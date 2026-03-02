@@ -11,9 +11,6 @@ import {
   alpha,
   Paper,
   Divider,
-  AppBar,
-  Toolbar,
-  Link as MuiLink
 } from '@mui/material';
 import { 
   Code2, 
@@ -22,145 +19,9 @@ import {
   ArrowRight,
   ChevronRight,
   Terminal,
-  Cpu,
-  Layers,
-  Fingerprint,
-  Zap,
-  Github
 } from 'lucide-react';
 import NextLink from 'next/link';
-
-const Navbar = () => {
-  return (
-    <AppBar 
-      position="fixed" 
-      sx={{ 
-        bgcolor: 'rgba(0,0,0,0.85)', 
-        backdropFilter: 'blur(30px)', 
-        boxShadow: 'none', 
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        backgroundImage: 'none'
-      }}
-    >
-      <Container maxWidth="xl">
-        <Toolbar 
-          disableGutters 
-          sx={{ 
-            height: { xs: 80, md: 100 }, 
-            justifyContent: 'space-between',
-            px: { xs: 2, md: 0 } 
-          }}
-        >
-          <Box component={NextLink} href="/" sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: '#fff' }}>KYLRIX</Typography>
-          </Box>
-          
-          <Stack 
-            direction="row" 
-            spacing={{ xs: 2, md: 6 }} 
-            sx={{ 
-              display: { xs: 'none', md: 'flex' }, 
-              alignItems: 'center' 
-            }}
-          >
-             <Box>
-                <MuiLink
-                  component={NextLink}
-                  href="/products"
-                  underline="none"
-                  sx={{ 
-                    fontWeight: 700, 
-                    fontSize: '0.85rem',
-                    opacity: 0.5,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.15em',
-                    transition: 'all 0.3s',
-                    color: '#fff',
-                    '&:hover': { opacity: 1, color: '#00F5FF' }
-                  }}
-                >
-                  Products
-                </MuiLink>
-             </Box>
-             <Box>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontWeight: 900, 
-                    fontSize: '0.85rem',
-                    color: '#00F5FF', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.15em' 
-                  }}
-                >
-                  Developers
-                </Typography>
-             </Box>
-             <Box>
-                <MuiLink
-                  component={NextLink}
-                  href="/docs"
-                  underline="none"
-                  sx={{ 
-                    fontWeight: 700, 
-                    fontSize: '0.85rem',
-                    opacity: 0.5,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.15em',
-                    transition: 'all 0.3s',
-                    color: '#fff',
-                    '&:hover': { opacity: 1, color: '#00F5FF' }
-                  }}
-                >
-                  Docs
-                </MuiLink>
-             </Box>
-             <Box>
-                <MuiLink
-                  component={NextLink}
-                  href="/downloads"
-                  underline="none"
-                  sx={{ 
-                    fontWeight: 700, 
-                    fontSize: '0.85rem',
-                    opacity: 0.5,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.15em',
-                    transition: 'all 0.3s',
-                    color: '#fff',
-                    '&:hover': { opacity: 1, color: '#00F5FF' }
-                  }}
-                >
-                  Downloads
-                </MuiLink>
-             </Box>
-          </Stack>
-
-          <Stack direction="row" spacing={3} alignItems="center">
-            <Box 
-              component="a" 
-              href="https://github.com/kylrix" 
-              target="_blank" 
-              sx={{ 
-                color: '#fff', 
-                opacity: 0.5, 
-                transition: 'all 0.3s', 
-                '&:hover': { opacity: 1, color: '#00F5FF' },
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <Github size={22} />
-            </Box>
-            <Button variant="contained" color="primary" sx={{ borderRadius: 100, px: 4, fontWeight: 900 }}>
-              Console
-            </Button>
-          </Stack>
-        </Toolbar>
-      </Container>
-    </AppBar>
-  );
-};
+import Navbar from '@/components/Navbar';
 
 const DevSection = ({ icon: Icon, title, description, children }: any) => (
   <Box sx={{ py: { xs: 15, md: 20 }, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
@@ -242,7 +103,7 @@ export default new Extension({
 
         {/* Client IDs & Auth */}
         <DevSection 
-          icon={Fingerprint}
+          icon={Key}
           title="OAuth & Client IDs"
           description="Register your third-party applications to interact with the Kylrix ecosystem securely."
         >

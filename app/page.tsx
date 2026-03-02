@@ -9,10 +9,7 @@ import {
   Stack, 
   Grid, 
   alpha,
-  Divider,
-  AppBar,
-  Toolbar,
-  Link as MuiLink
+  Divider
 } from '@mui/material';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { 
@@ -26,114 +23,10 @@ import {
   Terminal,
   Layers,
   Fingerprint,
-  Cpu,
-  Github
+  Cpu
 } from 'lucide-react';
 import NextLink from 'next/link';
-
-const Navbar = () => {
-  return (
-    <AppBar 
-      position="fixed" 
-      sx={{ 
-        bgcolor: 'rgba(0,0,0,0.85)', 
-        backdropFilter: 'blur(30px)', 
-        boxShadow: 'none', 
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        backgroundImage: 'none'
-      }}
-    >
-      <Container maxWidth="xl">
-        <Toolbar 
-          disableGutters 
-          sx={{ 
-            height: { xs: 80, md: 100 }, 
-            justifyContent: 'space-between',
-            px: { xs: 2, md: 0 } 
-          }}
-        >
-          <Box component={NextLink} href="/" sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 900, 
-                letterSpacing: '-0.05em', 
-                color: '#fff',
-                fontSize: { xs: '1.5rem', md: '2rem' }
-              }}
-            >
-              KYLRIX
-            </Typography>
-          </Box>
-          
-          <Stack 
-            direction="row" 
-            spacing={{ xs: 2, md: 6 }} 
-            sx={{ 
-              display: { xs: 'none', md: 'flex' }, 
-              alignItems: 'center' 
-            }}
-          >
-            {['Products', 'Developers', 'Docs', 'Downloads'].map((item) => (
-              <Box key={item}>
-                <MuiLink
-                  component={NextLink}
-                  href={`/${item.toLowerCase()}`}
-                  underline="none"
-                  sx={{ 
-                    fontWeight: 700, 
-                    fontSize: '0.85rem',
-                    opacity: 0.5,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.15em',
-                    transition: 'all 0.3s',
-                    color: '#fff',
-                    '&:hover': { opacity: 1, color: '#00F5FF' }
-                  }}
-                >
-                  {item}
-                </MuiLink>
-              </Box>
-            ))}
-          </Stack>
-
-          <Stack direction="row" spacing={3} alignItems="center">
-            <Box 
-              component="a" 
-              href="https://github.com/kylrix" 
-              target="_blank" 
-              sx={{ 
-                color: '#fff', 
-                opacity: 0.5, 
-                transition: 'all 0.3s', 
-                '&:hover': { opacity: 1, color: '#00F5FF' },
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <Github size={22} />
-            </Box>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              sx={{ 
-                borderRadius: 100, 
-                px: { xs: 3, md: 5 },
-                py: 1.5,
-                fontWeight: 800,
-                fontSize: '0.85rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em'
-              }}
-            >
-              Launch Console
-            </Button>
-          </Stack>
-        </Toolbar>
-      </Container>
-    </AppBar>
-  );
-};
+import Navbar from '@/components/Navbar';
 
 const ProductCard = ({ app }: any) => (
   <motion.div whileHover={{ y: -12 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}>

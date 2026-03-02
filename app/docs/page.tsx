@@ -11,9 +11,6 @@ import {
   alpha,
   Paper,
   Divider,
-  AppBar,
-  Toolbar,
-  Link as MuiLink,
   List,
   ListItem,
   ListItemButton,
@@ -21,9 +18,6 @@ import {
 } from '@mui/material';
 import { 
   ChevronRight, 
-  ArrowRight,
-  Search,
-  BookOpen,
   Code2,
   Cpu,
   Fingerprint,
@@ -31,102 +25,9 @@ import {
   ShieldCheck,
   Terminal,
   Zap,
-  ExternalLink,
-  Github
+  ExternalLink
 } from 'lucide-react';
-import NextLink from 'next/link';
-
-const Navbar = () => {
-  return (
-    <AppBar 
-      position="fixed" 
-      sx={{ 
-        bgcolor: 'rgba(0,0,0,0.85)', 
-        backdropFilter: 'blur(30px)', 
-        boxShadow: 'none', 
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        backgroundImage: 'none',
-        zIndex: (theme) => theme.zIndex.drawer + 1
-      }}
-    >
-      <Container maxWidth="xl">
-        <Toolbar 
-          disableGutters 
-          sx={{ 
-            height: { xs: 80, md: 100 }, 
-            justifyContent: 'space-between',
-            px: { xs: 2, md: 0 } 
-          }}
-        >
-          <Box component={NextLink} href="/" sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: '#fff' }}>KYLRIX</Typography>
-          </Box>
-          
-          <Stack 
-            direction="row" 
-            spacing={{ xs: 2, md: 6 }} 
-            sx={{ 
-              display: { xs: 'none', md: 'flex' }, 
-              alignItems: 'center' 
-            }}
-          >
-            {['Products', 'Developers', 'Docs', 'Downloads'].map((item) => (
-              <Box key={item}>
-                <MuiLink
-                  component={NextLink}
-                  href={`/${item.toLowerCase()}`}
-                  underline="none"
-                  sx={{ 
-                    fontWeight: 700, 
-                    fontSize: '0.85rem',
-                    opacity: item === 'Docs' ? 1 : 0.5,
-                    color: item === 'Docs' ? '#00F5FF' : '#fff',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.15em',
-                    transition: 'all 0.3s',
-                    '&:hover': { opacity: 1, color: '#00F5FF' }
-                  }}
-                >
-                  {item}
-                </MuiLink>
-              </Box>
-            ))}
-          </Stack>
-
-          <Stack direction="row" spacing={3} alignItems="center">
-            <Box 
-              component="a" 
-              href="https://github.com/kylrix" 
-              target="_blank" 
-              sx={{ 
-                color: '#fff', 
-                opacity: 0.5, 
-                transition: 'all 0.3s', 
-                '&:hover': { opacity: 1, color: '#00F5FF' },
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <Github size={22} />
-            </Box>
-            <Button 
-              variant="outlined" 
-              color="primary" 
-              sx={{ 
-                borderRadius: 100, 
-                px: 4,
-                fontWeight: 900
-              }}
-              startIcon={<Search size={16} />}
-            >
-              Search
-            </Button>
-          </Stack>
-        </Toolbar>
-      </Container>
-    </AppBar>
-  );
-};
+import Navbar from '@/components/Navbar';
 
 const Sidebar = () => {
   const sections = [
@@ -199,8 +100,7 @@ export default function DocsPage() {
               <Typography variant="subtitle2" sx={{ color: '#00F5FF', mb: 3, fontWeight: 900, letterSpacing: '0.3em' }}>DOCUMENTATION</Typography>
               <Typography variant="h1" sx={{ mb: 4, fontWeight: 900, fontSize: { xs: '2.5rem', md: '4rem' } }}>Master the <br /> Ecosystem.</Typography>
               <Typography variant="subtitle1" sx={{ maxWidth: 800, opacity: 0.6, fontSize: '1.25rem', lineHeight: 1.7 }}>
-                Welcome to the Kylrix Documentation. This is your comprehensive guide to the 
-                architecture, tools, and integration patterns that power the private web.
+                Comprehensive guide to the architecture, tools, and integration patterns that power the private web.
               </Typography>
             </Box>
 
@@ -226,9 +126,9 @@ export default function DocsPage() {
                     <Box sx={{ color: '#00F5FF', mb: 3 }}><link.icon size={32} strokeWidth={1.5} /></Box>
                     <Typography variant="h3" sx={{ mb: 2, fontSize: '1.5rem', fontWeight: 900 }}>{link.title}</Typography>
                     <Typography variant="body2" sx={{ opacity: 0.5, lineHeight: 1.6, mb: 3 }}>{link.desc}</Typography>
-                    <MuiLink sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#00F5FF', textDecoration: 'none', cursor: 'pointer' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#00F5FF', cursor: 'pointer' }}>
                       Learn More <ChevronRight size={14} />
-                    </MuiLink>
+                    </Box>
                   </Paper>
                 </Grid>
               ))}
@@ -239,15 +139,14 @@ export default function DocsPage() {
               <Typography variant="h2" sx={{ mb: 4, fontWeight: 900 }}>The Core Philosophy.</Typography>
               <Stack spacing={4}>
                 <Typography variant="body1" sx={{ opacity: 0.7, fontSize: '1.15rem' }}>
-                  Kylrix is designed from the ground up to prioritize **Privacy First Architecture**. 
-                  Every application in the ecosystem adheres to three fundamental pillars:
+                  Kylrix is designed from the ground up to prioritize **Privacy First Architecture**.
                 </Typography>
                 
                 <Stack spacing={6} sx={{ pt: 4 }}>
                   {[
-                    { icon: Fingerprint, title: 'Zero-Knowledge Security', text: 'All user data is encrypted locally using AES-256-GCM before synchronization. Kylrix never sees your plaintext data.' },
-                    { icon: Layers, title: 'Modular Interoperability', text: 'Applications communicate over a secure P2P layer, allowing you to build extensions that work across the entire suite.' },
-                    { icon: Cpu, title: 'Edge Execution', text: 'AI models and orchestration logic are processed locally on your hardware to minimize latency and maximize privacy.' }
+                    { icon: Fingerprint, title: 'Zero-Knowledge Security', text: 'All user data is encrypted locally using AES-256-GCM before synchronization.' },
+                    { icon: Layers, title: 'Modular Interoperability', text: 'Applications communicate over a secure P2P layer.' },
+                    { icon: Cpu, title: 'Edge Execution', text: 'AI models and orchestration logic are processed locally on your hardware.' }
                   ].map((p, i) => (
                     <Stack key={i} direction="row" spacing={4} alignItems="flex-start">
                       <Box sx={{ color: '#00F5FF', pt: 0.5 }}><p.icon size={28} strokeWidth={1.5} /></Box>
@@ -264,7 +163,7 @@ export default function DocsPage() {
             {/* Help Section */}
             <Box sx={{ mt: 10, p: 6, bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 4, border: '1px dashed rgba(255,255,255,0.1)', textAlign: 'center' }}>
                <Typography variant="h4" sx={{ mb: 2, fontWeight: 900 }}>Need more assistance?</Typography>
-               <Typography variant="body2" sx={{ mb: 4, opacity: 0.5 }}>Join our developer community to get real-time support and stay updated.</Typography>
+               <Typography variant="body2" sx={{ mb: 4, opacity: 0.5 }}>Join our developer community.</Typography>
                <Stack direction="row" spacing={3} justifyContent="center">
                   <Button variant="outlined" endIcon={<ExternalLink size={16} />}>Community Discord</Button>
                   <Button variant="outlined" endIcon={<ExternalLink size={16} />}>GitHub Discussions</Button>
@@ -278,7 +177,7 @@ export default function DocsPage() {
       <Box sx={{ py: 10, ml: { xs: 0, md: '280px' }, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <Container maxWidth="lg">
           <Typography variant="caption" sx={{ opacity: 0.2 }}>
-            © 2026 Kylrix Organization. Built with absolute precision for the global developer community.
+            © 2026 Kylrix Organization. Built with absolute precision.
           </Typography>
         </Container>
       </Box>

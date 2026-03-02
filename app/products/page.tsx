@@ -11,135 +11,19 @@ import {
   alpha,
   Paper,
   Divider,
-  AppBar,
-  Toolbar,
-  Link as MuiLink,
-  Chip
 } from '@mui/material';
 import { 
   ChevronRight, 
   ArrowRight,
-  Github,
   LayoutDashboard,
   MessageSquare,
   Lock,
   StickyNote,
   Terminal,
   ShieldCheck,
-  Zap,
-  Fingerprint,
-  Layers,
-  Cpu,
-  Globe,
-  Database,
-  Search
 } from 'lucide-react';
 import NextLink from 'next/link';
-import { motion } from 'framer-motion';
-
-const Navbar = () => {
-  return (
-    <AppBar 
-      position="fixed" 
-      sx={{ 
-        bgcolor: 'rgba(0,0,0,0.85)', 
-        backdropFilter: 'blur(30px)', 
-        boxShadow: 'none', 
-        borderBottom: '1px solid rgba(255,255,255,0.1)',
-        backgroundImage: 'none'
-      }}
-    >
-      <Container maxWidth="xl">
-        <Toolbar 
-          disableGutters 
-          sx={{ 
-            height: { xs: 80, md: 100 }, 
-            justifyContent: 'space-between',
-            px: { xs: 2, md: 0 } 
-          }}
-        >
-          <Box component={NextLink} href="/" sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: '#fff' }}>KYLRIX</Typography>
-          </Box>
-          
-          <Stack 
-            direction="row" 
-            spacing={{ xs: 2, md: 6 }} 
-            sx={{ 
-              display: { xs: 'none', md: 'flex' }, 
-              alignItems: 'center' 
-            }}
-          >
-            <Box>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontWeight: 900, 
-                    fontSize: '0.85rem',
-                    color: '#00F5FF', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.15em' 
-                  }}
-                >
-                  Products
-                </Typography>
-             </Box>
-            {['Developers', 'Docs', 'Downloads'].map((item) => (
-              <Box key={item}>
-                <MuiLink
-                  component={NextLink}
-                  href={`/${item.toLowerCase()}`}
-                  underline="none"
-                  sx={{ 
-                    fontWeight: 700, 
-                    fontSize: '0.85rem',
-                    opacity: 0.5,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.15em',
-                    transition: 'all 0.3s',
-                    color: '#fff',
-                    '&:hover': { opacity: 1, color: '#00F5FF' }
-                  }}
-                >
-                  {item}
-                </MuiLink>
-              </Box>
-            ))}
-          </Stack>
-
-          <Stack direction="row" spacing={3} alignItems="center">
-            <Box 
-              component="a" 
-              href="https://github.com/kylrix" 
-              target="_blank" 
-              sx={{ 
-                color: '#fff', 
-                opacity: 0.5, 
-                transition: 'all 0.3s', 
-                '&:hover': { opacity: 1, color: '#00F5FF' },
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <Github size={22} />
-            </Box>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              sx={{ 
-                borderRadius: 100, 
-                px: 4,
-                fontWeight: 900
-              }}
-            >
-              Launch Console
-            </Button>
-          </Stack>
-        </Toolbar>
-      </Container>
-    </AppBar>
-  );
-};
+import Navbar from '@/components/Navbar';
 
 const ProductHero = ({ app, reversed = false }: any) => (
   <Box sx={{ py: { xs: 15, md: 25 }, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -190,7 +74,6 @@ const ProductHero = ({ app, reversed = false }: any) => (
             position: 'relative'
           }}
         >
-          {/* Visual Placeholder for Product UI */}
           <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 40, bgcolor: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', px: 2, gap: 1 }}>
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'rgba(255,95,86,0.5)' }} />
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'rgba(255,189,46,0.5)' }} />
@@ -265,7 +148,6 @@ export default function ProductsPage() {
       <Navbar />
       <div className="bg-mesh" />
       
-      {/* Hero Section */}
       <Container maxWidth="xl">
         <Stack spacing={8} alignItems="center" textAlign="center" sx={{ pt: { xs: 15, md: 25 }, pb: { xs: 15, md: 20 } }}>
           <Box>
@@ -280,12 +162,10 @@ export default function ProductsPage() {
 
         <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
 
-        {/* Product Sections */}
         {products.map((product, i) => (
           <ProductHero key={product.name} app={product} reversed={i % 2 !== 0} />
         ))}
 
-        {/* Closing CTA */}
         <Box sx={{ py: { xs: 20, md: 30 }, textAlign: 'center' }}>
            <Typography variant="h2" sx={{ mb: 4, fontWeight: 900 }}>Ready to upgrade your stack?</Typography>
            <Typography variant="body1" sx={{ mb: 6, opacity: 0.5, maxWidth: 600, mx: 'auto', fontSize: '1.25rem' }}>
@@ -294,14 +174,13 @@ export default function ProductsPage() {
            </Typography>
            <Stack direction="row" spacing={3} justifyContent="center">
               <Button size="large" variant="contained">Get Started for Free</Button>
-              <Link href="/downloads">
+              <NextLink href="/downloads" passHref style={{ textDecoration: 'none' }}>
                 <Button size="large" variant="outlined">Download Clients</Button>
-              </Link>
+              </NextLink>
            </Stack>
         </Box>
       </Container>
 
-      {/* Footer */}
       <Box sx={{ py: 15, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: 'rgba(5,5,5,0.8)' }}>
         <Container maxWidth="xl">
           <Typography variant="caption" sx={{ opacity: 0.2 }}>
