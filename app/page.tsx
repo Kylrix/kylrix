@@ -11,7 +11,8 @@ import {
   alpha,
   Divider,
   AppBar,
-  Toolbar
+  Toolbar,
+  Link as MuiLink
 } from '@mui/material';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { 
@@ -27,39 +28,88 @@ import {
   Fingerprint,
   Cpu
 } from 'lucide-react';
-import Link from 'next/link';
+import NextLink from 'next/link';
 
 const Navbar = () => {
   return (
-    <AppBar position="fixed" sx={{ bgcolor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(30px)', boxShadow: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+    <AppBar 
+      position="fixed" 
+      sx={{ 
+        bgcolor: 'rgba(0,0,0,0.85)', 
+        backdropFilter: 'blur(30px)', 
+        boxShadow: 'none', 
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        backgroundImage: 'none'
+      }}
+    >
       <Container maxWidth="xl">
-        <Toolbar disableGutters sx={{ height: { xs: 80, md: 100 }, justifyContent: 'space-between' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: '#fff' }}>KYLRIX</Typography>
-          </Link>
+        <Toolbar 
+          disableGutters 
+          sx={{ 
+            height: { xs: 80, md: 100 }, 
+            justifyContent: 'space-between',
+            px: { xs: 2, md: 0 } 
+          }}
+        >
+          <Box component={NextLink} href="/" sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 900, 
+                letterSpacing: '-0.05em', 
+                color: '#fff',
+                fontSize: { xs: '1.5rem', md: '2rem' }
+              }}
+            >
+              KYLRIX
+            </Typography>
+          </Box>
           
-          <Stack direction="row" spacing={6} sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
+          <Stack 
+            direction="row" 
+            spacing={{ xs: 2, md: 6 }} 
+            sx={{ 
+              display: { xs: 'none', md: 'flex' }, 
+              alignItems: 'center' 
+            }}
+          >
             {['Products', 'Developers', 'Docs', 'Downloads'].map((item) => (
-              <Link key={item} href={`/${item.toLowerCase()}`}>
-                <Typography 
-                  variant="body2" 
+              <Box key={item}>
+                <MuiLink
+                  component={NextLink}
+                  href={`/${item.toLowerCase()}`}
+                  underline="none"
                   sx={{ 
                     fontWeight: 700, 
+                    fontSize: '0.85rem',
                     opacity: 0.5,
                     textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
+                    letterSpacing: '0.15em',
                     transition: 'all 0.3s',
+                    color: '#fff',
                     '&:hover': { opacity: 1, color: '#00F5FF' }
                   }}
                 >
                   {item}
-                </Typography>
-              </Link>
+                </MuiLink>
+              </Box>
             ))}
           </Stack>
 
-          <Stack direction="row" spacing={2}>
-            <Button variant="contained" color="primary" sx={{ borderRadius: 100, px: 4 }}>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <Button 
+              variant="contained" 
+              color="primary" 
+              sx={{ 
+                borderRadius: 100, 
+                px: { xs: 3, md: 5 },
+                py: 1.5,
+                fontWeight: 800,
+                fontSize: '0.85rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
+            >
               Launch Console
             </Button>
           </Stack>
@@ -73,7 +123,7 @@ const ProductCard = ({ app }: any) => (
   <motion.div whileHover={{ y: -12 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
     <Box 
       sx={{ 
-        p: { xs: 5, md: 6 }, 
+        p: { xs: 4, md: 6 }, 
         height: '100%',
         display: 'flex', 
         flexDirection: 'column',
@@ -83,21 +133,48 @@ const ProductCard = ({ app }: any) => (
         border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: 8,
         transition: 'all 0.4s',
-        '&:hover': { borderColor: 'rgba(0, 245, 255, 0.3)', background: 'rgba(15, 15, 15, 0.9)' }
+        '&:hover': { 
+          borderColor: 'rgba(0, 245, 255, 0.4)', 
+          background: 'rgba(15, 15, 15, 0.95)',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+        }
       }}
     >
-      <Box sx={{ width: 64, height: 64, borderRadius: 3, bgcolor: 'rgba(0, 245, 255, 0.05)', border: '1px solid rgba(0, 245, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00F5FF' }}>
+      <Box 
+        sx={{ 
+          width: 64, 
+          height: 64, 
+          borderRadius: 3, 
+          bgcolor: 'rgba(0, 245, 255, 0.05)', 
+          border: '1px solid rgba(0, 245, 255, 0.1)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          color: '#00F5FF' 
+        }}
+      >
         <app.icon size={32} strokeWidth={1.5} />
       </Box>
       
       <Box>
-        <Typography variant="h3" sx={{ mb: 2 }}>{app.name}</Typography>
+        <Typography variant="h3" sx={{ mb: 2, fontWeight: 900 }}>{app.name}</Typography>
         <Typography variant="body1" sx={{ opacity: 0.5, lineHeight: 1.8 }}>{app.desc}</Typography>
       </Box>
 
       <Box sx={{ mt: 'auto', pt: 4 }}>
-         <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#00F5FF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.2em' }}>
-           Explore {app.name} <ChevronRight size={14} />
+         <Typography 
+           variant="caption" 
+           sx={{ 
+             display: 'flex', 
+             alignItems: 'center', 
+             gap: 1, 
+             color: '#00F5FF', 
+             fontWeight: 900, 
+             textTransform: 'uppercase', 
+             letterSpacing: '0.2em' 
+           }}
+         >
+           Initialize {app.name} <ChevronRight size={14} />
          </Typography>
       </Box>
     </Box>
@@ -125,36 +202,71 @@ export default function LandingPage() {
       {/* Hero Section */}
       <Container maxWidth="xl">
         <motion.div style={{ opacity }}>
-          <Stack spacing={8} alignItems="center" textAlign="center" sx={{ pt: { xs: 15, md: 25 }, pb: { xs: 15, md: 30 } }}>
+          <Stack 
+            spacing={8} 
+            alignItems="center" 
+            textAlign="center" 
+            sx={{ 
+              pt: { xs: 15, md: 25 }, 
+              pb: { xs: 15, md: 30 },
+              px: { xs: 2, md: 0 }
+            }}
+          >
             <Box>
               <Typography 
                 variant="subtitle2" 
                 sx={{ 
-                  mb: 6,
+                  mb: 4,
                   color: '#00F5FF',
                   letterSpacing: '0.4em',
                   fontWeight: 900,
-                  textTransform: 'uppercase'
+                  textTransform: 'uppercase',
+                  fontSize: { xs: '0.7rem', md: '0.875rem' }
                 }}
               >
-                The Future of Secure Productivity
+                Architecture of Digital Intelligence
               </Typography>
-              <Typography variant="h1" sx={{ mb: 6, fontWeight: 900 }}>
-                The Architecture <br /> 
-                of <Box component="span" sx={{ color: '#00F5FF' }}>Intelligence.</Box>
+              <Typography 
+                variant="h1" 
+                sx={{ 
+                  mb: 6, 
+                  fontWeight: 900,
+                  fontSize: { xs: '3rem', md: '5.5rem' }
+                }}
+              >
+                Software for the <br /> 
+                <Box component="span" sx={{ color: '#00F5FF' }}>Private Era.</Box>
               </Typography>
-              <Typography variant="subtitle1" sx={{ maxWidth: 850, mx: 'auto', opacity: 0.6, fontSize: '1.4rem' }}>
+              <Typography 
+                variant="subtitle1" 
+                sx={{ 
+                  maxWidth: 850, 
+                  mx: 'auto', 
+                  opacity: 0.6, 
+                  fontSize: { xs: '1.1rem', md: '1.5rem' },
+                  lineHeight: 1.6
+                }}
+              >
                 A premium ecosystem of secure, AI-driven applications engineered 
-                for absolute performance, privacy, and precision.
+                for absolute performance, zero-knowledge privacy, and precision.
               </Typography>
             </Box>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4}>
-              <Button size="large" variant="contained" color="primary" sx={{ px: 6, py: 2.5, fontSize: '1.1rem' }}>
-                Get Started Free
+              <Button 
+                size="large" 
+                variant="contained" 
+                color="primary" 
+                sx={{ px: 6, py: 2.5, fontSize: '1.1rem', borderRadius: 2 }}
+              >
+                Get Started
               </Button>
-              <Button size="large" variant="outlined" sx={{ px: 6, py: 2.5, fontSize: '1.1rem' }}>
-                System Documentation
+              <Button 
+                size="large" 
+                variant="outlined" 
+                sx={{ px: 6, py: 2.5, fontSize: '1.1rem', borderRadius: 2 }}
+              >
+                Documentation
               </Button>
             </Stack>
           </Stack>
@@ -162,11 +274,11 @@ export default function LandingPage() {
       </Container>
 
       {/* Flagships Grid */}
-      <Box sx={{ py: { xs: 20, md: 30 }, borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
+      <Box sx={{ py: { xs: 15, md: 25 }, borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
         <Container maxWidth="xl">
           <Stack spacing={4} mb={15} textAlign="center">
-            <Typography variant="subtitle2" sx={{ color: '#00F5FF' }}>THE ECOSYSTEM</Typography>
-            <Typography variant="h2">Engineered without compromise.</Typography>
+            <Typography variant="subtitle2" sx={{ color: '#00F5FF', fontWeight: 900 }}>THE FLAGSHIPS</Typography>
+            <Typography variant="h2" sx={{ fontWeight: 900 }}>Ecosystem of Precision.</Typography>
           </Stack>
 
           <Grid container spacing={4}>
@@ -180,31 +292,31 @@ export default function LandingPage() {
       </Box>
 
       {/* Infrastructure Section */}
-      <Box sx={{ py: { xs: 20, md: 30 } }}>
+      <Box sx={{ py: { xs: 15, md: 25 } }}>
         <Container maxWidth="xl">
-          <Grid container spacing={15} alignItems="center">
+          <Grid container spacing={10} alignItems="center">
             <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={10}>
+              <Stack spacing={8}>
                 <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 4, color: '#00F5FF' }}>CORE INFRASTRUCTURE</Typography>
-                  <Typography variant="h2" sx={{ mb: 4 }}>Private. Local. <br />Professional.</Typography>
+                  <Typography variant="subtitle2" sx={{ mb: 4, color: '#00F5FF', fontWeight: 900 }}>INFRASTRUCTURE</Typography>
+                  <Typography variant="h2" sx={{ mb: 4, fontWeight: 900 }}>Secure by Design. <br />Private by Default.</Typography>
                   <Typography variant="body1" sx={{ opacity: 0.5, maxWidth: 600, fontSize: '1.25rem' }}>
-                    Every Kylrix app is powered by a high-performance infrastructure layer built for zero-knowledge privacy and lightning-fast edge execution.
+                    Every Kylrix application is built on our proprietary infrastructure layer, ensuring your data never leaves your control.
                   </Typography>
                 </Box>
                 
-                <Stack spacing={8}>
+                <Stack spacing={6}>
                   {[
-                    { icon: Fingerprint, title: 'Zero-Knowledge Privacy', desc: 'Your data is encrypted locally before it ever touches the network.' },
-                    { icon: Layers, title: 'Modular Systems', desc: 'Plug-and-play components that scale with your digital workflow.' },
-                    { icon: Cpu, title: 'Edge Intelligence', desc: 'Optimized local AI processing for minimum latency and maximum security.' }
+                    { icon: Fingerprint, title: 'Zero-Knowledge', desc: 'Local encryption ensures only you have access to your data.' },
+                    { icon: Layers, title: 'Modular Systems', desc: 'Built for developers to extend and integrate seamlessly.' },
+                    { icon: Cpu, title: 'Edge Intelligence', desc: 'Real-time local AI processing for maximum performance.' }
                   ].map((f, i) => (
-                    <Stack key={i} direction="row" spacing={5}>
+                    <Stack key={i} direction="row" spacing={4}>
                       <Box sx={{ color: '#00F5FF', pt: 1 }}>
-                        <f.icon size={36} strokeWidth={1.5} />
+                        <f.icon size={32} strokeWidth={1.5} />
                       </Box>
                       <Box>
-                        <Typography variant="h3" sx={{ mb: 2, fontSize: '2rem' }}>{f.title}</Typography>
+                        <Typography variant="h3" sx={{ mb: 1, fontSize: '1.75rem', fontWeight: 900 }}>{f.title}</Typography>
                         <Typography variant="body1" sx={{ opacity: 0.4 }}>{f.desc}</Typography>
                       </Box>
                     </Stack>
@@ -216,34 +328,38 @@ export default function LandingPage() {
             <Grid size={{ xs: 12, md: 6 }}>
               <Box 
                 sx={{ 
-                  p: { xs: 6, md: 10 }, 
-                  minHeight: 650, 
+                  p: { xs: 4, md: 10 }, 
+                  minHeight: 600, 
                   display: 'flex', 
                   flexDirection: 'column', 
                   justifyContent: 'center',
                   bgcolor: 'rgba(5,5,5,0.6)',
                   border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 12,
-                  position: 'relative',
-                  overflow: 'hidden'
+                  position: 'relative'
                 }}
               >
-                <Stack spacing={8}>
-                  <Terminal size={80} strokeWidth={0.5} sx={{ opacity: 0.1, color: '#00F5FF' }} />
+                <Stack spacing={6}>
+                  <Terminal size={64} strokeWidth={1} sx={{ opacity: 0.2, color: '#00F5FF' }} />
                   <Typography variant="h2" sx={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 400, opacity: 0.9 }}>
-                    <Box component="span" sx={{ color: '#00F5FF' }}>$</Box> kylrix auth <br />
+                    <Box component="span" sx={{ color: '#00F5FF' }}>$</Box> kylrix initialize <br />
                     <Box component="span" sx={{ opacity: 0.3 }}>
-                      &gt; Initializing handshake...<br />
                       &gt; Secure Tunnel Established.<br />
-                      &gt; P2P Sync Active.
+                      &gt; P2P Handshake Success.<br />
+                      &gt; Ecosystem Syncing...
                     </Box>
                   </Typography>
                   <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-                  <Link href="/developers">
-                    <Button size="large" variant="outlined" endIcon={<ArrowRight size={24} />} sx={{ px: 5, py: 2 }}>
-                      Developer Console
+                  <Box component={NextLink} href="/developers" sx={{ textDecoration: 'none' }}>
+                    <Button 
+                      size="large" 
+                      variant="outlined" 
+                      endIcon={<ArrowRight size={20} />} 
+                      sx={{ px: 5, py: 2, borderRadius: 2 }}
+                    >
+                      Developer Portal
                     </Button>
-                  </Link>
+                  </Box>
                 </Stack>
               </Box>
             </Grid>
@@ -254,27 +370,36 @@ export default function LandingPage() {
       {/* Footer */}
       <Box sx={{ py: 15, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: 'rgba(5,5,5,0.8)' }}>
         <Container maxWidth="xl">
-          <Grid container spacing={10}>
+          <Grid container spacing={8}>
             <Grid size={{ xs: 12, md: 5 }}>
               <Typography variant="h4" sx={{ mb: 4, fontWeight: 900 }}>KYLRIX</Typography>
               <Typography variant="body1" sx={{ opacity: 0.4, maxWidth: 400 }}>
-                The future of AI-powered secure productivity. Precision engineered for the modern era of privacy and intelligence.
+                High-fidelity secure productivity applications. Built for the future of digital sovereignty.
               </Typography>
             </Grid>
             <Grid size={{ xs: 12, md: 7 }}>
-              <Grid container spacing={10} justifyContent="flex-end">
+              <Grid container spacing={8} justifyContent="flex-end">
                 {[
-                  { title: 'Resources', links: ['Documentation', 'Developers', 'Downloads', 'Status'] },
-                  { title: 'Ecosystem', links: ['Vault', 'Flow', 'Connect', 'Note'] },
-                  { title: 'Company', links: ['About', 'Privacy', 'Terms', 'Contact'] }
+                  { title: 'Resources', links: ['Docs', 'Developers', 'Downloads'] },
+                  { title: 'Legal', links: ['Privacy', 'Terms'] }
                 ].map((col) => (
                   <Grid size={{ xs: 6, sm: 4 }} key={col.title}>
-                    <Typography variant="subtitle2" sx={{ mb: 5, color: '#fff', opacity: 0.3, letterSpacing: '0.2em' }}>{col.title}</Typography>
-                    <Stack spacing={2.5}>
+                    <Typography variant="subtitle2" sx={{ mb: 4, color: '#fff', opacity: 0.3, letterSpacing: '0.2em' }}>{col.title}</Typography>
+                    <Stack spacing={2}>
                       {col.links.map(link => (
-                        <Link key={link} href={`/${link.toLowerCase()}`}>
-                          <Typography variant="body2" sx={{ fontWeight: 500, opacity: 0.5, '&:hover': { opacity: 1, color: '#00F5FF' } }}>{link}</Typography>
-                        </Link>
+                        <Box key={link} component={NextLink} href={`/${link.toLowerCase()}`} sx={{ textDecoration: 'none' }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 500, 
+                              opacity: 0.5, 
+                              transition: 'all 0.3s',
+                              '&:hover': { opacity: 1, color: '#00F5FF' } 
+                            }}
+                          >
+                            {link}
+                          </Typography>
+                        </Box>
                       ))}
                     </Stack>
                   </Grid>
@@ -282,17 +407,10 @@ export default function LandingPage() {
               </Grid>
             </Grid>
           </Grid>
-          <Box sx={{ mt: 15, pt: 10, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Box sx={{ mt: 10, pt: 8, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <Typography variant="caption" sx={{ opacity: 0.2 }}>
               © 2026 Kylrix Organization. Built with absolute precision.
             </Typography>
-            <Stack direction="row" spacing={4}>
-              {['Twitter', 'GitHub', 'Discord'].map(social => (
-                <Typography key={social} variant="caption" sx={{ opacity: 0.2, '&:hover': { opacity: 1, color: '#00F5FF' }, cursor: 'pointer' }}>
-                  {social}
-                </Typography>
-              ))}
-            </Stack>
           </Box>
         </Container>
       </Box>

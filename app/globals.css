@@ -1,13 +1,6 @@
 :root {
   --background: #000000;
   --foreground: #f2f2f2;
-  --accent: #ffffff;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
 }
 
 html,
@@ -23,7 +16,7 @@ a {
   text-decoration: none;
 }
 
-/* The Kylrix Creamy Atmospheric Suite */
+/* The Kylrix Atmospheric Suite */
 .bg-mesh {
   position: fixed;
   top: 0;
@@ -32,8 +25,8 @@ a {
   height: 100%;
   z-index: -1;
   background: 
-    radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 90% 90%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 10% 10%, rgba(0, 245, 255, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 90% 90%, rgba(0, 245, 255, 0.03) 0%, transparent 50%),
     #000000;
 }
 
@@ -50,43 +43,8 @@ a {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3%3Ffilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
-/* Light Leak Animations - Muted */
-@keyframes leak {
-  0%, 100% { opacity: 0.1; transform: translate(0, 0) scale(1); }
-  50% { opacity: 0.2; transform: translate(5%, -5%) scale(1.05); }
-}
-
-.light-leak {
-  position: absolute;
-  width: 50vw;
-  height: 50vw;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
-  filter: blur(120px);
-  pointer-events: none;
-  z-index: -1;
-  animation: leak 20s ease-in-out infinite;
-}
-
 /* Ultra-smooth scrolling */
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
-}
-
-.text-gradient {
-  background: linear-gradient(135deg, #FFFFFF 0%, #71717A 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.accent-gradient {
-  background: linear-gradient(90deg, #FFFFFF 0%, #A1A1AA 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.glass-card {
-  background: rgba(12, 12, 12, 0.4) !important;
-  backdrop-filter: blur(40px) saturate(120%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }

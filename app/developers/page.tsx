@@ -12,7 +12,8 @@ import {
   Paper,
   Divider,
   AppBar,
-  Toolbar
+  Toolbar,
+  Link as MuiLink
 } from '@mui/material';
 import { 
   Code2, 
@@ -26,24 +27,115 @@ import {
   Fingerprint,
   Zap
 } from 'lucide-react';
-import Link from 'next/link';
+import NextLink from 'next/link';
 
 const Navbar = () => {
   return (
-    <AppBar position="fixed" sx={{ bgcolor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(30px)', boxShadow: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+    <AppBar 
+      position="fixed" 
+      sx={{ 
+        bgcolor: 'rgba(0,0,0,0.85)', 
+        backdropFilter: 'blur(30px)', 
+        boxShadow: 'none', 
+        borderBottom: '1px solid rgba(255,255,255,0.1)',
+        backgroundImage: 'none'
+      }}
+    >
       <Container maxWidth="xl">
-        <Toolbar disableGutters sx={{ height: { xs: 80, md: 100 }, justifyContent: 'space-between' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center' }}>
+        <Toolbar 
+          disableGutters 
+          sx={{ 
+            height: { xs: 80, md: 100 }, 
+            justifyContent: 'space-between',
+            px: { xs: 2, md: 0 } 
+          }}
+        >
+          <Box component={NextLink} href="/" sx={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
             <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.05em', color: '#fff' }}>KYLRIX</Typography>
-          </Link>
+          </Box>
           
-          <Stack direction="row" spacing={6} sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center' }}>
-             <Typography variant="body2" sx={{ fontWeight: 700, opacity: 1, color: '#00F5FF', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Developers</Typography>
-             <Link href="/docs"><Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', transition: 'all 0.3s', '&:hover': { opacity: 1, color: '#00F5FF' } }}>Documentation</Typography></Link>
-             <Link href="/api"><Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.5, textTransform: 'uppercase', letterSpacing: '0.1em', transition: 'all 0.3s', '&:hover': { opacity: 1, color: '#00F5FF' } }}>API Reference</Typography></Link>
+          <Stack 
+            direction="row" 
+            spacing={{ xs: 2, md: 6 }} 
+            sx={{ 
+              display: { xs: 'none', md: 'flex' }, 
+              alignItems: 'center' 
+            }}
+          >
+             <Box>
+                <MuiLink
+                  component={NextLink}
+                  href="/products"
+                  underline="none"
+                  sx={{ 
+                    fontWeight: 700, 
+                    fontSize: '0.85rem',
+                    opacity: 0.5,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.15em',
+                    transition: 'all 0.3s',
+                    color: '#fff',
+                    '&:hover': { opacity: 1, color: '#00F5FF' }
+                  }}
+                >
+                  Products
+                </MuiLink>
+             </Box>
+             <Box>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 900, 
+                    fontSize: '0.85rem',
+                    color: '#00F5FF', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.15em' 
+                  }}
+                >
+                  Developers
+                </Typography>
+             </Box>
+             <Box>
+                <MuiLink
+                  component={NextLink}
+                  href="/docs"
+                  underline="none"
+                  sx={{ 
+                    fontWeight: 700, 
+                    fontSize: '0.85rem',
+                    opacity: 0.5,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.15em',
+                    transition: 'all 0.3s',
+                    color: '#fff',
+                    '&:hover': { opacity: 1, color: '#00F5FF' }
+                  }}
+                >
+                  Docs
+                </MuiLink>
+             </Box>
+             <Box>
+                <MuiLink
+                  component={NextLink}
+                  href="/downloads"
+                  underline="none"
+                  sx={{ 
+                    fontWeight: 700, 
+                    fontSize: '0.85rem',
+                    opacity: 0.5,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.15em',
+                    transition: 'all 0.3s',
+                    color: '#fff',
+                    '&:hover': { opacity: 1, color: '#00F5FF' }
+                  }}
+                >
+                  Downloads
+                </MuiLink>
+             </Box>
           </Stack>
 
-          <Button variant="contained" color="primary" sx={{ borderRadius: 100, px: 4 }}>
+          <Button variant="contained" color="primary" sx={{ borderRadius: 100, px: 4, fontWeight: 900 }}>
             Console
           </Button>
         </Toolbar>
@@ -61,7 +153,7 @@ const DevSection = ({ icon: Icon, title, description, children }: any) => (
             <Icon size={32} strokeWidth={1.5} />
           </Box>
           <Box>
-            <Typography variant="h2" sx={{ mb: 3, fontSize: '2.5rem' }}>{title}</Typography>
+            <Typography variant="h2" sx={{ mb: 3, fontSize: '2.5rem', fontWeight: 900 }}>{title}</Typography>
             <Typography variant="body1" sx={{ opacity: 0.5, lineHeight: 1.8, fontSize: '1.1rem' }}>{description}</Typography>
           </Box>
         </Stack>
@@ -74,7 +166,7 @@ const DevSection = ({ icon: Icon, title, description, children }: any) => (
 );
 
 const CodeBlock = ({ code, language = 'bash' }: { code: string; language?: string }) => (
-  <Paper sx={{ p: 4, bgcolor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', fontFamily: 'var(--font-mono)', fontSize: '0.95rem', overflowX: 'auto', borderRadius: 4 }}>
+  <Paper sx={{ p: 4, bgcolor: 'rgba(5,5,5,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontFamily: 'var(--font-mono)', fontSize: '0.95rem', overflowX: 'auto', borderRadius: 4 }}>
     <Typography variant="caption" sx={{ opacity: 0.3, display: 'block', mb: 3, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>{language}</Typography>
     <pre style={{ margin: 0, color: '#f2f2f2', lineHeight: 1.6 }}>
       <code>{code}</code>
@@ -94,12 +186,11 @@ export default function DevelopersPage() {
           <Typography variant="subtitle2" sx={{ mb: 6, color: '#00F5FF', letterSpacing: '0.4em', fontWeight: 900, textTransform: 'uppercase' }}>DEVELOPER PORTAL</Typography>
           <Typography variant="h1" sx={{ mb: 6, fontWeight: 900 }}>Build for the <br /><Box component="span" sx={{ color: '#00F5FF' }}>Private Web.</Box></Typography>
           <Typography variant="subtitle1" sx={{ mb: 8, maxWidth: 800, mx: 'auto', fontSize: '1.25rem', opacity: 0.6 }}>
-            Kylrix provides the modular infrastructure needed to build secure, AI-powered applications 
-            and extensions with zero-knowledge privacy at the core.
+            Modular infrastructure for secure, AI-powered applications with zero-knowledge privacy at the core.
           </Typography>
           <Stack direction="row" spacing={3} justifyContent="center">
-            <Button size="large" variant="contained" sx={{ px: 6 }}>Create Client ID</Button>
-            <Button size="large" variant="outlined" sx={{ px: 6 }}>Read Documentation</Button>
+            <Button size="large" variant="contained" sx={{ px: 6, borderRadius: 2 }}>Create Client ID</Button>
+            <Button size="large" variant="outlined" sx={{ px: 6, borderRadius: 2 }}>Read Docs</Button>
           </Stack>
         </Container>
       </Box>
@@ -113,7 +204,7 @@ export default function DevelopersPage() {
         >
           <Stack spacing={6}>
             <Typography variant="body1" sx={{ fontSize: '1.2rem', opacity: 0.8 }}>
-              Extensions are modular bundles that can hook into Kylrix events, add new UI components, or provide custom AI tools to the orchestration layer.
+              Modular bundles that hook into Kylrix events, add UI components, or provide custom AI tools to the orchestration layer.
             </Typography>
             <CodeBlock 
               language="typescript"
@@ -127,7 +218,7 @@ export default new Extension({
   }
 });`}
             />
-            <Button variant="outlined" sx={{ alignSelf: 'flex-start', px: 4 }} endIcon={<ArrowRight size={18} />}>Extension Guide</Button>
+            <Button variant="outlined" sx={{ alignSelf: 'flex-start', px: 4, borderRadius: 2 }} endIcon={<ArrowRight size={18} />}>Extension Guide</Button>
           </Stack>
         </DevSection>
 
@@ -144,15 +235,15 @@ export default new Extension({
             <Grid container spacing={4}>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Paper sx={{ p: 6, height: '100%', borderStyle: 'dashed', bgcolor: 'rgba(255,255,255,0.02)' }}>
-                  <Typography variant="h3" sx={{ mb: 3 }}>Register App</Typography>
-                  <Typography variant="body2" sx={{ mb: 4, opacity: 0.5, lineHeight: 1.6 }}>Generate unique credentials for your platform to interface with Kylrix APIs.</Typography>
+                  <Typography variant="h3" sx={{ mb: 3, fontWeight: 900 }}>Register App</Typography>
+                  <Typography variant="body2" sx={{ mb: 4, opacity: 0.5, lineHeight: 1.6 }}>Generate unique credentials for your platform.</Typography>
                   <Button variant="contained" fullWidth size="large">New Client ID</Button>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Paper sx={{ p: 6, height: '100%', bgcolor: 'rgba(255,255,255,0.03)' }}>
-                  <Typography variant="h3" sx={{ mb: 3 }}>Permissions</Typography>
-                  <Typography variant="body2" sx={{ mb: 4, opacity: 0.5, lineHeight: 1.6 }}>Configure granular Scopes for your application, from Read-Only to Full-Sync.</Typography>
+                  <Typography variant="h3" sx={{ mb: 3, fontWeight: 900 }}>Permissions</Typography>
+                  <Typography variant="body2" sx={{ mb: 4, opacity: 0.5, lineHeight: 1.6 }}>Configure granular Scopes for your application.</Typography>
                   <Stack spacing={2}>
                     {['identity:read', 'vault:write', 'flow:execute'].map(scope => (
                       <Box key={scope} sx={{ px: 3, py: 1.5, bgcolor: 'rgba(0, 245, 255, 0.03)', borderRadius: 2, border: '1px solid rgba(0, 245, 255, 0.1)' }}>
@@ -174,7 +265,7 @@ export default new Extension({
         >
           <Stack spacing={6}>
             <Typography variant="body1" sx={{ fontSize: '1.2rem', opacity: 0.8 }}>
-              Implement the most secure authentication method on the web. No passwords, just high-fidelity biometric or hardware security.
+              Implement the most secure authentication method on the web. No passwords, just biometric security.
             </Typography>
             <Box 
               sx={{ 
@@ -207,13 +298,6 @@ export default new Extension({
               </Button>
               <Typography variant="caption" sx={{ opacity: 0.4, letterSpacing: '0.1em' }}>BIOMETRIC / WEBAUTHN SECURED</Typography>
             </Box>
-            <CodeBlock 
-              language="html"
-              code={`<button data-kylrix-signin data-client-id="YOUR_CLIENT_ID">
-  Sign in with Kylrix
-</button>
-<script src="https://auth.kylrix.space/sdk.js"></script>`}
-            />
           </Stack>
         </DevSection>
       </Container>
@@ -222,7 +306,7 @@ export default new Extension({
       <Box sx={{ py: 15, mt: 20, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: 'rgba(5,5,5,0.8)' }}>
         <Container maxWidth="xl">
           <Typography variant="caption" sx={{ opacity: 0.2 }}>
-            © 2026 Kylrix Organization. Built with absolute precision for the global developer community.
+            © 2026 Kylrix Organization. Built with absolute precision.
           </Typography>
         </Container>
       </Box>
