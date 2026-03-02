@@ -21,7 +21,9 @@ import {
     Waypoints,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
+import Logo, { KylrixApp } from './Logo';
 
 /**
  * Premium Icon Mapper
@@ -195,17 +197,21 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
                                         }}
                                     >
                                         <Box sx={{
-                                            width: 44,
-                                            height: 44,
-                                            borderRadius: '12px',
+                                            width: 48,
+                                            height: 48,
+                                            borderRadius: '14px',
                                             bgcolor: alpha(app.color, 0.15),
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            fontSize: '1.5rem',
-                                            border: `1px solid ${alpha(app.color, 0.2)}`
+                                            border: `1px solid ${alpha(app.color, 0.2)}`,
+                                            overflow: 'hidden'
                                         }}>
-                                            <PremiumIcon name={app.icon} color={app.color} />
+                                            {['note', 'vault', 'flow', 'connect', 'root'].includes(app.id) ? (
+                                              <Logo app={app.id as KylrixApp} size={28} variant="icon" />
+                                            ) : (
+                                              <Image src={app.logo} alt={app.label} width={28} height={28} />
+                                            )}
                                         </Box>
                                         <Box>
                                             <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>

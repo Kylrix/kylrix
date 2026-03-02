@@ -36,18 +36,6 @@ import Navbar from '@/components/Navbar';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
 
 const ProductCard = ({ app }: any) => {
-  const renderIcon = (iconName: string, color: string) => {
-    const icons: Record<string, any> = {
-      'file-text': FileText,
-      'shield': Shield,
-      'zap': Zap,
-      'waypoints': Waypoints,
-      'fingerprint': Fingerprint,
-    };
-    const IconComp = icons[iconName] || Zap;
-    return <IconComp size={32} strokeWidth={1.5} color={color} />;
-  };
-
   return (
     <motion.div whileHover={{ y: -12 }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
       <Box 
@@ -76,18 +64,21 @@ const ProductCard = ({ app }: any) => {
       >
         <Box 
           sx={{ 
-            width: 64, 
-            height: 64, 
+            width: 80, 
+            height: 80, 
             borderRadius: 3, 
             bgcolor: alpha(app.color, 0.05), 
             border: `1px solid ${alpha(app.color, 0.1)}`, 
             display: 'flex', 
             alignItems: 'center', 
-            justifyContent: 'center', 
-            color: app.color 
+            justifyContent: 'center'
           }}
         >
-          {renderIcon(app.icon, app.color)}
+          {['note', 'vault', 'flow', 'connect', 'root'].includes(app.id) ? (
+            <Logo app={app.id as KylrixApp} size={48} variant="icon" />
+          ) : (
+            <Image src={app.logo} alt={app.label} width={48} height={48} />
+          )}
         </Box>
         
         <Box>
@@ -116,7 +107,8 @@ const ProductCard = ({ app }: any) => {
   );
 };
 
-import Logo from '@/components/Logo';
+import Logo, { KylrixApp } from '@/components/Logo';
+import Image from 'next/image';
 
 export default function LandingPage() {
   const { scrollYProgress } = useScroll();
