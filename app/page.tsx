@@ -251,7 +251,9 @@ export default function LandingPage() {
                 }}
               >
                 <Stack spacing={6}>
-                  <Terminal size={64} strokeWidth={1} sx={{ opacity: 0.2, color: '#00F5FF' }} />
+                  <Box sx={{ opacity: 0.2, color: '#00F5FF' }}>
+                    <Terminal size={64} strokeWidth={1} />
+                  </Box>
                   <Typography variant="h2" sx={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 400, opacity: 0.9 }}>
                     <Box component="span" sx={{ color: '#00F5FF' }}>$</Box> kylrix initialize <br />
                     <Box component="span" sx={{ opacity: 0.3 }}>

@@ -13,14 +13,6 @@ interface LogoProps {
   href?: string;
 }
 
-const LogoContainer = styled(Box)({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '12px',
-  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-  textDecoration: 'none'
-});
-
 const Logo: React.FC<LogoProps> = ({ 
   sx, 
   size = 40, 
@@ -40,7 +32,18 @@ const Logo: React.FC<LogoProps> = ({
   const current = configs[app];
 
   return (
-    <LogoContainer sx={sx} component={component} href={href}>
+    <Box 
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        textDecoration: 'none',
+        ...sx
+      }} 
+      component={component} 
+      href={href}
+    >
       <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id={`grad-${app}`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -106,7 +109,7 @@ const Logo: React.FC<LogoProps> = ({
           </Typography>
         </Box>
       )}
-    </LogoContainer>
+    </Box>
   );
 };
 

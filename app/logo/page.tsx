@@ -26,7 +26,7 @@ export default function LogoPage() {
             </Typography>
             <Grid container spacing={4}>
               {apps.map((app) => (
-                <Grid item xs={12} md={6} key={app}>
+                <Grid size={{ xs: 12, md: 6 }} key={app}>
                   <Paper sx={{ 
                     p: 6, 
                     bgcolor: 'rgba(255,255,255,0.03)', 
@@ -77,7 +77,7 @@ export default function LogoPage() {
           <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
 
           <Grid container spacing={8}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>The "K" Skeleton</Typography>
               <Typography sx={{ opacity: 0.7, lineHeight: 1.8 }}>
                 Every app in the Kylrix ecosystem is a mutation of the same structural "K". This ensures 
@@ -85,7 +85,7 @@ export default function LogoPage() {
                 same autonomous lineage.
               </Typography>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>Generative Design</Typography>
               <Typography sx={{ opacity: 0.7, lineHeight: 1.8 }}>
                 By using SVG filters (Grain, Turbulence, Blur) and CSS keyframes, the logo becomes a 
