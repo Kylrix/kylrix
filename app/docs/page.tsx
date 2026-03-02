@@ -31,7 +31,8 @@ import {
   ShieldCheck,
   Terminal,
   Zap,
-  ExternalLink
+  ExternalLink,
+  Github
 } from 'lucide-react';
 import NextLink from 'next/link';
 
@@ -92,18 +93,35 @@ const Navbar = () => {
             ))}
           </Stack>
 
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            sx={{ 
-              borderRadius: 100, 
-              px: 4,
-              fontWeight: 900
-            }}
-            startIcon={<Search size={16} />}
-          >
-            Search
-          </Button>
+          <Stack direction="row" spacing={3} alignItems="center">
+            <Box 
+              component="a" 
+              href="https://github.com/kylrix" 
+              target="_blank" 
+              sx={{ 
+                color: '#fff', 
+                opacity: 0.5, 
+                transition: 'all 0.3s', 
+                '&:hover': { opacity: 1, color: '#00F5FF' },
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <Github size={22} />
+            </Box>
+            <Button 
+              variant="outlined" 
+              color="primary" 
+              sx={{ 
+                borderRadius: 100, 
+                px: 4,
+                fontWeight: 900
+              }}
+              startIcon={<Search size={16} />}
+            >
+              Search
+            </Button>
+          </Stack>
         </Toolbar>
       </Container>
     </AppBar>

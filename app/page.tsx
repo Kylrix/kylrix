@@ -26,7 +26,8 @@ import {
   Terminal,
   Layers,
   Fingerprint,
-  Cpu
+  Cpu,
+  Github
 } from 'lucide-react';
 import NextLink from 'next/link';
 
@@ -96,7 +97,22 @@ const Navbar = () => {
             ))}
           </Stack>
 
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={3} alignItems="center">
+            <Box 
+              component="a" 
+              href="https://github.com/kylrix" 
+              target="_blank" 
+              sx={{ 
+                color: '#fff', 
+                opacity: 0.5, 
+                transition: 'all 0.3s', 
+                '&:hover': { opacity: 1, color: '#00F5FF' },
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <Github size={22} />
+            </Box>
             <Button 
               variant="contained" 
               color="primary" 
