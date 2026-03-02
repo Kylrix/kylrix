@@ -37,7 +37,8 @@ export function getEcosystemUrl(subdomain: string) {
       note: 3001,
       vault: 3002,
       flow: 3003,
-      connect: 3004
+      connect: 3004,
+      kylrix: 3005
     };
     
     const appId = subdomain === 'id' ? 'accounts' : subdomain;
