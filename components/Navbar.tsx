@@ -64,7 +64,7 @@ export const Navbar = () => {
     const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
 
     if (isMobile) {
-      window.location.href = targetUrl;
+      window.location.assign(targetUrl);
     } else {
       const width = 560;
       const height = 750;
@@ -171,8 +171,8 @@ export const Navbar = () => {
                 <Box key={item.label}>
                   {item.type === 'dropdown' ? (
                     <Button
-                      onMouseEnter={(_e) => item.setAnchorEl(e.currentTarget)}
-                      onClick={(_e) => item.setAnchorEl(e.currentTarget)}
+                      onMouseEnter={(_e) => item.setAnchorEl(_e.currentTarget)}
+                      onClick={(_e) => item.setAnchorEl(_e.currentTarget)}
                       endIcon={<ChevronDown size={14} style={{ 
                         transform: Boolean(item.anchorEl) ? 'rotate(180deg)' : 'none',
                         transition: 'transform 0.2s'
@@ -252,7 +252,7 @@ export const Navbar = () => {
                         <MenuItem 
                           key={subItem.label}
                           onClick={() => {
-                            window.location.href = subItem.href;
+                            window.location.assign(subItem.href);
                             item.setAnchorEl(null);
                           }}
                           sx={{ 
@@ -408,7 +408,7 @@ export const Navbar = () => {
                       <ListItemButton 
                         key={subItem.label}
                         onClick={() => {
-                          window.location.href = subItem.href;
+                          window.location.assign(subItem.href);
                           setMobileMenuOpen(false);
                         }}
                         sx={{ 
@@ -433,7 +433,7 @@ export const Navbar = () => {
                 ) : (
                   <ListItemButton 
                     onClick={() => {
-                      window.location.href = item.href || '#';
+                      window.location.assign(item.href || '#');
                       setMobileMenuOpen(false);
                     }}
                     sx={{ 

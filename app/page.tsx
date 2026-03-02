@@ -122,7 +122,7 @@ export default function LandingPage() {
     const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
 
     if (isMobile) {
-      window.location.href = targetUrl;
+      window.location.assign(targetUrl);
     } else {
       const width = 560;
       const height = 750;

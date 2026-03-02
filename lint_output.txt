@@ -1,4 +1,0 @@
-
-> kylrix@1.0.0 lint /home/nathfavour/code/kylrix/kylrix
-> eslint .
-
