@@ -139,7 +139,7 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
                                 placeholder="Jump to app or search..."
                                 fullWidth
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                onChange={(_e) => setSearch(e.target.value)}
                                 sx={{
                                     color: 'white',
                                     fontSize: '1rem',

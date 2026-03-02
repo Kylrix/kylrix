@@ -171,8 +171,8 @@ export const Navbar = () => {
                 <Box key={item.label}>
                   {item.type === 'dropdown' ? (
                     <Button
-                      onMouseEnter={(e) => item.setAnchorEl(e.currentTarget)}
-                      onClick={(e) => item.setAnchorEl(e.currentTarget)}
+                      onMouseEnter={(_e) => item.setAnchorEl(e.currentTarget)}
+                      onClick={(_e) => item.setAnchorEl(e.currentTarget)}
                       endIcon={<ChevronDown size={14} style={{ 
                         transform: Boolean(item.anchorEl) ? 'rotate(180deg)' : 'none',
                         transition: 'transform 0.2s'
