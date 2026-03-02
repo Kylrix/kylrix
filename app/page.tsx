@@ -9,7 +9,9 @@ import {
   Stack, 
   Grid, 
   alpha,
-  Divider
+  Divider,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { 
@@ -119,6 +121,30 @@ import Logo from '@/components/Logo';
 export default function LandingPage() {
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  const handleGetStarted = () => {
+    const accountsUrl = getEcosystemUrl('accounts');
+    const authUrl = `${accountsUrl}/login`;
+    const sourceUrl = window.location.origin;
+    const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
+
+    if (isMobile) {
+      window.location.href = targetUrl;
+    } else {
+      const width = 560;
+      const height = 750;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      window.open(
+        targetUrl,
+        'KylrixAccounts',
+        `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+      );
+    }
+  };
 
   return (
     <Box component="main" sx={{ pt: 12 }}>
@@ -183,11 +209,7 @@ export default function LandingPage() {
                 size="large" 
                 variant="contained" 
                 color="primary" 
-                onClick={() => {
-                  const accountsUrl = getEcosystemUrl('accounts');
-                  const sourceUrl = window.location.origin;
-                  window.location.href = `${accountsUrl}/?source=${encodeURIComponent(sourceUrl)}`;
-                }}
+                onClick={handleGetStarted}
                 sx={{ px: 6, py: 2.5, fontSize: '1.1rem', borderRadius: 2 }}
               >
                 Get Started

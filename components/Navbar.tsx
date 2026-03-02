@@ -16,13 +16,12 @@ import {
   MenuItem,
   Drawer,
   List,
-  ListItem,
   ListItemButton,
   ListItemText,
   Divider,
-  Avatar,
   Tooltip,
-  ListItemIcon
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import { 
   Github,
@@ -35,7 +34,6 @@ import {
   FileText,
   Waypoints,
   Settings,
-  LogOut,
   ExternalLink
 } from 'lucide-react';
 import NextLink from 'next/link';
@@ -47,21 +45,38 @@ import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
 
 export const Navbar = () => {
   const pathname = usePathname();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Dropdown states
   const [anchorElProducts, setAnchorElProducts] = useState<null | HTMLElement>(null);
   const [anchorElDevelopers, setAnchorElDevelopers] = useState<null | HTMLElement>(null);
-  const [anchorElDocs, setAnchorElDocs] = useState<null | HTMLElement>(null);
 
   const isActive = (href: string) => pathname === href;
 
   const handleLaunchClick = () => {
-    // Redirect to accounts (accounts subdomain) with source param
     const accountsUrl = getEcosystemUrl('accounts');
+    const authUrl = `${accountsUrl}/login`;
     const sourceUrl = window.location.origin + pathname;
-    window.location.href = `${accountsUrl}/?source=${encodeURIComponent(sourceUrl)}`;
+    const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
+
+    if (isMobile) {
+      window.location.href = targetUrl;
+    } else {
+      const width = 560;
+      const height = 750;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      
+      window.open(
+        targetUrl,
+        'KylrixAccounts',
+        `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+      );
+    }
   };
 
   const navItems = [
@@ -108,250 +123,248 @@ export const Navbar = () => {
   };
 
   return (
-    <AppBar 
-      position="fixed" 
-      sx={{ 
-        bgcolor: 'rgba(5, 5, 5, 0.8)', 
-        backdropFilter: 'blur(20px) saturate(180%)', 
-        boxShadow: 'none', 
-        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-        backgroundImage: 'none',
-        zIndex: (theme) => theme.zIndex.drawer + 1
-      }}
-    >
-      <Container maxWidth="xl">
-        <Toolbar 
-          disableGutters 
-          sx={{ 
-            height: { xs: 72, md: 88 }, 
-            justifyContent: 'space-between'
-          }}
-        >
-          {/* Brand Logo & Name */}
-          <Logo 
-            size={36} 
+    <>
+      <AppBar 
+        position="fixed" 
+        sx={{ 
+          bgcolor: 'rgba(5, 5, 5, 0.8)', 
+          backdropFilter: 'blur(20px) saturate(180%)', 
+          boxShadow: 'none', 
+          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          backgroundImage: 'none',
+          zIndex: (theme) => theme.zIndex.drawer + 1
+        }}
+      >
+        <Container maxWidth="xl">
+          <Toolbar 
+            disableGutters 
             sx={{ 
-              textDecoration: 'none',
-              mr: 4,
-              '&:hover': { opacity: 0.8 }
-            }} 
-            component={NextLink}
-            href="/"
-          />
-          
-          {/* Desktop Navigation */}
-          <Stack 
-            direction="row" 
-            spacing={1} 
-            sx={{ 
-              display: { xs: 'none', md: 'flex' }, 
-              alignItems: 'center',
-              bgcolor: 'rgba(255, 255, 255, 0.03)',
-              px: 1,
-              py: 0.5,
-              borderRadius: '100px',
-              border: '1px solid rgba(255, 255, 255, 0.05)'
+              height: { xs: 72, md: 88 }, 
+              justifyContent: 'space-between'
             }}
           >
-            {navItems.map((item) => (
-              <Box key={item.label}>
-                {item.type === 'dropdown' ? (
-                  <Button
-                    onClick={(e) => item.setAnchorEl(e.currentTarget)}
-                    endIcon={<ChevronDown size={14} style={{ 
-                      transform: Boolean(item.anchorEl) ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 0.2s'
-                    }} />}
-                    sx={{ 
-                      px: 3,
-                      py: 1,
-                      borderRadius: '100px',
-                      fontWeight: 700, 
-                      fontSize: '0.8rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      color: Boolean(item.anchorEl) ? '#00F5FF' : '#fff',
-                      opacity: Boolean(item.anchorEl) ? 1 : 0.5,
-                      '&:hover': { 
-                        opacity: 1, 
-                        color: '#00F5FF',
-                        bgcolor: 'rgba(255, 255, 255, 0.05)'
-                      }
-                    }}
-                  >
-                    {item.label}
-                  </Button>
-                ) : (
-                  <MuiLink
-                    component={NextLink}
-                    href={item.href || '#'}
-                    underline="none"
-                    sx={{ 
-                      px: 3,
-                      py: 1,
-                      display: 'inline-block',
-                      borderRadius: '100px',
-                      fontWeight: 700, 
-                      fontSize: '0.8rem',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.1em',
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      color: isActive(item.href || '') ? '#00F5FF' : '#fff',
-                      opacity: isActive(item.href || '') ? 1 : 0.5,
-                      bgcolor: isActive(item.href || '') ? 'rgba(0, 245, 255, 0.05)' : 'transparent',
-                      '&:hover': { 
-                        opacity: 1, 
-                        color: '#00F5FF',
-                        bgcolor: 'rgba(255, 255, 255, 0.05)'
-                      }
-                    }}
-                  >
-                    {item.label}
-                  </MuiLink>
-                )}
+            <Logo 
+              size={36} 
+              sx={{ 
+                textDecoration: 'none',
+                mr: 4,
+                '&:hover': { opacity: 0.8 }
+              }} 
+              component={NextLink}
+              href="/"
+            />
+            
+            <Stack 
+              direction="row" 
+              spacing={1} 
+              sx={{ 
+                display: { xs: 'none', md: 'flex' }, 
+                alignItems: 'center',
+                bgcolor: 'rgba(255, 255, 255, 0.03)',
+                px: 1,
+                py: 0.5,
+                borderRadius: '100px',
+                border: '1px solid rgba(255, 255, 255, 0.05)'
+              }}
+            >
+              {navItems.map((item) => (
+                <Box key={item.label}>
+                  {item.type === 'dropdown' ? (
+                    <Button
+                      onMouseEnter={(e) => item.setAnchorEl(e.currentTarget)}
+                      onClick={(e) => item.setAnchorEl(e.currentTarget)}
+                      endIcon={<ChevronDown size={14} style={{ 
+                        transform: Boolean(item.anchorEl) ? 'rotate(180deg)' : 'none',
+                        transition: 'transform 0.2s'
+                      }} />}
+                      sx={{ 
+                        px: 3,
+                        py: 1,
+                        borderRadius: '100px',
+                        fontWeight: 700, 
+                        fontSize: '0.8rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        color: Boolean(item.anchorEl) ? '#00F5FF' : '#fff',
+                        opacity: Boolean(item.anchorEl) ? 1 : 0.5,
+                        '&:hover': { 
+                          opacity: 1, 
+                          color: '#00F5FF',
+                          bgcolor: 'rgba(255, 255, 255, 0.05)'
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </Button>
+                  ) : (
+                    <MuiLink
+                      component={NextLink}
+                      href={item.href || '#'}
+                      underline="none"
+                      sx={{ 
+                        px: 3,
+                        py: 1,
+                        display: 'inline-block',
+                        borderRadius: '100px',
+                        fontWeight: 700, 
+                        fontSize: '0.8rem',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        color: isActive(item.href || '') ? '#00F5FF' : '#fff',
+                        opacity: isActive(item.href || '') ? 1 : 0.5,
+                        bgcolor: isActive(item.href || '') ? 'rgba(0, 245, 255, 0.05)' : 'transparent',
+                        '&:hover': { 
+                          opacity: 1, 
+                          color: '#00F5FF',
+                          bgcolor: 'rgba(255, 255, 255, 0.05)'
+                        }
+                      }}
+                    >
+                      {item.label}
+                    </MuiLink>
+                  )}
 
-                {item.type === 'dropdown' && (
-                  <Menu
-                    anchorEl={item.anchorEl}
-                    open={Boolean(item.anchorEl)}
-                    onClose={() => item.setAnchorEl(null)}
-                    elevation={0}
-                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                    transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-                    PaperProps={{
-                      sx: {
-                        mt: 2,
-                        width: 280,
-                        bgcolor: 'rgba(10, 10, 10, 0.95)',
-                        backdropFilter: 'blur(20px) saturate(180%)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '24px',
-                        backgroundImage: 'none',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-                        p: 1
-                      }
-                    }}
-                  >
-                    {item.items?.map((subItem: any) => (
-                      <MenuItem 
-                        key={subItem.label}
-                        onClick={() => {
-                          if (subItem.href.startsWith('http')) {
+                  {item.type === 'dropdown' && (
+                    <Menu
+                      anchorEl={item.anchorEl}
+                      open={Boolean(item.anchorEl)}
+                      onClose={() => item.setAnchorEl(null)}
+                      MenuListProps={{ onMouseLeave: () => item.setAnchorEl(null) }}
+                      elevation={0}
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                      transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+                      PaperProps={{
+                        sx: {
+                          mt: 2,
+                          width: 280,
+                          bgcolor: 'rgba(10, 10, 10, 0.95)',
+                          backdropFilter: 'blur(20px) saturate(180%)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '24px',
+                          backgroundImage: 'none',
+                          boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+                          p: 1
+                        }
+                      }}
+                    >
+                      {item.items?.map((subItem: any) => (
+                        <MenuItem 
+                          key={subItem.label}
+                          onClick={() => {
                             window.location.href = subItem.href;
-                          } else {
-                            // Use next/link navigation for internal links if needed, 
-                            // but here we can just use window.location for simplicity in a landing page
-                            window.location.href = subItem.href;
-                          }
-                          item.setAnchorEl(null);
-                        }}
-                        sx={{ 
-                          borderRadius: '16px',
-                          py: 1.5,
-                          gap: 2,
-                          '&:hover': { 
-                            bgcolor: 'rgba(255, 255, 255, 0.05)',
-                            '& .subitem-icon': { transform: 'scale(1.1)' }
-                          }
-                        }}
-                      >
-                        <Box 
-                          className="subitem-icon"
+                            item.setAnchorEl(null);
+                          }}
                           sx={{ 
-                            width: 36, 
-                            height: 36, 
-                            borderRadius: '10px', 
-                            bgcolor: subItem.color ? alpha(subItem.color, 0.1) : 'rgba(255,255,255,0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            transition: 'transform 0.2s',
-                            color: subItem.color || '#fff'
+                            borderRadius: '16px',
+                            py: 1.5,
+                            gap: 2,
+                            '&:hover': { 
+                              bgcolor: 'rgba(255, 255, 255, 0.05)',
+                              '& .subitem-icon': { transform: 'scale(1.1)' }
+                            }
                           }}
                         >
-                          {renderIcon(subItem.icon, subItem.color)}
-                        </Box>
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>{subItem.label}</Typography>
-                          {subItem.desc && (
-                            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', display: 'block' }}>
-                              {subItem.desc}
-                            </Typography>
-                          )}
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  </Menu>
-                )}
-              </Box>
-            ))}
-          </Stack>
+                          <Box 
+                            className="subitem-icon"
+                            sx={{ 
+                              width: 36, 
+                              height: 36, 
+                              borderRadius: '10px', 
+                              bgcolor: subItem.color ? alpha(subItem.color, 0.1) : 'rgba(255,255,255,0.05)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'transform 0.2s',
+                              color: subItem.color || '#fff'
+                            }}
+                          >
+                            {renderIcon(subItem.icon, subItem.color)}
+                          </Box>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>{subItem.label}</Typography>
+                            {subItem.desc && (
+                              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', display: 'block' }}>
+                                {subItem.desc}
+                              </Typography>
+                            )}
+                          </Box>
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                  )}
+                </Box>
+              ))}
+            </Stack>
 
-          {/* Right Actions */}
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Tooltip title="Ecosystem Portal">
-              <IconButton 
-                onClick={() => setIsEcosystemPortalOpen(true)}
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Tooltip title="Ecosystem Portal">
+                <IconButton 
+                  onClick={() => setIsEcosystemPortalOpen(true)}
+                  sx={{ 
+                    color: '#00F5FF',
+                    bgcolor: 'rgba(0, 245, 255, 0.05)',
+                    border: '1px solid rgba(0, 245, 255, 0.1)',
+                    borderRadius: '12px',
+                    width: 42,
+                    height: 42,
+                    transition: 'all 0.3s',
+                    '&:hover': { 
+                      bgcolor: 'rgba(0, 245, 255, 0.1)', 
+                      boxShadow: '0 0 15px rgba(0, 245, 255, 0.2)',
+                      borderColor: '#00F5FF'
+                    },
+                    display: { xs: 'none', sm: 'flex' }
+                  }}
+                >
+                  <LayoutGrid size={20} strokeWidth={1.5} />
+                </IconButton>
+              </Tooltip>
+
+              <Button 
+                variant="contained" 
+                color="primary" 
+                onClick={handleLaunchClick}
                 sx={{ 
-                  color: '#00F5FF',
-                  bgcolor: 'rgba(0, 245, 255, 0.05)',
-                  border: '1px solid rgba(0, 245, 255, 0.1)',
+                  borderRadius: '12px', 
+                  px: { xs: 2, md: 4 },
+                  py: 1,
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  textTransform: 'none',
+                  boxShadow: '0 4px 15px rgba(0, 245, 255, 0.2)',
+                  '&:hover': {
+                    boxShadow: '0 6px 20px rgba(0, 245, 255, 0.4)'
+                  }
+                }}
+              >
+                Launch
+              </Button>
+
+              <IconButton 
+                onClick={() => setMobileMenuOpen(true)}
+                sx={{ 
+                  display: { xs: 'flex', md: 'none' },
+                  color: 'white',
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
                   borderRadius: '12px',
                   width: 42,
                   height: 42,
-                  transition: 'all 0.3s',
-                  '&:hover': { 
-                    bgcolor: 'rgba(0, 245, 255, 0.1)', 
-                    boxShadow: '0 0 15px rgba(0, 245, 255, 0.2)',
-                    borderColor: '#00F5FF'
-                  },
-                  display: { xs: 'none', sm: 'flex' }
+                  zIndex: 2000 // Ensure it's clickable
                 }}
               >
-                <LayoutGrid size={20} strokeWidth={1.5} />
+                <MenuIcon size={24} />
               </IconButton>
-            </Tooltip>
+            </Stack>
+          </Toolbar>
+        </Container>
+      </AppBar>
 
-            <Button 
-              variant="contained" 
-              color="primary" 
-              onClick={handleLaunchClick}
-              sx={{ 
-                borderRadius: '12px', 
-                px: { xs: 2, md: 4 },
-                py: 1,
-                fontWeight: 800,
-                fontSize: '0.85rem',
-                textTransform: 'none',
-                boxShadow: '0 4px 15px rgba(0, 245, 255, 0.2)',
-                '&:hover': {
-                  boxShadow: '0 6px 20px rgba(0, 245, 255, 0.4)'
-                }
-              }}
-            >
-              Launch
-            </Button>
-
-            <IconButton 
-              onClick={() => setMobileMenuOpen(true)}
-              sx={{ 
-                display: { xs: 'flex', md: 'none' },
-                color: 'white',
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '12px'
-              }}
-            >
-              <MenuIcon />
-            </IconButton>
-          </Stack>
-        </Toolbar>
-      </Container>
-
-      {/* Mobile Drawer */}
       <Drawer
         anchor="right"
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        sx={{ zIndex: (theme) => theme.zIndex.drawer + 2 }}
         PaperProps={{
           sx: {
             width: '100%',
@@ -373,7 +386,7 @@ export const Navbar = () => {
 
           <List sx={{ gap: 1, display: 'flex', flexDirection: 'column' }}>
             {navItems.map((item) => (
-              <Box key={item.label}>
+              <Box key={item.label} sx={{ mb: 2 }}>
                 <Typography 
                   variant="caption" 
                   sx={{ 
@@ -390,7 +403,7 @@ export const Navbar = () => {
                 </Typography>
                 
                 {item.type === 'dropdown' ? (
-                  <Stack spacing={0.5} sx={{ mb: 3 }}>
+                  <Stack spacing={0.5}>
                     {item.items?.map((subItem: any) => (
                       <ListItemButton 
                         key={subItem.label}
@@ -405,14 +418,14 @@ export const Navbar = () => {
                           bgcolor: 'rgba(255, 255, 255, 0.02)'
                         }}
                       >
-                        <Box sx={{ color: subItem.color || '#00F5FF' }}>
+                        <Box sx={{ color: subItem.color || '#00F5FF', display: 'flex' }}>
                           {renderIcon(subItem.icon)}
                         </Box>
                         <ListItemText 
                           primary={subItem.label} 
-                          primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
+                          primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem', color: 'white' }}
                           secondary={subItem.desc}
-                          secondaryTypographyProps={{ fontSize: '0.7rem', opacity: 0.5 }}
+                          secondaryTypographyProps={{ fontSize: '0.7rem', opacity: 0.5, color: 'white' }}
                         />
                       </ListItemButton>
                     ))}
@@ -425,7 +438,6 @@ export const Navbar = () => {
                     }}
                     sx={{ 
                       borderRadius: '12px',
-                      mb: 3,
                       bgcolor: isActive(item.href || '') ? 'rgba(0, 245, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)',
                       border: isActive(item.href || '') ? '1px solid rgba(0, 245, 255, 0.2)' : '1px solid transparent'
                     }}
@@ -437,7 +449,7 @@ export const Navbar = () => {
                         color: isActive(item.href || '') ? '#00F5FF' : 'white' 
                       }} 
                     />
-                    <ExternalLink size={14} style={{ opacity: 0.3 }} />
+                    <ExternalLink size={14} style={{ opacity: 0.3, color: 'white' }} />
                   </ListItemButton>
                 )}
               </Box>
@@ -465,13 +477,16 @@ export const Navbar = () => {
             <IconButton sx={{ color: 'rgba(255, 255, 255, 0.4)' }} component="a" href="https://github.com/kylrix">
               <Github size={24} />
             </IconButton>
-            <IconButton sx={{ color: 'rgba(255, 255, 255, 0.4)' }} onClick={() => {
-              setIsEcosystemPortalOpen(true);
-              setMobileMenuOpen(false);
-            }}>
+            <IconButton 
+              sx={{ color: 'rgba(255, 255, 255, 0.4)' }} 
+              onClick={() => {
+                setIsEcosystemPortalOpen(true);
+                setMobileMenuOpen(false);
+              }}
+            >
               <LayoutGrid size={24} />
             </IconButton>
-          </Stack>
+          </Box>
         </Box>
       </Drawer>
 
@@ -479,7 +494,7 @@ export const Navbar = () => {
         open={isEcosystemPortalOpen} 
         onClose={() => setIsEcosystemPortalOpen(false)} 
       />
-    </AppBar>
+    </>
   );
 };
 
