@@ -29,6 +29,7 @@ const LogoContainer = styled(Box)({
   alignItems: 'center',
   gap: '12px',
   transition: 'all 0.3s ease',
+  textDecoration: 'none'
 });
 
 const Logo: React.FC<LogoProps> = ({ 
@@ -39,30 +40,30 @@ const Logo: React.FC<LogoProps> = ({
   component,
   href
 }) => {
-  // App-specific configurations
+  // CHROMODYNAMICS: Ecosystem Root (Cyan) blends into App Specific Hue
   const configs = {
     root: {
-      color1: "#00F5FF", color2: "#00A3FF",
+      color1: "#00F5FF", color2: "#00A3FF", // Neon Cyan to Blue
       name: "KYLRIX",
       desc: "Ecosystem Hub"
     },
     vault: {
-      color1: "#00F5FF", color2: "#222222",
+      color1: "#00F5FF", color2: "#3B82F6", // Cyan to Glacier Steel
       name: "VAULT",
       desc: "Zero-Knowledge Storage"
     },
     flow: {
-      color1: "#00FF94", color2: "#00B2FF",
+      color1: "#00F5FF", color2: "#00FF94", // Cyan to Cyber Lime
       name: "FLOW",
       desc: "AI Orchestration"
     },
     note: {
-      color1: "#6366F1", color2: "#A855F7",
+      color1: "#00F5FF", color2: "#A855F7", // Cyan to Amethyst Purple
       name: "NOTE",
       desc: "Structured Intelligence"
     },
     connect: {
-      color1: "#F43F5E", color2: "#FB923C",
+      color1: "#00F5FF", color2: "#F43F5E", // Cyan to Electric Rose
       name: "CONNECT",
       desc: "P2P Encryption"
     }
@@ -102,13 +103,13 @@ const Logo: React.FC<LogoProps> = ({
           </filter>
         </defs>
 
-        {/* VAULT: Solid Spine + Enveloping Chevron */}
+        {/* VAULT: Monolith + Protected Shell */}
         {app === 'vault' && (
           <>
             <rect x="25" y="15" width="12" height="70" rx="4" fill={`url(#grad-${app})`} />
             <path
               d="M75 15L45 50L75 85"
-              stroke={`url(#grad-${app})`}
+              stroke={current.color2}
               strokeWidth="10"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -116,7 +117,7 @@ const Logo: React.FC<LogoProps> = ({
             />
             <path
               d="M85 25L55 50L85 75"
-              stroke={`url(#grad-${app})`}
+              stroke={current.color1}
               strokeWidth="4"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -125,10 +126,10 @@ const Logo: React.FC<LogoProps> = ({
           </>
         )}
 
-        {/* FLOW: Double-Chevron Movement */}
+        {/* FLOW: Kinetic Orchestration */}
         {app === 'flow' && (
           <>
-            <path d="M30 20V80" stroke={`url(#grad-${app})`} strokeWidth="8" strokeLinecap="round" />
+            <path d="M30 20V80" stroke={current.color1} strokeWidth="8" strokeLinecap="round" />
             <path
               d="M70 20L35 50L70 80"
               stroke={`url(#grad-${app})`}
@@ -140,7 +141,7 @@ const Logo: React.FC<LogoProps> = ({
             />
             <path
               d="M85 30L60 50L85 70"
-              stroke={`url(#grad-${app})`}
+              stroke={current.color2}
               strokeWidth="4"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -149,32 +150,31 @@ const Logo: React.FC<LogoProps> = ({
           </>
         )}
 
-        {/* NOTE: Segmented Structure */}
+        {/* NOTE: Synthesis Blocks */}
         {app === 'note' && (
           <>
-            <path d="M30 20V45M30 55V80" stroke={`url(#grad-${app})`} strokeWidth="10" strokeLinecap="round" />
-            <path d="M70 20L50 37" stroke={`url(#grad-${app})`} strokeWidth="8" strokeLinecap="round" />
+            <path d="M30 20V45M30 55V80" stroke={current.color1} strokeWidth="10" strokeLinecap="round" />
+            <path d="M70 20L50 37" stroke={current.color2} strokeWidth="8" strokeLinecap="round" />
             <path d="M35 50L55 67L75 84" stroke={`url(#grad-${app})`} strokeWidth="8" strokeLinecap="round" />
             <circle cx="30" cy="50" r="4" fill={current.color1} />
             <circle cx="70" cy="20" r="4" fill={current.color2} />
-            <circle cx="75" cy="84" r="4" fill={current.color2} />
           </>
         )}
 
-        {/* CONNECT: Nodes and Signal Pulses */}
+        {/* CONNECT: Radiant Signal Center */}
         {app === 'connect' && (
           <>
-            <path d="M30 20V80" stroke={`url(#grad-${app})`} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
-            <path d="M70 20L35 50L70 80" stroke={`url(#grad-${app})`} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
-            <circle cx="30" cy="20" r="8" fill={`url(#grad-${app})`} filter="url(#glow-heavy)" />
-            <circle cx="30" cy="80" r="8" fill={`url(#grad-${app})`} filter="url(#glow-heavy)" />
-            <circle cx="70" cy="20" r="8" fill={`url(#grad-${app})`} filter="url(#glow-heavy)" />
-            <circle cx="70" cy="80" r="8" fill={`url(#grad-${app})`} filter="url(#glow-heavy)" />
+            <path d="M30 20V80" stroke={current.color1} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
+            <path d="M70 20L35 50L70 80" stroke={current.color2} strokeWidth="6" strokeLinecap="round" opacity="0.3" />
+            <circle cx="30" cy="20" r="8" fill={current.color1} filter="url(#glow-heavy)" />
+            <circle cx="30" cy="80" r="8" fill={current.color1} filter="url(#glow-heavy)" />
+            <circle cx="70" cy="20" r="8" fill={current.color2} filter="url(#glow-heavy)" />
+            <circle cx="70" cy="80" r="8" fill={current.color2} filter="url(#glow-heavy)" />
             <circle cx="35" cy="50" r="12" fill="#fff" filter="url(#glow-heavy)" />
           </>
         )}
 
-        {/* ROOT: Standard High-Fidelity K */}
+        {/* ROOT: High-Fidelity K */}
         {app === 'root' && (
           <g filter="url(#grain)">
             <path d="M30 20V80" stroke={`url(#grad-${app})`} strokeWidth="10" strokeLinecap="round" />
@@ -206,7 +206,8 @@ const Logo: React.FC<LogoProps> = ({
           <Typography 
             sx={{ 
               fontSize: `${size * 0.25}px`, 
-              opacity: 0.4, 
+              color: current.color2,
+              opacity: 0.8, 
               fontWeight: 700, 
               letterSpacing: '0.1em',
               textTransform: 'uppercase'
