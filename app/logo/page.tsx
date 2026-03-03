@@ -40,11 +40,11 @@ export default function LogoPage() {
                   }}>
                     <Logo app={app} size={80} />
                     <Box sx={{ mt: 4, opacity: 0.5, fontSize: '0.9rem', lineHeight: 1.6 }}>
-                      {app === 'root' && "The structural baseline. Precise, balanced, and high-fidelity."}
-                      {app === 'vault' && "Focuses on density. The spine becomes a monolith, protected by an outer shell."}
-                      {app === 'flow' && "Emphasizes movement. Kinetic chevrons and energy paths define orchestration."}
-                      {app === 'note' && "Structured intelligence. Geometry broken into logic blocks and data points."}
-                      {app === 'connect' && "Radiant connectivity. Nodes expanded into signal centers with active glow filters."}
+                      {app === 'root' && "The core of the Kylrix design system."}
+                      {app === 'vault' && "Secure and dense storage for your most sensitive data."}
+                      {app === 'flow' && "Visualizing the movement of your tasks and workflows."}
+                      {app === 'note' && "Organizing your thoughts into structured knowledge."}
+                      {app === 'connect' && "Connecting you to your team and your other apps."}
                     </Box>
                   </Paper>
                 </Grid>

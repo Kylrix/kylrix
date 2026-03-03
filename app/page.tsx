@@ -164,7 +164,7 @@ export default function LandingPage() {
                   fontSize: { xs: '0.75rem', md: '0.875rem' }
                 }}
               >
-                Architecture of Digital Intelligence
+                Your Secure Digital Workspace
               </Typography>
               <Typography 
                 variant="h1" 
@@ -174,8 +174,8 @@ export default function LandingPage() {
                   fontSize: { xs: '3rem', md: '5.5rem' }
                 }}
               >
-                Software for the <br /> 
-                <Box component="span" sx={{ color: '#00F5FF' }}>Private Era.</Box>
+                Secure. <br /> 
+                <Box component="span" sx={{ color: '#00F5FF' }}>Private. Fast.</Box>
               </Typography>
               <Typography 
                 variant="subtitle1" 
@@ -187,8 +187,7 @@ export default function LandingPage() {
                   lineHeight: 1.6
                 }}
               >
-                A premium ecosystem of secure, AI-driven applications engineered 
-                for absolute performance, zero-knowledge privacy, and precision.
+                A suite of secure, private, and fast apps for your work and life.
               </Typography>
             </Box>
 
@@ -221,7 +220,7 @@ export default function LandingPage() {
         <Container maxWidth="xl">
           <Stack spacing={4} mb={15} textAlign="center">
             <Typography variant="subtitle2" sx={{ color: '#00F5FF', fontWeight: 900 }}>THE FLAGSHIPS</Typography>
-            <Typography variant="h2" sx={{ fontWeight: 900 }}>Ecosystem of Precision.</Typography>
+            <Typography variant="h2" sx={{ fontWeight: 900 }}>Your Workspace.</Typography>
           </Stack>
 
           <Grid container spacing={4}>
@@ -244,15 +243,15 @@ export default function LandingPage() {
                   <Typography variant="subtitle2" sx={{ mb: 4, color: '#00F5FF', fontWeight: 900 }}>INFRASTRUCTURE</Typography>
                   <Typography variant="h2" sx={{ mb: 4, fontWeight: 900 }}>Secure by Design. <br />Private by Default.</Typography>
                   <Typography variant="body1" sx={{ opacity: 0.5, maxWidth: 600, fontSize: '1.25rem' }}>
-                    Every Kylrix application is built on our proprietary infrastructure layer, ensuring your data never leaves your control.
+                    Every Kylrix application is built on our own secure infrastructure, so your data stays yours.
                   </Typography>
                 </Box>
                 
                 <Stack spacing={6}>
                   {[
-                    { icon: Fingerprint, title: 'Zero-Knowledge', desc: 'Local encryption ensures only you have access to your data.', color: '#ef4444' },
-                    { icon: Layers, title: 'Modular Systems', desc: 'Built for developers to extend and integrate seamlessly.', color: '#00F5FF' },
-                    { icon: Cpu, title: 'Edge Intelligence', desc: 'Real-time local AI processing for maximum performance.', color: '#10b981' }
+                    { icon: Fingerprint, title: 'Private', desc: 'Local encryption means only you can see your data.', color: '#ef4444' },
+                    { icon: Layers, title: 'Extensible', desc: 'Built for developers to build on top of.', color: '#00F5FF' },
+                    { icon: Cpu, title: 'Local AI', desc: 'Fast, private AI that runs on your device.', color: '#10b981' }
                   ].map((f, i) => (
                     <Stack key={i} direction="row" spacing={4}>
                       <Box sx={{ color: f.color, pt: 1 }}>
@@ -289,9 +288,9 @@ export default function LandingPage() {
                   <Typography variant="h2" sx={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 400, opacity: 0.9 }}>
                     <Box component="span" sx={{ color: '#00F5FF' }}>$</Box> kylrix initialize <br />
                     <Box component="span" sx={{ opacity: 0.3 }}>
-                      &gt; Secure Tunnel Established.<br />
-                      &gt; P2P Handshake Success.<br />
-                      &gt; Ecosystem Syncing...
+                      &gt; Secure Connection Established.<br />
+                      &gt; Connection Successful.<br />
+                      &gt; Syncing your data...
                     </Box>
                   </Typography>
                   <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
