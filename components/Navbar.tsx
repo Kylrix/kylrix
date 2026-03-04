@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Container, 
@@ -21,7 +21,9 @@ import {
   Divider,
   Tooltip,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  Avatar,
+  ListItemIcon
 } from '@mui/material';
 import { 
   Github,
@@ -34,19 +36,26 @@ import {
   FileText,
   Waypoints,
   Settings,
-  ExternalLink
+  ExternalLink,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import NextLink from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import Logo from './Logo';
 import EcosystemPortal from './EcosystemPortal';
-import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
+import { ECOSYSTEM_APPS, getEcosystemUrl, KYLRIX_AUTH_URI } from '@/lib/ecosystem';
+import { useAuth } from '@/context/auth/AuthContext';
+import { getUserProfilePicId } from '@/lib/utils';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePreview';
 
 export const Navbar = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user, isAuthenticated, logout, openIDMWindow } = useAuth();
   
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -54,28 +63,39 @@ export const Navbar = () => {
   // Dropdown states
   const [anchorElProducts, setAnchorElProducts] = useState<null | HTMLElement>(null);
   const [anchorElDevelopers, setAnchorElDevelopers] = useState<null | HTMLElement>(null);
+  const [anchorElAccount, setAnchorElAccount] = useState<null | HTMLElement>(null);
+
+  const [profileUrl, setProfileUrl] = useState<string | null>(null);
+  const profilePicId = getUserProfilePicId(user);
+
+  useEffect(() => {
+    let mounted = true;
+    const cached = getCachedProfilePreview(profilePicId);
+    if (cached !== undefined) setProfileUrl(cached);
+
+    const loadProfile = async () => {
+      if (profilePicId) {
+        const url = await fetchProfilePreview(profilePicId);
+        if (mounted) setProfileUrl(url);
+      }
+    };
+    loadProfile();
+    return () => { mounted = false; };
+  }, [profilePicId]);
 
   const isActive = (href: string) => pathname === href;
 
   const handleLaunchClick = () => {
-    const authUrl = `https://accounts.kylrix.space/login`;
-    const sourceUrl = window.location.origin + pathname;
-    const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
-
-    if (isMobile) {
-      window.location.assign(targetUrl);
+    if (isAuthenticated) {
+      router.push(getEcosystemUrl('note'));
     } else {
-      const width = 560;
-      const height = 750;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      window.open(
-        targetUrl,
-        'KylrixAccounts',
-        `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
-      );
+      openIDMWindow();
     }
+  };
+
+  const handleLogout = async () => {
+    setAnchorElAccount(null);
+    await logout();
   };
 
   const navItems = [
@@ -321,25 +341,107 @@ export const Navbar = () => {
                 </IconButton>
               </Tooltip>
 
-              <Button 
-                variant="contained" 
-                color="primary" 
-                onClick={handleLaunchClick}
-                sx={{ 
-                  borderRadius: '12px', 
-                  px: { xs: 2, md: 4 },
-                  py: 1,
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  textTransform: 'none',
-                  boxShadow: '0 4px 15px rgba(0, 245, 255, 0.2)',
-                  '&:hover': {
-                    boxShadow: '0 6px 20px rgba(0, 245, 255, 0.4)'
-                  }
-                }}
-              >
-                Launch
-              </Button>
+              {isAuthenticated ? (
+                <>
+                  <IconButton 
+                    onClick={(e) => setAnchorElAccount(e.currentTarget)}
+                    sx={{ 
+                      p: 0.5,
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      borderRadius: '14px',
+                      bgcolor: 'rgba(255, 255, 255, 0.03)',
+                      '&:hover': { borderColor: 'rgba(0, 245, 255, 0.3)', bgcolor: 'rgba(255, 255, 255, 0.05)' },
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <Avatar 
+                      src={profileUrl || undefined}
+                      sx={{ 
+                        width: 34, 
+                        height: 34, 
+                        bgcolor: '#050505',
+                        fontSize: '0.875rem',
+                        fontWeight: 800,
+                        color: '#00F5FF',
+                        borderRadius: '10px',
+                        fontFamily: 'JetBrains Mono'
+                      }}
+                    >
+                      {user?.name ? user.name[0].toUpperCase() : 'U'}
+                    </Avatar>
+                  </IconButton>
+
+                  <Menu
+                    anchorEl={anchorElAccount}
+                    open={Boolean(anchorElAccount)}
+                    onClose={() => setAnchorElAccount(null)}
+                    PaperProps={{
+                      sx: {
+                        mt: 2,
+                        width: 280,
+                        bgcolor: 'rgba(5, 5, 5, 0.05)',
+                        backdropFilter: 'blur(35px) saturate(180%)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '28px',
+                        backgroundImage: 'none',
+                        boxShadow: '0 25px 50px rgba(0,0,0,0.7)',
+                        p: 1,
+                        color: 'white'
+                      }
+                    }}
+                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                  >
+                    <Box sx={{ px: 2.5, py: 2.5, bgcolor: 'rgba(255, 255, 255, 0.02)', borderRadius: '20px', mb: 1 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255, 255, 255, 0.3)', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'JetBrains Mono' }}>
+                        Identity
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mt: 1 }}>
+                        {user?.name || user?.email}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', display: 'block', mt: 0.5, fontFamily: 'JetBrains Mono', fontSize: '0.65rem' }}>
+                        {user?.email}
+                      </Typography>
+                    </Box>
+                    <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)', my: 1 }} />
+                    <MenuItem 
+                      onClick={() => {
+                        window.location.href = `${KYLRIX_AUTH_URI}/settings?source=${encodeURIComponent(window.location.origin)}`;
+                        setAnchorElAccount(null);
+                      }}
+                      sx={{ py: 1.8, px: 2.5, borderRadius: '16px', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.03)' } }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 40 }}><Settings size={18} strokeWidth={1.5} color="rgba(255, 255, 255, 0.6)" /></ListItemIcon>
+                      <ListItemText primary="Account Settings" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
+                    </MenuItem>
+                    <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)', my: 1 }} />
+                    <MenuItem onClick={handleLogout} sx={{ py: 2, px: 2.5, borderRadius: '16px', color: '#FF4D4D', '&:hover': { bgcolor: alpha('#FF4D4D', 0.05) } }}>
+                      <ListItemIcon sx={{ minWidth: 40 }}><LogOut size={18} strokeWidth={1.5} color="#FF4D4D" /></ListItemIcon>
+                      <ListItemText primary="Disconnect Session" primaryTypographyProps={{ variant: 'body2', fontWeight: 800 }} />
+                    </MenuItem>
+                  </Menu>
+                </>
+              ) : (
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  onClick={handleLaunchClick}
+                  sx={{ 
+                    borderRadius: '12px', 
+                    px: { xs: 2, md: 4 },
+                    py: 1,
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    textTransform: 'none',
+                    boxShadow: '0 4px 15px rgba(0, 245, 255, 0.2)',
+                    '&:hover': {
+                      boxShadow: '0 6px 20px rgba(0, 245, 255, 0.4)'
+                    }
+                  }}
+                >
+                  Launch
+                </Button>
+              )}
 
               <IconButton 
                 onClick={() => setMobileMenuOpen(true)}
@@ -458,20 +560,78 @@ export const Navbar = () => {
 
           <Divider sx={{ my: 4, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
           
-          <Button 
-            fullWidth 
-            variant="contained" 
-            size="large"
-            onClick={handleLaunchClick}
-            sx={{ 
-              py: 2, 
-              borderRadius: '16px',
-              fontWeight: 900,
-              boxShadow: '0 8px 24px rgba(0, 245, 255, 0.2)'
-            }}
-          >
-            Launch Ecosystem
-          </Button>
+          {isAuthenticated ? (
+            <ListItemButton 
+              onClick={() => {
+                router.push(getEcosystemUrl('note'));
+                setMobileMenuOpen(false);
+              }}
+              sx={{ 
+                borderRadius: '12px',
+                bgcolor: 'rgba(0, 245, 255, 0.05)',
+                border: '1px solid rgba(0, 245, 255, 0.2)',
+                mb: 2
+              }}
+            >
+              <Avatar 
+                src={profileUrl || undefined}
+                sx={{ 
+                  width: 32, 
+                  height: 32, 
+                  mr: 2,
+                  bgcolor: '#050505',
+                  color: '#00F5FF',
+                  borderRadius: '8px',
+                  fontFamily: 'JetBrains Mono',
+                  fontSize: '0.8rem'
+                }}
+              >
+                {user?.name ? user.name[0].toUpperCase() : 'U'}
+              </Avatar>
+              <ListItemText 
+                primary={user?.name || 'User'} 
+                primaryTypographyProps={{ fontWeight: 700, color: '#00F5FF' }} 
+              />
+            </ListItemButton>
+          ) : (
+            <Button 
+              fullWidth 
+              variant="contained" 
+              size="large"
+              onClick={handleLaunchClick}
+              sx={{ 
+                py: 2, 
+                borderRadius: '16px',
+                fontWeight: 900,
+                boxShadow: '0 8px 24px rgba(0, 245, 255, 0.2)',
+                mb: 4
+              }}
+            >
+              Launch Ecosystem
+            </Button>
+          )}
+
+          {isAuthenticated && (
+            <Button 
+              fullWidth 
+              variant="outlined" 
+              onClick={handleLogout}
+              startIcon={<LogOut size={18} />}
+              sx={{ 
+                py: 1.5, 
+                borderRadius: '12px',
+                color: '#FF4D4D',
+                borderColor: 'rgba(255, 77, 77, 0.2)',
+                fontWeight: 700,
+                '&:hover': {
+                  borderColor: '#FF4D4D',
+                  bgcolor: 'rgba(255, 77, 77, 0.05)'
+                }
+              }}
+            >
+              Disconnect
+            </Button>
+          )}
           
           <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center', gap: 3 }}>
             <IconButton sx={{ color: 'rgba(255, 255, 255, 0.4)' }} component="a" href="https://github.com/kylrix">
