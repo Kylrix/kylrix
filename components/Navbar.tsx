@@ -126,8 +126,8 @@ export const Navbar = () => {
       <AppBar 
         position="fixed" 
         sx={{ 
-          bgcolor: 'rgba(5, 5, 5, 0.8)', 
-          backdropFilter: 'blur(20px) saturate(180%)', 
+          bgcolor: 'rgba(5, 5, 5, 0.01)', 
+          backdropFilter: 'blur(25px) saturate(180%)', 
           boxShadow: 'none', 
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           backgroundImage: 'none',
@@ -139,7 +139,8 @@ export const Navbar = () => {
             disableGutters 
             sx={{ 
               height: { xs: 72, md: 88 }, 
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              px: { xs: 0, md: 2 }
             }}
           >
             <Logo 
