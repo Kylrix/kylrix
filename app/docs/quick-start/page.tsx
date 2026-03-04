@@ -1,94 +1,129 @@
 'use client';
 
 import React from 'react';
-import { Box, Container, Typography, Stack, Divider, Paper, Button } from '@mui/material';
-import { Terminal, CheckCircle2, ArrowRight, Rocket } from 'lucide-react';
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  Stack, 
+  Divider, 
+  Paper, 
+  Button,
+  Grid,
+  alpha,
+  useTheme
+} from '@mui/material';
+import { Terminal, CheckCircle2, ArrowRight, Rocket, Code2, ShieldCheck, Zap } from 'lucide-react';
 import Navbar from '@/components/Navbar';
+import DocsSidebar from '@/components/layout/DocsSidebar';
+import { CodeBlock, LanguageSwitcher } from '@/components/ui/DocsUI';
 import NextLink from 'next/link';
 
 export default function QuickStartPage() {
-  const steps = [
-    {
-      title: 'Initialize your project',
-      desc: 'Create a new project using your preferred framework and install the Kylrix SDK.',
-      cmd: 'pnpm add @kylrix/sdk'
-    },
-    {
-      title: 'Configure Identity',
-      desc: 'Set up your Appwrite endpoint and project ID to connect to the Kylrix Root of Trust.',
-      cmd: "const sdk = new Kylrix({ endpoint: '...', project: '...' });"
-    },
-    {
-      title: 'Authenticate',
-      desc: 'Use WebAuthn or standard sessions to authenticate your users across the ecosystem.',
-      cmd: "await sdk.account.createOAuth2Session('kylrix');"
-    }
-  ];
+  const theme = useTheme();
 
   return (
-    <Box component="main" sx={{ pt: 12 }}>
+    <Box component="main" sx={{ pt: { xs: 8, md: 10 } }}>
       <Navbar />
       <div className="bg-mesh" />
       
-      <Box sx={{ py: { xs: 5, md: 10 }, pb: 20 }}>
+      <DocsSidebar />
+      
+      <Box sx={{ ml: { xs: 0, md: '300px' }, pt: { xs: 8, md: 12 }, pb: 20 }}>
         <Container maxWidth="lg">
-          <Stack spacing={6}>
+          <Stack spacing={8} sx={{ px: { xs: 2, md: 8 } }}>
+            {/* Hero Section */}
             <Box>
               <Typography variant="subtitle2" sx={{ color: '#6366F1', mb: 3, fontWeight: 900, letterSpacing: '0.3em' }}>GETTING STARTED</Typography>
-              <Typography variant="h1" sx={{ mb: 2, fontWeight: 900, fontSize: { xs: '2.5rem', md: '4rem' } }}>Quick Start Guide</Typography>
-              <Typography variant="subtitle1" sx={{ maxWidth: 800, opacity: 0.6 }}>
-                Get up and running with the Kylrix Ecosystem in less than 5 minutes.
+              <Typography variant="h1" sx={{ mb: 2, fontWeight: 900, fontSize: { xs: '2.5rem', md: '4rem' } }}>Quick Start</Typography>
+              <Typography variant="subtitle1" sx={{ maxWidth: 800, opacity: 0.6, fontSize: '1.25rem' }}>
+                Integrate the Kylrix Ecosystem into your application in minutes.
               </Typography>
             </Box>
 
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+            <Divider sx={{ borderColor: alpha(theme.palette.text.primary, 0.05) }} />
 
-            <Stack spacing={4}>
-              {steps.map((step, i) => (
-                <Box key={i}>
-                  <Stack direction="row" spacing={3} alignItems="center" sx={{ mb: 2 }}>
-                    <Box sx={{ 
-                      width: 32, 
-                      height: 32, 
-                      borderRadius: '50%', 
-                      bgcolor: 'rgba(99, 102, 241, 0.1)', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      color: '#6366F1',
-                      fontWeight: 900,
-                      fontSize: '0.8rem',
-                      border: '1px solid rgba(99, 102, 241, 0.2)'
-                    }}>
-                      {i + 1}
-                    </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 800 }}>{step.title}</Typography>
-                  </Stack>
-                  <Typography variant="body2" sx={{ mb: 2, opacity: 0.6, ml: 7 }}>{step.desc}</Typography>
-                  <Paper sx={{ p: 3, ml: 7, bgcolor: 'rgba(0,0,0,0.3)', borderRadius: 2, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                    <Stack direction="row" spacing={2} alignItems="center">
-                      <Terminal size={16} color="#6366F1" />
-                      <Typography variant="body2" sx={{ fontFamily: 'JetBrains Mono', color: '#F2F2F2', fontSize: '0.85rem' }}>
-                        {step.cmd}
-                      </Typography>
-                    </Stack>
-                  </Paper>
-                </Box>
-              ))}
+            {/* Language Selection */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={4} sx={{ flexWrap: 'wrap', gap: 2 }}>
+              <Box>
+                <Typography variant="h4" sx={{ mb: 1, fontWeight: 800 }}>Installation</Typography>
+                <Typography variant="body2" sx={{ opacity: 0.5 }}>Choose your platform to get started.</Typography>
+              </Box>
+              <LanguageSwitcher />
             </Stack>
 
-            <Box sx={{ mt: 6, p: 6, bgcolor: 'rgba(99, 102, 241, 0.03)', borderRadius: 4, border: '1px solid rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
-               <Rocket size={48} color="#6366F1" style={{ marginBottom: '24px' }} />
-               <Typography variant="h3" sx={{ mb: 2, fontWeight: 900 }}>You're all set!</Typography>
-               <Typography variant="body1" sx={{ mb: 4, opacity: 0.6 }}>Now explore the Core Systems to see what you can build.</Typography>
+            {/* Install Commands */}
+            <CodeBlock 
+              languages={{
+                typescript: 'pnpm add @kylrix/sdk',
+                go: 'go get github.com/kylrix/sdks-go',
+                python: 'pip install kylrix-sdk',
+                dart: 'dart pub add kylrix_sdk'
+              }}
+            />
+
+            <Divider sx={{ borderColor: alpha(theme.palette.text.primary, 0.05) }} />
+
+            {/* Next Steps */}
+            <Box>
+              <Typography variant="h2" sx={{ mb: 6, fontWeight: 900 }}>Initial Setup</Typography>
+              <Stack spacing={6}>
+                {[
+                  {
+                    title: 'Initialize Client',
+                    desc: 'Create an instance of the Kylrix client with your project credentials.',
+                    code: {
+                      typescript: "import { Kylrix } from '@kylrix/sdk';\n\nconst sdk = new Kylrix({\n  endpoint: 'https://cloud.appwrite.io/v1',\n  project: 'your-project-id'\n});",
+                      go: "import \"github.com/kylrix/sdks-go/pkg/kylrix\"\n\nsdk := kylrix.NewClient(kylrix.Config{\n  Endpoint: \"https://cloud.appwrite.io/v1\",\n  Project: \"your-project-id\",\n})",
+                      python: "from kylrix.client import Kylrix\n\nsdk = Kylrix(\n  endpoint=\"https://cloud.appwrite.io/v1\",\n  project=\"your-project-id\"\n)",
+                      dart: "import 'package:kylrix_sdk/kylrix_sdk.dart';\n\nfinal sdk = Kylrix(\n  endpoint: 'https://cloud.appwrite.io/v1',\n  project: 'your-project-id'\n);"
+                    }
+                  },
+                  {
+                    title: 'Authentication',
+                    desc: 'Log in your user to access the private ecosystem.',
+                    code: {
+                      typescript: "await sdk.account.createOAuth2Session('kylrix');",
+                      go: "// See full auth guide for platform specifics\nerr := sdk.Account.CreateOAuth2Session(\"kylrix\", \"\", \"\", nil)",
+                      python: "sdk.account.create_oauth2_session('kylrix')",
+                      dart: "await sdk.account.createOAuth2Session(provider: 'kylrix');"
+                    }
+                  }
+                ].map((step, i) => (
+                  <Box key={i}>
+                    <Stack direction="row" spacing={3} sx={{ mb: 3 }}>
+                      <Box sx={{ 
+                        width: 36, height: 36, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366F1', fontWeight: 900
+                      }}>
+                        {i + 1}
+                      </Box>
+                      <Box>
+                        <Typography variant="h4" sx={{ mb: 1, fontWeight: 800 }}>{step.title}</Typography>
+                        <Typography variant="body2" sx={{ opacity: 0.6 }}>{step.desc}</Typography>
+                      </Box>
+                    </Stack>
+                    <CodeBlock languages={step.code} />
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+
+            <Box sx={{ mt: 10, p: 6, bgcolor: alpha('#6366F1', 0.03), borderRadius: 6, border: '1px solid rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
+               <Rocket size={56} color="#6366F1" style={{ marginBottom: '24px' }} />
+               <Typography variant="h2" sx={{ mb: 3, fontWeight: 900 }}>Ready for takeoff?</Typography>
+               <Typography variant="body1" sx={{ mb: 6, opacity: 0.6, maxWidth: 600, mx: 'auto' }}>
+                 You've successfully initialized the SDK. Now dive deep into the architecture to master the Reactive Graph.
+               </Typography>
                <Button 
                 component={NextLink}
                 href="/docs/architecture"
                 variant="contained" 
-                endIcon={<ArrowRight size={18} />}
-                sx={{ borderRadius: '12px', px: 4, py: 1.5 }}
+                size="large"
+                endIcon={<ArrowRight size={20} />}
+                sx={{ borderRadius: '16px', px: 6, py: 2, fontWeight: 900 }}
                >
-                 Explore Architecture
+                 Master the Architecture
                </Button>
             </Box>
           </Stack>
