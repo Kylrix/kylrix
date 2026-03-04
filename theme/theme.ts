@@ -6,7 +6,7 @@ const getDesignTokens = (): ThemeOptions => ({
   palette: {
     mode: 'dark',
     primary: {
-      main: '#00F5FF', // Brand Electric Teal
+      main: '#6366F1', // Brand Electric Teal
       contrastText: '#000000',
     },
     secondary: {
@@ -64,7 +64,7 @@ const getDesignTokens = (): ThemeOptions => ({
       fontWeight: 700,
       textTransform: 'uppercase',
       letterSpacing: '0.4em', // Enhanced for premium look
-      color: '#00F5FF',
+      color: '#6366F1',
     },
     body1: {
       fontSize: '1.125rem',
@@ -112,11 +112,11 @@ const getDesignTokens = (): ThemeOptions => ({
           },
         },
         containedPrimary: {
-          backgroundColor: '#00F5FF',
+          backgroundColor: '#6366F1',
           color: '#000000',
           '&:hover': {
             backgroundColor: '#00E5EE',
-            boxShadow: '0 0 30px rgba(0, 245, 255, 0.4)',
+            boxShadow: '0 0 30px rgba(99, 102, 241, 0.4)',
           },
         },
         outlined: {

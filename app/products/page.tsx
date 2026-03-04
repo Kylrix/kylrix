@@ -31,10 +31,10 @@ const ProductHero = ({ app, reversed = false }: any) => (
       <Grid size={{ xs: 12, md: 6 }}>
         <Stack spacing={4}>
           <Stack direction="row" spacing={2} alignItems="center">
-             <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(0, 245, 255, 0.05)', border: '1px solid rgba(0, 245, 255, 0.1)', color: '#00F5FF' }}>
+             <Box sx={{ p: 1.5, borderRadius: 2, bgcolor: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
                <app.icon size={28} strokeWidth={1.5} />
              </Box>
-             <Typography variant="subtitle2" sx={{ color: '#00F5FF', fontWeight: 900, letterSpacing: '0.3em' }}>{app.tagline}</Typography>
+             <Typography variant="subtitle2" sx={{ color: '#6366F1', fontWeight: 900, letterSpacing: '0.3em' }}>{app.tagline}</Typography>
           </Stack>
           
           <Typography variant="h1" sx={{ fontWeight: 900, fontSize: { xs: '3rem', md: '4.5rem' } }}>{app.name}</Typography>
@@ -46,7 +46,7 @@ const ProductHero = ({ app, reversed = false }: any) => (
           <Stack spacing={3} sx={{ pt: 2 }}>
             {app.features.map((feat: string, i: number) => (
               <Stack key={i} direction="row" spacing={2} alignItems="center">
-                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#00F5FF' }} />
+                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#6366F1' }} />
                 <Typography variant="body1" sx={{ fontWeight: 600, opacity: 0.8 }}>{feat}</Typography>
               </Stack>
             ))}
@@ -99,7 +99,7 @@ export default function ProductsPage() {
       tagline: 'ORCHESTRATION ENGINE',
       longDesc: 'Advanced AI-driven orchestration for high-fidelity task management. Automate complex event-driven workflows with local execution and zero-knowledge data security.',
       features: ['Real-time Event Triggers', 'Local AI Model Integration', 'Cross-Platform Sync', 'Declarative Workflow Engine'],
-      color: '#00F5FF'
+      color: '#6366F1'
     },
     {
       name: 'Vault',
@@ -151,8 +151,8 @@ export default function ProductsPage() {
       <Container maxWidth="xl">
         <Stack spacing={8} alignItems="center" textAlign="center" sx={{ pt: { xs: 15, md: 25 }, pb: { xs: 15, md: 20 } }}>
           <Box>
-            <Typography variant="subtitle2" sx={{ mb: 4, color: '#00F5FF', letterSpacing: '0.4em', fontWeight: 900 }}>KYLRIX SUITE</Typography>
-            <Typography variant="h1" sx={{ mb: 4, fontWeight: 900 }}>Tools for the <br /> <Box component="span" sx={{ color: '#00F5FF' }}>Digital Sovereign.</Box></Typography>
+            <Typography variant="subtitle2" sx={{ mb: 4, color: '#6366F1', letterSpacing: '0.4em', fontWeight: 900 }}>KYLRIX SUITE</Typography>
+            <Typography variant="h1" sx={{ mb: 4, fontWeight: 900 }}>Tools for the <br /> <Box component="span" sx={{ color: '#6366F1' }}>Digital Sovereign.</Box></Typography>
             <Typography variant="subtitle1" sx={{ maxWidth: 850, mx: 'auto', opacity: 0.6, fontSize: '1.4rem' }}>
               A deeply integrated ecosystem of high-performance applications designed to 
               give you absolute control over your intelligence, privacy, and productivity.

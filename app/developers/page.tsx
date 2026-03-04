@@ -28,7 +28,7 @@ const DevSection = ({ icon: Icon, title, description, children }: any) => (
     <Grid container spacing={10}>
       <Grid size={{ xs: 12, md: 4 }}>
         <Stack spacing={4}>
-          <Box sx={{ width: 64, height: 64, borderRadius: 3, bgcolor: 'rgba(0, 245, 255, 0.05)', border: '1px solid rgba(0, 245, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#00F5FF' }}>
+          <Box sx={{ width: 64, height: 64, borderRadius: 3, bgcolor: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366F1' }}>
             <Icon size={32} strokeWidth={1.5} />
           </Box>
           <Box>
@@ -62,8 +62,8 @@ export default function DevelopersPage() {
       {/* Hero */}
       <Box sx={{ pt: { xs: 15, md: 25 }, pb: { xs: 10, md: 15 }, textAlign: 'center' }}>
         <Container maxWidth="lg">
-          <Typography variant="subtitle2" sx={{ mb: 6, color: '#00F5FF', letterSpacing: '0.4em', fontWeight: 900, textTransform: 'uppercase' }}>DEVELOPER PORTAL</Typography>
-          <Typography variant="h1" sx={{ mb: 6, fontWeight: 900 }}>Build for the <br /><Box component="span" sx={{ color: '#00F5FF' }}>Private Web.</Box></Typography>
+          <Typography variant="subtitle2" sx={{ mb: 6, color: '#6366F1', letterSpacing: '0.4em', fontWeight: 900, textTransform: 'uppercase' }}>DEVELOPER PORTAL</Typography>
+          <Typography variant="h1" sx={{ mb: 6, fontWeight: 900 }}>Build for the <br /><Box component="span" sx={{ color: '#6366F1' }}>Private Web.</Box></Typography>
           <Typography variant="subtitle1" sx={{ mb: 8, maxWidth: 800, mx: 'auto', fontSize: '1.25rem', opacity: 0.6 }}>
             Modular infrastructure for secure, AI-powered applications with zero-knowledge privacy at the core.
           </Typography>
@@ -125,8 +125,8 @@ export default new Extension({
                   <Typography variant="body2" sx={{ mb: 4, opacity: 0.5, lineHeight: 1.6 }}>Configure granular Scopes for your application.</Typography>
                   <Stack spacing={2}>
                     {['identity:read', 'vault:write', 'flow:execute'].map(scope => (
-                      <Box key={scope} sx={{ px: 3, py: 1.5, bgcolor: 'rgba(0, 245, 255, 0.03)', borderRadius: 2, border: '1px solid rgba(0, 245, 255, 0.1)' }}>
-                        <Typography variant="caption" sx={{ fontFamily: 'var(--font-mono)', color: '#00F5FF', fontWeight: 700 }}>{scope}</Typography>
+                      <Box key={scope} sx={{ px: 3, py: 1.5, bgcolor: 'rgba(99, 102, 241, 0.03)', borderRadius: 2, border: '1px solid rgba(99, 102, 241, 0.1)' }}>
+                        <Typography variant="caption" sx={{ fontFamily: 'var(--font-mono)', color: '#6366F1', fontWeight: 700 }}>{scope}</Typography>
                       </Box>
                     ))}
                   </Stack>

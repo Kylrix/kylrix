@@ -205,11 +205,11 @@ export const Navbar = () => {
                         fontSize: '0.8rem',
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
-                        color: Boolean(item.anchorEl) ? '#00F5FF' : '#fff',
+                        color: Boolean(item.anchorEl) ? '#6366F1' : '#fff',
                         opacity: Boolean(item.anchorEl) ? 1 : 0.5,
                         '&:hover': { 
                           opacity: 1, 
-                          color: '#00F5FF',
+                          color: '#6366F1',
                           bgcolor: 'rgba(255, 255, 255, 0.05)'
                         }
                       }}
@@ -231,12 +231,12 @@ export const Navbar = () => {
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        color: isActive(item.href || '') ? '#00F5FF' : '#fff',
+                        color: isActive(item.href || '') ? '#6366F1' : '#fff',
                         opacity: isActive(item.href || '') ? 1 : 0.5,
-                        bgcolor: isActive(item.href || '') ? 'rgba(0, 245, 255, 0.05)' : 'transparent',
+                        bgcolor: isActive(item.href || '') ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
                         '&:hover': { 
                           opacity: 1, 
-                          color: '#00F5FF',
+                          color: '#6366F1',
                           bgcolor: 'rgba(255, 255, 255, 0.05)'
                         }
                       }}
@@ -322,17 +322,17 @@ export const Navbar = () => {
                 <IconButton 
                   onClick={() => setIsEcosystemPortalOpen(true)}
                   sx={{ 
-                    color: '#00F5FF',
-                    bgcolor: 'rgba(0, 245, 255, 0.05)',
-                    border: '1px solid rgba(0, 245, 255, 0.1)',
+                    color: '#6366F1',
+                    bgcolor: 'rgba(99, 102, 241, 0.05)',
+                    border: '1px solid rgba(99, 102, 241, 0.1)',
                     borderRadius: '12px',
                     width: 42,
                     height: 42,
                     transition: 'all 0.3s',
                     '&:hover': { 
-                      bgcolor: 'rgba(0, 245, 255, 0.1)', 
-                      boxShadow: '0 0 15px rgba(0, 245, 255, 0.2)',
-                      borderColor: '#00F5FF'
+                      bgcolor: 'rgba(99, 102, 241, 0.1)', 
+                      boxShadow: '0 0 15px rgba(99, 102, 241, 0.2)',
+                      borderColor: '#6366F1'
                     },
                     display: { xs: 'none', sm: 'flex' }
                   }}
@@ -350,7 +350,7 @@ export const Navbar = () => {
                       border: '1px solid rgba(255, 255, 255, 0.08)',
                       borderRadius: '14px',
                       bgcolor: 'rgba(255, 255, 255, 0.03)',
-                      '&:hover': { borderColor: 'rgba(0, 245, 255, 0.3)', bgcolor: 'rgba(255, 255, 255, 0.05)' },
+                      '&:hover': { borderColor: 'rgba(99, 102, 241, 0.3)', bgcolor: 'rgba(255, 255, 255, 0.05)' },
                       transition: 'all 0.2s'
                     }}
                   >
@@ -362,7 +362,7 @@ export const Navbar = () => {
                         bgcolor: '#050505',
                         fontSize: '0.875rem',
                         fontWeight: 800,
-                        color: '#00F5FF',
+                        color: '#6366F1',
                         borderRadius: '10px',
                         fontFamily: 'JetBrains Mono'
                       }}
@@ -433,9 +433,9 @@ export const Navbar = () => {
                     fontWeight: 800,
                     fontSize: '0.85rem',
                     textTransform: 'none',
-                    boxShadow: '0 4px 15px rgba(0, 245, 255, 0.2)',
+                    boxShadow: '0 4px 15px rgba(99, 102, 241, 0.2)',
                     '&:hover': {
-                      boxShadow: '0 6px 20px rgba(0, 245, 255, 0.4)'
+                      boxShadow: '0 6px 20px rgba(99, 102, 241, 0.4)'
                     }
                   }}
                 >
@@ -520,7 +520,7 @@ export const Navbar = () => {
                           bgcolor: 'rgba(255, 255, 255, 0.02)'
                         }}
                       >
-                        <Box sx={{ color: subItem.color || '#00F5FF', display: 'flex' }}>
+                        <Box sx={{ color: subItem.color || '#6366F1', display: 'flex' }}>
                           {renderIcon(subItem.icon)}
                         </Box>
                         <ListItemText 
@@ -540,15 +540,15 @@ export const Navbar = () => {
                     }}
                     sx={{ 
                       borderRadius: '12px',
-                      bgcolor: isActive(item.href || '') ? 'rgba(0, 245, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                      border: isActive(item.href || '') ? '1px solid rgba(0, 245, 255, 0.2)' : '1px solid transparent'
+                      bgcolor: isActive(item.href || '') ? 'rgba(99, 102, 241, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                      border: isActive(item.href || '') ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid transparent'
                     }}
                   >
                     <ListItemText 
                       primary={item.label} 
                       primaryTypographyProps={{ 
                         fontWeight: 700, 
-                        color: isActive(item.href || '') ? '#00F5FF' : 'white' 
+                        color: isActive(item.href || '') ? '#6366F1' : 'white' 
                       }} 
                     />
                     <ExternalLink size={14} style={{ opacity: 0.3, color: 'white' }} />
@@ -568,8 +568,8 @@ export const Navbar = () => {
               }}
               sx={{ 
                 borderRadius: '12px',
-                bgcolor: 'rgba(0, 245, 255, 0.05)',
-                border: '1px solid rgba(0, 245, 255, 0.2)',
+                bgcolor: 'rgba(99, 102, 241, 0.05)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
                 mb: 2
               }}
             >
@@ -580,7 +580,7 @@ export const Navbar = () => {
                   height: 32, 
                   mr: 2,
                   bgcolor: '#050505',
-                  color: '#00F5FF',
+                  color: '#6366F1',
                   borderRadius: '8px',
                   fontFamily: 'JetBrains Mono',
                   fontSize: '0.8rem'
@@ -590,7 +590,7 @@ export const Navbar = () => {
               </Avatar>
               <ListItemText 
                 primary={user?.name || 'User'} 
-                primaryTypographyProps={{ fontWeight: 700, color: '#00F5FF' }} 
+                primaryTypographyProps={{ fontWeight: 700, color: '#6366F1' }} 
               />
             </ListItemButton>
           ) : (
@@ -603,7 +603,7 @@ export const Navbar = () => {
                 py: 2, 
                 borderRadius: '16px',
                 fontWeight: 900,
-                boxShadow: '0 8px 24px rgba(0, 245, 255, 0.2)',
+                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)',
                 mb: 4
               }}
             >

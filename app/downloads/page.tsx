@@ -34,13 +34,13 @@ const DownloadCard = ({ platform }: any) => (
       gap: 4,
       transition: 'all 0.3s',
       '&:hover': { 
-        borderColor: '#00F5FF', 
-        bgcolor: 'rgba(0, 245, 255, 0.02)', 
+        borderColor: '#6366F1', 
+        bgcolor: 'rgba(99, 102, 241, 0.02)', 
         transform: 'translateY(-8px)' 
       }
     }}
   >
-    <Box sx={{ color: '#00F5FF' }}>
+    <Box sx={{ color: '#6366F1' }}>
       <platform.icon size={48} strokeWidth={1} />
     </Box>
     <Box>
@@ -103,8 +103,8 @@ export default function DownloadsPage() {
       <Container maxWidth="xl">
         <Stack spacing={10} sx={{ pt: { xs: 15, md: 25 }, pb: 20 }}>
           <Box textAlign="center">
-            <Typography variant="subtitle2" sx={{ color: '#00F5FF', mb: 4, fontWeight: 900, letterSpacing: '0.4em' }}>DOWNLOADS</Typography>
-            <Typography variant="h1" sx={{ mb: 4, fontWeight: 900 }}>Get the <Box component="span" sx={{ color: '#00F5FF' }}>Suite.</Box></Typography>
+            <Typography variant="subtitle2" sx={{ color: '#6366F1', mb: 4, fontWeight: 900, letterSpacing: '0.4em' }}>DOWNLOADS</Typography>
+            <Typography variant="h1" sx={{ mb: 4, fontWeight: 900 }}>Get the <Box component="span" sx={{ color: '#6366F1' }}>Suite.</Box></Typography>
             <Typography variant="subtitle1" sx={{ maxWidth: 700, mx: 'auto', opacity: 0.6, fontSize: '1.25rem' }}>
               Native Kylrix clients for all your devices. Secure, private, and always in sync.
             </Typography>
@@ -138,7 +138,7 @@ export default function DownloadsPage() {
                     { icon: Cpu, title: 'Native Performance', text: 'Optimized for local AI.' }
                   ].map((feat, i) => (
                     <Stack key={i} direction="row" spacing={3}>
-                      <Box sx={{ color: '#00F5FF', pt: 0.5 }}><feat.icon size={24} strokeWidth={1.5} /></Box>
+                      <Box sx={{ color: '#6366F1', pt: 0.5 }}><feat.icon size={24} strokeWidth={1.5} /></Box>
                       <Box>
                         <Typography variant="h4" sx={{ mb: 1, fontWeight: 900 }}>{feat.title}</Typography>
                         <Typography variant="body2" sx={{ opacity: 0.5 }}>{feat.text}</Typography>

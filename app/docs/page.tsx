@@ -63,7 +63,7 @@ const Sidebar = () => {
                       borderRadius: 1.5, 
                       px: 2, 
                       py: 0.75,
-                      '&:hover': { bgcolor: 'rgba(0, 245, 255, 0.05)', color: '#00F5FF' }
+                      '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.05)', color: '#6366F1' }
                     }}
                   >
                     <ListItemText 
@@ -97,7 +97,7 @@ export default function DocsPage() {
           <Stack spacing={8} sx={{ px: { xs: 2, md: 10 } }}>
             {/* Hero Area */}
             <Box>
-              <Typography variant="subtitle2" sx={{ color: '#00F5FF', mb: 3, fontWeight: 900, letterSpacing: '0.3em' }}>DOCUMENTATION</Typography>
+              <Typography variant="subtitle2" sx={{ color: '#6366F1', mb: 3, fontWeight: 900, letterSpacing: '0.3em' }}>DOCUMENTATION</Typography>
               <Typography variant="h1" sx={{ mb: 4, fontWeight: 900, fontSize: { xs: '2.5rem', md: '4rem' } }}>Master the <br /> Ecosystem.</Typography>
               <Typography variant="subtitle1" sx={{ maxWidth: 800, opacity: 0.6, fontSize: '1.25rem', lineHeight: 1.7 }}>
                 Comprehensive guide to the architecture, tools, and integration patterns that power the private web.
@@ -120,13 +120,13 @@ export default function DocsPage() {
                       p: 5, 
                       height: '100%', 
                       transition: 'all 0.3s', 
-                      '&:hover': { borderColor: '#00F5FF', bgcolor: 'rgba(0, 245, 255, 0.02)', transform: 'translateY(-4px)' } 
+                      '&:hover': { borderColor: '#6366F1', bgcolor: 'rgba(99, 102, 241, 0.02)', transform: 'translateY(-4px)' } 
                     }}
                   >
-                    <Box sx={{ color: '#00F5FF', mb: 3 }}><link.icon size={32} strokeWidth={1.5} /></Box>
+                    <Box sx={{ color: '#6366F1', mb: 3 }}><link.icon size={32} strokeWidth={1.5} /></Box>
                     <Typography variant="h3" sx={{ mb: 2, fontSize: '1.5rem', fontWeight: 900 }}>{link.title}</Typography>
                     <Typography variant="body2" sx={{ opacity: 0.5, lineHeight: 1.6, mb: 3 }}>{link.desc}</Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#00F5FF', cursor: 'pointer' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', color: '#6366F1', cursor: 'pointer' }}>
                       Learn More <ChevronRight size={14} />
                     </Box>
                   </Paper>
@@ -149,7 +149,7 @@ export default function DocsPage() {
                     { icon: Cpu, title: 'Edge Execution', text: 'AI models and orchestration logic are processed locally on your hardware.' }
                   ].map((p, i) => (
                     <Stack key={i} direction="row" spacing={4} alignItems="flex-start">
-                      <Box sx={{ color: '#00F5FF', pt: 0.5 }}><p.icon size={28} strokeWidth={1.5} /></Box>
+                      <Box sx={{ color: '#6366F1', pt: 0.5 }}><p.icon size={28} strokeWidth={1.5} /></Box>
                       <Box>
                         <Typography variant="h4" sx={{ mb: 1.5, fontWeight: 900 }}>{p.title}</Typography>
                         <Typography variant="body1" sx={{ opacity: 0.5, lineHeight: 1.8 }}>{p.text}</Typography>

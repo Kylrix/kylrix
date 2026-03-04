@@ -21,11 +21,11 @@ const Logo: React.FC<LogoProps> = ({
   href
 }) => {
   const configs: Record<KylrixApp, { color1: string; color2: string; name: string; desc: string }> = {
-    root: { color1: "#00F5FF", color2: "#00A3FF", name: "KYLRIX", desc: "Home" },
-    vault: { color1: "#00F5FF", color2: "#3B82F6", name: "VAULT", desc: "Vault" },
-    flow: { color1: "#00F5FF", color2: "#00FF94", name: "FLOW", desc: "Workflows" },
-    note: { color1: "#00F5FF", color2: "#A855F7", name: "NOTE", desc: "Notes" },
-    connect: { color1: "#00F5FF", color2: "#F43F5E", name: "CONNECT", desc: "Connect" }
+    root: { color1: "#6366F1", color2: "#00A3FF", name: "KYLRIX", desc: "Home" },
+    vault: { color1: "#6366F1", color2: "#3B82F6", name: "VAULT", desc: "Vault" },
+    flow: { color1: "#6366F1", color2: "#00FF94", name: "FLOW", desc: "Workflows" },
+    note: { color1: "#6366F1", color2: "#A855F7", name: "NOTE", desc: "Notes" },
+    connect: { color1: "#6366F1", color2: "#F43F5E", name: "CONNECT", desc: "Connect" }
   };
 
   const current = configs[app] || configs.root;
