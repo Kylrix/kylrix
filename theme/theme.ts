@@ -1,27 +1,47 @@
 'use client';
 
-import { createTheme, ThemeOptions, alpha } from '@mui/material/styles';
+import { createTheme, ThemeOptions, alpha, PaletteMode } from '@mui/material/styles';
 
-const getDesignTokens = (): ThemeOptions => ({
+const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
   palette: {
-    mode: 'dark',
-    primary: {
-      main: '#6366F1', // Brand Electric Teal
-      contrastText: '#000000',
-    },
-    secondary: {
-      main: '#F2F2F2', // Titanium
-    },
-    background: {
-      default: '#000000', // Deep Black
-      paper: '#0A0A0A',   // Surface
-    },
-    text: {
-      primary: '#F2F2F2',   // Titanium
-      secondary: '#A1A1AA', // Zinc
-      disabled: '#404040',
-    },
-    divider: 'rgba(255, 255, 255, 0.08)',
+    mode,
+    ...(mode === 'dark' ? {
+      primary: {
+        main: '#6366F1', // Brand Electric Teal
+        contrastText: '#000000',
+      },
+      secondary: {
+        main: '#F2F2F2', // Titanium
+      },
+      background: {
+        default: '#000000', // Deep Black
+        paper: '#0A0A0A',   // Surface
+      },
+      text: {
+        primary: '#F2F2F2',   // Titanium
+        secondary: '#A1A1AA', // Zinc
+        disabled: '#404040',
+      },
+      divider: 'rgba(255, 255, 255, 0.08)',
+    } : {
+      primary: {
+        main: '#6366F1',
+        contrastText: '#FFFFFF',
+      },
+      secondary: {
+        main: '#18181B',
+      },
+      background: {
+        default: '#FDFCFB',
+        paper: '#FFFFFF',
+      },
+      text: {
+        primary: '#09090B',
+        secondary: '#52525B',
+        disabled: '#A1A1AA',
+      },
+      divider: 'rgba(0, 0, 0, 0.08)',
+    }),
   },
   typography: {
     fontFamily: '"Satoshi Variable", "Satoshi", sans-serif',
@@ -31,7 +51,7 @@ const getDesignTokens = (): ThemeOptions => ({
       fontWeight: 900,
       letterSpacing: '-0.05em',
       lineHeight: 1.05,
-      color: '#F2F2F2',
+      color: mode === 'dark' ? '#F2F2F2' : '#09090B',
     },
     h2: {
       fontFamily: '"Clash Display Variable", "Clash Display", sans-serif',
@@ -57,7 +77,7 @@ const getDesignTokens = (): ThemeOptions => ({
       fontSize: '1.25rem',
       fontWeight: 500,
       lineHeight: 1.6,
-      color: '#A1A1AA',
+      color: mode === 'dark' ? '#A1A1AA' : '#52525B',
     },
     subtitle2: {
       fontSize: '0.875rem',
@@ -74,7 +94,7 @@ const getDesignTokens = (): ThemeOptions => ({
     body2: {
       fontSize: '1rem',
       fontWeight: 400,
-      color: '#A1A1AA',
+      color: mode === 'dark' ? '#A1A1AA' : '#52525B',
       lineHeight: 1.6,
     },
     button: {
@@ -113,18 +133,18 @@ const getDesignTokens = (): ThemeOptions => ({
         },
         containedPrimary: {
           backgroundColor: '#6366F1',
-          color: '#000000',
+          color: mode === 'dark' ? '#000000' : '#FFFFFF',
           '&:hover': {
-            backgroundColor: '#00E5EE',
+            backgroundColor: mode === 'dark' ? '#00E5EE' : '#4F46E5',
             boxShadow: '0 0 30px rgba(99, 102, 241, 0.4)',
           },
         },
         outlined: {
-          borderColor: 'rgba(255, 255, 255, 0.1)',
-          color: '#F2F2F2',
+          borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          color: mode === 'dark' ? '#F2F2F2' : '#09090B',
           '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderColor: 'rgba(255, 255, 255, 0.3)',
+            backgroundColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+            borderColor: mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
           },
         },
       },
@@ -132,9 +152,9 @@ const getDesignTokens = (): ThemeOptions => ({
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundColor: 'rgba(10, 10, 10, 0.8)',
+          backgroundColor: mode === 'dark' ? 'rgba(10, 10, 10, 0.8)' : 'rgba(255, 255, 255, 0.8)',
           backdropFilter: 'blur(30px) saturate(180%)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
           borderRadius: 24,
           backgroundImage: 'none',
         },
@@ -143,13 +163,13 @@ const getDesignTokens = (): ThemeOptions => ({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: '#000000',
-          color: '#F2F2F2',
+          backgroundColor: mode === 'dark' ? '#000000' : '#FDFCFB',
+          color: mode === 'dark' ? '#F2F2F2' : '#09090B',
           '&::-webkit-scrollbar': {
             width: '8px',
           },
           '&::-webkit-scrollbar-thumb': {
-            background: '#222',
+            background: mode === 'dark' ? '#222' : '#DDD',
             borderRadius: '10px',
           },
         },
@@ -158,5 +178,4 @@ const getDesignTokens = (): ThemeOptions => ({
   },
 });
 
-export const theme = createTheme(getDesignTokens());
-export default theme;
+export { getDesignTokens };

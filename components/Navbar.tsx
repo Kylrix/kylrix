@@ -26,6 +26,8 @@ import {
   ListItemIcon
 } from '@mui/material';
 import { 
+  Sun,
+  Moon,
   Github,
   Menu as MenuIcon,
   X,
@@ -47,6 +49,7 @@ import Logo from './Logo';
 import EcosystemPortal from './EcosystemPortal';
 import { ECOSYSTEM_APPS, getEcosystemUrl, KYLRIX_AUTH_URI } from '@/lib/ecosystem';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useColorMode } from '@/context/ThemeContext';
 import { getUserProfilePicId } from '@/lib/utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePreview';
 
@@ -56,6 +59,7 @@ export const Navbar = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated, logout, openIDMWindow } = useAuth();
+  const { toggleColorMode, mode } = useColorMode();
   
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -146,10 +150,10 @@ export const Navbar = () => {
       <AppBar 
         position="fixed" 
         sx={{ 
-          bgcolor: 'rgba(5, 5, 5, 0.01)', 
+          bgcolor: mode === 'dark' ? 'rgba(5, 5, 5, 0.01)' : 'rgba(255, 255, 255, 0.01)', 
           backdropFilter: 'blur(25px) saturate(180%)', 
           boxShadow: 'none', 
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
           backgroundImage: 'none',
           zIndex: (theme) => theme.zIndex.drawer + 1
         }}
@@ -180,11 +184,11 @@ export const Navbar = () => {
               sx={{ 
                 display: { xs: 'none', md: 'flex' }, 
                 alignItems: 'center',
-                bgcolor: 'rgba(255, 255, 255, 0.03)',
+                bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
                 px: 1,
                 py: 0.5,
                 borderRadius: '100px',
-                border: '1px solid rgba(255, 255, 255, 0.05)'
+                border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(0, 0, 0, 0.05)'
               }}
             >
               {navItems.map((item) => (
@@ -205,12 +209,12 @@ export const Navbar = () => {
                         fontSize: '0.8rem',
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
-                        color: Boolean(item.anchorEl) ? '#6366F1' : '#fff',
+                        color: Boolean(item.anchorEl) ? '#6366F1' : (mode === 'dark' ? '#fff' : '#09090B'),
                         opacity: Boolean(item.anchorEl) ? 1 : 0.5,
                         '&:hover': { 
                           opacity: 1, 
                           color: '#6366F1',
-                          bgcolor: 'rgba(255, 255, 255, 0.05)'
+                          bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
                         }
                       }}
                     >
@@ -231,13 +235,13 @@ export const Navbar = () => {
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        color: isActive(item.href || '') ? '#6366F1' : '#fff',
+                        color: isActive(item.href || '') ? '#6366F1' : (mode === 'dark' ? '#fff' : '#09090B'),
                         opacity: isActive(item.href || '') ? 1 : 0.5,
                         bgcolor: isActive(item.href || '') ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
                         '&:hover': { 
                           opacity: 1, 
                           color: '#6366F1',
-                          bgcolor: 'rgba(255, 255, 255, 0.05)'
+                          bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
                         }
                       }}
                     >
@@ -317,7 +321,25 @@ export const Navbar = () => {
               ))}
             </Stack>
 
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
+                <IconButton 
+                  onClick={toggleColorMode}
+                  sx={{ 
+                    color: mode === 'dark' ? '#F2F2F2' : '#09090B',
+                    bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                    borderRadius: '12px',
+                    width: 42,
+                    height: 42,
+                    '&:hover': { 
+                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
+                    },
+                  }}
+                >
+                  {mode === 'dark' ? <Sun size={20} strokeWidth={1.5} /> : <Moon size={20} strokeWidth={1.5} />}
+                </IconButton>
+              </Tooltip>
+
               <Tooltip title="Ecosystem Portal">
                 <IconButton 
                   onClick={() => setIsEcosystemPortalOpen(true)}
@@ -443,18 +465,18 @@ export const Navbar = () => {
                 </Button>
               )}
 
-              <IconButton 
-                onClick={() => setMobileMenuOpen(true)}
-                sx={{ 
-                  display: { xs: 'flex', md: 'none' },
-                  color: 'white',
-                  bgcolor: 'rgba(255, 255, 255, 0.05)',
-                  borderRadius: '12px',
-                  width: 42,
-                  height: 42,
-                  zIndex: 2000 // Ensure it's clickable
-                }}
-              >
+                  <IconButton 
+                    onClick={() => setMobileMenuOpen(true)}
+                    sx={{ 
+                      display: { xs: 'flex', md: 'none' },
+                      color: mode === 'dark' ? 'white' : 'black',
+                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                      borderRadius: '12px',
+                      width: 42,
+                      height: 42,
+                      zIndex: 2000 // Ensure it's clickable
+                    }}
+                  >
                 <MenuIcon size={24} />
               </IconButton>
             </Stack>
