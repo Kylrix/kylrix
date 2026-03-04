@@ -27,25 +27,46 @@ import {
   Zap,
   ExternalLink
 } from 'lucide-react';
+import NextLink from 'next/link';
 import Navbar from '@/components/Navbar';
 
 const Sidebar = () => {
   const sections = [
     { 
       title: 'Introduction', 
-      items: ['Overview', 'Quick Start', 'Architecture'] 
+      items: [
+        { label: 'Overview', href: '/docs' },
+        { label: 'Quick Start', href: '/docs/quick-start' },
+        { label: 'Architecture', href: '/docs/architecture' }
+      ] 
     },
     { 
       title: 'Core Systems', 
-      items: ['Identity & WebAuthn', 'Zero-Knowledge Vault', 'P2P Communication', 'Flow Orchestration'] 
+      items: [
+        { label: 'Identity & WebAuthn', href: '/docs/identity' },
+        { label: 'Zero-Knowledge Vault', href: '/docs/vault' },
+        { label: 'P2P Communication', href: '/docs/connect' },
+        { label: 'Flow Orchestration', href: '/docs/flow' }
+      ] 
     },
     { 
       title: 'Guides', 
-      items: ['Building Extensions', 'Client Integration', 'Security Best Practices'] 
+      items: [
+        { label: 'Building Extensions', href: '/docs/extensions' },
+        { label: 'Client Integration', href: '/docs/integration' },
+        { label: 'Security Best Practices', href: '/docs/security' }
+      ] 
     },
     { 
-      title: 'Reference', 
-      items: ['API Reference', 'CLI Commands', 'SDK Documentation'] 
+      title: 'SDKs & Reference', 
+      items: [
+        { label: 'TypeScript SDK', href: '/docs/sdks/typescript' },
+        { label: 'Go SDK', href: '/docs/sdks/go' },
+        { label: 'Python SDK', href: '/docs/sdks/python' },
+        { label: 'Dart SDK', href: '/docs/sdks/dart' },
+        { label: 'CLI Commands', href: '/docs/cli' },
+        { label: 'API Reference', href: '/docs/api' }
+      ] 
     }
   ];
 
@@ -57,8 +78,10 @@ const Sidebar = () => {
             <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff', opacity: 0.3, letterSpacing: '0.15em', fontWeight: 900, fontSize: '0.7rem' }}>{section.title}</Typography>
             <List disablePadding>
               {section.items.map((item) => (
-                <ListItem key={item} disablePadding sx={{ mb: 1 }}>
+                <ListItem key={item.label} disablePadding sx={{ mb: 1 }}>
                   <ListItemButton 
+                    href={item.href}
+                    component={NextLink}
                     sx={{ 
                       borderRadius: 1.5, 
                       px: 2, 
@@ -67,7 +90,7 @@ const Sidebar = () => {
                     }}
                   >
                     <ListItemText 
-                      primary={item} 
+                      primary={item.label} 
                       primaryTypographyProps={{ 
                         variant: 'body2', 
                         sx: { fontWeight: 500, fontSize: '0.9rem', opacity: 0.7 } 
