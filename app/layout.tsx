@@ -3,6 +3,7 @@ import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import ThemeRegistry from "@/theme/ThemeProvider";
 import { AuthProvider } from "@/context/auth/AuthContext";
+import { DocsProvider } from "@/context/DocsContext";
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -55,8 +56,10 @@ export default function RootLayout({
       <body>
         <ThemeRegistry>
           <AuthProvider>
-            <div className="bg-mesh" />
-            {children}
+            <DocsProvider>
+              <div className="bg-mesh" />
+              {children}
+            </DocsProvider>
           </AuthProvider>
         </ThemeRegistry>
       </body>
