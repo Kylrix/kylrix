@@ -54,9 +54,9 @@ export default function RealtimeDocsPage() {
               <CodeBlock 
                 languages={{
                   typescript: `// 1. Listen for incoming calls (Connect app logic)\nsdk.pulse.on('call.incoming', DATABASE_ID, PULSE_TABLE_ID, (callData) => {\n  console.log('Incoming call from:', callData.callerId);\n});\n\n// 2. Subscribe to specific Row updates (TableDB Standard)\nsdk.pulse.subscribeToRow(DATABASE_ID, TABLE_ID, ROW_ID, (payload) => {\n  console.log('Document updated:', payload);\n});`,
-                  go: `// Pulse Go SDK implementation pending`,
-                  python: `# Pulse Python SDK implementation pending`,
-                  dart: `// Pulse Dart SDK implementation pending`
+                  go: `// Coming soon for Go SDK pulse module`,
+                  python: `# 1. Listen for incoming calls\ndef on_call(data):\n    print(f"Incoming call: {data['callerId']}")\n\nsdk.pulse.on('call.incoming', DATABASE_ID, PULSE_TABLE_ID, on_call)\n\n# 2. Subscribe to row updates\nsdk.pulse.subscribe_to_row(DATABASE_ID, TABLE_ID, ROW_ID, lambda p: print(p))`,
+                  dart: `// 1. Listen for incoming calls\nsdk.pulse.on(PulseEvent.callIncoming, \n  databaseId: DATABASE_ID, \n  pulseTableId: PULSE_TABLE_ID\n).listen((payload) => {\n  print('Incoming call: \${payload.data["callerId"]}');\n});\n\n// 2. Subscribe to row updates\nsdk.pulse.subscribeToRow(\n  databaseId: DATABASE_ID, \n  tableId: TABLE_ID, \n  rowId: ROW_ID\n).listen((payload) => print(payload));`
                 }}
               />
             </Box>

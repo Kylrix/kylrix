@@ -52,10 +52,10 @@ export default function SecurityDocsPage() {
               
               <CodeBlock 
                 languages={{
-                  typescript: `// 1. Derive a key from a user password\nconst key = await sdk.security.deriveKey('user-password', 'random-salt');\n\n// 2. Encrypt sensitive data\nconst { cipher, iv } = await sdk.security.encrypt('my private note', key);\n\n// 3. Decrypt when needed\nconst plainText = await sdk.security.decrypt(cipher, iv, key);`,
-                  go: `// Coming soon for Go SDK security module`,
-                  python: `# Coming soon for Python SDK security module`,
-                  dart: `// Coming soon for Dart SDK security module`
+                  typescript: `// 1. Derive a key from a user password\nconst key = await KylrixSecurity.deriveKey('user-password', 'random-salt');\n\n// 2. Encrypt sensitive data\nconst { cipher, iv } = await KylrixSecurity.encrypt('my private note', key);\n\n// 3. Decrypt when needed\nconst plainText = await KylrixSecurity.decrypt(cipher, iv, key);`,
+                  go: `// 1. Derive a key from a user password\nkey := sdk.Security.DeriveKey("user-password", "random-salt")\n\n// 2. Encrypt sensitive data\nresult, err := sdk.Security.Encrypt("my private note", key)\n\n// 3. Decrypt when needed\nplainText, err := sdk.Security.Decrypt(result.Cipher, result.IV, key)`,
+                  python: `# 1. Derive a key from a user password\nkey = KylrixSecurity.derive_key("user-password", "random-salt")\n\n# 2. Encrypt sensitive data\nresult = KylrixSecurity.encrypt("my private note", key)\n\n# 3. Decrypt when needed\nplain_text = KylrixSecurity.decrypt(result["cipher"], result["iv"], key)`,
+                  dart: `// 1. Derive a key from a user password\nfinal key = await sdk.security.deriveKey('user-password', 'random-salt');\n\n// 2. Encrypt sensitive data\nfinal result = await sdk.security.encrypt('my private note', key);\n\n// 3. Decrypt when needed\nfinal plainText = await sdk.security.decrypt(result['cipher']!, result['iv']!, key);`
                 }}
               />
             </Box>
