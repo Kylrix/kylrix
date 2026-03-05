@@ -41,19 +41,19 @@ export default function ArchitecturePage() {
               <Typography variant="h2" sx={{ mb: 4, fontWeight: 900 }}>Core Principles</Typography>
               <Stack spacing={4}>
                 <Box>
-                  <Typography variant="h5" sx={{ mb: 2, fontWeight: 700, color: '#6366F1' }}>1. Point, Don't Duplicate</md.Typography>
+                  <Typography variant="h5" sx={{ mb: 2, fontWeight: 700, color: '#6366F1' }}>1. Point, Don't Duplicate</Typography>
                   <Typography variant="body1" sx={{ opacity: 0.7, lineHeight: 1.8 }}>
                     Data exists in exactly one place. If `Note` needs `Vault` data, it points to the source. We never replicate state across databases.
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="h5" sx={{ mb: 2, fontWeight: 700, color: '#6366F1' }}>2. Pulse vs. Notification</md.Typography>
+                  <Typography variant="h5" sx={{ mb: 2, fontWeight: 700, color: '#6366F1' }}>2. Pulse vs. Notification</Typography>
                   <Typography variant="body1" sx={{ opacity: 0.7, lineHeight: 1.8 }}>
                     The **Pulse** is transient, live inter-app gossip via Realtime. **Notifications** are persistent pointers in the activity log.
                   </Typography>
                 </Box>
                 <Box>
-                  <Typography variant="h5" sx={{ mb: 2, fontWeight: 700, color: '#6366F1' }}>3. Universal Session</md.Typography>
+                  <Typography variant="h5" sx={{ mb: 2, fontWeight: 700, color: '#6366F1' }}>3. Universal Session</Typography>
                   <Typography variant="body1" sx={{ opacity: 0.7, lineHeight: 1.8 }}>
                     An Appwrite session is a global key. A user logged into **Accounts** is authenticated across the entire ecosystem.
                   </Typography>
