@@ -3,10 +3,14 @@ export const APPWRITE_CONFIG = {
     PROJECT_ID: '67fe9627001d97e37ef3',
     DATABASES: {
         NOTE: '67ff05a9000296822396',
+        CONNECT: 'chat',
     },
     TABLES: {
         NOTE: {
             USERS: '67ff05c900247b5673d3',
+        },
+        CONNECT: {
+            USERS: 'users',
         },
     },
     BUCKETS: {

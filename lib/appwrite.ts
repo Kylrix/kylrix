@@ -14,6 +14,8 @@ const storage = new Storage(client);
 
 export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 export const APPWRITE_TABLE_ID_USERS = APPWRITE_CONFIG.TABLES.NOTE.USERS;
+export const APPWRITE_DATABASE_ID_CONNECT = APPWRITE_CONFIG.DATABASES.CONNECT;
+export const APPWRITE_TABLE_ID_CONNECT_USERS = APPWRITE_CONFIG.TABLES.CONNECT.USERS;
 export const APPWRITE_BUCKET_PROFILE_PICTURES = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
 
 export { client, account, databases, storage, ID, Query };
@@ -66,4 +68,18 @@ export async function updateUser(userId: string, data: any) {
       updatedAt: new Date().toISOString()
     }
   );
+}
+
+export async function getGlobalProfile(username: string) {
+  try {
+    const res = await databases.listDocuments(
+      APPWRITE_DATABASE_ID_CONNECT,
+      APPWRITE_TABLE_ID_CONNECT_USERS,
+      [Query.equal('username', username.toLowerCase())]
+    );
+    return res.documents[0] || null;
+  } catch (error) {
+    console.error('getGlobalProfile error:', error);
+    return null;
+  }
 }
