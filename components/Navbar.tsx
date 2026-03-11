@@ -428,7 +428,7 @@ export const Navbar = () => {
                     <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)', my: 1 }} />
                     <MenuItem 
                       onClick={() => {
-                        window.location.href = `${KYLRIX_AUTH_URI}/settings?source=${encodeURIComponent(window.location.origin)}`;
+                        window.location.href = `${getEcosystemUrl('accounts')}/settings?source=${encodeURIComponent(window.location.origin)}`;
                         setAnchorElAccount(null);
                       }}
                       sx={{ py: 1.8, px: 2.5, borderRadius: '16px', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.03)' } }}
