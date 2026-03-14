@@ -29,7 +29,6 @@ const Logo: React.FC<LogoProps> = ({
   };
 
   const current = configs[app] || configs.root;
-  const gradId = `grad-${app}-${size}`;
 
   return (
     <Box 
@@ -44,60 +43,17 @@ const Logo: React.FC<LogoProps> = ({
       component={component} 
       href={href}
     >
-      <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={current.color1} />
-            <stop offset="100%" stopColor={current.color2} />
-          </linearGradient>
-        </defs>
-
-        {app === 'root' && (
-          <g stroke={`url(#${gradId})`} strokeWidth="12" strokeLinecap="round">
-            <path d="M30 20V80" stroke={current.color1} opacity="0.2" />
-            <path d="M30 20V80" /> 
-            <path d="M45 50L80 20" opacity="0.8" /> 
-            <path d="M45 50L80 80" opacity="0.6" /> 
-          </g>
-        )}
-
-        {app === 'vault' && (
-          <g fill={`url(#${gradId})`}>
-            <rect x="25" y="15" width="15" height="70" rx="2" fill={current.color1} opacity="0.2" />
-            <rect x="25" y="15" width="15" height="70" rx="2" /> 
-            <rect x="45" y="15" width="8" height="70" rx="2" opacity="0.7" /> 
-            <rect x="58" y="15" width="4" height="70" rx="2" opacity="0.4" />
-          </g>
-        )}
-
-        {app === 'flow' && (
-          <g stroke={`url(#${gradId})`} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 20V80" stroke={current.color1} opacity="0.1" />
-            <path d="M20 20V80" opacity="0.3" /> 
-            <path d="M40 30L65 50L40 70" /> 
-            <path d="M65 30L90 50L65 70" opacity="0.5" />
-          </g>
-        )}
-
-        {app === 'note' && (
-          <g stroke={`url(#${gradId})`} strokeWidth="10" strokeLinecap="round">
-            <path d="M30 20V80" stroke={current.color1} opacity="0.2" />
-            <path d="M30 20V80" /> 
-            <path d="M50 25H80" opacity="0.8" /> 
-            <path d="M50 50H80" opacity="0.6" /> 
-            <path d="M50 75H80" opacity="0.4" />
-          </g>
-        )}
-
-        {app === 'connect' && (
-          <g stroke={`url(#${gradId})`} strokeWidth="8" strokeLinecap="round">
-            <path d="M50 20V80" stroke={current.color1} opacity="0.2" />
-            <path d="M50 20V80" strokeWidth="12" /> 
-            <path d="M30 40A25 25 0 0 1 70 40" opacity="0.7" /> 
-            <path d="M20 60A40 40 0 0 0 80 60" opacity="0.4" />
-          </g>
-        )}
-      </svg>
+      <Box 
+        component="img" 
+        src="/logo.jpg" 
+        alt="Kylrix Logo" 
+        sx={{ 
+          width: size, 
+          height: size, 
+          borderRadius: '20%',
+          objectFit: 'cover'
+        }} 
+      />
       
       {variant === 'full' && (
         <Box>
