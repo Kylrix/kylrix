@@ -69,6 +69,8 @@ tableIdMap["whisperrflow"]["eventGuests"] = "eventGuests";
 tableIdMap["whisperrflow"]["events"] = "events";
 tableIdMap["whisperrflow"]["calendars"] = "calendars";
 tableIdMap["whisperrflow"]["tasks"] = "tasks";
+tableIdMap["whisperrflow"]["forms"] = "forms";
+tableIdMap["whisperrflow"]["formSubmissions"] = "formSubmissions";
 
 const tablesWithRelationships = new Set<string>();
 
