@@ -73,8 +73,8 @@ export default function PricingPage() {
           >
             <Button 
               onClick={() => setPaymentMethod('CRYPTO')}
-              fullWidth={{ xs: true, sm: false }}
               sx={{
+                width: { xs: '100%', sm: 'auto' },
                 px: 4,
                 py: 1.5,
                 borderRadius: '100px',
@@ -93,8 +93,8 @@ export default function PricingPage() {
             </Button>
             <Button 
               onClick={() => setPaymentMethod('CARD')}
-              fullWidth={{ xs: true, sm: false }}
               sx={{
+                width: { xs: '100%', sm: 'auto' },
                 px: 4,
                 py: 1.5,
                 borderRadius: '100px',
@@ -140,7 +140,7 @@ export default function PricingPage() {
                 
                 <Box sx={{ mb: { xs: 3, md: 5 } }}>
                   <Typography component="span" sx={{ fontSize: { xs: '2.5rem', md: '3rem' }, fontWeight: 900 }}>
-                    {detectedRegion.currencySymbol}{prices[tier.id].toFixed(2)}
+                    {detectedRegion.symbol}{prices[tier.id].toFixed(2)}
                   </Typography>
                   <Typography component="span" sx={{ opacity: 0.5, ml: 1, fontSize: { xs: '1rem', md: '1.2rem' } }}>/mo</Typography>
                 </Box>
@@ -200,8 +200,8 @@ export default function PricingPage() {
           <Button 
             onClick={() => window.location.assign('/dashboard')}
             variant="outlined"
-            fullWidth={{ xs: true, md: false }}
             sx={{
+              width: { xs: '100%', md: 'auto' },
               px: 5,
               py: { xs: 1.5, md: 2 },
               borderRadius: 3,

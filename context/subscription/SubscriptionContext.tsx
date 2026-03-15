@@ -5,13 +5,13 @@ import {
   SubscriptionTier, 
   PaymentMethod, 
   RegionConfig, 
-  PPP_CONFIG, 
+  PPP_DATA, 
   calculateSubscriptionPrice 
 } from '@/lib/subscription/ppp';
 
 interface SubscriptionState {
   currentTier: SubscriptionTier;
-  detectedRegion: RegionConfig;
+  detectedRegion: RegionConfig & { countryCode: string };
   paymentMethod: PaymentMethod;
   isLoading: boolean;
   prices: Record<SubscriptionTier, number>;
@@ -30,9 +30,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CRYPTO');
   const [isLoading, setIsLoading] = useState(true);
 
-  const detectedRegion = useMemo(() => 
-    PPP_CONFIG[regionCode] || PPP_CONFIG.DEFAULT, 
-  [regionCode]);
+  const detectedRegion = useMemo(() => {
+    const data = PPP_DATA[regionCode] || PPP_DATA.DEFAULT;
+    return { ...data, countryCode: regionCode === 'DEFAULT' ? 'US' : regionCode };
+  }, [regionCode]);
 
   const prices = useMemo(() => ({
     PRO: calculateSubscriptionPrice('PRO', regionCode, paymentMethod),
@@ -43,9 +44,17 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const initSubscription = async () => {
       try {
+        // Attempt to detect region via IP
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        
+        if (data.country_code && PPP_DATA[data.country_code]) {
+          setRegionCode(data.country_code);
+        }
+        
         setIsLoading(false);
       } catch (error) {
-        console.error('Failed to initialize subscription context', error);
+        console.error('Failed to initialize subscription context or detect IP', error);
         setIsLoading(false);
       }
     };
