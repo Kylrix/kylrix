@@ -44,12 +44,14 @@ export default function UserProfilePage() {
         const data = await getGlobalProfile(username);
         setProfile(data);
         if (data) {
-          const fileId = data.avatarFileId || data.profilePicId;
-          if (fileId) {
-            const url = await getProfilePicturePreview(fileId, 240, 240);
-            setAvatarUrl(url);
-          } else if (data.avatarUrl) {
-            setAvatarUrl(data.avatarUrl);
+          const avatar = data.avatar;
+          if (avatar) {
+            if (avatar.startsWith('http')) {
+              setAvatarUrl(avatar);
+            } else {
+              const url = await getProfilePicturePreview(avatar, 240, 240);
+              setAvatarUrl(url);
+            }
           }
         }
       } catch (err) {
@@ -74,8 +76,8 @@ export default function UserProfilePage() {
       <Box sx={{ minHeight: '100vh', bgcolor: '#000', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center' }}>
         <Typography variant="h2" sx={{ fontWeight: 900, mb: 2, letterSpacing: '-0.04em' }}>404</Typography>
         <Typography variant="h5" sx={{ color: 'rgba(255,255,255,0.5)', mb: 4, fontWeight: 500 }}>Entity &quot;@{username}&quot; not found in the Kylrix ecosystem.</Typography>
-        <Button 
-          variant="outlined" 
+        <Button
+          variant="outlined"
           onClick={() => router.push('/')}
           sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', borderColor: 'white' } }}
         >
@@ -153,7 +155,7 @@ export default function UserProfilePage() {
                 <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, mb: 3, fontFamily: 'var(--font-jetbrains-mono, monospace)' }}>
                   @{profile.username}
                 </Typography>
-                
+
                 <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.8, fontSize: '1.1rem', maxWidth: '600px' }}>
                   {profile.bio || 'This operative has not yet initialized their biographical data stream.'}
                 </Typography>
