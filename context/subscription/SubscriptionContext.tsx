@@ -55,38 +55,20 @@ export function SubscriptionProvider({
     const initSubscription = async () => {
       try {
         const prefs = await account.getPrefs();
-        if (prefs && prefs.tier) {
-          setCurrentTier(prefs.tier as SubscriptionTier);
-        } else {
-          setCurrentTier('FREE');
+        if (prefs?.tier) setCurrentTier(prefs.tier as SubscriptionTier);
+        if (prefs?.region && PPP_DATA[prefs.region]) setRegionCode(prefs.region);
+        else {
+          const res = await fetch('https://ipapi.co/json/');
+          const data = await res.json();
+          if (data.country_code && PPP_DATA[data.country_code]) setRegionCode(data.country_code);
         }
-
-        if (prefs && prefs.region && PPP_DATA[prefs.region]) {
-          setRegionCode(prefs.region);
-        } else {
-          // Fallback to IP detection if no pref
-          try {
-            const response = await fetch('https://ipapi.co/json/');
-            const data = await response.json();
-            if (data.country_code && PPP_DATA[data.country_code]) {
-              setRegionCode(data.country_code);
-            }
-          } catch (e) {
-            console.error('IP detection failed', e);
-          }
-        }
-
-        setIsLoading(false);
-      } catch (error) {
-        setCurrentTier('FREE');
-        // Still try IP detection for logged out users
+      } catch (e) {
         try {
-          const response = await fetch('https://ipapi.co/json/');
-          const data = await response.json();
-          if (data.country_code && PPP_DATA[data.country_code]) {
-            setRegionCode(data.country_code);
-          }
-        } catch (e) {}
+          const res = await fetch('https://ipapi.co/json/');
+          const data = await res.json();
+          if (data.country_code && PPP_DATA[data.country_code]) setRegionCode(data.country_code);
+        } catch (ipErr) {}
+      } finally {
         setIsLoading(false);
       }
     };
@@ -104,17 +86,11 @@ export function SubscriptionProvider({
     refreshPrices: () => {},
   };
 
-  return (
-    <SubscriptionContext.Provider value={value}>
-      {children}
-    </SubscriptionContext.Provider>
-  );
+  return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
 }
 
 export function useSubscription() {
   const context = useContext(SubscriptionContext);
-  if (context === undefined) {
-    throw new Error('useSubscription must be used within a SubscriptionProvider');
-  }
+  if (!context) throw new Error('useSubscription must be used within a SubscriptionProvider');
   return context;
 }
