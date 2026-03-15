@@ -58,8 +58,10 @@ export default function RootLayout({
         <ThemeRegistry>
           <AuthProvider>
             <DocsProvider>
-              <div className="bg-mesh" />
-              {children}
+              <SubscriptionProvider>
+                <div className="bg-mesh" />
+                {children}
+              </SubscriptionProvider>
             </DocsProvider>
           </AuthProvider>
         </ThemeRegistry>

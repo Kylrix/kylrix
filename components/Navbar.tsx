@@ -129,7 +129,8 @@ export const Navbar = () => {
       ]
     },
     { label: 'Docs', href: '/docs' },
-    { label: 'Downloads', href: '/downloads' }
+    { label: 'Downloads', href: '/downloads' },
+    { label: 'Pricing', href: '/pricing' }
   ];
 
   const renderIcon = (iconName: string, color?: string) => {
