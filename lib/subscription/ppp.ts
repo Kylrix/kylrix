@@ -6,6 +6,13 @@
 export type SubscriptionTier = 'PRO' | 'ULTRA' | 'ENTERPRISE';
 export type PaymentMethod = 'CRYPTO' | 'CARD';
 
+export interface RegionConfig {
+  multiplier: number;
+  currency: string;
+  symbol: string;
+  name: string;
+}
+
 export const GLOBAL_SUBSCRIPTION_CONFIG = {
   tier_multipliers: {
     pro: 1.0,        // Base reference
@@ -16,13 +23,6 @@ export const GLOBAL_SUBSCRIPTION_CONFIG = {
   card_surcharge_multiplier: 1.25, // 25% overhead for legacy banking
   default_multiplier: 1.0
 };
-
-export interface RegionConfig {
-  multiplier: number;
-  currency: string;
-  symbol: string;
-  name?: string;
-}
 
 export const PPP_DATA: Record<string, RegionConfig> = {
   // NORTH AMERICA

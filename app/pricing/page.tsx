@@ -10,15 +10,29 @@ import {
   Grid, 
   alpha,
   Divider,
+  Paper,
 } from '@mui/material';
 import NextLink from 'next/link';
 import Navbar from '@/components/Navbar';
 import Logo from '@/components/Logo';
+import { useAuth } from '@/context/auth/AuthContext';
+import { getEcosystemUrl } from '@/lib/ecosystem';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { SubscriptionTier } from '@/lib/subscription/ppp';
 
 export default function PricingPage() {
+  const { user, isAuthenticated, openIDMWindow } = useAuth();
   const { prices, detectedRegion, paymentMethod, setPaymentMethod } = useSubscription();
+
+  const handleSelectTier = (tier: SubscriptionTier) => {
+    if (!isAuthenticated) {
+      openIDMWindow();
+      return;
+    }
+    // Redirect to checkout or subscription management
+    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/checkout?tier=${tier}&source=${encodeURIComponent(window.location.href)}`;
+    window.location.assign(checkoutUrl);
+  };
 
   const tiers: { id: SubscriptionTier; name: string; description: string; features: string[] }[] = [
     { 
@@ -42,12 +56,12 @@ export default function PricingPage() {
   ];
 
   return (
-    <Box component="main" sx={{ pt: 12 }}>
+    <Box component="main" sx={{ pt: 12, minHeight: '100vh', bgcolor: '#050505', color: 'white' }}>
       <Navbar />
       <div className="bg-mesh" />
 
-      <Container maxWidth="xl" sx={{ py: { xs: 8, md: 15 } }}>
-        <header style={{ textAlign: 'center', marginBottom: '60px' }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 8, md: 15 }, position: 'relative', zIndex: 1 }}>
+        <header style={{ textAlign: 'center', marginBottom: '80px' }}>
           <Typography 
             variant="h1" 
             sx={{ 
@@ -55,12 +69,13 @@ export default function PricingPage() {
               fontWeight: 900,
               fontSize: { xs: '2.5rem', sm: '3.5rem', md: '5rem' },
               fontFamily: 'Clash Display',
-              lineHeight: 1.1
+              lineHeight: 1.1,
+              letterSpacing: '-0.02em'
             }}
           >
             Global Pricing
           </Typography>
-          <Typography variant="body1" sx={{ opacity: 0.7, fontSize: { xs: '0.9rem', md: '1.1rem' }, px: 2 }}>
+          <Typography variant="body1" sx={{ opacity: 0.6, fontSize: { xs: '0.9rem', md: '1.1rem' }, px: 2, fontFamily: 'Satoshi' }}>
             Regional adjustments for {detectedRegion.name} ({detectedRegion.countryCode})
           </Typography>
           
@@ -69,7 +84,16 @@ export default function PricingPage() {
             direction={{ xs: 'column', sm: 'row' }} 
             justifyContent="center" 
             spacing={2} 
-            sx={{ mt: 5, px: 2 }}
+            sx={{ 
+              mt: 6, 
+              px: 2,
+              p: 1,
+              bgcolor: 'rgba(255, 255, 255, 0.03)',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              width: 'fit-content',
+              mx: 'auto'
+            }}
           >
             <Button 
               onClick={() => setPaymentMethod('CRYPTO')}
@@ -77,19 +101,19 @@ export default function PricingPage() {
                 width: { xs: '100%', sm: 'auto' },
                 px: 4,
                 py: 1.5,
-                borderRadius: '100px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                bgcolor: paymentMethod === 'CRYPTO' ? 'white' : 'transparent',
-                color: paymentMethod === 'CRYPTO' ? 'black' : 'white',
+                borderRadius: '14px',
+                bgcolor: paymentMethod === 'CRYPTO' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                color: paymentMethod === 'CRYPTO' ? 'white' : 'rgba(255, 255, 255, 0.4)',
                 fontWeight: 700,
                 fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                opacity: paymentMethod === 'CRYPTO' ? 1 : 0.5,
+                textTransform: 'none',
+                fontFamily: 'Satoshi',
                 '&:hover': {
-                    bgcolor: paymentMethod === 'CRYPTO' ? 'white' : 'rgba(255,255,255,0.05)',
+                    bgcolor: paymentMethod === 'CRYPTO' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
                 }
               }}
             >
-              Crypto (The Fair Price)
+              Crypto (Fair Price)
             </Button>
             <Button 
               onClick={() => setPaymentMethod('CARD')}
@@ -97,19 +121,19 @@ export default function PricingPage() {
                 width: { xs: '100%', sm: 'auto' },
                 px: 4,
                 py: 1.5,
-                borderRadius: '100px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                bgcolor: paymentMethod === 'CARD' ? 'white' : 'transparent',
-                color: paymentMethod === 'CARD' ? 'black' : 'white',
+                borderRadius: '14px',
+                bgcolor: paymentMethod === 'CARD' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                color: paymentMethod === 'CARD' ? 'white' : 'rgba(255, 255, 255, 0.4)',
                 fontWeight: 700,
                 fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                opacity: paymentMethod === 'CARD' ? 1 : 0.5,
+                textTransform: 'none',
+                fontFamily: 'Satoshi',
                 '&:hover': {
-                    bgcolor: paymentMethod === 'CARD' ? 'white' : 'rgba(255,255,255,0.05)',
+                    bgcolor: paymentMethod === 'CARD' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.05)',
                 }
               }}
             >
-              Legacy Card (Surcharge 1.25x)
+              Legacy Card (+25%)
             </Button>
           </Stack>
         </header>
@@ -117,72 +141,91 @@ export default function PricingPage() {
         <Grid container spacing={4} sx={{ mb: { xs: 6, md: 10 } }}>
           {tiers.map((tier) => (
             <Grid size={{ xs: 12, md: 4 }} key={tier.id}>
-              <Box 
+              <Paper 
+                elevation={0}
                 sx={{
                   p: { xs: 4, sm: 5, md: 6 },
                   height: '100%',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: { xs: 6, md: 8 },
-                  background: 'rgba(10, 10, 10, 0.8)',
-                  backdropFilter: 'blur(30px) saturate(180%)',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  borderRadius: '32px',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  backdropFilter: 'blur(20px)',
                   display: 'flex',
                   flexDirection: 'column',
-                  transition: 'all 0.4s',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': { 
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                    transform: { xs: 'none', md: 'translateY(-12px)' },
-                    bgcolor: 'rgba(15, 15, 15, 0.95)',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    transform: { xs: 'none', md: 'translateY(-8px)' },
                   }
                 }}
               >
-                <Typography variant="h3" sx={{ fontFamily: 'Clash Display', fontSize: { xs: '1.75rem', md: '2rem' }, mb: 1, fontWeight: 900 }}>{tier.name}</Typography>
-                <Typography variant="body2" sx={{ opacity: 0.5, mb: 4 }}>{tier.description}</Typography>
+                <Typography variant="h3" sx={{ fontFamily: 'Clash Display', fontSize: { xs: '1.75rem', md: '2rem' }, mb: 1, fontWeight: 900, letterSpacing: '-0.02em' }}>{tier.name}</Typography>
+                <Typography variant="body2" sx={{ opacity: 0.5, mb: 4, fontFamily: 'Satoshi' }}>{tier.description}</Typography>
                 
-                <Box sx={{ mb: { xs: 3, md: 5 } }}>
-                  <Typography component="span" sx={{ fontSize: { xs: '2.5rem', md: '3rem' }, fontWeight: 900 }}>
-                    {detectedRegion.symbol}{prices[tier.id].toFixed(2)}
+                <Box sx={{ mb: { xs: 4, md: 5 } }}>
+                  <Typography component="span" sx={{ fontSize: { xs: '2.5rem', md: '3.5rem' }, fontWeight: 900, fontFamily: 'JetBrains Mono' }}>
+                    {detectedRegion.symbol}{prices[tier.id]?.toFixed(2)}
                   </Typography>
-                  <Typography component="span" sx={{ opacity: 0.5, ml: 1, fontSize: { xs: '1rem', md: '1.2rem' } }}>/mo</Typography>
+                  <Typography component="span" sx={{ opacity: 0.4, ml: 1, fontSize: { xs: '1rem', md: '1.1rem' }, fontFamily: 'Satoshi' }}>/mo</Typography>
                 </Box>
 
-                <Stack spacing={2} sx={{ mb: { xs: 4, md: 6 }, flexGrow: 1 }}>
+                <Stack spacing={2.5} sx={{ mb: { xs: 6, md: 8 }, flexGrow: 1 }}>
                   {tier.features.map((feature, i) => (
-                    <Stack key={i} direction="row" spacing={2} alignItems="center" sx={{ opacity: 0.8 }}>
-                      <Typography sx={{ color: '#4CAF50', fontWeight: 900, fontSize: '0.9rem' }}>✓</Typography>
-                      <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', md: '1rem' } }}>{feature}</Typography>
+                    <Stack key={i} direction="row" spacing={2} alignItems="center">
+                      <Box sx={{ 
+                        width: 20, 
+                        height: 20, 
+                        borderRadius: '6px', 
+                        bgcolor: 'rgba(255, 255, 255, 0.05)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        border: '1px solid rgba(255, 255, 255, 0.1)'
+                      }}>
+                        <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '0.7rem' }}>✓</Typography>
+                      </Box>
+                      <Typography variant="body2" sx={{ fontSize: { xs: '0.875rem', md: '0.95rem' }, opacity: 0.7, fontFamily: 'Satoshi' }}>{feature}</Typography>
                     </Stack>
                   ))}
                 </Stack>
 
                 <Button 
+                  onClick={() => handleSelectTier(tier.id)}
                   fullWidth
-                  variant={tier.id === 'ULTRA' ? "contained" : "outlined"}
+                  variant="contained"
                   sx={{
                     py: 2,
-                    borderRadius: 3,
-                    fontWeight: 900,
-                    bgcolor: tier.id === 'ULTRA' ? 'white' : 'transparent',
+                    borderRadius: '16px',
+                    fontWeight: 800,
+                    bgcolor: tier.id === 'ULTRA' ? 'white' : 'rgba(255, 255, 255, 0.05)',
                     color: tier.id === 'ULTRA' ? 'black' : 'white',
-                    borderColor: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    textTransform: 'none',
+                    fontFamily: 'Satoshi',
+                    fontSize: '1rem',
+                    transition: 'all 0.3s',
                     '&:hover': {
-                        bgcolor: tier.id === 'ULTRA' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.05)',
-                        borderColor: 'white'
+                        bgcolor: tier.id === 'ULTRA' ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.1)',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        transform: 'scale(1.02)'
                     }
                   }}
                 >
                   Select {tier.name}
                 </Button>
-              </Box>
+              </Paper>
             </Grid>
           ))}
         </Grid>
 
         {/* Free Tier Callout */}
-        <Box 
+        <Paper 
+          elevation={0}
           sx={{
             p: { xs: 4, sm: 5, md: 6 },
-            borderRadius: { xs: 6, md: 8 },
-            background: 'rgba(255, 255, 255, 0.02)',
+            borderRadius: '32px',
+            background: 'rgba(255, 255, 255, 0.01)',
             border: '1px solid rgba(255, 255, 255, 0.05)',
             display: 'flex',
             flexDirection: { xs: 'column', md: 'row' },
@@ -194,8 +237,8 @@ export default function PricingPage() {
           }}
         >
           <Box>
-            <Typography variant="h4" sx={{ fontFamily: 'Clash Display', fontSize: { xs: '1.5rem', md: '1.75rem' }, fontWeight: 900, mb: 1 }}>Kylrix Free</Typography>
-            <Typography variant="body2" sx={{ opacity: 0.6, fontSize: { xs: '0.875rem', md: '1rem' } }}>Basic access for individuals. No credit card required.</Typography>
+            <Typography variant="h4" sx={{ fontFamily: 'Clash Display', fontSize: { xs: '1.5rem', md: '1.75rem' }, fontWeight: 900, mb: 1, letterSpacing: '-0.02em' }}>Kylrix Free</Typography>
+            <Typography variant="body2" sx={{ opacity: 0.5, fontSize: { xs: '0.875rem', md: '1rem' }, fontFamily: 'Satoshi' }}>Basic access for individuals. No credit card required.</Typography>
           </Box>
           <Button 
             onClick={() => window.location.assign('/dashboard')}
@@ -204,10 +247,13 @@ export default function PricingPage() {
               width: { xs: '100%', md: 'auto' },
               px: 5,
               py: { xs: 1.5, md: 2 },
-              borderRadius: 3,
+              borderRadius: '16px',
               borderColor: 'rgba(255, 255, 255, 0.1)',
               color: 'white',
-              fontWeight: 900,
+              fontWeight: 800,
+              textTransform: 'none',
+              fontFamily: 'Satoshi',
+              fontSize: '1rem',
               '&:hover': {
                 borderColor: 'white',
                 bgcolor: 'rgba(255, 255, 255, 0.05)'
@@ -216,7 +262,7 @@ export default function PricingPage() {
           >
             Continue Free
           </Button>
-        </Box>
+        </Paper>
       </Container>
 
       {/* Footer */}
