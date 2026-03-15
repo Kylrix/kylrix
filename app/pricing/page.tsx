@@ -69,7 +69,7 @@ export default function PricingPage() {
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '30px', marginBottom: '60px' }}>
         {tiers.map((tier) => (
           <div 
             key={tier.id} 
@@ -118,6 +118,44 @@ export default function PricingPage() {
             </button>
           </div>
         ))}
+      </div>
+
+      {/* Free Tier Callout */}
+      <div 
+        style={{
+          padding: '30px 40px',
+          borderRadius: '24px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backdropFilter: 'blur(10px)',
+          marginTop: '40px'
+        }}
+      >
+        <div>
+          <h3 style={{ fontFamily: 'Clash Display', fontSize: '1.4rem', margin: '0 0 5px 0' }}>Kylrix Free</h3>
+          <p style={{ opacity: 0.6, margin: 0, fontSize: '0.9rem' }}>Basic access for individuals. No credit card required.</p>
+        </div>
+        <button 
+          onClick={() => window.location.assign('/dashboard')}
+          style={{
+            padding: '12px 30px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'transparent',
+            color: '#fff',
+            fontWeight: 700,
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            fontFamily: 'Satoshi'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+        >
+          Continue Free
+        </button>
       </div>
 
       <style jsx>{`
