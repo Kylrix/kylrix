@@ -142,7 +142,8 @@
         {
             "$id": "67ff05f3002502ef239e",
             "$permissions": [
-                "create(\"users\")"
+                "create(\"users\")",
+                "create(\"any\")"
             ],
             "databaseId": "67ff05a9000296822396",
             "name": "notes",
@@ -3432,16 +3433,12 @@
         {
             "$id": "users",
             "$permissions": [
-                "create(\"users\")",
-                "read(\"users\")",
-                "update(\"users\")",
-                "delete(\"users\")",
-                "read(\"any\")"
+                "create(\"users\")"
             ],
             "databaseId": "chat",
             "name": "users",
             "enabled": true,
-            "rowSecurity": false,
+            "rowSecurity": true,
             "columns": [
                 {
                     "key": "username",
@@ -3458,23 +3455,6 @@
                     "required": false,
                     "array": false,
                     "size": 100,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "avatarUrl",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": "url"
-                },
-                {
-                    "key": "avatarFileId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
                     "default": null,
                     "encrypt": false
                 },
@@ -3514,6 +3494,14 @@
                 },
                 {
                     "key": "publicKey",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "avatar",
                     "type": "text",
                     "required": false,
                     "array": false,
