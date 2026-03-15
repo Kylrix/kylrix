@@ -29,7 +29,6 @@ const createQueryBuilder = <T>(): QueryBuilder<T> => ({
 
 const tableIdMap: Record<string, Record<string, string>> = Object.create(null);
 tableIdMap["67ff05a9000296822396"] = Object.create(null);
-tableIdMap["67ff05a9000296822396"]["users"] = "67ff05c900247b5673d3";
 tableIdMap["67ff05a9000296822396"]["notes"] = "67ff05f3002502ef239e";
 tableIdMap["67ff05a9000296822396"]["tags"] = "67ff06280034908cf08a";
 tableIdMap["67ff05a9000296822396"]["apiKeys"] = "67ff064400263631ffe4";
