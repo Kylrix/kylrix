@@ -112,14 +112,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuthStarted.current = true;
     
     const init = async () => {
-      await refreshUser();
+      const currentUser = await refreshUser();
       // If no user found via direct session check, try silent iframe discovery
-      if (!user) {
+      if (!currentUser) {
         await attemptSilentAuth();
       }
     };
     init();
-  }, [refreshUser, attemptSilentAuth, user]);
+  }, [refreshUser, attemptSilentAuth]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
