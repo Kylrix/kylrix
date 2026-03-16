@@ -30,46 +30,62 @@ const Logo: React.FC<LogoProps> = ({
 
   // App Specific Colors (Muted V3 Palette)
   const appColors: Record<KylrixApp, { primary: string; secondary: string; label: string }> = {
-    root: { primary: "#6366F1", secondary: "#000000", label: "KYLRIX" },
-    vault: { primary: "#F59E0B", secondary: "#161412", label: "VAULT" }, // Amber/Gold
-    flow: { primary: "#10B981", secondary: "#161412", label: "FLOW" },   // Emerald
-    note: { primary: "#EC4899", secondary: "#161412", label: "NOTE" },   // Pink
-    connect: { primary: "#6366F1", secondary: "#161412", label: "CONNECT" } // Indigo (Connect stays Indigo for now)
+    root: { primary: "#6366F1", secondary: "#6366F1", label: "KYLRIX" },
+    vault: { primary: "#6366F1", secondary: "#10B981", label: "VAULT" }, // Left: Indigo, Right: Emerald
+    flow: { primary: "#6366F1", secondary: "#A855F7", label: "FLOW" },   // Left: Indigo, Right: Amethyst
+    note: { primary: "#6366F1", secondary: "#EC4899", label: "NOTE" },   // Left: Indigo, Right: Pink
+    connect: { primary: "#6366F1", secondary: "#F59E0B", label: "CONNECT" } // Left: Indigo, Right: Amber
   };
 
   const current = appColors[app] || appColors.root;
 
-  // Logic for the dynamic "Left Hemisphere" and "Center Cutout"
-  // 1. For specialized apps (note, flow, etc.), the left hemisphere assumes the app's secondary color.
-  // 2. For Root/Accounts, it depends on Light/Dark mode.
-  let leftColor = current.secondary;
-  if (app === 'root') {
-    leftColor = isDarkMode ? "#FFFFFF" : "#000000";
-  }
-
-  // Right hemisphere is ALWAYS the app's primary brand color
-  const rightColor = current.primary;
-
+  // The Identity Split:
+  // Left Hemisphere = Ecosystem Indigo (#6366F1) or White (for Root)
+  // Right Hemisphere = Application Specific Color
+  const leftColor = app === 'root' ? (isDarkMode ? "#FFFFFF" : "#000000") : current.primary;
+  const rightColor = current.secondary;
+  
   // Center cutout color (punches through to background)
-  // Usually matches the background of the container it's in.
   const cutoutColor = isDarkMode ? "#0A0908" : "#FFFFFF";
 
   // Malleability Framework: Define shapes for the center cutout
   const renderCutout = () => {
     switch (app) {
-      case 'vault': // Circle
-        return <circle cx="50" cy="50" r="14" fill={cutoutColor} />;
+      case 'note': // Slanted Square (Quadrilateral)
+        return (
+          <rect 
+            x="38" 
+            y="38" 
+            width="24" 
+            height="24" 
+            fill={cutoutColor} 
+            transform="rotate(45 50 50)"
+          />
+        );
+      case 'vault': // Slanted Square (Quadrilateral) - Same as Note but Emerald
+        return (
+          <rect 
+            x="38" 
+            y="38" 
+            width="24" 
+            height="24" 
+            fill={cutoutColor} 
+            transform="rotate(45 50 50)"
+          />
+        );
       case 'flow': // Triangle (forward-pointing)
         return <polygon points="42,38 62,50 42,62" fill={cutoutColor} />;
-      case 'connect': // Two vertical rectangles
+      case 'connect': // Slanted Square (Quadrilateral) - Same as Note/Vault but Amber
         return (
-          <>
-            <rect x="43" y="38" width="5" height="24" fill={cutoutColor} />
-            <rect x="52" y="38" width="5" height="24" fill={cutoutColor} />
-          </>
+          <rect 
+            x="38" 
+            y="38" 
+            width="24" 
+            height="24" 
+            fill={cutoutColor} 
+            transform="rotate(45 50 50)"
+          />
         );
-      case 'note': // Square
-        return <rect x="38" y="38" width="24" height="24" fill={cutoutColor} />;
       case 'root': // Diamond
       default:
         return <polygon points="50,38 62,50 50,62 38,50" fill={cutoutColor} />;
