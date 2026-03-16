@@ -7,15 +7,15 @@ const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     mode,
     ...(mode === 'dark' ? {
       primary: {
-        main: '#6366F1', // Brand Electric Teal
+        main: '#EC4899', // Muted V3 Pink
         contrastText: '#000000',
       },
       secondary: {
         main: '#F2F2F2', // Titanium
       },
       background: {
-        default: '#000000', // Deep Black
-        paper: '#0A0A0A',   // Surface
+        default: '#0A0908', // Deep Earth
+        paper: '#161412',   // Surface
       },
       text: {
         primary: '#F2F2F2',   // Titanium
@@ -79,13 +79,13 @@ const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
       lineHeight: 1.6,
       color: mode === 'dark' ? '#A1A1AA' : '#52525B',
     },
-    subtitle2: {
-      fontSize: '0.875rem',
-      fontWeight: 700,
-      textTransform: 'uppercase',
-      letterSpacing: '0.4em', // Enhanced for premium look
-      color: '#6366F1',
-    },
+      subtitle2: {
+        fontSize: '0.875rem',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.4em', // Enhanced for premium look
+        color: '#EC4899',
+      },
     body1: {
       fontSize: '1.125rem',
       fontWeight: 400,
@@ -132,11 +132,11 @@ const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
           },
         },
         containedPrimary: {
-          backgroundColor: '#6366F1',
+          backgroundColor: '#EC4899',
           color: mode === 'dark' ? '#000000' : '#FFFFFF',
           '&:hover': {
-            backgroundColor: mode === 'dark' ? '#00E5EE' : '#4F46E5',
-            boxShadow: '0 0 30px rgba(99, 102, 241, 0.4)',
+            backgroundColor: '#D946EF',
+            boxShadow: '0 0 30px rgba(236, 72, 153, 0.4)',
           },
         },
         outlined: {
@@ -152,18 +152,30 @@ const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundColor: mode === 'dark' ? 'rgba(10, 10, 10, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: mode === 'dark' ? '#161412' : 'rgba(255, 255, 255, 0.8)',
           backdropFilter: 'blur(30px) saturate(180%)',
-          border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.1)',
+          border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(0, 0, 0, 0.1)',
           borderRadius: 24,
           backgroundImage: 'none',
+          boxShadow: mode === 'dark' ? '0 1px 0 rgba(0,0,0,0.4)' : 'none',
+          '&::before': mode === 'dark' ? {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '1px',
+            background: 'rgba(255,255,255,0.05)',
+            borderRadius: '24px',
+            pointerEvents: 'none'
+          } : {},
         },
       },
     },
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: mode === 'dark' ? '#000000' : '#FDFCFB',
+          backgroundColor: mode === 'dark' ? '#0A0908' : '#FDFCFB',
           color: mode === 'dark' ? '#F2F2F2' : '#09090B',
           '&::-webkit-scrollbar': {
             width: '8px',
