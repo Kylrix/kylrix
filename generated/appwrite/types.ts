@@ -134,7 +134,7 @@ export type NotesCreate = {
     "format"?: string | null;
 }
 
-export type Notes = Models.Row & {
+export type Notes = Models.Row & { [key: string]: any; 
     "id"?: string | null;
     "createdAt"?: string | null;
     "updatedAt"?: string | null;
@@ -165,7 +165,7 @@ export type TagsCreate = {
     "nameLower"?: string | null;
 }
 
-export type Tags = Models.Row & {
+export type Tags = Models.Row & { [key: string]: any; 
     "id"?: string | null;
     "name"?: string | null;
     "notes"?: string[] | null;
@@ -190,7 +190,7 @@ export type ApiKeysCreate = {
     "keyHash"?: string | null;
 }
 
-export type ApiKeys = Models.Row & {
+export type ApiKeys = Models.Row & { [key: string]: any; 
     "id"?: string | null;
     "key"?: string | null;
     "name"?: string | null;
@@ -211,7 +211,7 @@ export type CommentsCreate = {
     "parentCommentId"?: string | null;
 }
 
-export type Comments = Models.Row & {
+export type Comments = Models.Row & { [key: string]: any; 
     "noteId": string;
     "userId": string;
     "content": string;
@@ -231,7 +231,7 @@ export type ExtensionsCreate = {
     "isPublic"?: boolean | null;
 }
 
-export type Extensions = Models.Row & {
+export type Extensions = Models.Row & { [key: string]: any; 
     "name": string;
     "description"?: string | null;
     "version"?: string | null;
@@ -251,7 +251,7 @@ export type ReactionsCreate = {
     "userId": string;
 }
 
-export type Reactions = Models.Row & {
+export type Reactions = Models.Row & { [key: string]: any; 
     "targetType": ReactionsTargetType;
     "emoji": string;
     "createdAt": string;
@@ -267,7 +267,7 @@ export type CollaboratorsCreate = {
     "accepted"?: boolean | null;
 }
 
-export type Collaborators = Models.Row & {
+export type Collaborators = Models.Row & { [key: string]: any; 
     "noteId": string;
     "userId": string;
     "permission": CollaboratorsPermission;
@@ -284,7 +284,7 @@ export type ActivityLogCreate = {
     "details"?: string | null;
 }
 
-export type ActivityLog = Models.Row & {
+export type ActivityLog = Models.Row & { [key: string]: any; 
     "userId": string;
     "action": string;
     "targetType": string;
@@ -301,7 +301,7 @@ export type SettingsCreate = {
     "mode"?: string | null;
 }
 
-export type Settings = Models.Row & {
+export type Settings = Models.Row & { [key: string]: any; 
     "userId": string;
     "settings": string;
     "createdAt"?: string | null;
@@ -315,7 +315,7 @@ export type WalletMapCreate = {
     "updatedAt"?: string | null;
 }
 
-export type WalletMap = Models.Row & {
+export type WalletMap = Models.Row & { [key: string]: any; 
     "walletAddressLower": string;
     "userId": string;
     "updatedAt"?: string | null;
@@ -329,7 +329,7 @@ export type NoteTagsCreate = {
     "tag"?: string | null;
 }
 
-export type NoteTags = Models.Row & {
+export type NoteTags = Models.Row & { [key: string]: any; 
     "noteId": string;
     "tagId": string;
     "userId": string;
@@ -350,7 +350,7 @@ export type NoteRevisionsCreate = {
     "cause"?: NoteRevisionsCause | null;
 }
 
-export type NoteRevisions = Models.Row & {
+export type NoteRevisions = Models.Row & { [key: string]: any; 
     "noteId": string;
     "revision": number;
     "userId"?: string | null;
@@ -377,7 +377,7 @@ export type AiGenerationsCreate = {
     "createdAt"?: string | null;
 }
 
-export type AiGenerations = Models.Row & {
+export type AiGenerations = Models.Row & { [key: string]: any; 
     "userId": string;
     "promptHash"?: string | null;
     "prompt"?: string | null;
@@ -402,7 +402,7 @@ export type SubscriptionsCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Subscriptions = Models.Row & {
+export type Subscriptions = Models.Row & { [key: string]: any; 
     "userId": string;
     "plan": SubscriptionsPlan;
     "status"?: SubscriptionsStatus | null;
@@ -425,7 +425,7 @@ export type SecurityLogsCreate = {
     "timestamp": string;
 }
 
-export type SecurityLogs = Models.Row & {
+export type SecurityLogs = Models.Row & { [key: string]: any; 
     "userId": string;
     "eventType": string;
     "ipAddress"?: string | null;
@@ -465,7 +465,7 @@ export type CredentialsCreate = {
     "username"?: string | null;
 }
 
-export type Credentials = Models.Row & {
+export type Credentials = Models.Row & { [key: string]: any; 
     "userId": string;
     "itemType": string;
     "name": string;
@@ -511,7 +511,7 @@ export type IdentitiesCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Identities = Models.Row & {
+export type Identities = Models.Row & { [key: string]: any; 
     "userId": string;
     "identityType": string;
     "label": string;
@@ -544,7 +544,7 @@ export type UserCreate = {
     "updatedAt"?: string | null;
 }
 
-export type User = Models.Row & {
+export type User = Models.Row & { [key: string]: any; 
     "userId": string;
     "email"?: string | null;
     "masterpass"?: boolean | null;
@@ -572,7 +572,7 @@ export type FoldersCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Folders = Models.Row & {
+export type Folders = Models.Row & { [key: string]: any; 
     "userId": string;
     "name": string;
     "parentFolderId"?: string | null;
@@ -604,7 +604,7 @@ export type TotpSecretsCreate = {
     "updatedAt"?: string | null;
 }
 
-export type TotpSecrets = Models.Row & {
+export type TotpSecrets = Models.Row & { [key: string]: any; 
     "userId": string;
     "issuer": string;
     "accountName": string;
@@ -635,7 +635,7 @@ export type KeychainCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Keychain = Models.Row & {
+export type Keychain = Models.Row & { [key: string]: any; 
     "userId": string;
     "type": string;
     "credentialId"?: string | null;
@@ -659,7 +659,7 @@ export type MessagesCreate = {
     "readBy"?: string[] | null;
 }
 
-export type Messages = Models.Row & {
+export type Messages = Models.Row & { [key: string]: any; 
     "conversationId": string;
     "senderId": string;
     "createdAt": string;
@@ -706,7 +706,7 @@ export type ConversationsCreate = {
     "contextId"?: string | null;
 }
 
-export type Conversations = Models.Row & {
+export type Conversations = Models.Row & { [key: string]: any; 
     "type": ConversationsType;
     "name"?: string | null;
     "lastMessageId"?: string | null;
@@ -755,7 +755,7 @@ export type ContactsCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Contacts = Models.Row & {
+export type Contacts = Models.Row & { [key: string]: any; 
     "userId": string;
     "contactUserId": string;
     "nickname"?: string | null;
@@ -780,7 +780,7 @@ export type UsersCreate = {
     "avatar"?: string | null;
 }
 
-export type Users = Models.Row & {
+export type Users = Models.Row & { [key: string]: any; 
     "username": string;
     "displayName"?: string | null;
     "bio"?: string | null;
@@ -800,7 +800,7 @@ export type FollowsCreate = {
     "createdAt"?: string | null;
 }
 
-export type Follows = Models.Row & {
+export type Follows = Models.Row & { [key: string]: any; 
     "followerId": string;
     "followingId": string;
     "status"?: FollowsStatus;
@@ -816,7 +816,7 @@ export type AppActivityCreate = {
     "customStatus"?: string | null;
 }
 
-export type AppActivity = Models.Row & {
+export type AppActivity = Models.Row & { [key: string]: any; 
     "userId": string;
     "status"?: AppActivityStatus;
     "lastSeen"?: string | null;
@@ -832,7 +832,7 @@ export type CallLinksCreate = {
     "expiresAt"?: string | null;
 }
 
-export type CallLinks = Models.Row & {
+export type CallLinks = Models.Row & { [key: string]: any; 
     "userId": string;
     "conversationId"?: string | null;
     "code": string;
@@ -848,7 +848,7 @@ export type InteractionsCreate = {
     "createdAt": string;
 }
 
-export type Interactions = Models.Row & {
+export type Interactions = Models.Row & { [key: string]: any; 
     "messageId": string;
     "userId": string;
     "emoji": string;
@@ -865,7 +865,7 @@ export type CallLogsCreate = {
     "startedAt": string;
 }
 
-export type CallLogs = Models.Row & {
+export type CallLogs = Models.Row & { [key: string]: any; 
     "callerId": string;
     "receiverId"?: string | null;
     "conversationId"?: string | null;
@@ -884,7 +884,7 @@ export type MomentsCreate = {
     "expiresAt": string;
 }
 
-export type Moments = Models.Row & {
+export type Moments = Models.Row & { [key: string]: any; 
     "userId": string;
     "fileId": string;
     "type"?: MomentsType;
@@ -902,7 +902,7 @@ export type FocusSessionsCreate = {
     "status"?: string;
 }
 
-export type FocusSessions = Models.Row & {
+export type FocusSessions = Models.Row & { [key: string]: any; 
     "userId": string;
     "taskId"?: string | null;
     "startTime": string;
@@ -919,7 +919,7 @@ export type EventGuestsCreate = {
     "role"?: string;
 }
 
-export type EventGuests = Models.Row & {
+export type EventGuests = Models.Row & { [key: string]: any; 
     "eventId": string;
     "userId"?: string | null;
     "email"?: string | null;
@@ -943,7 +943,7 @@ export type EventsCreate = {
     "userId": string;
 }
 
-export type Events = Models.Row & {
+export type Events = Models.Row & { [key: string]: any; 
     "title": string;
     "description"?: string | null;
     "startTime": string;
@@ -966,7 +966,7 @@ export type CalendarsCreate = {
     "userId": string;
 }
 
-export type Calendars = Models.Row & {
+export type Calendars = Models.Row & { [key: string]: any; 
     "name": string;
     "color"?: string;
     "isDefault"?: boolean;
@@ -988,7 +988,7 @@ export type TasksCreate = {
     "parentId"?: string | null;
 }
 
-export type Tasks = Models.Row & {
+export type Tasks = Models.Row & { [key: string]: any; 
     "title": string;
     "description"?: string | null;
     "status"?: string;
@@ -1013,7 +1013,7 @@ export type FormsCreate = {
     "visibility"?: FormsVisibility;
 }
 
-export type Forms = Models.Row & {
+export type Forms = Models.Row & { [key: string]: any; 
     "userId": string;
     "title": string;
     "description"?: string | null;
@@ -1031,7 +1031,7 @@ export type FormSubmissionsCreate = {
     "metadata"?: string | null;
 }
 
-export type FormSubmissions = Models.Row & {
+export type FormSubmissions = Models.Row & { [key: string]: any; 
     "formId": string;
     "submitterId"?: string | null;
     "payload": string;

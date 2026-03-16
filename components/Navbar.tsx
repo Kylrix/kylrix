@@ -59,7 +59,7 @@ export const Navbar = () => {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, isAuthenticated, logout, openIDMWindow } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, openIDMWindow } = useAuth();
   const { toggleColorMode, mode } = useColorMode();
   
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
@@ -250,7 +250,7 @@ export const Navbar = () => {
                         bgcolor: isActive(item.href || '') ? 'rgba(99, 102, 241, 0.05)' : 'transparent',
                         '&:hover': { 
                           opacity: 1, 
-                          color: '#6366F1',
+                          color: '#6366F1', 
                           bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
                         }
                       }}
@@ -332,26 +332,6 @@ export const Navbar = () => {
             </Stack>
 
             <Stack direction="row" spacing={1} alignItems="center">
-              {/* Theme Switcher - Hidden for now
-              <Tooltip title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}>
-                <IconButton 
-                  onClick={toggleColorMode}
-                  sx={{ 
-                    color: mode === 'dark' ? '#F2F2F2' : '#09090B',
-                    bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                    borderRadius: '12px',
-                    width: 42,
-                    height: 42,
-                    '&:hover': { 
-                      bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)', 
-                    },
-                  }}
-                >
-                  {mode === 'dark' ? <Sun size={20} strokeWidth={1.5} /> : <Moon size={20} strokeWidth={1.5} />}
-                </IconButton>
-              </Tooltip>
-              */}
-
               <Tooltip title="Ecosystem Portal">
                 <IconButton 
                   onClick={() => setIsEcosystemPortalOpen(true)}
@@ -375,108 +355,96 @@ export const Navbar = () => {
                 </IconButton>
               </Tooltip>
 
-              {isAuthenticated ? (
-                <>
-                  <Tooltip title="Account Identity">
-                    <IconButton 
-                      onClick={(e) => setAnchorElAccount(e.currentTarget)}
-                      sx={{ 
-                        p: 0.5,
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '14px',
-                        bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        '&:hover': { borderColor: 'rgba(99, 102, 241, 0.3)', bgcolor: 'rgba(255, 255, 255, 0.05)' },
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <Avatar 
-                        src={profileUrl || undefined}
-                        sx={{ 
-                          width: 34, 
-                          height: 34, 
-                          bgcolor: '#050505',
-                          fontSize: '0.875rem',
-                          fontWeight: 800,
-                          color: '#6366F1',
-                          borderRadius: '10px',
-                          fontFamily: 'JetBrains Mono'
-                        }}
-                      >
-                        {user?.name ? user.name[0].toUpperCase() : 'U'}
-                      </Avatar>
-                    </IconButton>
-                  </Tooltip>
-
-                  <Menu
-                    anchorEl={anchorElAccount}
-                    open={Boolean(anchorElAccount)}
-                    onClose={() => setAnchorElAccount(null)}
-                    PaperProps={{
-                      sx: {
-                        mt: 2,
-                        width: 280,
-                        bgcolor: 'rgba(5, 5, 5, 0.05)',
-                        backdropFilter: 'blur(35px) saturate(180%)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        borderRadius: '28px',
-                        backgroundImage: 'none',
-                        boxShadow: '0 25px 50px rgba(0,0,0,0.7)',
-                        p: 1,
-                        color: 'white'
-                      }
+              {user ? (
+                <IconButton 
+                  onClick={(e) => setAnchorElAccount(e.currentTarget)}
+                  sx={{ 
+                    p: 0.5,
+                    '&:hover': { transform: 'scale(1.05)' },
+                    transition: 'transform 0.2s'
+                  }}
+                >
+                  <Avatar 
+                    src={profileUrl || undefined}
+                    sx={{ 
+                      width: { xs: 32, sm: 38 }, 
+                      height: { xs: 32, sm: 38 }, 
+                      bgcolor: '#6366F1',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      color: '#000',
+                      border: '2px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '10px'
                     }}
-                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
                   >
-                    <Box sx={{ px: 2.5, py: 2.5, bgcolor: 'rgba(255, 255, 255, 0.02)', borderRadius: '20px', mb: 1 }}>
-                      <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255, 255, 255, 0.3)', textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'JetBrains Mono' }}>
-                        Identity
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mt: 1 }}>
-                        {user?.name || user?.email}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', display: 'block', mt: 0.5, fontFamily: 'JetBrains Mono', fontSize: '0.65rem' }}>
-                        {user?.email}
-                      </Typography>
-                    </Box>
-                    <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)', my: 1 }} />
+                    {user?.name ? user.name[0].toUpperCase() : 'U'}
+                  </Avatar>
+                </IconButton>
+              ) : (
+                <Button
+                  onClick={handleLaunchClick}
+                  variant="contained"
+                  size="small"
+                  sx={{
+                    ml: 1,
+                    bgcolor: '#6366F1',
+                    color: '#000',
+                    fontWeight: 800,
+                    borderRadius: '10px',
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
+                  }}
+                >
+                  Connect
+                </Button>
+              )}
+
+              {user && (
+                <Menu
+                  anchorEl={anchorElAccount}
+                  open={Boolean(anchorElAccount)}
+                  onClose={() => setAnchorElAccount(null)}
+                  PaperProps={{
+                    sx: {
+                      mt: 1.5,
+                      width: 280,
+                      bgcolor: 'rgba(10, 10, 10, 0.95)',
+                      backdropFilter: 'blur(25px) saturate(180%)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '24px',
+                      backgroundImage: 'none',
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+                      overflow: 'hidden'
+                    }
+                  }}
+                >
+                  <Box sx={{ px: 3, py: 2.5, bgcolor: 'rgba(255, 255, 255, 0.02)' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                      Account Identity
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'white', mt: 0.5, opacity: 0.9 }}>
+                      {user?.email}
+                    </Typography>
+                  </Box>
+                  <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)' }} />
+                  <Box sx={{ py: 1 }}>
                     <MenuItem 
                       onClick={() => {
                         window.location.href = `${getEcosystemUrl('accounts')}/settings?source=${encodeURIComponent(window.location.origin)}`;
                         setAnchorElAccount(null);
                       }}
-                      sx={{ py: 1.8, px: 2.5, borderRadius: '16px', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.03)' } }}
+                      sx={{ py: 1.5, px: 3, '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.05)' } }}
                     >
-                      <ListItemIcon sx={{ minWidth: 40 }}><Settings size={18} strokeWidth={1.5} color="rgba(255, 255, 255, 0.6)" /></ListItemIcon>
-                      <ListItemText primary="Account Settings" primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }} />
+                      <ListItemIcon><Settings size={18} strokeWidth={1.5} color="rgba(255, 255, 255, 0.4)" /></ListItemIcon>
+                      <ListItemText primary="Settings" primaryTypographyProps={{ variant: 'caption', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'white' }} />
                     </MenuItem>
-                    <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)', my: 1 }} />
-                    <MenuItem onClick={handleLogout} sx={{ py: 2, px: 2.5, borderRadius: '16px', color: '#FF4D4D', '&:hover': { bgcolor: alpha('#FF4D4D', 0.05) } }}>
-                      <ListItemIcon sx={{ minWidth: 40 }}><LogOut size={18} strokeWidth={1.5} color="#FF4D4D" /></ListItemIcon>
-                      <ListItemText primary="Disconnect Session" primaryTypographyProps={{ variant: 'body2', fontWeight: 800 }} />
-                    </MenuItem>
-                  </Menu>
-                </>
-              ) : (
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  onClick={handleLaunchClick}
-                  sx={{ 
-                    borderRadius: '12px', 
-                    px: { xs: 2, md: 4 },
-                    py: 1,
-                    fontWeight: 800,
-                    fontSize: '0.85rem',
-                    textTransform: 'none',
-                    boxShadow: '0 4px 15px rgba(99, 102, 241, 0.2)',
-                    '&:hover': {
-                      boxShadow: '0 6px 20px rgba(99, 102, 241, 0.4)'
-                    }
-                  }}
-                >
-                  Launch
-                </Button>
+                  </Box>
+                  <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)' }} />
+                  <MenuItem onClick={handleLogout} sx={{ py: 2, px: 3, color: '#FF4D4D', '&:hover': { bgcolor: alpha('#FF4D4D', 0.05) } }}>
+                    <ListItemIcon><LogOut size={18} strokeWidth={1.5} color="#FF4D4D" /></ListItemIcon>
+                    <ListItemText primary="Sign Out" primaryTypographyProps={{ variant: 'caption', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }} />
+                  </MenuItem>
+                </Menu>
               )}
 
                   <IconButton 
@@ -596,7 +564,7 @@ export const Navbar = () => {
 
           <Divider sx={{ my: 4, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
           
-          {isAuthenticated ? (
+          {user ? (
             <ListItemButton 
               onClick={() => {
                 router.push(getEcosystemUrl('note'));
@@ -640,10 +608,14 @@ export const Navbar = () => {
                 borderRadius: '16px',
                 fontWeight: 900,
                 boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)',
-                mb: 4
+                mb: 4,
+                bgcolor: '#6366F1',
+                color: '#000',
+                textTransform: 'none',
+                '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
               }}
             >
-              Launch Ecosystem
+              Connect
             </Button>
           )}
 
