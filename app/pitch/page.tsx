@@ -217,15 +217,15 @@ export default function PitchPage() {
       id: 4,
       title: "Next-Gen Knowledge",
       subtitle: "KYLRIX NOTE",
-      accent: "#EC4899",
+      accent: "#6366F1",
       description: "Not just notes—intelligence. Kylrix Note leverages the entire ecosystem's graph to provide AI-enhanced context to your knowledge base.",
       content: (
         <Stack direction="row" spacing={2}>
-           <Brain size={64} color="#EC4899" />
+           <Brain size={64} color="#6366F1" />
            <Stack spacing={1}>
               <Box sx={{ width: 140, height: 8, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1 }} />
               <Box sx={{ width: 100, height: 8, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1 }} />
-              <Box sx={{ width: 120, height: 8, bgcolor: alpha('#EC4899', 0.3), borderRadius: 1 }} />
+              <Box sx={{ width: 120, height: 8, bgcolor: alpha('#6366F1', 0.3), borderRadius: 1 }} />
            </Stack>
         </Stack>
       )

@@ -7,8 +7,8 @@ const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
     mode,
     ...(mode === 'dark' ? {
       primary: {
-        main: '#EC4899', // Muted V3 Pink
-        contrastText: '#000000',
+        main: '#6366F1', // Ecosystem Primary (Indigo)
+        contrastText: '#FFFFFF',
       },
       secondary: {
         main: '#F2F2F2', // Titanium
@@ -84,7 +84,7 @@ const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
         fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.4em', // Enhanced for premium look
-        color: '#EC4899',
+        color: '#6366F1',
       },
     body1: {
       fontSize: '1.125rem',
@@ -132,11 +132,11 @@ const getDesignTokens = (mode: PaletteMode): ThemeOptions => ({
           },
         },
         containedPrimary: {
-          backgroundColor: '#EC4899',
-          color: mode === 'dark' ? '#000000' : '#FFFFFF',
+          backgroundColor: '#6366F1',
+          color: '#FFFFFF',
           '&:hover': {
-            backgroundColor: '#D946EF',
-            boxShadow: '0 0 30px rgba(236, 72, 153, 0.4)',
+            backgroundColor: alpha('#6366F1', 0.8),
+            boxShadow: '0 0 30px rgba(99, 102, 241, 0.4)',
           },
         },
         outlined: {
