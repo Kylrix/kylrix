@@ -219,11 +219,11 @@ export const Navbar = () => {
                         fontSize: '0.8rem',
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
-                        color: Boolean(item.anchorEl) ? '#EC4899' : (mode === 'dark' ? '#fff' : '#09090B'),
+                        color: Boolean(item.anchorEl) ? '#6366F1' : (mode === 'dark' ? '#fff' : '#09090B'),
                         opacity: Boolean(item.anchorEl) ? 1 : 0.5,
                         '&:hover': { 
                           opacity: 1, 
-                          color: '#EC4899',
+                          color: '#6366F1',
                           bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
                         }
                       }}
@@ -245,12 +245,12 @@ export const Navbar = () => {
                         textTransform: 'uppercase',
                         letterSpacing: '0.1em',
                         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        color: isActive(item.href || '') ? '#EC4899' : (mode === 'dark' ? '#fff' : '#09090B'),
+                        color: isActive(item.href || '') ? '#6366F1' : (mode === 'dark' ? '#fff' : '#09090B'),
                         opacity: isActive(item.href || '') ? 1 : 0.5,
-                        bgcolor: isActive(item.href || '') ? alpha('#EC4899', 0.05) : 'transparent',
+                        bgcolor: isActive(item.href || '') ? alpha('#6366F1', 0.05) : 'transparent',
                         '&:hover': { 
                           opacity: 1, 
-                          color: '#EC4899', 
+                          color: '#6366F1', 
                           bgcolor: mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
                         }
                       }}
@@ -336,8 +336,8 @@ export const Navbar = () => {
                 <IconButton 
                   onClick={() => setIsEcosystemPortalOpen(true)}
                   sx={{ 
-                    color: '#EC4899',
-                    bgcolor: alpha('#EC4899', 0.05),
+                    color: '#6366F1',
+                    bgcolor: alpha('#6366F1', 0.05),
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                     borderRadius: '12px',
                     width: 42,
@@ -356,9 +356,9 @@ export const Navbar = () => {
                       borderRadius: '12px'
                     },
                     '&:hover': { 
-                      bgcolor: alpha('#EC4899', 0.1), 
-                      boxShadow: '0 0 15px rgba(236, 72, 153, 0.2), 0 1px 0 rgba(0,0,0,0.4)',
-                      borderColor: '#EC4899'
+                      bgcolor: alpha('#6366F1', 0.1), 
+                      boxShadow: '0 0 15px rgba(99, 102, 241, 0.2), 0 1px 0 rgba(0,0,0,0.4)',
+                      borderColor: '#6366F1'
                     },
                     display: { xs: 'none', sm: 'flex' }
                   }}
@@ -381,7 +381,7 @@ export const Navbar = () => {
                     sx={{ 
                       width: { xs: 32, sm: 38 }, 
                       height: { xs: 32, sm: 38 }, 
-                      bgcolor: '#EC4899',
+                      bgcolor: '#6366F1',
                       fontSize: '0.75rem',
                       fontWeight: 800,
                       color: '#000',
@@ -411,7 +411,7 @@ export const Navbar = () => {
                   size="small"
                   sx={{
                     ml: 1,
-                    bgcolor: '#EC4899',
+                    bgcolor: '#6366F1',
                     color: '#000',
                     fontWeight: 800,
                     borderRadius: '10px',
@@ -428,7 +428,7 @@ export const Navbar = () => {
                       background: 'rgba(255,255,255,0.05)',
                       borderRadius: '10px'
                     },
-                    '&:hover': { bgcolor: alpha('#EC4899', 0.8) }
+                    '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
                   }}
                 >
                   Connect
@@ -560,7 +560,7 @@ export const Navbar = () => {
                           bgcolor: 'rgba(255, 255, 255, 0.02)'
                         }}
                       >
-                        <Box sx={{ color: subItem.color || '#EC4899', display: 'flex' }}>
+                        <Box sx={{ color: subItem.color || '#6366F1', display: 'flex' }}>
                           {renderIcon(subItem.icon)}
                         </Box>
                         <ListItemText 
@@ -588,7 +588,7 @@ export const Navbar = () => {
                       primary={item.label} 
                       primaryTypographyProps={{ 
                         fontWeight: 700, 
-                        color: isActive(item.href || '') ? '#EC4899' : 'white' 
+                        color: isActive(item.href || '') ? '#6366F1' : 'white' 
                       }} 
                     />
                     <ExternalLink size={14} style={{ opacity: 0.3, color: 'white' }} />
@@ -608,7 +608,7 @@ export const Navbar = () => {
               }}
               sx={{ 
                 borderRadius: '12px',
-                bgcolor: alpha('#EC4899', 0.05),
+                bgcolor: alpha('#6366F1', 0.05),
                 border: '1px solid rgba(255, 255, 255, 0.05)',
                 mb: 2,
                 boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
@@ -632,7 +632,7 @@ export const Navbar = () => {
                   height: 32, 
                   mr: 2,
                   bgcolor: '#050505',
-                  color: '#EC4899',
+                  color: '#6366F1',
                   borderRadius: '8px',
                   fontFamily: 'JetBrains Mono',
                   fontSize: '0.8rem',
@@ -643,7 +643,7 @@ export const Navbar = () => {
               </Avatar>
               <ListItemText 
                 primary={user?.name || 'User'} 
-                primaryTypographyProps={{ fontWeight: 700, color: '#EC4899' }} 
+                primaryTypographyProps={{ fontWeight: 700, color: '#6366F1' }} 
               />
             </ListItemButton>
           ) : (
@@ -652,28 +652,28 @@ export const Navbar = () => {
               variant="contained" 
               size="large"
               onClick={handleLaunchClick}
-              sx={{ 
-                py: 2, 
-                borderRadius: '16px',
-                fontWeight: 900,
-                boxShadow: '0 8px 24px rgba(236, 72, 153, 0.2), 0 1px 0 rgba(0,0,0,0.4)',
-                mb: 4,
-                bgcolor: '#EC4899',
-                color: '#000',
-                textTransform: 'none',
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '1px',
-                  background: 'rgba(255,255,255,0.05)',
-                  borderRadius: '16px'
-                },
-                '&:hover': { bgcolor: alpha('#EC4899', 0.8) }
-              }}
+                      sx={{ 
+                        py: 2, 
+                        borderRadius: '16px',
+                        fontWeight: 900,
+                        boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2), 0 1px 0 rgba(0,0,0,0.4)',
+                        mb: 4,
+                        bgcolor: '#6366F1',
+                        color: '#000',
+                        textTransform: 'none',
+                        position: 'relative',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '1px',
+                          background: 'rgba(255,255,255,0.05)',
+                          borderRadius: '16px'
+                        },
+                        '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
+                      }}
             >
               Connect
             </Button>

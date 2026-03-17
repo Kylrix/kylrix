@@ -188,7 +188,7 @@ export default function LandingPage() {
                 }}
               >
                 Secure. <br /> 
-                <Box component="span" sx={{ color: '#EC4899' }}>Private. Fast.</Box>
+                <Box component="span" sx={{ color: '#6366F1' }}>Private. Fast.</Box>
               </Typography>
               <Typography 
                 variant="subtitle1" 
@@ -232,7 +232,7 @@ export default function LandingPage() {
       <Box sx={{ py: { xs: 15, md: 25 }, borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: '#0A0908' }}>
         <Container maxWidth="xl">
           <Stack spacing={4} mb={15} textAlign="center">
-            <Typography variant="subtitle2" sx={{ color: '#EC4899', fontWeight: 900 }}>THE FLAGSHIPS</Typography>
+            <Typography variant="subtitle2" sx={{ color: '#6366F1', fontWeight: 900 }}>THE FLAGSHIPS</Typography>
             <Typography variant="h2" sx={{ fontWeight: 900 }}>Your Workspace.</Typography>
           </Stack>
 
@@ -253,7 +253,7 @@ export default function LandingPage() {
             <Grid size={{ xs: 12, md: 6 }}>
               <Stack spacing={8}>
                 <Box>
-                  <Typography variant="subtitle2" sx={{ mb: 4, color: '#EC4899', fontWeight: 900 }}>INFRASTRUCTURE</Typography>
+                  <Typography variant="subtitle2" sx={{ mb: 4, color: '#6366F1', fontWeight: 900 }}>INFRASTRUCTURE</Typography>
                   <Typography variant="h2" sx={{ mb: 4, fontWeight: 900 }}>Secure by Design. <br />Private by Default.</Typography>
                   <Typography variant="body1" sx={{ opacity: 0.5, maxWidth: 600, fontSize: '1.25rem' }}>
                     Every Kylrix application is built on our own secure infrastructure, so your data stays yours.
@@ -263,7 +263,7 @@ export default function LandingPage() {
                 <Stack spacing={6}>
                   {[
                     { icon: Fingerprint, title: 'Private', desc: 'Local encryption means only you can see your data.', color: '#ef4444' },
-                    { icon: Layers, title: 'Extensible', desc: 'Built for developers to build on top of.', color: '#EC4899' },
+                    { icon: Layers, title: 'Extensible', desc: 'Built for developers to build on top of.', color: '#6366F1' },
                     { icon: Cpu, title: 'Local AI', desc: 'Fast, private AI that runs on your device.', color: '#10b981' }
                   ].map((f, i) => (
                     <Stack key={i} direction="row" spacing={4}>
@@ -307,11 +307,11 @@ export default function LandingPage() {
                 }}
               >
                 <Stack spacing={6}>
-                  <Box sx={{ opacity: 0.2, color: '#EC4899' }}>
+                  <Box sx={{ opacity: 0.2, color: '#6366F1' }}>
                     <Terminal size={64} strokeWidth={1} />
                   </Box>
                   <Typography variant="h2" sx={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', fontWeight: 400, opacity: 0.9 }}>
-                    <Box component="span" sx={{ color: '#EC4899' }}>$</Box> kylrix initialize <br />
+                    <Box component="span" sx={{ color: '#6366F1' }}>$</Box> kylrix initialize <br />
                     <Box component="span" sx={{ opacity: 0.3 }}>
                       &gt; Secure Connection Established.<br />
                       &gt; Connection Successful.<br />
@@ -363,7 +363,7 @@ export default function LandingPage() {
                               fontWeight: 500, 
                               opacity: 0.5, 
                               transition: 'all 0.3s',
-                              '&:hover': { opacity: 1, color: '#EC4899' } 
+                              '&:hover': { opacity: 1, color: '#6366F1' } 
                             }}
                           >
                             {link}
