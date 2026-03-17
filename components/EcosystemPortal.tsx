@@ -49,9 +49,11 @@ interface EcosystemPortalProps {
 export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps) {
     const [search, setSearch] = useState('');
 
-    const filteredApps = ECOSYSTEM_APPS.filter(app =>
-        app.label.toLowerCase().includes(search.toLowerCase()) ||
-        app.description.toLowerCase().includes(search.toLowerCase())
+    const filteredApps = ECOSYSTEM_APPS.filter(app => 
+        app.type === 'app' && (
+            app.label.toLowerCase().includes(search.toLowerCase()) ||
+            app.description.toLowerCase().includes(search.toLowerCase())
+        )
     );
 
     const handleAppClick = (subdomain: string) => {
