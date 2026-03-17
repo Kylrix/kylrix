@@ -121,7 +121,7 @@ export const Navbar = () => {
           label: 'Downloads',
           desc: 'Get Kylrix for Desktop and Mobile',
           icon: 'download',
-          color: '#10B981',
+          color: '#6366F1',
           href: '/downloads'
         }
       ]
@@ -282,49 +282,64 @@ export const Navbar = () => {
                         }
                       }}
                     >
-                      {item.items?.map((subItem: any) => (
-                        <MenuItem 
-                          key={subItem.label}
-                          onClick={() => {
-                            window.location.assign(subItem.href);
-                            item.setAnchorEl(null);
-                          }}
-                          sx={{ 
-                            borderRadius: '16px',
-                            py: 1.5,
-                            gap: 2,
-                            '&:hover': { 
-                              bgcolor: 'rgba(255, 255, 255, 0.05)',
-                              '& .subitem-icon': { transform: 'scale(1.1)' }
-                            }
-                          }}
-                        >
-                          <Box 
-                            className="subitem-icon"
-                            sx={{ 
-                              width: 36, 
-                              height: 36, 
-                              borderRadius: '10px', 
-                              bgcolor: subItem.color ? alpha(subItem.color, 0.1) : 'rgba(255,255,255,0.05)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              transition: 'transform 0.2s',
-                              color: subItem.color || '#fff'
-                            }}
-                          >
-                            {renderIcon(subItem.icon, subItem.color)}
-                          </Box>
-                          <Box>
-                            <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>{subItem.label}</Typography>
-                            {subItem.desc && (
-                              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', display: 'block' }}>
-                                {subItem.desc}
-                              </Typography>
-                            )}
-                          </Box>
-                        </MenuItem>
-                      ))}
+                        {item.items?.map((subItem: any) => {
+                          const isApp = ECOSYSTEM_APPS.some(app => app.label === subItem.label);
+                          return (
+                            <MenuItem 
+                              key={subItem.label}
+                              onClick={() => {
+                                window.location.assign(subItem.href);
+                                item.setAnchorEl(null);
+                              }}
+                              sx={{ 
+                                borderRadius: '16px',
+                                py: 1.5,
+                                gap: 2,
+                                '&:hover': { 
+                                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                  '& .subitem-icon': { transform: 'scale(1.1)' }
+                                }
+                              }}
+                            >
+                              {isApp ? (
+                                <Logo 
+                                  app={subItem.label.toLowerCase() as any} 
+                                  size={36} 
+                                  variant="icon"
+                                  className="subitem-icon"
+                                  sx={{ 
+                                    transition: 'transform 0.2s',
+                                  }}
+                                />
+                              ) : (
+                                <Box 
+                                  className="subitem-icon"
+                                  sx={{ 
+                                    width: 36, 
+                                    height: 36, 
+                                    borderRadius: '10px', 
+                                    bgcolor: subItem.color ? alpha(subItem.color, 0.1) : 'rgba(255,255,255,0.05)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'transform 0.2s',
+                                    color: subItem.color || '#fff'
+                                  }}
+                                >
+                                  {renderIcon(subItem.icon, subItem.color)}
+                                </Box>
+                              )}
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>{subItem.label}</Typography>
+                                {subItem.desc && (
+                                  <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', display: 'block' }}>
+                                    {subItem.desc}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </MenuItem>
+                          );
+                        })}
                     </Menu>
                   )}
                 </Box>
@@ -544,35 +559,46 @@ export const Navbar = () => {
                   {item.label}
                 </Typography>
                 
-                {item.type === 'dropdown' ? (
-                  <Stack spacing={0.5}>
-                    {item.items?.map((subItem: any) => (
-                      <ListItemButton 
-                        key={subItem.label}
-                        onClick={() => {
-                          window.location.assign(subItem.href);
-                          setMobileMenuOpen(false);
-                        }}
-                        sx={{ 
-                          borderRadius: '12px',
-                          py: 1.5,
-                          gap: 2,
-                          bgcolor: 'rgba(255, 255, 255, 0.02)'
-                        }}
-                      >
-                        <Box sx={{ color: subItem.color || '#6366F1', display: 'flex' }}>
-                          {renderIcon(subItem.icon)}
-                        </Box>
-                        <ListItemText 
-                          primary={subItem.label} 
-                          primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem', color: 'white' }}
-                          secondary={subItem.desc}
-                          secondaryTypographyProps={{ fontSize: '0.7rem', color: 'white', sx: { opacity: 0.5 } }}
-                        />
-                      </ListItemButton>
-                    ))}
-                  </Stack>
-                ) : (
+                        {item.type === 'dropdown' ? (
+                          <Stack spacing={0.5}>
+                            {item.items?.map((subItem: any) => {
+                              const isApp = ECOSYSTEM_APPS.some(app => app.label === subItem.label);
+                              return (
+                                <ListItemButton 
+                                  key={subItem.label}
+                                  onClick={() => {
+                                    window.location.assign(subItem.href);
+                                    setMobileMenuOpen(false);
+                                  }}
+                                  sx={{ 
+                                    borderRadius: '12px',
+                                    py: 1.5,
+                                    gap: 2,
+                                    bgcolor: 'rgba(255, 255, 255, 0.02)'
+                                  }}
+                                >
+                                  {isApp ? (
+                                    <Logo 
+                                      app={subItem.label.toLowerCase() as any} 
+                                      size={32} 
+                                      variant="icon"
+                                    />
+                                  ) : (
+                                    <Box sx={{ color: subItem.color || '#6366F1', display: 'flex' }}>
+                                      {renderIcon(subItem.icon)}
+                                    </Box>
+                                  )}
+                                  <ListItemText 
+                                    primary={subItem.label} 
+                                    primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem', color: 'white' }}
+                                    secondary={subItem.desc}
+                                    secondaryTypographyProps={{ fontSize: '0.7rem', color: 'white', sx: { opacity: 0.5 } }}
+                                  />
+                                </ListItemButton>
+                              );
+                            })}
+                          </Stack>
+                        ) : (
                   <ListItemButton 
                     onClick={() => {
                       window.location.assign(item.href || '#');
