@@ -49,28 +49,15 @@ const ProductCard = ({ app }: any) => {
           display: 'flex', 
           flexDirection: 'column',
           gap: 4,
-          background: '#161412',
+          background: 'rgba(10, 10, 10, 0.8)',
           backdropFilter: 'blur(30px) saturate(180%)',
-          border: '1px solid rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: 8,
           transition: 'all 0.4s',
-          boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '1px',
-            background: 'rgba(255,255,255,0.05)',
-            borderRadius: '8px',
-            pointerEvents: 'none'
-          },
           '&:hover': { 
             borderColor: alpha(app.color, 0.4), 
-            background: '#1C1A18',
-            boxShadow: `0 20px 40px ${alpha(app.color, 0.1)}, 0 1px 0 rgba(0,0,0,0.4)`
+            background: 'rgba(15, 15, 15, 0.95)',
+            boxShadow: `0 20px 40px ${alpha(app.color, 0.1)}`
           }
         }}
       >
@@ -229,7 +216,7 @@ export default function LandingPage() {
       </Container>
 
       {/* Flagships Grid */}
-      <Box sx={{ py: { xs: 15, md: 25 }, borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: '#0A0908' }}>
+      <Box sx={{ py: { xs: 15, md: 25 }, borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
         <Container maxWidth="xl">
           <Stack spacing={4} mb={15} textAlign="center">
             <Typography variant="subtitle2" sx={{ color: '#6366F1', fontWeight: 900 }}>THE FLAGSHIPS</Typography>
@@ -288,22 +275,10 @@ export default function LandingPage() {
                   display: 'flex', 
                   flexDirection: 'column', 
                   justifyContent: 'center',
-                  bgcolor: '#161412',
-                  border: '1px solid rgba(255,255,255,0.05)',
+                  bgcolor: 'rgba(5,5,5,0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: 12,
-                  boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                  position: 'relative',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '1px',
-                    background: 'rgba(255,255,255,0.05)',
-                    borderRadius: '12px',
-                    pointerEvents: 'none'
-                  }
+                  position: 'relative'
                 }}
               >
                 <Stack spacing={6}>
@@ -337,7 +312,7 @@ export default function LandingPage() {
       </Box>
 
       {/* Footer */}
-      <Box sx={{ py: 15, borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: '#0A0908' }}>
+      <Box sx={{ py: 15, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: 'rgba(5,5,5,0.8)' }}>
         <Container maxWidth="xl">
           <Grid container spacing={8}>
             <Grid size={{ xs: 12, md: 5 }}>
