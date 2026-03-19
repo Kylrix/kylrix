@@ -6,4 +6,4 @@
  */
 
 export const PROJECT_ID = '67fe9627001d97e37ef3';
-export const ENDPOINT = 'https://fra.cloud.appwrite.io/v1';
+export const ENDPOINT = 'https://api.kylrix.space/v1';
