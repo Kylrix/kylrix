@@ -14,6 +14,7 @@ interface LogoProps {
   component?: any;
   href?: string;
   animate?: boolean;
+  className?: string;
 }
 
 const Logo: React.FC<LogoProps> = ({ 
@@ -23,7 +24,8 @@ const Logo: React.FC<LogoProps> = ({
   variant = 'full',
   component,
   href,
-  animate = false
+  animate = false,
+  className
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
@@ -120,6 +122,7 @@ const Logo: React.FC<LogoProps> = ({
 
   return (
     <Box 
+      className={className}
       sx={{
         display: 'inline-flex',
         alignItems: 'center',
