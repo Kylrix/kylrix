@@ -78,25 +78,13 @@ export enum AppActivityStatus {
     BUSY = "busy"
 }
 
-export enum CallLinksType {
-    AUDIO = "audio",
-    VIDEO = "video"
-}
-
-export enum CallLogsType {
-    AUDIO = "audio",
-    VIDEO = "video"
-}
-
-export enum CallLogsStatus {
-    MISSED = "missed",
-    COMPLETED = "completed",
-    DECLINED = "declined",
-    ONGOING = "ongoing"
-}
-
 export enum MomentsType {
     IMAGE = "image",
+    VIDEO = "video"
+}
+
+export enum CallsType {
+    AUDIO = "audio",
     VIDEO = "video"
 }
 
@@ -385,6 +373,22 @@ export type Keychain = Models.Row & {
     updatedAt: string | null;
 }
 
+export type KeyMapping = Models.Row & {
+    resourceId: string;
+    resourceType: string;
+    grantee: string;
+    wrappedKey: string;
+    metadata: string | null;
+}
+
+export type Wallets = Models.Row & {
+    ownerId: string;
+    address: string;
+    chain: string;
+    encryptedSecret: string;
+    type: string;
+}
+
 export type Messages = Models.Row & {
     conversationId: string;
     senderId: string;
@@ -446,17 +450,6 @@ export type Contacts = Models.Row & {
     updatedAt: string | null;
 }
 
-export type Users = Models.Row & {
-    username: string;
-    displayName: string | null;
-    bio: string | null;
-    walletAddress: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
-    publicKey: string | null;
-    avatar: string | null;
-}
-
 export type Follows = Models.Row & {
     followerId: string;
     followingId: string;
@@ -473,30 +466,11 @@ export type AppActivity = Models.Row & {
     customStatus: string | null;
 }
 
-export type CallLinks = Models.Row & {
-    userId: string;
-    conversationId: string | null;
-    code: string;
-    type: CallLinksType;
-    url: string | null;
-    expiresAt: string | null;
-}
-
 export type Interactions = Models.Row & {
     messageId: string;
     userId: string;
     emoji: string;
     createdAt: string;
-}
-
-export type CallLogs = Models.Row & {
-    callerId: string;
-    receiverId: string | null;
-    conversationId: string | null;
-    type: CallLogsType;
-    status: CallLogsStatus;
-    duration: number;
-    startedAt: string;
 }
 
 export type Moments = Models.Row & {
@@ -506,6 +480,33 @@ export type Moments = Models.Row & {
     caption: string | null;
     createdAt: string;
     expiresAt: string;
+}
+
+export type Calls = Models.Row & {
+    userId: string;
+    type: CallsType;
+    title: string | null;
+    startsAt: string | null;
+    expiresAt: string | null;
+    metadata: string | null;
+}
+
+export type Profiles = Models.Row & {
+    username: string;
+    displayName: string | null;
+    bio: string | null;
+    avatar: string | null;
+    walletAddress: string | null;
+    publicKey: string | null;
+    status: string;
+    preferences: string | null;
+    userId: string;
+}
+
+export type Epochs = Models.Row & {
+    resourceId: string;
+    epochNumber: number;
+    createdBy: string;
 }
 
 export type FocusSessions = Models.Row & {
@@ -579,4 +580,12 @@ export type FormSubmissions = Models.Row & {
     payload: string;
     status: FormSubmissionsStatus;
     metadata: string | null;
+}
+
+export type Agents = Models.Row & {
+    ownerId: string;
+    parentId: string | null;
+    publicKey: string;
+    config: string;
+    status: string;
 }

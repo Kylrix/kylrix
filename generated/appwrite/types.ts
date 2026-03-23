@@ -75,25 +75,13 @@ export enum AppActivityStatus {
     BUSY = "busy"
 }
 
-export enum CallLinksType {
-    AUDIO = "audio",
-    VIDEO = "video"
-}
-
-export enum CallLogsType {
-    AUDIO = "audio",
-    VIDEO = "video"
-}
-
-export enum CallLogsStatus {
-    MISSED = "missed",
-    COMPLETED = "completed",
-    DECLINED = "declined",
-    ONGOING = "ongoing"
-}
-
 export enum MomentsType {
     IMAGE = "image",
+    VIDEO = "video"
+}
+
+export enum CallsType {
+    AUDIO = "audio",
     VIDEO = "video"
 }
 
@@ -134,7 +122,7 @@ export type NotesCreate = {
     "format"?: string | null;
 }
 
-export type Notes = Models.Row & { [key: string]: any; 
+export type Notes = Models.Row & {
     "id"?: string | null;
     "createdAt"?: string | null;
     "updatedAt"?: string | null;
@@ -165,7 +153,7 @@ export type TagsCreate = {
     "nameLower"?: string | null;
 }
 
-export type Tags = Models.Row & { [key: string]: any; 
+export type Tags = Models.Row & {
     "id"?: string | null;
     "name"?: string | null;
     "notes"?: string[] | null;
@@ -190,7 +178,7 @@ export type ApiKeysCreate = {
     "keyHash"?: string | null;
 }
 
-export type ApiKeys = Models.Row & { [key: string]: any; 
+export type ApiKeys = Models.Row & {
     "id"?: string | null;
     "key"?: string | null;
     "name"?: string | null;
@@ -211,7 +199,7 @@ export type CommentsCreate = {
     "parentCommentId"?: string | null;
 }
 
-export type Comments = Models.Row & { [key: string]: any; 
+export type Comments = Models.Row & {
     "noteId": string;
     "userId": string;
     "content": string;
@@ -231,7 +219,7 @@ export type ExtensionsCreate = {
     "isPublic"?: boolean | null;
 }
 
-export type Extensions = Models.Row & { [key: string]: any; 
+export type Extensions = Models.Row & {
     "name": string;
     "description"?: string | null;
     "version"?: string | null;
@@ -251,7 +239,7 @@ export type ReactionsCreate = {
     "userId": string;
 }
 
-export type Reactions = Models.Row & { [key: string]: any; 
+export type Reactions = Models.Row & {
     "targetType": ReactionsTargetType;
     "emoji": string;
     "createdAt": string;
@@ -267,7 +255,7 @@ export type CollaboratorsCreate = {
     "accepted"?: boolean | null;
 }
 
-export type Collaborators = Models.Row & { [key: string]: any; 
+export type Collaborators = Models.Row & {
     "noteId": string;
     "userId": string;
     "permission": CollaboratorsPermission;
@@ -284,7 +272,7 @@ export type ActivityLogCreate = {
     "details"?: string | null;
 }
 
-export type ActivityLog = Models.Row & { [key: string]: any; 
+export type ActivityLog = Models.Row & {
     "userId": string;
     "action": string;
     "targetType": string;
@@ -301,7 +289,7 @@ export type SettingsCreate = {
     "mode"?: string | null;
 }
 
-export type Settings = Models.Row & { [key: string]: any; 
+export type Settings = Models.Row & {
     "userId": string;
     "settings": string;
     "createdAt"?: string | null;
@@ -315,7 +303,7 @@ export type WalletMapCreate = {
     "updatedAt"?: string | null;
 }
 
-export type WalletMap = Models.Row & { [key: string]: any; 
+export type WalletMap = Models.Row & {
     "walletAddressLower": string;
     "userId": string;
     "updatedAt"?: string | null;
@@ -329,7 +317,7 @@ export type NoteTagsCreate = {
     "tag"?: string | null;
 }
 
-export type NoteTags = Models.Row & { [key: string]: any; 
+export type NoteTags = Models.Row & {
     "noteId": string;
     "tagId": string;
     "userId": string;
@@ -350,7 +338,7 @@ export type NoteRevisionsCreate = {
     "cause"?: NoteRevisionsCause | null;
 }
 
-export type NoteRevisions = Models.Row & { [key: string]: any; 
+export type NoteRevisions = Models.Row & {
     "noteId": string;
     "revision": number;
     "userId"?: string | null;
@@ -377,7 +365,7 @@ export type AiGenerationsCreate = {
     "createdAt"?: string | null;
 }
 
-export type AiGenerations = Models.Row & { [key: string]: any; 
+export type AiGenerations = Models.Row & {
     "userId": string;
     "promptHash"?: string | null;
     "prompt"?: string | null;
@@ -402,7 +390,7 @@ export type SubscriptionsCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Subscriptions = Models.Row & { [key: string]: any; 
+export type Subscriptions = Models.Row & {
     "userId": string;
     "plan": SubscriptionsPlan;
     "status"?: SubscriptionsStatus | null;
@@ -425,7 +413,7 @@ export type SecurityLogsCreate = {
     "timestamp": string;
 }
 
-export type SecurityLogs = Models.Row & { [key: string]: any; 
+export type SecurityLogs = Models.Row & {
     "userId": string;
     "eventType": string;
     "ipAddress"?: string | null;
@@ -465,7 +453,7 @@ export type CredentialsCreate = {
     "username"?: string | null;
 }
 
-export type Credentials = Models.Row & { [key: string]: any; 
+export type Credentials = Models.Row & {
     "userId": string;
     "itemType": string;
     "name": string;
@@ -511,7 +499,7 @@ export type IdentitiesCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Identities = Models.Row & { [key: string]: any; 
+export type Identities = Models.Row & {
     "userId": string;
     "identityType": string;
     "label": string;
@@ -544,7 +532,7 @@ export type UserCreate = {
     "updatedAt"?: string | null;
 }
 
-export type User = Models.Row & { [key: string]: any; 
+export type User = Models.Row & {
     "userId": string;
     "email"?: string | null;
     "masterpass"?: boolean | null;
@@ -572,7 +560,7 @@ export type FoldersCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Folders = Models.Row & { [key: string]: any; 
+export type Folders = Models.Row & {
     "userId": string;
     "name": string;
     "parentFolderId"?: string | null;
@@ -604,7 +592,7 @@ export type TotpSecretsCreate = {
     "updatedAt"?: string | null;
 }
 
-export type TotpSecrets = Models.Row & { [key: string]: any; 
+export type TotpSecrets = Models.Row & {
     "userId": string;
     "issuer": string;
     "accountName": string;
@@ -635,7 +623,7 @@ export type KeychainCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Keychain = Models.Row & { [key: string]: any; 
+export type Keychain = Models.Row & {
     "userId": string;
     "type": string;
     "credentialId"?: string | null;
@@ -645,6 +633,38 @@ export type Keychain = Models.Row & { [key: string]: any;
     "isBackup"?: boolean;
     "createdAt"?: string | null;
     "updatedAt"?: string | null;
+}
+
+export type KeyMappingCreate = {
+    "resourceId": string;
+    "resourceType": string;
+    "grantee": string;
+    "wrappedKey": string;
+    "metadata"?: string | null;
+}
+
+export type KeyMapping = Models.Row & {
+    "resourceId": string;
+    "resourceType": string;
+    "grantee": string;
+    "wrappedKey": string;
+    "metadata"?: string | null;
+}
+
+export type WalletsCreate = {
+    "ownerId": string;
+    "address": string;
+    "chain": string;
+    "encryptedSecret": string;
+    "type": string;
+}
+
+export type Wallets = Models.Row & {
+    "ownerId": string;
+    "address": string;
+    "chain": string;
+    "encryptedSecret": string;
+    "type": string;
 }
 
 export type MessagesCreate = {
@@ -659,7 +679,7 @@ export type MessagesCreate = {
     "readBy"?: string[] | null;
 }
 
-export type Messages = Models.Row & { [key: string]: any; 
+export type Messages = Models.Row & {
     "conversationId": string;
     "senderId": string;
     "createdAt": string;
@@ -706,7 +726,7 @@ export type ConversationsCreate = {
     "contextId"?: string | null;
 }
 
-export type Conversations = Models.Row & { [key: string]: any; 
+export type Conversations = Models.Row & {
     "type": ConversationsType;
     "name"?: string | null;
     "lastMessageId"?: string | null;
@@ -755,7 +775,7 @@ export type ContactsCreate = {
     "updatedAt"?: string | null;
 }
 
-export type Contacts = Models.Row & { [key: string]: any; 
+export type Contacts = Models.Row & {
     "userId": string;
     "contactUserId": string;
     "nickname"?: string | null;
@@ -769,28 +789,6 @@ export type Contacts = Models.Row & { [key: string]: any;
     "updatedAt"?: string | null;
 }
 
-export type UsersCreate = {
-    "username": string;
-    "displayName"?: string | null;
-    "bio"?: string | null;
-    "walletAddress"?: string | null;
-    "createdAt"?: string | null;
-    "updatedAt"?: string | null;
-    "publicKey"?: string | null;
-    "avatar"?: string | null;
-}
-
-export type Users = Models.Row & { [key: string]: any; 
-    "username": string;
-    "displayName"?: string | null;
-    "bio"?: string | null;
-    "walletAddress"?: string | null;
-    "createdAt"?: string | null;
-    "updatedAt"?: string | null;
-    "publicKey"?: string | null;
-    "avatar"?: string | null;
-}
-
 export type FollowsCreate = {
     "followerId": string;
     "followingId": string;
@@ -800,7 +798,7 @@ export type FollowsCreate = {
     "createdAt"?: string | null;
 }
 
-export type Follows = Models.Row & { [key: string]: any; 
+export type Follows = Models.Row & {
     "followerId": string;
     "followingId": string;
     "status"?: FollowsStatus;
@@ -816,29 +814,11 @@ export type AppActivityCreate = {
     "customStatus"?: string | null;
 }
 
-export type AppActivity = Models.Row & { [key: string]: any; 
+export type AppActivity = Models.Row & {
     "userId": string;
     "status"?: AppActivityStatus;
     "lastSeen"?: string | null;
     "customStatus"?: string | null;
-}
-
-export type CallLinksCreate = {
-    "userId": string;
-    "conversationId"?: string | null;
-    "code": string;
-    "type"?: CallLinksType;
-    "url"?: string | null;
-    "expiresAt"?: string | null;
-}
-
-export type CallLinks = Models.Row & { [key: string]: any; 
-    "userId": string;
-    "conversationId"?: string | null;
-    "code": string;
-    "type"?: CallLinksType;
-    "url"?: string | null;
-    "expiresAt"?: string | null;
 }
 
 export type InteractionsCreate = {
@@ -848,31 +828,11 @@ export type InteractionsCreate = {
     "createdAt": string;
 }
 
-export type Interactions = Models.Row & { [key: string]: any; 
+export type Interactions = Models.Row & {
     "messageId": string;
     "userId": string;
     "emoji": string;
     "createdAt": string;
-}
-
-export type CallLogsCreate = {
-    "callerId": string;
-    "receiverId"?: string | null;
-    "conversationId"?: string | null;
-    "type"?: CallLogsType;
-    "status"?: CallLogsStatus;
-    "duration"?: number;
-    "startedAt": string;
-}
-
-export type CallLogs = Models.Row & { [key: string]: any; 
-    "callerId": string;
-    "receiverId"?: string | null;
-    "conversationId"?: string | null;
-    "type"?: CallLogsType;
-    "status"?: CallLogsStatus;
-    "duration"?: number;
-    "startedAt": string;
 }
 
 export type MomentsCreate = {
@@ -884,13 +844,67 @@ export type MomentsCreate = {
     "expiresAt": string;
 }
 
-export type Moments = Models.Row & { [key: string]: any; 
+export type Moments = Models.Row & {
     "userId": string;
     "fileId": string;
     "type"?: MomentsType;
     "caption"?: string | null;
     "createdAt": string;
     "expiresAt": string;
+}
+
+export type CallsCreate = {
+    "userId": string;
+    "type"?: CallsType;
+    "title"?: string | null;
+    "startsAt"?: string | null;
+    "expiresAt"?: string | null;
+    "metadata"?: string | null;
+}
+
+export type Calls = Models.Row & {
+    "userId": string;
+    "type"?: CallsType;
+    "title"?: string | null;
+    "startsAt"?: string | null;
+    "expiresAt"?: string | null;
+    "metadata"?: string | null;
+}
+
+export type ProfilesCreate = {
+    "username": string;
+    "displayName"?: string | null;
+    "bio"?: string | null;
+    "avatar"?: string | null;
+    "walletAddress"?: string | null;
+    "publicKey"?: string | null;
+    "status"?: string;
+    "preferences"?: string | null;
+    "userId": string;
+}
+
+export type Profiles = Models.Row & {
+    "username": string;
+    "displayName"?: string | null;
+    "bio"?: string | null;
+    "avatar"?: string | null;
+    "walletAddress"?: string | null;
+    "publicKey"?: string | null;
+    "status"?: string;
+    "preferences"?: string | null;
+    "userId": string;
+}
+
+export type EpochsCreate = {
+    "resourceId": string;
+    "epochNumber": number;
+    "createdBy": string;
+}
+
+export type Epochs = Models.Row & {
+    "resourceId": string;
+    "epochNumber": number;
+    "createdBy": string;
 }
 
 export type FocusSessionsCreate = {
@@ -902,7 +916,7 @@ export type FocusSessionsCreate = {
     "status"?: string;
 }
 
-export type FocusSessions = Models.Row & { [key: string]: any; 
+export type FocusSessions = Models.Row & {
     "userId": string;
     "taskId"?: string | null;
     "startTime": string;
@@ -919,7 +933,7 @@ export type EventGuestsCreate = {
     "role"?: string;
 }
 
-export type EventGuests = Models.Row & { [key: string]: any; 
+export type EventGuests = Models.Row & {
     "eventId": string;
     "userId"?: string | null;
     "email"?: string | null;
@@ -943,7 +957,7 @@ export type EventsCreate = {
     "userId": string;
 }
 
-export type Events = Models.Row & { [key: string]: any; 
+export type Events = Models.Row & {
     "title": string;
     "description"?: string | null;
     "startTime": string;
@@ -966,7 +980,7 @@ export type CalendarsCreate = {
     "userId": string;
 }
 
-export type Calendars = Models.Row & { [key: string]: any; 
+export type Calendars = Models.Row & {
     "name": string;
     "color"?: string;
     "isDefault"?: boolean;
@@ -988,7 +1002,7 @@ export type TasksCreate = {
     "parentId"?: string | null;
 }
 
-export type Tasks = Models.Row & { [key: string]: any; 
+export type Tasks = Models.Row & {
     "title": string;
     "description"?: string | null;
     "status"?: string;
@@ -1013,7 +1027,7 @@ export type FormsCreate = {
     "visibility"?: FormsVisibility;
 }
 
-export type Forms = Models.Row & { [key: string]: any; 
+export type Forms = Models.Row & {
     "userId": string;
     "title": string;
     "description"?: string | null;
@@ -1031,12 +1045,28 @@ export type FormSubmissionsCreate = {
     "metadata"?: string | null;
 }
 
-export type FormSubmissions = Models.Row & { [key: string]: any; 
+export type FormSubmissions = Models.Row & {
     "formId": string;
     "submitterId"?: string | null;
     "payload": string;
     "status"?: FormSubmissionsStatus;
     "metadata"?: string | null;
+}
+
+export type AgentsCreate = {
+    "ownerId": string;
+    "parentId"?: string | null;
+    "publicKey": string;
+    "config": string;
+    "status"?: string;
+}
+
+export type Agents = Models.Row & {
+    "ownerId": string;
+    "parentId"?: string | null;
+    "publicKey": string;
+    "config": string;
+    "status"?: string;
 }
 
 declare const __roleStringBrand: unique symbol;
@@ -1069,23 +1099,23 @@ export type ExtractQueryValue<T> = T extends (infer U)[]
   : T extends QueryValue | null ? NonNullable<T> : never;
 
 export type QueryableKeys<T> = {
-  [K in keyof T]: ExtractQueryValue<any> extends never ? never : K;
+  [K in keyof T]: ExtractQueryValue<T[K]> extends never ? never : K;
 }[keyof T];
 
 export type QueryBuilder<T> = {
-  equal: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<any>) => string;
-  notEqual: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<any>) => string;
-  lessThan: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<any>) => string;
-  lessThanEqual: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<any>) => string;
-  greaterThan: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<any>) => string;
-  greaterThanEqual: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<any>) => string;
-  contains: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<any>) => string;
+  equal: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<T[K]>) => string;
+  notEqual: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<T[K]>) => string;
+  lessThan: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<T[K]>) => string;
+  lessThanEqual: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<T[K]>) => string;
+  greaterThan: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<T[K]>) => string;
+  greaterThanEqual: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<T[K]>) => string;
+  contains: <K extends QueryableKeys<T>>(field: K, value: ExtractQueryValue<T[K]>) => string;
   search: <K extends QueryableKeys<T>>(field: K, value: string) => string;
   isNull: <K extends QueryableKeys<T>>(field: K) => string;
   isNotNull: <K extends QueryableKeys<T>>(field: K) => string;
   startsWith: <K extends QueryableKeys<T>>(field: K, value: string) => string;
   endsWith: <K extends QueryableKeys<T>>(field: K, value: string) => string;
-  between: <K extends QueryableKeys<T>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string;
+  between: <K extends QueryableKeys<T>>(field: K, start: ExtractQueryValue<T[K]>, end: ExtractQueryValue<T[K]>) => string;
   select: <K extends keyof T>(fields: K[]) => string;
   orderAsc: <K extends keyof T>(field: K) => string;
   orderDesc: <K extends keyof T>(field: K) => string;
@@ -1140,7 +1170,7 @@ export type DatabaseTableMap = {
         "format"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Notes>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Notes>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Notes>>(field: K) => string; isNotNull: <K extends QueryableKeys<Notes>>(field: K) => string; startsWith: <K extends QueryableKeys<Notes>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Notes>>(field: K, value: string) => string; between: <K extends QueryableKeys<Notes>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Notes>(fields: K[]) => string; orderAsc: <K extends keyof Notes>(field: K) => string; orderDesc: <K extends keyof Notes>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Notes[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<Notes[K]>) => string; notEqual: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<Notes[K]>) => string; lessThan: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<Notes[K]>) => string; lessThanEqual: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<Notes[K]>) => string; greaterThan: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<Notes[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<Notes[K]>) => string; contains: <K extends QueryableKeys<Notes>>(field: K, value: ExtractQueryValue<Notes[K]>) => string; search: <K extends QueryableKeys<Notes>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Notes>>(field: K) => string; isNotNull: <K extends QueryableKeys<Notes>>(field: K) => string; startsWith: <K extends QueryableKeys<Notes>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Notes>>(field: K, value: string) => string; between: <K extends QueryableKeys<Notes>>(field: K, start: ExtractQueryValue<Notes[K]>, end: ExtractQueryValue<Notes[K]>) => string; select: <K extends keyof Notes>(fields: K[]) => string; orderAsc: <K extends keyof Notes>(field: K) => string; orderDesc: <K extends keyof Notes>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Notes[] }>;
     };
     "tags": {
       create: (data: {
@@ -1167,7 +1197,7 @@ export type DatabaseTableMap = {
         "nameLower"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Tags>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Tags>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Tags>>(field: K) => string; isNotNull: <K extends QueryableKeys<Tags>>(field: K) => string; startsWith: <K extends QueryableKeys<Tags>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Tags>>(field: K, value: string) => string; between: <K extends QueryableKeys<Tags>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Tags>(fields: K[]) => string; orderAsc: <K extends keyof Tags>(field: K) => string; orderDesc: <K extends keyof Tags>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Tags[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<Tags[K]>) => string; notEqual: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<Tags[K]>) => string; lessThan: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<Tags[K]>) => string; lessThanEqual: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<Tags[K]>) => string; greaterThan: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<Tags[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<Tags[K]>) => string; contains: <K extends QueryableKeys<Tags>>(field: K, value: ExtractQueryValue<Tags[K]>) => string; search: <K extends QueryableKeys<Tags>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Tags>>(field: K) => string; isNotNull: <K extends QueryableKeys<Tags>>(field: K) => string; startsWith: <K extends QueryableKeys<Tags>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Tags>>(field: K, value: string) => string; between: <K extends QueryableKeys<Tags>>(field: K, start: ExtractQueryValue<Tags[K]>, end: ExtractQueryValue<Tags[K]>) => string; select: <K extends keyof Tags>(fields: K[]) => string; orderAsc: <K extends keyof Tags>(field: K) => string; orderDesc: <K extends keyof Tags>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Tags[] }>;
     };
     "apiKeys": {
       create: (data: {
@@ -1196,7 +1226,7 @@ export type DatabaseTableMap = {
         "keyHash"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<ApiKeys>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<ApiKeys>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<ApiKeys>>(field: K) => string; isNotNull: <K extends QueryableKeys<ApiKeys>>(field: K) => string; startsWith: <K extends QueryableKeys<ApiKeys>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<ApiKeys>>(field: K, value: string) => string; between: <K extends QueryableKeys<ApiKeys>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof ApiKeys>(fields: K[]) => string; orderAsc: <K extends keyof ApiKeys>(field: K) => string; orderDesc: <K extends keyof ApiKeys>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: ApiKeys[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<ApiKeys[K]>) => string; notEqual: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<ApiKeys[K]>) => string; lessThan: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<ApiKeys[K]>) => string; lessThanEqual: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<ApiKeys[K]>) => string; greaterThan: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<ApiKeys[K]>) => string; greaterThanEqual: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<ApiKeys[K]>) => string; contains: <K extends QueryableKeys<ApiKeys>>(field: K, value: ExtractQueryValue<ApiKeys[K]>) => string; search: <K extends QueryableKeys<ApiKeys>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<ApiKeys>>(field: K) => string; isNotNull: <K extends QueryableKeys<ApiKeys>>(field: K) => string; startsWith: <K extends QueryableKeys<ApiKeys>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<ApiKeys>>(field: K, value: string) => string; between: <K extends QueryableKeys<ApiKeys>>(field: K, start: ExtractQueryValue<ApiKeys[K]>, end: ExtractQueryValue<ApiKeys[K]>) => string; select: <K extends keyof ApiKeys>(fields: K[]) => string; orderAsc: <K extends keyof ApiKeys>(field: K) => string; orderDesc: <K extends keyof ApiKeys>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: ApiKeys[] }>;
     };
     "Comments": {
       create: (data: {
@@ -1215,7 +1245,7 @@ export type DatabaseTableMap = {
         "parentCommentId"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Comments>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Comments>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Comments>>(field: K) => string; isNotNull: <K extends QueryableKeys<Comments>>(field: K) => string; startsWith: <K extends QueryableKeys<Comments>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Comments>>(field: K, value: string) => string; between: <K extends QueryableKeys<Comments>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Comments>(fields: K[]) => string; orderAsc: <K extends keyof Comments>(field: K) => string; orderDesc: <K extends keyof Comments>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Comments[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<Comments[K]>) => string; notEqual: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<Comments[K]>) => string; lessThan: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<Comments[K]>) => string; lessThanEqual: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<Comments[K]>) => string; greaterThan: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<Comments[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<Comments[K]>) => string; contains: <K extends QueryableKeys<Comments>>(field: K, value: ExtractQueryValue<Comments[K]>) => string; search: <K extends QueryableKeys<Comments>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Comments>>(field: K) => string; isNotNull: <K extends QueryableKeys<Comments>>(field: K) => string; startsWith: <K extends QueryableKeys<Comments>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Comments>>(field: K, value: string) => string; between: <K extends QueryableKeys<Comments>>(field: K, start: ExtractQueryValue<Comments[K]>, end: ExtractQueryValue<Comments[K]>) => string; select: <K extends keyof Comments>(fields: K[]) => string; orderAsc: <K extends keyof Comments>(field: K) => string; orderDesc: <K extends keyof Comments>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Comments[] }>;
     };
     "Extensions": {
       create: (data: {
@@ -1242,7 +1272,7 @@ export type DatabaseTableMap = {
         "isPublic"?: boolean | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Extensions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Extensions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Extensions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Extensions>>(field: K) => string; startsWith: <K extends QueryableKeys<Extensions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Extensions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Extensions>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Extensions>(fields: K[]) => string; orderAsc: <K extends keyof Extensions>(field: K) => string; orderDesc: <K extends keyof Extensions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Extensions[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<Extensions[K]>) => string; notEqual: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<Extensions[K]>) => string; lessThan: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<Extensions[K]>) => string; lessThanEqual: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<Extensions[K]>) => string; greaterThan: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<Extensions[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<Extensions[K]>) => string; contains: <K extends QueryableKeys<Extensions>>(field: K, value: ExtractQueryValue<Extensions[K]>) => string; search: <K extends QueryableKeys<Extensions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Extensions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Extensions>>(field: K) => string; startsWith: <K extends QueryableKeys<Extensions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Extensions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Extensions>>(field: K, start: ExtractQueryValue<Extensions[K]>, end: ExtractQueryValue<Extensions[K]>) => string; select: <K extends keyof Extensions>(fields: K[]) => string; orderAsc: <K extends keyof Extensions>(field: K) => string; orderDesc: <K extends keyof Extensions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Extensions[] }>;
     };
     "Reactions": {
       create: (data: {
@@ -1261,7 +1291,7 @@ export type DatabaseTableMap = {
         "userId": string;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Reactions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Reactions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Reactions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Reactions>>(field: K) => string; startsWith: <K extends QueryableKeys<Reactions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Reactions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Reactions>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Reactions>(fields: K[]) => string; orderAsc: <K extends keyof Reactions>(field: K) => string; orderDesc: <K extends keyof Reactions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Reactions[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<Reactions[K]>) => string; notEqual: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<Reactions[K]>) => string; lessThan: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<Reactions[K]>) => string; lessThanEqual: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<Reactions[K]>) => string; greaterThan: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<Reactions[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<Reactions[K]>) => string; contains: <K extends QueryableKeys<Reactions>>(field: K, value: ExtractQueryValue<Reactions[K]>) => string; search: <K extends QueryableKeys<Reactions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Reactions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Reactions>>(field: K) => string; startsWith: <K extends QueryableKeys<Reactions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Reactions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Reactions>>(field: K, start: ExtractQueryValue<Reactions[K]>, end: ExtractQueryValue<Reactions[K]>) => string; select: <K extends keyof Reactions>(fields: K[]) => string; orderAsc: <K extends keyof Reactions>(field: K) => string; orderDesc: <K extends keyof Reactions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Reactions[] }>;
     };
     "Collaborators": {
       create: (data: {
@@ -1280,7 +1310,7 @@ export type DatabaseTableMap = {
         "accepted"?: boolean | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Collaborators>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Collaborators>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Collaborators>>(field: K) => string; isNotNull: <K extends QueryableKeys<Collaborators>>(field: K) => string; startsWith: <K extends QueryableKeys<Collaborators>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Collaborators>>(field: K, value: string) => string; between: <K extends QueryableKeys<Collaborators>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Collaborators>(fields: K[]) => string; orderAsc: <K extends keyof Collaborators>(field: K) => string; orderDesc: <K extends keyof Collaborators>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Collaborators[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<Collaborators[K]>) => string; notEqual: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<Collaborators[K]>) => string; lessThan: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<Collaborators[K]>) => string; lessThanEqual: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<Collaborators[K]>) => string; greaterThan: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<Collaborators[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<Collaborators[K]>) => string; contains: <K extends QueryableKeys<Collaborators>>(field: K, value: ExtractQueryValue<Collaborators[K]>) => string; search: <K extends QueryableKeys<Collaborators>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Collaborators>>(field: K) => string; isNotNull: <K extends QueryableKeys<Collaborators>>(field: K) => string; startsWith: <K extends QueryableKeys<Collaborators>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Collaborators>>(field: K, value: string) => string; between: <K extends QueryableKeys<Collaborators>>(field: K, start: ExtractQueryValue<Collaborators[K]>, end: ExtractQueryValue<Collaborators[K]>) => string; select: <K extends keyof Collaborators>(fields: K[]) => string; orderAsc: <K extends keyof Collaborators>(field: K) => string; orderDesc: <K extends keyof Collaborators>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Collaborators[] }>;
     };
     "ActivityLog": {
       create: (data: {
@@ -1301,7 +1331,7 @@ export type DatabaseTableMap = {
         "details"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<ActivityLog>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<ActivityLog>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<ActivityLog>>(field: K) => string; isNotNull: <K extends QueryableKeys<ActivityLog>>(field: K) => string; startsWith: <K extends QueryableKeys<ActivityLog>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<ActivityLog>>(field: K, value: string) => string; between: <K extends QueryableKeys<ActivityLog>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof ActivityLog>(fields: K[]) => string; orderAsc: <K extends keyof ActivityLog>(field: K) => string; orderDesc: <K extends keyof ActivityLog>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: ActivityLog[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<ActivityLog[K]>) => string; notEqual: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<ActivityLog[K]>) => string; lessThan: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<ActivityLog[K]>) => string; lessThanEqual: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<ActivityLog[K]>) => string; greaterThan: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<ActivityLog[K]>) => string; greaterThanEqual: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<ActivityLog[K]>) => string; contains: <K extends QueryableKeys<ActivityLog>>(field: K, value: ExtractQueryValue<ActivityLog[K]>) => string; search: <K extends QueryableKeys<ActivityLog>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<ActivityLog>>(field: K) => string; isNotNull: <K extends QueryableKeys<ActivityLog>>(field: K) => string; startsWith: <K extends QueryableKeys<ActivityLog>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<ActivityLog>>(field: K, value: string) => string; between: <K extends QueryableKeys<ActivityLog>>(field: K, start: ExtractQueryValue<ActivityLog[K]>, end: ExtractQueryValue<ActivityLog[K]>) => string; select: <K extends keyof ActivityLog>(fields: K[]) => string; orderAsc: <K extends keyof ActivityLog>(field: K) => string; orderDesc: <K extends keyof ActivityLog>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: ActivityLog[] }>;
     };
     "Settings": {
       create: (data: {
@@ -1320,7 +1350,7 @@ export type DatabaseTableMap = {
         "mode"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Settings>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Settings>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Settings>>(field: K) => string; isNotNull: <K extends QueryableKeys<Settings>>(field: K) => string; startsWith: <K extends QueryableKeys<Settings>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Settings>>(field: K, value: string) => string; between: <K extends QueryableKeys<Settings>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Settings>(fields: K[]) => string; orderAsc: <K extends keyof Settings>(field: K) => string; orderDesc: <K extends keyof Settings>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Settings[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<Settings[K]>) => string; notEqual: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<Settings[K]>) => string; lessThan: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<Settings[K]>) => string; lessThanEqual: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<Settings[K]>) => string; greaterThan: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<Settings[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<Settings[K]>) => string; contains: <K extends QueryableKeys<Settings>>(field: K, value: ExtractQueryValue<Settings[K]>) => string; search: <K extends QueryableKeys<Settings>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Settings>>(field: K) => string; isNotNull: <K extends QueryableKeys<Settings>>(field: K) => string; startsWith: <K extends QueryableKeys<Settings>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Settings>>(field: K, value: string) => string; between: <K extends QueryableKeys<Settings>>(field: K, start: ExtractQueryValue<Settings[K]>, end: ExtractQueryValue<Settings[K]>) => string; select: <K extends keyof Settings>(fields: K[]) => string; orderAsc: <K extends keyof Settings>(field: K) => string; orderDesc: <K extends keyof Settings>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Settings[] }>;
     };
     "walletMap": {
       create: (data: {
@@ -1335,7 +1365,7 @@ export type DatabaseTableMap = {
         "updatedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<WalletMap>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<WalletMap>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<WalletMap>>(field: K) => string; isNotNull: <K extends QueryableKeys<WalletMap>>(field: K) => string; startsWith: <K extends QueryableKeys<WalletMap>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<WalletMap>>(field: K, value: string) => string; between: <K extends QueryableKeys<WalletMap>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof WalletMap>(fields: K[]) => string; orderAsc: <K extends keyof WalletMap>(field: K) => string; orderDesc: <K extends keyof WalletMap>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: WalletMap[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<WalletMap[K]>) => string; notEqual: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<WalletMap[K]>) => string; lessThan: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<WalletMap[K]>) => string; lessThanEqual: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<WalletMap[K]>) => string; greaterThan: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<WalletMap[K]>) => string; greaterThanEqual: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<WalletMap[K]>) => string; contains: <K extends QueryableKeys<WalletMap>>(field: K, value: ExtractQueryValue<WalletMap[K]>) => string; search: <K extends QueryableKeys<WalletMap>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<WalletMap>>(field: K) => string; isNotNull: <K extends QueryableKeys<WalletMap>>(field: K) => string; startsWith: <K extends QueryableKeys<WalletMap>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<WalletMap>>(field: K, value: string) => string; between: <K extends QueryableKeys<WalletMap>>(field: K, start: ExtractQueryValue<WalletMap[K]>, end: ExtractQueryValue<WalletMap[K]>) => string; select: <K extends keyof WalletMap>(fields: K[]) => string; orderAsc: <K extends keyof WalletMap>(field: K) => string; orderDesc: <K extends keyof WalletMap>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: WalletMap[] }>;
     };
     "note_tags": {
       create: (data: {
@@ -1354,7 +1384,7 @@ export type DatabaseTableMap = {
         "tag"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<NoteTags>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<NoteTags>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<NoteTags>>(field: K) => string; isNotNull: <K extends QueryableKeys<NoteTags>>(field: K) => string; startsWith: <K extends QueryableKeys<NoteTags>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<NoteTags>>(field: K, value: string) => string; between: <K extends QueryableKeys<NoteTags>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof NoteTags>(fields: K[]) => string; orderAsc: <K extends keyof NoteTags>(field: K) => string; orderDesc: <K extends keyof NoteTags>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: NoteTags[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<NoteTags[K]>) => string; notEqual: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<NoteTags[K]>) => string; lessThan: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<NoteTags[K]>) => string; lessThanEqual: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<NoteTags[K]>) => string; greaterThan: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<NoteTags[K]>) => string; greaterThanEqual: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<NoteTags[K]>) => string; contains: <K extends QueryableKeys<NoteTags>>(field: K, value: ExtractQueryValue<NoteTags[K]>) => string; search: <K extends QueryableKeys<NoteTags>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<NoteTags>>(field: K) => string; isNotNull: <K extends QueryableKeys<NoteTags>>(field: K) => string; startsWith: <K extends QueryableKeys<NoteTags>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<NoteTags>>(field: K, value: string) => string; between: <K extends QueryableKeys<NoteTags>>(field: K, start: ExtractQueryValue<NoteTags[K]>, end: ExtractQueryValue<NoteTags[K]>) => string; select: <K extends keyof NoteTags>(fields: K[]) => string; orderAsc: <K extends keyof NoteTags>(field: K) => string; orderDesc: <K extends keyof NoteTags>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: NoteTags[] }>;
     };
     "note_revisions": {
       create: (data: {
@@ -1383,7 +1413,7 @@ export type DatabaseTableMap = {
         "cause"?: NoteRevisionsCause | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<NoteRevisions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<NoteRevisions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<NoteRevisions>>(field: K) => string; isNotNull: <K extends QueryableKeys<NoteRevisions>>(field: K) => string; startsWith: <K extends QueryableKeys<NoteRevisions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<NoteRevisions>>(field: K, value: string) => string; between: <K extends QueryableKeys<NoteRevisions>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof NoteRevisions>(fields: K[]) => string; orderAsc: <K extends keyof NoteRevisions>(field: K) => string; orderDesc: <K extends keyof NoteRevisions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: NoteRevisions[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<NoteRevisions[K]>) => string; notEqual: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<NoteRevisions[K]>) => string; lessThan: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<NoteRevisions[K]>) => string; lessThanEqual: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<NoteRevisions[K]>) => string; greaterThan: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<NoteRevisions[K]>) => string; greaterThanEqual: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<NoteRevisions[K]>) => string; contains: <K extends QueryableKeys<NoteRevisions>>(field: K, value: ExtractQueryValue<NoteRevisions[K]>) => string; search: <K extends QueryableKeys<NoteRevisions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<NoteRevisions>>(field: K) => string; isNotNull: <K extends QueryableKeys<NoteRevisions>>(field: K) => string; startsWith: <K extends QueryableKeys<NoteRevisions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<NoteRevisions>>(field: K, value: string) => string; between: <K extends QueryableKeys<NoteRevisions>>(field: K, start: ExtractQueryValue<NoteRevisions[K]>, end: ExtractQueryValue<NoteRevisions[K]>) => string; select: <K extends keyof NoteRevisions>(fields: K[]) => string; orderAsc: <K extends keyof NoteRevisions>(field: K) => string; orderDesc: <K extends keyof NoteRevisions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: NoteRevisions[] }>;
     };
     "ai_generations": {
       create: (data: {
@@ -1414,7 +1444,7 @@ export type DatabaseTableMap = {
         "createdAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<AiGenerations>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<AiGenerations>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<AiGenerations>>(field: K) => string; isNotNull: <K extends QueryableKeys<AiGenerations>>(field: K) => string; startsWith: <K extends QueryableKeys<AiGenerations>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<AiGenerations>>(field: K, value: string) => string; between: <K extends QueryableKeys<AiGenerations>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof AiGenerations>(fields: K[]) => string; orderAsc: <K extends keyof AiGenerations>(field: K) => string; orderDesc: <K extends keyof AiGenerations>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: AiGenerations[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<AiGenerations[K]>) => string; notEqual: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<AiGenerations[K]>) => string; lessThan: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<AiGenerations[K]>) => string; lessThanEqual: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<AiGenerations[K]>) => string; greaterThan: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<AiGenerations[K]>) => string; greaterThanEqual: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<AiGenerations[K]>) => string; contains: <K extends QueryableKeys<AiGenerations>>(field: K, value: ExtractQueryValue<AiGenerations[K]>) => string; search: <K extends QueryableKeys<AiGenerations>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<AiGenerations>>(field: K) => string; isNotNull: <K extends QueryableKeys<AiGenerations>>(field: K) => string; startsWith: <K extends QueryableKeys<AiGenerations>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<AiGenerations>>(field: K, value: string) => string; between: <K extends QueryableKeys<AiGenerations>>(field: K, start: ExtractQueryValue<AiGenerations[K]>, end: ExtractQueryValue<AiGenerations[K]>) => string; select: <K extends keyof AiGenerations>(fields: K[]) => string; orderAsc: <K extends keyof AiGenerations>(field: K) => string; orderDesc: <K extends keyof AiGenerations>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: AiGenerations[] }>;
     };
     "subscriptions": {
       create: (data: {
@@ -1439,7 +1469,7 @@ export type DatabaseTableMap = {
         "updatedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Subscriptions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Subscriptions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Subscriptions>>(field: K) => string; startsWith: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Subscriptions>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Subscriptions>(fields: K[]) => string; orderAsc: <K extends keyof Subscriptions>(field: K) => string; orderDesc: <K extends keyof Subscriptions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Subscriptions[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<Subscriptions[K]>) => string; notEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<Subscriptions[K]>) => string; lessThan: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<Subscriptions[K]>) => string; lessThanEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<Subscriptions[K]>) => string; greaterThan: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<Subscriptions[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<Subscriptions[K]>) => string; contains: <K extends QueryableKeys<Subscriptions>>(field: K, value: ExtractQueryValue<Subscriptions[K]>) => string; search: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Subscriptions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Subscriptions>>(field: K) => string; startsWith: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Subscriptions>>(field: K, start: ExtractQueryValue<Subscriptions[K]>, end: ExtractQueryValue<Subscriptions[K]>) => string; select: <K extends keyof Subscriptions>(fields: K[]) => string; orderAsc: <K extends keyof Subscriptions>(field: K) => string; orderDesc: <K extends keyof Subscriptions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Subscriptions[] }>;
     }
   };
   "passwordManagerDb": {
@@ -1468,7 +1498,7 @@ export type DatabaseTableMap = {
         "timestamp": string;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<SecurityLogs>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<SecurityLogs>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<SecurityLogs>>(field: K) => string; isNotNull: <K extends QueryableKeys<SecurityLogs>>(field: K) => string; startsWith: <K extends QueryableKeys<SecurityLogs>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<SecurityLogs>>(field: K, value: string) => string; between: <K extends QueryableKeys<SecurityLogs>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof SecurityLogs>(fields: K[]) => string; orderAsc: <K extends keyof SecurityLogs>(field: K) => string; orderDesc: <K extends keyof SecurityLogs>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: SecurityLogs[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<SecurityLogs[K]>) => string; notEqual: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<SecurityLogs[K]>) => string; lessThan: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<SecurityLogs[K]>) => string; lessThanEqual: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<SecurityLogs[K]>) => string; greaterThan: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<SecurityLogs[K]>) => string; greaterThanEqual: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<SecurityLogs[K]>) => string; contains: <K extends QueryableKeys<SecurityLogs>>(field: K, value: ExtractQueryValue<SecurityLogs[K]>) => string; search: <K extends QueryableKeys<SecurityLogs>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<SecurityLogs>>(field: K) => string; isNotNull: <K extends QueryableKeys<SecurityLogs>>(field: K) => string; startsWith: <K extends QueryableKeys<SecurityLogs>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<SecurityLogs>>(field: K, value: string) => string; between: <K extends QueryableKeys<SecurityLogs>>(field: K, start: ExtractQueryValue<SecurityLogs[K]>, end: ExtractQueryValue<SecurityLogs[K]>) => string; select: <K extends keyof SecurityLogs>(fields: K[]) => string; orderAsc: <K extends keyof SecurityLogs>(field: K) => string; orderDesc: <K extends keyof SecurityLogs>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: SecurityLogs[] }>;
     };
     "Credentials": {
       create: (data: {
@@ -1527,7 +1557,7 @@ export type DatabaseTableMap = {
         "username"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Credentials>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Credentials>>(field: K) => string; isNotNull: <K extends QueryableKeys<Credentials>>(field: K) => string; startsWith: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; between: <K extends QueryableKeys<Credentials>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Credentials>(fields: K[]) => string; orderAsc: <K extends keyof Credentials>(field: K) => string; orderDesc: <K extends keyof Credentials>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Credentials[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<Credentials[K]>) => string; notEqual: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<Credentials[K]>) => string; lessThan: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<Credentials[K]>) => string; lessThanEqual: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<Credentials[K]>) => string; greaterThan: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<Credentials[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<Credentials[K]>) => string; contains: <K extends QueryableKeys<Credentials>>(field: K, value: ExtractQueryValue<Credentials[K]>) => string; search: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Credentials>>(field: K) => string; isNotNull: <K extends QueryableKeys<Credentials>>(field: K) => string; startsWith: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Credentials>>(field: K, value: string) => string; between: <K extends QueryableKeys<Credentials>>(field: K, start: ExtractQueryValue<Credentials[K]>, end: ExtractQueryValue<Credentials[K]>) => string; select: <K extends keyof Credentials>(fields: K[]) => string; orderAsc: <K extends keyof Credentials>(field: K) => string; orderDesc: <K extends keyof Credentials>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Credentials[] }>;
     };
     "Identities": {
       create: (data: {
@@ -1566,7 +1596,7 @@ export type DatabaseTableMap = {
         "updatedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Identities>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Identities>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Identities>>(field: K) => string; isNotNull: <K extends QueryableKeys<Identities>>(field: K) => string; startsWith: <K extends QueryableKeys<Identities>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Identities>>(field: K, value: string) => string; between: <K extends QueryableKeys<Identities>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Identities>(fields: K[]) => string; orderAsc: <K extends keyof Identities>(field: K) => string; orderDesc: <K extends keyof Identities>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Identities[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<Identities[K]>) => string; notEqual: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<Identities[K]>) => string; lessThan: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<Identities[K]>) => string; lessThanEqual: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<Identities[K]>) => string; greaterThan: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<Identities[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<Identities[K]>) => string; contains: <K extends QueryableKeys<Identities>>(field: K, value: ExtractQueryValue<Identities[K]>) => string; search: <K extends QueryableKeys<Identities>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Identities>>(field: K) => string; isNotNull: <K extends QueryableKeys<Identities>>(field: K) => string; startsWith: <K extends QueryableKeys<Identities>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Identities>>(field: K, value: string) => string; between: <K extends QueryableKeys<Identities>>(field: K, start: ExtractQueryValue<Identities[K]>, end: ExtractQueryValue<Identities[K]>) => string; select: <K extends keyof Identities>(fields: K[]) => string; orderAsc: <K extends keyof Identities>(field: K) => string; orderDesc: <K extends keyof Identities>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Identities[] }>;
     };
     "user": {
       create: (data: {
@@ -1599,7 +1629,7 @@ export type DatabaseTableMap = {
         "updatedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<User>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<User>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<User>>(field: K) => string; isNotNull: <K extends QueryableKeys<User>>(field: K) => string; startsWith: <K extends QueryableKeys<User>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<User>>(field: K, value: string) => string; between: <K extends QueryableKeys<User>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof User>(fields: K[]) => string; orderAsc: <K extends keyof User>(field: K) => string; orderDesc: <K extends keyof User>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: User[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<User[K]>) => string; notEqual: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<User[K]>) => string; lessThan: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<User[K]>) => string; lessThanEqual: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<User[K]>) => string; greaterThan: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<User[K]>) => string; greaterThanEqual: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<User[K]>) => string; contains: <K extends QueryableKeys<User>>(field: K, value: ExtractQueryValue<User[K]>) => string; search: <K extends QueryableKeys<User>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<User>>(field: K) => string; isNotNull: <K extends QueryableKeys<User>>(field: K) => string; startsWith: <K extends QueryableKeys<User>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<User>>(field: K, value: string) => string; between: <K extends QueryableKeys<User>>(field: K, start: ExtractQueryValue<User[K]>, end: ExtractQueryValue<User[K]>) => string; select: <K extends keyof User>(fields: K[]) => string; orderAsc: <K extends keyof User>(field: K) => string; orderDesc: <K extends keyof User>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: User[] }>;
     };
     "Folders": {
       create: (data: {
@@ -1628,7 +1658,7 @@ export type DatabaseTableMap = {
         "updatedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Folders>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Folders>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Folders>>(field: K) => string; isNotNull: <K extends QueryableKeys<Folders>>(field: K) => string; startsWith: <K extends QueryableKeys<Folders>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Folders>>(field: K, value: string) => string; between: <K extends QueryableKeys<Folders>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Folders>(fields: K[]) => string; orderAsc: <K extends keyof Folders>(field: K) => string; orderDesc: <K extends keyof Folders>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Folders[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<Folders[K]>) => string; notEqual: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<Folders[K]>) => string; lessThan: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<Folders[K]>) => string; lessThanEqual: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<Folders[K]>) => string; greaterThan: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<Folders[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<Folders[K]>) => string; contains: <K extends QueryableKeys<Folders>>(field: K, value: ExtractQueryValue<Folders[K]>) => string; search: <K extends QueryableKeys<Folders>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Folders>>(field: K) => string; isNotNull: <K extends QueryableKeys<Folders>>(field: K) => string; startsWith: <K extends QueryableKeys<Folders>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Folders>>(field: K, value: string) => string; between: <K extends QueryableKeys<Folders>>(field: K, start: ExtractQueryValue<Folders[K]>, end: ExtractQueryValue<Folders[K]>) => string; select: <K extends keyof Folders>(fields: K[]) => string; orderAsc: <K extends keyof Folders>(field: K) => string; orderDesc: <K extends keyof Folders>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Folders[] }>;
     };
     "TOTP Secrets": {
       create: (data: {
@@ -1669,7 +1699,7 @@ export type DatabaseTableMap = {
         "updatedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<TotpSecrets>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<TotpSecrets>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<TotpSecrets>>(field: K) => string; isNotNull: <K extends QueryableKeys<TotpSecrets>>(field: K) => string; startsWith: <K extends QueryableKeys<TotpSecrets>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<TotpSecrets>>(field: K, value: string) => string; between: <K extends QueryableKeys<TotpSecrets>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof TotpSecrets>(fields: K[]) => string; orderAsc: <K extends keyof TotpSecrets>(field: K) => string; orderDesc: <K extends keyof TotpSecrets>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: TotpSecrets[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<TotpSecrets[K]>) => string; notEqual: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<TotpSecrets[K]>) => string; lessThan: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<TotpSecrets[K]>) => string; lessThanEqual: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<TotpSecrets[K]>) => string; greaterThan: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<TotpSecrets[K]>) => string; greaterThanEqual: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<TotpSecrets[K]>) => string; contains: <K extends QueryableKeys<TotpSecrets>>(field: K, value: ExtractQueryValue<TotpSecrets[K]>) => string; search: <K extends QueryableKeys<TotpSecrets>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<TotpSecrets>>(field: K) => string; isNotNull: <K extends QueryableKeys<TotpSecrets>>(field: K) => string; startsWith: <K extends QueryableKeys<TotpSecrets>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<TotpSecrets>>(field: K, value: string) => string; between: <K extends QueryableKeys<TotpSecrets>>(field: K, start: ExtractQueryValue<TotpSecrets[K]>, end: ExtractQueryValue<TotpSecrets[K]>) => string; select: <K extends keyof TotpSecrets>(fields: K[]) => string; orderAsc: <K extends keyof TotpSecrets>(field: K) => string; orderDesc: <K extends keyof TotpSecrets>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: TotpSecrets[] }>;
     };
     "Keychain": {
       create: (data: {
@@ -1696,7 +1726,45 @@ export type DatabaseTableMap = {
         "updatedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Keychain>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Keychain>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Keychain>>(field: K) => string; isNotNull: <K extends QueryableKeys<Keychain>>(field: K) => string; startsWith: <K extends QueryableKeys<Keychain>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Keychain>>(field: K, value: string) => string; between: <K extends QueryableKeys<Keychain>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Keychain>(fields: K[]) => string; orderAsc: <K extends keyof Keychain>(field: K) => string; orderDesc: <K extends keyof Keychain>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Keychain[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<Keychain[K]>) => string; notEqual: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<Keychain[K]>) => string; lessThan: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<Keychain[K]>) => string; lessThanEqual: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<Keychain[K]>) => string; greaterThan: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<Keychain[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<Keychain[K]>) => string; contains: <K extends QueryableKeys<Keychain>>(field: K, value: ExtractQueryValue<Keychain[K]>) => string; search: <K extends QueryableKeys<Keychain>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Keychain>>(field: K) => string; isNotNull: <K extends QueryableKeys<Keychain>>(field: K) => string; startsWith: <K extends QueryableKeys<Keychain>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Keychain>>(field: K, value: string) => string; between: <K extends QueryableKeys<Keychain>>(field: K, start: ExtractQueryValue<Keychain[K]>, end: ExtractQueryValue<Keychain[K]>) => string; select: <K extends keyof Keychain>(fields: K[]) => string; orderAsc: <K extends keyof Keychain>(field: K) => string; orderDesc: <K extends keyof Keychain>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Keychain[] }>;
+    };
+    "key_mapping": {
+      create: (data: {
+        "resourceId": string;
+        "resourceType": string;
+        "grantee": string;
+        "wrappedKey": string;
+        "metadata"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<KeyMapping>;
+      get: (id: string) => Promise<KeyMapping>;
+      update: (id: string, data: Partial<{
+        "resourceId": string;
+        "resourceType": string;
+        "grantee": string;
+        "wrappedKey": string;
+        "metadata"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<KeyMapping>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<KeyMapping>>(field: K, value: ExtractQueryValue<KeyMapping[K]>) => string; notEqual: <K extends QueryableKeys<KeyMapping>>(field: K, value: ExtractQueryValue<KeyMapping[K]>) => string; lessThan: <K extends QueryableKeys<KeyMapping>>(field: K, value: ExtractQueryValue<KeyMapping[K]>) => string; lessThanEqual: <K extends QueryableKeys<KeyMapping>>(field: K, value: ExtractQueryValue<KeyMapping[K]>) => string; greaterThan: <K extends QueryableKeys<KeyMapping>>(field: K, value: ExtractQueryValue<KeyMapping[K]>) => string; greaterThanEqual: <K extends QueryableKeys<KeyMapping>>(field: K, value: ExtractQueryValue<KeyMapping[K]>) => string; contains: <K extends QueryableKeys<KeyMapping>>(field: K, value: ExtractQueryValue<KeyMapping[K]>) => string; search: <K extends QueryableKeys<KeyMapping>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<KeyMapping>>(field: K) => string; isNotNull: <K extends QueryableKeys<KeyMapping>>(field: K) => string; startsWith: <K extends QueryableKeys<KeyMapping>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<KeyMapping>>(field: K, value: string) => string; between: <K extends QueryableKeys<KeyMapping>>(field: K, start: ExtractQueryValue<KeyMapping[K]>, end: ExtractQueryValue<KeyMapping[K]>) => string; select: <K extends keyof KeyMapping>(fields: K[]) => string; orderAsc: <K extends keyof KeyMapping>(field: K) => string; orderDesc: <K extends keyof KeyMapping>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: KeyMapping[] }>;
+    };
+    "wallets": {
+      create: (data: {
+        "ownerId": string;
+        "address": string;
+        "chain": string;
+        "encryptedSecret": string;
+        "type": string;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Wallets>;
+      get: (id: string) => Promise<Wallets>;
+      update: (id: string, data: Partial<{
+        "ownerId": string;
+        "address": string;
+        "chain": string;
+        "encryptedSecret": string;
+        "type": string;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Wallets>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Wallets>>(field: K, value: ExtractQueryValue<Wallets[K]>) => string; notEqual: <K extends QueryableKeys<Wallets>>(field: K, value: ExtractQueryValue<Wallets[K]>) => string; lessThan: <K extends QueryableKeys<Wallets>>(field: K, value: ExtractQueryValue<Wallets[K]>) => string; lessThanEqual: <K extends QueryableKeys<Wallets>>(field: K, value: ExtractQueryValue<Wallets[K]>) => string; greaterThan: <K extends QueryableKeys<Wallets>>(field: K, value: ExtractQueryValue<Wallets[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Wallets>>(field: K, value: ExtractQueryValue<Wallets[K]>) => string; contains: <K extends QueryableKeys<Wallets>>(field: K, value: ExtractQueryValue<Wallets[K]>) => string; search: <K extends QueryableKeys<Wallets>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Wallets>>(field: K) => string; isNotNull: <K extends QueryableKeys<Wallets>>(field: K) => string; startsWith: <K extends QueryableKeys<Wallets>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Wallets>>(field: K, value: string) => string; between: <K extends QueryableKeys<Wallets>>(field: K, start: ExtractQueryValue<Wallets[K]>, end: ExtractQueryValue<Wallets[K]>) => string; select: <K extends keyof Wallets>(fields: K[]) => string; orderAsc: <K extends keyof Wallets>(field: K) => string; orderDesc: <K extends keyof Wallets>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Wallets[] }>;
     }
   };
   "chat": {
@@ -1725,7 +1793,7 @@ export type DatabaseTableMap = {
         "readBy"?: string[] | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Messages>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Messages>>(field: K) => string; isNotNull: <K extends QueryableKeys<Messages>>(field: K) => string; startsWith: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; between: <K extends QueryableKeys<Messages>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Messages>(fields: K[]) => string; orderAsc: <K extends keyof Messages>(field: K) => string; orderDesc: <K extends keyof Messages>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Messages[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; notEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; lessThan: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; lessThanEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; greaterThan: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; contains: <K extends QueryableKeys<Messages>>(field: K, value: ExtractQueryValue<Messages[K]>) => string; search: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Messages>>(field: K) => string; isNotNull: <K extends QueryableKeys<Messages>>(field: K) => string; startsWith: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Messages>>(field: K, value: string) => string; between: <K extends QueryableKeys<Messages>>(field: K, start: ExtractQueryValue<Messages[K]>, end: ExtractQueryValue<Messages[K]>) => string; select: <K extends keyof Messages>(fields: K[]) => string; orderAsc: <K extends keyof Messages>(field: K) => string; orderDesc: <K extends keyof Messages>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Messages[] }>;
     };
     "Conversations": {
       create: (data: {
@@ -1798,7 +1866,7 @@ export type DatabaseTableMap = {
         "contextId"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Conversations>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Conversations>>(field: K) => string; isNotNull: <K extends QueryableKeys<Conversations>>(field: K) => string; startsWith: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; between: <K extends QueryableKeys<Conversations>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Conversations>(fields: K[]) => string; orderAsc: <K extends keyof Conversations>(field: K) => string; orderDesc: <K extends keyof Conversations>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Conversations[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<Conversations[K]>) => string; notEqual: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<Conversations[K]>) => string; lessThan: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<Conversations[K]>) => string; lessThanEqual: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<Conversations[K]>) => string; greaterThan: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<Conversations[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<Conversations[K]>) => string; contains: <K extends QueryableKeys<Conversations>>(field: K, value: ExtractQueryValue<Conversations[K]>) => string; search: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Conversations>>(field: K) => string; isNotNull: <K extends QueryableKeys<Conversations>>(field: K) => string; startsWith: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Conversations>>(field: K, value: string) => string; between: <K extends QueryableKeys<Conversations>>(field: K, start: ExtractQueryValue<Conversations[K]>, end: ExtractQueryValue<Conversations[K]>) => string; select: <K extends keyof Conversations>(fields: K[]) => string; orderAsc: <K extends keyof Conversations>(field: K) => string; orderDesc: <K extends keyof Conversations>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Conversations[] }>;
     };
     "Contacts": {
       create: (data: {
@@ -1829,32 +1897,7 @@ export type DatabaseTableMap = {
         "updatedAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Contacts>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Contacts>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Contacts>>(field: K) => string; isNotNull: <K extends QueryableKeys<Contacts>>(field: K) => string; startsWith: <K extends QueryableKeys<Contacts>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Contacts>>(field: K, value: string) => string; between: <K extends QueryableKeys<Contacts>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Contacts>(fields: K[]) => string; orderAsc: <K extends keyof Contacts>(field: K) => string; orderDesc: <K extends keyof Contacts>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Contacts[] }>;
-    };
-    "users": {
-      create: (data: {
-        "username": string;
-        "displayName"?: string | null;
-        "bio"?: string | null;
-        "walletAddress"?: string | null;
-        "createdAt"?: string | null;
-        "updatedAt"?: string | null;
-        "publicKey"?: string | null;
-        "avatar"?: string | null;
-      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Users>;
-      get: (id: string) => Promise<Users>;
-      update: (id: string, data: Partial<{
-        "username": string;
-        "displayName"?: string | null;
-        "bio"?: string | null;
-        "walletAddress"?: string | null;
-        "createdAt"?: string | null;
-        "updatedAt"?: string | null;
-        "publicKey"?: string | null;
-        "avatar"?: string | null;
-      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Users>;
-      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Users>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Users>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Users>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Users>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Users>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Users>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Users>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Users>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Users>>(field: K) => string; isNotNull: <K extends QueryableKeys<Users>>(field: K) => string; startsWith: <K extends QueryableKeys<Users>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Users>>(field: K, value: string) => string; between: <K extends QueryableKeys<Users>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Users>(fields: K[]) => string; orderAsc: <K extends keyof Users>(field: K) => string; orderDesc: <K extends keyof Users>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Users[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<Contacts[K]>) => string; notEqual: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<Contacts[K]>) => string; lessThan: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<Contacts[K]>) => string; lessThanEqual: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<Contacts[K]>) => string; greaterThan: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<Contacts[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<Contacts[K]>) => string; contains: <K extends QueryableKeys<Contacts>>(field: K, value: ExtractQueryValue<Contacts[K]>) => string; search: <K extends QueryableKeys<Contacts>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Contacts>>(field: K) => string; isNotNull: <K extends QueryableKeys<Contacts>>(field: K) => string; startsWith: <K extends QueryableKeys<Contacts>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Contacts>>(field: K, value: string) => string; between: <K extends QueryableKeys<Contacts>>(field: K, start: ExtractQueryValue<Contacts[K]>, end: ExtractQueryValue<Contacts[K]>) => string; select: <K extends keyof Contacts>(fields: K[]) => string; orderAsc: <K extends keyof Contacts>(field: K) => string; orderDesc: <K extends keyof Contacts>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Contacts[] }>;
     };
     "Follows": {
       create: (data: {
@@ -1875,7 +1918,7 @@ export type DatabaseTableMap = {
         "createdAt"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Follows>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Follows>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Follows>>(field: K) => string; isNotNull: <K extends QueryableKeys<Follows>>(field: K) => string; startsWith: <K extends QueryableKeys<Follows>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Follows>>(field: K, value: string) => string; between: <K extends QueryableKeys<Follows>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Follows>(fields: K[]) => string; orderAsc: <K extends keyof Follows>(field: K) => string; orderDesc: <K extends keyof Follows>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Follows[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<Follows[K]>) => string; notEqual: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<Follows[K]>) => string; lessThan: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<Follows[K]>) => string; lessThanEqual: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<Follows[K]>) => string; greaterThan: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<Follows[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<Follows[K]>) => string; contains: <K extends QueryableKeys<Follows>>(field: K, value: ExtractQueryValue<Follows[K]>) => string; search: <K extends QueryableKeys<Follows>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Follows>>(field: K) => string; isNotNull: <K extends QueryableKeys<Follows>>(field: K) => string; startsWith: <K extends QueryableKeys<Follows>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Follows>>(field: K, value: string) => string; between: <K extends QueryableKeys<Follows>>(field: K, start: ExtractQueryValue<Follows[K]>, end: ExtractQueryValue<Follows[K]>) => string; select: <K extends keyof Follows>(fields: K[]) => string; orderAsc: <K extends keyof Follows>(field: K) => string; orderDesc: <K extends keyof Follows>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Follows[] }>;
     };
     "AppActivity": {
       create: (data: {
@@ -1892,28 +1935,7 @@ export type DatabaseTableMap = {
         "customStatus"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<AppActivity>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<AppActivity>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<AppActivity>>(field: K) => string; isNotNull: <K extends QueryableKeys<AppActivity>>(field: K) => string; startsWith: <K extends QueryableKeys<AppActivity>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<AppActivity>>(field: K, value: string) => string; between: <K extends QueryableKeys<AppActivity>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof AppActivity>(fields: K[]) => string; orderAsc: <K extends keyof AppActivity>(field: K) => string; orderDesc: <K extends keyof AppActivity>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: AppActivity[] }>;
-    };
-    "CallLinks": {
-      create: (data: {
-        "userId": string;
-        "conversationId"?: string | null;
-        "code": string;
-        "type"?: CallLinksType;
-        "url"?: string | null;
-        "expiresAt"?: string | null;
-      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<CallLinks>;
-      get: (id: string) => Promise<CallLinks>;
-      update: (id: string, data: Partial<{
-        "userId": string;
-        "conversationId"?: string | null;
-        "code": string;
-        "type"?: CallLinksType;
-        "url"?: string | null;
-        "expiresAt"?: string | null;
-      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<CallLinks>;
-      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<CallLinks>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<CallLinks>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<CallLinks>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<CallLinks>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<CallLinks>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<CallLinks>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<CallLinks>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<CallLinks>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<CallLinks>>(field: K) => string; isNotNull: <K extends QueryableKeys<CallLinks>>(field: K) => string; startsWith: <K extends QueryableKeys<CallLinks>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<CallLinks>>(field: K, value: string) => string; between: <K extends QueryableKeys<CallLinks>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof CallLinks>(fields: K[]) => string; orderAsc: <K extends keyof CallLinks>(field: K) => string; orderDesc: <K extends keyof CallLinks>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: CallLinks[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<AppActivity[K]>) => string; notEqual: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<AppActivity[K]>) => string; lessThan: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<AppActivity[K]>) => string; lessThanEqual: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<AppActivity[K]>) => string; greaterThan: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<AppActivity[K]>) => string; greaterThanEqual: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<AppActivity[K]>) => string; contains: <K extends QueryableKeys<AppActivity>>(field: K, value: ExtractQueryValue<AppActivity[K]>) => string; search: <K extends QueryableKeys<AppActivity>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<AppActivity>>(field: K) => string; isNotNull: <K extends QueryableKeys<AppActivity>>(field: K) => string; startsWith: <K extends QueryableKeys<AppActivity>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<AppActivity>>(field: K, value: string) => string; between: <K extends QueryableKeys<AppActivity>>(field: K, start: ExtractQueryValue<AppActivity[K]>, end: ExtractQueryValue<AppActivity[K]>) => string; select: <K extends keyof AppActivity>(fields: K[]) => string; orderAsc: <K extends keyof AppActivity>(field: K) => string; orderDesc: <K extends keyof AppActivity>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: AppActivity[] }>;
     };
     "Interactions": {
       create: (data: {
@@ -1930,30 +1952,7 @@ export type DatabaseTableMap = {
         "createdAt": string;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Interactions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Interactions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Interactions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Interactions>>(field: K) => string; startsWith: <K extends QueryableKeys<Interactions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Interactions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Interactions>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Interactions>(fields: K[]) => string; orderAsc: <K extends keyof Interactions>(field: K) => string; orderDesc: <K extends keyof Interactions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Interactions[] }>;
-    };
-    "CallLogs": {
-      create: (data: {
-        "callerId": string;
-        "receiverId"?: string | null;
-        "conversationId"?: string | null;
-        "type"?: CallLogsType;
-        "status"?: CallLogsStatus;
-        "duration"?: number;
-        "startedAt": string;
-      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<CallLogs>;
-      get: (id: string) => Promise<CallLogs>;
-      update: (id: string, data: Partial<{
-        "callerId": string;
-        "receiverId"?: string | null;
-        "conversationId"?: string | null;
-        "type"?: CallLogsType;
-        "status"?: CallLogsStatus;
-        "duration"?: number;
-        "startedAt": string;
-      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<CallLogs>;
-      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<CallLogs>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<CallLogs>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<CallLogs>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<CallLogs>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<CallLogs>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<CallLogs>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<CallLogs>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<CallLogs>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<CallLogs>>(field: K) => string; isNotNull: <K extends QueryableKeys<CallLogs>>(field: K) => string; startsWith: <K extends QueryableKeys<CallLogs>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<CallLogs>>(field: K, value: string) => string; between: <K extends QueryableKeys<CallLogs>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof CallLogs>(fields: K[]) => string; orderAsc: <K extends keyof CallLogs>(field: K) => string; orderDesc: <K extends keyof CallLogs>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: CallLogs[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<Interactions[K]>) => string; notEqual: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<Interactions[K]>) => string; lessThan: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<Interactions[K]>) => string; lessThanEqual: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<Interactions[K]>) => string; greaterThan: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<Interactions[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<Interactions[K]>) => string; contains: <K extends QueryableKeys<Interactions>>(field: K, value: ExtractQueryValue<Interactions[K]>) => string; search: <K extends QueryableKeys<Interactions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Interactions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Interactions>>(field: K) => string; startsWith: <K extends QueryableKeys<Interactions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Interactions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Interactions>>(field: K, start: ExtractQueryValue<Interactions[K]>, end: ExtractQueryValue<Interactions[K]>) => string; select: <K extends keyof Interactions>(fields: K[]) => string; orderAsc: <K extends keyof Interactions>(field: K) => string; orderDesc: <K extends keyof Interactions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Interactions[] }>;
     };
     "Moments": {
       create: (data: {
@@ -1974,7 +1973,70 @@ export type DatabaseTableMap = {
         "expiresAt": string;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Moments>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Moments>>(field: K) => string; isNotNull: <K extends QueryableKeys<Moments>>(field: K) => string; startsWith: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; between: <K extends QueryableKeys<Moments>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Moments>(fields: K[]) => string; orderAsc: <K extends keyof Moments>(field: K) => string; orderDesc: <K extends keyof Moments>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Moments[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<Moments[K]>) => string; notEqual: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<Moments[K]>) => string; lessThan: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<Moments[K]>) => string; lessThanEqual: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<Moments[K]>) => string; greaterThan: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<Moments[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<Moments[K]>) => string; contains: <K extends QueryableKeys<Moments>>(field: K, value: ExtractQueryValue<Moments[K]>) => string; search: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Moments>>(field: K) => string; isNotNull: <K extends QueryableKeys<Moments>>(field: K) => string; startsWith: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Moments>>(field: K, value: string) => string; between: <K extends QueryableKeys<Moments>>(field: K, start: ExtractQueryValue<Moments[K]>, end: ExtractQueryValue<Moments[K]>) => string; select: <K extends keyof Moments>(fields: K[]) => string; orderAsc: <K extends keyof Moments>(field: K) => string; orderDesc: <K extends keyof Moments>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Moments[] }>;
+    };
+    "Calls": {
+      create: (data: {
+        "userId": string;
+        "type"?: CallsType;
+        "title"?: string | null;
+        "startsAt"?: string | null;
+        "expiresAt"?: string | null;
+        "metadata"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Calls>;
+      get: (id: string) => Promise<Calls>;
+      update: (id: string, data: Partial<{
+        "userId": string;
+        "type"?: CallsType;
+        "title"?: string | null;
+        "startsAt"?: string | null;
+        "expiresAt"?: string | null;
+        "metadata"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Calls>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Calls>>(field: K, value: ExtractQueryValue<Calls[K]>) => string; notEqual: <K extends QueryableKeys<Calls>>(field: K, value: ExtractQueryValue<Calls[K]>) => string; lessThan: <K extends QueryableKeys<Calls>>(field: K, value: ExtractQueryValue<Calls[K]>) => string; lessThanEqual: <K extends QueryableKeys<Calls>>(field: K, value: ExtractQueryValue<Calls[K]>) => string; greaterThan: <K extends QueryableKeys<Calls>>(field: K, value: ExtractQueryValue<Calls[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Calls>>(field: K, value: ExtractQueryValue<Calls[K]>) => string; contains: <K extends QueryableKeys<Calls>>(field: K, value: ExtractQueryValue<Calls[K]>) => string; search: <K extends QueryableKeys<Calls>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Calls>>(field: K) => string; isNotNull: <K extends QueryableKeys<Calls>>(field: K) => string; startsWith: <K extends QueryableKeys<Calls>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Calls>>(field: K, value: string) => string; between: <K extends QueryableKeys<Calls>>(field: K, start: ExtractQueryValue<Calls[K]>, end: ExtractQueryValue<Calls[K]>) => string; select: <K extends keyof Calls>(fields: K[]) => string; orderAsc: <K extends keyof Calls>(field: K) => string; orderDesc: <K extends keyof Calls>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Calls[] }>;
+    };
+    "profiles": {
+      create: (data: {
+        "username": string;
+        "displayName"?: string | null;
+        "bio"?: string | null;
+        "avatar"?: string | null;
+        "walletAddress"?: string | null;
+        "publicKey"?: string | null;
+        "status"?: string;
+        "preferences"?: string | null;
+        "userId": string;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Profiles>;
+      get: (id: string) => Promise<Profiles>;
+      update: (id: string, data: Partial<{
+        "username": string;
+        "displayName"?: string | null;
+        "bio"?: string | null;
+        "avatar"?: string | null;
+        "walletAddress"?: string | null;
+        "publicKey"?: string | null;
+        "status"?: string;
+        "preferences"?: string | null;
+        "userId": string;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Profiles>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Profiles>>(field: K, value: ExtractQueryValue<Profiles[K]>) => string; notEqual: <K extends QueryableKeys<Profiles>>(field: K, value: ExtractQueryValue<Profiles[K]>) => string; lessThan: <K extends QueryableKeys<Profiles>>(field: K, value: ExtractQueryValue<Profiles[K]>) => string; lessThanEqual: <K extends QueryableKeys<Profiles>>(field: K, value: ExtractQueryValue<Profiles[K]>) => string; greaterThan: <K extends QueryableKeys<Profiles>>(field: K, value: ExtractQueryValue<Profiles[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Profiles>>(field: K, value: ExtractQueryValue<Profiles[K]>) => string; contains: <K extends QueryableKeys<Profiles>>(field: K, value: ExtractQueryValue<Profiles[K]>) => string; search: <K extends QueryableKeys<Profiles>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Profiles>>(field: K) => string; isNotNull: <K extends QueryableKeys<Profiles>>(field: K) => string; startsWith: <K extends QueryableKeys<Profiles>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Profiles>>(field: K, value: string) => string; between: <K extends QueryableKeys<Profiles>>(field: K, start: ExtractQueryValue<Profiles[K]>, end: ExtractQueryValue<Profiles[K]>) => string; select: <K extends keyof Profiles>(fields: K[]) => string; orderAsc: <K extends keyof Profiles>(field: K) => string; orderDesc: <K extends keyof Profiles>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Profiles[] }>;
+    };
+    "epochs": {
+      create: (data: {
+        "resourceId": string;
+        "epochNumber": number;
+        "createdBy": string;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Epochs>;
+      get: (id: string) => Promise<Epochs>;
+      update: (id: string, data: Partial<{
+        "resourceId": string;
+        "epochNumber": number;
+        "createdBy": string;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Epochs>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Epochs>>(field: K, value: ExtractQueryValue<Epochs[K]>) => string; notEqual: <K extends QueryableKeys<Epochs>>(field: K, value: ExtractQueryValue<Epochs[K]>) => string; lessThan: <K extends QueryableKeys<Epochs>>(field: K, value: ExtractQueryValue<Epochs[K]>) => string; lessThanEqual: <K extends QueryableKeys<Epochs>>(field: K, value: ExtractQueryValue<Epochs[K]>) => string; greaterThan: <K extends QueryableKeys<Epochs>>(field: K, value: ExtractQueryValue<Epochs[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Epochs>>(field: K, value: ExtractQueryValue<Epochs[K]>) => string; contains: <K extends QueryableKeys<Epochs>>(field: K, value: ExtractQueryValue<Epochs[K]>) => string; search: <K extends QueryableKeys<Epochs>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Epochs>>(field: K) => string; isNotNull: <K extends QueryableKeys<Epochs>>(field: K) => string; startsWith: <K extends QueryableKeys<Epochs>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Epochs>>(field: K, value: string) => string; between: <K extends QueryableKeys<Epochs>>(field: K, start: ExtractQueryValue<Epochs[K]>, end: ExtractQueryValue<Epochs[K]>) => string; select: <K extends keyof Epochs>(fields: K[]) => string; orderAsc: <K extends keyof Epochs>(field: K) => string; orderDesc: <K extends keyof Epochs>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Epochs[] }>;
     }
   };
   "whisperrflow": {
@@ -1997,7 +2059,7 @@ export type DatabaseTableMap = {
         "status"?: string;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<FocusSessions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<FocusSessions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<FocusSessions>>(field: K) => string; isNotNull: <K extends QueryableKeys<FocusSessions>>(field: K) => string; startsWith: <K extends QueryableKeys<FocusSessions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<FocusSessions>>(field: K, value: string) => string; between: <K extends QueryableKeys<FocusSessions>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof FocusSessions>(fields: K[]) => string; orderAsc: <K extends keyof FocusSessions>(field: K) => string; orderDesc: <K extends keyof FocusSessions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: FocusSessions[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<FocusSessions[K]>) => string; notEqual: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<FocusSessions[K]>) => string; lessThan: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<FocusSessions[K]>) => string; lessThanEqual: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<FocusSessions[K]>) => string; greaterThan: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<FocusSessions[K]>) => string; greaterThanEqual: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<FocusSessions[K]>) => string; contains: <K extends QueryableKeys<FocusSessions>>(field: K, value: ExtractQueryValue<FocusSessions[K]>) => string; search: <K extends QueryableKeys<FocusSessions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<FocusSessions>>(field: K) => string; isNotNull: <K extends QueryableKeys<FocusSessions>>(field: K) => string; startsWith: <K extends QueryableKeys<FocusSessions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<FocusSessions>>(field: K, value: string) => string; between: <K extends QueryableKeys<FocusSessions>>(field: K, start: ExtractQueryValue<FocusSessions[K]>, end: ExtractQueryValue<FocusSessions[K]>) => string; select: <K extends keyof FocusSessions>(fields: K[]) => string; orderAsc: <K extends keyof FocusSessions>(field: K) => string; orderDesc: <K extends keyof FocusSessions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: FocusSessions[] }>;
     };
     "eventGuests": {
       create: (data: {
@@ -2016,7 +2078,7 @@ export type DatabaseTableMap = {
         "role"?: string;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<EventGuests>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<EventGuests>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<EventGuests>>(field: K) => string; isNotNull: <K extends QueryableKeys<EventGuests>>(field: K) => string; startsWith: <K extends QueryableKeys<EventGuests>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<EventGuests>>(field: K, value: string) => string; between: <K extends QueryableKeys<EventGuests>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof EventGuests>(fields: K[]) => string; orderAsc: <K extends keyof EventGuests>(field: K) => string; orderDesc: <K extends keyof EventGuests>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: EventGuests[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<EventGuests[K]>) => string; notEqual: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<EventGuests[K]>) => string; lessThan: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<EventGuests[K]>) => string; lessThanEqual: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<EventGuests[K]>) => string; greaterThan: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<EventGuests[K]>) => string; greaterThanEqual: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<EventGuests[K]>) => string; contains: <K extends QueryableKeys<EventGuests>>(field: K, value: ExtractQueryValue<EventGuests[K]>) => string; search: <K extends QueryableKeys<EventGuests>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<EventGuests>>(field: K) => string; isNotNull: <K extends QueryableKeys<EventGuests>>(field: K) => string; startsWith: <K extends QueryableKeys<EventGuests>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<EventGuests>>(field: K, value: string) => string; between: <K extends QueryableKeys<EventGuests>>(field: K, start: ExtractQueryValue<EventGuests[K]>, end: ExtractQueryValue<EventGuests[K]>) => string; select: <K extends keyof EventGuests>(fields: K[]) => string; orderAsc: <K extends keyof EventGuests>(field: K) => string; orderDesc: <K extends keyof EventGuests>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: EventGuests[] }>;
     };
     "events": {
       create: (data: {
@@ -2051,7 +2113,7 @@ export type DatabaseTableMap = {
         "userId": string;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Events>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Events>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Events>>(field: K) => string; isNotNull: <K extends QueryableKeys<Events>>(field: K) => string; startsWith: <K extends QueryableKeys<Events>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Events>>(field: K, value: string) => string; between: <K extends QueryableKeys<Events>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Events>(fields: K[]) => string; orderAsc: <K extends keyof Events>(field: K) => string; orderDesc: <K extends keyof Events>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Events[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<Events[K]>) => string; notEqual: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<Events[K]>) => string; lessThan: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<Events[K]>) => string; lessThanEqual: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<Events[K]>) => string; greaterThan: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<Events[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<Events[K]>) => string; contains: <K extends QueryableKeys<Events>>(field: K, value: ExtractQueryValue<Events[K]>) => string; search: <K extends QueryableKeys<Events>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Events>>(field: K) => string; isNotNull: <K extends QueryableKeys<Events>>(field: K) => string; startsWith: <K extends QueryableKeys<Events>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Events>>(field: K, value: string) => string; between: <K extends QueryableKeys<Events>>(field: K, start: ExtractQueryValue<Events[K]>, end: ExtractQueryValue<Events[K]>) => string; select: <K extends keyof Events>(fields: K[]) => string; orderAsc: <K extends keyof Events>(field: K) => string; orderDesc: <K extends keyof Events>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Events[] }>;
     };
     "calendars": {
       create: (data: {
@@ -2068,7 +2130,7 @@ export type DatabaseTableMap = {
         "userId": string;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Calendars>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Calendars>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Calendars>>(field: K) => string; isNotNull: <K extends QueryableKeys<Calendars>>(field: K) => string; startsWith: <K extends QueryableKeys<Calendars>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Calendars>>(field: K, value: string) => string; between: <K extends QueryableKeys<Calendars>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Calendars>(fields: K[]) => string; orderAsc: <K extends keyof Calendars>(field: K) => string; orderDesc: <K extends keyof Calendars>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Calendars[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<Calendars[K]>) => string; notEqual: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<Calendars[K]>) => string; lessThan: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<Calendars[K]>) => string; lessThanEqual: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<Calendars[K]>) => string; greaterThan: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<Calendars[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<Calendars[K]>) => string; contains: <K extends QueryableKeys<Calendars>>(field: K, value: ExtractQueryValue<Calendars[K]>) => string; search: <K extends QueryableKeys<Calendars>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Calendars>>(field: K) => string; isNotNull: <K extends QueryableKeys<Calendars>>(field: K) => string; startsWith: <K extends QueryableKeys<Calendars>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Calendars>>(field: K, value: string) => string; between: <K extends QueryableKeys<Calendars>>(field: K, start: ExtractQueryValue<Calendars[K]>, end: ExtractQueryValue<Calendars[K]>) => string; select: <K extends keyof Calendars>(fields: K[]) => string; orderAsc: <K extends keyof Calendars>(field: K) => string; orderDesc: <K extends keyof Calendars>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Calendars[] }>;
     };
     "tasks": {
       create: (data: {
@@ -2101,7 +2163,7 @@ export type DatabaseTableMap = {
         "parentId"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Tasks>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Tasks>>(field: K) => string; isNotNull: <K extends QueryableKeys<Tasks>>(field: K) => string; startsWith: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; between: <K extends QueryableKeys<Tasks>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Tasks>(fields: K[]) => string; orderAsc: <K extends keyof Tasks>(field: K) => string; orderDesc: <K extends keyof Tasks>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Tasks[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<Tasks[K]>) => string; notEqual: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<Tasks[K]>) => string; lessThan: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<Tasks[K]>) => string; lessThanEqual: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<Tasks[K]>) => string; greaterThan: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<Tasks[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<Tasks[K]>) => string; contains: <K extends QueryableKeys<Tasks>>(field: K, value: ExtractQueryValue<Tasks[K]>) => string; search: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Tasks>>(field: K) => string; isNotNull: <K extends QueryableKeys<Tasks>>(field: K) => string; startsWith: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Tasks>>(field: K, value: string) => string; between: <K extends QueryableKeys<Tasks>>(field: K, start: ExtractQueryValue<Tasks[K]>, end: ExtractQueryValue<Tasks[K]>) => string; select: <K extends keyof Tasks>(fields: K[]) => string; orderAsc: <K extends keyof Tasks>(field: K) => string; orderDesc: <K extends keyof Tasks>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Tasks[] }>;
     };
     "forms": {
       create: (data: {
@@ -2124,7 +2186,7 @@ export type DatabaseTableMap = {
         "visibility"?: FormsVisibility;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Forms>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<Forms>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Forms>>(field: K) => string; isNotNull: <K extends QueryableKeys<Forms>>(field: K) => string; startsWith: <K extends QueryableKeys<Forms>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Forms>>(field: K, value: string) => string; between: <K extends QueryableKeys<Forms>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof Forms>(fields: K[]) => string; orderAsc: <K extends keyof Forms>(field: K) => string; orderDesc: <K extends keyof Forms>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Forms[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<Forms[K]>) => string; notEqual: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<Forms[K]>) => string; lessThan: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<Forms[K]>) => string; lessThanEqual: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<Forms[K]>) => string; greaterThan: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<Forms[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<Forms[K]>) => string; contains: <K extends QueryableKeys<Forms>>(field: K, value: ExtractQueryValue<Forms[K]>) => string; search: <K extends QueryableKeys<Forms>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Forms>>(field: K) => string; isNotNull: <K extends QueryableKeys<Forms>>(field: K) => string; startsWith: <K extends QueryableKeys<Forms>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Forms>>(field: K, value: string) => string; between: <K extends QueryableKeys<Forms>>(field: K, start: ExtractQueryValue<Forms[K]>, end: ExtractQueryValue<Forms[K]>) => string; select: <K extends keyof Forms>(fields: K[]) => string; orderAsc: <K extends keyof Forms>(field: K) => string; orderDesc: <K extends keyof Forms>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Forms[] }>;
     };
     "formSubmissions": {
       create: (data: {
@@ -2143,7 +2205,26 @@ export type DatabaseTableMap = {
         "metadata"?: string | null;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<FormSubmissions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
-      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<any>) => string; notEqual: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<any>) => string; lessThan: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<any>) => string; lessThanEqual: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThan: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<any>) => string; greaterThanEqual: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<any>) => string; contains: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<any>) => string; search: <K extends QueryableKeys<FormSubmissions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<FormSubmissions>>(field: K) => string; isNotNull: <K extends QueryableKeys<FormSubmissions>>(field: K) => string; startsWith: <K extends QueryableKeys<FormSubmissions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<FormSubmissions>>(field: K, value: string) => string; between: <K extends QueryableKeys<FormSubmissions>>(field: K, start: ExtractQueryValue<any>, end: ExtractQueryValue<any>) => string; select: <K extends keyof FormSubmissions>(fields: K[]) => string; orderAsc: <K extends keyof FormSubmissions>(field: K) => string; orderDesc: <K extends keyof FormSubmissions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: FormSubmissions[] }>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<FormSubmissions[K]>) => string; notEqual: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<FormSubmissions[K]>) => string; lessThan: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<FormSubmissions[K]>) => string; lessThanEqual: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<FormSubmissions[K]>) => string; greaterThan: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<FormSubmissions[K]>) => string; greaterThanEqual: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<FormSubmissions[K]>) => string; contains: <K extends QueryableKeys<FormSubmissions>>(field: K, value: ExtractQueryValue<FormSubmissions[K]>) => string; search: <K extends QueryableKeys<FormSubmissions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<FormSubmissions>>(field: K) => string; isNotNull: <K extends QueryableKeys<FormSubmissions>>(field: K) => string; startsWith: <K extends QueryableKeys<FormSubmissions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<FormSubmissions>>(field: K, value: string) => string; between: <K extends QueryableKeys<FormSubmissions>>(field: K, start: ExtractQueryValue<FormSubmissions[K]>, end: ExtractQueryValue<FormSubmissions[K]>) => string; select: <K extends keyof FormSubmissions>(fields: K[]) => string; orderAsc: <K extends keyof FormSubmissions>(field: K) => string; orderDesc: <K extends keyof FormSubmissions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: FormSubmissions[] }>;
+    };
+    "agents": {
+      create: (data: {
+        "ownerId": string;
+        "parentId"?: string | null;
+        "publicKey": string;
+        "config": string;
+        "status"?: string;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Agents>;
+      get: (id: string) => Promise<Agents>;
+      update: (id: string, data: Partial<{
+        "ownerId": string;
+        "parentId"?: string | null;
+        "publicKey": string;
+        "config": string;
+        "status"?: string;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Agents>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Agents>>(field: K, value: ExtractQueryValue<Agents[K]>) => string; notEqual: <K extends QueryableKeys<Agents>>(field: K, value: ExtractQueryValue<Agents[K]>) => string; lessThan: <K extends QueryableKeys<Agents>>(field: K, value: ExtractQueryValue<Agents[K]>) => string; lessThanEqual: <K extends QueryableKeys<Agents>>(field: K, value: ExtractQueryValue<Agents[K]>) => string; greaterThan: <K extends QueryableKeys<Agents>>(field: K, value: ExtractQueryValue<Agents[K]>) => string; greaterThanEqual: <K extends QueryableKeys<Agents>>(field: K, value: ExtractQueryValue<Agents[K]>) => string; contains: <K extends QueryableKeys<Agents>>(field: K, value: ExtractQueryValue<Agents[K]>) => string; search: <K extends QueryableKeys<Agents>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Agents>>(field: K) => string; isNotNull: <K extends QueryableKeys<Agents>>(field: K) => string; startsWith: <K extends QueryableKeys<Agents>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Agents>>(field: K, value: string) => string; between: <K extends QueryableKeys<Agents>>(field: K, start: ExtractQueryValue<Agents[K]>, end: ExtractQueryValue<Agents[K]>) => string; select: <K extends keyof Agents>(fields: K[]) => string; orderAsc: <K extends keyof Agents>(field: K) => string; orderDesc: <K extends keyof Agents>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Agents[] }>;
     }
   }
 };

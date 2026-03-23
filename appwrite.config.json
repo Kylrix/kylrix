@@ -2784,6 +2784,187 @@
             ]
         },
         {
+            "$id": "key_mapping",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "key_mapping",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "resourceId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "resourceType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "grantee",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "wrappedKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 2048,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_resource",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "resourceType",
+                        "resourceId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_grantee",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "grantee"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "unique_mapping",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "resourceType",
+                        "resourceId",
+                        "grantee"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "wallets",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "passwordManagerDb",
+            "name": "wallets",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "ownerId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "address",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "chain",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "encryptedSecret",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 2048,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_owner",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "unique_wallet",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "chain",
+                        "address"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "messages",
             "$permissions": [
                 "create(\"users\")",
@@ -3354,110 +3535,6 @@
             ]
         },
         {
-            "$id": "users",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "users",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "username",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 50,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "displayName",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 100,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "bio",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 500,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "walletAddress",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "createdAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "updatedAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "publicKey",
-                    "type": "text",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "avatar",
-                    "type": "text",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "encrypt": false
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_username_unique",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "username"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_walletAddress",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "walletAddress"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
             "$id": "follows",
             "$permissions": [
                 "create(\"users\")",
@@ -3619,100 +3696,6 @@
             ]
         },
         {
-            "$id": "call_links",
-            "$permissions": [
-                "create(\"users\")",
-                "read(\"any\")",
-                "update(\"users\")",
-                "delete(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "CallLinks",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "conversationId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "code",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "type",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": "video",
-                    "format": "enum",
-                    "elements": [
-                        "audio",
-                        "video"
-                    ]
-                },
-                {
-                    "key": "url",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": "url"
-                },
-                {
-                    "key": "expiresAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_call_links_code",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "code"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_call_links_user",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
             "$id": "interactions",
             "$permissions": [
                 "create(\"users\")",
@@ -3785,124 +3768,6 @@
                     "orders": [
                         "ASC",
                         "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "call_logs",
-            "$permissions": [
-                "create(\"users\")",
-                "read(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "CallLogs",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "callerId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "receiverId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "conversationId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "type",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": "audio",
-                    "format": "enum",
-                    "elements": [
-                        "audio",
-                        "video"
-                    ]
-                },
-                {
-                    "key": "status",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "default": "completed",
-                    "format": "enum",
-                    "elements": [
-                        "missed",
-                        "completed",
-                        "declined",
-                        "ongoing"
-                    ]
-                },
-                {
-                    "key": "duration",
-                    "type": "integer",
-                    "required": false,
-                    "array": false,
-                    "default": 0,
-                    "min": 0,
-                    "max": 2147483647
-                },
-                {
-                    "key": "startedAt",
-                    "type": "datetime",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_call_logs_conversation",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "conversationId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_call_logs_caller",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "callerId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_call_logs_receiver",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "receiverId"
-                    ],
-                    "orders": [
                         "ASC"
                     ]
                 }
@@ -3997,6 +3862,282 @@
                         "expiresAt"
                     ],
                     "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "calls",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"any\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Calls",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "type",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "video",
+                    "format": "enum",
+                    "elements": [
+                        "audio",
+                        "video"
+                    ]
+                },
+                {
+                    "key": "title",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "startsAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "metadata",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_calls_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "profiles",
+            "$permissions": [
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "profiles",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "username",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "displayName",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "bio",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "avatar",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "walletAddress",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "publicKey",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": "online",
+                    "encrypt": false
+                },
+                {
+                    "key": "preferences",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_username_unique",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "username"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_walletAddress",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "walletAddress"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_userId_unique",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "epochs",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "epochs",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "resourceId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "epochNumber",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "createdBy",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_resource",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "resourceId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "unique_epoch",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "resourceId",
+                        "epochNumber"
+                    ],
+                    "orders": [
+                        "ASC",
                         "ASC"
                     ]
                 }
@@ -4585,6 +4726,87 @@
                     "status": "available",
                     "columns": [
                         "formId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "agents",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "whisperrflow",
+            "name": "agents",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "ownerId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "parentId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "publicKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 1024,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "config",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": "idle",
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_owner",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_parent",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "parentId"
                     ],
                     "orders": [
                         "ASC"
