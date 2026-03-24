@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { useRouter, usePathname } from 'next/navigation';
 import { getCurrentUser, getUser, createUser, updateUser, account } from '@/lib/appwrite';
 import { getEffectiveUsername } from '@/lib/utils';
+import { getEcosystemUrl } from '@/lib/ecosystem';
 
 interface User {
   $id: string;
@@ -18,7 +19,7 @@ interface AuthContextType {
   isAuthenticating: boolean;
   isAuthenticated: boolean;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<User | null>;
+  refreshUser: (retryCount?: number) => Promise<User | null>;
   openIDMWindow: () => void;
   idmWindowOpen: boolean;
 }
@@ -35,40 +36,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const router = useRouter();
   const pathname = usePathname();
 
-  const refreshUser = useCallback(async () => {
-    try {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        let dbUser;
-        try {
-          dbUser = await getUser(currentUser.$id);
-        } catch (e) {
-          console.log('User not found in database, creating...', e);
-          const autoUsername = getEffectiveUsername(currentUser);
-          dbUser = await createUser({
-            id: currentUser.$id,
-            email: currentUser.email,
-            name: currentUser.name,
-            username: autoUsername
-          });
-        }
-        setUser({ ...currentUser, ...dbUser });
-      } else {
-        setUser(null);
-      }
-      return currentUser as User;
-    } catch (error) {
-      setUser(null);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   const attemptSilentAuth = useCallback(async (): Promise<void> => {
     if (typeof window === 'undefined') return;
 
-    const authBaseUrl = 'https://accounts.kylrix.space';
+    const authBaseUrl = getEcosystemUrl('accounts');
+    console.log('[Auth] Attempting silent auth via:', authBaseUrl);
 
     return new Promise<void>((resolve) => {
       const iframe = document.createElement('iframe');
@@ -76,6 +48,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       iframe.style.display = 'none';
 
       const timeout = setTimeout(() => {
+        console.log('[Auth] Silent auth timeout');
         cleanup();
         resolve();
       }, 5000);
@@ -84,11 +57,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (event.origin !== authBaseUrl) return;
 
         if (event.data?.type === 'idm:auth-status' && event.data.status === 'authenticated') {
-          console.log('Silent auth discovered session in kylrix landing');
+          console.log('[Auth] Silent auth discovered session, refreshing...');
           refreshUser();
           cleanup();
           resolve();
         } else if (event.data?.type === 'idm:auth-status') {
+          console.log('[Auth] Silent auth status:', event.data.status);
           cleanup();
           resolve();
         }
@@ -105,7 +79,67 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       window.addEventListener('message', handleIframeMessage);
       document.body.appendChild(iframe);
     });
-  }, [refreshUser]);
+  }, []);
+
+  const refreshUser = useCallback(async (retryCount = 0): Promise<User | null> => {
+    try {
+      console.log('[Auth] Refreshing user (attempt ' + (retryCount + 1) + ')...');
+      
+      let currentUser;
+      try {
+        currentUser = await account.get();
+      } catch (err) {
+        console.log('[Auth] account.get() failed:', err);
+        currentUser = null;
+      }
+      
+      if (currentUser) {
+        console.log('[Auth] Found Appwrite user:', currentUser.$id);
+        let dbUser = {};
+        try {
+          dbUser = await getUser(currentUser.$id);
+          console.log('[Auth] Found DB user');
+        } catch (e) {
+          console.log('[Auth] User not in database, creating...', e);
+          try {
+            const autoUsername = getEffectiveUsername(currentUser);
+            dbUser = await createUser({
+              id: currentUser.$id,
+              email: currentUser.email,
+              name: currentUser.name,
+              username: autoUsername
+            });
+            console.log('[Auth] Created DB user');
+          } catch (createErr) {
+            console.error('[Auth] Failed to create DB user, falling back to pure Appwrite user:', createErr);
+          }
+        }
+        const combinedUser = { ...currentUser, ...dbUser };
+        setUser(combinedUser);
+        setIsLoading(false);
+        return combinedUser;
+      } else {
+        // Check for auth=success signal in URL
+        const hasAuthSignal = typeof window !== 'undefined' && window.location.search.includes('auth=success');
+        
+        if (hasAuthSignal && retryCount < 3) {
+          console.log('[Auth] Auth signal detected but session not found. Retrying in 1s...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return refreshUser(retryCount + 1);
+        }
+
+        console.log('[Auth] No active session found.');
+        setUser(null);
+        return null;
+      }
+    } catch (error) {
+      console.error('[Auth] Refresh user error:', error);
+      setUser(null);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (initAuthStarted.current) return;
@@ -123,10 +157,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const authDomain = 'accounts.kylrix.space';
-      if (event.origin !== `https://${authDomain}`) return;
+      const authBaseUrl = getEcosystemUrl('accounts');
+      if (event.origin !== authBaseUrl) return;
       if (event.data?.type !== 'idm:auth-success') return;
 
+      console.log('[Auth] Received auth success via postMessage');
       refreshUser();
       setIDMWindowOpen(false);
       setIsAuthenticating(false);
@@ -144,7 +179,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (typeof window === 'undefined' || isAuthenticating) return;
 
     setIsAuthenticating(true);
-    const authUrl = `https://accounts.kylrix.space/login`;
+    const authBaseUrl = getEcosystemUrl('accounts');
+    const authUrl = `${authBaseUrl}/login`;
     const sourceUrl = window.location.origin + pathname;
     const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
 
@@ -153,6 +189,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const left = window.screenX + (window.outerWidth - width) / 2;
     const top = window.screenY + (window.outerHeight - height) / 2;
     
+    console.log('[Auth] Opening IDM window:', targetUrl);
     const windowRef = window.open(
       targetUrl,
       'KylrixAccounts',
@@ -160,6 +197,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     if (!windowRef) {
+      console.log('[Auth] Popup blocked, redirecting...');
       window.location.assign(targetUrl);
       return;
     }

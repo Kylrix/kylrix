@@ -61,6 +61,10 @@ export const Navbar = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated, isLoading, logout, openIDMWindow } = useAuth();
   const { toggleColorMode, mode } = useColorMode();
+
+  useEffect(() => {
+    console.log('[Navbar] Auth state:', { isLoading, isAuthenticated, userId: user?.$id });
+  }, [isLoading, isAuthenticated, user]);
   
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
