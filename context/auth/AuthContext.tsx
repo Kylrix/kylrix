@@ -39,7 +39,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const attemptSilentAuth = useCallback(async (): Promise<void> => {
     if (typeof window === 'undefined') return;
 
-    const authBaseUrl = getEcosystemUrl('accounts');
+    const authBaseUrl = 'https://accounts.kylrix.space';
     console.log('[Auth] Attempting silent auth via:', authBaseUrl);
 
     return new Promise<void>((resolve) => {
@@ -83,61 +83,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const refreshUser = useCallback(async (retryCount = 0): Promise<User | null> => {
     try {
-      console.log('[Auth] Refreshing user (attempt ' + (retryCount + 1) + ')...');
+      console.log(`[Auth] Checking session in kylrix (attempt ${retryCount + 1})...`);
+      const session = await account.get();
       
-      let currentUser;
-      try {
-        currentUser = await account.get();
-      } catch (err) {
-        console.log('[Auth] account.get() failed:', err);
-        currentUser = null;
+      console.log('[Auth] Active session detected:', session.$id);
+      
+      // Clear auth=success from URL
+      if (typeof window !== 'undefined' && window.location.search.includes('auth=success')) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('auth');
+        window.history.replaceState({}, '', url.toString());
       }
       
-      if (currentUser) {
-        console.log('[Auth] Found Appwrite user:', currentUser.$id);
-        let dbUser = {};
-        try {
-          dbUser = await getUser(currentUser.$id);
-          console.log('[Auth] Found DB user');
-        } catch (e) {
-          console.log('[Auth] User not in database, creating...', e);
-          try {
-            const autoUsername = getEffectiveUsername(currentUser);
-            dbUser = await createUser({
-              id: currentUser.$id,
-              email: currentUser.email,
-              name: currentUser.name,
-              username: autoUsername
-            });
-            console.log('[Auth] Created DB user');
-          } catch (createErr) {
-            console.error('[Auth] Failed to create DB user, falling back to pure Appwrite user:', createErr);
-          }
-        }
-        const combinedUser = { ...currentUser, ...dbUser };
-        setUser(combinedUser);
-        setIsLoading(false);
-        return combinedUser;
-      } else {
-        // Check for auth=success signal in URL
-        const hasAuthSignal = typeof window !== 'undefined' && window.location.search.includes('auth=success');
-        
-        if (hasAuthSignal && retryCount < 3) {
-          console.log('[Auth] Auth signal detected but session not found. Retrying in 1s...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          return refreshUser(retryCount + 1);
-        }
-
-        console.log('[Auth] No active session found.');
-        setUser(null);
-        return null;
-      }
-    } catch (error) {
-      console.error('[Auth] Refresh user error:', error);
-      setUser(null);
-      return null;
-    } finally {
+      setUser(session as any);
       setIsLoading(false);
+      return session as any;
+    } catch (error: unknown) {
+      const hasAuthSignal = typeof window !== 'undefined' && window.location.search.includes('auth=success');
+      
+      if (hasAuthSignal && retryCount < 3) {
+        console.log(`[Auth] Auth signal detected but session not found. Retrying... (${retryCount + 1})`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return refreshUser(retryCount + 1);
+      }
+
+      const err = error as any;
+      const isNetworkError = !err.response && (err.message?.includes('Network Error') || err.message?.includes('Failed to fetch'));
+      if (!isNetworkError) {
+        setUser(null);
+      }
+      
+      setIsLoading(false);
+      return null;
     }
   }, []);
 
@@ -157,7 +134,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const authBaseUrl = getEcosystemUrl('accounts');
+      const authBaseUrl = 'https://accounts.kylrix.space';
       if (event.origin !== authBaseUrl) return;
       if (event.data?.type !== 'idm:auth-success') return;
 
@@ -179,7 +156,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (typeof window === 'undefined' || isAuthenticating) return;
 
     setIsAuthenticating(true);
-    const authBaseUrl = getEcosystemUrl('accounts');
+    const authBaseUrl = 'https://accounts.kylrix.space';
     const authUrl = `${authBaseUrl}/login`;
     const sourceUrl = window.location.origin + pathname;
     const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;

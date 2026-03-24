@@ -116,7 +116,7 @@ export default function LandingPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleGetStarted = () => {
-    const accountsUrl = getEcosystemUrl('accounts');
+    const accountsUrl = 'https://accounts.kylrix.space';
     const authUrl = `${accountsUrl}/login`;
     const sourceUrl = window.location.origin;
     const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
