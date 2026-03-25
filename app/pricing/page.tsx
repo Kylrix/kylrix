@@ -41,7 +41,7 @@ export default function PricingPage() {
 
   const handleSubscribe = () => {
     const planId = months >= 12 ? 'PRO_YEAR' : 'PRO_MONTH';
-    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&source=${encodeURIComponent(window.location.href)}`;
+    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=${detectedRegion.countryCode}&source=${encodeURIComponent(window.location.href)}`;
     
     if (!isAuthenticated) {
       openIDMWindow(checkoutUrl);
