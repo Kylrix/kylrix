@@ -3,7 +3,7 @@
  * Base: USD = 1.0
  */
 
-export type SubscriptionTier = 'PRO' | 'ULTRA' | 'ENTERPRISE';
+export type SubscriptionTier = 'PRO';
 export type PaymentMethod = 'CRYPTO' | 'CARD';
 
 export interface RegionConfig {
@@ -16,8 +16,6 @@ export interface RegionConfig {
 export const GLOBAL_SUBSCRIPTION_CONFIG = {
   tier_multipliers: {
     pro: 1.0,        // Base reference
-    ultra: 3.2,      // Applied to PPP-adjusted Pro price
-    enterprise: 10.0 // Applied to PPP-adjusted Pro price
   },
   base_pro_price: 10, // Base Pro price in USD
   card_surcharge_multiplier: 1.25, // 25% overhead for legacy banking
@@ -25,7 +23,7 @@ export const GLOBAL_SUBSCRIPTION_CONFIG = {
 };
 
 export const PPP_DATA: Record<string, RegionConfig> = {
-  // NORTH AMERICA
+  // ... (rest of the PPP_DATA stays the same)
   "US": { multiplier: 1.0, currency: "USD", symbol: "$", name: "United States" },
   "CA": { multiplier: 0.92, currency: "CAD", symbol: "CA$", name: "Canada" },
   "MX": { multiplier: 0.45, currency: "MXN", symbol: "Mex$", name: "Mexico" },
@@ -85,19 +83,15 @@ export const calculateSubscriptionPrice = (
   const region = PPP_DATA[countryCode] || PPP_DATA.DEFAULT;
   const baseProPrice = GLOBAL_SUBSCRIPTION_CONFIG.base_pro_price;
   
-  // All tiers are derived from PPP-adjusted Pro price in USD
+  // Base Pro price adjusted by PPP
   const pppAdjustedProUsd = baseProPrice * region.multiplier;
   
-  const tierMultiplier = tier === 'PRO' ? 1.0 : 
-                        tier === 'ULTRA' ? GLOBAL_SUBSCRIPTION_CONFIG.tier_multipliers.ultra : 
-                        GLOBAL_SUBSCRIPTION_CONFIG.tier_multipliers.enterprise;
-
   const paymentMultiplier = method === 'CARD' 
     ? GLOBAL_SUBSCRIPTION_CONFIG.card_surcharge_multiplier 
     : 1.0;
 
-  // Final Price in USD: (PPP_Adjusted_Pro_USD * Tier_Multiplier) * Card_Surcharge
-  const finalPrice = (pppAdjustedProUsd * tierMultiplier) * paymentMultiplier;
+  // Final Price in USD: PPP_Adjusted_Pro_USD * Card_Surcharge
+  const finalPrice = pppAdjustedProUsd * paymentMultiplier;
   
   return Math.round(finalPrice * 100) / 100;
 };

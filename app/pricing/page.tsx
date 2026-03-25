@@ -31,8 +31,8 @@ export default function PricingPage() {
       openIDMWindow();
       return;
     }
-    // Redirect to checkout or subscription management
-    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/checkout?tier=${tier}&source=${encodeURIComponent(window.location.href)}`;
+    // Redirect to checkout in the accounts ecosystem
+    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?source=${encodeURIComponent(window.location.href)}`;
     window.location.assign(checkoutUrl);
   };
 
@@ -40,20 +40,15 @@ export default function PricingPage() {
     { 
       id: 'PRO', 
       name: 'Pro', 
-      description: 'The Fair Standard',
-      features: ['24/7 Priority Support', 'Basic Knowledge Graph', '5 Private Vault Slots'] 
-    },
-    { 
-      id: 'ULTRA', 
-      name: 'Ultra', 
-      description: 'The Intelligence Engine',
-      features: ['AI Knowledge Expansion', 'Advanced Flow Automations', 'Zero-Knowledge DMs'] 
-    },
-    { 
-      id: 'ENTERPRISE', 
-      name: 'Enterprise', 
-      description: 'The Absolute Tier',
-      features: ['Unlimited Scale', 'Custom AI Models', 'Full Governance Control'] 
+      description: 'Advanced Intelligence & Unlimited Scale',
+      features: [
+        '24/7 Priority Support', 
+        'Neural Knowledge Graph', 
+        'Unlimited Vault Slots', 
+        'AI-Enhanced Intelligence', 
+        'Advanced Flow Orchestration', 
+        'Zero-Knowledge DMs'
+      ] 
     },
   ];
 
@@ -82,9 +77,9 @@ export default function PricingPage() {
           </Typography>
         </header>
 
-        <Grid container spacing={4} sx={{ mb: { xs: 6, md: 10 } }}>
+        <Grid container spacing={4} sx={{ mb: { xs: 6, md: 10 } }} justifyContent="center">
           {tiers.map((tier) => (
-            <Grid size={{ xs: 12, md: 4 }} key={tier.id}>
+            <Grid size={{ xs: 12, sm: 8, md: 5 }} key={tier.id}>
               <Paper 
                 elevation={0}
                 sx={{
@@ -104,7 +99,7 @@ export default function PricingPage() {
                   }
                 }}
               >
-                <Typography variant="h3" sx={{ fontFamily: 'Clash Display', fontSize: { xs: '1.75rem', md: '2rem' }, mb: 1, fontWeight: 900, letterSpacing: '-0.02em' }}>{tier.name}</Typography>
+                <Typography variant="h3" sx={{ fontFamily: 'Clash Display', fontSize: { xs: '1.75rem', md: '2rem' }, mb: 1, fontWeight: 900, letterSpacing: '-0.02em' }}>Kylrix {tier.name}</Typography>
                 <Typography variant="body2" sx={{ opacity: 0.5, mb: 4, fontFamily: 'Satoshi' }}>{tier.description}</Typography>
                 
                 <Box sx={{ mb: { xs: 4, md: 5 } }}>
@@ -172,15 +167,15 @@ export default function PricingPage() {
                     py: 2,
                     borderRadius: '16px',
                     fontWeight: 800,
-                    bgcolor: tier.id === 'ULTRA' ? 'white' : 'rgba(255, 255, 255, 0.05)',
-                    color: tier.id === 'ULTRA' ? 'black' : 'white',
+                    bgcolor: 'white',
+                    color: 'black',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     textTransform: 'none',
                     fontFamily: 'Satoshi',
                     fontSize: '1rem',
                     transition: 'all 0.3s',
                     '&:hover': {
-                        bgcolor: tier.id === 'ULTRA' ? 'rgba(255,255,255,0.9)' : 'rgba(255, 255, 255, 0.1)',
+                        bgcolor: 'rgba(255,255,255,0.9)',
                         borderColor: 'rgba(255, 255, 255, 0.2)',
                         transform: 'scale(1.02)'
                     }
@@ -212,7 +207,7 @@ export default function PricingPage() {
         >
           <Box>
             <Typography variant="h4" sx={{ fontFamily: 'Clash Display', fontSize: { xs: '1.5rem', md: '1.75rem' }, fontWeight: 900, mb: 1, letterSpacing: '-0.02em' }}>Kylrix Free</Typography>
-            <Typography variant="body2" sx={{ opacity: 0.5, fontSize: { xs: '0.875rem', md: '1rem' }, fontFamily: 'Satoshi' }}>Basic access for individuals. No credit card required.</Typography>
+            <Typography variant="body2" sx={{ opacity: 0.5, fontSize: { xs: '0.875rem', md: '1rem' }, fontFamily: 'Satoshi' }}>High-performance tools for everyone—free forever. Experience the full core ecosystem with no restrictions and no credit card required.</Typography>
           </Box>
           <Button 
             onClick={() => window.location.assign('/dashboard')}
