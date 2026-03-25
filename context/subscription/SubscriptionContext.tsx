@@ -65,8 +65,6 @@ export function SubscriptionProvider({
 
   const prices = useMemo(() => ({
     PRO: calculateSubscriptionPrice('PRO', regionCode, paymentMethod),
-    ULTRA: calculateSubscriptionPrice('ULTRA', regionCode, paymentMethod),
-    ENTERPRISE: calculateSubscriptionPrice('ENTERPRISE', regionCode, paymentMethod),
   }), [regionCode, paymentMethod]);
 
   useEffect(() => {
