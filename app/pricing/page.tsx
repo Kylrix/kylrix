@@ -84,7 +84,7 @@ export default function PricingPage() {
           }}
         >
           <Grid container spacing={6} alignItems="center">
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Stack spacing={4}>
                 <Box>
                   <Typography sx={{ color: '#6366F1', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', tracking: '0.1em', mb: 1 }}>
@@ -134,7 +134,7 @@ export default function PricingPage() {
               </Stack>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Box sx={{ p: 4, borderRadius: '32px', bgcolor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)', textAlign: 'center' }}>
                 <Typography sx={{ opacity: 0.5, fontSize: '0.85rem', mb: 1 }}>Total Investment</Typography>
                 <Typography sx={{ fontSize: '4rem', fontWeight: 900, fontFamily: 'JetBrains Mono', lineHeight: 1 }}>
