@@ -30,11 +30,11 @@ export default function PricingPage() {
   const [waitingForAuth, setWaitingForAuth] = React.useState(false);
   const router = useRouter();
 
-  const getCheckoutUrl = React.useCallback((tier: SubscriptionTier) => {
-    return `${getEcosystemUrl('accounts')}/subscription/pro/checkout?source=${encodeURIComponent(window.location.href)}`;
+  const getCheckoutUrl = React.useCallback((tier: string) => {
+    return `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${tier}&source=${encodeURIComponent(window.location.href)}`;
   }, []);
 
-  const handleSelectTier = (tier: SubscriptionTier) => {
+  const handleSelectTier = (tier: string) => {
     const checkoutUrl = getCheckoutUrl(tier);
     
     if (!isAuthenticated) {
@@ -51,22 +51,39 @@ export default function PricingPage() {
   // and we were waiting for it.
   React.useEffect(() => {
     if (isAuthenticated && waitingForAuth && !isRedirecting) {
-      const checkoutUrl = getCheckoutUrl('PRO');
+      const checkoutUrl = getCheckoutUrl('PRO_MONTH');
       setIsRedirecting(true);
       window.location.assign(checkoutUrl);
     }
   }, [isAuthenticated, waitingForAuth, isRedirecting, getCheckoutUrl]);
 
-  const tiers: { id: SubscriptionTier; name: string; description: string; features: string[] }[] = [
+  const tiers = [
     { 
-      id: 'PRO', 
-      name: 'Pro', 
+      id: 'PRO_MONTH', 
+      name: 'Pro Monthly', 
       description: 'Advanced Intelligence & Unlimited Scale',
+      price: prices['PRO'],
+      period: '/mo',
       features: [
         '24/7 Priority Support', 
         'Neural Knowledge Graph', 
         'Unlimited Vault Slots', 
         'AI-Enhanced Intelligence', 
+        'Advanced Flow Orchestration', 
+        'Zero-Knowledge DMs'
+      ] 
+    },
+    { 
+      id: 'PRO_YEAR', 
+      name: 'Pro Yearly', 
+      description: 'Full Power with 2 Months Free',
+      price: (prices['PRO'] || 0) * 10,
+      period: '/yr',
+      features: [
+        'Everything in Monthly',
+        '2 Months Free (12 for 10)',
+        'Neural Knowledge Graph', 
+        'Unlimited Vault Slots', 
         'Advanced Flow Orchestration', 
         'Zero-Knowledge DMs'
       ] 
@@ -127,37 +144,38 @@ export default function PricingPage() {
                   {detectedRegion.countryCode !== 'US' && exchangeRates[detectedRegion.currency] && (
                     <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1, opacity: 0.5 }}>
                       <Typography sx={{ fontSize: '0.8rem', fontWeight: 600, fontFamily: 'JetBrains Mono' }}>
-                        ≈ {detectedRegion.symbol}{(prices[tier.id] * exchangeRates[detectedRegion.currency]).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </Typography>
-                      <Tooltip title={`Estimated conversion from USD to ${detectedRegion.currency} based on current market rates. Actual crypto charges are pinned to USD.`}>
+                        ≈ {detectedRegion.symbol}{(tier.price * (exchangeRates[detectedRegion.currency] || 1)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                        <Tooltip title={`Estimated conversion from USD to ${detectedRegion.currency} based on current market rates. Actual crypto charges are pinned to USD.`}>
                         <Info size={12} cursor="help" />
-                      </Tooltip>
-                    </Stack>
-                  )}
-                  <Stack direction="row" alignItems="baseline" sx={{ flexWrap: 'wrap' }}>
-                    <Typography 
-                      component="span" 
-                      sx={{ 
+                        </Tooltip>
+                        </Stack>
+                        )}
+                        <Stack direction="row" alignItems="baseline" sx={{ flexWrap: 'wrap' }}>
+                        <Typography 
+                        component="span" 
+                        sx={{ 
                         fontSize: { xs: '2.2rem', sm: '2.5rem', md: '3.5rem' }, 
                         fontWeight: 900, 
                         fontFamily: 'JetBrains Mono',
                         lineHeight: 1
-                      }}
-                    >
-                      ${prices[tier.id]?.toFixed(2)}
-                    </Typography>
-                    <Typography 
-                      component="span" 
-                      sx={{ 
+                        }}
+                        >
+                        ${tier.price?.toFixed(2)}
+                        </Typography>
+                        <Typography 
+                        component="span" 
+                        sx={{ 
                         opacity: 0.4, 
                         ml: 1, 
                         fontSize: { xs: '0.85rem', md: '1.1rem' }, 
                         fontFamily: 'Satoshi' 
-                      }}
-                    >
-                      /mo
-                    </Typography>
-                  </Stack>
+                        }}
+                        >
+                        {tier.period}
+                        </Typography>
+                        </Stack>
+
                 </Box>
 
                 <Stack spacing={2.5} sx={{ mb: { xs: 6, md: 8 }, flexGrow: 1 }}>
