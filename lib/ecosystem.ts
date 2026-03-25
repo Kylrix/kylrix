@@ -29,7 +29,13 @@ export function getEcosystemUrl(subdomain: string) {
   }
 
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168.') || hostname.includes('10.');
+  const isLocalhost = 
+    hostname === 'localhost' || 
+    hostname === '127.0.0.1' || 
+    hostname.endsWith('.local') || 
+    hostname.endsWith('.internal') ||
+    hostname.includes('192.168.') || 
+    hostname.includes('10.');
 
   if (isLocalhost) {
     const ports: Record<string, number> = {

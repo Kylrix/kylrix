@@ -23,7 +23,6 @@ import {
   Lock,
   StickyNote,
   Terminal,
-  Layers,
   Fingerprint,
   Cpu,
   Zap,
@@ -116,7 +115,7 @@ export default function LandingPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const handleGetStarted = () => {
-    const accountsUrl = 'https://accounts.kylrix.space';
+    const accountsUrl = getEcosystemUrl('accounts');
     const authUrl = `${accountsUrl}/login`;
     const sourceUrl = window.location.origin;
     const targetUrl = `${authUrl}?source=${encodeURIComponent(sourceUrl)}`;
