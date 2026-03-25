@@ -23,6 +23,7 @@ import {
   Lock,
   StickyNote,
   Terminal,
+  Layers,
   Fingerprint,
   Cpu,
   Zap,
