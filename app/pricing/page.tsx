@@ -137,10 +137,11 @@ export default function PricingPage() {
 
             <Grid size={{ xs: 12, md: 6 }}>
               <Box sx={{ p: 4, borderRadius: '32px', bgcolor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)', textAlign: 'center' }}>
-                <Typography sx={{ opacity: 0.5, fontSize: '0.85rem', mb: 1 }}>Total Investment</Typography>
+                <Typography sx={{ opacity: 0.5, fontSize: '0.85rem', mb: 1 }}>Total Amount</Typography>
                 <Typography sx={{ fontSize: '4rem', fontWeight: 900, fontFamily: 'JetBrains Mono', lineHeight: 1 }}>
                   ${totalPrice.toFixed(2)}
                 </Typography>
+
                 
                 {detectedRegion.countryCode !== 'US' && (
                   <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
