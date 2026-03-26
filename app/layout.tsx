@@ -5,6 +5,7 @@ import ThemeRegistry from "@/theme/ThemeProvider";
 import { AuthProvider } from "@/context/auth/AuthContext";
 import { DocsProvider } from "@/context/DocsContext";
 import { SubscriptionProvider } from "@/context/subscription/SubscriptionContext";
+import { DataNexusProvider } from "@/context/DataNexusContext";
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -56,14 +57,16 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeRegistry>
-          <AuthProvider>
-            <DocsProvider>
-              <SubscriptionProvider>
-                <div className="bg-mesh" />
-                {children}
-              </SubscriptionProvider>
-            </DocsProvider>
-          </AuthProvider>
+          <DataNexusProvider>
+            <AuthProvider>
+              <DocsProvider>
+                <SubscriptionProvider>
+                  <div className="bg-mesh" />
+                  {children}
+                </SubscriptionProvider>
+              </DocsProvider>
+            </AuthProvider>
+          </DataNexusProvider>
         </ThemeRegistry>
       </body>
     </html>
