@@ -138,9 +138,5 @@ export default function ThreeOrnamentScene({ accent, secondary, tertiary }: Thre
     };
   }, [accent, secondary, tertiary]);
 
-  return <BoxLike ref={hostRef} />;
+  return <div ref={hostRef} style={{ width: '100%', height: '100%' }} />;
 }
-
-const BoxLike = React.forwardRef<HTMLDivElement>(function BoxLike(_props, ref) {
-  return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
-});
