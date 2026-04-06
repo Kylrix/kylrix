@@ -7,7 +7,7 @@ import type { DesignFlyerProps } from '../types';
 
 interface FlyerShellProps extends DesignFlyerProps {
   accent: string;
-  title: string;
+  title: React.ReactNode;
   subtitle: string;
   eyebrow: string;
   backgroundA: string;
