@@ -46,10 +46,9 @@ export default function DesignSidebar({ open = true, onClose }: DesignSidebarPro
       >
         FLYER LIBRARY
       </Typography>
-      <Stack spacing={1.5}>
+      <Stack spacing={1}>
         {DESIGN_FLYERS.map((flyer) => {
           const selected = currentSlug === flyer.slug || (!currentSlug && flyer.slug === 'happy-easter');
-          const Preview = flyer.preview;
 
           return (
             <ButtonBase
@@ -57,29 +56,40 @@ export default function DesignSidebar({ open = true, onClose }: DesignSidebarPro
               onClick={() => handleNavigate(flyer.slug)}
               sx={{
                 width: '100%',
-                borderRadius: 4,
+                borderRadius: 2.5,
                 textAlign: 'left',
-                overflow: 'hidden',
-                border: `1px solid ${selected ? alpha(flyer.accent, 0.4) : 'rgba(255,255,255,0.06)'}`,
-                bgcolor: selected ? alpha(flyer.accent, 0.07) : 'rgba(255,255,255,0.02)',
-                transition: 'all 180ms ease',
+                px: 2,
+                py: 1.75,
+                border: `1px solid ${selected ? alpha(flyer.accent, 0.3) : 'rgba(255,255,255,0.04)'}`,
+                bgcolor: selected ? alpha(flyer.accent, 0.06) : 'transparent',
+                transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  transform: 'translateY(-2px)',
                   bgcolor: alpha(flyer.accent, 0.08),
+                  border: `1px solid ${alpha(flyer.accent, 0.4)}`,
                 },
               }}
             >
-              <Box sx={{ p: 1.5, width: '100%' }}>
-                <Preview />
-                <Box sx={{ mt: 1.5 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
-                    {flyer.title}
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.55)', mt: 0.5 }}>
-                    {flyer.description}
-                  </Typography>
-                </Box>
-              </Box>
+              <Stack direction="row" alignItems="center" spacing={2} sx={{ width: '100%' }}>
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    bgcolor: selected ? flyer.accent : 'rgba(255,255,255,0.12)',
+                    boxShadow: selected ? `0 0 12px ${flyer.accent}` : 'none',
+                  }}
+                />
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    fontWeight: selected ? 900 : 600,
+                    color: selected ? 'white' : 'rgba(255,255,255,0.54)',
+                    letterSpacing: '0.02em',
+                  }}
+                >
+                  {flyer.title}
+                </Typography>
+              </Stack>
             </ButtonBase>
           );
         })}
