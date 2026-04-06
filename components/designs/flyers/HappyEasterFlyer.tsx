@@ -1,10 +1,10 @@
 'use client';
 
-import React, { forwardRef } from 'react';
+import { forwardRef } from 'react';
 import { Box, Typography, alpha } from '@mui/material';
 import { Sparkles, Egg, Rabbit } from 'lucide-react';
 import FlyerShell from './FlyerShell';
-import ThreeOrnamentScene from '../ThreeOrnamentScene';
+import CodeOrnamentScene from '../CodeOrnamentScene';
 import type { DesignFlyerProps } from '../types';
 
 const Orb = ({ size, color, left, top, blur = 0 }: { size: number; color: string; left: string; top: string; blur?: number }) => (
@@ -51,7 +51,7 @@ const HappyEasterFlyer = forwardRef<HTMLDivElement, DesignFlyerProps>(function H
           }}
         />
 
-        <ThreeOrnamentScene accent="#FBCFE8" secondary="#FEF3C7" tertiary="#F59E0B" />
+        <CodeOrnamentScene accent="#FBCFE8" secondary="#FEF3C7" tertiary="#F59E0B" />
 
         <Orb size={220} color={alpha('#EC4899', 0.28)} left="-40px" top="10%" blur={80} />
         <Orb size={170} color={alpha('#F59E0B', 0.22)} left="58%" top="14%" blur={70} />

@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Box, Button, FormControl, MenuItem, Select, Stack, Typography, alpha } from '@mui/material';
 import { Download, ChevronDown } from 'lucide-react';
 import type { DesignExportFormat } from './types';

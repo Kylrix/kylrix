@@ -1,6 +1,5 @@
 'use client';
 
-import React from 'react';
 import { Box, ButtonBase, Stack, Typography, alpha } from '@mui/material';
 import { useRouter, usePathname } from 'next/navigation';
 import { DESIGN_FLYERS } from './flyers';

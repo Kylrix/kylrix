@@ -4,7 +4,6 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Box, Drawer, IconButton, Stack, useMediaQuery, useTheme, Typography } from '@mui/material';
 import { Menu, X } from 'lucide-react';
 import { toPng, toSvg } from 'html-to-image';
-import { toast } from 'react-hot-toast';
 import Logo from '@/components/Logo';
 import DesignSidebar from './DesignSidebar';
 import DesignToolbar from './DesignToolbar';
@@ -37,7 +36,7 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
   const handleExport = async () => {
     const node = flyerRef.current;
     if (!node) {
-      toast.error('Flyer canvas is not ready yet.');
+      window.alert('Flyer canvas is not ready yet.');
       return;
     }
 
@@ -53,10 +52,9 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
             });
 
       downloadDataUrl(dataUrl, `${fileBase}.${format}`);
-      toast.success(`Exported ${flyer.title} as ${format.toUpperCase()}`);
     } catch (error) {
       console.error('[DesignStudio] Export failed', error);
-      toast.error('Export failed');
+      window.alert('Export failed');
     }
   };
 
@@ -119,7 +117,7 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
             minHeight: 0,
             overflow: 'auto',
             p: { xs: 2, md: 4 },
-            bgcolor: 'radial-gradient(circle at top, rgba(236,72,153,0.08), transparent 34%), #0A0908',
+            background: 'radial-gradient(circle at top, rgba(236,72,153,0.08), transparent 34%), #0A0908',
           }}
         >
           <Box
