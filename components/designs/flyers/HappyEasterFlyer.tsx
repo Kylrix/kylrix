@@ -99,7 +99,7 @@ const HappyEasterFlyer = forwardRef<HTMLDivElement, DesignFlyerProps>(function H
           left: '10%',
           bottom: '22%',
           zIndex: 6,
-          opacity: 0.5,
+          opacity: 0.85,
         }}
       >
         <Typography
@@ -112,7 +112,7 @@ const HappyEasterFlyer = forwardRef<HTMLDivElement, DesignFlyerProps>(function H
             textShadow: '1px 1px 2px rgba(0,0,0,0.9)',
           }}
         >
-          RESURRECT YOUR PRODUCTIVITY
+          AWAKEN YOUR PRODUCTIVITY
         </Typography>
       </Box>
 
