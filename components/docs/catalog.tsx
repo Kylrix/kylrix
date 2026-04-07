@@ -280,7 +280,7 @@ const articles: DocsArticle[] = [
     summary: 'Threat model, session model, encryption tiers, and what each docs page must reinforce.',
     category: 'security',
     featured: true,
-    keywords: ['security', 'threat model', 'e2ee', 'passkeys', 'session'],
+    keywords: ['security', 'threat model', 'e2ee', 'passkeys', 'session', 'identity'],
     render: () => (
       <ArticleFrame eyebrow="SECURITY" title="Security Model" summary="This category should stitch together the trust model across all apps so readers can trace why each protection exists.">
         <Stack spacing={3}>

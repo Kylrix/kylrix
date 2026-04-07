@@ -1,186 +1,171 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Stack, 
-  List, 
-  ListItem, 
-  ListItemButton, 
-  ListItemText,
+import { useMemo, useState } from 'react';
+import {
+  Box,
   Collapse,
-  IconButton,
   Drawer,
-  useTheme,
+  IconButton,
+  InputAdornment,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+  alpha,
   useMediaQuery,
-  alpha
+  useTheme,
 } from '@mui/material';
-import { 
-  ChevronRight, 
-  ChevronDown,
-  Menu as MenuIcon,
-  X
-} from 'lucide-react';
+import { ChevronDown, ChevronRight, Menu as MenuIcon, Search, X } from 'lucide-react';
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
+import { DOCS_CATEGORIES, getDocsArticleBySlug, searchDocsArticles } from '@/components/docs/catalog';
 
-export const DOCS_SECTIONS = [
-  { 
-    title: 'Introduction', 
-    items: [
-      { label: 'Overview', href: '/docs' },
-      { label: 'Quick Start', href: '/docs/quick-start' },
-      { label: 'Architecture', href: '/docs/architecture' }
-    ] 
-  },
-  { 
-    title: 'Core Systems', 
-    items: [
-      { label: 'Identity & WebAuthn', href: '/docs/identity' },
-      { label: 'Zero-Knowledge Vault', href: '/docs/vault' },
-      { label: 'P2P Communication', href: '/docs/connect' },
-      { label: 'Flow Orchestration', href: '/docs/flow' }
-    ] 
-  },
-  { 
-    title: 'Guides', 
-    items: [
-      { label: 'Building Extensions', href: '/docs/extensions' },
-      { label: 'Client Integration', href: '/docs/integration' },
-      { label: 'Security Best Practices', href: '/docs/security' }
-    ] 
-  },
-  { 
-    title: 'SDKs & Reference', 
-    items: [
-      { 
-        label: 'TypeScript SDK', 
-        href: '/docs/sdks/typescript',
-        subItems: [
-          { label: 'Installation', href: '/docs/sdks/typescript#installation' },
-          { label: 'Quick Start', href: '/docs/sdks/typescript#quick-start' },
-          { label: 'Core Client', href: '/docs/sdks/typescript#core-client' }
-        ]
-      },
-      { label: 'Go SDK', href: '/docs/sdks/go' },
-      { label: 'Python SDK', href: '/docs/sdks/python' },
-      { label: 'Dart SDK', href: '/docs/sdks/dart' },
-      { label: 'CLI Commands', href: '/docs/cli' },
-      { label: 'API Reference', href: '/docs/api' }
-    ] 
-  }
-];
+const getDocsSlugFromPathname = (pathname: string) => {
+  if (!pathname.startsWith('/docs')) return '';
+  const slug = pathname.replace('/docs', '').replace(/^\/+/, '');
+  return slug;
+};
 
-interface SidebarContentProps {
-  onClose?: () => void;
-}
-
-const SidebarContent = ({ onClose }: SidebarContentProps) => {
+const SidebarContent = ({ onClose }: { onClose?: () => void }) => {
   const pathname = usePathname();
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(DOCS_CATEGORIES.map((category) => category.id));
+  const currentSlug = getDocsSlugFromPathname(pathname);
+  const resolvedCurrentSlug = getDocsArticleBySlug(currentSlug)?.slug || currentSlug;
+  const filteredArticles = useMemo(() => searchDocsArticles(query), [query]);
 
-  const toggleExpand = (label: string) => {
-    setExpandedItems(prev => 
-      prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label]
-    );
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) => (prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId]));
   };
 
-  const isSelected = (href: string) => pathname === href;
+  const articleHref = (slug: string) => `/docs/${slug}`;
+  const isSelected = (slug: string) => resolvedCurrentSlug === slug;
+
+  const groupedArticles = useMemo(() => {
+    const groups = DOCS_CATEGORIES.map((category) => ({
+      category,
+      articles: filteredArticles.filter((article) => article.category === category.id),
+    })).filter((group) => group.articles.length > 0);
+    return groups;
+  }, [filteredArticles]);
 
   return (
-    <Stack spacing={4} sx={{ px: { xs: 2, md: 4 }, py: { xs: 4, md: 0 } }}>
-      {DOCS_SECTIONS.map((section) => (
-        <Box key={section.title}>
-          <Typography variant="subtitle2" sx={{ mb: 2, color: 'text.primary', opacity: 0.3, letterSpacing: '0.15em', fontWeight: 900, fontSize: '0.7rem', textTransform: 'uppercase' }}>
-            {section.title}
-          </Typography>
-          <List disablePadding>
-            {section.items.map((item) => (
-              <Box key={item.label}>
-                <ListItem disablePadding sx={{ mb: 0.5 }}>
-                  <ListItemButton 
-                    href={item.href}
-                    component={NextLink}
-                    onClick={() => {
-                        if (onClose) onClose();
-                        if (item.subItems) toggleExpand(item.label);
-                    }}
-                    selected={isSelected(item.href)}
-                    sx={{ 
-                      borderRadius: 2, 
-                      px: 2, 
-                      py: 1,
-                      transition: 'all 0.2s',
-                      '&.Mui-selected': {
-                        bgcolor: 'rgba(99, 102, 241, 0.08)',
-                        color: '#6366F1',
-                        '& .MuiListItemText-primary': { fontWeight: 700, opacity: 1 }
-                      },
-                      '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.05)', color: '#6366F1' }
-                    }}
-                  >
-                    <ListItemText 
-                      primary={item.label} 
-                      primaryTypographyProps={{ 
-                        variant: 'body2', 
-                        sx: { fontWeight: 500, fontSize: '0.9rem', opacity: isSelected(item.href) ? 1 : 0.6 } 
-                      }} 
-                    />
-                    {item.subItems && (
-                      <IconButton 
-                        size="small" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleExpand(item.label);
+    <Stack spacing={3} sx={{ px: { xs: 2, md: 3 }, py: { xs: 2, md: 3 } }}>
+      <Box>
+        <Typography variant="overline" sx={{ color: '#6366F1', fontWeight: 900, letterSpacing: '0.3em' }}>
+          DOCS
+        </Typography>
+        <Typography variant="h6" sx={{ mt: 0.5, fontWeight: 900, letterSpacing: '-0.03em' }}>
+          Search the ecosystem
+        </Typography>
+      </Box>
+
+      <TextField
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search docs"
+        fullWidth
+        size="small"
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Search size={16} />
+            </InputAdornment>
+          ),
+        }}
+      />
+
+      <Stack spacing={2}>
+        {groupedArticles.length > 0 ? groupedArticles.map(({ category, articles }) => {
+          const Icon = category.icon;
+          const expanded = expandedCategories.includes(category.id) || query.trim().length > 0;
+          return (
+            <Paper key={category.id} sx={{ p: 1.5, bgcolor: alpha('#fff', 0.02), border: '1px solid rgba(255,255,255,0.06)' }}>
+              <ListItemButton
+                onClick={() => toggleCategory(category.id)}
+                sx={{
+                  borderRadius: 2,
+                  mb: 1,
+                  px: 1.5,
+                  py: 1,
+                  bgcolor: alpha(category.accent, 0.06),
+                }}
+              >
+                <Box sx={{ color: category.accent, display: 'flex', mr: 1.25 }}>
+                  <Icon size={18} />
+                </Box>
+                <ListItemText
+                  primary={category.title}
+                  secondary={query.trim().length > 0 ? `${articles.length} matches` : category.summary}
+                  primaryTypographyProps={{ sx: { fontWeight: 800 } }}
+                  secondaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.5)', fontSize: '0.78rem', lineHeight: 1.5 } }}
+                />
+                {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+              </ListItemButton>
+
+              <Collapse in={expanded} timeout="auto" unmountOnExit>
+                <List disablePadding sx={{ pl: 0.5 }}>
+                  {articles.map((article) => (
+                    <ListItem key={article.slug} disablePadding sx={{ mb: 0.5 }}>
+                      <ListItemButton
+                        component={NextLink}
+                        href={articleHref(article.slug)}
+                        onClick={onClose}
+                        selected={isSelected(article.slug)}
+                        sx={{
+                          borderRadius: 2,
+                          px: 1.5,
+                          py: 1,
+                          '&.Mui-selected': {
+                            bgcolor: alpha(category.accent, 0.13),
+                            color: category.accent,
+                          },
+                          '&:hover': {
+                            bgcolor: alpha(category.accent, 0.08),
+                          },
                         }}
                       >
-                        {expandedItems.includes(item.label) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                      </IconButton>
-                    )}
-                  </ListItemButton>
-                </ListItem>
-                
-                {item.subItems && (
-                  <Collapse in={expandedItems.includes(item.label) || isSelected(item.href)} timeout="auto" unmountOnExit>
-                    <List disablePadding sx={{ ml: 3, borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
-                      {item.subItems.map((sub) => (
-                        <ListItem key={sub.label} disablePadding>
-                          <ListItemButton 
-                            href={sub.href}
-                            component={NextLink}
-                            onClick={onClose}
-                            sx={{ 
-                              py: 0.5, 
-                              px: 2, 
-                              borderRadius: 1,
-                              '&:hover': { color: '#6366F1' } 
-                            }}
-                          >
-                            <ListItemText 
-                              primary={sub.label} 
-                              primaryTypographyProps={{ 
-                                variant: 'caption', 
-                                sx: { fontWeight: 500, fontSize: '0.75rem', opacity: 0.5 } 
-                              }} 
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Collapse>
-                )}
-              </Box>
-            ))}
-          </List>
+                        <ListItemText
+                          primary={article.title}
+                          secondary={article.summary}
+                          primaryTypographyProps={{ sx: { fontWeight: 700, fontSize: '0.92rem' } }}
+                          secondaryTypographyProps={{ sx: { color: 'rgba(255,255,255,0.48)', fontSize: '0.76rem', lineHeight: 1.4 } }}
+                        />
+                      </ListItemButton>
+                    </ListItem>
+                  ))}
+                </List>
+              </Collapse>
+            </Paper>
+          );
+        }) : (
+          <Paper sx={{ p: 2.5, bgcolor: alpha('#fff', 0.02), border: '1px solid rgba(255,255,255,0.06)' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 0.5 }}>
+              No matching docs
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>
+              Try a different keyword or clear the search field to browse every category.
+            </Typography>
+          </Paper>
+        )}
+      </Stack>
+
+      {query.trim() ? (
+        <Box sx={{ px: 1 }}>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', letterSpacing: '0.18em' }}>
+            {filteredArticles.length} result{filteredArticles.length === 1 ? '' : 's'}
+          </Typography>
         </Box>
-      ))}
+      ) : null}
     </Stack>
   );
 };
 
-const DocsSidebar = () => {
+export default function DocsSidebar() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -188,47 +173,38 @@ const DocsSidebar = () => {
   if (isMobile) {
     return (
       <>
-        <Box 
-          sx={{ 
-            position: 'fixed', 
-            bottom: 24, 
-            right: 24, 
-            zIndex: 1100,
-            display: { xs: 'flex', md: 'none' }
-          }}
-        >
-          <IconButton 
+        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1100 }}>
+          <IconButton
             onClick={() => setMobileOpen(true)}
-            sx={{ 
-              bgcolor: '#6366F1', 
-              color: 'white', 
-              width: 56, 
+            sx={{
+              bgcolor: '#6366F1',
+              color: 'white',
+              width: 56,
               height: 56,
-              boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)',
-              '&:hover': { bgcolor: '#4F46E5' }
+              boxShadow: '0 12px 32px rgba(99, 102, 241, 0.35)',
+              '&:hover': { bgcolor: '#4F46E5' },
             }}
           >
             <MenuIcon size={24} />
           </IconButton>
         </Box>
-
         <Drawer
           anchor="left"
           open={mobileOpen}
           onClose={() => setMobileOpen(false)}
           PaperProps={{
             sx: {
-              width: '85%',
-              maxWidth: 320,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(10, 10, 10, 0.98)' : 'rgba(253, 252, 251, 0.98)',
-              backdropFilter: 'blur(20px)',
-              backgroundImage: 'none'
-            }
+              width: '88%',
+              maxWidth: 360,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(10, 9, 8, 0.98)' : 'rgba(253, 252, 251, 0.98)',
+              backdropFilter: 'blur(22px)',
+              backgroundImage: 'none',
+            },
           }}
         >
           <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
             <IconButton onClick={() => setMobileOpen(false)}>
-              <X size={24} />
+              <X size={22} />
             </IconButton>
           </Box>
           <SidebarContent onClose={() => setMobileOpen(false)} />
@@ -238,23 +214,23 @@ const DocsSidebar = () => {
   }
 
   return (
-    <Box 
-      sx={{ 
-        width: 300, 
-        pt: 15, 
-        pb: 10, 
-        position: 'fixed', 
-        height: '100vh', 
-        overflowY: 'auto', 
+    <Box
+      sx={{
+        width: 320,
+        pt: 12,
+        pb: 10,
+        position: 'fixed',
+        height: '100vh',
+        overflowY: 'auto',
         borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         display: { xs: 'none', md: 'block' },
+        bgcolor: alpha('#0A0908', 0.55),
+        backdropFilter: 'blur(18px)',
         scrollbarWidth: 'none',
-        '&::-webkit-scrollbar': { display: 'none' }
+        '&::-webkit-scrollbar': { display: 'none' },
       }}
     >
       <SidebarContent />
     </Box>
   );
-};
-
-export default DocsSidebar;
+}
