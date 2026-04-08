@@ -105,11 +105,11 @@ const HappyEasterFlyer = forwardRef<HTMLDivElement, DesignFlyerProps>(function H
         <Typography
           sx={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 14,
+            fontSize: 20,
             fontWeight: 900,
             letterSpacing: '0.5em',
             color: 'white',
-            textShadow: '1px 1px 2px rgba(0,0,0,0.9)',
+            textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
           }}
         >
           AWAKEN YOUR PRODUCTIVITY
@@ -129,17 +129,17 @@ const HappyEasterFlyer = forwardRef<HTMLDivElement, DesignFlyerProps>(function H
           zIndex: 10,
         }}
       >
-        <Box sx={{ opacity: 0.6, filter: 'drop-shadow(0 0 10px rgba(99, 102, 241, 0.3))' }}>
-          <Logo app="root" variant="icon" size={48} />
+        <Box sx={{ opacity: 0.7, filter: 'drop-shadow(0 0 15px rgba(99, 102, 241, 0.4))' }}>
+          <Logo app="root" variant="icon" size={76} />
         </Box>
         
         <Typography
           sx={{
             fontFamily: 'var(--font-mono)',
-            fontSize: 14,
+            fontSize: 19,
             fontWeight: 800,
             letterSpacing: '0.6em',
-            color: 'white', // High visibility white
+            color: 'white',
           }}
         >
           kylrix.space
@@ -160,15 +160,15 @@ const HappyEasterFlyer = forwardRef<HTMLDivElement, DesignFlyerProps>(function H
         }}
       />
 
-      {/* Premium Film Grain Overlay */}
+      {/* Premium Visible Grain/Texture Overlay */}
       <Box
         sx={{
           position: 'absolute',
           inset: 0,
-          opacity: 0.04,
+          opacity: 0.08,
           pointerEvents: 'none',
-          zIndex: 20,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          zIndex: 25,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
         }}
       />
     </FlyerShell>
