@@ -150,7 +150,7 @@
                     "type": "string",
                     "required": false,
                     "array": false,
-                    "size": 65535,
+                    "size": 655350,
                     "default": null,
                     "encrypt": true
                 },
@@ -369,129 +369,6 @@
                     ],
                     "orders": [
                         "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "67ff064400263631ffe4",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "67ff05a9000296822396",
-            "name": "apiKeys",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "id",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "key",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "name",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "createdAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "lastUsed",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "expiresAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "scopes",
-                    "type": "string",
-                    "required": false,
-                    "array": true,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "lastUsedIp",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "keyHash",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_apiKeys_keyHash",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "keyHash"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_apiKeys_userId",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
                         "ASC"
                     ]
                 }
@@ -1299,157 +1176,8 @@
             ]
         },
         {
-            "$id": "ai_generations",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "67ff05a9000296822396",
-            "name": "ai_generations",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "promptHash",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "prompt",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 1000,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "mode",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "providerId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 128,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "model",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 128,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "durationMs",
-                    "type": "integer",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "min": -9223372036854775808,
-                    "max": 9223372036854775807
-                },
-                {
-                    "key": "tokensUsed",
-                    "type": "integer",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "min": -9223372036854775808,
-                    "max": 9223372036854775807
-                },
-                {
-                    "key": "success",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "error",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 512,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "createdAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_ai_generations_user_createdAt",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId",
-                        "createdAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_ai_generations_promptHash",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "promptHash"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_ai_generations_user_mode",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId",
-                        "mode"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
             "$id": "subscriptions",
-            "$permissions": [
-                "create(\"users\")"
-            ],
+            "$permissions": [],
             "databaseId": "67ff05a9000296822396",
             "name": "subscriptions",
             "enabled": true,
@@ -2961,6 +2689,19 @@
                         "ASC",
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_owne_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId",
+                        "type"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
                 }
             ]
         },
@@ -3086,6 +2827,32 @@
                     ],
                     "orders": [
                         "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_conv_crea",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_conv_send",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "senderId"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
                     ]
                 }
             ]
@@ -3389,7 +3156,19 @@
                     "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "idx_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "type"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
         },
         {
             "$id": "contacts",
@@ -3625,6 +3404,32 @@
                     "orders": [
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_foll_stat",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "followerId",
+                        "status"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_follg_stat",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "followingId",
+                        "status"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
                 }
             ]
         },
@@ -3691,6 +3496,17 @@
                     ],
                     "orders": [
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_stat",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "status"
+                    ],
+                    "orders": [
+                        "asc"
                     ]
                 }
             ]
@@ -3840,6 +3656,32 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "momentKind",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "sourceId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "searchTitle",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1024,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -3863,6 +3705,52 @@
                     ],
                     "orders": [
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_caption",
+                    "type": "fulltext",
+                    "status": "available",
+                    "columns": [
+                        "caption"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_sour",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "sourceId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_user_crea",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "$createdAt",
+                        "userId"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_sear",
+                    "type": "fulltext",
+                    "status": "available",
+                    "columns": [
+                        "searchTitle"
+                    ],
+                    "orders": [
+                        "asc"
                     ]
                 }
             ]
@@ -3932,6 +3820,24 @@
                     "array": false,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "receiverId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "conversationId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -3944,6 +3850,52 @@
                     ],
                     "orders": [
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_starts",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "startsAt"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_user_crea",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_rece",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "receiverId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_conv",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId"
+                    ],
+                    "orders": [
+                        "asc"
                     ]
                 }
             ]
@@ -4075,6 +4027,17 @@
                     "orders": [
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_displayName",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "displayName"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
                 }
             ]
         },
@@ -4138,6 +4101,73 @@
                     ],
                     "orders": [
                         "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "conversationMembers",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Conversation Members",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "conversationId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "unique_conversation_user",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_conversation",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
                         "ASC"
                     ]
                 }
@@ -4264,7 +4294,21 @@
                     "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "idx_even_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "eventId",
+                        "userId"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
+                }
+            ]
         },
         {
             "$id": "events",
@@ -4392,7 +4436,30 @@
                     "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "Idx_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_visi",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "visibility"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
         },
         {
             "$id": "calendars",
@@ -4439,7 +4506,19 @@
                     "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "idx_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
         },
         {
             "$id": "tasks",
@@ -4559,7 +4638,19 @@
                     "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "idx_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "asc"
+                    ]
+                }
+            ]
         },
         {
             "$id": "forms",
@@ -4729,6 +4820,32 @@
                     ],
                     "orders": [
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_form_subm",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "formId",
+                        "submitterId"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
+                    ]
+                },
+                {
+                    "key": "idx_form_crea",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "formId",
+                        "$createdAt"
+                    ],
+                    "orders": [
+                        "asc",
+                        "asc"
                     ]
                 }
             ]

@@ -138,19 +138,6 @@ export type Tags = Models.Row & {
     nameLower: string | null;
 }
 
-export type ApiKeys = Models.Row & {
-    id: string | null;
-    key: string | null;
-    name: string | null;
-    userId: string | null;
-    createdAt: string | null;
-    lastUsed: string | null;
-    expiresAt: string | null;
-    scopes: string[] | null;
-    lastUsedIp: string | null;
-    keyHash: string | null;
-}
-
 export type Comments = Models.Row & {
     noteId: string;
     userId: string;
@@ -229,20 +216,6 @@ export type NoteRevisions = Models.Row & {
     diffFormat: string | null;
     fullSnapshot: boolean | null;
     cause: NoteRevisionsCause | null;
-}
-
-export type AiGenerations = Models.Row & {
-    userId: string;
-    promptHash: string | null;
-    prompt: string | null;
-    mode: string | null;
-    providerId: string | null;
-    model: string | null;
-    durationMs: number | null;
-    tokensUsed: number | null;
-    success: boolean | null;
-    error: string | null;
-    createdAt: string | null;
 }
 
 export type Subscriptions = Models.Row & {
@@ -480,6 +453,9 @@ export type Moments = Models.Row & {
     caption: string | null;
     createdAt: string;
     expiresAt: string;
+    momentKind: string | null;
+    sourceId: string | null;
+    searchTitle: string | null;
 }
 
 export type Calls = Models.Row & {
@@ -489,6 +465,8 @@ export type Calls = Models.Row & {
     startsAt: string | null;
     expiresAt: string | null;
     metadata: string | null;
+    receiverId: string | null;
+    conversationId: string | null;
 }
 
 export type Profiles = Models.Row & {
@@ -507,6 +485,11 @@ export type Epochs = Models.Row & {
     resourceId: string;
     epochNumber: number;
     createdBy: string;
+}
+
+export type ConversationMembers = Models.Row & {
+    conversationId: string;
+    userId: string;
 }
 
 export type FocusSessions = Models.Row & {
