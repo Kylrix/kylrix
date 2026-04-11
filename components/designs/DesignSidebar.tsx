@@ -1,22 +1,20 @@
 'use client';
 
 import { Box, ButtonBase, Stack, Typography, alpha } from '@mui/material';
-import { useRouter, usePathname } from 'next/navigation';
 import { DESIGN_FLYERS } from './flyers';
 
 interface DesignSidebarProps {
   open?: boolean;
   onClose?: () => void;
+  selectedSlug?: string;
+  onSelect?: (slug: string) => void;
 }
 
-export default function DesignSidebar({ open = true, onClose }: DesignSidebarProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const currentSlug = pathname.split('/')[2] || '';
+export default function DesignSidebar({ open = true, onClose, selectedSlug, onSelect }: DesignSidebarProps) {
+  const currentSlug = selectedSlug || '';
 
   const handleNavigate = (slug: string) => {
-    router.push(`/designs/${slug}`);
+    onSelect?.(slug);
     onClose?.();
   };
 

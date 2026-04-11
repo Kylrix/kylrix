@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Drawer, IconButton, Stack, useMediaQuery, useTheme, Typography } from '@mui/material';
-import { Menu, X } from 'lucide-react';
+import { Box, Drawer, Fab, IconButton, Menu, MenuItem, Paper, Stack, useMediaQuery, useTheme, Typography } from '@mui/material';
+import { Download, LayoutList, Maximize, Menu as MenuIcon, MoveHorizontal, X, Home, ZoomIn, ZoomOut } from 'lucide-react';
 import { toPng, toSvg } from 'html-to-image';
 import Logo from '@/components/Logo';
+import { useRouter, useSearchParams } from 'next/navigation';
 import DesignSidebar from './DesignSidebar';
 import DesignToolbar from './DesignToolbar';
 import { DESIGN_FLYERS, getDesignFlyerBySlug, DESIGN_DEFAULT_SLUG } from './flyers';
@@ -25,14 +26,25 @@ const downloadDataUrl = (dataUrl: string, filename: string) => {
 
 export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudioProps) {
   const theme = useTheme();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const flyerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [format, setFormat] = useState<DesignExportFormat>('png');
   const [zoom, setZoom] = useState(0.8);
+  const [zoomMode, setZoomMode] = useState<'fit' | 'max' | 'min'>('fit');
+  const [formatMenuAnchor, setFormatMenuAnchor] = useState<HTMLElement | null>(null);
+  const [selectedSlug, setSelectedSlug] = useState(slug);
 
-  const flyer = useMemo(() => getDesignFlyerBySlug(slug) || DESIGN_FLYERS[0], [slug]);
+  useEffect(() => {
+    const rawSlug = searchParams?.get('design') || slug || DESIGN_DEFAULT_SLUG;
+    const nextSlug = getDesignFlyerBySlug(rawSlug)?.slug || DESIGN_DEFAULT_SLUG;
+    setSelectedSlug((current) => (current === nextSlug ? current : nextSlug));
+  }, [searchParams, slug]);
+
+  const flyer = useMemo(() => getDesignFlyerBySlug(selectedSlug) || DESIGN_FLYERS[0], [selectedSlug]);
   const FlyerComponent = flyer.component;
 
   const handleAutoFit = useCallback(() => {
@@ -56,6 +68,7 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
     // Limit auto-zoom to 1.0 to avoid pixelation, unless container is huge
     const clampedZoom = Math.min(newZoom, 1.2);
     setZoom(Number(clampedZoom.toFixed(2)));
+    setZoomMode('fit');
   }, [isMobile]);
 
   useEffect(() => {
@@ -71,7 +84,7 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
     handleAutoFit();
 
     return () => observer.disconnect();
-  }, [handleAutoFit, slug]);
+  }, [handleAutoFit, selectedSlug]);
 
   const handleExport = async () => {
     const node = flyerRef.current;
@@ -132,6 +145,39 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
     }
   };
 
+  const handleCycleZoom = () => {
+    if (zoomMode === 'fit') {
+      setZoom(1.2);
+      setZoomMode('max');
+      return;
+    }
+
+    if (zoomMode === 'max') {
+      setZoom(0.55);
+      setZoomMode('min');
+      return;
+    }
+
+    handleAutoFit();
+  };
+
+  const handleMobileHome = () => {
+    handleSelectFlyer(DESIGN_DEFAULT_SLUG);
+  };
+
+  const handleOpenLibrary = () => setDrawerOpen(true);
+
+  const handleFormatSelect = (nextFormat: DesignExportFormat) => {
+    setFormat(nextFormat);
+    setFormatMenuAnchor(null);
+  };
+
+  const handleSelectFlyer = useCallback((nextSlug: string) => {
+    const validSlug = getDesignFlyerBySlug(nextSlug)?.slug || DESIGN_DEFAULT_SLUG;
+    setSelectedSlug(validSlug);
+    router.replace(`/designs?design=${validSlug}`, { scroll: false });
+  }, [router]);
+
   return (
     <Box
       component="main"
@@ -144,16 +190,52 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
         overflow: 'hidden',
       }}
     >
-      <DesignToolbar
-        title={flyer.title}
-        subtitle="Designs live in code"
-        selectedFormat={format}
-        onFormatChange={setFormat}
-        onExport={handleExport}
-        zoom={zoom}
-        onZoomChange={setZoom}
-        onAutoFit={handleAutoFit}
-      />
+      {isMobile ? (
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            bgcolor: 'rgba(10,9,8,0.92)',
+            backdropFilter: 'blur(18px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1.5,
+            position: 'relative',
+            zIndex: 20,
+          }}
+        >
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 900, lineHeight: 1, letterSpacing: '-0.03em' }}>
+              {flyer.title}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.46)', letterSpacing: '0.16em' }}>
+              {flyer.subtitle || 'Designs live in code'}
+            </Typography>
+          </Box>
+
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <IconButton onClick={() => void handleExport()} sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.08)', bgcolor: 'rgba(255,255,255,0.04)' }}>
+              <Download size={16} />
+            </IconButton>
+            <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: 'white', border: '1px solid rgba(255,255,255,0.08)', bgcolor: 'rgba(255,255,255,0.04)' }}>
+              <MenuIcon size={16} />
+            </IconButton>
+          </Stack>
+        </Box>
+      ) : (
+        <DesignToolbar
+          title={flyer.title}
+          subtitle="Designs live in code"
+          selectedFormat={format}
+          onFormatChange={setFormat}
+          onExport={handleExport}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          onAutoFit={handleAutoFit}
+        />
+      )}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '380px 1fr' }, height: '100%', minHeight: 0 }}>
         {isMobile ? (
@@ -169,7 +251,7 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
                   <X size={18} />
                 </IconButton>
               </Box>
-              <DesignSidebar onClose={() => setDrawerOpen(false)} />
+              <DesignSidebar selectedSlug={selectedSlug} onSelect={handleSelectFlyer} onClose={() => setDrawerOpen(false)} />
             </Drawer>
 
             <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -187,7 +269,7 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
             </Box>
           </>
         ) : (
-          <DesignSidebar />
+          <DesignSidebar selectedSlug={selectedSlug} onSelect={handleSelectFlyer} />
         )}
 
         <Box
@@ -196,6 +278,7 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
             height: '100%',
             overflow: 'auto',
             p: { xs: 2, md: 4 },
+            pb: { xs: 'calc(92px + env(safe-area-inset-bottom))', md: 4 },
             background: 'radial-gradient(circle at top, rgba(236,72,153,0.08), transparent 34%), #0A0908',
             display: 'flex',
             flexDirection: 'column',
@@ -223,7 +306,145 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
             </Box>
           </Box>
         </Box>
+
+        {isMobile && (
+          <>
+            <Paper
+              elevation={0}
+              sx={{
+                position: 'fixed',
+                left: 12,
+                right: 12,
+                bottom: 12,
+                zIndex: 30,
+                borderRadius: '22px',
+                bgcolor: 'rgba(10,9,8,0.92)',
+                backdropFilter: 'blur(18px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 14px 40px rgba(0,0,0,0.48)',
+                p: 1,
+                pb: 'calc(8px + env(safe-area-inset-bottom))',
+              }}
+            >
+              <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
+                <IconButton
+                  onClick={handleMobileHome}
+                  sx={{
+                    color: 'white',
+                    flex: 1,
+                    flexDirection: 'column',
+                    gap: 0.25,
+                    py: 1,
+                    borderRadius: 3,
+                    bgcolor: 'rgba(255,255,255,0.03)',
+                  }}
+                >
+                  <Home size={16} />
+                  <Typography sx={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                    Home
+                  </Typography>
+                </IconButton>
+
+                <IconButton
+                  onClick={handleOpenLibrary}
+                  sx={{
+                    color: 'white',
+                    flex: 1,
+                    flexDirection: 'column',
+                    gap: 0.25,
+                    py: 1,
+                    borderRadius: 3,
+                    bgcolor: 'rgba(255,255,255,0.03)',
+                  }}
+                >
+                  <LayoutList size={16} />
+                  <Typography sx={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                    Lists
+                  </Typography>
+                </IconButton>
+
+                <IconButton
+                  onClick={(event) => setFormatMenuAnchor(event.currentTarget)}
+                  sx={{
+                    color: 'white',
+                    flex: 1,
+                    flexDirection: 'column',
+                    gap: 0.25,
+                    py: 1,
+                    borderRadius: 3,
+                    bgcolor: 'rgba(255,255,255,0.03)',
+                  }}
+                >
+                  <MoveHorizontal size={16} />
+                  <Typography sx={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                    {format.toUpperCase()}
+                  </Typography>
+                </IconButton>
+
+                <IconButton
+                  onClick={() => void handleExport()}
+                  sx={{
+                    color: 'white',
+                    flex: 1,
+                    flexDirection: 'column',
+                    gap: 0.25,
+                    py: 1,
+                    borderRadius: 3,
+                    bgcolor: '#EC4899',
+                  }}
+                >
+                  <Download size={16} />
+                  <Typography sx={{ fontSize: 10, fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                    Export
+                  </Typography>
+                </IconButton>
+              </Stack>
+            </Paper>
+
+            <Fab
+              onClick={handleCycleZoom}
+              sx={{
+                position: 'fixed',
+                right: 16,
+                bottom: 92,
+                zIndex: 31,
+                bgcolor: '#161412',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 14px 32px rgba(0,0,0,0.45)',
+                '&:hover': { bgcolor: '#1c1a18' },
+              }}
+            >
+              <Stack alignItems="center" spacing={0}>
+                {zoomMode === 'fit' ? <Maximize size={18} /> : zoomMode === 'max' ? <ZoomOut size={18} /> : <ZoomIn size={18} />}
+                <Typography sx={{ fontSize: 9, fontWeight: 900, lineHeight: 1, letterSpacing: '0.12em' }}>
+                  {zoomMode === 'fit' ? 'MAX' : zoomMode === 'max' ? 'MIN' : 'FIT'}
+                </Typography>
+              </Stack>
+            </Fab>
+          </>
+        )}
       </Box>
+
+      <Menu
+        anchorEl={formatMenuAnchor}
+        open={Boolean(formatMenuAnchor)}
+        onClose={() => setFormatMenuAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            bgcolor: 'rgba(15,15,15,0.96)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            minWidth: 160,
+          },
+        }}
+      >
+        <MenuItem selected={format === 'png'} onClick={() => handleFormatSelect('png')}>PNG</MenuItem>
+        <MenuItem selected={format === 'svg'} onClick={() => handleFormatSelect('svg')}>SVG</MenuItem>
+      </Menu>
     </Box>
   );
 }
