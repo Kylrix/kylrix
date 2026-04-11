@@ -23,11 +23,7 @@ const MuralFrameFlyer = forwardRef<HTMLDivElement, DesignFlyerProps>(function Mu
         sx={{
           position: 'absolute',
           inset: 0,
-          background: `
-            radial-gradient(circle at 18% 16%, rgba(255,255,255,0.05) 0%, transparent 28%),
-            radial-gradient(circle at 78% 82%, rgba(255,255,255,0.04) 0%, transparent 30%),
-            radial-gradient(circle at 42% 54%, rgba(255,255,255,0.02) 0%, transparent 40%)
-          `,
+          backgroundColor: '#0A0908',
           zIndex: 0,
         }}
       />
@@ -39,13 +35,7 @@ const MuralFrameFlyer = forwardRef<HTMLDivElement, DesignFlyerProps>(function Mu
           position: 'absolute',
           inset: 0,
           zIndex: 1,
-          opacity: 0.24,
-          backgroundImage: `
-            radial-gradient(circle at 30% 30%, rgba(255,255,255,0.05) 0 1px, transparent 1.4px),
-            radial-gradient(circle at 70% 30%, rgba(255,255,255,0.03) 0 1px, transparent 1.4px),
-            radial-gradient(circle at 55% 72%, rgba(255,255,255,0.04) 0 1px, transparent 1.4px)
-          `,
-          backgroundSize: '210px 210px, 240px 240px, 180px 180px',
+          backgroundColor: 'transparent',
         }}
       />
     </FlyerShell>
