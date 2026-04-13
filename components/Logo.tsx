@@ -137,7 +137,7 @@ const Logo: React.FC<LogoProps> = ({
       {Hexagon}
       
       {variant === 'full' && (
-        <Box>
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
           <Typography sx={{ 
             fontWeight: 900, 
             letterSpacing: '-0.04em', 
