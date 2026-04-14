@@ -164,7 +164,7 @@ export const Navbar = () => {
       <AppBar 
         position="fixed" 
         sx={{ 
-          bgcolor: mode === 'dark' ? 'rgba(5, 5, 5, 0.01)' : 'rgba(255, 255, 255, 0.01)', 
+          bgcolor: '#000000', 
           backdropFilter: 'blur(25px) saturate(180%)', 
           boxShadow: 'none', 
           borderBottom: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
@@ -276,7 +276,7 @@ export const Navbar = () => {
                         sx: {
                           mt: 2,
                           width: 280,
-                          bgcolor: 'rgba(10, 10, 10, 0.95)',
+                          bgcolor: '#000000',
                           backdropFilter: 'blur(20px) saturate(180%)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '24px',
