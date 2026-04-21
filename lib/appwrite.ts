@@ -34,9 +34,100 @@ export function getProfilePicturePreview(fileId: string, width: number = 64, hei
 
 // --- USER SESSION ---
 
+type CurrentUserSnapshot = {
+    user: any;
+    expiresAt: number;
+};
+
+let currentUserCache: CurrentUserSnapshot | null = null;
+let currentUserInFlight: Promise<any | null> | null = null;
+const CURRENT_USER_CACHE_TTL = 5000;
+const CURRENT_USER_CACHE_KEY = 'kylrix_landing_current_user_v1';
+
+function canUseStorage() {
+    return typeof window !== 'undefined';
+}
+
+function readCurrentUserSnapshot() {
+    if (!canUseStorage()) return null;
+    try {
+        const raw = localStorage.getItem(CURRENT_USER_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as CurrentUserSnapshot;
+        if (!parsed?.user || parsed.expiresAt <= Date.now()) {
+            localStorage.removeItem(CURRENT_USER_CACHE_KEY);
+            return null;
+        }
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function writeCurrentUserSnapshot(user: any | null) {
+    if (!canUseStorage()) return;
+    try {
+        if (!user) {
+            localStorage.removeItem(CURRENT_USER_CACHE_KEY);
+            return;
+        }
+        localStorage.setItem(CURRENT_USER_CACHE_KEY, JSON.stringify({
+            user,
+            expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
+        }));
+    } catch {
+        // Best effort only.
+    }
+}
+
+function hydrateCurrentUserCache() {
+    if (currentUserCache) return;
+    const snapshot = readCurrentUserSnapshot();
+    if (snapshot) {
+        currentUserCache = snapshot;
+    }
+}
+
+export function getCurrentUserSnapshot() {
+    hydrateCurrentUserCache();
+    return currentUserCache && currentUserCache.expiresAt > Date.now() ? currentUserCache.user : null;
+}
+
+export function invalidateCurrentUserCache(nextValue?: any | null) {
+    currentUserCache = nextValue
+        ? { user: nextValue, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL }
+        : null;
+    currentUserInFlight = null;
+    writeCurrentUserSnapshot(nextValue ?? null);
+}
+
 export async function getCurrentUser(): Promise<any | null> {
     try {
-        return await account.get();
+        hydrateCurrentUserCache();
+        if (currentUserCache && currentUserCache.expiresAt > Date.now()) {
+            return currentUserCache.user;
+        }
+
+        if (currentUserInFlight) {
+            return currentUserInFlight;
+        }
+
+        currentUserInFlight = account.get()
+            .then((user) => {
+                currentUserCache = { user, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
+                writeCurrentUserSnapshot(user);
+                return user;
+            })
+            .catch(() => {
+                currentUserCache = null;
+                writeCurrentUserSnapshot(null);
+                return null;
+            })
+            .finally(() => {
+                currentUserInFlight = null;
+            });
+
+        return await currentUserInFlight;
     } catch {
         return null;
     }

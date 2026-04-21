@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser, getUser, createUser, updateUser, account } from '@/lib/appwrite';
+import { getCurrentUser, getCurrentUserSnapshot, getUser, createUser, updateUser, account, invalidateCurrentUserCache } from '@/lib/appwrite';
 import { getEffectiveUsername } from '@/lib/utils';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 
@@ -27,8 +27,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialUser = getCurrentUserSnapshot();
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [isLoading, setIsLoading] = useState(!initialUser);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [idmWindowOpen, setIDMWindowOpen] = useState(false);
   const idmWindowRef = useRef<Window | null>(null);
@@ -36,10 +37,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const router = useRouter();
   const pathname = usePathname();
 
-  const refreshUser = useCallback(async (retryCount = 0): Promise<User | null> => {
+  const refreshUser = useCallback(async (retryCount = 0, forceRefresh = false): Promise<User | null> => {
     try {
       console.log(`[Auth] Checking session in kylrix (attempt ${retryCount + 1})...`);
-      const session = await account.get();
+      const session = await getCurrentUser(forceRefresh);
       
       console.log('[Auth] Active session detected:', session.$id);
       
@@ -59,7 +60,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (hasAuthSignal && retryCount < 3) {
         console.log(`[Auth] Auth signal detected but session not found. Retrying... (${retryCount + 1})`);
         await new Promise(resolve => setTimeout(resolve, 1000));
-        return refreshUser(retryCount + 1);
+        return refreshUser(retryCount + 1, true);
       }
 
       const err = error as any;
@@ -95,7 +96,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (event.data?.type === 'idm:auth-status' && event.data.status === 'authenticated') {
           console.log('[Auth] Silent auth discovered session, refreshing...');
-          refreshUser();
+          refreshUser(0, true);
           cleanup();
           resolve();
         } else if (event.data?.type === 'idm:auth-status') {
@@ -123,7 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuthStarted.current = true;
     
     const init = async () => {
-      const currentUser = await refreshUser();
+      const currentUser = await refreshUser(0, true);
       // If no user found via direct session check, try silent iframe discovery
       if (!currentUser) {
         await attemptSilentAuth();
@@ -139,7 +140,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (event.data?.type !== 'idm:auth-success') return;
 
       console.log('[Auth] Received auth success via postMessage');
-      refreshUser();
+      refreshUser(0, true);
       setIDMWindowOpen(false);
       setIsAuthenticating(false);
       if (idmWindowRef.current && !idmWindowRef.current.closed) {
@@ -187,6 +188,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = useCallback(async () => {
     try {
       await account.deleteSession('current');
+      invalidateCurrentUserCache();
       setUser(null);
     } catch (error) {
       console.error('Logout failed:', error);
