@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import {
+  Backdrop,
   alpha,
   Box,
   Button,
@@ -10,25 +11,22 @@ import {
   Divider,
   Fab,
   Grid,
-  IconButton,
   Paper,
-  Popover,
   Stack,
   Typography,
   useMediaQuery,
+  Zoom,
   useTheme,
 } from '@mui/material';
 import {
   ArrowRight,
-  LayoutGrid,
   Lock,
+  Plus,
   Shield,
-  Terminal,
   X,
   Zap,
 } from 'lucide-react';
 import { useReducedMotion } from 'framer-motion';
-import NextLink from 'next/link';
 
 import Navbar from '@/components/Navbar';
 import Logo, { KylrixApp } from '@/components/Logo';
@@ -65,10 +63,9 @@ function openApp(subdomain: string) {
 }
 
 function AppSwitcherFab() {
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const theme = useTheme();
-  const open = Boolean(anchorEl);
 
   const items = useMemo(
     () =>
@@ -79,122 +76,104 @@ function AppSwitcherFab() {
   );
 
   return (
-    <>
+    <Box
+      sx={{
+        position: 'fixed',
+        right: { xs: 16, md: 28 },
+        bottom: { xs: 16, md: 28 },
+        zIndex: theme.zIndex.appBar + 5,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: 1.5,
+      }}
+    >
+      <Backdrop
+        open={open}
+        onClick={() => setOpen(false)}
+        sx={{
+          zIndex: -1,
+          bgcolor: 'rgba(0, 0, 0, 0.4)',
+        }}
+      />
+
+      <Stack spacing={1.25} sx={{ mb: 0.5 }}>
+        {items.map((app, index) => (
+          <Zoom
+            key={app.id}
+            in={open}
+            style={{ transitionDelay: open ? `${index * 40}ms` : '0ms' }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  px: 1.25,
+                  py: 0.75,
+                  borderRadius: 999,
+                  bgcolor: 'rgba(0, 0, 0, 0.68)',
+                  color: '#fff',
+                  fontWeight: 800,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                {app.label}
+              </Typography>
+
+              <Fab
+                size="medium"
+                aria-label={`Open ${app.label}`}
+                onClick={() => {
+                  setOpen(false);
+                  openApp(app.subdomain);
+                }}
+                sx={{
+                  bgcolor: app.color,
+                  color: '#000',
+                  boxShadow: `0 12px 26px ${alpha(app.color, 0.35)}`,
+                  '&:hover': {
+                    bgcolor: app.color,
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 16px 30px ${alpha(app.color, 0.42)}`,
+                  },
+                  '&.Mui-focusVisible': {
+                    boxShadow: `0 0 0 1px ${alpha('#fff', 0.5)}, 0 0 0 6px ${alpha(app.color, 0.18)}`,
+                  },
+                }}
+              >
+                <Logo app={app.id as KylrixApp} size={28} variant="icon" />
+              </Fab>
+            </Box>
+          </Zoom>
+        ))}
+      </Stack>
+
       <Fab
         color="primary"
         aria-label="Open ecosystem switcher"
-        onClick={(event) => setAnchorEl(open ? null : event.currentTarget)}
+        onClick={() => setOpen((value) => !value)}
         sx={{
-          position: 'fixed',
-          right: { xs: 16, md: 28 },
-          bottom: { xs: 16, md: 28 },
-          zIndex: theme.zIndex.appBar + 5,
-          bgcolor: '#161514',
-          color: '#fff',
+          width: 64,
+          height: 64,
+          borderRadius: '20px',
+          bgcolor: open ? 'rgba(255, 255, 255, 0.08)' : '#6366F1',
+          color: open ? '#fff' : '#000',
           border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 18px 40px rgba(0, 0, 0, 0.55)',
+          boxShadow: open ? 'none' : '0 18px 40px rgba(0, 0, 0, 0.55)',
+          transition: reduceMotion ? 'none' : 'transform 150ms ease-out, background-color 150ms ease-out',
           '&:hover': {
-            bgcolor: '#1F1D1B',
+            bgcolor: open ? 'rgba(255, 255, 255, 0.12)' : '#5254E8',
+            transform: 'translateY(-2px)',
           },
           '&.Mui-focusVisible': {
             boxShadow: `0 0 0 1px ${alpha('#6366F1', 0.55)}, 0 0 0 6px ${alpha('#6366F1', 0.18)}`,
           },
         }}
       >
-        <LayoutGrid size={22} />
+        {open ? <X size={24} /> : <Plus size={24} />}
       </Fab>
-
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        PaperProps={{
-          sx: {
-            mt: 2,
-            width: 320,
-            overflow: 'hidden',
-            borderRadius: 4,
-            bgcolor: 'var(--surface)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            backgroundImage: 'none',
-            boxShadow: '0 32px 70px rgba(0, 0, 0, 0.72)',
-          },
-        }}
-        transitionDuration={reduceMotion ? 0 : 180}
-      >
-        <Box sx={{ p: 2.5 }}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-            <Box>
-              <Typography variant="caption" sx={{ display: 'block', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255, 255, 255, 0.45)' }}>
-                Ecosystem
-              </Typography>
-              <Typography variant="subtitle1" sx={{ mt: 0.5, fontWeight: 800, color: '#fff' }}>
-                Jump between apps
-              </Typography>
-            </Box>
-            <IconButton
-              onClick={() => setAnchorEl(null)}
-              aria-label="Close ecosystem switcher"
-              size="small"
-              sx={{ color: 'rgba(255, 255, 255, 0.5)' }}
-            >
-              <X size={18} />
-            </IconButton>
-          </Stack>
-
-          <Divider sx={{ my: 2, borderColor: 'rgba(255, 255, 255, 0.08)' }} />
-
-          <Stack spacing={1}>
-            {items.map((app) => (
-              <ButtonBase
-                key={app.id}
-                onClick={() => {
-                  setAnchorEl(null);
-                  openApp(app.subdomain);
-                }}
-                sx={{
-                  width: '100%',
-                  textAlign: 'left',
-                  borderRadius: 3,
-                  transition: reduceMotion ? 'none' : 'transform 150ms ease-out, background-color 150ms ease-out',
-                  '&:hover': {
-                    transform: reduceMotion ? 'none' : 'translateY(-1px)',
-                    bgcolor: 'rgba(255, 255, 255, 0.04)',
-                  },
-                  '&.Mui-focusVisible': {
-                    boxShadow: `0 0 0 1px ${alpha('#6366F1', 0.5)}, 0 0 0 6px ${alpha('#6366F1', 0.16)}`,
-                  },
-                }}
-              >
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  spacing={1.5}
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 3,
-                    bgcolor: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                  }}
-                >
-                  <Logo app={app.id as KylrixApp} size={34} variant="icon" />
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>
-                      {app.label}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.45)' }}>
-                      {app.description}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </ButtonBase>
-            ))}
-          </Stack>
-        </Box>
-      </Popover>
-    </>
+    </Box>
   );
 }
 
@@ -424,7 +403,6 @@ export default function LandingPage() {
                 <Button
                   size="large"
                   variant="outlined"
-                  component={NextLink}
                   href="/docs"
                   sx={{
                     px: 4,
@@ -681,7 +659,6 @@ export default function LandingPage() {
                 </Button>
                 <Button
                   variant="outlined"
-                  component={NextLink}
                   href="/pricing"
                   sx={{
                     borderRadius: 999,
@@ -721,10 +698,10 @@ export default function LandingPage() {
           </Box>
 
           <Stack direction="row" spacing={1.5}>
-            <Button component={NextLink} href="/docs" variant="text" sx={{ color: '#fff', fontWeight: 800 }}>
+            <Button href="/docs" variant="text" sx={{ color: '#fff', fontWeight: 800 }}>
               Docs
             </Button>
-            <Button component={NextLink} href="/downloads" variant="text" sx={{ color: '#fff', fontWeight: 800 }}>
+            <Button href="/downloads" variant="text" sx={{ color: '#fff', fontWeight: 800 }}>
               Downloads
             </Button>
           </Stack>
