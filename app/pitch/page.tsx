@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import NextLink from 'next/link';
 import {
   alpha,
   Box,
@@ -166,7 +165,6 @@ export default function PitchPage() {
 
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <Button
-                  component={NextLink}
                   href="/apps"
                   variant="contained"
                   endIcon={<ArrowRight size={18} />}
@@ -183,7 +181,6 @@ export default function PitchPage() {
                   Explore apps
                 </Button>
                 <Button
-                  component={NextLink}
                   href="/docs"
                   variant="outlined"
                   sx={{
