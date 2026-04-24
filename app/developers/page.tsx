@@ -45,7 +45,7 @@ const DevSection = ({ icon: Icon, title, description, children }: any) => (
 );
 
 const CodeBlock = ({ code, language = 'bash' }: { code: string; language?: string }) => (
-  <Paper sx={{ p: 4, bgcolor: 'rgba(5,5,5,0.8)', border: '1px solid rgba(255,255,255,0.1)', fontFamily: 'var(--font-mono)', fontSize: '0.95rem', overflowX: 'auto', borderRadius: 4 }}>
+  <Paper sx={{ p: 4, bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.1)', fontFamily: 'var(--font-mono)', fontSize: '0.95rem', overflowX: 'auto', borderRadius: 4 }}>
     <Typography variant="caption" sx={{ opacity: 0.3, display: 'block', mb: 3, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>{language}</Typography>
     <pre style={{ margin: 0, color: '#f2f2f2', lineHeight: 1.6 }}>
       <code>{code}</code>
@@ -55,7 +55,7 @@ const CodeBlock = ({ code, language = 'bash' }: { code: string; language?: strin
 
 export default function DevelopersPage() {
   return (
-    <Box component="main" sx={{ pt: 12 }}>
+    <Box component="main" sx={{ pt: 12, bgcolor: '#000', color: '#fff' }}>
       <Navbar />
       
       {/* Hero */}
@@ -112,14 +112,14 @@ export default new Extension({
             </Typography>
             <Grid container spacing={4}>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Paper sx={{ p: 6, height: '100%', borderStyle: 'dashed', bgcolor: 'rgba(255,255,255,0.02)' }}>
+                <Paper sx={{ p: 6, height: '100%', borderStyle: 'dashed', bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <Typography variant="h3" sx={{ mb: 3, fontWeight: 900 }}>Register App</Typography>
                   <Typography variant="body2" sx={{ mb: 4, opacity: 0.5, lineHeight: 1.6 }}>Generate unique credentials for your platform.</Typography>
                   <Button variant="contained" fullWidth size="large">New Client ID</Button>
                 </Paper>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Paper sx={{ p: 6, height: '100%', bgcolor: 'rgba(255,255,255,0.03)' }}>
+                <Paper sx={{ p: 6, height: '100%', bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <Typography variant="h3" sx={{ mb: 3, fontWeight: 900 }}>Permissions</Typography>
                   <Typography variant="body2" sx={{ mb: 4, opacity: 0.5, lineHeight: 1.6 }}>Configure granular Scopes for your application.</Typography>
                   <Stack spacing={2}>
@@ -153,7 +153,7 @@ export default new Extension({
                 justifyContent: 'center',
                 flexDirection: 'column',
                 gap: 4,
-                bgcolor: 'rgba(0,0,0,0.5)',
+                bgcolor: '#161514',
                 border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: 6
               }}
@@ -181,7 +181,7 @@ export default new Extension({
       </Container>
 
       {/* Footer */}
-      <Box sx={{ py: 15, mt: 20, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: 'rgba(5,5,5,0.8)' }}>
+      <Box sx={{ py: 15, mt: 20, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: '#000' }}>
         <Container maxWidth="xl">
           <Typography variant="caption" sx={{ opacity: 0.2 }}>
             © 2026 Kylrix Organization. Built with absolute precision.
