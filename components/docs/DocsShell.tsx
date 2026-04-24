@@ -9,7 +9,6 @@ export default function DocsShell({ children }: { children: React.ReactNode }) {
   return (
     <Box component="main" sx={{ pt: { xs: 8, md: 10 } }}>
       <Navbar />
-      <div className="bg-mesh" />
       <DocsSidebar />
       <Box sx={{ ml: { xs: 0, md: '320px' }, pt: { xs: 8, md: 12 }, pb: 20 }}>
         <Container maxWidth="lg">

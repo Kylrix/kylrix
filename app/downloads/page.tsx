@@ -98,7 +98,6 @@ export default function DownloadsPage() {
   return (
     <Box component="main" sx={{ pt: 12 }}>
       <Navbar />
-      <div className="bg-mesh" />
       
       <Container maxWidth="xl">
         <Stack spacing={10} sx={{ pt: { xs: 15, md: 25 }, pb: 20 }}>

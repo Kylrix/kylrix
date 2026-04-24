@@ -57,7 +57,6 @@ export default function DevelopersPage() {
   return (
     <Box component="main" sx={{ pt: 12 }}>
       <Navbar />
-      <div className="bg-mesh" />
       
       {/* Hero */}
       <Box sx={{ pt: { xs: 15, md: 25 }, pb: { xs: 10, md: 15 }, textAlign: 'center' }}>

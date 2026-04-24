@@ -60,9 +60,8 @@ export default function PricingPage() {
   }, [totalPrice, months]);
 
   return (
-    <Box component="main" sx={{ pt: 12, minHeight: '100vh', bgcolor: '#050505', color: 'white' }}>
+    <Box component="main" sx={{ pt: 12, minHeight: '100vh', bgcolor: '#000000', color: 'white' }}>
       <Navbar />
-      <div className="bg-mesh" />
 
       <Container maxWidth="md" sx={{ py: { xs: 8, md: 12 }, position: 'relative', zIndex: 1 }}>
         <Box sx={{ textAlign: 'center', mb: 8 }}>
@@ -227,4 +226,3 @@ export default function PricingPage() {
     </Box>
   );
 }
-
