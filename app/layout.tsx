@@ -62,7 +62,6 @@ export default function RootLayout({
             <AuthProvider>
               <DocsProvider>
                 <SubscriptionProvider>
-                  <div className="bg-mesh" />
                   {children}
                 </SubscriptionProvider>
               </DocsProvider>
