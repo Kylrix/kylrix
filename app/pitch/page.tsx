@@ -112,7 +112,7 @@ export default function PitchPage() {
                   py: 1,
                   width: 'fit-content',
                   borderRadius: 999,
-                  bgcolor: 'rgba(255, 255, 255, 0.03)',
+                  bgcolor: '#161514',
                   border: '1px solid rgba(255, 255, 255, 0.08)',
                 }}
               >
@@ -207,7 +207,7 @@ export default function PitchPage() {
                       sx={{
                         p: 2.5,
                         borderRadius: 4,
-                        bgcolor: 'var(--surface)',
+                        bgcolor: '#161514',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
                       }}
                     >
@@ -247,7 +247,7 @@ export default function PitchPage() {
               sx={{
                 p: { xs: 3, md: 4 },
                 borderRadius: 6,
-                bgcolor: 'var(--surface)',
+                bgcolor: '#161514',
                 border: '1px solid rgba(255, 255, 255, 0.08)',
                 boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
                 overflow: 'hidden',
@@ -279,7 +279,7 @@ export default function PitchPage() {
                   sx={{
                     p: 2.5,
                     borderRadius: 4,
-                    bgcolor: 'rgba(255, 255, 255, 0.02)',
+                    bgcolor: '#1F1D1B',
                     border: '1px solid rgba(255, 255, 255, 0.06)',
                   }}
                 >
@@ -313,7 +313,7 @@ export default function PitchPage() {
                       sx={{
                         p: 1.75,
                         borderRadius: 3,
-                        bgcolor: 'rgba(255, 255, 255, 0.02)',
+                        bgcolor: '#161514',
                         border: '1px solid rgba(255, 255, 255, 0.06)',
                         display: 'flex',
                         alignItems: 'center',

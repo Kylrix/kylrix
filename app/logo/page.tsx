@@ -29,12 +29,12 @@ export default function LogoPage() {
                 <Grid size={{ xs: 12, md: 6 }} key={app}>
                   <Paper sx={{ 
                     p: 6, 
-                    bgcolor: 'rgba(255,255,255,0.03)', 
+                    bgcolor: '#161514', 
                     borderRadius: 4, 
                     border: '1px solid rgba(255,255,255,0.08)',
                     transition: 'all 0.3s',
                     '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.05)',
+                      bgcolor: '#1F1D1B',
                       borderColor: 'rgba(255,255,255,0.15)'
                     }
                   }}>
@@ -56,14 +56,14 @@ export default function LogoPage() {
             <Typography variant="h6" sx={{ fontWeight: 700, mb: 4, opacity: 0.8, letterSpacing: '0.1em' }}>
               SCALABILITY & FIDELITY
             </Typography>
-            <Paper sx={{ 
-              p: 6, 
-              bgcolor: 'rgba(255,255,255,0.03)', 
-              borderRadius: 4, 
-              border: '1px solid rgba(255,255,255,0.08)',
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
+              <Paper sx={{ 
+                p: 6, 
+                bgcolor: '#161514', 
+                borderRadius: 4, 
+                border: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 8,
               alignItems: 'center',
               justifyContent: 'center'
             }}>

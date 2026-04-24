@@ -186,7 +186,7 @@ export default function AppsPage() {
                           px: 1.5,
                           py: 1,
                           borderRadius: 999,
-                          bgcolor: 'rgba(255, 255, 255, 0.03)',
+                          bgcolor: '#161514',
                           border: '1px solid rgba(255, 255, 255, 0.08)',
                         }}
                       >
