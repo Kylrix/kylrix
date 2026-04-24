@@ -14,13 +14,13 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kylrix — Premium reactive ecosystem",
-  description: "Kylrix is a premium, app-native ecosystem for secure notes, workflows, vaults, and communication under one shared session.",
-  keywords: ["kylrix", "reactive ecosystem", "secure productivity", "notes", "workflows", "vault", "messaging"],
+  title: "Kylrix — The Sovereign Work OS",
+  description: "Kylrix is the sovereign, end-to-end encrypted work OS for notes, vaults, tasks, and private communication.",
+  keywords: ["kylrix", "sovereign work os", "e2ee", "notes", "vault", "tasks", "communication"],
   authors: [{ name: "Kylrix Team" }],
   openGraph: {
-    title: "Kylrix — Premium reactive ecosystem",
-    description: "One login. Four surfaces. One system.",
+    title: "Kylrix — The Sovereign Work OS",
+    description: "One login. Four surfaces. One sovereign system.",
     type: "website",
     url: "https://kylrix.space",
     siteName: "Kylrix",

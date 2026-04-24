@@ -2,8 +2,8 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  Backdrop,
   alpha,
+  Backdrop,
   Box,
   Button,
   ButtonBase,
@@ -15,16 +15,19 @@ import {
   Stack,
   Typography,
   useMediaQuery,
-  Zoom,
   useTheme,
+  Zoom,
 } from '@mui/material';
 import {
   ArrowRight,
-  Lock,
+  FileText,
   Plus,
   Shield,
   X,
   Zap,
+  MessageSquare,
+  Wallet,
+  Waypoints,
 } from 'lucide-react';
 import { useReducedMotion } from 'framer-motion';
 
@@ -32,29 +35,66 @@ import Navbar from '@/components/Navbar';
 import Logo, { KylrixApp } from '@/components/Logo';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
 
-const appOrder = ['note', 'flow', 'vault', 'connect'] as const;
+const appOrder = ['note', 'vault', 'flow', 'connect'] as const;
+
+const surfaceShadow =
+  'inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0,0,0,0.8)';
 
 const heroMetrics = [
-  { value: '01', label: 'shared session' },
-  { value: '04', label: 'native apps' },
-  { value: '24/7', label: 'sync-first shell' },
+  { value: 'E2EE', label: 'end-to-end encryption' },
+  { value: '100%', label: 'data ownership' },
+  { value: '4+', label: 'native surfaces' },
 ];
 
-const designPrinciples = [
+const suiteCards = [
   {
+    id: 'note',
+    title: 'Note',
+    copy: 'The encrypted knowledge engine for research, writing, and context you actually own.',
+    accent: '#EC4899',
+    icon: FileText,
+  },
+  {
+    id: 'vault',
+    title: 'Vault',
+    copy: 'Unbreakable credential and data storage with a zero-knowledge core.',
+    accent: '#10B981',
     icon: Shield,
-    title: 'Point, don\'t duplicate',
-    copy: 'Each surface points back to the real table instead of cloning state into a second model.',
   },
   {
+    id: 'flow',
+    title: 'Flow',
+    copy: 'Task orchestration and execution that stays reactive across the shared session.',
+    accent: '#A855F7',
     icon: Zap,
-    title: 'Pulse before notice',
-    copy: 'Live interactions stay transient; only durable changes become notification pointers.',
   },
   {
-    icon: Lock,
-    title: 'Universal session',
-    copy: 'One authenticated Appwrite session flows through Accounts, Vault, Flow, Connect, and Note.',
+    id: 'connect',
+    title: 'Connect',
+    copy: 'Secure private communication for teams that refuse to leak their context.',
+    accent: '#F59E0B',
+    icon: MessageSquare,
+  },
+];
+
+const infraPanels = [
+  {
+    title: 'AI Agents',
+    label: 'ORCHESTRATION LAYER',
+    copy: 'Embedded AI can see and act across the ecosystem without the privacy trade-off that breaks trust.',
+    icon: Zap,
+  },
+  {
+    title: 'Non-custodial financial layer',
+    label: 'VALUE MOVEMENT',
+    copy: 'Machine-to-machine settlement and payments live inside the same sovereign surface.',
+    icon: Wallet,
+  },
+  {
+    title: 'Crypto-exclusive subscriptions',
+    label: 'REVENUE MODEL',
+    copy: 'The commercial model is built entirely on cryptocurrency: no fiat, no surveillance stack.',
+    icon: Waypoints,
   },
 ];
 
@@ -85,25 +125,14 @@ function AppSwitcherFab() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-end',
-        gap: 1.5,
+        gap: 1.25,
       }}
     >
-      <Backdrop
-        open={open}
-        onClick={() => setOpen(false)}
-        sx={{
-          zIndex: -1,
-          bgcolor: 'rgba(0, 0, 0, 0.4)',
-        }}
-      />
+      <Backdrop open={open} onClick={() => setOpen(false)} sx={{ zIndex: -1, bgcolor: 'rgba(0,0,0,0.4)' }} />
 
-      <Stack spacing={1.25} sx={{ mb: 0.5 }}>
+      <Stack spacing={1.25} sx={{ mb: 0.25 }}>
         {items.map((app, index) => (
-          <Zoom
-            key={app.id}
-            in={open}
-            style={{ transitionDelay: open ? `${index * 40}ms` : '0ms' }}
-          >
+          <Zoom key={app.id} in={open} style={{ transitionDelay: open ? `${index * 40}ms` : '0ms' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
               <Typography
                 variant="caption"
@@ -111,11 +140,13 @@ function AppSwitcherFab() {
                   px: 1.25,
                   py: 0.75,
                   borderRadius: 999,
-                  bgcolor: 'rgba(0, 0, 0, 0.68)',
+                  bgcolor: '#161514',
+                  border: '1px solid rgba(255,255,255,0.08)',
                   color: '#fff',
                   fontWeight: 800,
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
+                  boxShadow: surfaceShadow,
                 }}
               >
                 {app.label}
@@ -129,9 +160,12 @@ function AppSwitcherFab() {
                   openApp(app.subdomain);
                 }}
                 sx={{
+                  width: 52,
+                  height: 52,
                   bgcolor: app.color,
                   color: '#000',
-                  boxShadow: `0 12px 26px ${alpha(app.color, 0.35)}`,
+                  boxShadow: `0 12px 26px ${alpha(app.color, 0.32)}`,
+                  transition: reduceMotion ? 'none' : 'transform 150ms ease-out, box-shadow 150ms ease-out',
                   '&:hover': {
                     bgcolor: app.color,
                     transform: 'translateY(-2px)',
@@ -150,20 +184,19 @@ function AppSwitcherFab() {
       </Stack>
 
       <Fab
-        color="primary"
         aria-label="Open ecosystem switcher"
         onClick={() => setOpen((value) => !value)}
         sx={{
           width: 64,
           height: 64,
           borderRadius: '20px',
-          bgcolor: open ? 'rgba(255, 255, 255, 0.08)' : '#6366F1',
+          bgcolor: open ? '#1F1D1B' : '#6366F1',
           color: open ? '#fff' : '#000',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: open ? 'none' : '0 18px 40px rgba(0, 0, 0, 0.55)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: open ? 'none' : '0 18px 40px rgba(0,0,0,0.55)',
           transition: reduceMotion ? 'none' : 'transform 150ms ease-out, background-color 150ms ease-out',
           '&:hover': {
-            bgcolor: open ? 'rgba(255, 255, 255, 0.12)' : '#5254E8',
+            bgcolor: open ? '#1F1D1B' : '#5254E8',
             transform: 'translateY(-2px)',
           },
           '&.Mui-focusVisible': {
@@ -177,24 +210,24 @@ function AppSwitcherFab() {
   );
 }
 
-function AppCard({ app }: { app: (typeof ECOSYSTEM_APPS)[number] }) {
+function SuiteCard({ app }: { app: (typeof suiteCards)[number] }) {
   const reduceMotion = useReducedMotion();
+  const appMeta = ECOSYSTEM_APPS.find((item) => item.id === app.id)!;
 
   return (
     <ButtonBase
-      onClick={() => openApp(app.subdomain)}
+      onClick={() => openApp(app.id)}
       sx={{
         width: '100%',
         height: '100%',
         textAlign: 'left',
-        borderRadius: 5,
+        borderRadius: 6,
         display: 'block',
-        transition: reduceMotion ? 'none' : 'transform 150ms ease-out',
-        '&:hover .card-shell': {
-          transform: reduceMotion ? 'none' : 'translateY(-4px)',
-        },
         '&.Mui-focusVisible .card-shell': {
-          boxShadow: `0 0 0 1px ${alpha(app.color, 0.55)}, 0 0 0 6px ${alpha(app.color, 0.16)}`,
+          boxShadow: `0 0 0 1px ${alpha(app.accent, 0.55)}, 0 0 0 6px ${alpha(app.accent, 0.16)}`,
+        },
+        '&:hover .card-shell': {
+          transform: reduceMotion ? 'none' : 'perspective(1200px) rotateX(2deg) translateY(-4px)',
         },
       }}
     >
@@ -203,19 +236,27 @@ function AppCard({ app }: { app: (typeof ECOSYSTEM_APPS)[number] }) {
         sx={{
           height: '100%',
           p: 3,
-          bgcolor: 'var(--surface)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: 5,
-          boxShadow: '0 16px 40px rgba(0, 0, 0, 0.42)',
-          transition: reduceMotion ? 'none' : 'transform 150ms ease-out, box-shadow 150ms ease-out',
+          borderRadius: 6,
+          bgcolor: '#161514',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: surfaceShadow,
           overflow: 'hidden',
           position: 'relative',
+          transition: reduceMotion ? 'none' : 'transform 150ms ease-out, background-color 150ms ease-out',
+          '&:hover': {
+            bgcolor: '#1F1D1B',
+          },
           '&::before': {
             content: '""',
             position: 'absolute',
             inset: 0,
-            background: `radial-gradient(circle at top left, ${alpha(app.color, 0.16)}, transparent 45%)`,
+            background: `radial-gradient(circle at 50% 100%, ${alpha(app.accent, 0.18)}, transparent 48%)`,
+            opacity: 0,
+            transition: reduceMotion ? 'none' : 'opacity 150ms ease-out',
             pointerEvents: 'none',
+          },
+          '&:hover::before': {
+            opacity: 1,
           },
         }}
       >
@@ -228,23 +269,19 @@ function AppCard({ app }: { app: (typeof ECOSYSTEM_APPS)[number] }) {
                 fontWeight: 800,
                 letterSpacing: '0.18em',
                 textTransform: 'uppercase',
-                color: alpha(app.color, 0.9),
+                color: alpha(app.accent, 0.95),
               }}
             >
-              {app.label}
+              {app.title}
             </Typography>
           </Stack>
 
           <Box>
-            <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff', mb: 1 }}>
-              {app.label}
+            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 1 }}>
+              {app.title}
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.6)', lineHeight: 1.8 }}>
-              {app.description}{' '}
-              {app.id === 'note' && 'Private notes, linked context, and clean retrieval without public leakage.'}
-              {app.id === 'flow' && 'Tasks, calendars, and workflow state that resolve the current user first.'}
-              {app.id === 'vault' && 'Zero-knowledge storage for credentials, TOTP, and recovery-critical secrets.'}
-              {app.id === 'connect' && 'Messages and calls that stay live through the shared session graph.'}
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.68)', lineHeight: 1.8 }}>
+              {app.copy}
             </Typography>
           </Box>
 
@@ -255,12 +292,12 @@ function AppCard({ app }: { app: (typeof ECOSYSTEM_APPS)[number] }) {
                 fontWeight: 800,
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase',
-                color: alpha(app.color, 0.95),
+                color: alpha(app.accent, 0.95),
               }}
             >
-              Open surface
+              Open {appMeta.label}
             </Typography>
-            <ArrowRight size={16} color={app.color} />
+            <ArrowRight size={16} color={app.accent} />
           </Stack>
         </Stack>
       </Paper>
@@ -271,14 +308,10 @@ function AppCard({ app }: { app: (typeof ECOSYSTEM_APPS)[number] }) {
 export default function LandingPage() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const reduceMotion = useReducedMotion();
 
-  const apps = useMemo(() => ECOSYSTEM_APPS.filter((app) => app.type === 'app'), []);
-
-  const handleGetStarted = () => {
+  const initiateEcosystem = () => {
     const accountsUrl = getEcosystemUrl('accounts');
-    const sourceUrl = window.location.origin;
-    const targetUrl = `${accountsUrl}/login?source=${encodeURIComponent(sourceUrl)}`;
+    const targetUrl = `${accountsUrl}/login?source=${encodeURIComponent(window.location.origin)}`;
 
     if (isMobile) {
       window.location.assign(targetUrl);
@@ -298,261 +331,180 @@ export default function LandingPage() {
   };
 
   return (
-    <Box component="main" sx={{ pt: { xs: 10, md: 12 }, pb: { xs: 10, md: 14 } }}>
+    <Box component="main" sx={{ position: 'relative', overflow: 'clip', bgcolor: '#000', color: '#fff', pt: { xs: 10, md: 12 }, pb: { xs: 10, md: 14 } }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          background: `
+            radial-gradient(circle at 50% 16%, ${alpha('#6366F1', 0.14)} 0, transparent 34%),
+            radial-gradient(circle at 50% 58%, ${alpha('#6366F1', 0.14)} 0, transparent 30%),
+            linear-gradient(to bottom, rgba(99,102,241,0.08) 0%, transparent 26%)
+          `,
+        }}
+      />
       <Navbar />
 
       <Container maxWidth="xl" sx={{ position: 'relative' }}>
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: { xs: '-8rem -2rem auto -2rem', md: '-12rem -6rem auto -6rem' },
-            height: { xs: 440, md: 560 },
-            pointerEvents: 'none',
-            background: `
-              radial-gradient(circle at 18% 18%, ${alpha('#6366F1', 0.18)} 0, transparent 28%),
-              radial-gradient(circle at 82% 12%, ${alpha('#F59E0B', 0.1)} 0, transparent 26%),
-              radial-gradient(circle at 50% 60%, ${alpha('#EC4899', 0.08)} 0, transparent 34%)
-            `,
-            opacity: 0.9,
-          }}
-        />
-
-        <Grid container spacing={{ xs: 6, md: 8 }} alignItems="center" sx={{ position: 'relative', py: { xs: 4, md: 8 } }}>
-          <Grid size={{ xs: 12, lg: 7 }}>
-            <Stack spacing={4} sx={{ maxWidth: 820 }}>
-              <Box
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  width: 'fit-content',
-                  px: 1.75,
-                  py: 1,
-                  borderRadius: 999,
-                  bgcolor: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                }}
-              >
-                <Logo app="root" size={24} variant="icon" />
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontWeight: 800,
-                    letterSpacing: '0.18em',
-                    textTransform: 'uppercase',
-                    color: 'rgba(255, 255, 255, 0.72)',
-                  }}
-                >
-                  Reactive graph / premium shell
-                </Typography>
-              </Box>
-
-              <Box>
-                <Typography
-                  component="h1"
-                  sx={{
-                    fontSize: { xs: '3rem', sm: '4.2rem', lg: '5.8rem' },
-                    lineHeight: 0.94,
-                    letterSpacing: '-0.06em',
-                    fontWeight: 900,
-                    color: '#fff',
-                    textWrap: 'balance',
-                  }}
-                >
-                  One login.
-                  <Box component="span" sx={{ display: 'block', color: '#6366F1' }}>
-                    Four surfaces.
-                  </Box>
-                  One system.
-                </Typography>
-
-                <Typography
-                  variant="h6"
-                  sx={{
-                    mt: 3,
-                    maxWidth: 760,
-                    color: 'rgba(255, 255, 255, 0.68)',
-                    lineHeight: 1.8,
-                    fontWeight: 400,
-                  }}
-                >
-                  Kylrix binds Accounts, Note, Flow, Vault, and Connect into one premium session layer so the
-                  product feels like a single instrument instead of five disconnected apps.
-                </Typography>
-              </Box>
-
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                <Button
-                  size="large"
-                  variant="contained"
-                  onClick={handleGetStarted}
-                  sx={{
-                    px: 4,
-                    py: 1.6,
-                    borderRadius: 999,
-                    fontWeight: 800,
-                    bgcolor: '#6366F1',
-                    color: '#fff',
-                    boxShadow: `0 18px 40px ${alpha('#6366F1', 0.24)}`,
-                    '&:hover': { bgcolor: '#5254E8' },
-                  }}
-                >
-                  Get started
-                </Button>
-
-                <Button
-                  size="large"
-                  variant="outlined"
-                  href="/docs"
-                  sx={{
-                    px: 4,
-                    py: 1.6,
-                    borderRadius: 999,
-                    fontWeight: 800,
-                    borderColor: 'rgba(255, 255, 255, 0.12)',
-                    color: '#fff',
-                    '&:hover': {
-                      borderColor: 'rgba(255, 255, 255, 0.28)',
-                      bgcolor: 'rgba(255, 255, 255, 0.04)',
-                    },
-                  }}
-                >
-                  Read the docs
-                </Button>
-              </Stack>
-
-              <Grid container spacing={2}>
-                {heroMetrics.map((metric) => (
-                  <Grid size={{ xs: 12, sm: 4 }} key={metric.label}>
-                    <Paper
-                      sx={{
-                        p: 2.25,
-                        borderRadius: 4,
-                        bgcolor: 'var(--surface)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                      }}
-                    >
-                      <Typography
-                        variant="h4"
-                        sx={{
-                          fontFamily: 'var(--font-mono)',
-                          fontVariantNumeric: 'tabular-nums',
-                          fontWeight: 700,
-                          color: '#fff',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {metric.value}
-                      </Typography>
-                      <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.55)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
-                        {metric.label}
-                      </Typography>
-                    </Paper>
-                  </Grid>
-                ))}
-              </Grid>
-            </Stack>
-          </Grid>
-
-          <Grid size={{ xs: 12, lg: 5 }}>
-            <Paper
+        <Stack spacing={4} alignItems="center" textAlign="center" sx={{ pt: { xs: 10, md: 14 }, pb: { xs: 8, md: 12 } }}>
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 1.5,
+              px: 1.75,
+              py: 1,
+              width: 'fit-content',
+              borderRadius: 999,
+              bgcolor: '#161514',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: surfaceShadow,
+            }}
+          >
+            <Logo app="root" size={24} variant="icon" />
+            <Typography
+              variant="caption"
               sx={{
-                p: { xs: 3, sm: 4 },
-                borderRadius: 6,
-                bgcolor: 'var(--surface)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
-                position: 'relative',
-                overflow: 'hidden',
+                fontWeight: 800,
+                letterSpacing: '0.18em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.72)',
               }}
             >
-              <Box
-                sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: `linear-gradient(135deg, ${alpha('#6366F1', 0.08)}, transparent 42%)`,
-                  pointerEvents: 'none',
-                }}
-              />
+              Sovereign work OS
+            </Typography>
+          </Box>
 
-              <Stack spacing={3} sx={{ position: 'relative' }}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
-                  <Logo app="root" size={58} />
-                  <Box sx={{ textAlign: 'right' }}>
-                    <Typography variant="caption" sx={{ display: 'block', color: 'rgba(255, 255, 255, 0.45)', textTransform: 'uppercase', letterSpacing: '0.18em', fontWeight: 800 }}>
-                      System shell
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700 }}>
-                      Premium, quiet, connected
-                    </Typography>
-                  </Box>
-                </Stack>
+          <Box sx={{ maxWidth: 1100 }}>
+            <Typography
+              component="h1"
+              sx={{
+                fontSize: { xs: '3.2rem', sm: '4.8rem', lg: '6.6rem' },
+                lineHeight: 0.92,
+                letterSpacing: '-0.07em',
+                fontWeight: 900,
+                color: '#fff',
+                textWrap: 'balance',
+                fontFamily: 'var(--font-clash)',
+              }}
+            >
+              The Sovereign Work OS.
+            </Typography>
 
-                <Box
+            <Typography
+              variant="h6"
+              sx={{
+                mt: 3,
+                mx: 'auto',
+                maxWidth: 820,
+                color: 'rgba(255,255,255,0.74)',
+                lineHeight: 1.85,
+                fontWeight: 400,
+              }}
+            >
+              Kylrix gives you end-to-end encrypted notes, tasks, vaults, and communication with absolute data
+              ownership. It is the alternative to Notion and Discord that refuses to trade sovereignty for utility.
+            </Typography>
+          </Box>
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Button
+              onClick={initiateEcosystem}
+              size="large"
+              variant="contained"
+              endIcon={<ArrowRight size={18} />}
+              sx={{
+                px: 4,
+                py: 1.6,
+                borderRadius: 3,
+                bgcolor: '#6366F1',
+                color: '#fff',
+                fontWeight: 800,
+                boxShadow: '0 16px 36px rgba(99,102,241,0.25)',
+                '&:hover': { bgcolor: '#5254E8' },
+              }}
+            >
+              Initiate Ecosystem
+            </Button>
+
+            <Button
+              href="/pitch"
+              size="large"
+              variant="outlined"
+              sx={{
+                px: 4,
+                py: 1.6,
+                borderRadius: 3,
+                bgcolor: '#161514',
+                borderColor: 'rgba(255,255,255,0.12)',
+                color: '#fff',
+                fontWeight: 800,
+                boxShadow: surfaceShadow,
+                '&:hover': {
+                  bgcolor: '#1F1D1B',
+                  borderColor: 'rgba(255,255,255,0.2)',
+                },
+              }}
+            >
+              Read the Manifesto
+            </Button>
+          </Stack>
+
+          <Grid container spacing={2.5} sx={{ width: '100%', maxWidth: 980, mt: 2 }}>
+            {heroMetrics.map((metric) => (
+              <Grid key={metric.label} size={{ xs: 12, sm: 4 }}>
+                <Paper
                   sx={{
                     p: 2.5,
-                    borderRadius: 4,
-                    bgcolor: 'rgba(255, 255, 255, 0.02)',
-                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    borderRadius: 3,
+                    bgcolor: '#161514',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    boxShadow: surfaceShadow,
                   }}
                 >
-                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 2 }}>
-                    <Terminal size={18} color="#6366F1" />
-                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)', textTransform: 'uppercase', letterSpacing: '0.16em', fontWeight: 800 }}>
-                      Kylrix session
-                    </Typography>
-                  </Stack>
                   <Typography
-                    variant="body1"
+                    variant="h4"
                     sx={{
                       color: '#fff',
+                      fontWeight: 900,
                       fontFamily: 'var(--font-mono)',
                       fontVariantNumeric: 'tabular-nums',
-                      lineHeight: 1.9,
+                      lineHeight: 1,
                     }}
                   >
-                    <Box component="span" sx={{ color: '#6366F1' }}>$</Box> auth.resolve --shared-session
-                    <br />
-                    <Box component="span" sx={{ opacity: 0.55 }}>&gt; accounts online</Box>
-                    <br />
-                    <Box component="span" sx={{ opacity: 0.55 }}>&gt; note, flow, vault, connect ready</Box>
+                    {metric.value}
                   </Typography>
-                </Box>
-
-                <Grid container spacing={2}>
-                  {apps.map((app) => (
-                    <Grid size={{ xs: 6 }} key={app.id}>
-                      <Box
-                        sx={{
-                          p: 1.75,
-                          borderRadius: 4,
-                          bgcolor: 'rgba(255, 255, 255, 0.02)',
-                          border: '1px solid rgba(255, 255, 255, 0.06)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                        }}
-                      >
-                        <Logo app={app.id as KylrixApp} size={28} variant="icon" />
-                        <Box>
-                          <Typography variant="body2" sx={{ color: '#fff', fontWeight: 800 }}>
-                            {app.label}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: alpha(app.color, 0.9) }}>
-                            {app.description}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-              </Stack>
-            </Paper>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      mt: 1,
+                      display: 'block',
+                      color: 'rgba(255,255,255,0.55)',
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {metric.label}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
           </Grid>
+        </Stack>
+      </Container>
+
+      <Container maxWidth="xl" sx={{ mt: { xs: 4, md: 8 } }}>
+        <Grid container spacing={2.5}>
+          {suiteCards.map((app) => (
+            <Grid key={app.id} size={{ xs: 12, sm: 6, xl: 3 }}>
+              <SuiteCard app={app} />
+            </Grid>
+          ))}
         </Grid>
       </Container>
 
-      <Container maxWidth="xl" sx={{ mt: { xs: 6, md: 10 } }}>
+      <Container maxWidth="xl" sx={{ mt: { xs: 8, md: 12 } }}>
         <Stack spacing={2} sx={{ mb: 3 }}>
           <Typography
             variant="caption"
@@ -563,33 +515,32 @@ export default function LandingPage() {
               textTransform: 'uppercase',
             }}
           >
-            Flagship apps
+            Sovereign infrastructure
           </Typography>
-          <Typography variant="h2" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em' }}>
-            Real marks. Real surfaces.
+          <Typography
+            variant="h2"
+            sx={{
+              color: '#fff',
+              fontWeight: 900,
+              letterSpacing: '-0.05em',
+              fontFamily: 'var(--font-clash)',
+            }}
+          >
+            Built for privacy, automation, and crypto-native scale.
           </Typography>
         </Stack>
 
         <Grid container spacing={2.5}>
-          {apps.map((app) => (
-            <Grid key={app.id} size={{ xs: 12, sm: 6, xl: 3 }}>
-              <AppCard app={app} />
-            </Grid>
-          ))}
-        </Grid>
-      </Container>
-
-      <Container maxWidth="xl" sx={{ mt: { xs: 8, md: 12 } }}>
-        <Grid container spacing={2.5}>
-          {designPrinciples.map((item) => (
-            <Grid key={item.title} size={{ xs: 12, md: 4 }}>
+          {infraPanels.map((panel) => (
+            <Grid key={panel.title} size={{ xs: 12, md: 4 }}>
               <Paper
                 sx={{
-                  p: 3,
                   height: '100%',
-                  borderRadius: 5,
-                  bgcolor: 'var(--surface)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  p: 3,
+                  borderRadius: 6,
+                  bgcolor: '#161514',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: surfaceShadow,
                 }}
               >
                 <Stack spacing={2.25}>
@@ -600,19 +551,32 @@ export default function LandingPage() {
                       borderRadius: 3,
                       display: 'grid',
                       placeItems: 'center',
-                      bgcolor: alpha('#6366F1', 0.12),
+                      bgcolor: '#1F1D1B',
                       color: '#6366F1',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255,255,255,0.08)',
                     }}
                   >
-                    <item.icon size={22} />
+                    <panel.icon size={22} />
                   </Box>
                   <Box>
-                    <Typography variant="h5" sx={{ color: '#fff', fontWeight: 800, mb: 1 }}>
-                      {item.title}
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: 'block',
+                        mb: 1,
+                        color: 'rgba(255,255,255,0.5)',
+                        fontFamily: 'var(--font-mono)',
+                        letterSpacing: '0.16em',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      {panel.label}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.62)', lineHeight: 1.8 }}>
-                      {item.copy}
+                    <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 1 }}>
+                      {panel.title}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.66)', lineHeight: 1.8 }}>
+                      {panel.copy}
                     </Typography>
                   </Box>
                 </Stack>
@@ -627,85 +591,39 @@ export default function LandingPage() {
           sx={{
             p: { xs: 3, md: 4 },
             borderRadius: 6,
-            bgcolor: 'var(--surface)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            overflow: 'hidden',
+            bgcolor: '#161514',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: surfaceShadow,
           }}
         >
-          <Grid container spacing={3} alignItems="center">
-            <Grid size={{ xs: 12, md: 8 }}>
-              <Typography variant="h3" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em', mb: 1 }}>
-                Premium enough to lead with, quiet enough to live in.
-              </Typography>
-              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.62)', lineHeight: 1.8, maxWidth: 760 }}>
-                Kylrix is built to look like a serious system: crisp typography, true app marks, a black canvas,
-                and one shell that routes you to the right product without modal noise.
-              </Typography>
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Stack direction={{ xs: 'column', sm: 'row', md: 'column' }} spacing={1.5} sx={{ justifyContent: 'flex-end' }}>
-                <Button
-                  variant="contained"
-                  onClick={handleGetStarted}
-                  sx={{
-                    borderRadius: 999,
-                    bgcolor: '#6366F1',
-                    color: '#fff',
-                    fontWeight: 800,
-                    '&:hover': { bgcolor: '#5254E8' },
-                  }}
-                >
-                  Open Accounts
-                </Button>
-                <Button
-                  variant="outlined"
-                  href="/pricing"
-                  sx={{
-                    borderRadius: 999,
-                    borderColor: 'rgba(255, 255, 255, 0.12)',
-                    color: '#fff',
-                    fontWeight: 800,
-                    '&:hover': {
-                      borderColor: 'rgba(255, 255, 255, 0.28)',
-                      bgcolor: 'rgba(255, 255, 255, 0.04)',
-                    },
-                  }}
-                >
-                  View pricing
-                </Button>
-              </Stack>
-            </Grid>
-          </Grid>
-        </Paper>
-      </Container>
-
-      <Container maxWidth="xl" sx={{ mt: { xs: 8, md: 12 } }}>
-        <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.08)', mb: 3 }} />
-        <Stack
-          direction={{ xs: 'column', md: 'row' }}
-          spacing={2}
-          alignItems={{ xs: 'flex-start', md: 'center' }}
-          justifyContent="space-between"
-          sx={{ pb: { xs: 8, md: 10 } }}
-        >
-          <Box>
-            <Typography variant="caption" sx={{ display: 'block', color: 'rgba(255, 255, 255, 0.42)', letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 800 }}>
-              Kylrix.space
+          <Stack spacing={2}>
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#6366F1',
+                fontWeight: 900,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+              }}
+            >
+              Terminal footer
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.62)', mt: 1, maxWidth: 680 }}>
-              One system, one session, one premium surface for the entire ecosystem.
-            </Typography>
-          </Box>
-
-          <Stack direction="row" spacing={1.5}>
-            <Button href="/docs" variant="text" sx={{ color: '#fff', fontWeight: 800 }}>
-              Docs
-            </Button>
-            <Button href="/downloads" variant="text" sx={{ color: '#fff', fontWeight: 800 }}>
-              Downloads
-            </Button>
+            <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)' }} />
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={2}
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+              justifyContent="space-between"
+            >
+              <Typography variant="h4" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em' }}>
+                Kylrix. A sovereign entity.
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', maxWidth: 540, lineHeight: 1.8 }}>
+                Privacy as a power, not a feature. Built to feel like hardware, not a generic SaaS landing page.
+              </Typography>
+            </Stack>
           </Stack>
-        </Stack>
+        </Paper>
       </Container>
 
       <AppSwitcherFab />
