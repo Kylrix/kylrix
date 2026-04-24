@@ -25,20 +25,22 @@ import {
 import Navbar from '@/components/Navbar';
 
 const DownloadCard = ({ platform }: any) => (
-  <Paper 
-    sx={{ 
-      p: 6, 
-      height: '100%', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: 4,
-      transition: 'all 0.3s',
-      '&:hover': { 
-        borderColor: '#6366F1', 
-        bgcolor: 'rgba(99, 102, 241, 0.02)', 
-        transform: 'translateY(-8px)' 
-      }
-    }}
+    <Paper 
+      sx={{ 
+        p: 6, 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: 4,
+        bgcolor: '#161514',
+        border: '1px solid rgba(255,255,255,0.08)',
+        transition: 'all 0.3s',
+        '&:hover': { 
+          borderColor: '#6366F1', 
+          bgcolor: '#1F1D1B', 
+          transform: 'translateY(-8px)' 
+        }
+      }}
   >
     <Box sx={{ color: '#6366F1' }}>
       <platform.icon size={48} strokeWidth={1} />
@@ -96,7 +98,7 @@ export default function DownloadsPage() {
   ];
 
   return (
-    <Box component="main" sx={{ pt: 12 }}>
+    <Box component="main" sx={{ pt: 12, bgcolor: '#000', color: '#fff' }}>
       <Navbar />
       
       <Container maxWidth="xl">
@@ -119,7 +121,7 @@ export default function DownloadsPage() {
             ))}
           </Grid>
 
-          <Box sx={{ mt: 10, p: { xs: 6, md: 10 }, bgcolor: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}>
+          <Box sx={{ mt: 10, p: { xs: 6, md: 10 }, bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}>
             <Grid container spacing={8} alignItems="center">
               <Grid size={{ xs: 12, md: 7 }}>
                 <Typography variant="h2" sx={{ mb: 4, fontWeight: 900 }}>Built for Integrity.</Typography>
@@ -151,7 +153,7 @@ export default function DownloadsPage() {
         </Stack>
       </Container>
 
-      <Box sx={{ py: 15, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: 'rgba(5,5,5,0.8)' }}>
+      <Box sx={{ py: 15, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: '#000' }}>
         <Container maxWidth="xl">
           <Typography variant="caption" sx={{ opacity: 0.2 }}>
             © 2026 Kylrix Organization. Built with absolute precision.

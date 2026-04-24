@@ -77,10 +77,9 @@ export default function PricingPage() {
           elevation={0}
           sx={{
             p: { xs: 4, md: 6 },
-            borderRadius: '40px',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
+            borderRadius: '24px',
+            background: '#161514',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
           }}
         >
           <Grid container spacing={6} alignItems="center">
@@ -135,7 +134,7 @@ export default function PricingPage() {
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
-              <Box sx={{ p: 4, borderRadius: '32px', bgcolor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)', textAlign: 'center' }}>
+                <Box sx={{ p: 4, borderRadius: '24px', bgcolor: '#1F1D1B', border: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
                 <Typography sx={{ opacity: 0.5, fontSize: '0.85rem', mb: 1 }}>Total Amount</Typography>
                 <Typography sx={{ fontSize: '4rem', fontWeight: 900, fontFamily: 'JetBrains Mono', lineHeight: 1 }}>
                   ${totalPrice.toFixed(2)}

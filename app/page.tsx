@@ -20,6 +20,7 @@ import {
 } from '@mui/material';
 import {
   ArrowRight,
+  ArrowUp,
   Github,
   FileText,
   Plus,
@@ -192,7 +193,16 @@ function AppSwitcherFab() {
         gap: 1.25,
       }}
     >
-      <Backdrop open={open} onClick={() => setOpen(false)} sx={{ zIndex: -1, bgcolor: 'rgba(0,0,0,0.4)' }} />
+      <Backdrop
+        open={open}
+        onClick={() => setOpen(false)}
+        sx={{
+          zIndex: -1,
+          bgcolor: 'rgba(0,0,0,0.32)',
+          backdropFilter: 'blur(6px) saturate(140%)',
+          transition: 'opacity 180ms ease',
+        }}
+      />
 
       <Stack spacing={1.25} sx={{ mb: 0.25 }}>
         {items.map((app, index) => (
@@ -204,13 +214,14 @@ function AppSwitcherFab() {
                   px: 1.25,
                   py: 0.75,
                   borderRadius: 999,
-                  bgcolor: '#161514',
+                  bgcolor: 'rgba(22,20,18,0.92)',
                   border: '1px solid rgba(255,255,255,0.08)',
                   color: '#fff',
                   fontWeight: 800,
                   letterSpacing: '0.1em',
                   textTransform: 'uppercase',
                   boxShadow: surfaceShadow,
+                  backdropFilter: 'blur(10px)',
                 }}
               >
                 {app.label}
@@ -245,6 +256,56 @@ function AppSwitcherFab() {
             </Box>
           </Zoom>
         ))}
+        <Zoom in={open} style={{ transitionDelay: open ? `${items.length * 40}ms` : '0ms' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                px: 1.25,
+                py: 0.75,
+                borderRadius: 999,
+                bgcolor: 'rgba(22,20,18,0.92)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#fff',
+                fontWeight: 800,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                boxShadow: surfaceShadow,
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              Back to top
+            </Typography>
+
+            <Fab
+              size="medium"
+              aria-label="Scroll back to top"
+              onClick={() => {
+                setOpen(false);
+                window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+              }}
+              sx={{
+                width: 52,
+                height: 52,
+                bgcolor: '#1F1D1B',
+                color: '#fff',
+                boxShadow: `0 12px 26px rgba(0,0,0,0.35)`,
+                border: '1px solid rgba(255,255,255,0.08)',
+                transition: reduceMotion ? 'none' : 'transform 150ms ease-out, box-shadow 150ms ease-out',
+                '&:hover': {
+                  bgcolor: '#1F1D1B',
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 16px 30px rgba(0,0,0,0.45)`,
+                },
+                '&.Mui-focusVisible': {
+                  boxShadow: `0 0 0 1px ${alpha('#fff', 0.5)}, 0 0 0 6px ${alpha('#6366F1', 0.18)}`,
+                },
+              }}
+            >
+              <ArrowUp size={22} />
+            </Fab>
+          </Box>
+        </Zoom>
       </Stack>
 
       <Fab

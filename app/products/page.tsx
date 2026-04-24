@@ -67,23 +67,23 @@ const ProductHero = ({ app, reversed = false }: any) => (
             display: 'flex', 
             flexDirection: 'column', 
             justifyContent: 'center',
-            bgcolor: 'rgba(5,5,5,0.4)',
+            bgcolor: '#161514',
             border: '1px solid rgba(255,255,255,0.1)',
             borderRadius: 8,
             overflow: 'hidden',
             position: 'relative'
           }}
         >
-          <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 40, bgcolor: 'rgba(255,255,255,0.03)', display: 'flex', alignItems: 'center', px: 2, gap: 1 }}>
+          <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 40, bgcolor: '#1F1D1B', display: 'flex', alignItems: 'center', px: 2, gap: 1 }}>
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'rgba(255,95,86,0.5)' }} />
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'rgba(255,189,46,0.5)' }} />
             <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'rgba(39,201,63,0.5)' }} />
           </Box>
           <Stack spacing={3} sx={{ px: 4 }}>
              <Box sx={{ height: 10, width: '40%', bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 5 }} />
-             <Box sx={{ height: 60, width: '100%', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2 }} />
+              <Box sx={{ height: 60, width: '100%', bgcolor: '#1F1D1B', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2 }} />
              <Box sx={{ height: 10, width: '60%', bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 5 }} />
-             <Box sx={{ height: 100, width: '100%', bgcolor: 'rgba(0,245,255,0.02)', border: '1px dashed rgba(0,245,255,0.1)', borderRadius: 2 }} />
+              <Box sx={{ height: 100, width: '100%', bgcolor: '#1F1D1B', border: '1px dashed rgba(0,245,255,0.1)', borderRadius: 2 }} />
           </Stack>
         </Paper>
       </Grid>
@@ -144,7 +144,7 @@ export default function ProductsPage() {
   ];
 
   return (
-    <Box component="main" sx={{ pt: 12 }}>
+    <Box component="main" sx={{ pt: 12, bgcolor: '#000', color: '#fff' }}>
       <Navbar />
       
       <Container maxWidth="xl">
@@ -180,7 +180,7 @@ export default function ProductsPage() {
         </Box>
       </Container>
 
-      <Box sx={{ py: 15, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: 'rgba(5,5,5,0.8)' }}>
+      <Box sx={{ py: 15, borderTop: '1px solid rgba(255,255,255,0.1)', bgcolor: '#000' }}>
         <Container maxWidth="xl">
           <Typography variant="caption" sx={{ opacity: 0.2 }}>
             © 2026 Kylrix Organization. Built with absolute precision.
