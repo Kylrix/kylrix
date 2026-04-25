@@ -263,7 +263,7 @@ export default function DesignStudio({ slug = DESIGN_DEFAULT_SLUG }: DesignStudi
                   </Typography>
                 </Box>
                 <IconButton onClick={() => setDrawerOpen(true)} sx={{ color: 'white' }}>
-                  <Menu size={18} />
+                  <MenuIcon size={18} />
                 </IconButton>
               </Stack>
             </Box>

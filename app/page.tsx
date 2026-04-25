@@ -145,19 +145,19 @@ const integrationCards = [
 const infraPanels = [
   {
     title: 'AI Agents',
-    label: 'Built into the apps',
+    label: 'AI agents',
     copy: 'AI can help inside the apps without making you move your data somewhere else.',
     icon: Zap,
   },
   {
     title: 'Non-custodial financial layer',
-    label: 'Built into the apps',
+    label: 'Payments',
     copy: 'Payments and settlement can live alongside your work, not outside it.',
     icon: Wallet,
   },
   {
     title: 'Crypto-exclusive subscriptions',
-    label: 'Built into the apps',
+    label: 'Billing',
     copy: 'Pricing and subscriptions can run on crypto instead of card rails.',
     icon: Waypoints,
   },
@@ -367,154 +367,154 @@ function LiveSurfaceCard({
         },
       }}
     >
-      <Paper
-        className="surface-shell"
-        component={motion.div}
-        style={{ y, rotate, scale }}
-        sx={{
-          height: '100%',
-          minHeight: 248,
-          p: 2.25,
-          borderRadius: 2.25,
-          bgcolor: '#161514',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: surfaceShadow,
-          overflow: 'hidden',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-          transition: reduceMotion ? 'none' : 'transform 150ms ease-out, background-color 150ms ease-out',
-          '&:hover': {
-            bgcolor: '#1F1D1B',
-          },
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            inset: 0,
-            background: `radial-gradient(circle at 18% 0%, ${alpha(panel.accent, 0.18)}, transparent 46%)`,
-            opacity: 0,
-            transition: reduceMotion ? 'none' : 'opacity 150ms ease-out',
-            pointerEvents: 'none',
-          },
-          '&:hover::before': {
-            opacity: 1,
-          },
-        }}
-      >
-        <Stack spacing={2} sx={{ position: 'relative', height: '100%' }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 1.5,
-              pb: 1.5,
-              borderBottom: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <Stack direction="row" alignItems="center" spacing={1.25}>
-              <Box
-                sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 2,
-                  display: 'grid',
-                  placeItems: 'center',
-                  bgcolor: '#1F1D1B',
-                  border: `1px solid ${alpha(panel.accent, 0.28)}`,
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05), 0 12px 24px ${alpha(panel.accent, 0.12)}`,
-                  flexShrink: 0,
-                }}
-              >
-                <Logo app={panel.id as KylrixApp} size={24} variant="icon" />
-              </Box>
-              <Box>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    display: 'block',
-                    fontWeight: 800,
-                    letterSpacing: '0.16em',
-                    textTransform: 'uppercase',
-                    color: alpha(panel.accent, 0.95),
-                  }}
-                >
-                  {panel.eyebrow}
-                </Typography>
-                <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, lineHeight: 1.05 }}>
-                  {appMeta.label}
-                </Typography>
-              </Box>
-            </Stack>
-            <ArrowRight size={16} color={panel.accent} />
-          </Box>
-
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              gap: 1.75,
-            }}
-          >
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.78)', lineHeight: 1.75, maxWidth: 300 }}>
-              {panel.summary}
-            </Typography>
-
-            <Stack spacing={1}>
-              {panel.rows.map((row) => (
-                <Box
-                  key={row.title}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 2,
-                    px: 1.5,
-                    py: 1.1,
-                    borderRadius: 1.5,
-                    bgcolor: '#1F1D1B',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }}
-                >
-                  <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1.3 }}>
-                    {row.title}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: alpha(panel.accent, 0.9), fontWeight: 800 }}>
-                    {row.meta}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-
+      <motion.div style={{ y, rotate, scale }}>
+        <Paper
+          className="surface-shell"
+          sx={{
+            height: '100%',
+            minHeight: 248,
+            p: 2.25,
+            borderRadius: 2.25,
+            bgcolor: '#161514',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: surfaceShadow,
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            transition: reduceMotion ? 'none' : 'transform 150ms ease-out, background-color 150ms ease-out',
+            '&:hover': {
+              bgcolor: '#1F1D1B',
+            },
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              inset: 0,
+              background: `radial-gradient(circle at 18% 0%, ${alpha(panel.accent, 0.18)}, transparent 46%)`,
+              opacity: 0,
+              transition: reduceMotion ? 'none' : 'opacity 150ms ease-out',
+              pointerEvents: 'none',
+            },
+            '&:hover::before': {
+              opacity: 1,
+            },
+          }}
+        >
+          <Stack spacing={2} sx={{ position: 'relative', height: '100%' }}>
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                pt: 1,
-                borderTop: '1px solid rgba(255,255,255,0.08)',
+                gap: 1.5,
+                pb: 1.5,
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
               }}
             >
-              <Typography
-                variant="caption"
+              <Stack direction="row" alignItems="center" spacing={1.25}>
+                <Box
+                  sx={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 2,
+                    display: 'grid',
+                    placeItems: 'center',
+                    bgcolor: '#1F1D1B',
+                    border: `1px solid ${alpha(panel.accent, 0.28)}`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.05), 0 12px 24px ${alpha(panel.accent, 0.12)}`,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Logo app={panel.id as KylrixApp} size={24} variant="icon" />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      display: 'block',
+                      fontWeight: 800,
+                      letterSpacing: '0.16em',
+                      textTransform: 'uppercase',
+                      color: alpha(panel.accent, 0.95),
+                    }}
+                  >
+                    {panel.eyebrow}
+                  </Typography>
+                  <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, lineHeight: 1.05 }}>
+                    {appMeta.label}
+                  </Typography>
+                </Box>
+              </Stack>
+              <ArrowRight size={16} color={panel.accent} />
+            </Box>
+
+            <Box
+              sx={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: 1.75,
+              }}
+            >
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.78)', lineHeight: 1.75, maxWidth: 300 }}>
+                {panel.summary}
+              </Typography>
+
+              <Stack spacing={1}>
+                {panel.rows.map((row) => (
+                  <Box
+                    key={row.title}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 2,
+                      px: 1.5,
+                      py: 1.1,
+                      borderRadius: 1.5,
+                      bgcolor: '#1F1D1B',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ color: '#fff', fontWeight: 700, lineHeight: 1.3 }}>
+                      {row.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: alpha(panel.accent, 0.9), fontWeight: 800 }}>
+                      {row.meta}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+
+              <Box
                 sx={{
-                  fontWeight: 800,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  color: alpha(panel.accent, 0.95),
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  pt: 1,
+                  borderTop: '1px solid rgba(255,255,255,0.08)',
                 }}
               >
-                {panel.footer}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>
-                Open {appMeta.label}
-              </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontWeight: 800,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: alpha(panel.accent, 0.95),
+                  }}
+                >
+                  {panel.footer}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>
+                  Open {appMeta.label}
+                </Typography>
+              </Box>
             </Box>
-          </Box>
-        </Stack>
-      </Paper>
+          </Stack>
+        </Paper>
+      </motion.div>
     </ButtonBase>
   );
 }
@@ -920,7 +920,7 @@ export default function LandingPage() {
               textTransform: 'uppercase',
             }}
           >
-            Built into the apps
+            Inside the product
           </Typography>
           <Typography
             variant="h2"
@@ -931,7 +931,7 @@ export default function LandingPage() {
               fontFamily: 'var(--font-clash)',
             }}
           >
-            AI, payments, and subscriptions sit inside the product.
+            AI, payments, and billing are part of the product.
           </Typography>
         </Stack>
 

@@ -40,7 +40,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshUser = useCallback(async (retryCount = 0, forceRefresh = false): Promise<User | null> => {
     try {
       console.log(`[Auth] Checking session in kylrix (attempt ${retryCount + 1})...`);
-      const session = await getCurrentUser(forceRefresh);
+      if (forceRefresh) {
+        invalidateCurrentUserCache(null);
+      }
+      const session = await getCurrentUser();
       
       console.log('[Auth] Active session detected:', session.$id);
       
