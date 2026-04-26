@@ -423,6 +423,7 @@ export const Navbar = () => {
                 </IconButton>
               ) : (
                 <Button
+                  id="navbar-connect-btn"
                   onClick={handleLaunchClick}
                   variant="contained"
                   size="small"

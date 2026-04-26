@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse } from '@/lib/appwrite';
+import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, globalSessionPromise } from '@/lib/appwrite';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 
 interface User {
@@ -27,11 +27,11 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // 1. Instant Synchronous Load from Pulse Cache
+  // 1. Instant Synchronous Load from Pulse Cache (Bridge or Local)
   const [user, setUser] = useState<User | null>(() => {
     const pulse = getKylrixPulse();
     if (pulse) {
-        return { $id: pulse.$id, name: pulse.name, isPulse: true, email: null };
+        return { $id: pulse.$id, name: pulse.name, isPulse: true, email: null, profilePicId: pulse.profilePicId };
     }
     return null;
   });
@@ -47,7 +47,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 2. Background Revalidation (Mandatory account.get)
   const refreshUser = useCallback(async (): Promise<User | null> => {
     try {
-      const session = await account.get();
+      // Use the pre-started global promise for maximum speed
+      const session = await globalSessionPromise;
       if (session) {
         setUser(session as any);
         setKylrixPulse(session);
@@ -76,6 +77,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     initAuthStarted.current = true;
     refreshUser();
   }, [refreshUser]);
+
+  // Handle cross-tab or bridge discovery
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkPulse = () => {
+        const pulse = getKylrixPulse();
+        if (pulse && !user) {
+            setUser({ $id: pulse.$id, name: pulse.name, isPulse: true, email: null, profilePicId: pulse.profilePicId });
+            setIsLoading(false);
+        }
+    };
+    window.addEventListener('focus', checkPulse);
+    return () => window.removeEventListener('focus', checkPulse);
+  }, [user]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {

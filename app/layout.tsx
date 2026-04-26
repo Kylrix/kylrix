@@ -52,6 +52,24 @@ export default function RootLayout({
         {/* Instant API Handshake */}
         <link rel="preconnect" href="https://api.kylrix.space" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.kylrix.space" />
+
+        {/* Pulse Bridge: Handshake LocalStorage to DOM instantly to kill FOUC */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function() {
+            try {
+              var p = localStorage.getItem('kylrix_pulse_v1');
+              if (p) {
+                var d = JSON.parse(p);
+                window.__KYLRIX_PULSE__ = d;
+                document.documentElement.setAttribute('data-kylrix-pulse', 'true');
+                // Inject instant style to hide Connect button before React loads
+                var s = document.createElement('style');
+                s.innerHTML = '[data-kylrix-pulse="true"] #navbar-connect-btn { display: none !important; }';
+                document.head.appendChild(s);
+              }
+            } catch(e) {}
+          })();
+        `}} />
         
         {/* THE KYLRIX SIGNATURE TRIO: Satoshi (Body) & Clash Display (Headings) via Fontshare */}
         <link 
