@@ -38,10 +38,14 @@ export interface KylrixPulse {
     $id: string;
     name: string;
     avatarBase64?: string | null;
+    profilePicId?: string | null;
 }
 
 export function getKylrixPulse(): KylrixPulse | null {
     if (typeof window === 'undefined') return null;
+    // Check if the Bridge already extracted it to window
+    if ((window as any).__KYLRIX_PULSE__) return (window as any).__KYLRIX_PULSE__;
+    
     try {
         const raw = localStorage.getItem(PULSE_KEY);
         return raw ? JSON.parse(raw) : null;
@@ -57,9 +61,11 @@ export function setKylrixPulse(user: any, avatarBase64?: string | null) {
         const pulse: KylrixPulse = {
             $id: user.$id,
             name: user.name || user.username || 'User',
+            profilePicId: user.prefs?.profilePicId || user.profilePicId || current?.profilePicId || null,
             avatarBase64: avatarBase64 || (current?.$id === user.$id ? current?.avatarBase64 : null)
         };
         localStorage.setItem(PULSE_KEY, JSON.stringify(pulse));
+        (window as any).__KYLRIX_PULSE__ = pulse;
     } catch (e) {
         console.warn('[Pulse] Quota exceeded or storage failure');
     }
@@ -68,24 +74,23 @@ export function setKylrixPulse(user: any, avatarBase64?: string | null) {
 export function clearKylrixPulse() {
     if (typeof window === 'undefined') return;
     localStorage.removeItem(PULSE_KEY);
+    delete (window as any).__KYLRIX_PULSE__;
+    document.documentElement.removeAttribute('data-kylrix-pulse');
 }
 
-// --- USER SESSION ---
+// --- INSTANT UNDERGROUND FETCH ---
+// Start the fetch the absolute microsecond this module is loaded.
+export const globalSessionPromise = typeof window !== 'undefined' 
+    ? account.get().catch(() => null) 
+    : Promise.resolve(null);
 
 export async function getCurrentUser(): Promise<any | null> {
-    try {
-        return await account.get();
-    } catch {
-        return null;
-    }
+    return await globalSessionPromise;
 }
 
 // Compatibility placeholders
-export function getCurrentUserSnapshot() { return null; }
+export function getCurrentUserSnapshot() { return getKylrixPulse(); }
 export function invalidateCurrentUserCache() { clearKylrixPulse(); }
-export function getIdentityCollateral() { return null; }
-export function setIdentityCollateral() {}
-export function clearIdentityCollateral() {}
 
 export async function getCurrentUserFromRequest(req: { headers: { get(k: string): string | null } } | null | undefined): Promise<any | null> {
     try {
