@@ -14,104 +14,75 @@ export const storage = new Storage(client);
 export const realtime = new Realtime(client);
 export const tablesDB = new TablesDB(client);
 
-export { client };
+export { client, ID, Query };
 
-export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
-export const APPWRITE_TABLE_ID_USERS = APPWRITE_CONFIG.TABLES.NOTE.USERS;
-export const APPWRITE_BUCKET_PROFILE_PICTURES = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
-
-export { ID, Query };
-
-export function getFilePreview(bucketId: string, fileId: string, width: number = 64, height: number = 64) {
-    return storage.getFilePreview(bucketId, fileId, width, height);
-}
-
-export function getProfilePicturePreview(fileId: string, width: number = 64, height: number = 64) {
-    return getFilePreview("profile_pictures", fileId, width, height);
-}
-
-// --- KYLRIX PULSE (NEW ISOLATED CACHE) ---
-
-const PULSE_KEY = 'kylrix_pulse_v1';
+// --- UNIFIED DOMAIN PULSE (CROSS-SUBDOMAIN INSTANT IDENTITY) ---
+const PULSE_COOKIE_NAME = 'kylrix_pulse_v2';
+const AVATAR_CACHE_PREFIX = 'kylrix_avatar_pulse_v2_';
 
 export interface KylrixPulse {
     $id: string;
     name: string;
-    avatarBase64?: string | null;
     profilePicId?: string | null;
+    avatarBase64?: string | null;
 }
 
 export function getKylrixPulse(): KylrixPulse | null {
     if (typeof window === 'undefined') return null;
-    // Check if the Bridge already extracted it to window
     if ((window as any).__KYLRIX_PULSE__) return (window as any).__KYLRIX_PULSE__;
     
     try {
-        const raw = localStorage.getItem(PULSE_KEY);
-        return raw ? JSON.parse(raw) : null;
-    } catch {
-        return null;
-    }
+        const match = document.cookie.match(new RegExp('(^| )' + PULSE_COOKIE_NAME + '=([^;]+)'));
+        if (match) {
+            const basic = JSON.parse(decodeURIComponent(match[2]));
+            const avatar = localStorage.getItem(AVATAR_CACHE_PREFIX + basic.$id);
+            return { ...basic, avatarBase64: avatar };
+        }
+    } catch (e) {}
+    return null;
 }
 
 export function setKylrixPulse(user: any, avatarBase64?: string | null) {
     if (typeof window === 'undefined') return;
     try {
-        const current = getKylrixPulse();
-        const pulse: KylrixPulse = {
+        const pulse = {
             $id: user.$id,
             name: user.name || user.username || 'User',
-            profilePicId: user.prefs?.profilePicId || user.profilePicId || current?.profilePicId || null,
-            avatarBase64: avatarBase64 || (current?.$id === user.$id ? current?.avatarBase64 : null)
+            profilePicId: user.prefs?.profilePicId || user.profilePicId || null
         };
-        localStorage.setItem(PULSE_KEY, JSON.stringify(pulse));
-        (window as any).__KYLRIX_PULSE__ = pulse;
-    } catch (e) {
-        console.warn('[Pulse] Quota exceeded or storage failure');
-    }
+        const domain = 'kylrix.space';
+        document.cookie = `${PULSE_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(pulse))}; path=/; domain=.${domain}; max-age=31536000; SameSite=Lax`;
+        if (avatarBase64) localStorage.setItem(AVATAR_CACHE_PREFIX + user.$id, avatarBase64);
+        (window as any).__KYLRIX_PULSE__ = { ...pulse, avatarBase64: avatarBase64 || localStorage.getItem(AVATAR_CACHE_PREFIX + user.$id) };
+    } catch (e) {}
 }
 
 export function clearKylrixPulse() {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(PULSE_KEY);
+    const domain = 'kylrix.space';
+    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     delete (window as any).__KYLRIX_PULSE__;
     document.documentElement.removeAttribute('data-kylrix-pulse');
 }
 
-// --- INSTANT UNDERGROUND FETCH ---
-// Start the fetch the absolute microsecond this module is loaded.
-export const globalSessionPromise = typeof window !== 'undefined' 
-    ? account.get().catch(() => null) 
-    : Promise.resolve(null);
+export const globalSessionPromise = typeof window !== 'undefined' ? account.get().catch(() => null) : Promise.resolve(null);
 
 export async function getCurrentUser(): Promise<any | null> {
     return await globalSessionPromise;
 }
-
-// Compatibility placeholders
-export function getCurrentUserSnapshot() { return getKylrixPulse(); }
-export function invalidateCurrentUserCache() { clearKylrixPulse(); }
 
 export async function getCurrentUserFromRequest(req: { headers: { get(k: string): string | null } } | null | undefined): Promise<any | null> {
     try {
         if (!req) return null;
         const cookieHeader = req.headers.get('cookie') || req.headers.get('Cookie');
         if (!cookieHeader) return null;
-
         const res = await fetch(`${APPWRITE_ENDPOINT}/account`, {
             method: 'GET',
-            headers: {
-                'X-Appwrite-Project': APPWRITE_PROJECT_ID,
-                'Cookie': cookieHeader,
-                'Accept': 'application/json'
-            },
+            headers: { 'X-Appwrite-Project': APPWRITE_PROJECT_ID, 'Cookie': cookieHeader, 'Accept': 'application/json' },
             cache: 'no-store'
         });
         if (!res.ok) return null;
         const data = await res.json();
-        if (!data || typeof data !== 'object' || !data.$id) return null;
-        return data;
-    } catch {
-        return null;
-    }
+        return (data && data.$id) ? data : null;
+    } catch { return null; }
 }
