@@ -2,13 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser, account } from '@/lib/appwrite';
+import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse } from '@/lib/appwrite';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 
 interface User {
   $id: string;
   email: string | null;
   name: string | null;
+  isPulse?: boolean;
   [key: string]: any;
 }
 
@@ -26,8 +27,16 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // 1. Instant Synchronous Load from Pulse Cache
+  const [user, setUser] = useState<User | null>(() => {
+    const pulse = getKylrixPulse();
+    if (pulse) {
+        return { $id: pulse.$id, name: pulse.name, isPulse: true, email: null };
+    }
+    return null;
+  });
+  
+  const [isLoading, setIsLoading] = useState(!getKylrixPulse());
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [idmWindowOpen, setIDMWindowOpen] = useState(false);
   const idmWindowRef = useRef<Window | null>(null);
@@ -35,13 +44,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const router = useRouter();
   const pathname = usePathname();
 
+  // 2. Background Revalidation (Mandatory account.get)
   const refreshUser = useCallback(async (): Promise<User | null> => {
-    setIsLoading(true);
     try {
-      const session = await getCurrentUser();
+      const session = await account.get();
       if (session) {
         setUser(session as any);
-        // Clear auth=success from URL
+        setKylrixPulse(session);
+        
         if (typeof window !== 'undefined' && window.location.search.includes('auth=success')) {
           const url = new URL(window.location.href);
           url.searchParams.delete('auth');
@@ -49,10 +59,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       } else {
         setUser(null);
+        clearKylrixPulse();
       }
       return session as any;
     } catch (error) {
       setUser(null);
+      clearKylrixPulse();
       return null;
     } finally {
       setIsLoading(false);
@@ -112,9 +124,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = useCallback(async () => {
     try {
       await account.deleteSession('current');
+    } finally {
       setUser(null);
-    } catch (error) {
-      setUser(null);
+      clearKylrixPulse();
+      setIDMWindowOpen(false);
     }
   }, []);
 

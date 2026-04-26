@@ -18,8 +18,6 @@ export { client };
 
 export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 export const APPWRITE_TABLE_ID_USERS = APPWRITE_CONFIG.TABLES.NOTE.USERS;
-export const APPWRITE_DATABASE_ID_CONNECT = APPWRITE_CONFIG.DATABASES.CONNECT;
-export const APPWRITE_TABLE_ID_CONNECT_USERS = APPWRITE_CONFIG.TABLES.CONNECT.USERS;
 export const APPWRITE_BUCKET_PROFILE_PICTURES = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
 
 export { ID, Query };
@@ -32,24 +30,62 @@ export function getProfilePicturePreview(fileId: string, width: number = 64, hei
     return getFilePreview("profile_pictures", fileId, width, height);
 }
 
-// --- INSTANT USER SESSION ---
-// Start the fetch the absolute microsecond this module is loaded, before React even breathes.
-const globalSessionPromise = typeof window !== 'undefined' 
-    ? account.get().catch(() => null) 
-    : Promise.resolve(null);
+// --- KYLRIX PULSE (NEW ISOLATED CACHE) ---
+
+const PULSE_KEY = 'kylrix_pulse_v1';
+
+export interface KylrixPulse {
+    $id: string;
+    name: string;
+    avatarBase64?: string | null;
+}
+
+export function getKylrixPulse(): KylrixPulse | null {
+    if (typeof window === 'undefined') return null;
+    try {
+        const raw = localStorage.getItem(PULSE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+}
+
+export function setKylrixPulse(user: any, avatarBase64?: string | null) {
+    if (typeof window === 'undefined') return;
+    try {
+        const current = getKylrixPulse();
+        const pulse: KylrixPulse = {
+            $id: user.$id,
+            name: user.name || user.username || 'User',
+            avatarBase64: avatarBase64 || (current?.$id === user.$id ? current?.avatarBase64 : null)
+        };
+        localStorage.setItem(PULSE_KEY, JSON.stringify(pulse));
+    } catch (e) {
+        console.warn('[Pulse] Quota exceeded or storage failure');
+    }
+}
+
+export function clearKylrixPulse() {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(PULSE_KEY);
+}
+
+// --- USER SESSION ---
 
 export async function getCurrentUser(): Promise<any | null> {
-    return await globalSessionPromise;
+    try {
+        return await account.get();
+    } catch {
+        return null;
+    }
 }
 
-// Minimal placeholder for compatibility
-export function getCurrentUserSnapshot() {
-    return null;
-}
-
-export function invalidateCurrentUserCache() {
-    // No-op
-}
+// Compatibility placeholders
+export function getCurrentUserSnapshot() { return null; }
+export function invalidateCurrentUserCache() { clearKylrixPulse(); }
+export function getIdentityCollateral() { return null; }
+export function setIdentityCollateral() {}
+export function clearIdentityCollateral() {}
 
 export async function getCurrentUserFromRequest(req: { headers: { get(k: string): string | null } } | null | undefined): Promise<any | null> {
     try {
@@ -70,7 +106,7 @@ export async function getCurrentUserFromRequest(req: { headers: { get(k: string)
         const data = await res.json();
         if (!data || typeof data !== 'object' || !data.$id) return null;
         return data;
-    } catch (_e: unknown) {
+    } catch {
         return null;
     }
 }
