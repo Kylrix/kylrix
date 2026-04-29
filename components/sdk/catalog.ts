@@ -1,7 +1,16 @@
-export interface SdkSection extends SdkSectionNav {
-  description: string;
-  snippet: string;
-}
+import type { ComponentType } from 'react';
+import {
+  Blocks,
+  CirclePlus,
+  MessageSquare,
+  Palette,
+  Phone,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  Waypoints,
+  PanelsTopLeft,
+} from 'lucide-react';
 
 export interface SdkSectionNav {
   id: string;
@@ -9,6 +18,12 @@ export interface SdkSectionNav {
   summary: string;
   accent: string;
   sourceHref: string;
+}
+
+export interface SdkSection extends SdkSectionNav {
+  description: string;
+  snippet: string;
+  icon: ComponentType<{ size?: number }>;
 }
 
 const githubBase = 'https://github.com/kylrix/sdks/blob/master/typescript/src';
@@ -21,7 +36,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'Shared colors and layout tokens used across the ecosystem.',
     accent: '#6366F1',
     sourceHref: `${githubBase}/design/index.ts`,
-    snippet: `import { KYLRIX_COLORS, KYLRIX_APP_TONES, TOPBAR_LAYOUT } from '@kylrix/sdk/design';`,
+    snippet: `import { KYLRIX_COLORS, KYLRIX_APP_TONES, TOPBAR_LAYOUT } from '@/lib/sdk/design';`,
+    icon: Palette,
   },
   {
     id: 'topbar',
@@ -30,7 +46,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'The shared topbar contract that powers search, profile, and ecosystem actions.',
     accent: '#EC4899',
     sourceHref: `${githubBase}/topbar/index.ts`,
-    snippet: `import { createTopbarSurface, createTopbarAction } from '@kylrix/sdk/topbar';`,
+    snippet: `import { createTopbarSurface, createTopbarAction } from '@/lib/sdk/topbar';`,
+    icon: PanelsTopLeft,
   },
   {
     id: 'fab',
@@ -39,7 +56,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'The global floating action button model for compose-style shortcuts.',
     accent: '#10B981',
     sourceHref: `${githubBase}/fab/index.ts`,
-    snippet: `import { createFabAction } from '@kylrix/sdk/fab';`,
+    snippet: `import { createFabAction } from '@/lib/sdk/fab';`,
+    icon: CirclePlus,
   },
   {
     id: 'profile-preview',
@@ -48,7 +66,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'Profile photo fetching with cache-first behavior and Appwrite previews.',
     accent: '#F59E0B',
     sourceHref: `${githubBase}/appwrite/index.ts`,
-    snippet: `import { createProfilePreviewManager } from '@kylrix/sdk/appwrite';`,
+    snippet: `import { createProfilePreviewManager } from '@/lib/sdk/appwrite';`,
+    icon: UserRound,
   },
   {
     id: 'ecosystem',
@@ -57,7 +76,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'Shared app URLs and cross-app routing helpers for the graph.',
     accent: '#6366F1',
     sourceHref: `${githubBase}/ecosystem/index.ts`,
-    snippet: `import { getEcosystemUrl, ECOSYSTEM_APPS } from '@kylrix/sdk/ecosystem';`,
+    snippet: `import { getEcosystemUrl, ECOSYSTEM_APPS } from '@/lib/sdk/ecosystem';`,
+    icon: Waypoints,
   },
   {
     id: 'security',
@@ -66,7 +86,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'Zero-knowledge primitives, unlock/reset flows, and trust boundaries.',
     accent: '#10B981',
     sourceHref: `${githubBase}/security/index.ts`,
-    snippet: `import { deriveMasterpassKey, resetMasterpassState } from '@kylrix/sdk/security';`,
+    snippet: `import { deriveMasterpassKey, resetMasterpassState } from '@/lib/sdk/security';`,
+    icon: ShieldCheck,
   },
   {
     id: 'messaging',
@@ -75,7 +96,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'Shared message types for real-time conversations and read state.',
     accent: '#F97316',
     sourceHref: `${githubBase}/messaging/index.ts`,
-    snippet: `import { createMessageEnvelope } from '@kylrix/sdk/messaging';`,
+    snippet: `import { createMessageEnvelope } from '@/lib/sdk/messaging';`,
+    icon: MessageSquare,
   },
   {
     id: 'social',
@@ -84,7 +106,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'Post and thread primitives for the feed and its metadata.',
     accent: '#EC4899',
     sourceHref: `${githubBase}/social/index.ts`,
-    snippet: `import { createMomentSignal } from '@kylrix/sdk/social';`,
+    snippet: `import { createMomentSignal } from '@/lib/sdk/social';`,
+    icon: Sparkles,
   },
   {
     id: 'huddles',
@@ -93,7 +116,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'Transient call/session objects for tasks, notes, and threads.',
     accent: '#A855F7',
     sourceHref: `${githubBase}/huddles/index.ts`,
-    snippet: `import { createHuddleSignal } from '@kylrix/sdk/huddles';`,
+    snippet: `import { createHuddleSignal } from '@/lib/sdk/huddles';`,
+    icon: Phone,
   },
   {
     id: 'extensions',
@@ -102,7 +126,8 @@ export const SDK_SECTIONS: SdkSection[] = [
     description: 'The ecosystem extension contract used by Note and companion apps.',
     accent: '#22C55E',
     sourceHref: `${githubBase}/extensions/index.ts`,
-    snippet: `import { createExtensionManifest } from '@kylrix/sdk/extensions';`,
+    snippet: `import { createExtensionManifest } from '@/lib/sdk/extensions';`,
+    icon: Blocks,
   },
 ];
 
