@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   alpha,
   Avatar,
@@ -398,6 +398,68 @@ function renderSection(sectionId: string) {
   }
 }
 
+function DemoHeader({ section }: { section: ReturnType<typeof getSdkSection> }) {
+  return (
+    <Paper
+      sx={{
+        p: { xs: 2.5, md: 3 },
+        borderRadius: 6,
+        bgcolor: 'rgba(255,255,255,0.03)',
+        border: '1px solid rgba(255,255,255,0.08)',
+      }}
+    >
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2} flexWrap="wrap">
+        <Box>
+          <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 900, letterSpacing: '0.18em' }}>
+            LIVE SDK DEMO
+          </Typography>
+          <Typography variant="h3" sx={{ mt: 1, fontWeight: 900, letterSpacing: '-0.05em' }}>
+            {section.title}
+          </Typography>
+          <Typography variant="body2" sx={{ mt: 1, color: 'rgba(255,255,255,0.66)', lineHeight: 1.8, maxWidth: 720 }}>
+            {section.description}
+          </Typography>
+        </Box>
+
+        <Chip
+          label={section.sourceHref.replace('https://github.com/kylrix/sdks/blob/master/', '')}
+          sx={{ bgcolor: 'rgba(255,255,255,0.04)', color: '#fff', maxWidth: '100%' }}
+        />
+      </Stack>
+    </Paper>
+  );
+}
+
+function DemoStage({ children, accent }: { children: ReactNode; accent: string }) {
+  return (
+    <Paper
+      sx={{
+        p: { xs: 2, md: 3 },
+        borderRadius: 6,
+        bgcolor: 'rgba(255,255,255,0.025)',
+        border: `1px solid ${alpha(accent, 0.14)}`,
+        boxShadow: `0 24px 80px ${alpha(accent, 0.08)}`,
+      }}
+    >
+      <Box
+        sx={{
+          minHeight: { xs: 220, md: 280 },
+          p: { xs: 1, md: 2 },
+          borderRadius: 5,
+          bgcolor: 'rgba(0,0,0,0.18)',
+          border: '1px solid rgba(255,255,255,0.05)',
+          display: 'flex',
+          alignItems: 'stretch',
+          justifyContent: 'stretch',
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{children}</Box>
+      </Box>
+    </Paper>
+  );
+}
+
 export default function SdkDemoPage() {
   const [activeSection, setActiveSection] = useState('topbar');
   const section = getSdkSection(activeSection);
@@ -408,36 +470,11 @@ export default function SdkDemoPage() {
       <SdkShell sections={SDK_SECTIONS} activeSection={activeSection} onSelectSection={setActiveSection}>
         <Container maxWidth="xl" sx={{ px: { xs: 0, md: 1 } }}>
           <Stack spacing={2.5}>
-            <Paper
-              sx={{
-                p: { xs: 2.5, md: 3 },
-                borderRadius: 6,
-                bgcolor: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
-              <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2} flexWrap="wrap">
-                  <Box>
-                    <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 900, letterSpacing: '0.18em' }}>
-                      LIVE SDK DEMO
-                    </Typography>
-                    <Typography variant="h3" sx={{ mt: 1, fontWeight: 900, letterSpacing: '-0.05em' }}>
-                      {section.title}
-                    </Typography>
-                    <Typography variant="body2" sx={{ mt: 1, color: 'rgba(255,255,255,0.66)', lineHeight: 1.8 }}>
-                      {section.description}
-                    </Typography>
-                  </Box>
-                  <Chip
-                    label={section.sourceHref.replace('https://github.com/kylrix/sdks/blob/master/', '')}
-                    sx={{ bgcolor: 'rgba(255,255,255,0.04)', color: '#fff', maxWidth: '100%' }}
-                  />
-                </Stack>
+            <DemoHeader section={section} />
 
-                {renderSection(section.id)}
-              </Stack>
-            </Paper>
+            <DemoStage accent={section.accent}>
+              {renderSection(section.id)}
+            </DemoStage>
 
             <Stack direction="row" spacing={1.25} flexWrap="wrap">
               <Button
