@@ -138,7 +138,7 @@ export const Navbar = () => {
       items: [
         { label: 'Documentation', href: '/docs', icon: 'file-text' },
         { label: 'API Reference', href: '/docs/api', icon: 'zap' },
-        { label: 'SDKs & Tools', href: '/downloads', icon: 'settings' },
+        { label: 'SDK Demo', href: '/sdk', icon: 'settings' },
         { label: 'GitHub', href: 'https://github.com/kylrix', icon: 'github', external: true },
       ]
     },

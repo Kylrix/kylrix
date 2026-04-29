@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@kylrix/sdk": [
+        "./lib/sdk/index.ts"
+      ],
+      "@kylrix/sdk/*": [
+        "./lib/sdk/*"
       ]
     }
   },
