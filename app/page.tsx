@@ -529,6 +529,38 @@ export default function LandingPage() {
   });
   const showcaseGlowY = useTransform(scrollYProgress, [0, 1], [0, -90]);
 
+  // Auto-redirect logged-in users to last active app
+  React.useEffect(() => {
+    const checkAndRedirect = async () => {
+      try {
+        // Dynamically import the SDK to avoid hydration issues
+        const { Kylrix } = await import('@/lib/ecosystem');
+        const kylrix = new Kylrix({ project: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '' });
+        const user = await kylrix.account.get();
+        
+        if (user?.email) {
+          // User is logged in, redirect to last active app
+          const { getLastActiveApp, getEcosystemUrl } = await import('@/lib/sdk/ecosystem');
+          const lastApp = getLastActiveApp();
+          const baseUri = getEcosystemUrl(lastApp);
+          const dashboards: Record<string, string> = {
+            accounts: '/settings',
+            note: '/dashboard',
+            vault: '/dashboard',
+            flow: '/dashboard',
+            connect: '/dashboard',
+          };
+          const redirectPath = dashboards[lastApp] || '/dashboard';
+          window.location.href = `${baseUri}${redirectPath}`;
+        }
+      } catch {
+        // Not logged in, show landing page
+      }
+    };
+    
+    checkAndRedirect();
+  }, []);
+
   const initiateEcosystem = () => {
     const accountsUrl = getEcosystemUrl('accounts');
     const targetUrl = `${accountsUrl}/login?source=${encodeURIComponent(window.location.origin)}`;
