@@ -34,7 +34,7 @@ import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePrevi
 
 const TOPBAR_HEIGHT = 88;
 
-export const Navbar = () => {
+export default function Navbar() {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -187,7 +187,7 @@ export const Navbar = () => {
                         }}
                       >
                         <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
-                          <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(item.color || '#6366F1', 0.08), color: item.color || '#6366F1', flexShrink: 0 }}>
+                          <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha((item as any).color || '#6366F1', 0.08), color: (item as any).color || '#6366F1', flexShrink: 0 }}>
                             <Logo app={(item as any).app || 'accounts'} size={16} variant="icon" />
                           </Box>
                           <Box sx={{ minWidth: 0, flex: 1 }}>
