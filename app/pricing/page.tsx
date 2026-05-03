@@ -17,6 +17,7 @@ import { Info, Sparkles, Globe, ShieldCheck, ArrowRight } from 'lucide-react';
 
 import Navbar from '@/components/Navbar';
 import Logo from '@/components/Logo';
+import PaymentMethodDrawer from '@/components/PaymentMethodDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
@@ -26,6 +27,7 @@ export default function PricingPage() {
   const { prices, detectedRegion } = useSubscription();
   const [months, setMonths] = useState(1);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
 
   const basePrice = prices['PRO'] || 10;
   const isYearly = months >= 12;
@@ -41,8 +43,12 @@ export default function PricingPage() {
   }, [months, basePrice]);
 
   const handleSubscribe = () => {
+    setPaymentDrawerOpen(true);
+  };
+
+  const handlePaymentMethodSelect = (method: 'kylrix' | 'external') => {
     const planId = months >= 12 ? 'PRO_YEAR' : 'PRO_MONTH';
-    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=${detectedRegion.countryCode}&source=${encodeURIComponent(window.location.href)}`;
+    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=${detectedRegion.countryCode}&paymentMethod=${method}&source=${encodeURIComponent(window.location.href)}`;
     
     if (!isAuthenticated) {
       openIDMWindow(checkoutUrl);
@@ -62,6 +68,14 @@ export default function PricingPage() {
   return (
     <Box component="main" sx={{ pt: 12, minHeight: '100vh', bgcolor: '#000000', color: 'white' }}>
       <Navbar />
+
+      <PaymentMethodDrawer
+        open={paymentDrawerOpen}
+        onClose={() => setPaymentDrawerOpen(false)}
+        months={months}
+        totalPrice={totalPrice}
+        onPaymentMethodSelect={handlePaymentMethodSelect}
+      />
 
       <Container maxWidth="md" sx={{ py: { xs: 8, md: 12 }, position: 'relative', zIndex: 1 }}>
         <Box sx={{ textAlign: 'center', mb: 8 }}>
