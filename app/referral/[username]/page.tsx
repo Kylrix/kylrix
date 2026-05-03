@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Avatar, Box, Button, Container, Divider, Paper, Stack, Typography, CircularProgress, alpha } from '@mui/material';
 import { ArrowRight, CheckCircle2, Copy, ExternalLink, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 
-import { useAuth } from '@/context/auth/AuthContext';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 
 type ReferralLookup = {
@@ -22,7 +21,8 @@ function buildLoginUrl(returnTo: string) {
 }
 
 export default function ReferralPage({ params }: { params: { username: string } }) {
-  const { isLoading: isAuthLoading, isAuthenticated } = useAuth();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const username = useMemo(() => (params.username || '').trim().replace(/^@+/, '').toLowerCase(), [params.username]);
   const [currentHref, setCurrentHref] = useState('');
   const [referral, setReferral] = useState<ReferralLookup | null>(null);
@@ -33,6 +33,14 @@ export default function ReferralPage({ params }: { params: { username: string } 
   const autoClaimedRef = useRef(false);
 
   const referralApiBase = useMemo(() => `${getEcosystemUrl('accounts')}/api/referrals`, []);
+
+  // Check if user has an active session (without calling account.get())
+  useEffect(() => {
+    setIsAuthLoading(true);
+    const hasSession = document.cookie.includes('a_session');
+    setIsAuthenticated(hasSession);
+    setIsAuthLoading(false);
+  }, []);
 
   const loadReferral = useCallback(async () => {
     if (!username) {
