@@ -219,12 +219,13 @@ export default function PricingPage() {
               endIcon={<ArrowRight size={18} />}
               sx={{
                 textTransform: 'none',
-                color: 'white',
+                color: '#000',
                 fontWeight: 900,
                 fontFamily: 'Clash Display',
                 fontSize: '1rem',
+                bgcolor: '#6366F1',
                 '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  bgcolor: alpha('#6366F1', 0.85),
                   transform: 'translateX(4px)'
                 },
                 transition: 'all 0.3s ease'
