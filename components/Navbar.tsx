@@ -111,19 +111,14 @@ export default function Navbar() {
       color: app.color,
       href: getEcosystemUrl(app.subdomain),
       app: app.subdomain
-    })),
-    {
-      label: 'Download CLI',
-      description: 'Command line interface for Kylrix',
-      color: '#6366F1',
-      href: 'https://github.com/Kylrix/cli'
-    }
+    }))
   ], []);
 
   const navItems = useMemo(() => [
     { label: 'Developers', href: '/developers' },
     { label: 'Docs', href: '/docs' },
     { label: 'Pricing', href: '/pricing' },
+    { label: 'Download CLI', href: 'https://github.com/Kylrix/cli' },
   ], []);
 
   const activePanel = productsMenuOpen ? 'products' : profileMenuOpen ? 'profile' : navMenuOpen ? 'nav' : null;
