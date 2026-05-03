@@ -10,11 +10,7 @@ import {
   ButtonBase,
   Container,
   Divider,
-  Drawer,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemText,
   Stack,
   Typography,
   useMediaQuery,
@@ -48,7 +44,7 @@ export default function Navbar() {
 
   const [productsMenuOpen, setProductsMenuOpen] = useState<null | HTMLElement>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState<null | HTMLElement>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [navMenuOpen, setNavMenuOpen] = useState<null | HTMLElement>(null);
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -87,16 +83,25 @@ export default function Navbar() {
   const handleCloseAll = useCallback(() => {
     setProductsMenuOpen(null);
     setProfileMenuOpen(null);
+    setNavMenuOpen(null);
   }, []);
 
   const openProductsMenu = useCallback((event: MouseEvent<HTMLElement>) => {
     setProfileMenuOpen(null);
+    setNavMenuOpen(null);
     setProductsMenuOpen(event.currentTarget);
   }, []);
 
   const openProfileMenu = useCallback((event: MouseEvent<HTMLElement>) => {
     setProductsMenuOpen(null);
+    setNavMenuOpen(null);
     setProfileMenuOpen(event.currentTarget);
+  }, []);
+
+  const openNavMenu = useCallback((event: MouseEvent<HTMLElement>) => {
+    setProductsMenuOpen(null);
+    setProfileMenuOpen(null);
+    setNavMenuOpen(event.currentTarget);
   }, []);
 
   const productItems = useMemo(() => [
@@ -120,7 +125,7 @@ export default function Navbar() {
     { label: 'Pricing', href: '/pricing' },
   ], []);
 
-  const activePanel = productsMenuOpen ? 'products' : profileMenuOpen ? 'profile' : null;
+  const activePanel = productsMenuOpen ? 'products' : profileMenuOpen ? 'profile' : navMenuOpen ? 'nav' : null;
 
   useEffect(() => {
     if (!activePanel) return;
@@ -137,11 +142,6 @@ export default function Navbar() {
 
   const renderProductsPanel = () => {
     if (!productsMenuOpen) return null;
-
-    const isRenderableImageSrc = (value?: string | null) => {
-      if (!value) return false;
-      return /^(https?:)?\/\//.test(value) || value.startsWith('data:') || value.startsWith('blob:');
-    };
 
     return (
       <Box sx={{ width: '100%', bgcolor: '#161412', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -181,6 +181,114 @@ export default function Navbar() {
               </Stack>
             </Button>
           ))}
+        </Box>
+      </Box>
+    );
+  };
+
+  const renderNavPanel = () => {
+    if (!navMenuOpen) return null;
+
+    return (
+      <Box sx={{ width: '100%', bgcolor: '#161412', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <Box sx={{ px: { xs: 2, md: 4 }, py: 1.5, maxHeight: '70vh', overflowY: 'auto', display: 'grid', gap: 0.75 }}>
+          {/* Navigation items */}
+          <Box sx={{ display: 'grid', gap: 0.75 }}>
+            {navItems.map((item) => (
+              <Button
+                key={item.label}
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  window.location.assign(item.href);
+                }}
+                sx={{
+                  justifyContent: 'flex-start',
+                  textAlign: 'left',
+                  px: 1.5,
+                  py: 1.1,
+                  borderRadius: '18px',
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' },
+                }}
+              >
+                <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                  {item.label}
+                </Typography>
+              </Button>
+            ))}
+          </Box>
+
+          {/* Products section */}
+          <Box sx={{ mt: 1.5 }}>
+            <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5, mb: 0.75 }}>
+              Products
+            </Typography>
+            <Box sx={{ display: 'grid', gap: 0.75 }}>
+              {productItems.map((item, idx) => (
+                <Button
+                  key={`nav-product-${idx}`}
+                  fullWidth
+                  onClick={() => {
+                    handleCloseAll();
+                    window.location.assign(item.href);
+                  }}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
+                    px: 1.5,
+                    py: 1.1,
+                    borderRadius: '18px',
+                    color: 'white',
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' },
+                  }}
+                >
+                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
+                    <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha((item as any).color || '#6366F1', 0.08), color: (item as any).color || '#6366F1', flexShrink: 0 }}>
+                      <Logo app={(item as any).app || 'accounts'} size={16} variant="icon" />
+                    </Box>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                        {item.label}
+                      </Typography>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                        {item.description}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Button>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Connect button for guests */}
+          {!isAuthenticated && (
+            <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  handleLaunchClick();
+                }}
+                sx={{
+                  bgcolor: '#6366F1',
+                  color: '#000',
+                  fontWeight: 800,
+                  borderRadius: '14px',
+                  textTransform: 'none',
+                  py: 1.2,
+                  fontSize: '0.9rem',
+                  '&:hover': { bgcolor: alpha('#6366F1', 0.85) }
+                }}
+              >
+                Connect
+              </Button>
+            </Box>
+          )}
         </Box>
       </Box>
     );
@@ -413,7 +521,7 @@ export default function Navbar() {
 
                 {/* Mobile menu button */}
                 <IconButton
-                  onClick={() => setMobileMenuOpen(true)}
+                  onClick={openNavMenu}
                   sx={{
                     display: { xs: 'flex', md: 'none' },
                     color: 'white',
@@ -432,123 +540,9 @@ export default function Navbar() {
         </Container>
 
         {renderProductsPanel()}
+        {renderNavPanel()}
         {renderProfilePanel()}
       </AppBar>
-
-      {/* Mobile menu drawer */}
-      <Drawer
-        anchor="right"
-        open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        sx={{ zIndex: 1200 }}
-        PaperProps={{
-          sx: {
-            width: '100%',
-            maxWidth: 320,
-            bgcolor: '#0A0908',
-            borderLeft: '1px solid rgba(255,255,255,0.1)',
-            backgroundImage: 'none'
-          }
-        }}
-      >
-        <Box sx={{ p: 3 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-            <Logo size={32} />
-            <IconButton onClick={() => setMobileMenuOpen(false)} sx={{ color: 'white' }}>
-              <CloseIcon size={20} />
-            </IconButton>
-          </Stack>
-
-          <List sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {/* Navigation items in mobile menu */}
-            {navItems.map((item) => (
-              <ListItemButton
-                key={item.label}
-                onClick={() => {
-                  window.location.assign(item.href);
-                  setMobileMenuOpen(false);
-                }}
-                sx={{
-                  borderRadius: '12px',
-                  bgcolor: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
-                }}
-              >
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{ fontWeight: 700, color: 'white', fontSize: '0.9rem' }}
-                />
-              </ListItemButton>
-            ))}
-          </List>
-
-          <Divider sx={{ my: 2.5, borderColor: 'rgba(255,255,255,0.08)' }} />
-
-          {/* Products section in mobile menu */}
-          <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1.5 }}>
-            Products
-          </Typography>
-          <Stack sx={{ gap: 1 }}>
-            {productItems.map((item, idx) => (
-              <Button
-                key={`mobile-product-${idx}`}
-                fullWidth
-                onClick={() => {
-                  window.location.assign(item.href);
-                  setMobileMenuOpen(false);
-                }}
-                sx={{
-                  justifyContent: 'flex-start',
-                  textAlign: 'left',
-                  px: 1.5,
-                  py: 1,
-                  borderRadius: '12px',
-                  color: 'white',
-                  bgcolor: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
-                }}
-              >
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
-                  <Box sx={{ width: 28, height: 28, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: alpha((item as any).color || '#6366F1', 0.08), color: (item as any).color || '#6366F1', flexShrink: 0 }}>
-                    <Logo app={(item as any).app || 'accounts'} size={14} variant="icon" />
-                  </Box>
-                  <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ fontWeight: 700, fontSize: '0.8rem', lineHeight: 1.2 }} noWrap>
-                      {item.label}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </Button>
-            ))}
-          </Stack>
-
-          {!isAuthenticated && (
-            <>
-              <Divider sx={{ my: 2.5, borderColor: 'rgba(255,255,255,0.08)' }} />
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={() => {
-                  handleLaunchClick();
-                  setMobileMenuOpen(false);
-                }}
-                sx={{
-                  bgcolor: '#6366F1',
-                  color: '#000',
-                  fontWeight: 800,
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  py: 1.5,
-                }}
-              >
-                Connect
-              </Button>
-            </>
-          )}
-        </Box>
-      </Drawer>
 
       <Box sx={{ height: `${TOPBAR_HEIGHT}px` }} />
 
