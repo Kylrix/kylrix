@@ -204,11 +204,11 @@ export default function PricingPage() {
               px: { xs: 3, sm: 4 },
               py: 2.5,
               borderRadius: '30px',
-              background: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
+              background: '#1F1D1B',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
             }}
           >
-            <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, fontFamily: 'Satoshi', opacity: 0.4 }}>
+            <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, fontFamily: 'Satoshi', color: 'white' }}>
               Kylrix Free is free forever. No pressure.
             </Typography>
             
