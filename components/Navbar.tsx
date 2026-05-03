@@ -105,7 +105,7 @@ export default function Navbar() {
   }, []);
 
   const productItems = useMemo(() => [
-    ...ECOSYSTEM_APPS.filter(app => app.type === 'app').map(app => ({
+    ...ECOSYSTEM_APPS.filter(app => app.type === 'app' || app.type === 'accounts').map(app => ({
       label: app.label,
       description: app.description,
       color: app.color,
@@ -113,15 +113,16 @@ export default function Navbar() {
       app: app.subdomain
     })),
     {
-      label: 'Downloads',
-      description: 'Get Kylrix for Desktop and Mobile',
+      label: 'Download CLI',
+      description: 'Command line interface for Kylrix',
       color: '#6366F1',
-      href: '/downloads'
+      href: 'https://github.com/Kylrix/cli'
     }
   ], []);
 
   const navItems = useMemo(() => [
     { label: 'Developers', href: '/developers' },
+    { label: 'Docs', href: '/docs' },
     { label: 'Pricing', href: '/pricing' },
   ], []);
 
@@ -221,49 +222,7 @@ export default function Navbar() {
             ))}
           </Box>
 
-          {/* Products section */}
-          <Box sx={{ mt: 1.5 }}>
-            <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5, mb: 0.75 }}>
-              Products
-            </Typography>
-            <Box sx={{ display: 'grid', gap: 0.75 }}>
-              {productItems.map((item, idx) => (
-                <Button
-                  key={`nav-product-${idx}`}
-                  fullWidth
-                  onClick={() => {
-                    handleCloseAll();
-                    window.location.assign(item.href);
-                  }}
-                  sx={{
-                    justifyContent: 'flex-start',
-                    textAlign: 'left',
-                    px: 1.5,
-                    py: 1.1,
-                    borderRadius: '18px',
-                    color: 'white',
-                    bgcolor: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' },
-                  }}
-                >
-                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
-                    <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha((item as any).color || '#6366F1', 0.08), color: (item as any).color || '#6366F1', flexShrink: 0 }}>
-                      <Logo app={(item as any).app || 'accounts'} size={16} variant="icon" />
-                    </Box>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
-                        {item.label}
-                      </Typography>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
-                        {item.description}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Button>
-              ))}
-            </Box>
-          </Box>
+
 
           {/* Connect button for guests */}
           {!isAuthenticated && (
