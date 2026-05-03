@@ -533,31 +533,18 @@ export default function LandingPage() {
   React.useEffect(() => {
     const checkAndRedirect = async () => {
       try {
-        // Dynamically import the SDK to avoid hydration issues
-        const { Kylrix } = await import('@/lib/ecosystem');
-        const kylrix = new Kylrix({ project: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '' });
-        const user = await kylrix.account.get();
+        // Use the global session promise from appwrite
+        const { getCurrentUser } = await import('@/lib/appwrite');
+        const user = await getCurrentUser();
         
         if (user?.email) {
-          // User is logged in, redirect to last active app
-          const { getLastActiveApp, getEcosystemUrl } = await import('@/lib/sdk/ecosystem');
-          const lastApp = getLastActiveApp();
-          const baseUri = getEcosystemUrl(lastApp);
-          const dashboards: Record<string, string> = {
-            accounts: '/settings',
-            note: '/dashboard',
-            vault: '/dashboard',
-            flow: '/dashboard',
-            connect: '/dashboard',
-          };
-          const redirectPath = dashboards[lastApp] || '/dashboard';
-          window.location.href = `${baseUri}${redirectPath}`;
+          // User is logged in, redirect to connect as default landing
+          window.location.href = 'https://connect.kylrix.space/chats';
         }
-      } catch {
-        // Not logged in, show landing page
+      } catch (error) {
+        // Silently fail - not a critical operation
       }
     };
-    
     checkAndRedirect();
   }, []);
 

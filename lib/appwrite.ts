@@ -69,7 +69,20 @@ export function clearKylrixPulse() {
     document.documentElement.removeAttribute('data-kylrix-pulse');
 }
 
-export const globalSessionPromise = typeof window !== 'undefined' ? account.get().catch(() => null) : Promise.resolve(null);
+// Initialize session only if there's an existing session cookie (avoid auth errors for guests)
+export const globalSessionPromise = typeof window !== 'undefined' 
+  ? (async () => {
+      try {
+        // Check if there's an active session cookie before calling account.get()
+        const hasCookie = document.cookie.includes('a_session');
+        if (!hasCookie) return null;
+        return await account.get();
+      } catch (error) {
+        // Silently fail for unauthenticated users
+        return null;
+      }
+    })()
+  : Promise.resolve(null);
 
 export async function getCurrentUser(): Promise<any | null> {
     return await globalSessionPromise;
