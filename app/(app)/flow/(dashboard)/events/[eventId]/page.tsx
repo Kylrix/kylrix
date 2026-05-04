@@ -75,7 +75,7 @@ function AttendeeAvatar({ guest, theme }: { guest: any, theme: any }) {
 export default function EventPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const theme = useTheme();
-  const { user, isAuthenticated, openLoginPopup } = useAuth();
+  const { user, isAuthenticated, openIDMWindow } = useAuth();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,7 +143,7 @@ export default function EventPage() {
   }, [eventId, isRegistered]);
 
   const handleRegister = async () => {
-    if (!isAuthenticated) { openLoginPopup(); return; }
+    if (!isAuthenticated) { openIDMWindow(); return; }
     if (!user || !event) return;
     try {
       setRegistering(true);

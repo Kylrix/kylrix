@@ -509,6 +509,14 @@ export class EcosystemSecurity {
     return !!localStorage.getItem("kylrix_pin_verifier");
   }
 
+  wipePin(): void {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem("kylrix_pin_verifier");
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem("kylrix_pin_ephemeral");
+    }
+  }
+
   lock() {
     this.masterKey = null;
     this.identityKeyPair = null;
