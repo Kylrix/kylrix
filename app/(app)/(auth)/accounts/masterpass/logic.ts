@@ -78,7 +78,7 @@ export class MasterPassCrypto {
     try {
       const { AppwriteService } = await import("@/lib/appwrite");
       const entries = await AppwriteService.listKeychainEntries(userId);
-      const passwordEntry = entries.find(k => k.type === 'password');
+      const passwordEntry = entries.find((k: { type?: string }) => k.type === 'password');
 
       if (!passwordEntry) return false;
 
