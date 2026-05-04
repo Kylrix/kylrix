@@ -49,7 +49,7 @@ export default function SettingsPage() {
         setIsPinSet(ecosystemSecurity.isPinSet());
 
         const unsubscribe = ecosystemSecurity.onStatusChange((unlocked) => {
-            setIsUnlocked(unlocked);
+            setIsUnlocked(unlocked.isUnlocked);
         });
 
         getCurrentUser().then(u => {
@@ -101,7 +101,7 @@ export default function SettingsPage() {
         }
 
         if (isPinSet) {
-            const verified = await ecosystemSecurity.verifyPin(oldPin);
+            const verified = await ecosystemSecurity.unlockWithPin(oldPin);
             if (!verified) {
                 setMessage({ type: 'error', text: 'Current PIN is incorrect.' });
                 return;
