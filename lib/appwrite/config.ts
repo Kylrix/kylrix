@@ -6,6 +6,10 @@ export const APPWRITE_CONFIG = {
         VAULT: 'passwordManagerDb',
         FLOW: 'whisperrflow',
         CONNECT: 'chat',
+        CHAT: 'chat',
+        PASSWORD_MANAGER: 'passwordManagerDb',
+        KYLRIXNOTE: '67ff05a9000296822396',
+        KYLRIXFLOW: 'whisperrflow'
     },
     TABLES: {
         NOTE: {
@@ -22,7 +26,14 @@ export const APPWRITE_CONFIG = {
             SUBSCRIPTIONS: 'subscriptions',
             NOTE_TAGS: 'note_tags',
             NOTE_REVISIONS: 'note_revisions',
-            BLOGPOSTS: '67ff065a003e2bb950f7'
+            BLOGPOSTS: '67ff065a003e2bb950f7',
+            WALLET_MAP: 'walletMap'
+        },
+        KYLRIXNOTE: {
+            PROFILES: 'profiles',
+            USERS: '67ff05c900247b5673d3',
+            ACTIVITY_LOG: 'activityLog',
+            WALLET_MAP: 'walletMap'
         },
         VAULT: {
             CREDENTIALS: 'credentials',
@@ -30,17 +41,34 @@ export const APPWRITE_CONFIG = {
             FOLDERS: 'folders',
             SECURITY_LOGS: 'securityLogs',
             USER: 'user',
-            KEYCHAIN: 'keychain'
+            KEYCHAIN: 'keychain',
+            KEY_MAPPING: 'key_mapping',
+            WALLETS: 'wallets'
+        },
+        PASSWORD_MANAGER: {
+            KEYCHAIN: 'keychain',
+            KEY_MAPPING: 'key_mapping',
+            IDENTITIES: 'identities',
+            WALLETS: 'wallets'
         },
         FLOW: {
             TASKS: 'tasks',
             EVENTS: 'events',
-            GUESTS: 'eventGuests'
+            GUESTS: 'eventGuests',
+            FORMS: 'forms',
+            FORM_SUBMISSIONS: 'formSubmissions'
         },
         CONNECT: {
             USERS: 'users',
+            PROFILES: 'profiles',
             CONVERSATIONS: 'conversations',
+            CONVERSATION_MEMBERS: 'conversationMembers',
             MESSAGES: 'messages',
+            JOIN_REQUESTS: 'joinRequests',
+            MESSAGE_REACTIONS: 'messageReactions',
+            EPOCHS: 'epochs',
+            UNORGANIC_EMAILS: 'unorganic_emails',
+            ACCOUNT_EVENTS: 'accountEvents',
             CALL_LOGS: 'call_logs',
             APP_ACTIVITY: 'app_activity',
             CALL_LINKS: 'call_links',
@@ -49,16 +77,41 @@ export const APPWRITE_CONFIG = {
             INTERACTIONS: 'interactions',
             CONTACTS: 'contacts'
         },
+        CHAT: {
+            USERS: 'users',
+            PROFILES: 'profiles',
+            CONVERSATIONS: 'conversations',
+            CONVERSATION_MEMBERS: 'conversationMembers',
+            MESSAGES: 'messages',
+            JOIN_REQUESTS: 'joinRequests',
+            MESSAGE_REACTIONS: 'messageReactions',
+            EPOCHS: 'epochs',
+            UNORGANIC_EMAILS: 'unorganic_emails',
+            ACCOUNT_EVENTS: 'accountEvents',
+            CALL_LOGS: 'call_logs',
+            APP_ACTIVITY: 'app_activity',
+            CALL_LINKS: 'call_links',
+            FOLLOWS: 'follows',
+            MOMENTS: 'moments',
+            INTERACTIONS: 'interactions',
+            CONTACTS: 'contacts'
+        }
     },
     BUCKETS: {
         PROFILE_PICTURES: 'profile_pictures',
+        GROUP_AVATARS: 'group_avatars',
         NOTES_ATTACHMENTS: 'notes_attachments',
         BLOG_MEDIA: 'blog_media',
         EXTENSION_ASSETS: 'extension_assets',
         BACKUPS: 'backups',
-        TEMP_UPLOADS: 'temp_uploads'
+        TEMP_UPLOADS: 'temp_uploads',
+        MESSAGES: 'messages',
+        TASK_ATTACHMENTS: 'notes_attachments', // Alias
+        EVENT_COVERS: 'blog_media' // Alias
     },
     FUNCTIONS: {
+        PERMISSION_UPDATER: 'permission-updater',
+        CLAIM_GHOST_NOTES: 'claim-ghost-notes',
         SEARCH_USERS: '69a582720012957d2027',
         SYNC_USER_PROFILE: '69a583ac002b674685b0',
         NOTIFY_ON_SHARE: '69a58c1c001c39695bf6',
@@ -67,7 +120,8 @@ export const APPWRITE_CONFIG = {
         LOG_SECURITY_EVENT: '69a6c45a002085baa8dd',
         SYNC_SUBSCRIPTION_STATUS: '69a6c56d00203438232c',
         ACCOUNT_CLEANUP: '69a6c6fc001dc877979d',
-        CONNECT_CALL_CLEANUP: '69a6c841000b2c5aaae3'
+        CONNECT_CALL_CLEANUP: '69a6c841000b2c5aaae3',
+        DATA_PORTER: 'data-porter'
     },
     SYSTEM: {
         DOMAIN: 'kylrix.space',
