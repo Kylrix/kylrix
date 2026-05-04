@@ -16,6 +16,7 @@ import {
   getCurrentUser, 
   invalidateCurrentUserCache,
   appwriteAccount,
+  appwriteDatabases,
   appwriteStorage,
   appwriteAvatars,
   APPWRITE_BUCKET_BACKUPS_ID,

@@ -19,7 +19,6 @@ initAppwrite();
 
 export const account = new Account(client);
 export const databases = new Databases(client);
-export const tablesDB = new TablesDB(client);
 export const storage = new Storage(client);
 export const avatars = new Avatars(client);
 export const teams = new Teams(client);
@@ -29,7 +28,8 @@ export const realtime = new Realtime(client);
 
 // Aliases for compatibility
 export const appwriteAccount = account;
-export const appwriteDatabases = tablesDB; // Most apps use tablesDB wrapper
+export const appwriteDatabases = databases; // Standard Databases API
+export const tablesDB = new TablesDB(client); // Kylrix wrapper
 export const appwriteStorage = storage;
 export const appwriteAvatars = avatars;
 export { client };
