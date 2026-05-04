@@ -34,8 +34,8 @@ import { stageProfileView } from '@/lib/profile-handoff';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { default as _toast } from 'react-hot-toast';
-import { IslandContext } from "./DynamicIslandContext";
-import type { IslandPanel } from "./DynamicIslandContext";
+import { IslandContext } from './DynamicIslandContext';
+import type { IslandPanel } from './DynamicIslandContext';
 
 import Logo from './Logo';
 import { 

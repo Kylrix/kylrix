@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Box,
   Typography,
@@ -16,25 +16,25 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText
-} from "@mui/material";
-import UploadIcon from "@mui/icons-material/Upload";
-import DownloadIcon from "@mui/icons-material/Download";
-import DescriptionIcon from "@mui/icons-material/Description";
-import ShieldIcon from "@mui/icons-material/Shield";
-import InfoIcon from "@mui/icons-material/Info";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import VpnKeyIcon from "@mui/icons-material/VpnKey";
-import FolderIcon from "@mui/icons-material/Folder";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { validateBitwardenExport } from "@/utils/import/bitwarden-mapper";
-import { useBackgroundTask } from '@/context/BackgroundTaskContext";
-import { ImportPreviewModal } from "@/components/import/ImportPreviewModal";
-import { ImportItem } from "@/lib/import/deduplication";
-import { analyzeBitwardenExport } from "@/utils/import/bitwarden-mapper";
-import { masterPassCrypto } from "@/lib/masterpass-crypto";
-import { porterExport, downloadExportAsFile } from "@/lib/data-porter";
-import toast from "react-hot-toast";
+} from '@mui/material';
+import UploadIcon from '@mui/icons-material/Upload';
+import DownloadIcon from '@mui/icons-material/Download';
+import DescriptionIcon from '@mui/icons-material/Description';
+import ShieldIcon from '@mui/icons-material/Shield';
+import InfoIcon from '@mui/icons-material/Info';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import FolderIcon from '@mui/icons-material/Folder';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { validateBitwardenExport } from '@/utils/import/bitwarden-mapper';
+import { useBackgroundTask } from '@/context/BackgroundTaskContext';
+import { ImportPreviewModal } from '@/components/import/ImportPreviewModal';
+import { ImportItem } from '@/lib/import/deduplication';
+import { analyzeBitwardenExport } from '@/utils/import/bitwarden-mapper';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { porterExport, downloadExportAsFile } from '@/lib/data-porter';
+import toast from 'react-hot-toast';
 
 export default function ImportPage() {
   const { user } = useAppwriteVault();

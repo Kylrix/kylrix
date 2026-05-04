@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { useLastActiveApp } from "@/lib/sdk/ecosystem";
-import { AppwriteProvider } from "./appwrite-provider";
-import { BackgroundTaskProvider } from "./context/BackgroundTaskContext";
-import { AIProvider } from "./context/AIContext";
-import { SudoProvider } from "./context/SudoContext";
-import { NotificationProvider } from "./context/NotificationContext";
-import { SubscriptionProvider } from "@/context/subscription";
-import { DataNexusProvider } from "@/context/DataNexusContext";
-import { Toaster } from "react-hot-toast";
-import { ThemeProvider as MuiThemeProvider, CssBaseline } from "@mui/material";
-import { darkTheme } from "@/theme/theme";
-import EcosystemPortal from "@/components/common/EcosystemPortal";
-import { useEcosystemNode } from "@/hooks/useEcosystemNode";
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useLastActiveApp } from '@/lib/sdk/ecosystem';
+import { AppwriteProvider } from './appwrite-provider';
+import { BackgroundTaskProvider } from './context/BackgroundTaskContext';
+import { AIProvider } from './context/AIContext';
+import { SudoProvider } from './context/SudoContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { SubscriptionProvider } from '@/context/subscription';
+import { DataNexusProvider } from '@/context/DataNexusContext';
+import { Toaster } from 'react-hot-toast';
+import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material';
+import { darkTheme } from '@/theme/theme';
+import EcosystemPortal from '@/components/common/EcosystemPortal';
+import { useEcosystemNode } from '@/hooks/useEcosystemNode';
 
 function GlobalEcosystemHandler() {
   const [open, setOpen] = useState(false);

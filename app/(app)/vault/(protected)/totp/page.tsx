@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Box, 
   Typography, 
@@ -16,20 +16,20 @@ import {
   DialogContent, 
   DialogActions, 
   Chip,
-} from "@mui/material";
-import { alpha } from "@mui/material/styles";
-import ShieldIcon from "@mui/icons-material/Shield";
-import AddIcon from "@mui/icons-material/Add";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { listTotpSecrets, deleteTotpSecret, listFolders } from "@/lib/appwrite";
-import { authenticator } from "otplib";
-import toast from "react-hot-toast";
-import VaultGuard from "@/components/layout/VaultGuard";
-import NewTotpDialog from "@/components/app/totp/new";
-import { useSudo } from "@/context/SudoContext";
+} from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import ShieldIcon from '@mui/icons-material/Shield';
+import AddIcon from '@mui/icons-material/Add';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';
+import { authenticator } from 'otplib';
+import toast from 'react-hot-toast';
+import VaultGuard from '@/components/layout/VaultGuard';
+import NewTotpDialog from '@/components/app/totp/new';
+import { useSudo } from '@/context/SudoContext';
 
 export default function TOTPPage() {
   const [search, setSearch] = useState("");

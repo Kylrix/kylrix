@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -14,16 +14,16 @@ import {
   Stack,
   CircularProgress,
   useTheme
-} from "@mui/material";
-import { startRegistration } from "@simplewebauthn/browser";
-import { AppwriteService } from "@/lib/appwrite";
-import { ecosystemSecurity } from "@/lib/ecosystem/security";
-import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import { Fingerprint } from "lucide-react";
+} from '@mui/material';
+import { startRegistration } from '@simplewebauthn/browser';
+import { AppwriteService } from '@/lib/appwrite';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Fingerprint } from 'lucide-react';
 
 interface PasskeySetupProps {
   open: boolean;

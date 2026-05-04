@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Box, 
   Typography, 
@@ -19,27 +19,27 @@ import {
   CircularProgress,
   ToggleButton,
   ToggleButtonGroup
-} from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import RefreshIcon from "@mui/icons-material/Refresh";
-import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
-import FolderIcon from "@mui/icons-material/Folder";
-import VpnKeyIcon from "@mui/icons-material/VpnKey";
-import { useAppwriteVault } from "@/context/appwrite-context";
+} from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import FolderIcon from '@mui/icons-material/Folder';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import { useAppwriteVault } from '@/context/appwrite-context';
 import {
   createCredential,
   createFolder,
   createTotpSecret,
   listFolders,
-} from "@/lib/appwrite";
-import type { Folders, Credentials, TotpSecrets } from "@/lib/appwrite/types";
-import { generateRandomPassword } from "@/utils/password";
-import { masterPassCrypto } from "@/lib/masterpass-crypto";
-import toast from "react-hot-toast";
-import VaultGuard from "@/components/layout/VaultGuard";
+} from '@/lib/appwrite';
+import type { Folders, Credentials, TotpSecrets } from '@/lib/appwrite/types';
+import { generateRandomPassword } from '@/utils/password';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import toast from 'react-hot-toast';
+import VaultGuard from '@/components/layout/VaultGuard';
 
 export default function NewCredentialPage() {
   const router = useRouter();

@@ -1,6 +1,6 @@
-import { JetBrains_Mono } from "next/font/google";
-import "../globals.css";
-import { Providers } from "@/components/Providers";
+import { JetBrains_Mono } from 'next/font/google';
+import '../../globals.css';
+import { Providers } from '@/components/Providers';
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import type { Credentials, Folders as FolderDoc } from "@/lib/appwrite/types";
-import { useAppwriteVault } from "@/context/appwrite-context";
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import type { Credentials, Folders as FolderDoc } from '@/lib/appwrite/types';
+import { useAppwriteVault } from '@/context/appwrite-context';
 import {
   deleteCredential,
   listAllCredentials,
@@ -11,18 +11,18 @@ import {
   listRecentCredentials,
   createFolder,
   updateCredential,
-} from "@/lib/appwrite";
-import toast from "react-hot-toast";
-import CredentialItem from "@/components/app/dashboard/CredentialItem";
-import CredentialSkeleton from "@/components/app/dashboard/CredentialSkeleton";
-import PaginationControls from "@/components/app/dashboard/PaginationControls";
-import SearchBar from "@/components/app/dashboard/SearchBar";
-import CredentialDialog from "@/components/app/dashboard/CredentialDialog";
-import VaultGuard from "@/components/layout/VaultGuard";
-import CredentialDetail from "@/components/app/dashboard/CredentialDetail";
-import { MasterPassDrawer } from "@/components/overlays/MasterPassDrawer";
-import { useAI } from '@/context/AIContext";
-import { useSudo } from "@/context/SudoContext";
+} from '@/lib/appwrite';
+import toast from 'react-hot-toast';
+import CredentialItem from '@/components/app/dashboard/CredentialItem';
+import CredentialSkeleton from '@/components/app/dashboard/CredentialSkeleton';
+import PaginationControls from '@/components/app/dashboard/PaginationControls';
+import SearchBar from '@/components/app/dashboard/SearchBar';
+import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
+import VaultGuard from '@/components/layout/VaultGuard';
+import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
+import { MasterPassDrawer } from '@/components/overlays/MasterPassDrawer';
+import { useAI } from '@/context/AIContext';
+import { useSudo } from '@/context/SudoContext';
 import { 
   Box, 
   Typography, 
@@ -40,11 +40,11 @@ import {
   MenuItem,
   useTheme,
   useMediaQuery,
-} from "@mui/material";
-import { alpha } from "@mui/material/styles";
-import FolderIcon from "@mui/icons-material/Folder";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import AddIcon from "@mui/icons-material/Add";
+} from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import FolderIcon from '@mui/icons-material/Folder';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AddIcon from '@mui/icons-material/Add';
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (

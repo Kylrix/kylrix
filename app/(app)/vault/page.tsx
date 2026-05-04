@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
-import { Box, Container, Stack, Typography, Button, CircularProgress, AppBar, Toolbar } from "@mui/material";
-import { useRouter } from "next/navigation";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import PasswordGenerator from "@/components/ui/PasswordGenerator";
-import Logo from "@/components/common/Logo";
+import { useEffect } from 'react';
+import { Box, Container, Stack, Typography, Button, CircularProgress, AppBar, Toolbar } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import PasswordGenerator from '@/components/ui/PasswordGenerator';
+import Logo from '@/components/common/Logo';
 
 export default function LandingPage() {
   const { user, openIDMWindow, isAuthenticating } = useAppwriteVault();

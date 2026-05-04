@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Drawer } from "@/components/ui/Drawer";
+import { useState, useMemo } from 'react';
+import { Drawer } from '@/components/ui/Drawer';
 import { 
   Button, 
   Box, 
@@ -16,13 +16,13 @@ import {
   TableHead,
   TableRow,
   Chip
-} from "@mui/material";
-import { ImportItem, DeduplicationEngine } from "@/lib/import/deduplication";
-import CheckIcon from "@mui/icons-material/Check";
-import CloseIcon from "@mui/icons-material/Close";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import StorageIcon from "@mui/icons-material/Storage";
-import MergeIcon from "@mui/icons-material/Merge";
+} from '@mui/material';
+import { ImportItem, DeduplicationEngine } from '@/lib/import/deduplication';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import StorageIcon from '@mui/icons-material/Storage';
+import MergeIcon from '@mui/icons-material/Merge';
 
 interface ImportPreviewModalProps {
   isOpen: boolean;

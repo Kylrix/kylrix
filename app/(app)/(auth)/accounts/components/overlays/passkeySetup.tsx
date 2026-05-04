@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,15 +13,15 @@ import {
   Box, 
   Stack, 
   CircularProgress
-} from "@mui/material";
-import { startRegistration } from "@simplewebauthn/browser";
-import { AppwriteService } from "@/lib/appwrite";
-import toast from "react-hot-toast";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import FingerprintIcon from "@mui/icons-material/Fingerprint";
-import { masterPassCrypto } from "@/lib/masterpass-crypto";
+} from '@mui/material';
+import { startRegistration } from '@simplewebauthn/browser';
+import { AppwriteService } from '@/lib/appwrite';
+import toast from 'react-hot-toast';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FingerprintIcon from '@mui/icons-material/Fingerprint';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
 
 interface PasskeySetupProps {
   isOpen: boolean;

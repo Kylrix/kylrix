@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useSudo } from "@/context/SudoContext";
-import { Box, Typography, Button, alpha } from "@mui/material";
-import { Shield } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { useSudo } from '@/context/SudoContext';
+import { Box, Typography, Button, alpha } from '@mui/material';
+import { Shield } from 'lucide-react';
 
 interface SudoGuardProps {
     children: React.ReactNode;

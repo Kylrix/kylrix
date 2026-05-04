@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
   Typography,
@@ -10,15 +10,15 @@ import {
   Stack,
   CircularProgress,
   alpha,
-} from "@mui/material";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import SecurityIcon from "@mui/icons-material/Security";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { resetMasterpassAndWipe } from "@/lib/appwrite";
-import toast from "react-hot-toast";
-import { SudoModal } from "@/components/overlays/SudoModal";
+} from '@mui/material';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SecurityIcon from '@mui/icons-material/Security';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { resetMasterpassAndWipe } from '@/lib/appwrite';
+import toast from 'react-hot-toast';
+import { SudoModal } from '@/components/overlays/SudoModal';
 
 export default function MasterpassResetPage() {
   const router = useRouter();

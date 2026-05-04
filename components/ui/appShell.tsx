@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { getCurrentUser } from "@/lib/appwrite";
-import { useAuth } from "./AuthContext";
-import Navigation from "../Navigation";
-import QuickCreateFab from "./QuickCreateFab";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { getCurrentUser } from '@/lib/appwrite';
+import { useAuth } from './AuthContext';
+import Navigation from '../Navigation';
+import QuickCreateFab from './QuickCreateFab';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
 const PUBLIC_ROUTES = [
   "/reset", "/verify", "/landing"

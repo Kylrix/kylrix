@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Drawer, Box, Typography, TextField, Button, CircularProgress, useTheme, useMediaQuery } from "@mui/material";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import SendIcon from "@mui/icons-material/Send";
-import { useAI } from '@/context/AIContext";
-import { toast } from "react-hot-toast";
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Drawer, Box, Typography, TextField, Button, CircularProgress, useTheme, useMediaQuery } from '@mui/material';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import SendIcon from '@mui/icons-material/Send';
+import { useAI } from '@/context/AIContext';
+import { toast } from 'react-hot-toast';
 
 export function AIModal({ onClose }: { onClose: () => void }) {
   const theme = useTheme();

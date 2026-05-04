@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { getTopbarLogoHref, getEcosystemUrl } from "@/lib/sdk";
+import Link from 'next/link';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { getTopbarLogoHref, getEcosystemUrl } from '@/lib/sdk';
 import {
   GridViewOutlined as GripIcon,
   AutoAwesomeOutlined as SparklesIcon,
@@ -10,30 +10,30 @@ import {
   SettingsOutlined as SettingsIcon,
   LockOutlined as LockIcon,
   LogoutOutlined as LogOutIcon,
-} from "@mui/icons-material";
-import Button from "@mui/material/Button";
-import Box from "@mui/material/Box";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
-import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
-import Divider from "@mui/material/Divider";
-import Tooltip from "@mui/material/Tooltip";
-import CircularProgress from "@mui/material/CircularProgress";
-import { alpha } from "@mui/material/styles";
-import { useState, useEffect } from "react";
-import { DropdownMenu } from "@/components/ui/DropdownMenu";
-import { useAI } from '@/context/AIContext";
-import { usePathname } from "next/navigation";
-import dynamic from "next/dynamic";
-import EcosystemPortal from "../common/EcosystemPortal";
-import Logo from "../common/Logo";
-import { getUserProfilePicId } from "@/lib/user-utils";
-import { fetchProfilePreview, getCachedProfilePreview } from "@/lib/profile-preview";
-import { IdentityAvatar, computeIdentityFlags } from "../common/IdentityBadge";
-import { searchGlobalUsers } from "@/lib/ecosystem/identity";
+} from '@mui/icons-material';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Divider from '@mui/material/Divider';
+import Tooltip from '@mui/material/Tooltip';
+import CircularProgress from '@mui/material/CircularProgress';
+import { alpha } from '@mui/material/styles';
+import { useState, useEffect } from 'react';
+import { DropdownMenu } from '@/components/ui/DropdownMenu';
+import { useAI } from '@/context/AIContext';
+import { usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
+import EcosystemPortal from '../common/EcosystemPortal';
+import Logo from '../common/Logo';
+import { getUserProfilePicId } from '@/lib/user-utils';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
+import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
+import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 
 const PasswordGenerator = dynamic(() => import("@/components/ui/PasswordGenerator"), { 
   loading: () => <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}><CircularProgress size={24} /></Box>,

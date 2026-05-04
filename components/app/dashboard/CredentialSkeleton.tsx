@@ -1,4 +1,4 @@
-import { Box, Paper, Skeleton } from "@mui/material";
+import { Box, Paper, Skeleton } from '@mui/material';
 
 export default function CredentialSkeleton() {
   return (

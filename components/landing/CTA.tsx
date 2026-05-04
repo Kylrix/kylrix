@@ -1,10 +1,10 @@
 "use client";
 
-import { Box, Container, Typography, Button, CircularProgress } from "@mui/material";
-import { alpha } from "@mui/material/styles";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { useRouter } from "next/navigation";
+import { Box, Container, Typography, Button, CircularProgress } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { useRouter } from 'next/navigation';
 
 export default function CTA() {
   // Use the app's secondary color for the primary hero CTA to balance branding

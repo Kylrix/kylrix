@@ -1,4 +1,4 @@
-import { ecosystemSecurity } from "@/lib/ecosystem/security";
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 // Enhanced crypto configuration for maximum security with optimal performance
 export class MasterPassCrypto {

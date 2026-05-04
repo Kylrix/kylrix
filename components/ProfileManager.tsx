@@ -14,13 +14,13 @@ import {
   Stack,
   alpha,
   IconButton
-} from "@mui/material";
+} from '@mui/material';
 import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   InfoOutlined as InfoIcon,
   PhotoCamera as PhotoCameraIcon
-} from "@mui/icons-material";
+} from '@mui/icons-material';
 import { IdentityAvatar, IdentityName, computeIdentityFlags } from './IdentityBadge';
 
 const storage = new Storage(client);

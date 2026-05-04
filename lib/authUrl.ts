@@ -1,5 +1,5 @@
-import { APPWRITE_CONFIG } from "./appwrite/config";
-import { getEcosystemUrl } from "./constants";
+import { APPWRITE_CONFIG } from './appwrite/config';
+import { getEcosystemUrl } from './constants';
 
 /**
  * Generate the auth/accounts IDM subdomain URL

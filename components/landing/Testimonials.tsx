@@ -1,7 +1,7 @@
 "use client";
 
-import { Box, Container, Typography, Grid, Paper, Stack } from "@mui/material";
-import StarIcon from "@mui/icons-material/Star";
+import { Box, Container, Typography, Grid, Paper, Stack } from '@mui/material';
+import StarIcon from '@mui/icons-material/Star';
 
 const VAULT_PRIMARY = "#10B981";
 

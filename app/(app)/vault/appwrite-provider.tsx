@@ -6,23 +6,23 @@ import {
   useCallback,
   ReactNode,
   useRef,
-} from "react";
-import { useRouter, usePathname } from "next/navigation";
+} from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   getCurrentUser,
   getCurrentUserSnapshot,
   onCurrentUserChanged,
   resetMasterpassAndWipe,
   logoutAppwrite,
-} from "@/lib/appwrite";
-import { APPWRITE_CONFIG } from "@/lib/appwrite/config";
-import { getAuthOrigin, openAuthPopup } from "@/lib/authUrl";
-import { masterPassCrypto } from "@/lib/masterpass-crypto";
-import { logDebug, logWarn } from "@/lib/logger";
-import { AppwriteContext } from "@/context/appwrite-context";
+} from '@/lib/appwrite';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { getAuthOrigin, openAuthPopup } from '@/lib/authUrl';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { logDebug, logWarn } from '@/lib/logger';
+import { AppwriteContext } from '@/context/appwrite-context';
 
 // Types
-import type { Models } from "appwrite";
+import type { Models } from 'appwrite';
 
 interface AppwriteError extends Error {
   code?: number;

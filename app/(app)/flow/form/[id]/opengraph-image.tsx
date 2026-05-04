@@ -1,5 +1,5 @@
-import { ImageResponse } from "next/og";
-import { FormsServerService } from "@/lib/services/server/forms";
+import { ImageResponse } from 'next/og';
+import { FormsServerService } from '@/lib/services/server/forms';
 
 export const runtime = "edge";
 export const size = {

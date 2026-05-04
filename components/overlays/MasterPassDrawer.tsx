@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Drawer,
   Button,
@@ -15,29 +15,29 @@ import {
   alpha,
   useTheme,
   useMediaQuery
-} from "@mui/material";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import LockIcon from "@mui/icons-material/Lock";
-import ShieldIcon from "@mui/icons-material/Shield";
-import LogoutIcon from "@mui/icons-material/Logout";
-import FingerprintIcon from "@mui/icons-material/Fingerprint";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import AppsIcon from "@mui/icons-material/Apps";
-import CloseIcon from "@mui/icons-material/Close";
-import Logo from "../common/Logo";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { masterPassCrypto } from "@/lib/masterpass-crypto";
-import { useFinalizeAuth } from "@/lib/finalizeAuth";
+} from '@mui/material';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import LockIcon from '@mui/icons-material/Lock';
+import ShieldIcon from '@mui/icons-material/Shield';
+import LogoutIcon from '@mui/icons-material/Logout';
+import FingerprintIcon from '@mui/icons-material/Fingerprint';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import AppsIcon from '@mui/icons-material/Apps';
+import CloseIcon from '@mui/icons-material/Close';
+import Logo from '../common/Logo';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { useFinalizeAuth } from '@/lib/finalizeAuth';
 import {
   setMasterpassFlag,
   AppwriteService,
-} from "@/lib/appwrite";
-import { checkRateLimit, getBlockedDuration } from "@/lib/rate-limiter";
-import toast from "react-hot-toast";
-import { unlockWithPasskey } from "@/lib/passkey";
-import { PasskeySetup } from "./passkeySetup";
-import { ecosystemSecurity } from "@/lib/ecosystem/security";
+} from '@/lib/appwrite';
+import { checkRateLimit, getBlockedDuration } from '@/lib/rate-limiter';
+import toast from 'react-hot-toast';
+import { unlockWithPasskey } from '@/lib/passkey';
+import { PasskeySetup } from './passkeySetup';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 interface MasterPassDrawerProps {
   isOpen: boolean;

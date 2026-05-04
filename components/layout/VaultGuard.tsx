@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import { useAppwriteVault } from "@/context/appwrite-context";
+import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAppwriteVault } from '@/context/appwrite-context';
 
 /**
  * VaultGuard: Wrap protected pages/components with this to enforce

@@ -1,6 +1,6 @@
-import { ReactNode } from "react";
-import { Drawer, Box, IconButton, useTheme, useMediaQuery } from "@mui/material";
-import { Close as CloseIcon } from "@mui/icons-material";
+import { ReactNode } from 'react';
+import { Drawer, Box, IconButton, useTheme, useMediaQuery } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 
 export function Dialog({
   open,

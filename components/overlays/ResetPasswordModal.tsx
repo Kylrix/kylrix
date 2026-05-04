@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Drawer, 
   Button, 
@@ -14,12 +14,12 @@ import {
   Stack,
   useTheme,
   useMediaQuery
-} from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
-import MailIcon from "@mui/icons-material/Mail";
-import VpnKeyIcon from "@mui/icons-material/VpnKey";
-import { createPasswordRecovery, updatePasswordRecovery } from "@/lib/appwrite";
-import toast from "react-hot-toast";
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
+import MailIcon from '@mui/icons-material/Mail';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import { createPasswordRecovery, updatePasswordRecovery } from '@/lib/appwrite';
+import toast from 'react-hot-toast';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;

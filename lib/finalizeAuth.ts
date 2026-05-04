@@ -1,8 +1,8 @@
 "use client";
 
-import { getMfaAuthenticationStatus } from "@/lib/appwrite";
-import { useRouter } from "next/navigation";
-import { useAppwriteVault } from "@/context/appwrite-context";
+import { getMfaAuthenticationStatus } from '@/lib/appwrite';
+import { useRouter } from 'next/navigation';
+import { useAppwriteVault } from '@/context/appwrite-context';
 
 /**
  * Centralized post-auth finalization.

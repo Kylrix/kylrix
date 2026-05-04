@@ -1,10 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
-import { AnalysisMode } from "@/lib/ai/types";
-import { PrivacyFilter } from "@/lib/ai/sanitizer";
-import { generateAIContent } from '@/actions/ai";
-import dynamic from "next/dynamic";
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import { AnalysisMode } from '@/lib/ai/types';
+import { PrivacyFilter } from '@/lib/ai/sanitizer';
+import { generateAIContent } from '@/actions/ai';
+import dynamic from 'next/dynamic';
 
 const AIModal = dynamic(() => import("@/components/ai/AIModal").then(mod => mod.AIModal), {
   ssr: false

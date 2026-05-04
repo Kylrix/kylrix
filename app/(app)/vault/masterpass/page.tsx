@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { Box, CircularProgress, Typography } from "@mui/material";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
 /**
  * /masterpass - Master Password Management Page

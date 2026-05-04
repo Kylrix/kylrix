@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Typography, Button, Paper } from '@mui/material';
-import { useTheme } from "@/components/ThemeProvider";
+import { useTheme } from '@/components/ThemeProvider';
 
 export function ThemeTest() {
   const { theme, toggleTheme } = useTheme();

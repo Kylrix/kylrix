@@ -1,5 +1,5 @@
-import { Client, TablesDB, Storage, Account, Realtime } from "appwrite";
-import { APPWRITE_CONFIG } from "./config";
+import { Client, TablesDB, Storage, Account, Realtime } from 'appwrite';
+import { APPWRITE_CONFIG } from './config';
 
 const client = new Client();
 
@@ -77,7 +77,7 @@ export function getCurrentUserSnapshot() {
     return currentUserCache && currentUserCache.expiresAt > Date.now() ? currentUserCache.user : null;
 }
 
-import { Query } from "appwrite";
+import { Query } from 'appwrite';
 
 export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
 export const APPWRITE_COLLECTION_KEYCHAIN_ID = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { 
   Box, 
   Typography, 
@@ -12,24 +12,24 @@ import {
   alpha, 
   CircularProgress,
   Avatar
-} from "@mui/material";
-import VpnKeyIcon from "@mui/icons-material/VpnKey";
-import ShieldIcon from "@mui/icons-material/Shield";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import WarningIcon from "@mui/icons-material/Warning";
-import AddIcon from "@mui/icons-material/Add";
-import DownloadIcon from "@mui/icons-material/Download";
-import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import { useAppwriteVault } from "@/context/appwrite-context";
+} from '@mui/material';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
+import ShieldIcon from '@mui/icons-material/Shield';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import WarningIcon from '@mui/icons-material/Warning';
+import AddIcon from '@mui/icons-material/Add';
+import DownloadIcon from '@mui/icons-material/Download';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { useAppwriteVault } from '@/context/appwrite-context';
 import {
   appwriteDatabases,
   APPWRITE_DATABASE_ID,
   APPWRITE_COLLECTION_TOTPSECRETS_ID,
   Query,
   AppwriteService,
-} from "@/lib/appwrite";
-import { masterPassCrypto } from "@/lib/masterpass-crypto";
-import { useDataNexus } from "@/context/DataNexusContext";
+} from '@/lib/appwrite';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { useDataNexus } from '@/context/DataNexusContext';
 
 export default function OverviewPage() {
   const { user } = useAppwriteVault();

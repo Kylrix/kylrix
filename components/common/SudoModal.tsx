@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from 'react';
 import {
     Drawer,
     DialogTitle,
@@ -16,21 +16,21 @@ import {
     InputAdornment,
     useMediaQuery,
     useTheme,
-} from "@mui/material";
+} from '@mui/material';
 import {
     Lock,
     Fingerprint,
     Eye,
     EyeOff,
     LayoutGrid,
-} from "lucide-react";
-import Logo from "./Logo";
-import { ecosystemSecurity } from "@/lib/ecosystem/security";
-import { AppwriteService } from "@/lib/appwrite/client";
-import { useAuth } from "@/context/auth/AuthContext";
-import toast from "react-hot-toast";
-import { unlockWithPasskey } from "@/lib/passkey";
-import { PasskeySetup } from "./PasskeySetup";
+} from 'lucide-react';
+import Logo from './Logo';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { AppwriteService } from '@/lib/appwrite/client';
+import { useAuth } from '@/context/auth/AuthContext';
+import toast from 'react-hot-toast';
+import { unlockWithPasskey } from '@/lib/passkey';
+import { PasskeySetup } from './PasskeySetup';
 
 interface SudoModalProps {
     isOpen: boolean;

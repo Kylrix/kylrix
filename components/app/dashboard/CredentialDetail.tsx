@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Typography, 
@@ -11,20 +11,20 @@ import {
   Chip,
   Paper,
   Stack
-} from "@mui/material";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import CloseIcon from "@mui/icons-material/Close";
-import LanguageIcon from "@mui/icons-material/Language";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import GppMaybeIcon from "@mui/icons-material/GppMaybe";
-import GppGoodIcon from "@mui/icons-material/GppGood";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
-import type { Credentials } from "@/lib/appwrite/types";
-import { useAI } from '@/context/AIContext";
-import { useSudo } from "@/context/SudoContext";
+} from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CloseIcon from '@mui/icons-material/Close';
+import LanguageIcon from '@mui/icons-material/Language';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import GppMaybeIcon from '@mui/icons-material/GppMaybe';
+import GppGoodIcon from '@mui/icons-material/GppGood';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import type { Credentials } from '@/lib/appwrite/types';
+import { useAI } from '@/context/AIContext';
+import { useSudo } from '@/context/SudoContext';
 
 export default function CredentialDetail({
   credential,
