@@ -25,7 +25,7 @@ import SearchIcon from '@mui/icons-material/SearchOutlined';
 import { EcosystemService } from '@/lib/services/ecosystem';
 import { useAuth } from '@/lib/auth';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { SudoModal } from '../overlays/SudoModal';
+import SudoModal from '../overlays/SudoModal';
 import speakeasy from 'speakeasy';
 
 interface SecretSelectorModalProps {

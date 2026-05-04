@@ -18,7 +18,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { resetMasterpassAndWipe } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
-import { SudoModal } from '@/components/overlays/SudoModal';
+import SudoModal from '@/components/overlays/SudoModal';
 
 export default function MasterpassResetPage() {
   const router = useRouter();

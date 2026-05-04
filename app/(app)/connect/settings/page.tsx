@@ -29,7 +29,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
-import { SudoModal } from '@/components/overlays/SudoModal';
+import SudoModal from '@/components/overlays/SudoModal';
 import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
 import { toast } from 'react-hot-toast';
 

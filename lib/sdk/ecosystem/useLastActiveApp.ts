@@ -1,3 +1,4 @@
+"use client";
 import { useEffect } from 'react';
 
 export type AppName = 'accounts' | 'note' | 'vault' | 'flow' | 'connect';

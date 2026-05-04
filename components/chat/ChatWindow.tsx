@@ -65,7 +65,7 @@ import {
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { SudoModal } from '../overlays/SudoModal';
+import SudoModal from '../overlays/SudoModal';
 import { usePresence } from '../providers/PresenceProvider';
 import type { AttachmentMetadata } from '@/types/p2p';
 import toast from 'react-hot-toast';

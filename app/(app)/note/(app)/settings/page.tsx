@@ -30,7 +30,7 @@ import {
     Eye
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { SudoModal } from '@/components/overlays/SudoModal';
+import SudoModal from '@/components/overlays/SudoModal';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
 import { useAuth } from '@/components/ui/AuthContext';
