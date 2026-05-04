@@ -76,8 +76,9 @@ function getConversationManagers(conversation: any) {
 
 function getConversationPreview(conversation: any) {
   const inviteMeta = parseInviteMeta(conversation?.inviteMeta);
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_BASE_URL || 'https://kylrix.space');
   const avatarRoute = conversation?.avatarFileId
-    ? `${new URL('/api/connect/group-avatar', 'https://accounts.kylrix.space').toString()}?conversationId=${conversation.$id}`
+    ? `${new URL('/api/connect/group-avatar', baseUrl).toString()}?conversationId=${conversation.$id}`
     : null;
   return {
     resourceType: 'chat.conversation',
@@ -409,7 +410,7 @@ export async function PATCH(req: NextRequest) {
         });
       }
 
-      await fetch(`${process.env.KYLRIX_ACCOUNTS_ORIGIN || 'https://accounts.kylrix.space'}/api/emails`, {
+      await fetch(`${process.env.KYLRIX_ACCOUNTS_ORIGIN || process.env.NEXT_PUBLIC_BASE_URL || 'https://kylrix.space'}/api/emails`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
