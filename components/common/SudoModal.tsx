@@ -598,3 +598,5 @@ export default function SudoModal({
         </Drawer>
     );
 }
+
+export { SudoModal };

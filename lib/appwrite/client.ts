@@ -32,6 +32,8 @@ export const appwriteDatabases = databases; // Standard Databases API
 export const tablesDB = new TablesDB(client); // Kylrix wrapper
 export const appwriteStorage = storage;
 export const appwriteAvatars = avatars;
+export const appwriteClient = client;
+export const appwriteRealtime = realtime;
 export { client };
 
 export const APPWRITE_BUCKET_BACKUPS_ID = APPWRITE_CONFIG.BUCKETS.BACKUPS;
@@ -39,6 +41,7 @@ export const APPWRITE_BUCKET_PROFILE_PICTURES_ID = APPWRITE_CONFIG.BUCKETS.PROFI
 
 let currentUserCache: { user: any | null; expiresAt: number } | null = null;
 let currentUserInFlight: Promise<any | null> | null = null;
+const currentUserListeners = new Set<(user: any | null) => void>();
 const CURRENT_USER_CACHE_TTL = 5000;
 const CURRENT_USER_CACHE_KEY = 'kylrix_flow_current_user_v1';
 
@@ -75,6 +78,12 @@ function writeCurrentUserSnapshot(user: any | null) {
         }));
     } catch {
         // Best effort only.
+    }
+}
+
+function emitCurrentUserChange(user: any | null) {
+    for (const listener of currentUserListeners) {
+        listener(user);
     }
 }
 
@@ -188,6 +197,47 @@ export function getProfilePicturePreview(fileId: string, width: number = 64, hei
     return getFilePreview("profile_pictures", fileId, width, height);
 }
 
+const PULSE_COOKIE_NAME = 'kylrix_pulse_v2';
+const AVATAR_CACHE_PREFIX = 'kylrix_avatar_pulse_v2_';
+
+export function getKylrixPulse(): { $id: string; name: string; profilePicId?: string | null; avatarBase64?: string | null } | null {
+    if (typeof window === 'undefined') return null;
+    if ((window as any).__KYLRIX_PULSE__) return (window as any).__KYLRIX_PULSE__;
+
+    try {
+        const match = document.cookie.match(new RegExp('(^| )' + PULSE_COOKIE_NAME + '=([^;]+)'));
+        if (match) {
+            const basic = JSON.parse(decodeURIComponent(match[2]));
+            const avatar = localStorage.getItem(AVATAR_CACHE_PREFIX + basic.$id);
+            return { ...basic, avatarBase64: avatar };
+        }
+    } catch (_e) {}
+    return null;
+}
+
+export function setKylrixPulse(user: any, avatarBase64?: string | null) {
+    if (typeof window === 'undefined') return;
+    try {
+        const pulse = {
+            $id: user.$id,
+            name: user.name || user.username || 'User',
+            profilePicId: user.prefs?.profilePicId || user.profilePicId || null,
+        };
+        const domain = APPWRITE_CONFIG.SYSTEM.DOMAIN;
+        document.cookie = `${PULSE_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(pulse))}; path=/; domain=.${domain}; max-age=31536000; SameSite=Lax`;
+        if (avatarBase64) localStorage.setItem(AVATAR_CACHE_PREFIX + user.$id, avatarBase64);
+        (window as any).__KYLRIX_PULSE__ = { ...pulse, avatarBase64: avatarBase64 || localStorage.getItem(AVATAR_CACHE_PREFIX + user.$id) };
+    } catch (_e) {}
+}
+
+export function clearKylrixPulse() {
+    if (typeof window === 'undefined') return;
+    const domain = APPWRITE_CONFIG.SYSTEM.DOMAIN;
+    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    delete (window as any).__KYLRIX_PULSE__;
+    document.documentElement.removeAttribute('data-kylrix-pulse');
+}
+
 export async function getCurrentUser(force = false): Promise<any | null> {
     hydrateCurrentUserCache();
 
@@ -203,11 +253,13 @@ export async function getCurrentUser(force = false): Promise<any | null> {
         .then((user) => {
             currentUserCache = { user, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
             writeCurrentUserSnapshot(user);
+            emitCurrentUserChange(user);
             return user;
         })
         .catch((error) => {
             currentUserCache = null;
             writeCurrentUserSnapshot(null);
+            emitCurrentUserChange(null);
             return null;
         })
         .finally(() => {
@@ -220,7 +272,27 @@ export async function getCurrentUser(force = false): Promise<any | null> {
 export function invalidateCurrentUserCache() {
     currentUserCache = null;
     writeCurrentUserSnapshot(null);
+    emitCurrentUserChange(null);
 }
+
+export function onCurrentUserChanged(listener: (user: any | null) => void) {
+    currentUserListeners.add(listener);
+    return () => {
+        currentUserListeners.delete(listener);
+    };
+}
+
+export const globalSessionPromise = typeof window !== 'undefined'
+    ? (async () => {
+        try {
+            const hasCookie = document.cookie.includes('a_session');
+            if (!hasCookie) return null;
+            return await getCurrentUser();
+        } catch (_error) {
+            return null;
+        }
+    })()
+    : Promise.resolve(null);
 
 // --- USER SESSION ---
 

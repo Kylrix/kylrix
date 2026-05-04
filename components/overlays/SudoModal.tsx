@@ -749,3 +749,5 @@ export default function SudoModal({
     </Dialog>
 );
 }
+
+export { SudoModal };

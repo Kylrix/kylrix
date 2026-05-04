@@ -550,6 +550,9 @@ const noteCreationService = createNoteCreationService({
   },
 });
 
+export { createNoteCreationService };
+export default AppwriteService;
+
 export async function createNote(data: Partial<Notes>) {
   return noteCreationService.createNote(data as any);
 }

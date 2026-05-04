@@ -24,3 +24,10 @@ export { useLastActiveApp as useLastActiveAppRouting } from './routing';
 
 // --- Re-export topbar SDK ---
 export { createTopbarPanelMotion, createEcosystemPanelItems, isTopbarScrollAtTop, isTopbarScrollAtBottom } from './topbar';
+export { getTopbarLogoHref, createTopbarAction, createTopbarSurface, createConnectTopbarSurface, createTopbarPanelSurface, createTopbarSearchSurface, createTopbarProfileSurface, topbarMatches } from './topbar';
+
+// --- Re-export navigation policy ---
+export { createNavigationPolicy } from './orchestration';
+
+// --- Re-export note creation service ---
+export { createNoteCreationService } from './notes';

@@ -30,6 +30,13 @@ export function stageProfileView(profile: ProfileSeed, avatarId?: string | null)
   }
 }
 
+export function getProfileView(username?: string | null) {
+  const staged = getStagedProfileView();
+  if (!staged) return null;
+  if (username && staged.username && staged.username !== username) return null;
+  return { profile: staged, timestamp: (staged as any).timestamp ?? Date.now() };
+}
+
 /**
  * Retrieves a staged profile view from sessionStorage
  * @returns The staged profile data or null if not found/expired
