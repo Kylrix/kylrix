@@ -232,7 +232,7 @@ export function Navbar() {
               variant="contained"
               size="small"
               onClick={() => {
-                window.location.href = `https://accounts.kylrix.space/login?source=${encodeURIComponent(window.location.origin)}`;
+                window.location.href = `/accounts/login?source=${encodeURIComponent(window.location.origin)}`;
               }}
               sx={{ 
                 bgcolor: '#6366F1',
@@ -308,7 +308,7 @@ export function Navbar() {
                 </MenuItem>
                 <MenuItem 
                   onClick={() => {
-                    window.location.href = `https://accounts.kylrix.space/settings?source=${encodeURIComponent(window.location.origin)}`;
+                    window.location.href = `/accounts/settings?source=${encodeURIComponent(window.location.origin)}`;
                     handleCloseMenu();
                   }} 
                   sx={{ py: 1.8, px: 2.5, gap: 2, borderRadius: '14px', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.03)' } }}

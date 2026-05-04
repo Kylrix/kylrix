@@ -152,44 +152,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Skip if already authenticated
     if (user) return;
 
-    const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
-    const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
-    if (!authSubdomain || !domain) return;
-
+    // In unified app, just try refreshing - session cookie is shared across all routes
+    // No need for cross-origin iframe since everything is same-origin now
     return new Promise<void>((resolve) => {
-      const iframe = document.createElement('iframe');
-      iframe.src = `https://${authSubdomain}.${domain}/silent-check`;
-      iframe.style.display = 'none';
-
-      const timeout = setTimeout(() => {
-        cleanup();
+      setTimeout(async () => {
+        try {
+          await refreshUser();
+        } catch (error) {
+          console.warn('Silent auth check failed:', error);
+        }
         resolve();
-      }, 5000);
-
-      const handleIframeMessage = (event: MessageEvent) => {
-        if (event.origin !== `https://${authSubdomain}.${domain}`) return;
-
-        if (event.data?.type === 'idm:auth-status' && event.data.status === 'authenticated') {
-          console.log('Silent auth discovered active session');
-          refreshUser();
-          cleanup();
-          resolve();
-        } else if (event.data?.type === 'idm:auth-status') {
-          cleanup();
-          resolve();
-        }
-      };
-
-      const cleanup = () => {
-        clearTimeout(timeout);
-        window.removeEventListener('message', handleIframeMessage);
-        if (document.body.contains(iframe)) {
-          document.body.removeChild(iframe);
-        }
-      };
-
-      window.addEventListener('message', handleIframeMessage);
-      document.body.appendChild(iframe);
+      }, 500);
     });
   }, [user, refreshUser]);
 

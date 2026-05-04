@@ -256,25 +256,18 @@ export default function Topbar({
     () =>
       createEcosystemPanelItems('accounts').map((item) => {
         const app = item.app;
-        const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
-        const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+        const appBasePaths: Record<string, string> = {
+          'accounts': '/accounts',
+          'note': '/note',
+          'vault': '/vault',
+          'flow': '/flow',
+          'connect': '/connect',
+          'kylrix': '/'
+        };
         
-        let href = `https://${app}.${domain}`;
-        if (isLocal) {
-          const ports: Record<string, number> = {
-            accounts: 3000,
-            note: 3001,
-            vault: 3002,
-            flow: 3003,
-            connect: 3004,
-            kylrix: 3005
-          };
-          href = `http://localhost:${ports[app] || 3000}`;
-        }
-
         return {
           ...item,
-          href,
+          href: appBasePaths[app] || '/',
         };
       }),
     [],
@@ -288,22 +281,15 @@ export default function Topbar({
         currentApp: 'accounts',
         snippets: [],
         resolveUrl: (app, path = '') => {
-          const targetApp = app;
-          const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
-          const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-          
-          if (isLocal) {
-            const ports: Record<string, number> = {
-              accounts: 3000,
-              note: 3001,
-              vault: 3002,
-              flow: 3003,
-              connect: 3004,
-              kylrix: 3005
-            };
-            return `http://localhost:${ports[targetApp] || 3000}${path}`;
-          }
-          return `https://${targetApp}.${domain}${path}`;
+          const appBasePaths: Record<string, string> = {
+            'accounts': '/accounts',
+            'note': '/note',
+            'vault': '/vault',
+            'flow': '/flow',
+            'connect': '/connect',
+            'kylrix': '/'
+          };
+          return (appBasePaths[app] || '/') + path;
         },
       }),
     [searchQuery],

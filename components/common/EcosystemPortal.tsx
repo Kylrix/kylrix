@@ -54,22 +54,13 @@ export function EcosystemPortal({ open: controlledOpen, onClose: controlledOnClo
 
     const getCurrentSubdomain = () => {
         if (typeof window === 'undefined') return null;
-        const host = window.location.hostname;
-        if (host === 'localhost' || host === '127.0.0.1') {
-            const port = window.location.port;
-            const ports: Record<string, string> = {
-                '3000': 'accounts',
-                '3001': 'note',
-                '3002': 'vault',
-                '3003': 'flow',
-                '3004': 'connect',
-                '3005': 'kylrix'
-            };
-            return ports[port] || null;
-        }
-        const segments = host.split('.');
-        if (segments.length <= 2) return 'kylrix';
-        return segments[0];
+        const pathname = window.location.pathname;
+        if (pathname.startsWith('/accounts')) return 'accounts';
+        if (pathname.startsWith('/note')) return 'note';
+        if (pathname.startsWith('/vault')) return 'vault';
+        if (pathname.startsWith('/flow')) return 'flow';
+        if (pathname.startsWith('/connect')) return 'connect';
+        return 'kylrix';
     };
 
     const handleAppClick = (subdomain: string) => {

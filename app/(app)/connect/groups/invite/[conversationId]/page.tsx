@@ -57,7 +57,7 @@ export default function GroupInvitePage() {
   useEffect(() => {
     if (isLoading || user || !inviteUrl) return;
 
-    const loginUrl = new URL('/login', 'https://accounts.kylrix.space');
+    const loginUrl = new URL('/accounts/login', window.location.origin);
     loginUrl.searchParams.set('source', inviteUrl);
     window.location.replace(loginUrl.toString());
   }, [inviteUrl, isLoading, user]);
