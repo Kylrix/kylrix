@@ -440,6 +440,27 @@ export class EcosystemSecurity {
     }
   }
 
+  async saveRecoveryIdentity(
+    userId: string,
+    codes: string[],
+    metadata: Record<string, unknown> = {},
+  ): Promise<void> {
+    if (!userId) {
+      throw new Error('Missing user ID for recovery identity');
+    }
+    if (!Array.isArray(codes) || codes.length === 0) return;
+    if (typeof window === 'undefined') return;
+
+    const payload = {
+      userId,
+      codes: codes.map((code) => String(code).trim()).filter(Boolean),
+      metadata,
+      savedAt: new Date().toISOString(),
+    };
+
+    localStorage.setItem(`kylrix_recovery_identity_${userId}`, JSON.stringify(payload));
+  }
+
   async unlockWithPin(pin: string): Promise<boolean> {
     if (typeof window === "undefined") return false;
     const verifierStr = localStorage.getItem("kylrix_pin_verifier");
