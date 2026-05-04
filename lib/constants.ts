@@ -11,6 +11,7 @@ export interface EcosystemApp {
 }
 
 export const NEXT_PUBLIC_DOMAIN = APPWRITE_CONFIG.SYSTEM?.DOMAIN || 'kylrix.space';
+export const KYLRIX_AUTH_URI = `https://${APPWRITE_CONFIG.SYSTEM.AUTH_SUBDOMAIN}.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
 
 export const ECOSYSTEM_APPS: EcosystemApp[] = [
   { id: 'note', label: 'Note', subdomain: 'note', type: 'app', icon: 'file-text', color: '#EC4899', description: 'Secure notes and research.' },

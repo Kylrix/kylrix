@@ -17,8 +17,7 @@ import {
     Close as CloseIcon,
     AutoAwesome as PulseIcon,
 } from '@mui/icons-material';
-import { ECOSYSTEM_APPS, getEcosystemUrl } from '../../lib/constants';
-import { EcosystemWidgets } from '../../ecosystem/integration/Widgets';
+import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/constants';
 import type { KylrixApp } from '@/lib/sdk/design';
 
 import Logo from './Logo';
@@ -229,7 +228,9 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
                         </Grid>
 
                         {search.length === 0 && (
-                            <EcosystemWidgets />
+                            <Box sx={{ mt: 3, color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.9rem' }}>
+                                Browse the gateways above.
+                            </Box>
                         )}
                     </Box>
                 </Paper>

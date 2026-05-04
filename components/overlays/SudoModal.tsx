@@ -194,7 +194,7 @@ export default function SudoModal({
             const pinSet = ecosystemSecurity.isPinSet();
             setHasPin(pinSet);
 
-            AppwriteService.listKeychainEntries(user.$id).then(entries => {
+            AppwriteService.listKeychainEntries(user.$id).then((entries: Array<{ type?: string }>) => {
                 const passkeyPresent = entries.some((e: any) => e.type === 'passkey');
                 const passwordPresent = entries.some((e: any) => e.type === 'password');
                 const pinPresent = entries.some((e: any) => e.type === 'pin') || pinSet;

@@ -284,3 +284,5 @@ export function EcosystemPortal({ open: controlledOpen, onClose: controlledOnClo
         </Dialog>
     );
 }
+
+export default EcosystemPortal;
