@@ -1,0 +1,90 @@
+:root {
+  --font-satoshi: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-clash: "Clash Display", "Satoshi", sans-serif;
+  --font-clash-display: "Clash Display", "Satoshi", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-void: #000000;
+  --color-surface: #161514;
+  --color-surface-2: #1F1D1B;
+  --color-titanium: #F2F2F2;
+  --color-gunmetal: #A1A1AA;
+  --color-carbon: #404040;
+  --color-electric: #F59E0B;
+  --color-primary: #6366F1;
+  --glow-soft: 0.12;
+  --glow-focus: 0.18;
+  --glow-serious: 0.06;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-active: rgba(255, 255, 255, 0.12);
+
+  --background: var(--color-void);
+  --foreground: var(--color-titanium);
+  --primary: var(--color-electric);
+  --primary-foreground: var(--color-void);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-titanium);
+  --border: var(--border-subtle);
+  --ring: var(--color-primary);
+
+  --radius-micro: 12px;
+  --radius-macro: 24px;
+  --radius-mega: 32px;
+  --radius: var(--radius-micro);
+}
+
+.dark {
+  /* Dark is the only mode */
+  color-scheme: dark;
+}
+
+.glass-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+
+html,
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-family: var(--font-satoshi), sans-serif;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body[data-ui-mood="focus"] {
+  --color-surface: #1A1816;
+  --color-surface-2: #22201D;
+  --glow-soft: 0.08;
+  --glow-focus: 0.12;
+}
+
+body[data-ui-mood="serious"] {
+  --color-surface: #151312;
+  --color-surface-2: #1C1A18;
+  --glow-soft: 0.05;
+  --glow-focus: 0.08;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-clash), sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}

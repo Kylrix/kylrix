@@ -1,0 +1,121 @@
+/* Reset and base styles for Kylrix Flow - The Glass Monolith */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+:root {
+  --font-satoshi: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-clash: "Clash Display", "Satoshi", sans-serif;
+  --font-clash-display: "Clash Display", "Satoshi", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-void: #000000;
+  --color-surface: #161514;
+  --color-surface-2: #1F1D1B;
+  --color-titanium: #F2F2F2;
+  --color-gunmetal: #A1A1AA;
+  --color-electric: #A855F7;
+  /* Flow Purple (Secondary) */
+  --color-primary: #6366F1;
+  /* Ecosystem Primary */
+  --color-brand: var(--color-primary);
+  --color-app: var(--color-electric);
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(255, 255, 255, 0.15);
+  --glow-soft: 0.12;
+  --glow-focus: 0.18;
+  --glow-serious: 0.06;
+
+  --background: var(--color-void);
+  --foreground: var(--color-titanium);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-clash), sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Glassmorphism 2.0 */
+.glass-panel {
+  background: rgba(10, 10, 10, 0.7);
+  backdrop-filter: blur(25px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: var(--font-satoshi), "Satoshi", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-void);
+  color: var(--color-titanium);
+  min-height: 100vh;
+  selection-background-color: rgba(99, 102, 241, 0.2);
+  selection-color: #fff;
+}
+
+.glass-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--border-subtle);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 12px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-active);
+}
+
+/* Selection styles */
+::selection {
+  background-color: rgba(99, 102, 241, 0.2);
+  color: var(--color-brand);
+}
+
+body[data-ui-mood="focus"] {
+  --color-surface: #1A1816;
+  --color-surface-2: #22201D;
+  --glow-soft: 0.08;
+  --glow-focus: 0.12;
+}
+
+body[data-ui-mood="serious"] {
+  --color-surface: #151312;
+  --color-surface-2: #1C1A18;
+  --glow-soft: 0.05;
+  --glow-focus: 0.08;
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
