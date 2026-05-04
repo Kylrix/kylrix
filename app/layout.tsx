@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono } from 'next/font/google';
-import 'globals.css';
+import './globals.css';
 import ThemeRegistry from '@/theme/ThemeProvider';
 import { AuthProvider } from '@/context/auth/AuthContext';
 import { DocsProvider } from '@/context/DocsContext';
