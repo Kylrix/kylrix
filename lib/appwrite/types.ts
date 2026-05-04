@@ -6,7 +6,7 @@ import type {
   User,
   Keychain,
   KeyMapping,
-} from "@/types/appwrite";
+} from '@/types/appwrite';
 
 export type {
   Credentials,

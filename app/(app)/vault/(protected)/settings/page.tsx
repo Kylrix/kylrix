@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Box, 
   Typography, 
@@ -24,7 +24,7 @@ import {
   DialogContent,
   DialogActions,
   InputAdornment
-} from "@mui/material";
+} from '@mui/material';
 import { 
   Lock, 
   Shield, 
@@ -33,14 +33,14 @@ import {
   AlertTriangle,
   KeyRound,
   CheckCircle2
-} from "lucide-react";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { MasterPassModal } from "@/components/overlays/MasterPassModal";
-import { PasskeySetup } from "@/components/overlays/passkeySetup";
-import { DiscoverabilitySettings } from "@/components/settings/DiscoverabilitySettings";
-import { masterPassCrypto } from "@/lib/masterpass-crypto";
-import { AppwriteService } from "@/lib/appwrite";
-import toast from "react-hot-toast";
+} from 'lucide-react';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { MasterPassModal } from '@/components/overlays/MasterPassModal';
+import { PasskeySetup } from '@/components/overlays/passkeySetup';
+import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { AppwriteService } from '@/lib/appwrite';
+import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
   const muiTheme = useTheme();

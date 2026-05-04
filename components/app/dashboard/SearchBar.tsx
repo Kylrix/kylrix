@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import SearchIcon from "@mui/icons-material/Search";
-import CloseIcon from "@mui/icons-material/Close";
-import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import { useAI } from '@/context/AIContext";
+import { useEffect, useRef, useState } from 'react';
+import SearchIcon from '@mui/icons-material/Search';
+import CloseIcon from '@mui/icons-material/Close';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { useAI } from '@/context/AIContext';
 import { 
   Box, 
   TextField, 
@@ -11,7 +11,7 @@ import {
   Button,
   alpha,
   useTheme
-} from "@mui/material";
+} from '@mui/material';
 
 export default function SearchBar({
   onSearch,

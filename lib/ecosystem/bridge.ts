@@ -1,4 +1,4 @@
-import { getEcosystemUrl } from "@/constants/ecosystem";
+import { getEcosystemUrl } from '@/constants/ecosystem';
 
 /**
  * Ecosystem Bridge

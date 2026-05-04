@@ -1,6 +1,6 @@
-import { logDebug, logError } from "@/lib/logger";
-import { markSudoActive, resetSudo } from "@/lib/sudo-mode";
-import { ecosystemSecurity } from "@/lib/ecosystem/security";
+import { logDebug, logError } from '@/lib/logger';
+import { markSudoActive, resetSudo } from '@/lib/sudo-mode';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 // Enhanced crypto configuration for maximum security with optimal performance
 export class MasterPassCrypto {

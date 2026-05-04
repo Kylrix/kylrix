@@ -1,10 +1,10 @@
-import { ID, Models, Permission, Role, Query } from "appwrite";
-import { tablesDB, realtime } from "./appwrite/client";
-import { APPWRITE_CONFIG } from "./appwrite/config";
-import { getEcosystemUrl } from "./constants";
-import { Calendar, Task, Event, EventGuest, FocusSession } from "../types/kylrixflow";
-import type { CollaboratorPermission, TaskCollaborator } from "../types";
-import { sendKylrixEmailNotification } from "./email-notifications";
+import { ID, Models, Permission, Role, Query } from 'appwrite';
+import { tablesDB, realtime } from './appwrite/client';
+import { APPWRITE_CONFIG } from './appwrite/config';
+import { getEcosystemUrl } from './constants';
+import { Calendar, Task, Event, EventGuest, FocusSession } from '../types/kylrixflow';
+import type { CollaboratorPermission, TaskCollaborator } from '../types';
+import { sendKylrixEmailNotification } from './email-notifications';
 
 const { DATABASE_ID, TABLES } = APPWRITE_CONFIG;
 const TASK_COLLABORATOR_RESOURCE_PREFIX = 'task:';

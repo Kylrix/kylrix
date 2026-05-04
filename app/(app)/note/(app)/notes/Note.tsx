@@ -7,10 +7,10 @@ import {
   Button
 } from '@mui/material';
 import { Delete, Share, Lock, LockOpen, MoreVert, Analytics } from '@mui/icons-material';
-import type { Notes } from "@/types/appwrite";
+import type { Notes } from '@/types/appwrite';
 import { formatNoteUpdatedDate } from '@/lib/date-utils';
 import { isNotePublic } from '@/lib/appwrite';
-import { motion } from "framer-motion";
+import { motion } from 'framer-motion';
 const MotionCard = motion(Card);
 
 interface NoteComponentProps {

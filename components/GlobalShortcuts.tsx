@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useEffect, useState, lazy, Suspense } from "react";
-import { useRouter } from "next/navigation";
-import { useOverlay } from "@/components/ui/OverlayContext";
-import { useNotes } from "@/context/NotesContext";
-import { createNavigationPolicy } from "@/lib/sdk";
+import React, { useEffect, useState, lazy, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useNotes } from '@/context/NotesContext';
+import { createNavigationPolicy } from '@/lib/sdk';
 
 // Lazy load heavy components
 const KeyboardShortcuts = lazy(() => import("@/components/KeyboardShortcuts"));

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -16,14 +16,14 @@ import {
   List,
   ListItem,
   Tooltip,
-} from "@mui/material";
+} from '@mui/material';
 import {
   ContentCopy as ContentCopyIcon,
   Refresh as RefreshIcon,
   History as HistoryIcon,
-} from "@mui/icons-material";
-import { generateRandomPassword } from "@/utils/password";
-import toast from "react-hot-toast";
+} from '@mui/icons-material';
+import { generateRandomPassword } from '@/utils/password';
+import toast from 'react-hot-toast';
 
 export default function PasswordGenerator() {
   const [length, setLength] = useState(16);

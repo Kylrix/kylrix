@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import { 
   Box, 
   Typography, 
@@ -12,14 +12,14 @@ import {
   Chip,
   useTheme,
   useMediaQuery
-} from "@mui/material";
-import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import PersonIcon from "@mui/icons-material/Person";
-import LockIcon from "@mui/icons-material/Lock";
-import type { Credentials } from "@/lib/appwrite/types";
+} from '@mui/material';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PersonIcon from '@mui/icons-material/Person';
+import LockIcon from '@mui/icons-material/Lock';
+import type { Credentials } from '@/lib/appwrite/types';
 
 export default function CredentialItem({
   credential,

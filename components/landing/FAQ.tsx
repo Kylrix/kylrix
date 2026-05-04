@@ -1,7 +1,7 @@
 "use client";
 
-import { Box, Container, Typography, Stack, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { Box, Container, Typography, Stack, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 const faqs = [
   {

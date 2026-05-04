@@ -1,5 +1,5 @@
-import { APPWRITE_CONFIG } from "../../appwrite/config";
-import { Forms } from "../../../generated/appwrite/types";
+import { APPWRITE_CONFIG } from '../../appwrite/config';
+import { Forms } from '../../../generated/appwrite/types';
 
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
 const FORMS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.FORMS;

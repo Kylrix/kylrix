@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
-import "./globals.css";
-import { Providers } from "./providers";
-import { AppShell } from "@/components/layout/AppShell";
-import { Box } from "@mui/material";
-import { EcosystemClient } from "@/components/ecosystem/EcosystemClient";
-import { Suspense } from "react";
+import type { Metadata } from 'next';
+import { JetBrains_Mono } from 'next/font/google';
+import '../../globals.css';
+import { Providers } from './providers';
+import { AppShell } from '@/components/layout/AppShell';
+import { Box } from '@mui/material';
+import { EcosystemClient } from '@/components/ecosystem/EcosystemClient';
+import { Suspense } from 'react';
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],

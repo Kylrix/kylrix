@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { 
   AppBar, 
   Toolbar, 
@@ -16,7 +16,7 @@ import {
   ListItemText,
   InputBase,
   Button
-} from "@mui/material";
+} from '@mui/material';
 import { 
   Bell, 
   Sparkles, 
@@ -30,20 +30,20 @@ import {
   Menu as MenuIcon,
   Search,
   Wallet
-} from "lucide-react";
-import { SubscriptionBadge } from "@/context/subscription";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { useAI } from '@/context/AIContext";
-import { useNotifications } from '@/context/NotificationContext";
-import { useState, useEffect } from "react";
-import EcosystemPortal from "../common/EcosystemPortal";
-import { getEcosystemUrl } from "@/lib/constants/ecosystem";
-import Logo from "../common/Logo";
-import { getUserProfilePicId } from "@/lib/user-utils";
-import { fetchProfilePreview, getCachedProfilePreview } from "@/lib/profile-preview";
-import { IdentityAvatar, computeIdentityFlags } from "../common/IdentityBadge";
-import { WalletSidebar } from "../overlays/WalletSidebar";
-import { searchGlobalUsers } from "@/lib/ecosystem/identity";
+} from 'lucide-react';
+import { SubscriptionBadge } from '@/context/subscription';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { useAI } from '@/context/AIContext';
+import { useNotifications } from '@/context/NotificationContext';
+import { useState, useEffect } from 'react';
+import EcosystemPortal from '../common/EcosystemPortal';
+import { getEcosystemUrl } from '@/lib/constants/ecosystem';
+import Logo from '../common/Logo';
+import { getUserProfilePicId } from '@/lib/user-utils';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
+import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
+import { WalletSidebar } from '../overlays/WalletSidebar';
+import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 
 // Pages that should use the simplified layout (no sidebar/header)
 const SIMPLIFIED_LAYOUT_PATHS = ["/"];

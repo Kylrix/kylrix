@@ -1,5 +1,5 @@
-import type { Credentials } from "@/lib/appwrite/types";
-import { AnalysisMode } from "./types";
+import type { Credentials } from '@/lib/appwrite/types';
+import { AnalysisMode } from './types';
 
 /**
  * Privacy Filter Layer

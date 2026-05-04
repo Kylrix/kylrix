@@ -29,8 +29,8 @@ import {
 import { useRouter, useSearchParams  } from 'next/navigation';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { EditProfileModal } from './EditProfileModal';
-import { ActorsListDrawer } from "../social/ActorsListDrawer";
-import type { Actor } from "../social/ActorsListDrawer";
+import { ActorsListDrawer } from '../social/ActorsListDrawer';
+import type { Actor } from '../social/ActorsListDrawer';
 
 import { getUserProfilePicId } from '@/lib/user-utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';

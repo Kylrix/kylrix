@@ -1,4 +1,4 @@
-import { Box, Typography, Select, MenuItem, Pagination } from "@mui/material";
+import { Box, Typography, Select, MenuItem, Pagination } from '@mui/material';
 
 interface PaginationControlsProps {
   currentPage: number;

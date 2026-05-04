@@ -1,11 +1,11 @@
-import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono } from "next/font/google";
-import "./globals.css";
-import ThemeRegistry from "@/theme/ThemeProvider";
-import { AuthProvider } from "@/context/auth/AuthContext";
-import { DocsProvider } from "@/context/DocsContext";
-import { SubscriptionProvider } from "@/context/subscription/SubscriptionContext";
-import { DataNexusProvider } from "@/context/DataNexusContext";
+import type { Metadata, Viewport } from 'next';
+import { JetBrains_Mono } from 'next/font/google';
+import 'globals.css';
+import ThemeRegistry from '@/theme/ThemeProvider';
+import { AuthProvider } from '@/context/auth/AuthContext';
+import { DocsProvider } from '@/context/DocsContext';
+import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
+import { DataNexusProvider } from '@/context/DataNexusContext';
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { Query } from "node-appwrite";
-import { createAdminClient } from "@/lib/appwrite-admin";
-import { APPWRITE_CONFIG } from "@/lib/appwrite/config";
-import { getCorsHeaders, verifyUser } from "@/lib/api/permission-updater";
+import { NextRequest, NextResponse } from 'next/server';
+import { Query } from 'node-appwrite';
+import { createAdminClient } from '@/lib/appwrite-admin';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { getCorsHeaders, verifyUser } from '@/lib/api/permission-updater';
 
 type RepairBody = {
   userId?: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -13,17 +13,17 @@ import {
   TextField,
   Typography,
   alpha,
-} from "@mui/material";
-import ShareIcon from "@mui/icons-material/Share";
-import DownloadDoneIcon from "@mui/icons-material/DownloadDone";
-import SearchIcon from "@mui/icons-material/Search";
-import LockOpenIcon from "@mui/icons-material/LockOpen";
-import PersonIcon from "@mui/icons-material/Person";
-import KeyIcon from "@mui/icons-material/VpnKey";
-import VaultGuard from "@/components/layout/VaultGuard";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { searchGlobalUsers } from "@/lib/ecosystem/identity";
-import { EcosystemSecurity } from "@/lib/ecosystem/security";
+} from '@mui/material';
+import ShareIcon from '@mui/icons-material/Share';
+import DownloadDoneIcon from '@mui/icons-material/DownloadDone';
+import SearchIcon from '@mui/icons-material/Search';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
+import PersonIcon from '@mui/icons-material/Person';
+import KeyIcon from '@mui/icons-material/VpnKey';
+import VaultGuard from '@/components/layout/VaultGuard';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { searchGlobalUsers } from '@/lib/ecosystem/identity';
+import { EcosystemSecurity } from '@/lib/ecosystem/security';
 import {
   acceptSharedCredential,
   acceptSharedTotp,
@@ -32,9 +32,9 @@ import {
   listTotpSecrets,
   shareCredential,
   shareTotpSecret,
-} from "@/lib/appwrite";
-import type { Credentials, KeyMapping, TotpSecrets } from "@/lib/appwrite/types";
-import toast from "react-hot-toast";
+} from '@/lib/appwrite';
+import type { Credentials, KeyMapping, TotpSecrets } from '@/lib/appwrite/types';
+import toast from 'react-hot-toast';
 
 type SearchResult = Awaited<ReturnType<typeof searchGlobalUsers>>[number];
 

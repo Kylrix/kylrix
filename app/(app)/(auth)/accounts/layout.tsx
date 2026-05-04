@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import type { Metadata } from 'next';
+import { JetBrains_Mono } from 'next/font/google';
 import { Providers } from '@/components/Providers';
 import { EcosystemClient } from '@/components/EcosystemClient';
 import TopbarShell from '@/components/layout/TopbarShell';
 import { Box } from '@mui/material';
-import "./globals.css";
+import '../../../globals.css';
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Drawer,
   Typography,
@@ -13,15 +13,15 @@ import {
   alpha,
   useTheme,
   useMediaQuery
-} from "@mui/material";
+} from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
   ErrorOutline as ErrorOutlineIcon,
   Mail as MailIcon,
   Home as HomeIcon,
   Settings as SettingsIcon,
-} from "@mui/icons-material";
-import { completeEmailVerification } from "@/lib/appwrite";
+} from '@mui/icons-material';
+import { completeEmailVerification } from '@/lib/appwrite';
 
 interface VerifyEmailModalProps {
   isOpen: boolean;

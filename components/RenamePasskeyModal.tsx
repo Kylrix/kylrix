@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect } from 'react';
 import {
   Drawer,
   Button,
@@ -9,9 +9,9 @@ import {
   CircularProgress,
   useTheme,
   useMediaQuery,
-} from "@mui/material";
-import { AppwriteService } from "@/lib/appwrite";
-import toast from "react-hot-toast";
+} from '@mui/material';
+import { AppwriteService } from '@/lib/appwrite';
+import toast from 'react-hot-toast';
 
 interface Passkey {
   id: string;

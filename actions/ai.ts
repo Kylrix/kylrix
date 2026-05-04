@@ -1,7 +1,7 @@
 "use server";
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { AIRequestPayload, AIResponse } from '@/lib/ai/types';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AIRequestPayload, AIResponse } from "@/lib/ai/types";
 
 // Initialize Gemini
 // Note: GOOGLE_API_KEY must be set in environment variables

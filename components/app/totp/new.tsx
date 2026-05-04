@@ -12,11 +12,11 @@ import {
   Checkbox,
   Grid,
   CircularProgress
-} from "@mui/material";
-import { createTotpSecret, updateTotpSecret } from "@/lib/appwrite";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+} from '@mui/material';
+import { createTotpSecret, updateTotpSecret } from '@/lib/appwrite';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 export default function NewTotpDialog({
   open,

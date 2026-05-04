@@ -1,6 +1,6 @@
-import { tablesDB } from "../appwrite";
-import { APPWRITE_CONFIG } from "../appwrite/config";
-import { getEcosystemUrl } from "../constants/ecosystem";
+import { tablesDB } from '../appwrite';
+import { APPWRITE_CONFIG } from '../appwrite/config';
+import { getEcosystemUrl } from '../constants/ecosystem';
 
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const TABLE_ID = APPWRITE_CONFIG.TABLES.VAULT.USER; // 'user' table in chat DB is used for profiles

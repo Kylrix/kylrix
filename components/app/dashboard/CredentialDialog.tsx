@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
-import AddIcon from "@mui/icons-material/Add";
-import CloseIcon from "@mui/icons-material/Close";
-import SaveIcon from "@mui/icons-material/Save";
-import LanguageIcon from "@mui/icons-material/Language";
-import LocalOfferIcon from "@mui/icons-material/LocalOffer";
-import DescriptionIcon from "@mui/icons-material/Description";
-import PersonIcon from "@mui/icons-material/Person";
-import LockIcon from "@mui/icons-material/Lock";
-import CreditCardIcon from "@mui/icons-material/CreditCard";
+import { useState, useEffect } from 'react';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
+import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import SaveIcon from '@mui/icons-material/Save';
+import LanguageIcon from '@mui/icons-material/Language';
+import LocalOfferIcon from '@mui/icons-material/LocalOffer';
+import DescriptionIcon from '@mui/icons-material/Description';
+import PersonIcon from '@mui/icons-material/Person';
+import LockIcon from '@mui/icons-material/Lock';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 import { 
   Drawer,
   Button, 
@@ -25,11 +25,11 @@ import {
   useMediaQuery,
   Stack,
   Divider
-} from "@mui/material";
-import { createCredential, updateCredential } from "@/lib/appwrite";
-import type { Credentials, CredentialsCreate } from "@/lib/appwrite/types";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { generateRandomPassword } from "@/utils/password";
+} from '@mui/material';
+import { createCredential, updateCredential } from '@/lib/appwrite';
+import type { Credentials, CredentialsCreate } from '@/lib/appwrite/types';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { generateRandomPassword } from '@/utils/password';
 
 const VAULT_PRIMARY = "#10B981"; // Emerald
 const SURFACE_COLOR = "#161412";

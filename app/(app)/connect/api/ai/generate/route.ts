@@ -1,6 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { NextResponse } from "next/server";
-import { resolveCurrentUser } from "@/lib/appwrite/client";
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { NextResponse } from 'next/server';
+import { resolveCurrentUser } from '@/lib/appwrite/client';
 
 export async function POST(req: Request) {
   try {

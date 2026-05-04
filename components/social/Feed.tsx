@@ -57,8 +57,8 @@ import { getCachedIdentityById, seedIdentityCache, subscribeIdentityCache } from
 import { resolveIdentity, resolveIdentityUsername } from '@/lib/identity-format';
 import { seedMomentPreview } from '@/lib/moment-preview';
 import { FormattedText } from '../common/FormattedText';
-import { FastDraftInput } from "../common/FastDraftInput";
-import type { FastDraftInputHandle } from "../common/FastDraftInput";
+import { FastDraftInput } from '../common/FastDraftInput';
+import type { FastDraftInputHandle } from '../common/FastDraftInput';
 
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { NoteViewDrawer } from './NoteViewDrawer';

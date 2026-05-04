@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { FormsServerService } from "@/lib/services/server/forms";
+import type { Metadata } from 'next';
+import { FormsServerService } from '@/lib/services/server/forms';
 
 const DEFAULT_DESCRIPTION = "Secure, shareable Kylrix Flow forms.";
 

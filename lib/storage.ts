@@ -1,6 +1,6 @@
-import { ID } from "appwrite";
-import { storage } from "./appwrite/client";
-import { APPWRITE_CONFIG } from "./appwrite/config";
+import { ID } from 'appwrite';
+import { storage } from './appwrite/client';
+import { APPWRITE_CONFIG } from './appwrite/config';
 
 const { BUCKETS } = APPWRITE_CONFIG;
 

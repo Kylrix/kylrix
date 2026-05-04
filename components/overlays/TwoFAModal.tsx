@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useFinalizeAuth } from "@/lib/finalizeAuth";
+import { useState, useEffect } from 'react';
+import { useFinalizeAuth } from '@/lib/finalizeAuth';
 import {
   Drawer,
   Typography,
@@ -14,20 +14,20 @@ import {
   alpha,
   useTheme,
   useMediaQuery,
-} from "@mui/material";import {
+} from '@mui/material';import {
   Smartphone as SmartphoneIcon,
   Mail as MailIcon,
   Phone as PhoneIcon,
   VpnKey as KeyIcon,
   ChevronLeft as ChevronLeftIcon,
   VerifiedUser as ShieldCheckIcon,
-} from "@mui/icons-material";
+} from '@mui/icons-material';
 import {
   listMfaFactors,
   createMfaChallenge,
   completeMfaChallenge,
-} from "@/lib/appwrite";
-import toast from "react-hot-toast";
+} from '@/lib/appwrite';
+import toast from 'react-hot-toast';
 
 interface TwoFAModalProps {
   isOpen: boolean;

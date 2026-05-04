@@ -1,4 +1,4 @@
-import { APPWRITE_CONFIG } from "./appwrite/config";
+import { APPWRITE_CONFIG } from './appwrite/config';
 
 export interface EcosystemApp {
   id: string;

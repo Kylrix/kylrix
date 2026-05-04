@@ -1,9 +1,9 @@
 "use client";
 
-import { startAuthentication } from "@simplewebauthn/browser";
-import { AppwriteService } from "@/lib/appwrite";
-import { ecosystemSecurity } from "@/lib/ecosystem/security";
-import toast from "react-hot-toast";
+import { startAuthentication } from '@simplewebauthn/browser';
+import { AppwriteService } from '@/lib/appwrite';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import toast from 'react-hot-toast';
 
 /**
  * Unlocks the ecosystem security (MEK) using a registered passkey.

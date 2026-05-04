@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useEffect, useState, useMemo } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { 
   Shield, 
   Settings, 
@@ -11,7 +11,7 @@ import {
   Share2, 
   Upload, 
   Lock 
-} from "lucide-react";
+} from 'lucide-react';
 import { 
   Button, 
   Box, 
@@ -24,14 +24,14 @@ import {
   Typography, 
   Paper,
   alpha
-} from "@mui/material";
-import { useAppwriteVault } from "@/context/appwrite-context";
-import { masterPassCrypto } from "@/lib/masterpass-crypto";
-import VaultTopbar from "@/components/common/VaultTopbar";
-import BottomNav from "./BottomNav";
-import { VaultFAB } from "./VaultFAB";
-import dynamic from "next/dynamic";
-import type { Models } from "appwrite";
+} from '@mui/material';
+import { useAppwriteVault } from '@/context/appwrite-context';
+import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import VaultTopbar from '@/components/common/VaultTopbar';
+import BottomNav from './BottomNav';
+import { VaultFAB } from './VaultFAB';
+import dynamic from 'next/dynamic';
+import type { Models } from 'appwrite';
 
 const PasskeySetup = dynamic(() => import("@/components/overlays/passkeySetup").then(mod => mod.PasskeySetup), { ssr: false });
 
