@@ -39,7 +39,7 @@ import {
 import { checkRateLimit, getBlockedDuration } from '@/lib/rate-limiter';
 import toast from 'react-hot-toast';
 import { unlockWithPasskey } from '@/lib/passkey';
-import { PasskeySetup } from './passkeySetup';
+import { PasskeySetup } from './PasskeySetup';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 interface MasterPassModalProps {

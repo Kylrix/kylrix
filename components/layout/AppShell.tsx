@@ -33,7 +33,7 @@ import { VaultFAB } from './VaultFAB';
 import dynamic from 'next/dynamic';
 import type { Models } from 'appwrite';
 
-const PasskeySetup = dynamic(() => import("@/components/overlays/passkeySetup").then(mod => mod.PasskeySetup), { ssr: false });
+const PasskeySetup = dynamic(() => import('@/components/overlays/PasskeySetup').then(mod => mod.PasskeySetup), { ssr: false });
 
 interface ExtendedUser extends Models.User<Models.Preferences> {
   isPasskey?: boolean;
