@@ -259,7 +259,7 @@ export default function Topbar({
         const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
         return {
           ...item,
-          href: appBasePaths[app] || '/',
+          href: APP_BASE_PATHS[app as keyof typeof APP_BASE_PATHS] || '/',
         };
       }),
     [],
@@ -273,15 +273,7 @@ export default function Topbar({
         currentApp: 'accounts',
         snippets: [],
         resolveUrl: (app, path = '') => {
-          const appBasePaths: Record<string, string> = {
-            'accounts': '/accounts',
-            'note': '/note',
-            'vault': '/vault',
-            'flow': '/flow',
-            'connect': '/connect',
-            'kylrix': '/'
-          };
-          return (appBasePaths[app] || '/') + path;
+          return (APP_BASE_PATHS[app as keyof typeof APP_BASE_PATHS] || '/') + path;
         },
       }),
     [searchQuery],

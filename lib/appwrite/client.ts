@@ -223,8 +223,15 @@ export function setKylrixPulse(user: any, avatarBase64?: string | null) {
             name: user.name || user.username || 'User',
             profilePicId: user.prefs?.profilePicId || user.profilePicId || null,
         };
-        const domain = APPWRITE_CONFIG.SYSTEM.DOMAIN;
-        document.cookie = `${PULSE_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(pulse))}; path=/; domain=.${domain}; max-age=31536000; SameSite=Lax`;
+        
+        // On localhost, set cookie without domain (path-only). On production, use .domain format
+        const hostname = window.location.hostname;
+        const domain = hostname === 'localhost' || hostname.startsWith('127.') 
+            ? '' 
+            : `.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
+        const domainStr = domain ? `domain=${domain}; ` : '';
+        
+        document.cookie = `${PULSE_COOKIE_NAME}=${encodeURIComponent(JSON.stringify(pulse))}; path=/; ${domainStr}max-age=31536000; SameSite=Lax`;
         if (avatarBase64) localStorage.setItem(AVATAR_CACHE_PREFIX + user.$id, avatarBase64);
         (window as any).__KYLRIX_PULSE__ = { ...pulse, avatarBase64: avatarBase64 || localStorage.getItem(AVATAR_CACHE_PREFIX + user.$id) };
     } catch (_e) {}
@@ -232,8 +239,12 @@ export function setKylrixPulse(user: any, avatarBase64?: string | null) {
 
 export function clearKylrixPulse() {
     if (typeof window === 'undefined') return;
-    const domain = APPWRITE_CONFIG.SYSTEM.DOMAIN;
-    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; domain=.${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    const hostname = window.location.hostname;
+    const domain = hostname === 'localhost' || hostname.startsWith('127.') 
+        ? '' 
+        : `.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
+    const domainStr = domain ? `domain=${domain}; ` : '';
+    document.cookie = `${PULSE_COOKIE_NAME}=; path=/; ${domainStr}expires=Thu, 01 Jan 1970 00:00:00 GMT`;
     delete (window as any).__KYLRIX_PULSE__;
     document.documentElement.removeAttribute('data-kylrix-pulse');
 }

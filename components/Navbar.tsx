@@ -458,6 +458,7 @@ export default function Navbar() {
 
                 {!isAuthenticated && (
                   <Button
+                    id="navbar-connect-btn"
                     onClick={handleLaunchClick}
                     sx={{
                       bgcolor: '#6366F1',

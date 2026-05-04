@@ -9,7 +9,7 @@ import { calculateSubscriptionPrice, PPP_DATA } from '@/lib/subscription/ppp';
 import { account } from '@/lib/appwrite';
 
 function CheckoutContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(false);

@@ -20,14 +20,14 @@ type CouponClaimResponse = {
 
 export default function CouponLandingPage(props: { params: Promise<{ id: string }> }) {
   const params = use(props.params);
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const couponId = useMemo(() => (params.id || '').trim(), [params.id]);
   const [state, setState] = useState<'loading' | 'ready' | 'claimed' | 'error'>('loading');
   const [message, setMessage] = useState<string>('Resolving coupon...');
   const [coupon, setCoupon] = useState<CouponClaimResponse | null>(null);
 
   useEffect(() => {
-    if (loading) return;
+    if (isLoading) return;
     if (!user) {
       const url = new URL('/login', window.location.origin);
       url.searchParams.set('source', window.location.href);
@@ -72,7 +72,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
     };
 
     run();
-  }, [couponId, loading, user]);
+  }, [couponId, isLoading, user]);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff', display: 'flex', alignItems: 'center', py: 8 }}>

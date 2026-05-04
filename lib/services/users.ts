@@ -143,5 +143,31 @@ export const UsersService = {
         } catch (_e) {
             return false;
         }
+    },
+
+    async ensureProfileForUser(user: any) {
+        try {
+            const existing = await this.getProfileById(user.$id);
+            if (existing) return existing;
+            
+            // Generate a default username from email
+            const email = user.email || user.name || 'user';
+            const defaultUsername = email.split('@')[0].replace(/[^a-z0-9_]/g, '_').toLowerCase();
+            
+            // Check if username is available, if not add timestamp
+            let username = defaultUsername;
+            let attempts = 0;
+            while (!(await this.isUsernameAvailable(username)) && attempts < 5) {
+                username = `${defaultUsername}${Math.random().toString(36).substring(7)}`;
+                attempts++;
+            }
+            
+            return await this.createProfile(user.$id, username, {
+                displayName: user.name || email,
+            });
+        } catch (error) {
+            console.warn('[UsersService] Failed to ensure profile:', error);
+            return null;
+        }
     }
-};
+

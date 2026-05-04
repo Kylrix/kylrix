@@ -7,14 +7,14 @@ import { Box, CircularProgress } from '@mui/material';
 import { isUserAdmin } from '@/actions/admin/check-admin';
 
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
     const checkStatus = async () => {
-      if (!loading) {
-        if (!user) {
+      if (!isLoading) {
+        if (!user || !user.email) {
           router.push('/login');
           return;
         }
@@ -30,9 +30,9 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     };
 
     checkStatus();
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
-  if (loading || isAdmin === null) {
+  if (isLoading || isAdmin === null) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#0A0908' }}>
         <CircularProgress sx={{ color: '#6366F1' }} />
