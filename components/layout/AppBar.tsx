@@ -39,7 +39,7 @@ import { getTopbarLogoHref } from '@/lib/sdk';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/constants';
 import dynamic from 'next/dynamic';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
-import { getUserProfilePicId } from '@/lib/user-utils';
+import { getUserProfilePicId } from '@/lib/utils';
 import { Button } from '@mui/material';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';

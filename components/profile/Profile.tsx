@@ -32,7 +32,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { ActorsListDrawer } from '../social/ActorsListDrawer';
 import type { Actor } from '../social/ActorsListDrawer';
 
-import { getUserProfilePicId } from '@/lib/user-utils';
+import { getUserProfilePicId } from '@/lib/utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityByUsername, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
 import { getProfileView, stageProfileView } from '@/lib/profile-handoff';

@@ -39,7 +39,7 @@ import { useState, useEffect } from 'react';
 import EcosystemPortal from '../common/EcosystemPortal';
 import { getEcosystemUrl } from '@/lib/constants/ecosystem';
 import Logo from '../common/Logo';
-import { getUserProfilePicId } from '@/lib/user-utils';
+import { getUserProfilePicId } from '@/lib/utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
 import { WalletSidebar } from '../overlays/WalletSidebar';

@@ -70,7 +70,7 @@ import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { formatPostTimestamp } from '@/lib/time';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
-import { getUserSubscriptionTier } from '@/lib/user-utils';
+import { getUserSubscriptionTier } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 
 import toast from 'react-hot-toast';

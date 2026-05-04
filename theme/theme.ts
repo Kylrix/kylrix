@@ -13,7 +13,7 @@ const SURFACE = '#161514';
  * 4. Surface System = Glassmorphic layers that adapt to background luminance.
  */
 
-const getDesignTokens = (mode: 'light' | 'dark'): ThemeOptions => ({
+export const getDesignTokens = (mode: 'light' | 'dark'): ThemeOptions => ({
   palette: {
     mode,
     primary: {

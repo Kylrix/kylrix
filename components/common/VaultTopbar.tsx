@@ -26,7 +26,7 @@ import { WalletSidebar } from '@/components/overlays/WalletSidebar';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
-import { getUserProfilePicId } from '@/lib/user-utils';
+import { getUserProfilePicId } from '@/lib/utils';
 import { getEcosystemUrl } from '@/lib/constants/ecosystem';
 import { TOPBAR_LAYOUT, getAppTone } from '@/lib/sdk/design';
 import { createEcosystemPanelItems, createTopbarPanelMotion, isTopbarScrollAtBottom, isTopbarScrollAtTop } from '@/lib/sdk/topbar';

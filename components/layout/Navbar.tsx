@@ -30,7 +30,7 @@ import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import EcosystemPortal from '../common/EcosystemPortal';
 import Logo from '../common/Logo';
-import { getUserProfilePicId } from '@/lib/user-utils';
+import { getUserProfilePicId } from '@/lib/utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';

@@ -26,7 +26,7 @@ import {
 import { account, AppwriteService } from '@/lib/appwrite';
 import { useAuth } from '@/context/AuthContext';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
-import { getUserProfilePicId } from '@/lib/user-utils';
+import { getUserProfilePicId } from '@/lib/utils';
 import EcosystemPortal from '../EcosystemPortal';
 import { ReferralInfoDrawer } from '../ReferralInfoDrawer';
 import { IdentityAvatar, IdentityName, computeIdentityFlags } from '../IdentityBadge';
