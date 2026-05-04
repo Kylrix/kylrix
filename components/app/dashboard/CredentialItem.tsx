@@ -111,10 +111,10 @@ export default function CredentialItem({
         <Typography variant="body2" noWrap sx={{ color: 'text.secondary', mt: 0.5 }}>
           {credential.username}
         </Typography>
-        {credential.sharedFrom && (
+        {(credential as any).sharedFrom && (
           <Chip
             size="small"
-            label={`shared from ${credential.sharedFrom}`}
+            label={`shared from ${(credential as any).sharedFrom}`}
             sx={{
               mt: 1,
               height: 20,

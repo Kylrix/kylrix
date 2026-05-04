@@ -64,7 +64,7 @@ export default function UserSearch({
     setIsSearching(true);
     try {
       const users = await UsersService.searchUsers(searchQuery);
-      const filtered = users.filter(u => 
+      const filtered = users.filter((u: any) => 
         !selectedUsers.some(s => s.id === u.id) && 
         !excludeIds.includes(u.id)
       );

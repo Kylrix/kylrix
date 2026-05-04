@@ -1758,7 +1758,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             {conversation?.type === 'direct' && !isSelf ? (
                                 <IdentityName
                                     verified={partnerVerification.verified}
-                                    verifiedOn={partnerVerification.verifiedOn}
                                     sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: 'text.primary' }}
                                 >
                                     {conversation?.name || 'Loading...'}

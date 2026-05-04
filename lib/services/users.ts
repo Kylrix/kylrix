@@ -169,6 +169,39 @@ export const UsersService = {
             console.warn('[UsersService] Failed to ensure profile:', error);
             return null;
         }
+    },
+
+    async searchUsers(query: string) {
+        try {
+            const { Query } = await import("appwrite");
+            const res = await (tablesDB as any).listRows({
+                databaseId: DATABASE_ID,
+                tableId: TABLE_ID,
+                queries: [
+                    Query.or([
+                        Query.startsWith('username', query.toLowerCase()),
+                        Query.startsWith('displayName', query),
+                    ]),
+                    Query.limit(20)
+                ]
+            });
+            return res.rows || [];
+        } catch (error) {
+            console.warn('[UsersService] Search failed:', error);
+            return [];
+        }
+    },
+
+    async forceSyncProfileWithIdentity(user: any) {
+        try {
+            const existing = await this.getProfileById(user.$id);
+            if (existing) return existing;
+            
+            return await this.ensureProfileForUser(user);
+        } catch (error) {
+            console.warn('[UsersService] Force sync failed:', error);
+            return null;
+        }
     }
 
 };

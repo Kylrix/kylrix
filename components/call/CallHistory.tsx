@@ -47,8 +47,6 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
         if (!user) return;
         setLoading(true);
         try {
-            // Run cleanup of old logs
-            await CallService.cleanupOldCallLogs();
 
             const [history, ongoing] = await Promise.all([
                 CallService.getCallHistory(user.$id),

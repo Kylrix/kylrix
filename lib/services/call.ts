@@ -117,5 +117,74 @@ export const CallService = {
         } catch (_e) {
             return;
         }
+    },
+
+    async getCallHistory(userId: string) {
+        try {
+            const res = await tablesDB.listRows({
+                databaseId: DB_ID,
+                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                queries: [
+                    Query.or([
+                        Query.equal('userId', userId),
+                        Query.equal('callerId', userId),
+                        Query.equal('receiverId', userId),
+                    ]),
+                    Query.limit(50)
+                ],
+            });
+            return res.rows || [];
+        } catch (_e) {
+            return [];
+        }
+    },
+
+    async getActiveCalls(userId: string) {
+        try {
+            const res = await tablesDB.listRows({
+                databaseId: DB_ID,
+                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                queries: [
+                    Query.or([
+                        Query.equal('userId', userId),
+                        Query.equal('callerId', userId),
+                        Query.equal('receiverId', userId),
+                    ]),
+                    Query.equal('status', 'active'),
+                    Query.limit(50)
+                ],
+            });
+            return res.rows || [];
+        } catch (_e) {
+            return [];
+        }
+    },
+
+    async deleteCallLog(callId: string) {
+        try {
+            await tablesDB.deleteRow({
+                databaseId: DB_ID,
+                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                rowId: callId,
+            });
+        } catch (_e) {
+            return;
+        }
+    },
+
+    async endCall(callId: string) {
+        try {
+            await tablesDB.updateRow({
+                databaseId: DB_ID,
+                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                rowId: callId,
+                data: {
+                    status: 'ended',
+                    endedAt: new Date().toISOString(),
+                },
+            });
+        } catch (_e) {
+            return;
+        }
     }
 };
