@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
         console.log(`[MasterPurge] Deleting ${creds.length} credentials and ${totps.length} TOTP secrets`);
 
         await Promise.all([
-            ...creds.map(c => AppwriteService.deleteCredential(c.$id)),
-            ...totps.map(t => AppwriteService.deleteTOTPSecret(t.$id))
+            ...creds.map((c: any) => AppwriteService.deleteCredential(c.$id)),
+            ...totps.map((t: any) => AppwriteService.deleteTOTPSecret(t.$id))
         ]);
 
         // 2. Purge Connect Tier 2 Data (Direct Messages ONLY)
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
         const keychainEntries = await AppwriteService.listKeychainEntries(userId);
         console.log(`[MasterPurge] Purging ${keychainEntries.length} keychain entries`);
         
-        await Promise.all(keychainEntries.map(e => AppwriteService.deleteKeychainEntry(e.$id)));
+        await Promise.all(keychainEntries.map((e: any) => AppwriteService.deleteKeychainEntry(e.$id)));
 
         const identityRows = await appwriteDatabases.listDocuments(
             APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,

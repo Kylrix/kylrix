@@ -78,15 +78,11 @@ export default function OverviewPage() {
         } catch {
         }
 
-        const totalCreds =
-          (
-            credsResp as {
-              total?: number;
-              documents?: Array<Record<string, unknown>>;
-            }
-          ).total ??
-          credsResp.documents?.length ??
-          0;
+        const credsTyped = credsResp as {
+          total?: number;
+          documents?: Array<Record<string, unknown>>;
+        };
+        const totalCreds = credsTyped.total ?? credsTyped.documents?.length ?? 0;
 
         let dupGroupsLocal: Array<{
           key: string;
@@ -104,7 +100,8 @@ export default function OverviewPage() {
               [Query.orderDesc("$updatedAt")],
             )
           );
-          const items = recentWindow.documents || [];
+          const recentWindowTyped = recentWindow as { documents?: any[] };
+          const items = recentWindowTyped.documents || [];
           const fieldCandidates = [
             "username",
             "password",
@@ -166,7 +163,8 @@ export default function OverviewPage() {
             username: d.username as string | undefined,
           }));
         } catch {
-          recentItems = (credsResp.documents || [])
+          const credsTyped2 = credsResp as { documents?: any[] };
+          recentItems = (credsTyped2.documents || [])
             .slice(0, 5)
             .map((d) => ({
               $id: String((d as Record<string, unknown>)["$id"]),

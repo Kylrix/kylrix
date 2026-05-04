@@ -63,7 +63,7 @@ export default function SettingsPage() {
     if (!user?.$id) return;
     try {
         const entries = await AppwriteService.listKeychainEntries(user.$id);
-        const pkEntries = entries.filter(e => e.type === 'passkey').map(e => ({
+        const pkEntries = entries.filter((e: any) => e.type === 'passkey').map((e: any) => ({
             ...e,
             params: typeof e.params === 'string' ? JSON.parse(e.params) : e.params
         }));
@@ -412,7 +412,7 @@ export default function SettingsPage() {
       />
 
       <PasskeySetup 
-        isOpen={passkeySetupOpen}
+        open={passkeySetupOpen}
         onClose={() => setPasskeySetupOpen(false)}
         userId={user?.$id || ""}
         onSuccess={() => {

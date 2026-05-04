@@ -230,7 +230,7 @@ export default function DashboardPage() {
             updatedAt: new Date().toISOString(),
           });
           folderId = newFolder.$id;
-          folderMap.set(folderName.toLowerCase(), folderId);
+          if (folderId) folderMap.set(folderName.toLowerCase(), folderId);
         }
 
         // 3. Move credentials to folder
