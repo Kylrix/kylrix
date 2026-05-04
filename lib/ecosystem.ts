@@ -40,28 +40,8 @@ export function getEcosystemUrl(subdomain: string, path = '') {
     return '#';
   }
 
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isLocalhost = 
-    hostname === 'localhost' || 
-    hostname === '127.0.0.1' || 
-    hostname.endsWith('.local') || 
-    hostname.endsWith('.internal') ||
-    hostname.includes('192.168.') || 
-    hostname.includes('10.');
-
-  if (isLocalhost) {
-    const ports: Record<string, number> = {
-      accounts: 3000,
-      note: 3001,
-      vault: 3002,
-      flow: 3003,
-      connect: 3004,
-      kylrix: 3005
-    };
-
-    return `http://localhost:${ports[subdomain] || ports['accounts']}${path ? (path.startsWith('/') ? path : `/${path}`) : ''}`;
-  }
-
+  // Always use path-based routing in unified app (same-origin)
+  // Regardless of localhost or production
   const basePath = APP_BASE_PATHS[subdomain] || `/${subdomain}`;
   return `${basePath}${path ? (path.startsWith('/') ? path : `/${path}`) : ''}`;
 }
