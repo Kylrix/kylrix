@@ -4,7 +4,7 @@ import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import { motion } from 'framer-motion';
 
-export type KylrixApp = 'root' | 'vault' | 'flow' | 'note' | 'connect';
+export type KylrixApp = 'root' | 'accounts' | 'kylrix' | 'vault' | 'flow' | 'note' | 'connect';
 
 interface LogoProps {
   sx?: any;
@@ -32,6 +32,8 @@ const Logo: React.FC<LogoProps> = ({
 
   const appColors: Record<KylrixApp, { accent: string; label: string }> = {
     root: { accent: "#6366F1", label: "KYLRIX" },
+    accounts: { accent: "#6366F1", label: "ACCOUNTS" },
+    kylrix: { accent: "#6366F1", label: "KYLRIX" },
     vault: { accent: "#10B981", label: "VAULT" },
     flow: { accent: "#A855F7", label: "FLOW" },
     note: { accent: "#EC4899", label: "NOTE" },

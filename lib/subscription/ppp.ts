@@ -76,9 +76,10 @@ export const PPP_DATA: Record<string, RegionConfig> = {
 };
 
 export const calculateSubscriptionPrice = (
-  tier: SubscriptionTier,
+  tier: SubscriptionTier | string,
   countryCode: string,
-  method: PaymentMethod
+  method: PaymentMethod,
+  months = 1
 ): number => {
   const region = PPP_DATA[countryCode] || PPP_DATA.DEFAULT;
   const baseProPrice = GLOBAL_SUBSCRIPTION_CONFIG.base_pro_price;
@@ -91,7 +92,7 @@ export const calculateSubscriptionPrice = (
     : 1.0;
 
   // Final Price in USD: PPP_Adjusted_Pro_USD * Card_Surcharge
-  const finalPrice = pppAdjustedProUsd * paymentMultiplier;
+  const finalPrice = pppAdjustedProUsd * paymentMultiplier * Math.max(1, months);
   
   return Math.round(finalPrice * 100) / 100;
 };

@@ -168,7 +168,7 @@ export default function SudoModal({
             setHasPin(pinSet);
 
             // Check for passkey keychain entry
-            AppwriteService.listKeychainEntries(user.$id).then(entries => {
+            AppwriteService.listKeychainEntries(user.$id).then((entries: Array<{ type?: string }>) => {
                 const passkeyPresent = entries.some((e: any) => e.type === 'passkey');
                 const passwordPresent = entries.some((e: any) => e.type === 'password');
                 const pinPresent = entries.some((e: any) => e.type === 'pin') || pinSet;

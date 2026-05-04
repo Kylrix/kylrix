@@ -49,12 +49,7 @@ export default function PinManager() {
 
     setLoading(true);
     try {
-      await ecosystemSecurity.setupPinVerifier(pin);
-      
-      // If unlocked, piggyback now
-      if (ecosystemSecurity.status.isUnlocked) {
-        await ecosystemSecurity.piggybackSession(pin);
-      }
+      await ecosystemSecurity.setupPin(pin);
       
       setHasPin(true);
       setShowSetup(false);
