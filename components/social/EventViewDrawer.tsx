@@ -126,7 +126,7 @@ export const EventViewDrawer = ({ open, onClose, event }: EventViewDrawerProps) 
                         variant="contained" 
                         color="primary"
                         component="a"
-                        href={`http://localhost:3003/events/${event.$id || event.id}`} // Assuming Flow app runs on 3003
+                        href={`/flow/events/${event.$id || event.id}`}
                         target="_blank"
                         sx={{ borderRadius: 3, py: 1.5, fontWeight: 800, color: 'black' }}
                     >

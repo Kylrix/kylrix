@@ -13,7 +13,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://id.kylrix.space'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://kylrix.space'),
   title: 'Kylrix ID - Premium Identity Management',
   description: 'The root of your digital identity. Manage your secure access and passkeys with professional reliability.',
   icons: {
