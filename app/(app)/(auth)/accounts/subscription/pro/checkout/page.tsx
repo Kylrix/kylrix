@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, Suspense, useMemo } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import { Box, Container, Typography, CircularProgress, Paper, Button, Stack, Divider } from '@mui/material';
 import { Rocket, Heart, Globe, Clock } from 'lucide-react';

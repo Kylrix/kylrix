@@ -31,7 +31,7 @@ import Logo from '../Logo';
 import { AppwriteService } from '@/lib/appwrite';
 import { PasskeySetup } from './passkeySetup';
 import { unlockWithPasskey } from '@/lib/passkey';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import toast from 'react-hot-toast';
 import React from 'react';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';

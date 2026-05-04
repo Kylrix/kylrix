@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
 import { isUserAdmin } from '@/actions/admin/check-admin';
 

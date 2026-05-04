@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { account } from '@/lib/appwrite';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { TwoFactorDrawer } from '@/components/overlays/TwoFactorDrawer';
 
 const REMINDER_KEY_PREFIX = 'kylrix_two_factor_reminder_last_prompt_';

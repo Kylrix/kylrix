@@ -8,7 +8,7 @@ import { ThemeProvider as AppThemeProvider, useTheme } from '@/lib/theme-context
 import { useEcosystemNode } from '@/lib/use-ecosystem-node';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { AppwriteService, getCurrentUser } from '@/lib/appwrite';
-import { AuthProvider } from '@/context/AuthContext';
+import { AuthProvider } from '@/context/auth/AuthContext';
 import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 import { DataNexusProvider } from '@/context/DataNexusContext';
 import TwoFactorReminderHost from '@/components/TwoFactorReminderHost';
