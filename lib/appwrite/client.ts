@@ -1,4 +1,4 @@
-import { Client, TablesDB, Storage, Account, Realtime } from 'appwrite';
+import { Client, TablesDB, Storage, Account, Realtime, Databases, Avatars, Teams, Functions, Locale } from 'appwrite';
 import { APPWRITE_CONFIG } from './config';
 
 const client = new Client();
@@ -17,11 +17,25 @@ const initAppwrite = () => {
 
 initAppwrite();
 
+export const account = new Account(client);
+export const databases = new Databases(client);
 export const tablesDB = new TablesDB(client);
 export const storage = new Storage(client);
-export const account = new Account(client);
+export const avatars = new Avatars(client);
+export const teams = new Teams(client);
+export const functions = new Functions(client);
+export const locale = new Locale(client);
 export const realtime = new Realtime(client);
+
+// Aliases for compatibility
+export const appwriteAccount = account;
+export const appwriteDatabases = tablesDB; // Most apps use tablesDB wrapper
+export const appwriteStorage = storage;
+export const appwriteAvatars = avatars;
 export { client };
+
+export const APPWRITE_BUCKET_BACKUPS_ID = APPWRITE_CONFIG.BUCKETS.BACKUPS;
+export const APPWRITE_BUCKET_PROFILE_PICTURES_ID = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
 
 let currentUserCache: { user: any | null; expiresAt: number } | null = null;
 let currentUserInFlight: Promise<any | null> | null = null;

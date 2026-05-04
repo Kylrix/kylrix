@@ -1,6 +1,11 @@
 export const APPWRITE_CONFIG = {
     ENDPOINT: 'https://api.kylrix.space/v1',
     PROJECT_ID: '67fe9627001d97e37ef3',
+    DATABASE_ID: '67ff05a9000296822396', // Alias for NOTE database
+    NOTE_DATABASE_ID: '67ff05a9000296822396',
+    VAULT_DATABASE_ID: 'passwordManagerDb',
+    FLOW_DATABASE_ID: 'whisperrflow',
+    CONNECT_DATABASE_ID: 'chat',
     DATABASES: {
         NOTE: '67ff05a9000296822396',
         VAULT: 'passwordManagerDb',
@@ -12,6 +17,18 @@ export const APPWRITE_CONFIG = {
         KYLRIXFLOW: 'whisperrflow'
     },
     TABLES: {
+        // Flat aliases for common tables
+        NOTES: '67ff05f3002502ef239e',
+        TAGS: '67ff06280034908cf08a',
+        TASKS: 'tasks',
+        EVENTS: 'events',
+        CALENDARS: 'calendars',
+        EVENT_GUESTS: 'eventGuests',
+        FOCUS_SESSIONS: 'focusSessions',
+        MESSAGES: 'messages',
+        PROFILES: 'profiles',
+        KEYCHAIN: 'keychain',
+        
         NOTE: {
             USERS: '67ff05c900247b5673d3',
             NOTES: '67ff05f3002502ef239e',
@@ -55,6 +72,7 @@ export const APPWRITE_CONFIG = {
             TASKS: 'tasks',
             EVENTS: 'events',
             GUESTS: 'eventGuests',
+            COLLABORATORS: 'Collaborators',
             FORMS: 'forms',
             FORM_SUBMISSIONS: 'formSubmissions'
         },

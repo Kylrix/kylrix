@@ -7,8 +7,22 @@ import {
   Role,
   AuthenticatorType,
 } from "appwrite";
-import { account, databases, storage, realtime, client, getCurrentUser, invalidateCurrentUserCache } from './client';
-import { buildVaultNoteTags } from "@/lib/sdk/crosslinks";
+import { 
+  account, 
+  databases, 
+  storage, 
+  realtime, 
+  client, 
+  getCurrentUser, 
+  invalidateCurrentUserCache,
+  appwriteAccount,
+  appwriteStorage,
+  appwriteAvatars,
+  APPWRITE_BUCKET_BACKUPS_ID,
+  APPWRITE_BUCKET_PROFILE_PICTURES_ID
+} from './client';
+import { AppwriteService } from './auth';
+import { buildVaultNoteTags } from "../sdk/crosslinks";
 import type {
   Credentials,
   CredentialsCreate,
@@ -24,10 +38,160 @@ import type {
   KeyMapping,
   KeyMappingCreate,
 } from "./types";
-import { sanitizeString } from "@/lib/validation";
+import { sanitizeString } from "../validation";
+import { getEcosystemUrl } from "../ecosystem";
 
 import { APPWRITE_CONFIG } from "./config";
-import { sendKylrixEmailNotification } from "@/lib/email-notifications";
+import { sendKylrixEmailNotification } from "../email-notifications";
+
+// --- Helper Utilities ---
+
+function normalizeEndpoint(ep?: string): string {
+  const raw = (ep || "").trim();
+  if (!raw) return "";
+  const cleaned = raw.replace(/\/+$/, "");
+  if (/\/v1$/.test(cleaned)) return cleaned;
+  return `${cleaned}/v1`;
+}
+
+function isFetchNetworkError(error: unknown): boolean {
+  const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("network error") ||
+    msg.includes("load failed")
+  );
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  return new Uint8Array(atob(value).split("").map((char) => char.charCodeAt(0)));
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function readShareMetadata(metadata: string | null | undefined): Record<string, unknown> {
+  if (!metadata) return {};
+  try {
+    const parsed = JSON.parse(metadata);
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+async function importX25519PublicKey(publicKeyBase64: string): Promise<CryptoKey> {
+  return await crypto.subtle.importKey(
+    "raw",
+    base64ToBytes(publicKeyBase64) as unknown as BufferSource,
+    { name: "X25519" },
+    false,
+    [],
+  );
+}
+
+async function exportX25519PublicKey(publicKey: CryptoKey): Promise<string> {
+  const exported = await crypto.subtle.exportKey("raw", publicKey);
+  return bytesToBase64(new Uint8Array(exported));
+}
+
+async function encryptShareEnvelope<T extends Record<string, unknown>>(
+  payload: T,
+  recipientPublicKeyBase64: string,
+): Promise<{ wrappedKey: string; senderPublicKey: string }> {
+  const recipientPublicKey = await importX25519PublicKey(recipientPublicKeyBase64);
+  const ephemeralKeyPair = (await crypto.subtle.generateKey(
+    { name: "X25519" },
+    true,
+    ["deriveKey", "deriveBits"],
+  )) as CryptoKeyPair;
+
+  const sharedKey = await crypto.subtle.deriveKey(
+    { name: "X25519", public: recipientPublicKey },
+    ephemeralKeyPair.privateKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const encoded = new TextEncoder().encode(JSON.stringify(payload));
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, sharedKey, encoded);
+  const combined = new Uint8Array(iv.length + encrypted.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(encrypted), iv.length);
+
+  return {
+    wrappedKey: bytesToBase64(combined),
+    senderPublicKey: await exportX25519PublicKey(ephemeralKeyPair.publicKey),
+  };
+}
+
+async function decryptShareEnvelope<T extends Record<string, unknown>>(
+  wrappedKeyBase64: string,
+  senderPublicKeyBase64: string,
+): Promise<T> {
+  const { ecosystemSecurity } = await import("../ecosystem/security");
+  const privateKey = ecosystemSecurity.getInstance().getIdentityPrivateKey();
+  if (!privateKey) {
+    throw new Error("Vault is locked - cannot decrypt shared item");
+  }
+
+  const senderPublicKey = await importX25519PublicKey(senderPublicKeyBase64);
+  const sharedKey = await crypto.subtle.deriveKey(
+    { name: "X25519", public: senderPublicKey },
+    privateKey,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"],
+  );
+
+  const combined = base64ToBytes(wrappedKeyBase64);
+  const iv = combined.slice(0, 12);
+  const ciphertext = combined.slice(12);
+  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, sharedKey, ciphertext);
+  return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+}
+
+async function listDocumentsWithRetry(
+  collectionId: string,
+  queries: string[] = [],
+): Promise<Models.DocumentList<Models.Document>> {
+  try {
+    return await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      collectionId,
+      queries,
+    );
+  } catch (err: unknown) {
+    if (!isFetchNetworkError(err)) throw err as Error;
+
+    // Try to normalize endpoint then retry once
+    try {
+      const envEp = APPWRITE_CONFIG.ENDPOINT;
+      if (envEp) {
+        client.setEndpoint(envEp);
+      } else if (typeof window !== "undefined") {
+        // Fallback to same-origin /v1 in dev if env missing
+        client.setEndpoint(normalizeEndpoint(window.location.origin));
+      }
+      return await databases.listDocuments(
+        APPWRITE_DATABASE_ID,
+        collectionId,
+        queries,
+      );
+    } catch (err2: unknown) {
+      // Surface a clearer error with guidance
+      const note =
+        "Network request to Appwrite failed. Check NEXT_PUBLIC_APPWRITE_ENDPOINT, CORS, and /v1 suffix.";
+      const e = err2 as Error & { cause?: unknown };
+      e.cause = err;
+      throw new Error(`${note} Original: ${e.message}`);
+    }
+  }
+}
 
 // --- Appwrite Config ---
 export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
@@ -1325,7 +1489,7 @@ export class VaultService {
 
     try {
       const { encryptField, masterPassCrypto } = await import(
-        "../lib/masterpass-crypto"
+        "../masterpass-crypto"
       );
 
       if (!masterPassCrypto.isVaultUnlocked()) {
@@ -1365,7 +1529,7 @@ export class VaultService {
 
     try {
       const { decryptField, masterPassCrypto } = await import(
-        "../lib/masterpass-crypto"
+        "../masterpass-crypto"
       );
 
       // Check if vault is unlocked before attempting decryption
@@ -2220,7 +2384,7 @@ export async function getAuthenticationNextRoute(
     // Check if vault is unlocked
     try {
       const { masterPassCrypto } = await import(
-        "../lib/masterpass-crypto"
+        "../masterpass-crypto"
       );
       if (!masterPassCrypto.isVaultUnlocked()) {
         return "/dashboard";
