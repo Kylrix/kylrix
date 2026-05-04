@@ -198,7 +198,6 @@ const APP_TONES: Record<KylrixApp, { primary: string; secondary: string; label: 
   flow: { primary: '#6366F1', secondary: '#A855F7', label: 'Flow' },
   note: { primary: '#6366F1', secondary: '#EC4899', label: 'Note' },
   connect: { primary: '#6366F1', secondary: '#F59E0B', label: 'Connect' },
-  kylrix: { primary: '#6366F1', secondary: '#6366F1', label: 'Kylrix' },
 };
 
 const TYPE_TONES: Record<IslandType, { primary: string; secondary: string; label: string }> = {
@@ -691,4 +690,3 @@ export const DynamicIslandPanelSurface: React.FC<{
     </Box>
   );
 };
-
