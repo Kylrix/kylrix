@@ -24,7 +24,7 @@ import {
   Clock
 } from 'lucide-react';
 import { account, AppwriteService } from '@/lib/appwrite';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/utils';
 import EcosystemPortal from '../EcosystemPortal';
