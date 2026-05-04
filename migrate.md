@@ -8,6 +8,7 @@ Unified Next.js build restored. Shared compatibility exports are in place and th
 - Consolidated shared `lib/`, `components/`, `context/`, `utils/`, `hooks/`, `constants/`, and `types/`
 - Restored shared compatibility exports in `lib/appwrite`, `lib/sdk`, `lib/constants`, and `lib/profile-handoff`
 - Patched legacy default/named export mismatches in `Logo`, `EcosystemPortal`, `SudoModal`, and `Navigation`
+- Restored call-service compatibility helpers for public call routes (`getCallLink`, `getCallLinkByCode`, `cleanupLink`, `getActiveParticipants`, `createAnonymousSession`, `sendSignal`)
 - Merged package dependencies
 - Build now passes module resolution again
 
