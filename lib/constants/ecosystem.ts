@@ -55,17 +55,14 @@ export const ECOSYSTEM_APPS: EcosystemApp[] = [
 ];
 
 export const getEcosystemUrl = (subdomain: string) => {
-    if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        const ports: Record<string, number> = {
-            accounts: 3000,
-            note: 3001,
-            vault: 3002,
-            flow: 3003,
-            connect: 3004,
-            kylrix: 3005
-        };
-        const appId = subdomain === 'id' ? 'accounts' : subdomain;
-        return `http://localhost:${ports[appId] || 3000}`;
-    }
-    return `https://${subdomain}.${KYLRIX_DOMAIN}`;
+    const appBasePaths: Record<string, string> = {
+        'accounts': '/accounts',
+        'note': '/note',
+        'vault': '/vault',
+        'flow': '/flow',
+        'connect': '/connect',
+        'id': '/accounts',
+        'kylrix': '/'
+    };
+    return appBasePaths[subdomain] || '/' + subdomain;
 };

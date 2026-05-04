@@ -6,14 +6,12 @@ import { CheckCircle2, ShieldCheck, Zap, Globe } from 'lucide-react';
 import NextLink from 'next/link';
 
 export default function ProSuccessPage() {
-  const [dashboardUrl, setDashboardUrl] = React.useState('https://kylrix.space/dashboard');
+  const [dashboardUrl, setDashboardUrl] = React.useState('/');
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      if (isLocal) {
-        setDashboardUrl('http://localhost:3005/dashboard');
-      }
+      // In unified app, always use same-origin paths
+      setDashboardUrl('/');
     }
   }, []);
 
