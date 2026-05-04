@@ -192,7 +192,7 @@ export const IslandProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 };
 
 const APP_TONES: Record<KylrixApp, { primary: string; secondary: string; label: string }> = {
-  root: { primary: '#6366F1', secondary: '#6366F1', label: 'Kylrix' },
+  kylrix: { primary: '#6366F1', secondary: '#6366F1', label: 'Kylrix' },
   accounts: { primary: '#6366F1', secondary: '#6366F1', label: 'Accounts' },
   vault: { primary: '#6366F1', secondary: '#10B981', label: 'Vault' },
   flow: { primary: '#6366F1', secondary: '#A855F7', label: 'Flow' },

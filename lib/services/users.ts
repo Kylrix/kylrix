@@ -171,19 +171,25 @@ export const UsersService = {
         }
     },
 
-    async searchUsers(query: string) {
+    async searchUsers(query: string, options?: { requirePublicKey?: boolean }) {
         try {
             const { Query } = await import("appwrite");
+            const queries = [
+                Query.or([
+                    Query.startsWith('username', query.toLowerCase()),
+                    Query.startsWith('displayName', query),
+                ]),
+                Query.limit(20)
+            ];
+            
+            if (options?.requirePublicKey) {
+                queries.push(Query.notEqual('publicKey', null));
+            }
+            
             const res = await (tablesDB as any).listRows({
                 databaseId: DATABASE_ID,
                 tableId: TABLE_ID,
-                queries: [
-                    Query.or([
-                        Query.startsWith('username', query.toLowerCase()),
-                        Query.startsWith('displayName', query),
-                    ]),
-                    Query.limit(20)
-                ]
+                queries
             });
             return res.rows || [];
         } catch (error) {
