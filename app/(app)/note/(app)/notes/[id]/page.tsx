@@ -99,7 +99,7 @@ export default function NoteEditorPage() {
       // Invalidate cache
       if (CACHE_KEY) invalidate(CACHE_KEY);
       showSuccess('Deleted', 'Note removed');
-      router.push('/notes');
+      router.push('/note/notes');
     } catch (error: any) {
       console.error('Delete failed', error);
       showError('Delete failed', 'Could not delete the note.');
@@ -112,7 +112,7 @@ export default function NoteEditorPage() {
 
   const handleMinimize = () => {
     if (!note?.$id) return;
-    const target = isMobileViewport ? '/notes' : `/notes?openNoteId=${note.$id}`;
+    const target = isMobileViewport ? '/note/notes' : `/note/notes?openNoteId=${note.$id}`;
     router.push(target);
   };
 
@@ -308,4 +308,3 @@ export default function NoteEditorPage() {
     </Box>
   );
 }
-

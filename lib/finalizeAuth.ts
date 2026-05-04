@@ -40,14 +40,14 @@ export function useFinalizeAuth() {
         })());
       // If no user after refresh, go to fallback/dashboard
       if (!u) {
-        router.replace(options.fallback || "/dashboard");
+        router.replace(options.fallback || "/vault");
         return;
       }
       // The vault crypto lock is the source of truth for local access.
       if (!isVaultUnlocked()) {
-        router.replace("/dashboard");
+        router.replace("/vault");
       } else {
-        router.replace("/dashboard");
+        router.replace("/vault");
       }
     }
   };

@@ -15,14 +15,14 @@ export default function TopbarShell() {
       profilePicId={(user?.prefs as any)?.profilePicId || null}
       connectedWallet={(user?.prefs as any)?.walletEth || (user?.prefs as any)?.walletAddress || null}
       onManageAccount={() => {
-        window.location.href = '/settings/profile';
+        window.location.href = '/accounts/settings/profile';
       }}
       onSignOut={logout}
       onSessionsClick={() => {
-        window.location.href = '/settings/sessions';
+        window.location.href = '/accounts/settings/sessions';
       }}
       onActivityClick={() => {
-        window.location.href = '/settings/activity';
+        window.location.href = '/accounts/settings/activity';
       }}
     />
   );

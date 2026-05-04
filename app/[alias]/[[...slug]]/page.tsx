@@ -13,9 +13,7 @@ const ALIAS_TO_SUBDOMAIN: Record<string, string> = {
 };
 
 function buildTargetUrl(subdomain: string, slug: string[]) {
-  const base = getEcosystemUrl(subdomain);
-  const path = slug.length > 0 ? `/${slug.map(encodeURIComponent).join('/')}` : '';
-  return `${base}${path}`;
+  return getEcosystemUrl(subdomain, slug.length > 0 ? `/${slug.map(encodeURIComponent).join('/')}` : '');
 }
 
 export default function EcosystemAliasRedirectPage({

@@ -86,7 +86,7 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
     await refresh();
 
     // 3. Complete the flow and navigate once the state is settled
-    await finalizeAuth({ redirect: true, fallback: "/dashboard" });
+    await finalizeAuth({ redirect: true, fallback: "/vault" });
   }, [user?.$id, finalizeAuth, refresh]);
 
   const handleSuccessWithSync = onSuccess;

@@ -1315,7 +1315,7 @@ export function NoteDetailSidebar({
                 </Box>
                 <IconButton
                   size="small"
-                  onClick={() => window.open(`https://flow.kylrix.space/tasks?taskId=${task.$id}`, '_blank')}
+                  onClick={() => window.open(`/flow/tasks?taskId=${task.$id}`, '_blank')}
                   sx={{ color: theme.palette.primary.main }}
                 >
                   <OpenIcon fontSize="small" />
@@ -1372,7 +1372,7 @@ export function NoteDetailSidebar({
                 </Box>
                 <IconButton
                   size="small"
-                  onClick={() => window.open(`https://flow.kylrix.space/events?eventId=${event.$id}`, '_blank')}
+                  onClick={() => window.open(`/flow/events?eventId=${event.$id}`, '_blank')}
                   sx={{ color: theme.palette.primary.main }}
                 >
                   <OpenIcon fontSize="small" />
@@ -1429,7 +1429,7 @@ export function NoteDetailSidebar({
                 </Box>
                 <IconButton
                   size="small"
-                  onClick={() => window.open(`https://vault.kylrix.space/vault?id=${secret.$id}`, '_blank')}
+                  onClick={() => window.open(`/vault?id=${secret.$id}`, '_blank')}
                   sx={{ color: theme.palette.primary.main }}
                 >
                   <OpenIcon fontSize="small" />
@@ -1642,7 +1642,7 @@ export function NoteDetailSidebar({
               variant="outlined"
               startIcon={<OpenIcon />}
               onClick={() => {
-                window.location.assign(`https://flow.kylrix.space/tasks?source=note&noteId=${encodeURIComponent(liveNote.$id)}`);
+                window.location.assign(`/flow/tasks?source=note&noteId=${encodeURIComponent(liveNote.$id)}`);
                 setShowActionHub(false);
               }}
               sx={{

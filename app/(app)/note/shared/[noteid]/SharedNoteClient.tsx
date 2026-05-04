@@ -928,7 +928,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
               </Typography>
               <Button
                 component={NextLink}
-                href="/notes"
+                href="/note/notes"
                 variant="contained"
                 size="large"
                 endIcon={<ArrowRightIcon />}

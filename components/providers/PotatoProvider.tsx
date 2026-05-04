@@ -51,12 +51,12 @@ function normalizeQuery(query: string) {
 function routeLabelFromPath(pathname: string | null) {
   if (!pathname) return 'Note';
   if (pathname === '/' || pathname === '/landing') return 'Landing';
-  if (pathname === '/notes') return 'Notes';
-  if (pathname.startsWith('/notes/')) return 'Note';
-  if (pathname === '/shared' || pathname.startsWith('/shared/')) return 'Shared';
-  if (pathname === '/tags') return 'Tags';
-  if (pathname === '/extensions') return 'Extensions';
-  if (pathname === '/settings') return 'Settings';
+  if (pathname === '/note' || pathname === '/note/notes') return 'Notes';
+  if (pathname.startsWith('/note/notes/')) return 'Note';
+  if (pathname === '/note/shared' || pathname.startsWith('/note/shared/')) return 'Shared';
+  if (pathname === '/note/tags') return 'Tags';
+  if (pathname === '/note/extensions') return 'Extensions';
+  if (pathname === '/note/settings') return 'Settings';
   if (pathname === '/pitch') return 'Pitch';
   return 'Note';
 }
@@ -75,7 +75,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
     ];
   }
 
-  if (pathname === '/notes') {
+  if (pathname === '/note' || pathname === '/note/notes') {
     return [
       {
         id: 'notes-current',
@@ -92,7 +92,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
     ];
   }
 
-  if (pathname.startsWith('/notes/')) {
+  if (pathname.startsWith('/note/notes/')) {
     return [
       {
         id: 'note-editor',
@@ -109,7 +109,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
     ];
   }
 
-  if (pathname === '/shared' || pathname.startsWith('/shared/')) {
+  if (pathname === '/note/shared' || pathname.startsWith('/note/shared/')) {
     return [
       {
         id: 'shared-notes',
@@ -120,7 +120,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
     ];
   }
 
-  if (pathname === '/tags') {
+  if (pathname === '/note/tags') {
     return [
       {
         id: 'tags-overview',
@@ -131,7 +131,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
     ];
   }
 
-  if (pathname === '/extensions') {
+  if (pathname === '/note/extensions') {
     return [
       {
         id: 'extensions-overview',
@@ -142,7 +142,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
     ];
   }
 
-  if (pathname === '/settings') {
+  if (pathname === '/note/settings' || pathname.startsWith('/accounts/settings')) {
     return [
       {
         id: 'settings-profile',
@@ -176,50 +176,50 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
       kind: 'note',
       title: 'Draft a note',
       description: 'Capture the current context before it disappears.',
-      href: '/notes/new',
+        href: '/note/notes/new',
       accent: '#EC4899',
       terms: ['note', 'draft', 'capture', 'write'],
-      onSelect: () => window.location.assign('/notes/new'),
+      onSelect: () => window.location.assign('/note/notes/new'),
     },
     {
       id: 'browse-notes',
       kind: 'note',
       title: 'Open notes',
       description: 'Jump to your notes workspace.',
-      href: '/notes',
+        href: '/note/notes',
       accent: '#EC4899',
       terms: ['notes', 'note', 'workspace', 'home'],
-      onSelect: () => window.location.assign('/notes'),
+      onSelect: () => window.location.assign('/note/notes'),
     },
     {
       id: 'browse-shared',
       kind: 'shared',
       title: 'Review shared notes',
       description: 'Open notes shared with you or published by link.',
-      href: '/shared',
+        href: '/note/shared',
       accent: '#6366F1',
       terms: ['shared', 'share', 'public', 'link'],
-      onSelect: () => window.location.assign('/shared'),
+      onSelect: () => window.location.assign('/note/shared'),
     },
     {
       id: 'open-tags',
       kind: 'tag',
       title: 'Organize tags',
       description: 'Sort notes into clear topical clusters.',
-      href: '/tags',
+        href: '/note/tags',
       accent: '#6366F1',
       terms: ['tag', 'tags', 'organize', 'cluster'],
-      onSelect: () => window.location.assign('/tags'),
+      onSelect: () => window.location.assign('/note/tags'),
     },
     {
       id: 'open-extensions',
       kind: 'extension',
       title: 'Manage extensions',
       description: 'Connect automations and editor extensions.',
-      href: '/extensions',
+        href: '/note/extensions',
       accent: '#6366F1',
       terms: ['extension', 'extensions', 'automation', 'plugin'],
-      onSelect: () => window.location.assign('/extensions'),
+      onSelect: () => window.location.assign('/note/extensions'),
     },
   ];
 
@@ -229,30 +229,30 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
       kind: 'note',
       title: 'Search notes',
       description: 'Find drafts, archives, and research.',
-      href: `/notes?search=${encodeURIComponent(query)}`,
+        href: `/note/notes?search=${encodeURIComponent(query)}`,
       accent: '#EC4899',
       terms: ['note', 'notes', 'writing', 'draft'],
-      onSelect: () => window.location.assign(`/notes?search=${encodeURIComponent(query)}`),
+      onSelect: () => window.location.assign(`/note/notes?search=${encodeURIComponent(query)}`),
     },
     {
       id: 'search-shared',
       kind: 'shared',
       title: 'Search shared notes',
       description: 'Find public links and shared copies.',
-      href: `/shared?search=${encodeURIComponent(query)}`,
+        href: `/note/shared?search=${encodeURIComponent(query)}`,
       accent: '#6366F1',
       terms: ['shared', 'public', 'link', 'share'],
-      onSelect: () => window.location.assign(`/shared?search=${encodeURIComponent(query)}`),
+      onSelect: () => window.location.assign(`/note/shared?search=${encodeURIComponent(query)}`),
     },
     {
       id: 'search-tags',
       kind: 'tag',
       title: 'Search tags',
       description: 'Find topics and clusters faster.',
-      href: `/tags?search=${encodeURIComponent(query)}`,
+        href: `/note/tags?search=${encodeURIComponent(query)}`,
       accent: '#6366F1',
       terms: ['tag', 'tags', 'topic', 'cluster'],
-      onSelect: () => window.location.assign(`/tags?search=${encodeURIComponent(query)}`),
+      onSelect: () => window.location.assign(`/note/tags?search=${encodeURIComponent(query)}`),
     },
     {
       id: 'search-extensions',

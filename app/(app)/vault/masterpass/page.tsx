@@ -24,7 +24,7 @@ export default function MasterPassPage() {
     // Redirect to dashboard - masterpass management is handled via drawer
     // This route is reserved for future expansion if needed
     if (user && !loading) {
-      router.replace("/dashboard");
+      router.replace("/vault");
     }
   }, [user, loading, router]);
 
@@ -47,4 +47,3 @@ export default function MasterPassPage() {
     </Box>
   );
 }
-

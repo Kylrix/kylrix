@@ -538,8 +538,7 @@ export default function LandingPage() {
         const user = await getCurrentUser();
         
         if (user?.email) {
-          // User is logged in, redirect to connect as default landing
-          window.location.href = 'https://connect.kylrix.space/chats';
+          window.location.href = '/note';
         }
       } catch (error) {
         // Silently fail - not a critical operation

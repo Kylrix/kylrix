@@ -240,12 +240,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      const authSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
-      const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
-      if (!authSubdomain || !domain) return;
-      const expectedOrigin = `https://${authSubdomain}.${domain}`;
-
-      if (event.origin !== expectedOrigin) {
+      const expectedOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      if (!expectedOrigin || event.origin !== expectedOrigin) {
         return;
       }
       if (event.data?.type !== 'idm:auth-success') {
@@ -260,7 +256,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
       idmWindowRef.current = null;
       if (pathname === '/' || pathname === '/landing') {
-        router.replace('/notes');
+        router.replace('/note');
       }
     };
 

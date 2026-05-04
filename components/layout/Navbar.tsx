@@ -116,7 +116,7 @@ export function Navbar() {
   });
 
   const isCorePage = [
-    "/dashboard",
+    "/vault",
     "/credentials",
     "/totp",
     "/import",
@@ -322,7 +322,7 @@ export function Navbar() {
                     import("@/lib/masterpass-crypto").then(({ masterPassCrypto }) => {
                       masterPassCrypto.lockNow();
                       sessionStorage.setItem("masterpass_return_to", window.location.pathname);
-                      window.location.replace("/dashboard");
+                      window.location.replace("/vault");
                     });
                     handleCloseMenu();
                   }}

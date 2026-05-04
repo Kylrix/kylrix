@@ -50,7 +50,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/notes');
+      router.replace('/note/notes');
       return;
     }
   }, [isAuthenticated, router]);
@@ -91,7 +91,7 @@ export default function LandingPage() {
               app="note" 
               size={36} 
               variant="full" 
-              href="/"
+              href="/note"
               component="a"
               sx={{ '&:hover': { opacity: 0.8 } }}
             />

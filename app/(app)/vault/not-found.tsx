@@ -47,7 +47,7 @@ export default function NotFound() {
           </Button>
           <Button
             component={Link}
-            href="/dashboard"
+            href="/vault"
             variant="contained"
           >
             Go to Dashboard

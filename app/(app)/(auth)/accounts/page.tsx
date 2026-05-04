@@ -44,7 +44,7 @@ function HomeContent() {
             return;
           } else {
             // If logged in and no source, go to settings profile
-            router.replace('/settings/profile');
+            router.replace('/accounts/settings/profile');
             return;
           }
         }

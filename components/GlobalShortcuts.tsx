@@ -71,10 +71,10 @@ export default function GlobalShortcuts() {
       // Avoid interfering with typing for other combos
       const typing = isTypingTarget(e.target);
 
-      // Cmd/Ctrl + N => create new note (navigate to /notes if not there)
+      // Cmd/Ctrl + N => create new note (navigate to /note if not there)
       if (key === "n" && !e.altKey && !typing) {
         e.preventDefault();
-        if (window.location.pathname.startsWith("/notes")) {
+        if (window.location.pathname.startsWith("/note")) {
           // Dynamically import CreateNoteForm when needed
           import("@/app/(app)/note/(app)/notes/CreateNoteForm").then(({ default: CreateNoteForm }) => {
             openOverlay(<CreateNoteForm onNoteCreated={(n) => upsertNote(n)} />);
@@ -83,7 +83,7 @@ export default function GlobalShortcuts() {
           try {
             sessionStorage.setItem("open-create-note", "1");
           } catch {}
-          router.push("/notes");
+          router.push("/note/notes");
         }
         return;
       }

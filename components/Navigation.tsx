@@ -33,12 +33,12 @@ export const MobileBottomNav: React.FC = () => {
   const pathname = usePathname();
   const { isDrawerOpen } = useDrawerState();
   const surface = createBottomBarSurface({
-    activeHref: pathname || '/notes',
+    activeHref: pathname || '/note/notes',
     items: [
-      { id: 'notes', label: 'Notes', href: '/notes' },
-      { id: 'shared', label: 'Links', href: '/shared' },
-      { id: 'tags', label: 'Tags', href: '/tags' },
-      { id: 'extensions', label: 'Caps', href: '/extensions' },
+      { id: 'notes', label: 'Notes', href: '/note/notes' },
+      { id: 'shared', label: 'Links', href: '/note/shared' },
+      { id: 'tags', label: 'Tags', href: '/note/tags' },
+      { id: 'extensions', label: 'Caps', href: '/note/extensions' },
     ],
   });
 
@@ -73,7 +73,7 @@ export const MobileBottomNav: React.FC = () => {
         }}
       >
         {surface.items.map(({ href, active }) => {
-          const navIcon = href === '/notes' ? FileText : href === '/shared' ? Link2 : href === '/tags' ? Tag : Puzzle;
+          const navIcon = href === '/note/notes' ? FileText : href === '/note/shared' ? Link2 : href === '/note/tags' ? Tag : Puzzle;
           const Icon = navIcon;
 
           return (
@@ -114,11 +114,11 @@ export const DesktopSidebar: React.FC = () => {
   const isActive = (path: string) => pathname === path || pathname.startsWith(path);
 
   const navItems = [
-    { icon: FileText, label: 'Notes', path: '/notes' },
-    { icon: Link2, label: 'Shared Links', path: '/shared' },
-    { icon: Tag, label: 'Tags', path: '/tags' },
-    { icon: Puzzle, label: 'Extensions', path: '/extensions' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: FileText, label: 'Notes', path: '/note/notes' },
+    { icon: Link2, label: 'Shared Links', path: '/note/shared' },
+    { icon: Tag, label: 'Tags', path: '/note/tags' },
+    { icon: Puzzle, label: 'Extensions', path: '/note/extensions' },
+    { icon: Settings, label: 'Settings', path: '/note/settings' },
   ];
 
   return (

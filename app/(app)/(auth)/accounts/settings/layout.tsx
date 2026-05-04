@@ -58,12 +58,12 @@ function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
   // Create bottom bar surface early (before any early returns) to maintain hook order
   const bottomBarSurface = useMemo(() => 
     createBottomBarSurface({
-      activeHref: pathname || '/settings/profile',
+      activeHref: pathname || '/accounts/settings/profile',
       items: [
-        { id: 'profile', label: 'Profile', href: '/settings/profile' },
-        { id: 'security', label: 'Security', href: '/settings/security' },
-        { id: 'preferences', label: 'Preferences', href: '/settings/preferences' },
-        { id: 'account', label: 'Account', href: '/settings/account' },
+        { id: 'profile', label: 'Profile', href: '/accounts/settings/profile' },
+        { id: 'security', label: 'Security', href: '/accounts/settings/security' },
+        { id: 'preferences', label: 'Preferences', href: '/accounts/settings/preferences' },
+        { id: 'account', label: 'Account', href: '/accounts/settings/account' },
       ],
     }),
     [pathname]
@@ -93,7 +93,7 @@ function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
         if (mounted) {
           setLoading(false);
           const source = searchParams.get('source');
-          router.replace('/login' + (source ? `?source=${encodeURIComponent(source)}` : ''));
+          router.replace('/accounts/login' + (source ? `?source=${encodeURIComponent(source)}` : ''));
         }
       }
     }
@@ -105,9 +105,9 @@ function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('id_redirect_source');
     const source = searchParams.get('source');
     if (source) {
-      router.replace(`/login?source=${encodeURIComponent(source)}`);
+      router.replace(`/accounts/login?source=${encodeURIComponent(source)}`);
     } else {
-      router.replace('/login');
+      router.replace('/accounts/login');
     }
   };
 

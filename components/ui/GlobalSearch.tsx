@@ -256,12 +256,12 @@ export default function GlobalSearch({
   };
 
   const handleNavigateToNotes = () => {
-    router.push('/notes');
+    router.push('/note/notes');
     handleUserMenuClose();
   };
 
   const handleNavigateToTags = () => {
-    router.push('/tags');
+    router.push('/note/tags');
     handleUserMenuClose();
   };
 

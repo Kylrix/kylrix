@@ -141,7 +141,7 @@ export default function NotesPage() {
     const format = searchParams.get('format');
     if (format === 'doodle') {
       // Remove the format param from URL
-      window.history.replaceState({}, '', '/notes');
+      window.history.replaceState({}, '', '/note/notes');
       openOverlay(<CreateNoteForm initialFormat="doodle" onNoteCreated={handleNoteCreated} />);
     }
   }, [searchParams, openOverlay, handleNoteCreated]);
@@ -194,7 +194,7 @@ export default function NotesPage() {
       if (typeof window === 'undefined') return;
       const params = new URLSearchParams(window.location.search);
       params.delete('openNoteId');
-      const path = `/notes${params.toString() ? `?${params.toString()}` : ''}`;
+      const path = `/note/notes${params.toString() ? `?${params.toString()}` : ''}`;
       router.replace(path);
     };
 

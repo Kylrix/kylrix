@@ -23,7 +23,7 @@ export const VaultFAB: React.FC = () => {
   const pathname = usePathname();
 
   // Only show on Dashboard, TOTP and Sharing pages
-  const showFab = pathname === '/dashboard' || pathname === '/totp' || pathname === '/sharing';
+  const showFab = pathname === '/vault' || pathname === '/vault/totp' || pathname === '/vault/sharing';
   
   if (!showFab) return null;
 

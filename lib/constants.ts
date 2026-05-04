@@ -11,7 +11,19 @@ export interface EcosystemApp {
 }
 
 export const NEXT_PUBLIC_DOMAIN = APPWRITE_CONFIG.SYSTEM?.DOMAIN || 'kylrix.space';
-export const KYLRIX_AUTH_URI = `https://${APPWRITE_CONFIG.SYSTEM.AUTH_SUBDOMAIN}.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
+export const APP_BASE_PATHS: Record<string, string> = {
+  accounts: '/accounts',
+  note: '/note',
+  vault: '/vault',
+  flow: '/flow',
+  connect: '/connect',
+  kylrix: '/',
+};
+
+export const KYLRIX_AUTH_URI =
+  typeof window !== 'undefined'
+    ? `${window.location.origin}${APP_BASE_PATHS.accounts}`
+    : `https://${APPWRITE_CONFIG.SYSTEM.AUTH_SUBDOMAIN}.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
 
 export const ECOSYSTEM_APPS: EcosystemApp[] = [
   { id: 'note', label: 'Note', subdomain: 'note', type: 'app', icon: 'file-text', color: '#EC4899', description: 'Secure notes and research.' },
@@ -21,34 +33,12 @@ export const ECOSYSTEM_APPS: EcosystemApp[] = [
   { id: 'accounts', label: 'Accounts', subdomain: 'accounts', type: 'accounts', icon: 'fingerprint', color: '#6366F1', description: 'Your Kylrix account.' },
 ];
 
-export function getEcosystemUrl(subdomain: string) {
+export function getEcosystemUrl(subdomain: string, path = '') {
   if (!subdomain) {
     return '#';
   }
 
-  if (typeof window === 'undefined') {
-    return `https://${subdomain}.kylrix.space`;
-  }
-
-  const hostname = window.location.hostname;
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-
-  if (isLocalhost) {
-    const ports: Record<string, number> = {
-      accounts: 3000,
-      note: 3001,
-      vault: 3002,
-      flow: 3003,
-      connect: 3004
-    };
-    const subdomainToAppId: Record<string, string> = {
-      app: 'note',
-      id: 'accounts',
-      keep: 'vault'
-    };
-    const appId = subdomainToAppId[subdomain] || subdomain;
-    return `http://localhost:${ports[appId] || 3000}`;
-  }
-
-  return `https://${subdomain}.kylrix.space`;
+  const normalizedPath = path ? (path.startsWith('/') ? path : `/${path}`) : '';
+  const basePath = APP_BASE_PATHS[subdomain] || `/${subdomain}`;
+  return `${basePath}${normalizedPath}`;
 }

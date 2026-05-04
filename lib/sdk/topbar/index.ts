@@ -370,11 +370,11 @@ export function topbarMatches(query: string, terms: string[]) {
  */
 export function getTopbarLogoHref(app: 'accounts' | 'note' | 'vault' | 'flow' | 'connect' | 'kylrix'): string {
   const paths: Record<string, string> = {
-    'accounts': '/dashboard',
-    'note': '/dashboard',
-    'vault': '/dashboard',
-    'flow': '/dashboard',
-    'connect': '/dashboard',
+    'accounts': '/accounts/settings/profile',
+    'note': '/note',
+    'vault': '/vault',
+    'flow': '/flow',
+    'connect': '/connect',
     'kylrix': '/',
   };
   return paths[app] || '/';

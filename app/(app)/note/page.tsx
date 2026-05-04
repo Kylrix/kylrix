@@ -24,7 +24,7 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
     if (!isLoading && isAuthenticated) {
-      router.replace('/notes');
+      router.replace('/note/notes');
     }
   }, [isAuthenticated, isLoading, router]);
 

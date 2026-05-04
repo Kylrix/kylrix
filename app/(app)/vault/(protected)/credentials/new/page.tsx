@@ -167,7 +167,7 @@ export default function NewCredentialPage() {
           >,
         );
         toast.success("Credential created!");
-        router.push("/dashboard");
+        router.push("/vault");
       } else if (formData.type === "folder") {
         await createFolder({
           userId: user.$id,
@@ -180,7 +180,7 @@ export default function NewCredentialPage() {
           deletedAt: null,
         } as unknown as Omit<Folders, "$id" | "$createdAt" | "$updatedAt">);
         toast.success("Folder created!");
-        router.push("/dashboard");
+        router.push("/vault");
       } else if (formData.type === "totp") {
         if (!masterPassCrypto.isVaultUnlocked()) {
           throw new Error("Vault is locked. Please unlock your vault first.");

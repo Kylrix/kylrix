@@ -176,14 +176,14 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     // First, check if we already have a session locally
     try {
         const account = getCurrentUserSnapshot() ?? await getCurrentUser();
-      if (account) {
-        console.log("[auth] Active session detected, skipping IDM window");
-        setUser(account);
-        setIsAuthenticating(false);
-        if (pathname === "/" || pathname === "/landing") {
-          router.replace("/dashboard");
-        }
-        return;
+        if (account) {
+          console.log("[auth] Active session detected, skipping IDM window");
+          setUser(account);
+          setIsAuthenticating(false);
+          if (pathname === "/" || pathname === "/landing") {
+            router.replace("/vault");
+          }
+          return;
       }
     } catch (_e: unknown) {
       // No session, proceed to silent check
@@ -193,13 +193,13 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     await attemptSilentAuth();
     try {
         const account = getCurrentUserSnapshot() ?? await getCurrentUser();
-      if (account) {
-        setUser(account);
-        setIsAuthenticating(false);
-        if (pathname === "/" || pathname === "/landing") {
-          router.replace("/dashboard");
-        }
-        return;
+        if (account) {
+          setUser(account);
+          setIsAuthenticating(false);
+          if (pathname === "/" || pathname === "/landing") {
+            router.replace("/vault");
+          }
+          return;
       }
     } catch (_e: unknown) {
       // Still no session
@@ -251,7 +251,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
         
         // Redirect to dashboard if authenticated
         if (account) {
-          router.replace("/dashboard");
+          router.replace("/vault");
         }
       }
     };

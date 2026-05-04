@@ -102,7 +102,7 @@ export default function EventList() {
             eventData.startTime.toISOString(),
             60 // 1 hour duration
           );
-          meetingUrl = `https://connect.kylrix.space/call/${call.$id}`;
+          meetingUrl = `/connect/call/${call.$id}`;
           toast.success('Kylrix Connect call scheduled');
         } catch (callErr) {
           console.error('Failed to create call link', callErr);

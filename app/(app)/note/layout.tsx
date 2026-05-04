@@ -9,7 +9,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata = {
-  metadataBase: new URL('https://note.kylrix.space'),
+  metadataBase: new URL('https://kylrix.space/note'),
   title: "Kylrix Note - High-End Note Taking",
   description: "Experience the next generation of note taking with Kylrix Note.",
   icons: {

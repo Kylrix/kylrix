@@ -47,7 +47,7 @@ export const RouteGuard: React.FC<RouteGuardProps> = ({ children }) => {
     // If user is authenticated and on landing page, redirect to notes
     if (isAuthenticated && pathname === '/') {
       // Use silent redirect without global loading
-      router.replace('/notes');
+      router.replace('/note');
       return;
     }
 

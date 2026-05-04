@@ -118,7 +118,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         if (isOpen && hasMasterpass === false) {
             const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
             const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
-            window.location.href = `https://vault.kylrix.space/masterpass?callbackUrl=${callbackUrl}`;
+            window.location.href = `/vault/masterpass?callbackUrl=${callbackUrl}`;
         }
     }, [isOpen, hasMasterpass]);
 
@@ -250,7 +250,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         onClick={() => {
                             const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
                             const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
-                            window.location.href = `https://vault.kylrix.space/masterpass?callbackUrl=${callbackUrl}`;
+                            window.location.href = `/vault/masterpass?callbackUrl=${callbackUrl}`;
                         }}
                         sx={{
                             bgcolor: 'white',

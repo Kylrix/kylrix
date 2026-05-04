@@ -82,7 +82,7 @@ export default function SudoModal({
                 
                 if (intent === "reset") {
                     const callbackUrl = encodeURIComponent(window.location.href);
-                    window.location.href = `https://vault.kylrix.space/masterpass/reset?callbackUrl=${callbackUrl}`;
+                    window.location.href = `/vault/masterpass/reset?callbackUrl=${callbackUrl}`;
                     return;
                 }
 
@@ -119,7 +119,7 @@ export default function SudoModal({
 
     const handleRedirectToVaultSetup = useCallback(() => {
         const callbackUrl = encodeURIComponent(window.location.href);
-        window.location.href = `https://vault.kylrix.space/masterpass?callbackUrl=${callbackUrl}`;
+        window.location.href = `/vault/masterpass?callbackUrl=${callbackUrl}`;
     }, []);
 
     const handleInitializeMasterPass = async (e: React.FormEvent) => {
@@ -186,7 +186,7 @@ export default function SudoModal({
     const handleFinalReset = async (e: React.FormEvent) => {
         e.preventDefault();
         const callbackUrl = encodeURIComponent(window.location.href);
-        window.location.href = `https://vault.kylrix.space/masterpass/reset?callbackUrl=${callbackUrl}`;
+                    window.location.href = `/vault/masterpass/reset?callbackUrl=${callbackUrl}`;
     };
 
     useEffect(() => {
@@ -724,7 +724,7 @@ export default function SudoModal({
                             size="small"
                             onClick={() => {
                                 const callbackUrl = encodeURIComponent(window.location.href);
-                                window.open(`https://vault.kylrix.space/masterpass/reset?callbackUrl=${callbackUrl}`, "_blank");
+                                window.open(`/vault/masterpass/reset?callbackUrl=${callbackUrl}`, "_blank");
                             }}
                             sx={{ color: "error.main", "&:hover": { bgcolor: alpha("#ef4444", 0.1) }, mt: 2 }}
                         >

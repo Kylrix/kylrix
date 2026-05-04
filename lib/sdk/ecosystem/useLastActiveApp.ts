@@ -22,6 +22,13 @@ export function useLastActiveApp(): void {
 export function detectCurrentApp(): AppName | null {
   if (typeof window === 'undefined') return null;
 
+  const pathname = window.location.pathname.toLowerCase();
+  if (pathname === '/accounts' || pathname.startsWith('/accounts/')) return 'accounts';
+  if (pathname === '/note' || pathname.startsWith('/note/')) return 'note';
+  if (pathname === '/vault' || pathname.startsWith('/vault/')) return 'vault';
+  if (pathname === '/flow' || pathname.startsWith('/flow/')) return 'flow';
+  if (pathname === '/connect' || pathname.startsWith('/connect/')) return 'connect';
+
   const hostname = window.location.hostname.toLowerCase();
 
   // Parse: accounts.kylrix.space, accounts.localhost, localhost:3000, etc.
@@ -43,12 +50,12 @@ export function detectCurrentApp(): AppName | null {
 }
 
 /**
- * Get the last active app, or default to 'connect' if none found
+ * Get the last active app, or default to 'note' if none found
  */
 export function getLastActiveApp(): AppName {
-  if (typeof window === 'undefined') return 'connect';
+  if (typeof window === 'undefined') return 'note';
   const saved = localStorage.getItem('kylrix_last_active_app') as AppName | null;
-  return saved || 'connect';
+  return saved || 'note';
 }
 
 /**
@@ -61,11 +68,11 @@ export function getLastActiveAppRedirectUrl(baseUrl: string): string {
   
   // Map each app to its dashboard equivalent
   const dashboards: Record<AppName, string> = {
-    accounts: '/settings',
-    note: '/dashboard',
-    vault: '/dashboard',
-    flow: '/dashboard',
-    connect: '/dashboard',
+    accounts: '/accounts/settings/profile',
+    note: '/note',
+    vault: '/vault',
+    flow: '/flow',
+    connect: '/connect',
   };
 
   return `${baseUri}${dashboards[app]}`;

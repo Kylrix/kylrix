@@ -425,7 +425,7 @@ export async function PATCH(req: NextRequest) {
           resourceTitle: resource?.name || resource?.title || 'Group',
           resourceType: 'group',
           templateKey: 'connect:group-member-added',
-          ctaUrl: `https://connect.kylrix.space/chat/${resourceId}`,
+          ctaUrl: `/connect/chat/${resourceId}`,
           ctaText: 'Open group',
           metadata: {
             requestId: request.$id,

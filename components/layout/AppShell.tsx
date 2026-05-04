@@ -40,11 +40,11 @@ interface ExtendedUser extends Models.User<Models.Preferences> {
 }
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: Home, big: false },
-  { name: "Sharing", href: "/sharing", icon: Share2, big: false },
-  { name: "TOTP", href: "/totp", icon: Shield, big: false },
-  { name: "Import", href: "/import", icon: Upload, big: false },
-  { name: "Settings", href: "/settings", icon: Settings, big: false },
+  { name: "Dashboard", href: "/vault", icon: Home, big: false },
+  { name: "Sharing", href: "/vault/sharing", icon: Share2, big: false },
+  { name: "TOTP", href: "/vault/totp", icon: Shield, big: false },
+  { name: "Import", href: "/vault/import", icon: Upload, big: false },
+  { name: "Settings", href: "/vault/settings", icon: Settings, big: false },
 ];
 
 const SIMPLIFIED_LAYOUT_PATHS = [
@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user && !isSimplifiedLayout) {
-      router.replace("/dashboard");
+      router.replace("/vault");
     }
   }, [loading, user, isSimplifiedLayout, router]);
 
@@ -91,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         intervalId = window.setInterval(() => {
           if (!masterPassCrypto.isVaultUnlocked()) {
             sessionStorage.setItem("masterpass_return_to", pathname);
-            router.replace("/dashboard");
+            router.replace("/vault");
             clearInterval(intervalId as number);
           }
         }, 1000);
@@ -110,7 +110,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       const handleVisibility = () => {
         if (!masterPassCrypto.isVaultUnlocked()) {
           sessionStorage.setItem("masterpass_return_to", pathname);
-          router.replace("/dashboard");
+          router.replace("/vault");
         }
       };
       document.addEventListener("visibilitychange", handleVisibility);
@@ -119,7 +119,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       if (!masterPassCrypto.isVaultUnlocked()) {
         sessionStorage.setItem("masterpass_return_to", pathname);
-        router.replace("/dashboard");
+        router.replace("/vault");
       }
 
       return () => {
@@ -229,7 +229,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   masterPassCrypto.lockNow();
                   if (!masterPassCrypto.isVaultUnlocked()) {
                     sessionStorage.setItem("masterpass_return_to", pathname);
-                    router.replace("/dashboard");
+                    router.replace("/vault");
                   }
                 }}
                 sx={{ 

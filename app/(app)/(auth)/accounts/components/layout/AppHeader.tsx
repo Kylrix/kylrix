@@ -428,7 +428,7 @@ export const AppHeader = () => {
           note={referralNote}
           onOpenSettings={() => {
             setReferralDrawerOpen(false);
-            router.push('/settings/profile');
+            router.push('/accounts/settings/profile');
           }}
           onCopyLink={async () => {
             if (!referralLink) return;

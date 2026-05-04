@@ -92,7 +92,7 @@ export default function AttachmentPage() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <IconButton 
               component={Link} 
-              href={`/notes/${noteId}`}
+              href={`/note/notes/${noteId}`}
               sx={{ 
                 color: 'white', 
                 bgcolor: 'rgba(255, 255, 255, 0.05)',
@@ -103,10 +103,10 @@ export default function AttachmentPage() {
             </IconButton>
             <Box>
               <Breadcrumbs sx={{ color: 'rgba(255, 255, 255, 0.5)', mb: 0.5 }}>
-                <MuiLink component={Link} href="/notes" underline="hover" color="inherit">
+                <MuiLink component={Link} href="/note/notes" underline="hover" color="inherit">
                   Notes
                 </MuiLink>
-                <MuiLink component={Link} href={`/notes/${noteId}`} underline="hover" color="inherit">
+                <MuiLink component={Link} href={`/note/notes/${noteId}`} underline="hover" color="inherit">
                   Note
                 </MuiLink>
                 <Typography color="white">Attachment</Typography>
@@ -366,5 +366,4 @@ export default function AttachmentPage() {
     </Box>
   );
 }
-
 

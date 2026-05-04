@@ -14,7 +14,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://vault.kylrix.space'),
+  metadataBase: new URL('https://kylrix.space/vault'),
   title: "Kylrix Vault - Premium Password Vault",
   description: "Secure, simple password management for individuals and teams. Your digital life, protected.",
   icons: {

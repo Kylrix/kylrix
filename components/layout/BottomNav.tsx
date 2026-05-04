@@ -28,18 +28,18 @@ export default function BottomNav() {
     if (pathname.startsWith('/import')) return 'import';
     if (pathname.startsWith('/settings')) return 'settings';
     // Default to overview for /dashboard
-    if (pathname === '/dashboard' || pathname.startsWith('/dashboard')) return 'overview';
+    if (pathname === '/vault' || pathname.startsWith('/vault')) return 'overview';
     return 'overview';
   };
 
   const handleChange = (_: React.SyntheticEvent, newValue: string) => {
     const routes: Record<string, string> = {
-      overview: '/dashboard',
+      overview: '/vault',
       credentials: '/credentials',
       import: '/import',
       settings: '/settings',
     };
-    router.push(routes[newValue] || '/dashboard');
+    router.push(routes[newValue] || '/vault');
   };
 
   return (
