@@ -42,7 +42,7 @@ export default function MasterPassManager({ userId }: { userId: string }) {
     setError(null);
     try {
       const entries = await AppwriteService.listKeychainEntries(userId);
-      const passwordEntry = entries.find(e => e.type === 'password');
+      const passwordEntry = entries.find((e: any) => e.type === 'password');
       
       if (!passwordEntry) {
         setError("No Master Pass discovered. Please set it up first.");

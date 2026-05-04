@@ -449,8 +449,8 @@ export default function SettingsPage() {
             </Stack>
 
             <SudoModal
-                open={unlockModalOpen}
-                onClose={() => {
+                isOpen={unlockModalOpen}
+                onCancel={() => {
                     setUnlockModalOpen(false);
                     setPendingAction(null);
                 }}

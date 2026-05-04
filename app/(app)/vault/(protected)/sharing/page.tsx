@@ -418,8 +418,8 @@ export default function SharingPage() {
                         <Typography variant="body2" noWrap sx={{ minWidth: 0 }}>
                           {credential.name}
                         </Typography>
-                        {credential.sharedFrom ? (
-                          <Chip size="small" label={`shared from ${credential.sharedFrom}`} variant="outlined" />
+                        {(credential as any).sharedFrom ? (
+                          <Chip size="small" label={`shared from ${(credential as any).sharedFrom}`} variant="outlined" />
                         ) : (
                           <Chip size="small" label="owned" color="success" variant="outlined" />
                         )}
@@ -441,8 +441,8 @@ export default function SharingPage() {
                         <Typography variant="body2" noWrap sx={{ minWidth: 0 }}>
                           {secret.issuer} / {secret.accountName}
                         </Typography>
-                        {secret.sharedFrom ? (
-                          <Chip size="small" label={`shared from ${secret.sharedFrom}`} variant="outlined" />
+                        {(secret as any).sharedFrom ? (
+                          <Chip size="small" label={`shared from ${(secret as any).sharedFrom}`} variant="outlined" />
                         ) : (
                           <Chip size="small" label="owned" color="success" variant="outlined" />
                         )}
