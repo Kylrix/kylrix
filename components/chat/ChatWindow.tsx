@@ -1959,7 +1959,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                             {!isOutgoing && (
                                                 <IdentityName
                                                     verified={senderVerification.verified}
-                                                    verifiedOn={senderVerification.verifiedOn}
                                                     sx={{
                                                         fontSize: '0.72rem',
                                                         fontWeight: 800,
