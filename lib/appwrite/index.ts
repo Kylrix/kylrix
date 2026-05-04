@@ -1,29 +1,24 @@
 // Re-export appwrite clients and utilities
-export { account, databases, tablesDB, storage, realtime, client } from './client';
-export { APPWRITE_CONFIG } from './config';
-export { AppwriteService, KeychainService } from './keychain';
+export * from './client';
+export * from './config';
+export * from './auth';
+export * from './note';
+export * from './vault';
 
-// Profile picture preview helper
-import { storage } from './client';
+import { AppwriteService as SharedService } from './auth';
+import { VaultService } from './vault';
 
-const APPWRITE_BUCKET_PROFILE_PICTURES = 'profile-pictures';
-
-/**
- * Get a preview of a profile picture from Appwrite storage
- */
-export async function getProfilePicturePreview(fileId: string, width: number = 64, height: number = 64): Promise<string | null> {
-  try {
-    if (!fileId) return null;
-    
-    const preview = storage.getFilePreview(
-      APPWRITE_BUCKET_PROFILE_PICTURES,
-      fileId,
-      width,
-      height
-    );
-    return preview;
-  } catch (error) {
-    console.error('Failed to get profile picture preview:', error);
-    return null;
-  }
-}
+// Merge AppwriteService methods from all domains
+export const AppwriteService = {
+  // From Auth/Shared
+  ensureGlobalProfile: SharedService.ensureGlobalProfile,
+  getGlobalProfileStatus: SharedService.getGlobalProfileStatus,
+  hasMasterpass: SharedService.hasMasterpass,
+  listKeychainEntries: SharedService.listKeychainEntries,
+  createKeychainEntry: SharedService.createKeychainEntry,
+  deleteKeychainEntry: SharedService.deleteKeychainEntry,
+  createGhostNote: SharedService.createGhostNote,
+  
+  // From Vault (Inject all static methods from VaultService)
+  ...VaultService
+} as any;
