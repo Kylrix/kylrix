@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { ID, Query, Permission, Role, OAuthProvider } from 'appwrite';
 import { account, databases, storage, functions, realtime, client, getCurrentUser, invalidateCurrentUserCache } from './client';
+import { AppwriteService } from './auth';
 import type {
   Users,
   Notes,
