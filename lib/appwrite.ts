@@ -1,5 +1,5 @@
 import { Client, Account, Databases, Storage, ID, Query, Realtime, TablesDB } from 'appwrite';
-import { APPWRITE_CONFIG } from './appwrite/config';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 export const APPWRITE_ENDPOINT = 'https://api.kylrix.space/v1';
 export const APPWRITE_PROJECT_ID = APPWRITE_CONFIG.PROJECT_ID;
