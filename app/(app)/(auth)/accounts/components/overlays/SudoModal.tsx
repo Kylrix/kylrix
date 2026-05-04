@@ -29,7 +29,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import Logo from '../Logo';
 import { AppwriteService } from '@/lib/appwrite';
-import { PasskeySetup } from './passkeySetup';
+import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { unlockWithPasskey } from '@/lib/passkey';
 import { useAuth } from '@/context/auth/AuthContext';
 import toast from 'react-hot-toast';
@@ -256,7 +256,7 @@ export default function SudoModal({
     if (showPasskeyIncentive && user) {
         return (
             <PasskeySetup
-                isOpen={true}
+                open={true}
                 onClose={() => {
                     setShowPasskeyIncentive(false);
                     handleSuccessWithSync();

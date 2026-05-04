@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { MasterPassModal } from '@/components/overlays/MasterPassModal';
-import { PasskeySetup } from '@/components/overlays/passkeySetup';
+import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { AppwriteService } from '@/lib/appwrite';

@@ -236,7 +236,7 @@ export default function SettingsPage() {
             </Box>
 
             <PasskeySetup 
-                isOpen={passkeySetupOpen}
+                open={passkeySetupOpen}
                 onClose={() => setPasskeySetupOpen(false)}
                 userId={user?.$id || ""}
                 onSuccess={() => {
