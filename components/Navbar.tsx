@@ -39,7 +39,7 @@ export default function Navbar() {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const { user, isAuthenticated, logout, openIDMWindow } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, openIDMWindow } = useAuth();
   const { mode } = useColorMode();
 
   const [productsMenuOpen, setProductsMenuOpen] = useState<null | HTMLElement>(null);
@@ -220,7 +220,7 @@ export default function Navbar() {
 
 
           {/* Connect button for guests */}
-          {!isAuthenticated && (
+          {!isLoading && !isAuthenticated && (
             <Box sx={{ mt: 1.5, pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               <Button
                 fullWidth
@@ -428,7 +428,7 @@ export default function Navbar() {
 
               {/* Right side actions */}
               <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
-                {isAuthenticated && (
+                {!isLoading && isAuthenticated && (
                   <ButtonBase
                     onClick={openProfileMenu}
                     sx={{
@@ -456,7 +456,7 @@ export default function Navbar() {
                   </ButtonBase>
                 )}
 
-                {!isAuthenticated && (
+                {!isLoading && !isAuthenticated && (
                   <Button
                     id="navbar-connect-btn"
                     onClick={handleLaunchClick}
