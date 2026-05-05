@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
     Box, 
     TextField, 
@@ -576,8 +577,8 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink }: GhostSpar
 };
 
 export const GhostEditor = () => {
+    const router = useRouter();
     const theme = useTheme();
-    const { openIDMWindow } = useAuth();
     const { showSuccess } = useToast();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
