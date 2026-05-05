@@ -48,11 +48,25 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
-  const [cursor, setCursor] = useState<string | null>(null); // last fetched document id
+  const [cursor, setCursor] = useState<string | null>(null);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [isCacheLoaded, setIsCacheLoaded] = useState(false);
 
-  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  // Make useAuth optional - try to use it if available
+  let user = null;
+  let isAuthenticated = false;
+  let isAuthLoading = true;
+  
+  try {
+    const authContext = useAuth();
+    user = authContext.user;
+    isAuthenticated = authContext.isAuthenticated;
+    isAuthLoading = authContext.isLoading;
+  } catch (e) {
+    // AuthProvider not available yet, that's fine
+    isAuthLoading = false;
+  }
+
   const { fetchOptimized, setCachedData, invalidate, getCachedData } = useDataNexus();
   const sweepInFlightRef = useRef(false);
   

@@ -34,7 +34,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<ActivityLog[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
+  
+  // Make useAuth optional - try to use it if available
+  let user = null;
+  let isAuthenticated = false;
+  
+  try {
+    const authContext = useAuth();
+    user = authContext.user;
+    isAuthenticated = authContext.isAuthenticated;
+  } catch (e) {
+    // AuthProvider not available yet, that's fine
+  }
 
   const parseMetadata = (details: string | null): NotificationMetadata => {
     if (!details) return { read: false, originalDetails: null };
