@@ -2,17 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import ThemeRegistry from '@/theme/ThemeProvider';
-import { AuthProvider } from '@/context/auth/AuthContext';
-import { DocsProvider } from '@/context/DocsContext';
-import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 import { DataNexusProvider } from '@/context/DataNexusContext';
-import { TaskProvider } from '@/context/TaskContext';
-import { BackgroundTaskProvider } from '@/context/BackgroundTaskContext';
-import { NotesProvider } from '@/context/NotesContext';
-import { NotificationProvider } from '@/context/NotificationContext';
-import { AppwriteProvider } from '@/app/(app)/vault/appwrite-provider';
-import { SourceProvider } from '@/lib/source-context';
-import { PotatoProvider } from '@/components/providers/PotatoProvider';
+import { ClientProviders } from './ClientProviders';
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -53,27 +44,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={mono.className}>
         <ThemeRegistry>
           <DataNexusProvider>
-            <AuthProvider>
-              <AppwriteProvider>
-                <DocsProvider>
-                  <SubscriptionProvider>
-                    <NotesProvider>
-                      <TaskProvider>
-                        <BackgroundTaskProvider>
-                          <NotificationProvider>
-                            <SourceProvider>
-                              <PotatoProvider>
-                                {children}
-                              </PotatoProvider>
-                            </SourceProvider>
-                          </NotificationProvider>
-                        </BackgroundTaskProvider>
-                      </TaskProvider>
-                    </NotesProvider>
-                  </SubscriptionProvider>
-                </DocsProvider>
-              </AppwriteProvider>
-            </AuthProvider>
+            <ClientProviders>
+              {children}
+            </ClientProviders>
           </DataNexusProvider>
         </ThemeRegistry>
       </body>
