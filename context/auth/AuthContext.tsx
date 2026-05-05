@@ -45,6 +45,55 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const pathname = usePathname();
 
   // 2. Background Revalidation (Mandatory account.get)
+  const attemptSilentAuth = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+
+    // Use config to get auth subdomain and domain
+    // We import it dynamically to avoid circular issues
+    const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+    const authSubdomain = APPWRITE_CONFIG.SYSTEM.AUTH_SUBDOMAIN;
+    const domain = APPWRITE_CONFIG.SYSTEM.DOMAIN;
+    if (!authSubdomain || !domain) return;
+
+    return new Promise<void>((resolve) => {
+      const iframe = document.createElement('iframe');
+      iframe.src = `https://${authSubdomain}.${domain}/silent-check`;
+      iframe.style.display = 'none';
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        resolve();
+      }, 5000);
+
+      const handleIframeMessage = (event: MessageEvent) => {
+        if (event.origin !== `https://${authSubdomain}.${domain}`) return;
+
+        if (
+          event.data?.type === 'idm:auth-status' &&
+          event.data.status === 'authenticated'
+        ) {
+          refreshUser();
+          cleanup();
+          resolve();
+        } else if (event.data?.type === 'idm:auth-status') {
+          cleanup();
+          resolve();
+        }
+      };
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        window.removeEventListener('message', handleIframeMessage);
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
+
+      window.addEventListener('message', handleIframeMessage);
+      document.body.appendChild(iframe);
+    });
+  }, []);
+
   const refreshUser = useCallback(async (): Promise<User | null> => {
     try {
       // Use the pre-started global promise for maximum speed
@@ -59,6 +108,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           window.history.replaceState({}, '', url.toString());
         }
       } else {
+        // If local session check fails, try silent auth
+        await attemptSilentAuth();
+        
+        // Re-check session after silent auth might have succeeded
+        const retrySession = await getCurrentUser(true);
+        if (retrySession) {
+          setUser(retrySession as any);
+          setKylrixPulse(retrySession);
+          return retrySession as any;
+        }
+
         setUser(null);
         clearKylrixPulse();
       }
@@ -70,7 +130,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [attemptSilentAuth]);
 
   useEffect(() => {
     if (initAuthStarted.current) return;
