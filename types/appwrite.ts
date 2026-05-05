@@ -380,3 +380,6 @@ export type Tasks = Models.Row & {
 }
 
 export type Stickers = Models.Row & { name: string; description: string | null; creatorId: string | null; packId: string | null; imageUrl: string; imageFileId: string | null; animatedUrl: string | null; animatedFileId: string | null; tags: string[]; category: string | null; isPremium: boolean; isAnimated: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }
+
+// Re-export auto-generated types from appwrite.d.ts
+export type { Keychain, KeyMapping } from './appwrite.d';

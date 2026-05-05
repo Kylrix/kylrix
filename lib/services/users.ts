@@ -198,6 +198,24 @@ export const UsersService = {
         }
     },
 
+    async getProfile(username: string) {
+        try {
+            const { Query } = await import("appwrite");
+            const res = await (tablesDB as any).listRows({
+                databaseId: DATABASE_ID,
+                tableId: TABLE_ID,
+                queries: [
+                    Query.equal('username', username.toLowerCase()),
+                    Query.limit(1)
+                ]
+            });
+            return res.rows?.[0] || null;
+        } catch (error) {
+            console.warn('[UsersService] Get profile by username failed:', error);
+            return null;
+        }
+    },
+
     async forceSyncProfileWithIdentity(user: any) {
         try {
             const existing = await this.getProfileById(user.$id);

@@ -19,8 +19,17 @@ import {
   appwriteDatabases,
   appwriteStorage,
   appwriteAvatars,
+  APPWRITE_DATABASE_ID,
   APPWRITE_BUCKET_BACKUPS_ID,
-  APPWRITE_BUCKET_PROFILE_PICTURES_ID
+  APPWRITE_BUCKET_PROFILE_PICTURES_ID,
+  APPWRITE_COLLECTION_CREDENTIALS_ID,
+  APPWRITE_COLLECTION_FOLDERS_ID,
+  APPWRITE_COLLECTION_KEYCHAIN_ID,
+  APPWRITE_COLLECTION_KEY_MAPPING_ID,
+  APPWRITE_COLLECTION_SECURITYLOGS_ID,
+  APPWRITE_COLLECTION_TOTPSECRETS_ID,
+  APPWRITE_COLLECTION_USER_ID,
+  APPWRITE_COLLECTION_IDENTITIES_ID
 } from './client';
 import { AppwriteService } from './auth';
 import { buildVaultNoteTags } from "../sdk/crosslinks";
@@ -135,25 +144,8 @@ async function decryptShareEnvelope<T extends Record<string, unknown>>(
   senderPublicKeyBase64: string,
 ): Promise<T> {
   const { ecosystemSecurity } = await import("../ecosystem/security");
-  const privateKey = ecosystemSecurity.getInstance().getIdentityPrivateKey();
-  if (!privateKey) {
-    throw new Error("Vault is locked - cannot decrypt shared item");
-  }
-
-  const senderPublicKey = await importX25519PublicKey(senderPublicKeyBase64);
-  const sharedKey = await crypto.subtle.deriveKey(
-    { name: "X25519", public: senderPublicKey },
-    privateKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"],
-  );
-
-  const combined = base64ToBytes(wrappedKeyBase64);
-  const iv = combined.slice(0, 12);
-  const ciphertext = combined.slice(12);
-  const plaintext = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, sharedKey, ciphertext);
-  return JSON.parse(new TextDecoder().decode(plaintext)) as T;
+  const plaintext = await ecosystemSecurity.decryptWithECDH(wrappedKeyBase64, senderPublicKeyBase64);
+  return JSON.parse(plaintext) as T;
 }
 
 async function listDocumentsWithRetry(
@@ -195,19 +187,14 @@ async function listDocumentsWithRetry(
 }
 
 // --- Appwrite Config ---
-export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
 export const APPWRITE_COLLECTION_CREDENTIALS_ID = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
 export const APPWRITE_COLLECTION_TOTPSECRETS_ID = APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS;
 export const APPWRITE_COLLECTION_FOLDERS_ID = APPWRITE_CONFIG.TABLES.VAULT.FOLDERS;
 export const APPWRITE_COLLECTION_SECURITYLOGS_ID = APPWRITE_CONFIG.TABLES.VAULT.SECURITY_LOGS;
 export const APPWRITE_COLLECTION_USER_ID = APPWRITE_CONFIG.TABLES.VAULT.USER;
-export const APPWRITE_COLLECTION_KEYCHAIN_ID = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
 export const APPWRITE_COLLECTION_KEY_MAPPING_ID = APPWRITE_CONFIG.TABLES.VAULT.KEY_MAPPING;
 
 // Ecosystem: Kylrix Flow
-export const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-export const FLOW_COLLECTION_ID_TASKS = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
-export const FLOW_COLLECTION_ID_EVENTS = APPWRITE_CONFIG.TABLES.FLOW.EVENTS;
 
 // Ecosystem: Kylrix Note
 export const NOTE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -1960,12 +1947,6 @@ export async function addEmailFactor(
  * Complete email verification for MFA (after user clicks link in email).
  * Call this with the userId and secret from the verification link.
  */
-export async function completeEmailVerification(
-  userId: string,
-  secret: string,
-): Promise<void> {
-  await appwriteAccount.updateVerification(userId, secret);
-}
 
 /**
  * Initiate password recovery (send reset email).
@@ -2136,13 +2117,6 @@ export async function listCloudBackups(userId: string) {
   return await AppwriteService.listCloudBackups(userId);
 }
 
-export function getFilePreview(bucketId: string, fileId: string, width: number = 64, height: number = 64) {
-  return appwriteStorage.getFilePreview(bucketId, fileId, width, height);
-}
-
-export function getProfilePicturePreview(fileId: string, width: number = 64, height: number = 64) {
-  return getFilePreview("profile_pictures", fileId, width, height);
-}
 
 /**
  * Delete user account and all associated data.

@@ -256,7 +256,7 @@ export default function SudoModal({
     if (showPasskeyIncentive && user) {
         return (
             <PasskeySetup
-                isOpen={true}
+                open={true}
                 onClose={() => {
                     setShowPasskeyIncentive(false);
                     handleSuccessWithSync();

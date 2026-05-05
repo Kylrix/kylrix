@@ -131,7 +131,6 @@ export const Profile = ({ username }: ProfileProps) => {
         bio: profile?.bio || null,
         tier: profile?.tier || null,
         publicKey: profile?.publicKey || null,
-        preferences: profile?.preferences || null,
     });
 
     const loadRelatedData = useCallback(async (data: any) => {
@@ -167,7 +166,7 @@ export const Profile = ({ username }: ProfileProps) => {
 
         if (stagedProfile) {
             seedIdentityCache(stagedProfile);
-            stageProfileView(stagedProfile, null);
+            stageProfileView(stagedProfile as any, null);
             setProfile(stagedProfile);
             setLoading(false);
             void loadRelatedData(stagedProfile);
@@ -392,7 +391,6 @@ export const Profile = ({ username }: ProfileProps) => {
                             alt={profile.displayName || profile.username || 'profile'}
                             fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
                             verified={identityFlags.verified}
-                            verifiedOn={identityFlags.verifiedOn}
                             pro={identityFlags.pro}
                             size={140}
                             verifiedSize={22}
@@ -406,7 +404,7 @@ export const Profile = ({ username }: ProfileProps) => {
                             fontFamily: 'var(--font-clash)',
                             letterSpacing: '-0.04em'
                         }}>
-                            <IdentityName verified={identityFlags.verified} verifiedOn={identityFlags.verifiedOn} sx={{ fontWeight: 900 }}>
+                            <IdentityName verified={identityFlags.verified} sx={{ fontWeight: 900 }}>
                                 {profile.displayName || profile.username || 'Anonymous'}
                             </IdentityName>
                         </Typography>

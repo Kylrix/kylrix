@@ -35,7 +35,7 @@ import { useRouter } from 'next/navigation';
 import { getTopbarLogoHref } from '@/lib/sdk';
 
 export const AppHeader = () => {
-  const { user, refresh } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [anchorElAccount, setAnchorElAccount] = useState<null | HTMLElement>(null);
   const [anchorElNotifications, setAnchorElNotifications] = useState<null | HTMLElement>(null);
   const [isPortalOpen, setIsPortalOpen] = useState(false);
@@ -201,7 +201,7 @@ export const AppHeader = () => {
       }
       setReferralDrawerOpen(false);
       setReferralNote(null);
-      await refresh();
+      await refreshUser();
       router.push('/login');
     } catch (error) {
       console.error('Logout failed', error);

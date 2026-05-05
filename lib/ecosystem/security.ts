@@ -391,6 +391,22 @@ export class EcosystemSecurity {
     );
   }
 
+  async decryptWithECDH(encryptedDataBase64: string, peerPublicKeyBase64: string): Promise<string> {
+    const sharedSecret = await this.deriveSharedSecret(peerPublicKeyBase64);
+
+    const combined = new Uint8Array(atob(encryptedDataBase64).split("").map(c => c.charCodeAt(0)));
+    const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
+    const ciphertext = combined.slice(EcosystemSecurity.IV_SIZE);
+
+    const plaintext = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: iv },
+      sharedSecret,
+      ciphertext
+    );
+
+    return new TextDecoder().decode(plaintext);
+  }
+
   async encrypt(data: string): Promise<string> {
     if (!this.masterKey) throw new Error("Security vault locked");
     return this.encryptWithKey(data, this.masterKey);

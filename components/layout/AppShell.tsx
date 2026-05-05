@@ -399,10 +399,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <VaultFAB />
           <BottomNav />
           <PasskeySetup
-            isOpen={showPasskeySetup}
+            open={showPasskeySetup}
             onClose={() => setShowPasskeySetup(false)}
             userId={user.$id}
-            isEnabled={false}
             onSuccess={() => {
               setShowPasskeySetup(false);
               refresh();

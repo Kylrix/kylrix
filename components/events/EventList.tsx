@@ -31,7 +31,7 @@ export default function EventList() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { projects, userId } = useTask();
   const { openSecondarySidebar } = useLayout();
-  const { isAuthenticated, openLoginPopup } = useAuth();
+  const { isAuthenticated, openIDMWindow } = useAuth();
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -219,7 +219,7 @@ export default function EventList() {
           }}
           onClick={() => {
             if (!isAuthenticated) {
-              openLoginPopup();
+              openIDMWindow();
               return;
             }
             setIsDialogOpen(true);

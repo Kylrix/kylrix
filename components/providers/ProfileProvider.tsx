@@ -89,7 +89,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             }
 
             try {
-                const bootstrappedProfile = await queueProfileBootstrap(user);
+                const bootstrappedProfile = await queueProfileBootstrap(user as any);
                 if (bootstrappedProfile) {
                     let nextProfile = bootstrappedProfile;
                     try {
@@ -128,7 +128,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             const setupComplete = typeof window !== 'undefined' && localStorage.getItem(setupKey) === 'true';
             if (setupComplete) return;
 
-            void queueProfileBootstrap(user)
+            void queueProfileBootstrap(user as any)
                 .then(async () => {
                     invalidate(`profile_${user.$id}`);
                     await refreshProfile();

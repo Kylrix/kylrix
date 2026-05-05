@@ -8,7 +8,7 @@ export function useCachedProfilePreview(source?: string | null, width: number = 
     if (!source) return null;
     if (/^https?:\/\//.test(source)) return source;
 
-    const cached = getCachedProfilePreview(source, width, height);
+    const cached = getCachedProfilePreview(source);
     return cached ?? null;
   });
 
@@ -29,7 +29,7 @@ export function useCachedProfilePreview(source?: string | null, width: number = 
       };
     }
 
-    const cached = getCachedProfilePreview(source, width, height);
+    const cached = getCachedProfilePreview(source);
     if (cached !== undefined) {
       setPreview(cached ?? null);
       if (cached !== null) {

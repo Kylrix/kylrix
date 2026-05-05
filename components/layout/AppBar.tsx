@@ -55,7 +55,7 @@ type IslandNotification = {
   majestic?: boolean;
 };
 
-const AICommandModal = dynamic(() => import('@/components/ai/AICommandModal'), { ssr: false });
+const AICommandModal = dynamic(() => import('@/components/ai/AICommandModal').then(mod => mod.AICommandModal), { ssr: false });
 const EcosystemPortal = dynamic(() => import('@/components/common/EcosystemPortal'), { ssr: false });
 const WalletSidebar = dynamic(() => import('@/components/overlays/WalletSidebar').then(mod => mod.WalletSidebar), { ssr: false });
 
@@ -789,7 +789,7 @@ export default function AppBar() {
           </MenuItem>
         </Menu>
       </Toolbar>
-      <AICommandModal open={aiModalOpen} onClose={() => setAiModalOpen(false)} />
+      <AICommandModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} />
       <EcosystemPortal open={portalOpen} onClose={() => setPortalOpen(false)} />
       <WalletSidebar isOpen={walletOpen} onClose={() => setWalletOpen(false)} />
 

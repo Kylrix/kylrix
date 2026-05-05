@@ -31,8 +31,10 @@ export const APPWRITE_PROJECT_ID = APPWRITE_CONFIG.PROJECT_ID;
 // export app public uri
  export const APP_URI = process.env.NEXT_PUBLIC_APP_URI ?? `https://app.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
 
+// NOTE database ID (internal, not exported to avoid conflict with vault's APPWRITE_DATABASE_ID)
+const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
+
 // Appwrite config IDs from constants
-export const APPWRITE_DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 export const APPWRITE_TABLE_ID_PROFILES = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 export const APPWRITE_TABLE_ID_USERS = APPWRITE_TABLE_ID_PROFILES; // legacy alias
 export const APPWRITE_TABLE_ID_NOTES = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
@@ -48,7 +50,7 @@ export const APPWRITE_TABLE_ID_SUBSCRIPTIONS = APPWRITE_CONFIG.TABLES.NOTE.SUBSC
 export const APPWRITE_TABLE_ID_NOTETAGS = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS;
 
 // Ecosystem: Kylrix Flow
-export const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
 export const FLOW_COLLECTION_ID_TASKS = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 export const FLOW_COLLECTION_ID_EVENTS = APPWRITE_CONFIG.TABLES.FLOW.EVENTS;
 
@@ -56,10 +58,6 @@ export const FLOW_COLLECTION_ID_EVENTS = APPWRITE_CONFIG.TABLES.FLOW.EVENTS;
 export const KEEP_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
 export const KEEP_COLLECTION_ID_CREDENTIALS = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
 export const KEEP_COLLECTION_ID_KEYCHAIN = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
-
-// Ecosystem: Kylrix Connect
-export const CONNECT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-export const CONNECT_COLLECTION_ID_USERS = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
 export const APPWRITE_BUCKET_PROFILE_PICTURES = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
 export const APPWRITE_BUCKET_NOTES_ATTACHMENTS = APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS;
@@ -540,7 +538,7 @@ const noteCreationService = createNoteCreationService({
   tableId: APPWRITE_TABLE_ID_NOTES,
   getCurrentUser,
   createRow: async (databaseId, tableId, data, rowId, permissions) => {
-    return databases.createDocument(databaseId, tableId, rowId || ID.unique(), data as any, permissions);
+    return databases.createDocument(databaseId, tableId, rowId || ID.unique(), data as any, permissions) as any;
   },
   getNote,
   getNotePermissions,
@@ -1943,13 +1941,6 @@ export async function getProfilePicture(fileId: string) {
   return storage.getFileView(APPWRITE_BUCKET_PROFILE_PICTURES, fileId);
 }
 
-export async function getFilePreview(bucketId: string, fileId: string, width: number = 64, height: number = 64) {
-  return storage.getFilePreview(bucketId, fileId, width, height);
-}
-
-export async function getProfilePicturePreview(fileId: string, width: number = 64, height: number = 64) {
-  return getFilePreview(APPWRITE_BUCKET_PROFILE_PICTURES, fileId, width, height);
-}
 
 export async function deleteProfilePicture(fileId: string) {
   return deleteFile(APPWRITE_BUCKET_PROFILE_PICTURES, fileId);
@@ -2730,6 +2721,9 @@ async function getT4NoteKeyMapping(noteId: string, ownerId: string) {
 
 async function loadT4NoteKey(noteId: string, ownerId: string): Promise<CryptoKey> {
   const ownerPublicKey = await ecosystemSecurity.ensureE2EIdentity(ownerId);
+  if (!ownerPublicKey) {
+    throw new Error('Failed to load owner public key');
+  }
   const keyMappingRes = await getT4NoteKeyMapping(noteId, ownerId);
 
   const mapping = keyMappingRes.documents[0] as any;
@@ -2737,7 +2731,7 @@ async function loadT4NoteKey(noteId: string, ownerId: string): Promise<CryptoKey
     throw new Error('Missing encryption key mapping for this note');
   }
 
-  return await ecosystemSecurity.unwrapKeyForIdentity(mapping.wrappedKey, ownerPublicKey);
+  return await ecosystemSecurity.unwrapKeyWithECDH(mapping.wrappedKey, ownerPublicKey);
 }
 
 export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = false): Promise<Notes | null> {
@@ -2809,6 +2803,9 @@ async function preparePublicNoteUpdate(
   }
 
   const ownerPublicKey = await ecosystemSecurity.ensureE2EIdentity(ownerId);
+  if (!ownerPublicKey) {
+    throw new Error('Failed to load owner public key');
+  }
   const existingMappings = await getT4NoteKeyMapping(note.$id, ownerId);
   const hasExistingKey = existingMappings.total > 0;
   let symmetricKey: CryptoKey;
@@ -2816,12 +2813,12 @@ async function preparePublicNoteUpdate(
 
   if (!rotateLink && hasExistingKey) {
     const mapping = existingMappings.documents[0] as any;
-    symmetricKey = await ecosystemSecurity.unwrapKeyForIdentity(mapping.wrappedKey, ownerPublicKey);
+    symmetricKey = await ecosystemSecurity.unwrapKeyWithECDH(mapping.wrappedKey, ownerPublicKey);
     decryptionKey = await exportUrlSafeCryptoKey(symmetricKey);
   } else {
     symmetricKey = await ecosystemSecurity.generateRandomMEK();
     decryptionKey = await exportUrlSafeCryptoKey(symmetricKey);
-    const wrappedKey = await ecosystemSecurity.wrapKeyForIdentity(symmetricKey, ownerPublicKey);
+    const wrappedKey = await ecosystemSecurity.wrapKeyWithECDH(symmetricKey, ownerPublicKey);
     const mappingData = {
       resourceId: note.$id,
       resourceType: 'note',

@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await account.deleteSession('current');
       invalidate('current_user');
-      invalidateCurrentUserCache(null);
+      invalidateCurrentUserCache();
       setUser(null);
     } catch (_e) {
       console.error('Logout failed', _e);

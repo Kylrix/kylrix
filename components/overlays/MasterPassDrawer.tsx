@@ -159,7 +159,7 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
 
     // Check for keychain entries to determine mode
     AppwriteService.listKeychainEntries(user.$id)
-      .then((entries) => {
+      .then((entries: any[]) => {
         const passkeyPresent = entries.some((e: any) => e.type === 'passkey');
         const passwordPresent = entries.some((e: any) => e.type === 'password');
 
@@ -299,7 +299,7 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
   if (showPasskeyIncentive) {
     return (
       <PasskeySetup
-        isOpen={true}
+        open={true}
         onClose={onSuccess}
         userId={user.$id}
         onSuccess={onSuccess}
