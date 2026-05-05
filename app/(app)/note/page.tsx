@@ -16,7 +16,7 @@ import Logo from '@/components/common/Logo';
 import { Button } from '@/components/ui/Button';
 import { DynamicSidebarProvider, DynamicSidebar } from '@/components/ui/DynamicSidebar';
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const { isAuthenticated, isLoading, openIDMWindow, isAuthenticating } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -95,4 +95,22 @@ export default function Home() {
       <DynamicSidebar />
     </DynamicSidebarProvider>
   );
+}
+
+export default function Home() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Box sx={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', bgcolor: '#0F0D0C' }}>
+        <CircularProgress color="primary" />
+      </Box>
+    );
+  }
+
+  return <HomeContent />;
 }
