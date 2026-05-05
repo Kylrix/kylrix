@@ -49,7 +49,6 @@ import {
 import { AppwriteService } from '@/lib/appwrite';
 import { encryptGhostData, decryptGhostData } from '@/lib/encryption/ghost-crypto';
 import toast from 'react-hot-toast';
-import { useAuth } from '@/components/ui/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -859,7 +858,7 @@ export const GhostEditor = () => {
         saveHistory([]);
     }, [saveHistory]);
 
-    const handleOpenIDMWindow = useCallback(() => openIDMWindow(), [openIDMWindow]);
+    const handleOpenIDMWindow = useCallback(() => router.push('/accounts/login'), [router]);
 
     const activeSparks = useMemo(() => prevNotes.filter(n => new Date(n.expiresAt).getTime() > Date.now()), [prevNotes]);
     const staleSparks = useMemo(() => prevNotes.filter(n => new Date(n.expiresAt).getTime() <= Date.now()), [prevNotes]);
@@ -892,7 +891,7 @@ export const GhostEditor = () => {
                     <Button 
                         size="small" 
                         variant="text"
-                        onClick={() => openIDMWindow()}
+                        onClick={() => router.push('/accounts/login')}
                         sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}
                     >
                         Create Permanent Vault →
@@ -1137,7 +1136,7 @@ export const GhostEditor = () => {
                         </Typography>
                         <Button 
                             variant="outlined"
-                            onClick={() => openIDMWindow()}
+                            onClick={() => router.push('/accounts/login')}
                             sx={{ 
                                 borderRadius: '100px', 
                                 px: 6,
