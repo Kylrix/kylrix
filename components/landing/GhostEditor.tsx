@@ -52,7 +52,6 @@ import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
-import { useToast } from '@/components/ui/Toast';
 
 const GHOST_STORAGE_KEY = 'kylrix_ghost_notes_v2';
 const GHOST_SECRET_KEY = 'kylrix_ghost_secret_v2';
@@ -578,7 +577,6 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink }: GhostSpar
 export const GhostEditor = () => {
     const router = useRouter();
     const theme = useTheme();
-    const { showSuccess } = useToast();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [isCreating, setIsCreating] = useState(false);
@@ -787,7 +785,7 @@ export const GhostEditor = () => {
                 
                 if (copied) {
                     setCopiedId(note.$id);
-                    showSuccess('Link Copied', 'Live share link copied to clipboard.');
+                    toast.success('Link Copied! Live share link copied to clipboard.');
                 } else {
                     toast.error("Note created, but failed to copy link. Check your history.");
                 }

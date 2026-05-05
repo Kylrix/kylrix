@@ -6,6 +6,13 @@ import { AuthProvider } from '@/context/auth/AuthContext';
 import { DocsProvider } from '@/context/DocsContext';
 import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 import { DataNexusProvider } from '@/context/DataNexusContext';
+import { TaskProvider } from '@/context/TaskContext';
+import { BackgroundTaskProvider } from '@/context/BackgroundTaskContext';
+import { NotesProvider } from '@/context/NotesContext';
+import { NotificationProvider } from '@/context/NotificationContext';
+import { AppwriteProvider } from '@/app/(app)/vault/appwrite-provider';
+import { SourceProvider } from '@/lib/source-context';
+import { PotatoProvider } from '@/components/providers/PotatoProvider';
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -47,11 +54,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeRegistry>
           <DataNexusProvider>
             <AuthProvider>
-              <DocsProvider>
-                <SubscriptionProvider>
-                  {children}
-                </SubscriptionProvider>
-              </DocsProvider>
+              <AppwriteProvider>
+                <DocsProvider>
+                  <SubscriptionProvider>
+                    <NotesProvider>
+                      <TaskProvider>
+                        <BackgroundTaskProvider>
+                          <NotificationProvider>
+                            <SourceProvider>
+                              <PotatoProvider>
+                                {children}
+                              </PotatoProvider>
+                            </SourceProvider>
+                          </NotificationProvider>
+                        </BackgroundTaskProvider>
+                      </TaskProvider>
+                    </NotesProvider>
+                  </SubscriptionProvider>
+                </DocsProvider>
+              </AppwriteProvider>
             </AuthProvider>
           </DataNexusProvider>
         </ThemeRegistry>
