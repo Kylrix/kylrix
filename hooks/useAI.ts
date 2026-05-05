@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 
 export interface AIChatMessage {
   role: 'user' | 'assistant';

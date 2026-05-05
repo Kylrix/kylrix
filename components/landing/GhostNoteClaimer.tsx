@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { KYLRIX_AUTH_URI } from '@/constants/ecosystem';

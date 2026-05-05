@@ -29,7 +29,7 @@ import {
 
 import Logo from '@/components/common/Logo';
 import { WalletSidebar } from '@/components/overlays/WalletSidebar';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { getUserProfilePicId } from '@/lib/utils';

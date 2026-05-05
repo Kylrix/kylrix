@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import {
   Description as DescriptionIcon,
   CloudUpload as CloudIcon,

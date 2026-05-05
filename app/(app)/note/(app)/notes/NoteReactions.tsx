@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Box, Chip, Stack, Typography } from '@mui/material';
 import { Query } from 'appwrite';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { createReaction, listReactions, deleteReaction } from '@/lib/appwrite';
 import type { Reactions } from '@/types/appwrite';

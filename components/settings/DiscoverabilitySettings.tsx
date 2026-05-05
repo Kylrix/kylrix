@@ -20,7 +20,7 @@ import {
     Tooltip
 } from '@mui/material';
 import { User, Edit2, Check, X, ShieldAlert } from 'lucide-react';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { databases, CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, Query, Permission, Role } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';

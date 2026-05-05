@@ -6,7 +6,7 @@ import { Reply as ReplyIcon, ExpandMore, ExpandLess, Edit as EditIcon, Delete as
 import { listComments, createComment, getUsersByIds, updateComment, deleteComment, deleteReactionsForTarget } from '@/lib/appwrite';
 import type { Comments, Users } from '@/types/appwrite';
 import { getEffectiveDisplayName, getEffectiveUsername, getUserProfilePicId } from '@/lib/utils';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { getEcosystemUrl } from '@/constants/ecosystem';
 import { Menu, MenuItem, ListItemIcon } from '@mui/material';

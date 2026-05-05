@@ -3,7 +3,7 @@
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { createBottomBarSurface, getBottomBarViewportOffset } from '@/lib/sdk/bottombar';

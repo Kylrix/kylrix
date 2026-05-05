@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 
 export type PotatoSnippetKind = 'note' | 'tag' | 'shared' | 'extension' | 'settings' | 'context';
 

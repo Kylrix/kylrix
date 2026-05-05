@@ -33,7 +33,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import SudoModal from '@/components/overlays/SudoModal';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import PageHeader from '@/components/PageHeader';
 import { AppwriteService } from '@/lib/appwrite';
 import toast from 'react-hot-toast';

@@ -29,7 +29,7 @@ import {
 } from '@mui/icons-material';
 import { Tags } from '@/types/appwrite';
 import { listTags, createTag, updateTag, deleteTag, updateNote } from '@/lib/appwrite';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { formatDateWithFallback } from '@/lib/date-utils';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { ID } from 'appwrite';

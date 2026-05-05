@@ -27,7 +27,7 @@ import {
     History,
     Settings,
 } from 'lucide-react';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { toast } from 'react-hot-toast';

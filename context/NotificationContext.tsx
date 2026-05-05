@@ -8,7 +8,7 @@ import {
   APPWRITE_DATABASE_ID, 
   APPWRITE_TABLE_ID_ACTIVITYLOG 
 } from '@/lib/appwrite';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import type { ActivityLog } from '@/types/appwrite';
 
 interface NotificationMetadata {

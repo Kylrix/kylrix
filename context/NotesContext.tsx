@@ -14,7 +14,7 @@ import {
   decryptPublicEncryptedNote
 } from '@/lib/appwrite';
 import type { Notes } from '@/types/appwrite';
-import { useAuth } from '@/components/ui/AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from './DataNexusContext';
 
 interface NotesContextType {
