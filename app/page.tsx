@@ -167,7 +167,7 @@ function openApp(subdomain: string) {
   window.location.assign(getEcosystemUrl(subdomain));
 }
 
-function AppSwitcherFab() {
+const AppSwitcherFab = React.memo(function AppSwitcherFab() {
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const theme = useTheme();
@@ -310,7 +310,10 @@ function AppSwitcherFab() {
 
       <Fab
         aria-label="Open ecosystem switcher"
-        onClick={() => setOpen((value) => !value)}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }}
         sx={{
           width: 64,
           height: 64,
@@ -333,7 +336,7 @@ function AppSwitcherFab() {
       </Fab>
     </Box>
   );
-}
+});
 
 function LiveSurfaceCard({
   panel,
@@ -528,24 +531,6 @@ export default function LandingPage() {
     offset: ['start end', 'end start'],
   });
   const showcaseGlowY = useTransform(scrollYProgress, [0, 1], [0, -90]);
-
-  // Auto-redirect logged-in users to last active app
-  React.useEffect(() => {
-    const checkAndRedirect = async () => {
-      try {
-        // Use the global session promise from appwrite
-        const { getCurrentUser } = await import('@/lib/appwrite');
-        const user = await getCurrentUser();
-        
-        if (user?.email) {
-          window.location.href = '/note';
-        }
-      } catch (error) {
-        // Silently fail - not a critical operation
-      }
-    };
-    checkAndRedirect();
-  }, []);
 
   const initiateEcosystem = () => {
     const accountsUrl = getEcosystemUrl('accounts');
