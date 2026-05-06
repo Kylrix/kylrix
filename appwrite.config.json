@@ -1,6 +1,6 @@
 {
     "projectId": "67fe9627001d97e37ef3",
-    "projectName": "whisperrnote",
+    "projectName": "Kylrix",
     "endpoint": "https://fra.cloud.appwrite.io/v1",
     "settings": {
         "services": {
@@ -20,12 +20,12 @@
         "auth": {
             "methods": {
                 "jwt": true,
-                "phone": true,
+                "phone": false,
                 "invites": true,
-                "anonymous": true,
+                "anonymous": false,
                 "email-otp": true,
-                "magic-url": true,
-                "email-password": true
+                "magic-url": false,
+                "email-password": false
             },
             "security": {
                 "duration": 31536000,
@@ -1664,6 +1664,15 @@
                     "size": 1000,
                     "default": null,
                     "encrypt": true
+                },
+                {
+                    "key": "sharedFrom",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -2348,6 +2357,15 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "sharedFrom",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -3154,6 +3172,14 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "inviteMeta",
+                    "type": "text",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "encrypt": true
                 }
             ],
             "indexes": [
@@ -3901,6 +3927,138 @@
             ]
         },
         {
+            "$id": "epochs",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "epochs",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "resourceId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "epochNumber",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "createdBy",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_resource",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "resourceId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "unique_epoch",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "resourceId",
+                        "epochNumber"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "conversationMembers",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Conversation Members",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "conversationId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "unique_conversation_user",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_conversation",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "profiles",
             "$permissions": [
                 "create(\"users\")",
@@ -4042,17 +4200,17 @@
             ]
         },
         {
-            "$id": "epochs",
+            "$id": "messageReactions",
             "$permissions": [
                 "create(\"users\")"
             ],
             "databaseId": "chat",
-            "name": "epochs",
+            "name": "Message Reactions",
             "enabled": true,
             "rowSecurity": true,
             "columns": [
                 {
-                    "key": "resourceId",
+                    "key": "conversationId",
                     "type": "string",
                     "required": true,
                     "array": false,
@@ -4061,63 +4219,7 @@
                     "encrypt": false
                 },
                 {
-                    "key": "epochNumber",
-                    "type": "integer",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "min": 0,
-                    "max": 2147483647
-                },
-                {
-                    "key": "createdBy",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 36,
-                    "default": null,
-                    "encrypt": false
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_resource",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "resourceId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "unique_epoch",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "resourceId",
-                        "epochNumber"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "conversationMembers",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "Conversation Members",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "conversationId",
+                    "key": "messageId",
                     "type": "string",
                     "required": true,
                     "array": false,
@@ -4133,16 +4235,164 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "emoji",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
                 }
             ],
             "indexes": [
                 {
-                    "key": "unique_conversation_user",
-                    "type": "unique",
+                    "key": "idx_msgreact_msg",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "messageId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_msgreact_conv_created",
+                    "type": "key",
                     "status": "available",
                     "columns": [
                         "conversationId",
-                        "userId"
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "uniq_msgreact_user_msg",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "messageId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "joinRequests",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Join Requests",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "resourceType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "resourceId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "requesterId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "pending",
+                        "accepted",
+                        "rejected"
+                    ]
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "resolvedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "resolvedBy",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_joinreq_resource",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "resourceType",
+                        "resourceId",
+                        "status"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_joinreq_requester",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "requesterId",
+                        "status"
                     ],
                     "orders": [
                         "ASC",
@@ -4150,25 +4400,240 @@
                     ]
                 },
                 {
-                    "key": "idx_conversation",
-                    "type": "key",
+                    "key": "uniq_joinreq_resource",
+                    "type": "unique",
                     "status": "available",
                     "columns": [
-                        "conversationId"
+                        "resourceType",
+                        "resourceId",
+                        "requesterId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "unorganic_emails",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Unorganic Emails",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "eventType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "sourceApp",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "actorId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "recipientId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "recipientEmail",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "resourceType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "resourceId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "templateKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "priority",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "queued",
+                        "sending",
+                        "sent",
+                        "suppressed",
+                        "failed"
+                    ]
+                },
+                {
+                    "key": "dedupeKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "attempts",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "sentAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "processedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "blockedReason",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 10000,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_dedupeKey",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "dedupeKey"
                     ],
                     "orders": [
                         "ASC"
                     ]
                 },
                 {
-                    "key": "idx_user",
+                    "key": "idx_recipient_status_sentAt",
                     "type": "key",
                     "status": "available",
                     "columns": [
-                        "userId"
+                        "recipientId",
+                        "status",
+                        "sentAt"
                     ],
                     "orders": [
-                        "ASC"
+                        "ASC",
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_recipient_sentAt",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "recipientId",
+                        "sentAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_status_priority",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "status",
+                        "priority"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
                     ]
                 }
             ]
@@ -5356,6 +5821,29 @@
                 "webp"
             ],
             "compression": "gzip",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "group_avatars",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "fileSecurity": true,
+            "name": "group_avatars",
+            "enabled": true,
+            "maximumFileSize": 5242880,
+            "allowedFileExtensions": [
+                "png",
+                "jpg",
+                "jpeg",
+                "webp",
+                "gif"
+            ],
+            "compression": "none",
             "encryption": true,
             "antivirus": true
         }
