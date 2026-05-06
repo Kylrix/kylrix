@@ -22,31 +22,47 @@ import {
   Menu as MenuIcon,
   Settings,
   X as CloseIcon,
+  Search,
+  Wallet,
+  RefreshCw,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
-import Logo from './Logo';
+import Logo, { KylrixApp } from './Logo';
 import EcosystemPortal from './EcosystemPortal';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useColorMode } from '@/context/ThemeContext';
 import { getUserProfilePicId } from '@/lib/utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePreview';
+import { InputBase, Paper, Tooltip } from '@mui/material';
+import { WalletSidebar } from './overlays/WalletSidebar';
 
 const TOPBAR_HEIGHT = 88;
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated, isLoading, logout, openIDMWindow } = useAuth();
   const { mode } = useColorMode();
+
+  const isLanding = pathname === '/';
+  const currentAppId = pathname?.split('/')[2] as KylrixApp || 'root';
+  const isApp = !isLanding && ['note', 'vault', 'flow', 'connect'].includes(currentAppId);
 
   const [productsMenuOpen, setProductsMenuOpen] = useState<null | HTMLElement>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState<null | HTMLElement>(null);
   const [navMenuOpen, setNavMenuOpen] = useState<null | HTMLElement>(null);
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isWalletOpen, setIsWalletOpen] = useState(false);
+  
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
   
   const profilePicId = getUserProfilePicId(user);
@@ -84,6 +100,7 @@ export default function Navbar() {
     setProductsMenuOpen(null);
     setProfileMenuOpen(null);
     setNavMenuOpen(null);
+    setSearchOpen(false);
   }, []);
 
   const openProductsMenu = useCallback((event: MouseEvent<HTMLElement>) => {
@@ -121,7 +138,7 @@ export default function Navbar() {
     { label: 'Download CLI', href: 'https://github.com/Kylrix/cli' },
   ], []);
 
-  const activePanel = productsMenuOpen ? 'products' : profileMenuOpen ? 'profile' : navMenuOpen ? 'nav' : null;
+  const activePanel = productsMenuOpen ? 'products' : profileMenuOpen ? 'profile' : navMenuOpen ? 'nav' : searchOpen ? 'search' : null;
 
   useEffect(() => {
     if (!activePanel) return;
@@ -193,7 +210,6 @@ export default function Navbar() {
             {navItems.map((item) => (
               <Button
                 key={item.label}
-                fullWidth
                 onClick={() => {
                   handleCloseAll();
                   window.location.assign(item.href);
@@ -376,7 +392,7 @@ export default function Navbar() {
                   position: 'relative',
                 }}
               >
-                <Logo size={32} />
+                <Logo app={isApp ? currentAppId : 'root'} size={32} />
                 <IconButton
                   size="small"
                   sx={{
@@ -395,39 +411,99 @@ export default function Navbar() {
                 </IconButton>
               </Box>
 
-              {/* Desktop nav items */}
-              <Stack
-                direction="row"
-                spacing={2}
-                sx={{
-                  display: { xs: 'none', md: 'flex' },
-                  alignItems: 'center',
-                  flex: 1,
-                  ml: 4,
-                }}
-              >
-                {navItems.map((item) => (
-                  <Button
-                    key={item.label}
-                    onClick={() => window.location.assign(item.href)}
+              {/* Desktop nav items / Search Bar */}
+              {isLanding ? (
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{
+                    display: { xs: 'none', md: 'flex' },
+                    alignItems: 'center',
+                    flex: 1,
+                    ml: 4,
+                  }}
+                >
+                  {navItems.map((item) => (
+                    <Button
+                      key={item.label}
+                      onClick={() => window.location.assign(item.href)}
+                      sx={{
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        color: 'rgba(255,255,255,0.7)',
+                        '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.05)' },
+                      }}
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </Stack>
+              ) : (
+                <Box
+                  sx={{
+                    flex: 1,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    mx: 2,
+                  }}
+                >
+                  <Paper
+                    elevation={0}
                     sx={{
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      color: 'rgba(255,255,255,0.7)',
-                      '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.05)' },
+                      width: { xs: '100%', sm: 420, md: 520 },
+                      height: 44,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      px: 2,
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      bgcolor: '#000',
+                      color: 'white',
+                      borderRadius: '24px',
+                      boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 26px rgba(0,0,0,0.55)',
                     }}
                   >
-                    {item.label}
-                  </Button>
-                ))}
-              </Stack>
+                    <Search size={16} strokeWidth={2.25} style={{ flexShrink: 0, opacity: 0.84 }} />
+                    <InputBase
+                      placeholder={`Search ${currentAppId}, tags, people...`}
+                      fullWidth
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      sx={{
+                        color: 'white',
+                        fontWeight: 800,
+                        '& input::placeholder': { color: 'rgba(255,255,255,0.42)', opacity: 1 },
+                      }}
+                    />
+                  </Paper>
+                </Box>
+              )}
 
-              {/* Spacer */}
-              <Box sx={{ flex: 1 }} />
+              {/* Spacer (only on landing) */}
+              {isLanding && <Box sx={{ flex: 1 }} />}
 
               {/* Right side actions */}
               <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
+                {isApp && isAuthenticated && (
+                   <Tooltip title="Wallet">
+                    <IconButton
+                      onClick={() => setIsWalletOpen(true)}
+                      sx={{
+                        color: '#6366F1',
+                        bgcolor: 'rgba(99, 102, 241, 0.03)',
+                        border: '1px solid rgba(99, 102, 241, 0.1)',
+                        borderRadius: '12px',
+                        width: 42,
+                        height: 42,
+                        '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.08)' },
+                      }}
+                    >
+                      <Wallet size={18} strokeWidth={1.5} />
+                    </IconButton>
+                  </Tooltip>
+                )}
+
                 {!isLoading && isAuthenticated && (
                   <ButtonBase
                     onClick={openProfileMenu}
@@ -502,6 +578,7 @@ export default function Navbar() {
       <Box sx={{ height: `${TOPBAR_HEIGHT}px` }} />
 
       <EcosystemPortal open={isEcosystemPortalOpen} onClose={() => setIsEcosystemPortalOpen(false)} />
+      <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
     </>
   );
 }
