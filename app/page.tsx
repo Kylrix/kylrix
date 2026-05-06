@@ -33,7 +33,6 @@ import {
 } from 'lucide-react';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 
-import Navbar from '@/components/Navbar';
 import Logo, { KylrixApp } from '@/components/Logo';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
 
@@ -555,8 +554,6 @@ export default function LandingPage() {
 
   return (
     <Box component="main" sx={{ position: 'relative', overflow: 'clip', bgcolor: '#000', color: '#fff', pt: { xs: 10, md: 12 }, pb: { xs: 10, md: 14 } }}>
-      <Navbar />
-
       <Container maxWidth="xl" sx={{ position: 'relative' }}>
         <Stack spacing={4} alignItems="center" textAlign="center" sx={{ pt: { xs: 10, md: 14 }, pb: { xs: 8, md: 12 } }}>
           <Box
