@@ -61,7 +61,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
         overflow: 'hidden',
       }}
     >
-      <AppBar />
       {/* Sidebar only visible on desktop and not on event pages */}
       {showSidebar && <Sidebar />}
       <Box
@@ -69,7 +68,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
         sx={{
           flexGrow: 1,
           px: { xs: 1, md: 2 },
-          pt: { xs: `calc(64px + 12px)`, md: `calc(64px + 16px)` },
           pb: { xs: '80px', md: 2 },
           minHeight: '100vh',
           boxSizing: 'border-box',
@@ -110,9 +108,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
       <RightSidebar />
       
       <GlobalFAB />
-      
-      {/* BottomNav only visible on mobile */}
-      {isMobile && !isEventPage && <BottomNav />}
       
       {/* Global Dialogs */}
       <TaskDialog />
