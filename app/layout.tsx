@@ -11,6 +11,8 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+import GlobalShell from '@/components/GlobalShell';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={mono.variable}>
@@ -45,7 +47,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeRegistry>
           <DataNexusProvider>
             <ClientProviders>
-              {children}
+              <GlobalShell>
+                {children}
+              </GlobalShell>
             </ClientProviders>
           </DataNexusProvider>
         </ThemeRegistry>
