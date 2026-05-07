@@ -195,6 +195,8 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         };
         return colorMap[chain] || '#666';
     };
+
+    const getExplorerUrl = (wallet: WalletSummary) => {
         switch (wallet.chain) {
             case 'btc':
                 return `https://www.blockchain.com/explorer/addresses/btc/${wallet.address}`;
