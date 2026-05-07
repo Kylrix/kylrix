@@ -3,11 +3,11 @@
 import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { Box } from '@mui/material';
-import Navbar from './Navbar';
-import { DesktopSidebar, MobileBottomNav } from './Navigation';
+import { DesktopSidebar } from './Navigation';
 import { useSidebar } from './ui/SidebarContext';
 import { DynamicSidebar, useDynamicSidebar } from './ui/DynamicSidebar';
 import { ProUpgradeDrawer } from './overlays/ProUpgradeDrawer';
+import { UnifiedBottomBar } from './UnifiedBottomBar';
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -41,7 +41,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       </Box>
 
       {!isLanding && !isSharedPage && <DynamicSidebar />}
-      {!isLanding && !isSharedPage && <MobileBottomNav />}
+      <UnifiedBottomBar />
       <ProUpgradeDrawer />
     </Box>
   );
