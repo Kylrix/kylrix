@@ -28,7 +28,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         component="main"
         sx={{
           minWidth: 0,
-          pt: 0, // No top padding needed - topbar is fixed in app/(app)/layout
+          pt: '88px', // Offset for fixed topbar
           pb: isLanding ? 0 : { xs: 12, md: 4 },
           transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           ml: (!isLanding && !isSharedPage) ? {
