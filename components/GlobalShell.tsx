@@ -8,6 +8,7 @@ import { useSidebar } from './ui/SidebarContext';
 import { DynamicSidebar, useDynamicSidebar } from './ui/DynamicSidebar';
 import { ProUpgradeDrawer } from './overlays/ProUpgradeDrawer';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
+import Topbar from './Topbar';
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -20,7 +21,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
-      {/* Navbar/Topbar is now in app/(app)/layout.tsx as UnifiedTopbar - don't render it here */}
+      {/* /(app) routes get UnifiedTopbar from app/(app)/layout.tsx; landing needs its own topbar */}
+      {isLanding && <Topbar />}
       
       {!isLanding && !isSharedPage && <DesktopSidebar />}
       
@@ -41,7 +43,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       </Box>
 
       {!isLanding && !isSharedPage && <DynamicSidebar />}
-      <UnifiedBottomBar />
+      {!isLanding && <UnifiedBottomBar />}
       <ProUpgradeDrawer />
     </Box>
   );
