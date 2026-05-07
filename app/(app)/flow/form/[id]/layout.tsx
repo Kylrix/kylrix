@@ -41,7 +41,7 @@ export async function generateMetadata({
   }
 
   const description = form.description?.trim() || summarizeFields(form.schema);
-  const previewImage = `/form/${id}/opengraph-image?v=${encodeURIComponent(
+  const previewImage = `/flow/form/${id}/opengraph-image?v=${encodeURIComponent(
     form.$updatedAt || id
   )}`;
 

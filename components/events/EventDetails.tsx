@@ -206,7 +206,7 @@ export default function EventDetails({ eventId, initialData }: EventDetailsProps
             <Button
                 variant="contained"
                 fullWidth
-                href={`/events/${eventIdValue}`}
+                href={`/flow/events/${eventIdValue}`}
                 target="_blank"
             >
                 View Event Page

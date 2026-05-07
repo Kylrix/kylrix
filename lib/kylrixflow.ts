@@ -6,7 +6,8 @@ import { Calendar, Task, Event, EventGuest, FocusSession } from '../types/kylrix
 import type { CollaboratorPermission, TaskCollaborator } from '../types';
 import { sendKylrixEmailNotification } from './email-notifications';
 
-const { DATABASE_ID, TABLES } = APPWRITE_CONFIG;
+const FLOW_DATABASE_ID = APPWRITE_CONFIG.FLOW_DATABASE_ID || APPWRITE_CONFIG.DATABASES.FLOW;
+const { TABLES } = APPWRITE_CONFIG;
 const TASK_COLLABORATOR_RESOURCE_PREFIX = 'task:';
 const TASK_COLLABORATOR_TABLE = TABLES.FLOW.COLLABORATORS;
 const TASK_COLLABORATOR_DATABASE = APPWRITE_CONFIG.NOTE_DATABASE_ID;
@@ -17,7 +18,7 @@ export function subscribeToTable<T extends Models.Row>(
     tableId: string,
     callback: (event: { type: 'create' | 'update' | 'delete', payload: T }) => void
 ) {
-    const channel = `databases.${DATABASE_ID}.collections.${tableId}.documents`;
+    const channel = `databases.${FLOW_DATABASE_ID}.tables.${tableId}.rows`;
 
     return realtime.subscribe(channel, (response) => {
         const payload = response.payload as T;
@@ -123,7 +124,7 @@ async function listRows<T extends Models.Row>(tableId: string, queries?: string[
     const cached = queryCache.get(key);
     if (cached && cached.expires > Date.now()) return cached.data;
 
-    const res = await tablesDB.listRows<T>({ databaseId: DATABASE_ID, tableId, queries });
+    const res = await tablesDB.listRows<T>({ databaseId: FLOW_DATABASE_ID, tableId, queries });
     queryCache.set(key, { data: res, expires: Date.now() + CACHE_TTL });
     return res;
 }
@@ -229,7 +230,7 @@ async function createRow<T extends Models.Row>(
     rowId: string = ID.unique()
 ): Promise<T> {
     const res = await tablesDB.createRow<T>({
-        databaseId: DATABASE_ID,
+        databaseId: FLOW_DATABASE_ID,
         tableId,
         rowId,
         data,
@@ -245,7 +246,7 @@ async function getRow<T extends Models.Row>(tableId: string, rowId: string): Pro
     if (cached && cached.expires > Date.now()) return cached.data;
 
     const res = await tablesDB.getRow<T>({
-        databaseId: DATABASE_ID,
+        databaseId: FLOW_DATABASE_ID,
         tableId,
         rowId
     });
@@ -263,7 +264,7 @@ function clearCache(tableId: string) {
 
 async function updateRow<T extends Models.Row>(tableId: string, rowId: string, data: TableUpdateData<T>): Promise<T> {
     const res = await tablesDB.updateRow<T>({
-        databaseId: DATABASE_ID,
+        databaseId: FLOW_DATABASE_ID,
         tableId,
         rowId,
         data
@@ -274,7 +275,7 @@ async function updateRow<T extends Models.Row>(tableId: string, rowId: string, d
 
 async function deleteRow(tableId: string, rowId: string): Promise<void> {
     await tablesDB.deleteRow({
-        databaseId: DATABASE_ID,
+        databaseId: FLOW_DATABASE_ID,
         tableId,
         rowId
     });
@@ -299,7 +300,7 @@ export const tasks = {
     get: (id: string) => getRow<Task>(TABLES.TASKS, id),
     update: (id: string, data: TableUpdateData<Task>, permissions?: string[]) =>
         tablesDB.updateRow<Task>({
-            databaseId: DATABASE_ID,
+            databaseId: FLOW_DATABASE_ID,
             tableId: TABLES.TASKS,
             rowId: id,
             data,

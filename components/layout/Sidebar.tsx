@@ -328,14 +328,14 @@ export default function Sidebar() {
         <ListItem disablePadding sx={{ mb: 0.5 }}>
           <ListItemButton
             component={Link}
-            href="/forms"
-            selected={pathname === '/forms'}
-            sx={navItemStyles('/forms')}
+            href="/flow/forms"
+            selected={pathname === '/flow/forms'}
+            sx={navItemStyles('/flow/forms')}
           >
-            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/forms' ? 'var(--color-brand)' : '#A1A1AA' }}>
+            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/flow/forms' ? 'var(--color-brand)' : '#A1A1AA' }}>
               <FormIcon size={20} />
             </ListItemIcon>
-            <ListItemText primary="Forms" primaryTypographyProps={{ fontWeight: pathname === '/forms' ? 900 : 700, fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }} />
+            <ListItemText primary="Forms" primaryTypographyProps={{ fontWeight: pathname === '/flow/forms' ? 900 : 700, fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }} />
           </ListItemButton>
         </ListItem>
 
@@ -343,14 +343,14 @@ export default function Sidebar() {
         <ListItem disablePadding sx={{ mb: 0.5 }}>
           <ListItemButton
             component={Link}
-            href="/events"
-            selected={pathname === '/events'}
-            sx={navItemStyles('/events')}
+            href="/flow/events"
+            selected={pathname === '/flow/events'}
+            sx={navItemStyles('/flow/events')}
           >
-            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/events' ? 'var(--color-app)' : '#A1A1AA' }}>
+            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/flow/events' ? 'var(--color-app)' : '#A1A1AA' }}>
               <ZapIcon size={20} />
             </ListItemIcon>
-            <ListItemText primary="Events" primaryTypographyProps={{ fontWeight: pathname === '/events' ? 900 : 700, fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }} />
+            <ListItemText primary="Events" primaryTypographyProps={{ fontWeight: pathname === '/flow/events' ? 900 : 700, fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }} />
           </ListItemButton>
         </ListItem>
 
@@ -358,14 +358,14 @@ export default function Sidebar() {
         <ListItem disablePadding sx={{ mb: 0.5 }}>
           <ListItemButton
             component={Link}
-            href="/calendar"
-            selected={pathname === '/calendar'}
-            sx={navItemStyles('/calendar')}
+            href="/flow/calendar"
+            selected={pathname === '/flow/calendar'}
+            sx={navItemStyles('/flow/calendar')}
           >
-            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/calendar' ? 'var(--color-brand)' : '#A1A1AA' }}>
+            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/flow/calendar' ? 'var(--color-brand)' : '#A1A1AA' }}>
               <CalendarIcon size={20} />
             </ListItemIcon>
-            <ListItemText primary="Calendar" primaryTypographyProps={{ fontWeight: pathname === '/calendar' ? 900 : 700, fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }} />
+            <ListItemText primary="Calendar" primaryTypographyProps={{ fontWeight: pathname === '/flow/calendar' ? 900 : 700, fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }} />
           </ListItemButton>
         </ListItem>
 
@@ -373,14 +373,14 @@ export default function Sidebar() {
         <ListItem disablePadding sx={{ mb: 0.5 }}>
           <ListItemButton
             component={Link}
-            href="/focus"
-            selected={pathname === '/focus'}
-            sx={navItemStyles('/focus')}
+            href="/flow/focus"
+            selected={pathname === '/flow/focus'}
+            sx={navItemStyles('/flow/focus')}
           >
-            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/focus' ? 'var(--color-brand)' : '#A1A1AA' }}>
+            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/flow/focus' ? 'var(--color-brand)' : '#A1A1AA' }}>
               <ClockIcon size={20} />
             </ListItemIcon>
-            <ListItemText primary="Focus Mode" primaryTypographyProps={{ fontWeight: pathname === '/focus' ? 900 : 700, fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }} />
+            <ListItemText primary="Focus Mode" primaryTypographyProps={{ fontWeight: pathname === '/flow/focus' ? 900 : 700, fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }} />
           </ListItemButton>
         </ListItem>
 

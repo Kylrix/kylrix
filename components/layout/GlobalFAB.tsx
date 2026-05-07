@@ -26,8 +26,8 @@ export default function GlobalFAB() {
 
   // Hide FAB on specific pages or conditions
   const isSettingsPage = pathname === '/settings';
-  const isFormActive = pathname.startsWith('/forms/') && pathname.split('/').length > 2;
-  const isEventActive = pathname.startsWith('/events/') && pathname.split('/').length > 2;
+  const isFormActive = pathname.startsWith('/flow/forms/') && pathname.split('/').length > 3;
+  const isEventActive = pathname.startsWith('/flow/events/') && pathname.split('/').length > 3;
   
   const shouldHide = isSettingsPage || isFormActive || isEventActive;
 
@@ -47,7 +47,7 @@ export default function GlobalFAB() {
       icon: <FormIcon size={22} strokeWidth={2} />, 
       name: 'FORM', 
       onClick: () => {
-        router.push('/forms/new');
+        router.push('/flow/forms/new');
         setIsExpanded(false);
       },
       color: '#6366F1',
@@ -56,7 +56,7 @@ export default function GlobalFAB() {
       icon: <EventIcon size={22} strokeWidth={2} />, 
       name: 'EVENT', 
       onClick: () => {
-        router.push('/events/new');
+        router.push('/flow/events/new');
         setIsExpanded(false);
       },
       color: '#A855F7',

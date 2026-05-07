@@ -276,7 +276,7 @@ export default function FormsDashboard() {
                                         <Grid size={{ xs: 12, md: 6, lg: 4 }} key={form.$id}>
                                             <Fade in={true}>
                                                 <Card 
-                                                    onClick={() => router.push(`/forms/${form.$id}`)}
+                                                    onClick={() => router.push(`/flow/forms/${form.$id}`)}
                                                     sx={{ 
                                                         bgcolor: '#161514', 
                                                         border: '1px solid rgba(255, 255, 255, 0.05)', 
@@ -319,7 +319,7 @@ export default function FormsDashboard() {
                                                                 <IconButton 
                                                                     size="small" 
                                                                     component={Link} 
-                                                                    href={`/form/${form.$id}`} 
+                                                                    href={`/flow/form/${form.$id}`} 
                                                                     target="_blank" 
                                                                     onClick={(e) => e.stopPropagation()}
                                                                     sx={{ bgcolor: '#161514' }}
