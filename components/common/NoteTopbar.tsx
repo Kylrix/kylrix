@@ -67,6 +67,12 @@ export default function NoteTopbar({
   const isLandingRoute = pathname === '/';
   const logoApp = isLandingRoute ? 'root' : 'note';
   const showSearchControl = isAuthenticated && !isLandingRoute;
+  const landingNavItems = [
+    { label: 'Developers', href: '/developers' },
+    { label: 'Docs', href: '/docs' },
+    { label: 'Pricing', href: '/pricing' },
+    { label: 'Download CLI', href: 'https://github.com/Kylrix/cli' },
+  ] as const;
 
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -775,6 +781,28 @@ export default function NoteTopbar({
     return (
       <Box sx={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: '#161412', overflow: 'hidden' }}>
         <Box sx={{ px: 2, py: 1.5, display: 'grid', gap: 0.75 }}>
+          {isLandingRoute &&
+            landingNavItems.map((item) => (
+              <Button
+                key={item.label}
+                fullWidth
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  window.location.assign(item.href);
+                }}
+                sx={{
+                  justifyContent: 'flex-start',
+                  textTransform: 'none',
+                  borderRadius: '14px',
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                {item.label}
+              </Button>
+            ))}
+
           {!isLandingRoute && (
             <Button
               fullWidth
@@ -795,24 +823,26 @@ export default function NoteTopbar({
               Search
             </Button>
           )}
-          <Button
-            fullWidth
-            onClick={(event) => {
-              setMobileMenuOpen(false);
-              openAppMenu(event);
-            }}
-            sx={{
-              justifyContent: 'flex-start',
-              textTransform: 'none',
-              borderRadius: '14px',
-              color: 'white',
-              bgcolor: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-            startIcon={<ChevronDown size={16} />}
-          >
-            Ecosystem Apps
-          </Button>
+          {!isLandingRoute && (
+            <Button
+              fullWidth
+              onClick={(event) => {
+                setMobileMenuOpen(false);
+                openAppMenu(event);
+              }}
+              sx={{
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                borderRadius: '14px',
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+              startIcon={<ChevronDown size={16} />}
+            >
+              Ecosystem Apps
+            </Button>
+          )}
           {mode === 'shared' && onRefresh && (
             <Button
               fullWidth
