@@ -21,8 +21,8 @@ export default function AppLayout({
         <UnifiedTopbar />
       </Box>
       
-      {/* App content with topbar offset */}
-      <Box component="main" sx={{ pt: '88px', width: '100%' }}>
+      {/* App content - no top padding needed, topbar is fixed */}
+      <Box component="main" sx={{ width: '100%' }}>
         {children}
       </Box>
     </Box>
