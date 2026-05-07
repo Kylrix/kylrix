@@ -20,8 +20,12 @@ export default function AppLayoutContent({ children }: { children: React.ReactNo
   }, [isDynamicSidebarOpen, pathname]);
 
   return (
-    <Box sx={{ py: 0, my: 0, mt: 0, mb: 0 }}>
-      {children}
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
+      <Box component="main" sx={{ minWidth: 0 }}>
+        <Box sx={{ px: { xs: 2, md: 3, lg: 4 }, py: 3 }}>
+          {children}
+        </Box>
+      </Box>
     </Box>
   );
 }

@@ -269,13 +269,12 @@ export default function NotesPage() {
 
   return (
     <NotesErrorBoundary>
-      <Box sx={{ px: { xs: 1, md: 2, lg: 3 }, mt: 0, pt: 0, mb: 0 }}>
+      <Box sx={{ flex: 1, minHeight: '100vh' }}>
         {/* Mobile Header - Hidden on Desktop */}
         <Box
           component="header"
           sx={{
-            mb: 0,
-            mt: 0,
+            mb: 4,
             display: { xs: 'flex', md: 'none' },
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -349,8 +348,7 @@ export default function NotesPage() {
             display: { xs: 'none', md: 'flex' },
             alignItems: 'center',
             justifyContent: 'space-between',
-            mb: 2,
-            mt: 0,
+            mb: 6,
             p: 4,
             bgcolor: 'rgba(255, 255, 255, 0.01)',
             borderRadius: '32px',
