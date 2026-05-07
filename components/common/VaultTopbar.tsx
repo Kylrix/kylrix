@@ -514,49 +514,51 @@ export default function VaultTopbar({
               )}
 
               {user && (
-                <Tooltip title="Agentic Workspace">
-                  <IconButton
-                    onClick={openAgenticDrawer}
-                    sx={{
-                      color: getAppColor('vault'),
-                      bgcolor: alpha(getAppColor('vault'), 0.03),
-                      border: '1px solid',
-                      borderColor: alpha(getAppColor('vault'), 0.1),
-                      borderRadius: '12px',
-                      width: 42,
-                      height: 42,
-                      '&:hover': { bgcolor: alpha(getAppColor('vault'), 0.08) },
-                    }}
-                  >
-                    <Bot size={18} strokeWidth={1.5} />
-                  </IconButton>
-                </Tooltip>
+                <>
+                  <Tooltip title="Agentic Workspace">
+                    <IconButton
+                      onClick={openAgenticDrawer}
+                      sx={{
+                        color: getAppColor('vault'),
+                        bgcolor: alpha(getAppColor('vault'), 0.03),
+                        border: '1px solid',
+                        borderColor: alpha(getAppColor('vault'), 0.1),
+                        borderRadius: '12px',
+                        width: 42,
+                        height: 42,
+                        '&:hover': { bgcolor: alpha(getAppColor('vault'), 0.08) },
+                      }}
+                    >
+                      <Bot size={18} strokeWidth={1.5} />
+                    </IconButton>
+                  </Tooltip>
 
-                <ButtonBase
-                  onClick={openProfileMenu}
-                  sx={{
-                    p: 0,
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    '&:hover': { transform: 'scale(1.05)' },
-                    transition: 'transform 0.2s',
-                  }}
-                >
-                  <Avatar
-                    src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
+                  <ButtonBase
+                    onClick={openProfileMenu}
                     sx={{
-                      width: 38,
-                      height: 38,
-                      bgcolor: profileAvatarUrl ? 'rgba(255,255,255,0.04)' : getAppTone('vault').secondary,
-                      color: '#fff',
-                      fontWeight: 900,
-                      borderRadius: '12px',
+                      p: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      '&:hover': { transform: 'scale(1.05)' },
+                      transition: 'transform 0.2s',
                     }}
                   >
-                    {profileName.slice(0, 1).toUpperCase()}
-                  </Avatar>
-                </ButtonBase>
+                    <Avatar
+                      src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
+                      sx={{
+                        width: 38,
+                        height: 38,
+                        bgcolor: profileAvatarUrl ? 'rgba(255,255,255,0.04)' : getAppTone('vault').secondary,
+                        color: '#fff',
+                        fontWeight: 900,
+                        borderRadius: '12px',
+                      }}
+                    >
+                      {profileName.slice(0, 1).toUpperCase()}
+                    </Avatar>
+                  </ButtonBase>
+                </>
               )}
             </Stack>
           </Box>
