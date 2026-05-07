@@ -252,7 +252,7 @@ export async function POST(req: Request) {
           expiresAt: currentPeriodEnd.toISOString(),
           couponStatus: 'active',
           giftMessage: giftMessage || `A ${months}-month ${planId === 'PRO_YEAR' ? 'yearly' : 'monthly'} Kylrix Pro gift is waiting for you.`,
-          claimUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.com'}/coupon/${giftCoupon.$id}`,
+          claimUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.com'}/accounts/coupon/${giftCoupon.$id}`,
         }).catch((error) => {
           console.warn('[BlockBee IPN] Gift email send deferred:', error);
         });

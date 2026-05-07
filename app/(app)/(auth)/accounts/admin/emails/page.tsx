@@ -31,6 +31,7 @@ import {
 import AdminLayout from '../components/AdminLayout';
 import { EMAIL_TEMPLATES } from '@/lib/email-template-catalog';
 import { getAdminUsersAction } from '../../actions/admin';
+import { sendAdminEmailsAction } from '../../actions/emails';
 
 interface User {
   id: string;
@@ -141,24 +142,13 @@ export default function EmailOrchestrator() {
     setSending(true);
     setSendResult(null);
     try {
-      const response = await fetch('/api/admin/emails/send', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recipientIds: selectedUsers,
-          templateId: template,
-          subject: customSubject.trim() || selectedTemplate.subject,
-          html: customBody.trim() || undefined,
-          ctaUrl: '/accounts',
-        }),
+      const data = await sendAdminEmailsAction({
+        recipientIds: selectedUsers,
+        templateId: template,
+        subject: customSubject.trim() || selectedTemplate.subject,
+        html: customBody.trim() || undefined,
+        ctaUrl: '/accounts',
       });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send emails');
-      }
 
       setSendResult(`Queued ${data.sent} email(s) successfully.`);
       setSelectedUsers([]);
