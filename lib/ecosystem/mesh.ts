@@ -57,8 +57,12 @@ export const MeshProtocol = {
     };
 
     if (typeof window !== 'undefined') {
-      const channel = new BroadcastChannel('kylrix_mesh_internal');
-      channel.postMessage(fullMessage);
+      const BroadcastChannelCtor = (globalThis as any)?.BroadcastChannel;
+      if (typeof BroadcastChannelCtor === 'function') {
+        const channel = new BroadcastChannelCtor('kylrix_mesh_internal');
+        channel.postMessage(fullMessage);
+        channel.close?.();
+      }
     }
 
     return fullMessage;
@@ -67,9 +71,12 @@ export const MeshProtocol = {
   subscribe: (handler: (msg: MeshMessage) => void) => {
     if (typeof window === 'undefined') return () => {};
 
-    const bc = new BroadcastChannel('kylrix_mesh_internal');
+    const BroadcastChannelCtor = (globalThis as any)?.BroadcastChannel;
+    const bc = typeof BroadcastChannelCtor === 'function'
+      ? new BroadcastChannelCtor('kylrix_mesh_internal')
+      : null;
     const bcHandler = (e: MessageEvent) => handler(e.data);
-    bc.addEventListener('message', bcHandler);
+    bc?.addEventListener?.('message', bcHandler);
 
     const winHandler = (e: MessageEvent) => {
       // SECURITY: Validate message origin to prevent XSS spoofing (CVE-KYL-2026-001)
@@ -85,9 +92,9 @@ export const MeshProtocol = {
     window.addEventListener('message', winHandler);
 
     return () => {
-      bc.removeEventListener('message', bcHandler);
+      bc?.removeEventListener?.('message', bcHandler);
       window.removeEventListener('message', winHandler);
-      bc.close();
+      bc?.close?.();
     };
   }
 };

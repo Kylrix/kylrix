@@ -87,7 +87,7 @@ export interface TopbarSearchCard {
   disabled?: boolean;
 }
 
-export interface TopbarSearchSurface extends TopbarSurface {
+export interface TopbarSearchSurface extends Omit<TopbarSurface, 'quickActions' | 'searchTargets'> {
   query: string;
   searchPlaceholder: string;
   quickActionLabel: string;

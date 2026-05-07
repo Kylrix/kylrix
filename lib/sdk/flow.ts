@@ -1,11 +1,13 @@
-import { Kylrix } from './index';
+type FlowSdk = {
+  createRow: (databaseId: string, tableId: string, data: Record<string, unknown>) => Promise<unknown>;
+};
 
 /**
  * Kylrix.Flow: The Action Engine Module.
  * Domain: flow.kylrix.space
  */
 export class KylrixFlow {
-  constructor(private sdk: Kylrix) {}
+  constructor(private sdk: FlowSdk) {}
 
   /**
    * Creates a new task in the Flow engine.

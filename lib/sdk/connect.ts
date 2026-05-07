@@ -1,11 +1,15 @@
-import { Kylrix } from './index';
+type ConnectSdk = {
+  createRow: (databaseId: string, tableId: string, data: Record<string, unknown>) => Promise<unknown>;
+  getRow: <T = unknown>(databaseId: string, tableId: string, rowId: string) => Promise<T>;
+  updateRow: (databaseId: string, tableId: string, rowId: string, data: Record<string, unknown>) => Promise<unknown>;
+};
 
 /**
  * Kylrix.Connect: The Communication Relay Module.
  * Domain: connect.kylrix.space
  */
 export class KylrixConnect {
-  constructor(private sdk: Kylrix) {}
+  constructor(private sdk: ConnectSdk) {}
 
   /**
    * Sends a message to a conversation.

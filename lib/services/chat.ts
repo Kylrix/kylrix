@@ -507,7 +507,7 @@ async function resolveConversationKey(
           }, auth);
 
           if (repairResult?.identity) {
-            const repairedProfile = await UsersService.getProfileById(userId, true);
+            const repairedProfile = await UsersService.getProfileById(userId);
             seedIdentityCache(repairedProfile);
           }
 

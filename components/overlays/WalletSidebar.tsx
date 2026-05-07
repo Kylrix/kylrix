@@ -51,7 +51,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const { user } = useAuth();
     
     // Make useSudo optional - gracefully handle missing provider
-    let requestSudo: (() => Promise<void>) | null = null;
+    let requestSudo: ((options: { onSuccess: () => void }) => void) | null = null;
     try {
       const sudoContext = useSudo();
       requestSudo = sudoContext?.requestSudo || null;
@@ -132,6 +132,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     }, [isOpen, hasMasterpass]);
 
     const handleUnlock = () => {
+        if (!requestSudo) return;
         requestSudo({
             onSuccess: async () => {
                 toast.success('Wallet Unlocked');

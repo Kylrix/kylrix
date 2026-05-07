@@ -57,7 +57,8 @@ function CheckoutContent() {
           markBillingSyncPending(user.$id);
           window.location.assign(session.url);
         } else {
-          setError(session.error || 'Failed to create checkout session');
+          const sessionError = 'error' in session ? session.error : undefined;
+          setError(typeof sessionError === 'string' ? sessionError : 'Failed to create checkout session');
           setInitializing(false);
         }
       } catch (err) {

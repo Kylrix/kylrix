@@ -268,7 +268,7 @@ export class MasterPassCrypto {
 
       // Check if entry exists to update or create
       const existing = await AppwriteService.listKeychainEntries(userId);
-      const passwordEntry = existing.find(k => k.type === 'password');
+      const passwordEntry = existing.find((k: any) => k.type === 'password');
 
       if (passwordEntry) {
         await AppwriteService.deleteKeychainEntry(passwordEntry.$id);

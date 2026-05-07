@@ -1,12 +1,24 @@
-import { Kylrix } from './index';
 import { createCrossObjectMetadata, type CrossObjectOrigin } from './orchestration';
+
+type NoteSdk = {
+  createRow: (
+    databaseId: string,
+    tableId: string,
+    data: Record<string, unknown>,
+    rowId?: string,
+    permissions?: string[]
+  ) => Promise<unknown>;
+  getRow: <T = unknown>(databaseId: string, tableId: string, rowId: string) => Promise<T>;
+  updateRow: (databaseId: string, tableId: string, rowId: string, data: Record<string, unknown>) => Promise<unknown>;
+  listRows: <T = unknown>(databaseId: string, tableId: string, queries?: string[]) => Promise<{ documents: T[] } & Record<string, unknown>>;
+};
 
 /**
  * Kylrix.Note: The Intelligence Layer Module.
  * Domain: note.kylrix.space
  */
 export class KylrixNote {
-  constructor(private sdk: Kylrix) {}
+  constructor(private sdk: NoteSdk) {}
 
   /**
    * Creates a new note row with basic timestamps and optional metadata.

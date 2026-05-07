@@ -187,7 +187,11 @@ export default function SettingsPage() {
                                     </Box>
                                     <Button 
                                         variant={isUnlocked ? 'outlined' : 'contained'}
-                                        onClick={() => isUnlocked ? ecosystemSecurity.lock() : requestSudo()}
+                                        onClick={() =>
+                                          isUnlocked
+                                            ? ecosystemSecurity.lock()
+                                            : requestSudo({ onSuccess: () => {} })
+                                        }
                                         color={isUnlocked ? 'inherit' : 'primary'}
                                         startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
                                         sx={{ 
@@ -304,9 +308,9 @@ export default function SettingsPage() {
             </Box>
 
             <PasskeySetup 
-                isOpen={passkeySetupOpen}
+                open={passkeySetupOpen}
                 onClose={() => setPasskeySetupOpen(false)}
-                userId={user?.$id || ""}
+                userId={user?.userId || ""}
                 onSuccess={() => {
                     setPasskeySetupOpen(false);
                     loadPasskeys();

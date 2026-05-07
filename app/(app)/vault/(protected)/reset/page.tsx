@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Box,
@@ -18,15 +18,17 @@ import SecurityIcon from '@mui/icons-material/Security';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { resetMasterpassAndWipe } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
-import SudoModal from '@/components/overlays/SudoModal';
+import { useSudo } from '@/context/SudoContext';
 
-export default function MasterpassResetPage() {
+export const dynamic = 'force-dynamic';
+
+function MasterpassResetContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAppwriteVault();
+  const { promptSudo } = useSudo();
   const [step, setStep] = useState<"reset" | "confirm" | "done">("reset");
   const [loading, setLoading] = useState(false);
-  const [isSudoOpen, setIsSudoOpen] = useState(false);
 
   const callbackUrl = searchParams.get("callbackUrl");
 
@@ -40,13 +42,11 @@ export default function MasterpassResetPage() {
     }
   }, [user, router, callbackUrl]);
 
-  const handleStartReset = () => {
-    setIsSudoOpen(true);
-  };
-
-  const onSudoSuccess = () => {
-    setIsSudoOpen(false);
-    setStep("confirm");
+  const handleStartReset = async () => {
+    const allowed = await promptSudo('reset');
+    if (allowed) {
+      setStep("confirm");
+    }
   };
 
   const handleReset = async () => {
@@ -254,12 +254,20 @@ export default function MasterpassResetPage() {
         )}
       </Paper>
       
-      <SudoModal 
-        isOpen={isSudoOpen} 
-        onSuccess={onSudoSuccess} 
-        onCancel={() => setIsSudoOpen(false)} 
-        intent="reset"
-      />
     </Box>
+  );
+}
+
+export default function MasterpassResetPage() {
+  return (
+    <Suspense
+      fallback={
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#000' }}>
+          <CircularProgress />
+        </Box>
+      }
+    >
+      <MasterpassResetContent />
+    </Suspense>
   );
 }

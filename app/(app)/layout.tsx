@@ -2,6 +2,7 @@
 
 import type { Metadata } from 'next';
 import { Box } from '@mui/material';
+import { Suspense } from 'react';
 import { UnifiedTopbar } from '@/components/UnifiedTopbar';
 
 /**
@@ -18,7 +19,9 @@ export default function AppLayout({
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Persistent fixed topbar - mounts once, never unmounts */}
       <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000 }}>
-        <UnifiedTopbar />
+        <Suspense fallback={null}>
+          <UnifiedTopbar />
+        </Suspense>
       </Box>
       
       {/* App content - no top padding needed, topbar is fixed */}

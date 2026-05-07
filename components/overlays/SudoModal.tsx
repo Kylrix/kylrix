@@ -119,7 +119,7 @@ export default function SudoModal({
     useEffect(() => {
         if (isOpen && user?.$id) {
             // Check for passkey keychain entry
-            AppwriteService.listKeychainEntries(user.$id).then(entries => {
+            AppwriteService.listKeychainEntries(user.$id).then((entries: any[]) => {
                 const passkeyPresent = entries.some((e: any) => e.type === 'passkey');
                 const passwordPresent = entries.some((e: any) => e.type === 'password');
                 const passkeyAllowed = passkeyPresent && isKylrixDomain;
