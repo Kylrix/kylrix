@@ -16,10 +16,10 @@
 | `/api/connect/group-avatar` | `lib/services/chat.ts` | `lib/services/internal/connectAvatar.ts` | pending | pending |
 | `/api/billing/checkout` | `app/(app)/(auth)/accounts/subscription/pro/checkout/page.tsx` | `lib/services/internal/billing.ts` | pending | pending |
 | `/api/billing/coupons/claim` | `app/(app)/(auth)/accounts/coupon/[id]/page.tsx` | `lib/services/internal/billing.ts` | pending | pending |
-| `/api/admin/stats` | `app/(app)/(auth)/accounts/admin/page.tsx` | `lib/services/internal/admin.ts` | pending | pending |
-| `/api/admin/users` | `app/(app)/(auth)/accounts/admin/users/page.tsx`, `app/(app)/(auth)/accounts/admin/emails/page.tsx` | `lib/services/internal/admin.ts` | pending | pending |
-| `/api/admin/coupons` | `app/(app)/(auth)/accounts/admin/coupons/page.tsx` | `lib/services/internal/admin.ts` | pending | pending |
-| `/api/admin/emails/send` | `app/(app)/(auth)/accounts/admin/emails/page.tsx` | `lib/services/internal/admin.ts` | pending | pending |
+| `/api/admin/stats` | `app/(app)/(auth)/accounts/admin/page.tsx` | `lib/services/internal/admin.ts` | completed | removed |
+| `/api/admin/users` | `app/(app)/(auth)/accounts/admin/users/page.tsx`, `app/(app)/(auth)/accounts/admin/emails/page.tsx` | `lib/services/internal/admin.ts` | completed | removed |
+| `/api/admin/coupons` | `app/(app)/(auth)/accounts/admin/coupons/page.tsx` | `accounts/actions/coupons.ts` | completed | removed |
+| `/api/admin/emails/send` | `app/(app)/(auth)/accounts/admin/emails/page.tsx` | `accounts/actions/emails.ts` | completed | removed |
 | `/api/emails` | `lib/email-notifications.ts`, `api/connect/join-requests/route.ts` | `lib/services/internal/emailDispatch.ts` | in_progress | pending |
 | `/api/reports` | no in-repo callers found | `lib/services/internal/reports.ts` | pending | pending |
 | `/api/referrals` | no in-repo callers found | `lib/services/internal/referrals.ts` | pending | pending |
@@ -36,8 +36,8 @@
 - [x] Ensure pricing/subscription links resolve to `/accounts/subscription/pro/checkout` and `/accounts/pro/success`
 
 ## Phase 2 - Internal Service Layer
-- [ ] Add `lib/services/internal/permissions.ts` (shared permission mutation methods)
-- [ ] Add `lib/services/internal/joinRequests.ts` (GET/POST/PATCH/DELETE join-request logic)
+- [x] Add `lib/services/internal/permissions.ts` (shared permission mutation methods)
+- [x] Add `lib/services/internal/joinRequests.ts` (GET/POST/PATCH/DELETE join-request logic)
 - [x] Add `lib/services/internal/emailDispatch.ts` (non-HTTP email dispatch wrapper)
 - [x] Add `lib/services/internal/admin.ts` + `billing.ts` (admin/billing callable methods)
 - [x] Refactor route handlers to thin wrappers over these methods
@@ -47,6 +47,7 @@
 - [x] Rewire `app/(app)/connect/groups/invite/[conversationId]/page.tsx` off join-request API fetches
 - [x] Rewire `lib/email-notifications.ts` to internal dispatch method
 - [x] Rewire note permission callers (`lib/appwrite/note.ts`, `GhostNoteClaimer.tsx`) to internal permission methods where server-safe
+- [x] Rewire accounts admin dashboard/users/coupons/emails to server actions
 
 ## Phase 4 - Security Hardening
 - [ ] Centralize admin guards in internal admin service methods
@@ -70,7 +71,7 @@
 - `GOOGLE_API_KEY` and `GEMINI_MODEL_NAME` (duplicated in `flow`/`vault`)
 
 ## Phase 7 - API Shutdown
-- [ ] Remove deprecated accounts API handlers after rewires complete
+- [x] Remove deprecated accounts API handlers after rewires complete (admin stats/users/coupons/emails)
 - [ ] Keep only required external callback endpoints (if any)
 
 ## Phase 8 - Final Sweep

@@ -13,6 +13,7 @@ import {
   upsertLockboxRows,
   verifyUser,
 } from '@/lib/api/permission-updater';
+import { applyPermissionMutation, revokePermissionMutation } from '@/lib/services/internal/permissions';
 
 const DEFAULT_GHOST_RESOURCE_TYPE = 'ghost_note';
 
@@ -144,59 +145,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const keyMappings = getResourceKeyMappings(body);
-    const targetUserIds = normalizeTargetUserIds(body?.targetUserIds || body?.recipientUserIds || body?.targetUserId);
-    const storageBucketId = body?.storageBucketId || body?.bucketId;
-    const fileId = body?.fileId;
-    const permission = getPermissionLevel(body);
-
-    let result = null;
-    let storageResult = null;
-
-    if (action === 'grant' && keyMappings.length > 0) {
-      await upsertLockboxRows(databases, user.$id, keyMappings);
-    }
-
-    if (storageBucketId && fileId) {
-      storageResult = action === 'revoke'
-        ? await revokeStorageFilePermissions(storage, user.$id, {
-          bucketId: storageBucketId,
-          fileId,
-          targetUserIds,
-          permission,
-        })
-        : await mutateStorageFilePermissions(storage, user.$id, {
-          bucketId: storageBucketId,
-          fileId,
-          targetUserIds,
-          permission,
-        });
-    }
-
-    const databaseId = body?.databaseId;
-    const tableId = body?.tableId;
-    const rowId = body?.rowId;
-
-    if (databaseId && tableId && rowId) {
-      result = await mutateRowPermissions(databases, user.$id, {
-        databaseId,
-        tableId,
-        rowId,
-        targetUserIds,
-        permission: getPermissionLevel(body),
-        action: action === 'revoke' ? 'revoke' : 'grant',
-      });
-    } else if (action === 'grant' && keyMappings.length === 0 && !databaseId && !storageBucketId) {
-      return NextResponse.json({ error: 'databaseId, tableId, and rowId are required for ACL updates' }, { status: 400, headers: corsHeaders });
-    }
+    const result = await applyPermissionMutation(user.$id, body);
 
     return NextResponse.json(
         {
           success: true,
           action,
-          rowId,
-          permissions: result?.permissions || null,
-          storagePermissions: storageResult?.$permissions || null,
+          rowId: body?.rowId || null,
+          permissions: (result as any)?.permissions || null,
+          storagePermissions: null,
         },
       { headers: corsHeaders },
     );
@@ -220,36 +177,14 @@ export async function DELETE(req: NextRequest) {
     const url = new URL(req.url);
     const queryTargetUserId = url.searchParams.get('targetUserId');
     const body = await req.json().catch(() => ({}));
-    const { databases } = createAdminClient();
-
-    const databaseId = body?.databaseId;
-    const tableId = body?.tableId;
-    const rowId = body?.rowId;
-    const targetUserIds = normalizeTargetUserIds(body?.targetUserIds || body?.recipientUserIds || body?.targetUserId || queryTargetUserId);
-    const resourceType = body?.resourceType || body?.mappingResourceType;
-    const resourceId = body?.resourceId || body?.mappingResourceId || rowId;
-
-    let result = null;
-    if (databaseId && tableId && rowId) {
-      result = await mutateRowPermissions(databases, user.$id, {
-        databaseId,
-        tableId,
-        rowId,
-        targetUserIds,
-        action: 'revoke',
-      });
-    }
-
-    if (resourceType && resourceId) {
-      await removeLockboxRows(databases, resourceType, resourceId, targetUserIds.length > 0 ? targetUserIds : undefined);
-    }
+    await revokePermissionMutation(user.$id, body, queryTargetUserId);
 
     return NextResponse.json(
       {
         success: true,
         action: 'revoke',
-        rowId,
-        permissions: result?.permissions || null,
+        rowId: body?.rowId || null,
+        permissions: null,
       },
       { headers: corsHeaders },
     );

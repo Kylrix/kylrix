@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Alert, Box, Button, Chip, CircularProgress, Paper, Stack, TextField, Typography, alpha } from '@mui/material';
 import { Copy, RefreshCw, Ticket } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { createCouponAction, listCouponsAction } from '../../actions/coupons';
 
 type CouponRow = {
   $id: string;
@@ -54,10 +55,8 @@ export default function AdminCouponsPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/admin/coupons', { cache: 'no-store' });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to load coupons');
-      setCoupons(data.coupons || []);
+      const rows = await listCouponsAction();
+      setCoupons(rows as CouponRow[]);
     } catch (err: any) {
       setError(err?.message || 'Failed to load coupons');
     } finally {
@@ -75,23 +74,17 @@ export default function AdminCouponsPage() {
     setSuccess(null);
     try {
       const targetUserIds = form.targetUserIds.split(',').map((id) => id.trim()).filter(Boolean);
-      const response = await fetch('/api/admin/coupons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userIds: targetUserIds.length > 0 ? targetUserIds : undefined,
-          discountPercent: Number.parseInt(form.discountPercent, 10) || 0,
-          status: form.status,
-          expiresAt: form.expiresAt || undefined,
-          title: form.title || undefined,
-          note: form.note || undefined,
-          metadata: {
-            scope: targetUserIds.length > 0 ? 'targeted' : 'open',
-          },
-        }),
+      const data = await createCouponAction({
+        userIds: targetUserIds.length > 0 ? targetUserIds : undefined,
+        discountPercent: Number.parseInt(form.discountPercent, 10) || 0,
+        status: form.status,
+        expiresAt: form.expiresAt || undefined,
+        title: form.title || undefined,
+        note: form.note || undefined,
+        metadata: {
+          scope: targetUserIds.length > 0 ? 'targeted' : 'open',
+        },
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to create coupon');
       setSuccess(`Created ${data.count || 1} coupon(s).`);
       setForm((prev) => ({ ...prev, targetUserIds: '', title: '', note: '' }));
       await loadCoupons();
@@ -104,7 +97,7 @@ export default function AdminCouponsPage() {
 
   const copyLink = async (id: string) => {
     if (typeof navigator === 'undefined' || !navigator.clipboard) return;
-    await navigator.clipboard.writeText(`${window.location.origin}/coupon/${id}`);
+    await navigator.clipboard.writeText(`${window.location.origin}/accounts/coupon/${id}`);
     setSuccess('Coupon link copied.');
   };
 
@@ -216,7 +209,7 @@ export default function AdminCouponsPage() {
                         {parseMetadata(coupon.metadata)?.coupon?.title || coupon.$id}
                       </Typography>
                       <Typography sx={{ color: alpha('#FFFFFF', 0.5), fontSize: '0.8rem' }}>
-                        /coupon/{coupon.$id}
+                        /accounts/coupon/{coupon.$id}
                       </Typography>
                     </Box>
                     <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end">
@@ -239,7 +232,7 @@ export default function AdminCouponsPage() {
                     </Button>
                     <Button
                       component={Link}
-                      href={`/coupon/${coupon.$id}`}
+                      href={`/accounts/coupon/${coupon.$id}`}
                       variant="text"
                       sx={{ borderRadius: 999, textTransform: 'none', fontWeight: 800, color: '#6366F1' }}
                     >

@@ -31,7 +31,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
     if (!user) {
       const url = new URL('/accounts/login', window.location.origin);
       url.searchParams.set('source', window.location.href);
-      url.searchParams.set('return_to', `/coupon/${encodeURIComponent(couponId)}`);
+      url.searchParams.set('return_to', `/accounts/coupon/${encodeURIComponent(couponId)}`);
       window.location.assign(url.toString());
       return;
     }
