@@ -11,7 +11,11 @@ export const AuthOverlay = () => {
     if (isLoading) return null;
 
     // Allow public profiles, posts and home feed to be viewed by guests
-    const isPublicRoute = pathname === '/' || pathname?.startsWith('/u/') || pathname?.startsWith('/post/');
+    const isPublicRoute =
+        pathname === '/' ||
+        pathname?.startsWith('/u/') ||
+        pathname?.startsWith('/post/') ||
+        pathname?.startsWith('/connect/post/');
     
     if (!user && !isPublicRoute) {
         return (

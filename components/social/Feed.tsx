@@ -845,7 +845,7 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
 
     const handleOpenMoment = useCallback((moment: any) => {
         seedMomentPreview(moment);
-        router.push(`/post/${moment.$id}`);
+        router.push(`/connect/post/${moment.$id}`);
     }, [router]);
 
     const handleToggleLike = async (e: React.MouseEvent, moment: any) => {
