@@ -3,45 +3,16 @@ import { billingManager } from '@/lib/billing/provider-factory';
 import { StripeProvider } from '@/lib/billing/providers/stripe-provider';
 import { CryptoPaymentProvider } from '@/lib/billing/providers/crypto-provider';
 import { PaymentMethod } from '@/lib/billing/types';
-import { Account, Client } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { cookies } from 'next/headers';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { notifySubscriptionActivated } from '@/lib/billing/subscription-notifications';
 import { Permission, Role, ID } from 'node-appwrite';
+import { billingAuthErrorResponse, getAuthenticatedUserForBilling } from '@/lib/services/internal/billing';
 
 // Register providers
 billingManager.registerProvider(new StripeProvider());
 billingManager.registerProvider(new CryptoPaymentProvider());
-
-async function getAuthenticatedUser(req: Request) {
-  const client = new Client()
-    .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-    .setProject(APPWRITE_CONFIG.PROJECT_ID);
-
-  const authHeader = req.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    client.setJWT(authHeader.split(' ')[1]);
-  } else {
-    const sessionName = `a_session_${APPWRITE_CONFIG.PROJECT_ID.toLowerCase()}`;
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get(sessionName) || cookieStore.get(`${sessionName}_legacy`);
-
-    if (sessionCookie) {
-      client.setSession(sessionCookie.value);
-    } else {
-      return null;
-    }
-  }
-
-  const account = new Account(client);
-  try {
-    return await account.get();
-  } catch (_e) {
-    return null;
-  }
-}
 
 function parseMetadata(value: unknown): Record<string, any> {
   if (!value) return {};
@@ -61,9 +32,9 @@ function parsePositiveInteger(value: unknown, fallback = 1) {
 
 export async function POST(req: Request) {
   try {
-    const user = await getAuthenticatedUser(req);
+    const user = await getAuthenticatedUserForBilling(req);
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return billingAuthErrorResponse();
     }
 
     const { planId, method, countryCode, months, giftRecipientId, giftRecipientName, giftMessage, couponId } = await req.json();
@@ -205,9 +176,9 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const user = await getAuthenticatedUser(req);
+    const user = await getAuthenticatedUserForBilling(req);
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return billingAuthErrorResponse();
     }
 
     const { searchParams } = new URL(req.url);

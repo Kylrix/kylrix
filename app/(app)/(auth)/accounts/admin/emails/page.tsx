@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { EMAIL_TEMPLATES } from '@/lib/email-template-catalog';
+import { getAdminUsersAction } from '../../actions/admin';
 
 interface User {
   id: string;
@@ -71,21 +72,11 @@ export default function EmailOrchestrator() {
 
     try {
       setUserLoadError(null);
-      const params = new URLSearchParams({
-        verified: 'true',
-        limit: '50',
+      const data = await getAdminUsersAction({
+        verifiedOnly: true,
+        limit: 50,
+        cursorAfter,
       });
-
-      if (cursorAfter) {
-        params.set('cursorAfter', cursorAfter);
-      }
-
-      const response = await fetch(`/api/admin/users?${params.toString()}`);
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch users');
-      }
-
       const batch = data.users || [];
       setUsers((prev) => {
         if (!append) {

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { Account, Client, ID, Permission, Query, Role } from 'node-appwrite';
-import { cookies } from 'next/headers';
+import { ID, Permission, Query, Role } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { notifySubscriptionActivated } from '@/lib/billing/subscription-notifications';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
+import { billingAuthErrorResponse, getAuthenticatedUserForBilling } from '@/lib/services/internal/billing';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const SUBSCRIPTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
@@ -24,34 +24,6 @@ function parseMetadata(value: unknown): Record<string, any> {
     return JSON.parse(value);
   } catch {
     return {};
-  }
-}
-
-async function getAuthenticatedUser(req: Request) {
-  const client = new Client()
-    .setEndpoint(APPWRITE_CONFIG.ENDPOINT)
-    .setProject(APPWRITE_CONFIG.PROJECT_ID);
-
-  const authHeader = req.headers.get('authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    client.setJWT(authHeader.split(' ')[1]);
-  } else {
-    const sessionName = `a_session_${APPWRITE_CONFIG.PROJECT_ID.toLowerCase()}`;
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get(sessionName) || cookieStore.get(`${sessionName}_legacy`);
-
-    if (sessionCookie) {
-      client.setSession(sessionCookie.value);
-    } else {
-      return null;
-    }
-  }
-
-  const account = new Account(client);
-  try {
-    return await account.get();
-  } catch (_e) {
-    return null;
   }
 }
 
@@ -94,9 +66,9 @@ async function calculateStackedPeriod(databases: ReturnType<typeof createAdminCl
 
 export async function POST(req: Request) {
   try {
-    const user = await getAuthenticatedUser(req);
+    const user = await getAuthenticatedUserForBilling(req);
     if (!user) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return billingAuthErrorResponse();
     }
 
     const { databases, users } = createAdminClient();
