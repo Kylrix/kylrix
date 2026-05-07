@@ -228,8 +228,8 @@ export default function CredentialDialog({
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 600px)',
           maxWidth: '100%',
-          height: isMobile ? '92dvh' : '100%',
-          maxHeight: '100dvh',
+          height: isMobile ? '60dvh' : '100%',
+          maxHeight: isMobile ? '60dvh' : '100dvh',
           bgcolor: BG_COLOR,
           backdropFilter: 'blur(32px) saturate(200%)',
           border: isMobile ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid rgba(255, 255, 255, 0.05)',
@@ -624,7 +624,8 @@ export default function CredentialDialog({
           flexDirection: 'column',
           borderTop: '1px solid rgba(255, 255, 255, 0.05)',
           flexShrink: 0,
-          backgroundColor: isMobile ? 'transparent' : BG_COLOR
+          backgroundColor: BG_COLOR,
+          pb: isMobile ? 'max(1rem, env(safe-area-inset-bottom))' : 3
         }}>
           <Button 
             onClick={onClose} 
