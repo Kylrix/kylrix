@@ -119,7 +119,6 @@ export default function SettingsPage() {
                 sx={{
                     maxWidth: 840,
                     mx: 'auto',
-                    mt: '88px',
                     pt: { xs: 2, md: 2.5 },
                     pb: { xs: 3, md: 4 },
                     px: { xs: 2, md: 3 },
