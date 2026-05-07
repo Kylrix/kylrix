@@ -1367,7 +1367,7 @@ export function PostViewClient() {
                                     }}
                                     threadLineMode={index === 0 ? 'down' : 'both'}
                                     variant="thread"
-                                    onClick={() => router.push(`/post/${ancestor.$id}`)}
+                                    onClick={() => router.push(`/connect/post/${ancestor.$id}`)}
                                     onLike={(e) => { e.stopPropagation(); handleToggleLike(ancestor); }}
                                     onPulse={(e) => {
                                         e.stopPropagation();
@@ -1508,7 +1508,7 @@ export function PostViewClient() {
                                         }}
                                         threadLineMode={index < replies.length - 1 ? 'both' : 'up'}
                                         variant="thread"
-                                        onClick={() => router.push(`/post/${reply.$id}`)}
+                                        onClick={() => router.push(`/connect/post/${reply.$id}`)}
                                         onLike={(e) => {
                                             e.stopPropagation();
                                             handleToggleLike(reply);

@@ -666,7 +666,7 @@ export const Profile = ({ username }: ProfileProps) => {
                         {moments.map((moment) => (
                             <Paper
                                 key={moment.$id}
-                                onClick={() => router.push(`/post/${moment.$id}`)}
+                                onClick={() => router.push(`/connect/post/${moment.$id}`)}
                                 sx={{
                                     p: 2.5,
                                     borderRadius: 5,
