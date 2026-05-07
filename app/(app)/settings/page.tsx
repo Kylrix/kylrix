@@ -98,7 +98,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '90px', md: 0 } }}>
+        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '90px', md: 0 }, pt: 11 }}>
             <Container maxWidth="md" sx={{ py: 6 }}>
                 <Typography variant="h4" sx={{ fontWeight: 900, mb: 6, fontFamily: 'var(--font-clash)' }}>
                     Settings

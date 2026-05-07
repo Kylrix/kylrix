@@ -8,7 +8,6 @@ import NoteTopbar from '@/components/common/NoteTopbar';
 import VaultTopbar from '@/components/common/VaultTopbar';
 import ConnectTopbar from '@/components/layout/ConnectTopbar';
 import TopbarShell from '@/components/layout/TopbarShell';
-import Topbar from '@/components/Topbar';
 import { useAuth } from '@/context/auth/AuthContext';
 
 /**
@@ -21,18 +20,19 @@ export function UnifiedTopbar() {
   const router = useRouter();
   const { user, logout } = useAuth();
 
-  // Check if we're on settings page
-  const isSettingsPage = pathname === '/settings';
+  // Check if we're on settings page FIRST
+  const isSettingsPage = useMemo(() => pathname === '/settings', [pathname]);
 
   // Determine which app we're in based on pathname (ignoring /settings)
   const appContext = useMemo(() => {
+    if (isSettingsPage) return null;
     if (pathname?.startsWith('/note')) return 'note';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/flow')) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
     if (pathname?.startsWith('/accounts')) return 'accounts';
     return null;
-  }, [pathname]);
+  }, [pathname, isSettingsPage]);
 
   // On settings page, show ecosystem logo with back button
   if (isSettingsPage) {
