@@ -1084,7 +1084,7 @@ export default function NoteTopbar({
                       <IconButton
                         onClick={() => setIsWalletOpen(true)}
                         sx={{
-                          display: { xs: 'none', md: 'inline-flex' },
+                          display: 'inline-flex',
                           color: getAppColor('note'),
                           bgcolor: alpha(getAppColor('note'), 0.03),
                           border: '1px solid',
@@ -1127,7 +1127,7 @@ export default function NoteTopbar({
                   </ButtonBase>
                 </>
               )}
-              <Box sx={{ display: { xs: 'inline-flex', md: 'none' } }}>
+              <Box sx={{ display: { xs: isWebsiteRoute ? 'inline-flex' : 'none', md: 'none' } }}>
                 <IconButton
                   onClick={() => {
                     setSearchOpen(false);
