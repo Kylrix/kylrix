@@ -1,7 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useCallback, ReactNode } from 'react';
-import { useIsland, IslandType } from './DynamicIsland';
+import React, { createContext, useContext, useCallback, ReactNode, useState } from 'react';
+import toast from 'react-hot-toast';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -37,36 +37,43 @@ interface ToastProviderProps {
 }
 
 export function ToastProvider({ children }: ToastProviderProps) {
-  const { showIsland } = useIsland();
-
-  const showToast = useCallback((type: ToastType, title: string, message?: string, duration = 5000, defaultExpanded = false) => {
-    showIsland({
-      type: type as IslandType,
-      title,
-      message,
-      duration,
-      defaultExpanded,
-    });
-  }, [showIsland]);
-
-  const dismissToast = useCallback((_id: string) => {
-    void _id;
+  const showToast = useCallback((type: ToastType, title: string, message?: string, duration = 5000, _defaultExpanded = false) => {
+    const content = message ? `${title}\n${message}` : title;
+    
+    switch (type) {
+      case 'error':
+        toast.error(content, { duration });
+        break;
+      case 'success':
+        toast.success(content, { duration });
+        break;
+      case 'warning':
+        toast(content, { duration, icon: '⚠️' });
+        break;
+      case 'info':
+        toast(content, { duration, icon: 'ℹ️' });
+        break;
+    }
   }, []);
 
-  const showError = useCallback((title: string, message?: string, defaultExpanded = false) => {
-    showToast('error', title, message, 5000, defaultExpanded);
+  const dismissToast = useCallback((_id: string) => {
+    // react-hot-toast handles dismissal internally
+  }, []);
+
+  const showError = useCallback((title: string, message?: string, _defaultExpanded = false) => {
+    showToast('error', title, message, 5000);
   }, [showToast]);
 
-  const showSuccess = useCallback((title: string, message?: string, defaultExpanded = false) => {
-    showToast('success', title, message, 5000, defaultExpanded);
+  const showSuccess = useCallback((title: string, message?: string, _defaultExpanded = false) => {
+    showToast('success', title, message, 5000);
   }, [showToast]);
 
-  const showWarning = useCallback((title: string, message?: string, defaultExpanded = false) => {
-    showToast('warning', title, message, 5000, defaultExpanded);
+  const showWarning = useCallback((title: string, message?: string, _defaultExpanded = false) => {
+    showToast('warning', title, message, 5000);
   }, [showToast]);
 
-  const showInfo = useCallback((title: string, message?: string, defaultExpanded = false) => {
-    showToast('info', title, message, 5000, defaultExpanded);
+  const showInfo = useCallback((title: string, message?: string, _defaultExpanded = false) => {
+    showToast('info', title, message, 5000);
   }, [showToast]);
 
   const value: ToastContextType = {
@@ -81,10 +88,6 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      {/* Old Toast System replaced by Dynamic Island */}
-      {/* <Stack spacing={2} sx={{ position: 'fixed', top: 24, right: 24, zIndex: 9999, width: '100%', maxWidth: 400 }}>
-        ...
-      </Stack> */}
     </ToastContext.Provider>
   );
 }
