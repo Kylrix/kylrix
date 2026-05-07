@@ -65,8 +65,17 @@ const Logo: React.FC<LogoProps> = ({
             transform="rotate(45 50 50)"
           />
         );
-      case 'flow': // Triangle (forward-pointing)
-        return <polygon points="42,38 62,50 42,62" fill={cutoutColor} />;
+      case 'flow': // Slanted Square (Quadrilateral)
+        return (
+          <rect 
+            x="38" 
+            y="38" 
+            width="24" 
+            height="24" 
+            fill={cutoutColor} 
+            transform="rotate(45 50 50)"
+          />
+        );
       case 'accounts': // Diamond
       case 'kylrix':
       default:
