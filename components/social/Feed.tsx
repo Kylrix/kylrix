@@ -79,13 +79,13 @@ const CACHE_KEY = 'kylrix_feed_cache';
 const profileRegistry = new Map<string, any>();
 const momentCardSx = {
     borderRadius: '20px',
-    bgcolor: '#161514',
+    bgcolor: '#161412',
     border: '1px solid rgba(255, 255, 255, 0.07)',
     boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 30px rgba(245, 158, 11, 0.12), 0 22px 48px rgba(0, 0, 0, 0.34)',
     overflow: 'hidden',
     transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     '&:hover': {
-        bgcolor: '#161514',
+        bgcolor: '#161412',
         transform: 'translateY(-2px)',
         borderColor: 'rgba(245, 158, 11, 0.18)',
         boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.1), 0 0 38px rgba(245, 158, 11, 0.2), 0 24px 56px rgba(0, 0, 0, 0.38)'

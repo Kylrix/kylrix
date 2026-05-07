@@ -296,7 +296,7 @@ const ThreadPostView = ({
             py: 1.5,
             position: 'relative',
             cursor: onClick ? 'pointer' : 'default',
-            bgcolor: variant === 'card' ? '#161514' : 'transparent',
+            bgcolor: variant === 'card' ? '#161412' : 'transparent',
             border: variant === 'card' ? '1px solid rgba(255,255,255,0.07)' : 'none',
             borderRadius: variant === 'card' ? '20px' : 0,
             boxShadow: variant === 'card' ? '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 30px rgba(245, 158, 11, 0.12), 0 18px 42px rgba(0, 0, 0, 0.34)' : 'none',
@@ -456,12 +456,12 @@ const QuoteMomentView = ({
             py: 1.5,
             position: 'relative',
             cursor: onClick ? 'pointer' : 'default',
-            bgcolor: '#000000',
+            bgcolor: '#161412',
             border: '1px solid rgba(255,255,255,0.07)',
             borderRadius: '20px',
             boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 30px rgba(245, 158, 11, 0.12), 0 18px 42px rgba(0, 0, 0, 0.34)',
             overflow: 'hidden',
-            '&:hover': onClick ? { bgcolor: '#000000', borderColor: 'rgba(245, 158, 11, 0.16)' } : undefined,
+            '&:hover': onClick ? { bgcolor: '#161412', borderColor: 'rgba(245, 158, 11, 0.16)' } : undefined,
         }}
     >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
@@ -541,7 +541,7 @@ const QuoteMomentView = ({
             sx={{
                 p: 1.5,
                 borderRadius: '16px',
-                bgcolor: '#000000',
+                bgcolor: '#161412',
                 border: '1px solid rgba(255,255,255,0.06)',
                 boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 24px rgba(245, 158, 11, 0.08)',
             }}

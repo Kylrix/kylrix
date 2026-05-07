@@ -43,7 +43,7 @@ export function UnifiedTopbar() {
     return <NoteTopbar />;
   }
   if (appContext === 'settings') {
-    return <TopbarShell />;
+    return <NoteTopbar />;
   }
 
   return null;
