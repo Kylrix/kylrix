@@ -20,7 +20,7 @@ export default function AppLayoutContent({ children }: { children: React.ReactNo
   }, [isDynamicSidebarOpen, pathname]);
 
   return (
-    <Box sx={{ py: 0 }}>
+    <Box sx={{ py: 0, my: 0, mt: 0, mb: 0 }}>
       {children}
     </Box>
   );
