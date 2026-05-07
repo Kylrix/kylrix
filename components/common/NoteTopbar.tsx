@@ -1079,16 +1079,15 @@ export default function NoteTopbar({
                     disabled={isLoading}
                     sx={{
                       color: '#fff',
-                      bgcolor: alpha('#6366F1', 0.14),
-                      border: '1px solid',
-                      borderColor: alpha('#6366F1', 0.38),
+                      bgcolor: '#6366F1',
                       borderRadius: '12px',
                       minWidth: 98,
                       height: 42,
                       px: 1.5,
                       textTransform: 'none',
                       fontWeight: 800,
-                      '&:hover': { bgcolor: alpha('#6366F1', 0.22) },
+                      boxShadow: '0 16px 36px rgba(99,102,241,0.25)',
+                      '&:hover': { bgcolor: '#5254E8' },
                     }}
                   >
                     {isLoading ? (
