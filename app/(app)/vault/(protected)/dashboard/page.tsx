@@ -20,7 +20,7 @@ import SearchBar from '@/components/app/dashboard/SearchBar';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import VaultGuard from '@/components/layout/VaultGuard';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
-import { MasterPassDrawer } from '@/components/overlays/MasterPassDrawer';
+import SudoModal from '@/components/overlays/SudoModal';
 import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
 import { 
@@ -66,7 +66,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 }
 
 export default function DashboardPage() {
-  const { user, needsMasterPassword } = useAppwriteVault();
+  const { user, needsMasterPassword, isVaultUnlocked } = useAppwriteVault();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { analyze, registerCreateModal } = useAI();
@@ -74,7 +74,7 @@ export default function DashboardPage() {
   const isMobileView = useMediaQuery(theme.breakpoints.down('md'));
   
   // Master password modal state
-  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(needsMasterPassword || false);
+  const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(needsMasterPassword || !isVaultUnlocked());
   
   // State for all credentials, fetched once
   const [allCredentials, setAllCredentials] = useState<Credentials[]>([]);
@@ -106,10 +106,10 @@ export default function DashboardPage() {
 
   // Update master password drawer state when auth state changes
   useEffect(() => {
-    if (needsMasterPassword) {
+    if (needsMasterPassword || !isVaultUnlocked()) {
       setShowMasterPassDrawer(true);
     }
-  }, [needsMasterPassword]);
+  }, [needsMasterPassword, isVaultUnlocked]);
 
   const [selectedCredential, setSelectedCredential] =
     useState<Credentials | null>(null);
@@ -680,9 +680,11 @@ export default function DashboardPage() {
         )}
 
         {/* Master Password Unlock Drawer */}
-        <MasterPassDrawer 
+        <SudoModal
           isOpen={showMasterPassDrawer}
-          onClose={() => setShowMasterPassDrawer(false)}
+          app="vault"
+          onSuccess={() => setShowMasterPassDrawer(false)}
+          onCancel={() => { }}
         />
       </Box>
     </VaultGuard>
