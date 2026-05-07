@@ -98,6 +98,7 @@ export default function SettingsPage() {
     };
 
     return (
+        <>
             <Box sx={{ maxWidth: 840, mx: 'auto', py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
                 <Box sx={{ mb: 4 }}>
                     <Typography
@@ -278,5 +279,6 @@ export default function SettingsPage() {
                 }}
                 onCancel={() => setUnlockModalOpen(false)}
             />
+        </>
     );
 }
