@@ -56,7 +56,7 @@ function ChatHandler() {
           );
 
           if (found) {
-            router.push(`/chat/${found.$id}`);
+            router.push(`/connect/chat/${found.$id}`);
             return;
           }
 
@@ -68,7 +68,7 @@ function ChatHandler() {
             try {
               await ecosystemSecurity.ensureE2EIdentity(user.$id);
               const newConv = await ChatService.createConversation([user.$id, actualTargetUserId], 'direct');
-              router.push(`/chat/${newConv.$id}`);
+              router.push(`/connect/chat/${newConv.$id}`);
             } catch (err: any) {
               console.error("Failed to create chat:", err);
               toast.error(`Failed to create chat: ${err?.message || 'Unknown error'}`);
@@ -83,7 +83,7 @@ function ChatHandler() {
                   await UsersService.ensureProfileForUser(user);
                   await ecosystemSecurity.ensureE2EIdentity(user.$id);
                   const newConv = await ChatService.createConversation([user.$id, actualTargetUserId], 'direct');
-                  router.push(`/chat/${newConv.$id}`);
+                  router.push(`/connect/chat/${newConv.$id}`);
                 } catch (err: any) {
                   console.error("Failed to create chat:", err);
                   toast.error(`Failed to create chat: ${err?.message || 'Unknown error'}`);

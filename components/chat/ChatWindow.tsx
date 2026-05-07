@@ -1157,7 +1157,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     };
 
     const handleCall = (type: 'audio' | 'video' = 'audio') => {
-        router.push(`/call/${conversationId}?caller=true&type=${type}`);
+        router.push(`/connect/call/${conversationId}?caller=true&type=${type}`);
     };
 
     const _handleAttachClick = (event: React.MouseEvent<HTMLElement>) => {
@@ -1385,7 +1385,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 borderRadius: '16px',
                 overflow: 'hidden',
                 border: '1px solid rgba(255, 255, 255, 0.12)',
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)',
+                background: '#161412',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
                 position: 'relative',
                 '&::before': {
@@ -1394,9 +1394,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     inset: 0,
                     borderRadius: '16px',
                     padding: '1px',
-                    background: metadata.entity === 'vault' 
-                        ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.3), transparent)' 
-                        : 'linear-gradient(135deg, rgba(99, 102, 241, 0.3), transparent)',
+                    background: metadata.entity === 'vault'
+                        ? 'rgba(245, 158, 11, 0.18)'
+                        : 'rgba(99, 102, 241, 0.18)',
                     mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
                     WebkitMaskComposite: 'xor',
                     maskComposite: 'exclude',
@@ -1711,7 +1711,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             flexDirection: 'column',
             height: '100%',
             minHeight: 0,
-            bgcolor: '#000000',
+            bgcolor: '#161412',
             position: 'relative',
             overflow: 'hidden',
         }}>
@@ -1979,9 +1979,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                                     alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
                                                     borderRadius: isOutgoing ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
                                                     bgcolor: '#161514',
-                                                    backgroundImage: isOutgoing
-                                                        ? 'linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, rgba(255,255,255,0.02) 34%, rgba(0,0,0,0.16) 100%)'
-                                                        : 'linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, rgba(255,255,255,0.015) 34%, rgba(0,0,0,0.18) 100%)',
+                                                    backgroundImage: 'none',
                                                     border: '1px solid',
                                                     borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.45)' : 'rgba(245, 158, 11, 0.35)',
                                                     color: 'text.primary',

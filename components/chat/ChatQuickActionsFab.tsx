@@ -166,7 +166,7 @@ export default function ChatQuickActionsFab({ hidden = false }: { hidden?: boole
       const existing = await ChatService.getConversations(user.$id);
       const found = existing.rows.find((c: any) => c.type === 'direct' && c.participants?.includes(targetUserId));
       if (found) {
-        router.push(`/chat/${found.$id}`);
+        router.push(`/connect/chat/${found.$id}`);
         reset();
         return;
       }
@@ -180,7 +180,7 @@ export default function ChatQuickActionsFab({ hidden = false }: { hidden?: boole
         await ecosystemSecurity.ensureE2EIdentity(user.$id);
         const participants = targetUserId === user.$id ? [user.$id] : [user.$id, targetUserId];
         const newConv = await ChatService.createConversation(participants, 'direct');
-        router.push(`/chat/${newConv.$id}`);
+        router.push(`/connect/chat/${newConv.$id}`);
         reset();
       } catch (error: any) {
         console.error('[ChatQuickActionsFab] Failed to create chat:', error);
@@ -205,7 +205,7 @@ export default function ChatQuickActionsFab({ hidden = false }: { hidden?: boole
         await UsersService.ensureProfileForUser(user);
         await ecosystemSecurity.ensureE2EIdentity(user.$id);
         const newConv = await ChatService.createConversation(participants, 'group', name);
-        router.push(`/chat/${newConv.$id}`);
+        router.push(`/connect/chat/${newConv.$id}`);
         reset();
       } catch (error: any) {
         console.error('[ChatQuickActionsFab] Failed to create group:', error);
