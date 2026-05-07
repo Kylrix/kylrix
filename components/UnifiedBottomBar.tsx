@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Box,
@@ -14,7 +14,6 @@ import {
   Tag as TagsIcon,
   Settings as SettingsIcon,
   Lock as VaultIcon,
-  Upload as ImportIcon,
   CheckSquare as FlowIcon,
   MessageCircle as ConnectIcon,
   Home as HomeIcon,
@@ -29,6 +28,7 @@ import {
 export function UnifiedBottomBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [hasBottomDrawerOpen, setHasBottomDrawerOpen] = useState(false);
 
   // Determine which app we're in
   const appContext = useMemo(() => {
@@ -66,10 +66,10 @@ export function UnifiedBottomBar() {
       return 'notes';
     }
     if (appContext === 'vault') {
-      if (pathname?.includes('/credentials')) return 'credentials';
-      if (pathname?.includes('/import')) return 'import';
+      if (pathname?.includes('/sharing')) return 'sharing';
+      if (pathname?.includes('/totp')) return 'totp';
       if (pathname?.includes('/settings')) return 'settings';
-      return 'overview';
+      return 'credentials';
     }
     if (appContext === 'flow') {
       if (pathname?.includes('/calendar')) return 'calendar';
@@ -101,12 +101,12 @@ export function UnifiedBottomBar() {
       router.push(routes[newValue] || '/note/notes');
     } else if (appContext === 'vault') {
       const routes: Record<string, string> = {
-        overview: '/vault',
-        credentials: '/vault/credentials',
-        import: '/vault/import',
-        settings: '/settings',
+        credentials: '/vault/dashboard',
+        sharing: '/vault/sharing',
+        totp: '/vault/totp',
+        settings: '/vault/settings',
       };
-      router.push(routes[newValue] || '/vault');
+      router.push(routes[newValue] || '/vault/dashboard');
     } else if (appContext === 'flow') {
       const routes: Record<string, string> = {
         overview: '/flow',
@@ -155,19 +155,19 @@ export function UnifiedBottomBar() {
     if (appContext === 'vault') {
       return [
         <BottomNavigationAction
-          key="overview"
-          value="overview"
+          key="credentials"
+          value="credentials"
           icon={<VaultIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
-          key="credentials"
-          value="credentials"
-          icon={<NotesIcon size={24} strokeWidth={1.5} className="lucide" />}
+          key="sharing"
+          value="sharing"
+          icon={<SharedIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
-          key="import"
-          value="import"
-          icon={<ImportIcon size={24} strokeWidth={1.5} className="lucide" />}
+          key="totp"
+          value="totp"
+          icon={<TagsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
           key="settings"
@@ -227,8 +227,34 @@ export function UnifiedBottomBar() {
     return null;
   };
 
+  useEffect(() => {
+    const evaluateDrawerState = () => {
+      if (typeof document === 'undefined') return;
+      const hasOpenBottomDrawer = Boolean(
+        document.querySelector('.MuiDrawer-root .MuiDrawer-paperAnchorBottom') ||
+          document.querySelector('.MuiDrawer-root .MuiDrawer-paper.MuiDrawer-paperAnchorBottom')
+      );
+      setHasBottomDrawerOpen(hasOpenBottomDrawer);
+    };
+
+    evaluateDrawerState();
+
+    const observer = new MutationObserver(() => {
+      evaluateDrawerState();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style'],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
   // Hide bottom bar on settings page
-  if (pathname === '/settings') return null;
+  if (pathname === '/settings' || hasBottomDrawerOpen) return null;
 
   return (
     <Box

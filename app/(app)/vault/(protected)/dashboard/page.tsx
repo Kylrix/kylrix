@@ -9,6 +9,7 @@ import {
   listAllCredentials,
   listFolders,
   listRecentCredentials,
+  listTotpSecrets,
   createFolder,
   updateCredential,
 } from '@/lib/appwrite';
@@ -137,6 +138,7 @@ export default function DashboardPage() {
 
   // Recent credentials state
   const [recentCredentials, setRecentCredentials] = useState<Credentials[]>([]);
+  const [_decryptedTotpSecrets, setDecryptedTotpSecrets] = useState<any[]>([]);
 
   // Delete confirmation state
   const [credentialToDelete, setCredentialToDelete] =
@@ -254,7 +256,7 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
-    if (user?.$id) {
+    if (user?.$id && isVaultUnlocked()) {
       loadAllCredentials();
 
       listFolders(user.$id)
@@ -269,8 +271,15 @@ export default function DashboardPage() {
         .catch((err: unknown) => {
           console.error("Failed to fetch recent credentials:", err);
         });
+
+      // Keep decrypted TOTP entries in memory after unlock for instant TOTP surfaces.
+      listTotpSecrets(user.$id)
+        .then(setDecryptedTotpSecrets)
+        .catch((err: unknown) => {
+          console.error("Failed to fetch TOTP secrets:", err);
+        });
     }
-  }, [user, loadAllCredentials]);
+  }, [user, loadAllCredentials, isVaultUnlocked]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);

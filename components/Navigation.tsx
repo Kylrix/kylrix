@@ -25,6 +25,8 @@ import {
   Tag,
   Settings,
   Puzzle,
+  Shield,
+  KeyRound,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -112,14 +114,26 @@ export const DesktopSidebar: React.FC = () => {
   const { } = useAuth();
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path);
+  const appContext = pathname?.startsWith('/vault')
+    ? 'vault'
+    : pathname?.startsWith('/note')
+      ? 'note'
+      : 'note';
 
-  const navItems = [
-    { icon: FileText, label: 'Notes', path: '/note/notes' },
-    { icon: Link2, label: 'Shared Links', path: '/note/shared' },
-    { icon: Tag, label: 'Tags', path: '/note/tags' },
-    { icon: Puzzle, label: 'Extensions', path: '/note/extensions' },
-    { icon: Settings, label: 'Settings', path: '/note/settings' },
-  ];
+  const navItems = appContext === 'vault'
+    ? [
+        { icon: KeyRound, label: 'Credentials', path: '/vault/dashboard' },
+        { icon: Link2, label: 'Sharing', path: '/vault/sharing' },
+        { icon: Shield, label: 'TOTP', path: '/vault/totp' },
+        { icon: Settings, label: 'Settings', path: '/vault/settings' },
+      ]
+    : [
+        { icon: FileText, label: 'Notes', path: '/note/notes' },
+        { icon: Link2, label: 'Shared Links', path: '/note/shared' },
+        { icon: Tag, label: 'Tags', path: '/note/tags' },
+        { icon: Puzzle, label: 'Extensions', path: '/note/extensions' },
+        { icon: Settings, label: 'Settings', path: '/note/settings' },
+      ];
 
   return (
     <Box

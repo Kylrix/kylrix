@@ -403,12 +403,29 @@ export const COLLECTION_SCHEMAS = {
 
 // --- Secure CRUD Operations ---
 export class VaultService {
-  private static credentialsListCache = new Map<string, { expiresAt: number; documents: Credentials[] }>();
+  private static credentialsListCache = new Map<string, Credentials[]>();
+  private static totpSecretsCache = new Map<string, TotpSecrets[]>();
+  private static runtimeHooksInitialized = false;
+
+  private static ensureRuntimeSecurityHooks() {
+    if (this.runtimeHooksInitialized || typeof window === "undefined") return;
+    this.runtimeHooksInitialized = true;
+
+    window.addEventListener("vault-locked", () => {
+      this.credentialsListCache.clear();
+      this.totpSecretsCache.clear();
+    });
+  }
 
   private static clearCredentialCache(userId: string) {
     for (const key of this.credentialsListCache.keys()) {
       if (key.startsWith(`${userId}:`)) {
         this.credentialsListCache.delete(key);
+      }
+    }
+    for (const key of this.totpSecretsCache.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        this.totpSecretsCache.delete(key);
       }
     }
   }
@@ -1131,10 +1148,11 @@ export class VaultService {
     userId: string,
     queries: string[] = [],
   ): Promise<Credentials[]> {
+    this.ensureRuntimeSecurityHooks();
     const cacheKey = `${userId}:${JSON.stringify(queries)}`;
     const cached = this.credentialsListCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.documents;
+    if (cached) {
+      return cached;
     }
 
     let documents: Credentials[] = [];
@@ -1170,10 +1188,7 @@ export class VaultService {
       documents.length < response.total
     );
 
-    this.credentialsListCache.set(cacheKey, {
-      expiresAt: Date.now() + 15_000,
-      documents,
-    });
+    this.credentialsListCache.set(cacheKey, documents);
     return documents;
   }
 
@@ -1204,12 +1219,19 @@ export class VaultService {
     userId: string,
     queries: string[] = [],
   ): Promise<TotpSecrets[]> {
+    this.ensureRuntimeSecurityHooks();
+    const cacheKey = `${userId}:${JSON.stringify(queries)}`;
+    const cached = this.totpSecretsCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const response = await appwriteDatabases.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_COLLECTION_TOTPSECRETS_ID,
       [Query.equal("userId", userId), ...queries],
     );
-    return await Promise.all(
+    const decryptedSecrets = await Promise.all(
       response.documents.map(
         (doc: Models.Document) =>
           this.decryptDocumentFields(
@@ -1218,6 +1240,8 @@ export class VaultService {
           ) as Promise<TotpSecrets>,
       ),
     );
+    this.totpSecretsCache.set(cacheKey, decryptedSecrets);
+    return decryptedSecrets;
   }
 
   static async listFolders(
