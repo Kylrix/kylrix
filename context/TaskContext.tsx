@@ -10,6 +10,7 @@ import { buildSourceNoteTags } from '@/lib/sdk';
 import { Task as AppwriteTask, Calendar as AppwriteCalendar } from '@/types/kylrixflow';
 import { useDataNexus } from './DataNexusContext';
 import { sendKylrixEmailNotification } from '@/lib/email-notifications';
+import { useAuth } from '@/context/auth/AuthContext';
 import {
   Task,
   Project,
@@ -584,24 +585,28 @@ interface TaskProviderProps {
 export function TaskProvider({ children }: TaskProviderProps) {
   const [state, dispatch] = useReducer(taskReducer, initialState);
   const { fetchOptimized, invalidate } = useDataNexus();
+  const { user: authUser, isLoading: isAuthLoading } = useAuth();
 
   // Initial Data Fetch
   useEffect(() => {
     const fetchData = async () => {
+      if (isAuthLoading) return;
       console.log('[TaskContext] fetchData triggered');
       try {
         dispatch({ type: 'SET_LOADING', payload: true });
         
         // Get current user
-        let userId = 'guest';
-        try {
-          const user = await getCurrentUser();
-          console.log('[TaskContext] User found', user.$id);
-          userId = user.$id;
-          dispatch({ type: 'SET_USER', payload: userId });
-        } catch (error: unknown) {
-          console.warn('[TaskContext] Not logged in', error);
+        let userId = authUser?.$id || 'guest';
+        if (!authUser?.$id) {
+          try {
+            const user = await getCurrentUser();
+            console.log('[TaskContext] User found', user.$id);
+            userId = user.$id;
+          } catch (error: unknown) {
+            console.warn('[TaskContext] Not logged in', error);
+          }
         }
+        dispatch({ type: 'SET_USER', payload: userId });
 
         // Fetch tasks and calendars (Nexus Optimized)
         const [tasksList, calendarsList] = await Promise.all([
@@ -627,7 +632,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     };
 
     fetchData();
-  }, [fetchOptimized]);
+  }, [fetchOptimized, authUser?.$id, isAuthLoading]);
 
   // Realtime Subscriptions
   useEffect(() => {

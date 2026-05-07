@@ -109,7 +109,7 @@ export default function TaskList() {
 
   const getViewTitle = () => {
     if (selectedProject) return selectedProject.name;
-    if (filter.status?.includes('done')) return 'Completed Tasks';
+    if (filter.status?.includes('done')) return 'Completed Goals';
     if (filter.dueDate?.from && filter.dueDate?.to) {
       const from = new Date(filter.dueDate.from);
       const _to = new Date(filter.dueDate.to);
@@ -121,7 +121,7 @@ export default function TaskList() {
       if (from.toDateString() === tomorrow.toDateString()) return 'Upcoming';
     }
     if (filter.dueDate?.to && !filter.dueDate.from) return 'Overdue';
-    return 'All Tasks';
+    return 'All Goals';
   };
 
   // Group tasks by status for board view
@@ -152,7 +152,7 @@ export default function TaskList() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10B981', boxShadow: '0 0 8px #10B981' }} />
             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {tasks.length} {tasks.length === 1 ? 'Action Item' : 'Action Items'}
+                {tasks.length} {tasks.length === 1 ? 'Goal' : 'Goals'}
             </Typography>
           </Box>
         </Box>
@@ -339,14 +339,14 @@ export default function TaskList() {
               <Typography variant="body2" sx={{ mb: 4, opacity: 0.6 }}>
                 {filter.search
                   ? 'No action items matching your search.'
-                  : 'You have no pending tasks in this view.'}
+                  : 'You have no goals in this view yet.'}
               </Typography>
               <Button
                 variant="outlined"
                 startIcon={<AddIcon />}
                 onClick={() => setTaskDialogOpen(true)}
               >
-                Add Your First Task
+                Add Your First Goal
               </Button>
             </Box>
           ) : (
