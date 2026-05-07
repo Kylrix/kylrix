@@ -27,7 +27,6 @@ import {
 import { useToast } from '@/components/ui/Toast';
 import CommentsSection from '@/app/(app)/note/(app)/notes/Comments';
 import NoteReactions from '@/app/(app)/note/(app)/notes/NoteReactions';
-import SudoGuard from '@/components/ui/SudoGuard';
 import { useDataNexus } from '@/context/DataNexusContext';
 
 export default function NoteEditorPage() {
@@ -167,14 +166,17 @@ export default function NoteEditorPage() {
               <BackIcon sx={{ fontSize: 28 }} />
             </IconButton>
             <Box>
-              <Typography 
-                variant="h2" 
-                sx={{ 
-                  fontWeight: 900, 
+              <Typography
+                variant="h2"
+                sx={{
+                  fontWeight: 900,
                   letterSpacing: '-0.04em',
                   fontFamily: 'var(--font-clash-display)',
                   lineHeight: 1,
-                  mb: 0.5
+                  mb: 0.5,
+                  fontSize: { xs: '1.35rem', md: '2.2rem' },
+                  overflowWrap: 'anywhere',
+                  wordBreak: 'break-word',
                 }}
               >
                 {title}
@@ -217,15 +219,13 @@ export default function NoteEditorPage() {
             transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
           }
         }}>
-          <SudoGuard>
-            <NoteDetailSidebar
-              note={note}
-              onUpdate={handleUpdate}
-              onDelete={handleDelete}
-              showExpandButton={false}
-              showHeaderDeleteButton={false}
-            />
-          </SudoGuard>
+          <NoteDetailSidebar
+            note={note}
+            onUpdate={handleUpdate}
+            onDelete={handleDelete}
+            showExpandButton={false}
+            showHeaderDeleteButton={false}
+          />
         </Box>
 
         <Box sx={{ 
