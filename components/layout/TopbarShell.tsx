@@ -5,7 +5,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import Topbar from '../Topbar';
 
 export default function TopbarShell() {
-  const { user, logout } = useAuth();
+  const { user, isLoading, logout, openIDMWindow } = useAuth();
 
   return (
     <Topbar
@@ -24,6 +24,8 @@ export default function TopbarShell() {
       onActivityClick={() => {
         window.location.href = '/accounts/settings/activity';
       }}
+      authLoading={isLoading}
+      onConnect={() => openIDMWindow()}
     />
   );
 }

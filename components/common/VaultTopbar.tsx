@@ -13,6 +13,7 @@ import {
   IconButton,
   Paper,
   Stack,
+  CircularProgress,
   Tooltip,
   Typography,
 } from '@mui/material';
@@ -49,7 +50,7 @@ function isRenderableImageSrc(value?: string | null) {
 export default function VaultTopbar({
   className,
 }: VaultTopbarProps) {
-  const { user, logout } = useAppwriteVault();
+  const { user, loading, openIDMWindow, logout } = useAppwriteVault();
   const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
   const { requestSudo } = useSudo();
@@ -479,8 +480,43 @@ export default function VaultTopbar({
 
             <Box sx={{ flex: 1 }} />
 
-            {user && (
-              <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
+            <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
+              {!user && (
+                <Tooltip title={loading ? 'Checking account...' : 'Connect'}>
+                  <Button
+                    onClick={() => {
+                      if (loading) return;
+                      void openIDMWindow();
+                    }}
+                    disabled={loading}
+                    sx={{
+                      color: '#fff',
+                      bgcolor: alpha(getAppColor('connect'), 0.12),
+                      border: '1px solid',
+                      borderColor: alpha(getAppColor('connect'), 0.35),
+                      borderRadius: '12px',
+                      minWidth: 104,
+                      height: 42,
+                      px: 1.5,
+                      textTransform: 'none',
+                      fontWeight: 800,
+                      gap: 1,
+                      '&:hover': { bgcolor: alpha(getAppColor('connect'), 0.14) },
+                    }}
+                  >
+                    {loading ? (
+                      <CircularProgress size={16} sx={{ color: 'inherit' }} />
+                    ) : (
+                      <>
+                        <Logo app="connect" size={16} variant="icon" />
+                        <span>Connect</span>
+                      </>
+                    )}
+                  </Button>
+                </Tooltip>
+              )}
+
+              {user && (
                 <Tooltip title="Agentic Workspace">
                   <IconButton
                     onClick={openAgenticDrawer}
@@ -524,8 +560,8 @@ export default function VaultTopbar({
                     {profileName.slice(0, 1).toUpperCase()}
                   </Avatar>
                 </ButtonBase>
-              </Stack>
-            )}
+              )}
+            </Stack>
           </Box>
         </Box>
 

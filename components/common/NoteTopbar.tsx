@@ -15,6 +15,7 @@ import {
   InputBase,
   Paper,
   Stack,
+  CircularProgress,
   TextField,
   Tooltip,
   Typography,
@@ -62,7 +63,7 @@ export default function NoteTopbar({
   onRefresh,
   isRefreshing = false,
 }: NoteTopbarProps) {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout, openIDMWindow } = useAuth();
   const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
   const pathname = usePathname();
@@ -1068,22 +1069,37 @@ export default function NoteTopbar({
 
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
               {!isAuthenticated && (
-                <Tooltip title="Open Connect">
-                  <IconButton
-                    onClick={() => window.location.assign(getEcosystemUrl('connect'))}
+                <Tooltip title={isLoading ? 'Checking account...' : 'Connect'}>
+                  <Button
+                    onClick={() => {
+                      if (isLoading) return;
+                      openIDMWindow();
+                    }}
+                    disabled={isLoading}
                     sx={{
-                      color: getAppColor('connect'),
-                      bgcolor: alpha(getAppColor('connect'), 0.08),
+                      color: '#fff',
+                      bgcolor: alpha(getAppColor('connect'), 0.12),
                       border: '1px solid',
-                      borderColor: alpha(getAppColor('connect'), 0.2),
+                      borderColor: alpha(getAppColor('connect'), 0.35),
                       borderRadius: '12px',
-                      width: 42,
+                      minWidth: 104,
                       height: 42,
+                      px: 1.5,
+                      textTransform: 'none',
+                      fontWeight: 800,
+                      gap: 1,
                       '&:hover': { bgcolor: alpha(getAppColor('connect'), 0.14) },
                     }}
                   >
-                    <Logo app="connect" size={18} variant="icon" />
-                  </IconButton>
+                    {isLoading ? (
+                      <CircularProgress size={16} sx={{ color: 'inherit' }} />
+                    ) : (
+                      <>
+                        <Logo app="connect" size={16} variant="icon" />
+                        <span>Connect</span>
+                      </>
+                    )}
+                  </Button>
                 </Tooltip>
               )}
 
