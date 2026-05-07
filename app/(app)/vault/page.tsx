@@ -3,9 +3,11 @@
 import { useEffect } from 'react';
 import { Box, Container, Stack, Typography, Button, CircularProgress, AppBar, Toolbar } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAppwriteVault } from '@/context/appwrite-context';
-import PasswordGenerator from '@/components/ui/PasswordGenerator';
 import Logo from '@/components/common/Logo';
+
+const PasswordGenerator = dynamic(() => import('@/components/ui/PasswordGenerator'), { ssr: false });
 
 export default function LandingPage() {
   const { user, openIDMWindow, isAuthenticating } = useAppwriteVault();
