@@ -49,7 +49,16 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user } = useAuth();
-    const { requestSudo } = useSudo();
+    
+    // Make useSudo optional - gracefully handle missing provider
+    let requestSudo: (() => Promise<void>) | null = null;
+    try {
+      const sudoContext = useSudo();
+      requestSudo = sudoContext?.requestSudo || null;
+    } catch (e) {
+      // SudoProvider not available, that's fine
+    }
+    
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [isExpanded, setIsExpanded] = useState(false);
     const [loading, setLoading] = useState(false);

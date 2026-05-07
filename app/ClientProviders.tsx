@@ -14,6 +14,8 @@ import { PotatoProvider } from '@/components/providers/PotatoProvider';
 import { SidebarProvider } from '@/components/ui/SidebarContext';
 import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
+import { SudoProvider } from '@/context/SudoContext';
+import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -26,15 +28,19 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                 <BackgroundTaskProvider>
                   <NotificationProvider>
                     <SourceProvider>
-                      <SidebarProvider>
-                        <DynamicSidebarProvider>
-                          <DrawerStateProvider>
-                            <PotatoProvider>
-                              {children}
-                            </PotatoProvider>
-                          </DrawerStateProvider>
-                        </DynamicSidebarProvider>
-                      </SidebarProvider>
+                      <SudoProvider>
+                        <SidebarProvider>
+                          <DynamicSidebarProvider>
+                            <DrawerStateProvider>
+                              <ProUpgradeProvider>
+                                <PotatoProvider>
+                                  {children}
+                                </PotatoProvider>
+                              </ProUpgradeProvider>
+                            </DrawerStateProvider>
+                          </DynamicSidebarProvider>
+                        </SidebarProvider>
+                      </SudoProvider>
                     </SourceProvider>
                   </NotificationProvider>
                 </BackgroundTaskProvider>

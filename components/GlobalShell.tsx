@@ -7,6 +7,7 @@ import Navbar from './Navbar';
 import { DesktopSidebar, MobileBottomNav } from './Navigation';
 import { useSidebar } from './ui/SidebarContext';
 import { DynamicSidebar, useDynamicSidebar } from './ui/DynamicSidebar';
+import { ProUpgradeDrawer } from './overlays/ProUpgradeDrawer';
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -41,6 +42,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
       {!isLanding && !isSharedPage && <DynamicSidebar />}
       {!isLanding && !isSharedPage && <MobileBottomNav />}
+      <ProUpgradeDrawer />
     </Box>
   );
 }
