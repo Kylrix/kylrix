@@ -251,7 +251,7 @@ export function UnifiedBottomBar() {
           borderRadius: '24px 24px 0 0',
           px: 2,
           pt: 0.5,
-          pb: 'calc(1.5rem + env(safe-area-inset-bottom))',
+          pb: 'max(0.5rem, env(safe-area-inset-bottom))',
         }}
       >
         <BottomNavigation
