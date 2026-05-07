@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders, verifyUser } from '@/lib/api/permission-updater';
-import { dispatchUnorganicEmails, type UnorganicEmailEventType, type UnorganicEmailSource } from '@/lib/unorganic-email-api';
+import type { UnorganicEmailEventType, UnorganicEmailSource } from '@/lib/unorganic-email-api';
+import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 
 type EmailApiBody = {
   eventType?: UnorganicEmailEventType | string;
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
     const recipientIds = normalizeList(body.recipientIds);
     const recipientEmails = normalizeList(body.recipientEmails);
 
-    const result = await dispatchUnorganicEmails({
+    const result = await dispatchEmail({
       eventType,
       sourceApp,
       actorName: body.actorName?.trim() || null,

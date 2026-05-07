@@ -31,22 +31,22 @@
 | `/api/connect/calls/cleanup` | no in-repo callers found | `lib/services/internal/callCleanup.ts` | pending | pending |
 
 ## Phase 1 - `/accounts/**` Route Parity
-- [ ] Normalize links in `app/(app)/(auth)/accounts/**` to canonical `/accounts/...` paths
-- [ ] Remove residual unprefixed accounts navigation (`/login`, `/admin`, `/settings`, `/pro/success`)
-- [ ] Ensure pricing/subscription links resolve to `/accounts/subscription/pro/checkout` and `/accounts/pro/success`
+- [x] Normalize links in `app/(app)/(auth)/accounts/**` to canonical `/accounts/...` paths
+- [x] Remove residual unprefixed accounts navigation (`/login`, `/admin`, `/settings`, `/pro/success`)
+- [x] Ensure pricing/subscription links resolve to `/accounts/subscription/pro/checkout` and `/accounts/pro/success`
 
 ## Phase 2 - Internal Service Layer
 - [ ] Add `lib/services/internal/permissions.ts` (shared permission mutation methods)
 - [ ] Add `lib/services/internal/joinRequests.ts` (GET/POST/PATCH/DELETE join-request logic)
-- [ ] Add `lib/services/internal/emailDispatch.ts` (non-HTTP email dispatch wrapper)
-- [ ] Add `lib/services/internal/admin.ts` + `billing.ts` (admin/billing callable methods)
-- [ ] Refactor route handlers to thin wrappers over these methods
+- [x] Add `lib/services/internal/emailDispatch.ts` (non-HTTP email dispatch wrapper)
+- [x] Add `lib/services/internal/admin.ts` + `billing.ts` (admin/billing callable methods)
+- [x] Refactor route handlers to thin wrappers over these methods
 
 ## Phase 3 - Consumer Rewire
-- [ ] Rewire `lib/services/chat.ts` off `KYLRIX_AUTH_URI/api/connect/*` + `/api/permissions`
-- [ ] Rewire `app/(app)/connect/groups/invite/[conversationId]/page.tsx` off join-request API fetches
-- [ ] Rewire `lib/email-notifications.ts` to internal dispatch method
-- [ ] Rewire note permission callers (`lib/appwrite/note.ts`, `GhostNoteClaimer.tsx`) to internal permission methods where server-safe
+- [x] Rewire `lib/services/chat.ts` off `KYLRIX_AUTH_URI/api/connect/*` + `/api/permissions`
+- [x] Rewire `app/(app)/connect/groups/invite/[conversationId]/page.tsx` off join-request API fetches
+- [x] Rewire `lib/email-notifications.ts` to internal dispatch method
+- [x] Rewire note permission callers (`lib/appwrite/note.ts`, `GhostNoteClaimer.tsx`) to internal permission methods where server-safe
 
 ## Phase 4 - Security Hardening
 - [ ] Centralize admin guards in internal admin service methods
