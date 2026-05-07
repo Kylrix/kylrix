@@ -31,7 +31,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
-import { SudoModal } from '@/components/overlays/SudoModal';
+import { useSudo } from '@/context/SudoContext';
 import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
 import { toast } from 'react-hot-toast';
 
@@ -39,8 +39,8 @@ export default function SettingsPage() {
     const { user } = useAuth();
     const router = useRouter();
     const _muiTheme = useTheme();
+    const { requestSudo } = useSudo();
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
-    const [unlockModalOpen, setUnlockModalOpen] = useState(false);
     const [passkeySetupOpen, setPasskeySetupOpen] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
 
@@ -188,7 +188,7 @@ export default function SettingsPage() {
                                     </Box>
                                     <Button 
                                         variant={isUnlocked ? 'outlined' : 'contained'}
-                                        onClick={() => isUnlocked ? ecosystemSecurity.lock() : setUnlockModalOpen(true)}
+                                        onClick={() => isUnlocked ? ecosystemSecurity.lock() : requestSudo()}
                                         color={isUnlocked ? 'inherit' : 'primary'}
                                         startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
                                         sx={{ 
@@ -313,15 +313,6 @@ export default function SettingsPage() {
                     loadPasskeys();
                 }}
                 trustUnlocked={true}
-            />
-
-            <SudoModal 
-                isOpen={unlockModalOpen}
-                onSuccess={() => {
-                    setUnlockModalOpen(false);
-                    setIsUnlocked(true);
-                }}
-                onCancel={() => setUnlockModalOpen(false)}
             />
         </>
     );
