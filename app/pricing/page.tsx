@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import { Info, Sparkles, Globe, ShieldCheck, ArrowRight } from 'lucide-react';
 
-import Navbar from '@/components/Navbar';
 import Logo from '@/components/Logo';
 import PaymentMethodDrawer from '@/components/PaymentMethodDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -66,8 +65,7 @@ export default function PricingPage() {
   }, [totalPrice, months]);
 
   return (
-    <Box component="main" sx={{ pt: 12, minHeight: '100vh', bgcolor: '#000000', color: 'white' }}>
-      <Navbar />
+    <Box component="main" sx={{ minHeight: '100vh', bgcolor: '#000000', color: 'white' }}>
 
       <PaymentMethodDrawer
         open={paymentDrawerOpen}

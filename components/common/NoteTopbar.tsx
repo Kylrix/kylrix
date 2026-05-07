@@ -64,9 +64,16 @@ export default function NoteTopbar({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isLandingRoute = pathname === '/';
-  const logoApp = isLandingRoute ? 'root' : 'note';
-  const showSearchControl = isAuthenticated && !isLandingRoute;
+  const isWebsiteRoute = !(
+    pathname?.startsWith('/note') ||
+    pathname?.startsWith('/vault') ||
+    pathname?.startsWith('/flow') ||
+    pathname?.startsWith('/connect') ||
+    pathname?.startsWith('/accounts') ||
+    pathname?.startsWith('/settings')
+  );
+  const logoApp = isWebsiteRoute ? 'root' : 'note';
+  const showSearchControl = isAuthenticated && !isWebsiteRoute;
   const landingNavItems = [
     { label: 'Developers', href: '/developers' },
     { label: 'Docs', href: '/docs' },
@@ -780,7 +787,7 @@ export default function NoteTopbar({
     return (
       <Box sx={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: '#161412', overflow: 'hidden' }}>
         <Box sx={{ px: 2, py: 1.5, display: 'grid', gap: 0.75 }}>
-          {isLandingRoute &&
+          {isWebsiteRoute &&
             landingNavItems.map((item) => (
               <Button
                 key={item.label}
@@ -802,7 +809,7 @@ export default function NoteTopbar({
               </Button>
             ))}
 
-          {!isLandingRoute && (
+          {!isWebsiteRoute && (
             <Button
               fullWidth
               onClick={() => {
@@ -862,7 +869,7 @@ export default function NoteTopbar({
               Refresh
             </Button>
           )}
-          {isAuthenticated && !isLandingRoute && (
+          {isAuthenticated && !isWebsiteRoute && (
             <Button
               fullWidth
               onClick={() => {
@@ -1071,7 +1078,7 @@ export default function NoteTopbar({
 
               {isAuthenticated && (
                 <>
-                  {!isLandingRoute && (
+                  {!isWebsiteRoute && (
                     <Tooltip title="Wallet">
                       <IconButton
                         onClick={() => setIsWalletOpen(true)}

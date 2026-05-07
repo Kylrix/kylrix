@@ -17,11 +17,7 @@ import {
   Key, 
   ShieldCheck, 
   ArrowRight,
-  ChevronRight,
-  Terminal,
 } from 'lucide-react';
-import NextLink from 'next/link';
-import Navbar from '@/components/Navbar';
 
 const DevSection = ({ icon: Icon, title, description, children }: any) => (
   <Box sx={{ py: { xs: 15, md: 20 }, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
@@ -55,8 +51,7 @@ const CodeBlock = ({ code, language = 'bash' }: { code: string; language?: strin
 
 export default function DevelopersPage() {
   return (
-    <Box component="main" sx={{ pt: 12, bgcolor: '#000', color: '#fff' }}>
-      <Navbar />
+    <Box component="main" sx={{ bgcolor: '#000', color: '#fff' }}>
       
       {/* Hero */}
       <Box sx={{ pt: { xs: 15, md: 25 }, pb: { xs: 10, md: 15 }, textAlign: 'center' }}>
