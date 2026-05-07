@@ -174,7 +174,7 @@ export function createEcosystemPanelItems(currentApp: KylrixApp = 'note'): Topba
   return [
     { id: 'note', app: 'note', label: 'Note', description: 'Secure notes and research.', selected: currentApp === 'note' },
     { id: 'vault', app: 'vault', label: 'Vault', description: 'Passwords, 2FA, and keys.', selected: currentApp === 'vault' },
-    { id: 'flow', app: 'flow', label: 'Goals', description: 'Tasks, plans, and follow-through.', selected: currentApp === 'flow' },
+    { id: 'flow', app: 'flow', label: 'Flow', description: 'Goals, plans, and follow-through.', selected: currentApp === 'flow' },
     { id: 'connect', app: 'connect', label: 'Connect', description: 'Secure messages and sharing.', selected: currentApp === 'connect' },
     { id: 'accounts', app: 'kylrix', label: 'Accounts', description: 'Your Kylrix account.', selected: currentApp === 'kylrix' },
   ];
@@ -224,7 +224,7 @@ export function createTopbarSearchSurface(params: {
       kind: 'goal',
       title: 'Create a goal',
       description: 'Convert the current moment into a premium follow-through.',
-      href: resolveUrl('flow', '/tasks?mode=create'),
+      href: resolveUrl('flow', '/goals?mode=create'),
       accent: '#A855F7',
       terms: ['goal', 'task', 'plan', 'follow up', 'follow-up'],
     },
@@ -272,7 +272,7 @@ export function createTopbarSearchSurface(params: {
       kind: 'goal',
       title: 'Search goals',
       description: 'Find tasks and follow-through in Flow.',
-      href: resolveUrl('flow', `/tasks?search=${encodeURIComponent(query)}`),
+      href: resolveUrl('flow', `/goals?search=${encodeURIComponent(query)}`),
       accent: '#A855F7',
       terms: ['goal', 'goals', 'task', 'tasks', 'flow'],
     },

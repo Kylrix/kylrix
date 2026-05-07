@@ -80,7 +80,7 @@ async function notifyTaskAssignment(params: {
     resourceTitle: params.taskTitle,
     resourceType: 'task',
     templateKey: 'flow:task-assigned',
-    ctaUrl: `${getEcosystemUrl('flow')}/tasks/${params.taskId}`,
+    ctaUrl: `${getEcosystemUrl('flow')}/goals/${params.taskId}`,
     ctaText: 'Open task',
   });
 }

@@ -183,7 +183,7 @@ export default function ConversationActionsSheet({
   const groupAvatarSrc = currentConversation?.avatarUrl || undefined;
   const inviteLink = useMemo(() => {
     if (!currentConversation?.$id || typeof window === 'undefined') return '';
-    return `${window.location.origin}/groups/invite/${currentConversation.$id}`;
+    return `${window.location.origin}/hangouts/invite/${currentConversation.$id}`;
   }, [currentConversation?.$id]);
   const isDetailsDirty = useMemo(() => {
     const currentName = String(currentConversation?.name || '').trim();
@@ -473,7 +473,7 @@ export default function ConversationActionsSheet({
     const nextDescription = groupDescriptionDraft.trim();
 
     if (!nextName) {
-      toast.error('Group name is required');
+      toast.error('Hangout name is required');
       return;
     }
 
@@ -484,10 +484,10 @@ export default function ConversationActionsSheet({
         description: nextDescription,
       });
       await refreshConversation();
-      toast.success('Group details updated');
+      toast.success('Hangout details updated');
     } catch (error: any) {
-      console.error('[ConversationActionsSheet] Failed to update group details:', error);
-      toast.error(error?.message || 'Failed to update group details');
+      console.error('[ConversationActionsSheet] Failed to update hangout details:', error);
+      toast.error(error?.message || 'Failed to update hangout details');
     } finally {
       setDetailsSaving(false);
     }
@@ -500,10 +500,10 @@ export default function ConversationActionsSheet({
     try {
       await ChatService.updateConversationAvatar(currentConversation.$id, file);
       await refreshConversation();
-      toast.success('Group avatar updated');
+      toast.success('Hangout avatar updated');
     } catch (error: any) {
-      console.error('[ConversationActionsSheet] Failed to update group avatar:', error);
-      toast.error(error?.message || 'Failed to update group avatar');
+      console.error('[ConversationActionsSheet] Failed to update hangout avatar:', error);
+      toast.error(error?.message || 'Failed to update hangout avatar');
     } finally {
       setAvatarUploading(false);
     }
@@ -544,12 +544,12 @@ export default function ConversationActionsSheet({
     try {
       await ChatService.deleteConversationFully(currentConversation.$id);
       onConversationDeleted?.(currentConversation.$id);
-      toast.success('Group deleted');
+      toast.success('Hangout deleted');
       setDeleteConfirmOpen(false);
       onClose();
     } catch (error: any) {
-      console.error('[ConversationActionsSheet] Failed to delete group:', error);
-      toast.error(error?.message || 'Failed to delete group');
+      console.error('[ConversationActionsSheet] Failed to delete hangout:', error);
+      toast.error(error?.message || 'Failed to delete hangout');
     } finally {
       setMutating(false);
     }
@@ -666,7 +666,7 @@ export default function ConversationActionsSheet({
               </Avatar>
               <Box>
                 <Typography sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>
-                  {currentConversation.name || 'Group'}
+                  {currentConversation.name || 'Hangout'}
                 </Typography>
                 <Typography variant="body2" sx={{ opacity: 0.6 }}>
                   {participantIds.length} members
@@ -752,7 +752,7 @@ export default function ConversationActionsSheet({
             {isAdmin ? null : (
               <Paper sx={{ p: 1.5, mb: 2, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <Typography variant="body2" sx={{ opacity: 0.75 }}>
-                  You can view this group, but only admins can manage members.
+                  You can view this hangout, but only admins can manage members.
                 </Typography>
               </Paper>
             )}
@@ -815,7 +815,7 @@ export default function ConversationActionsSheet({
                     }}
                   >
                     <Stack spacing={1.5}>
-                      <Typography sx={{ fontWeight: 800 }}>Group details</Typography>
+                      <Typography sx={{ fontWeight: 800 }}>Hangout details</Typography>
                       <Stack direction="row" spacing={1.5} alignItems="center">
                         <Avatar
                           src={groupAvatarSrc}
@@ -846,7 +846,7 @@ export default function ConversationActionsSheet({
                       <TextField
                         fullWidth
                         size="small"
-                        label="Group name"
+                        label="Hangout name"
                         value={groupNameDraft}
                         onChange={(e) => setGroupNameDraft(e.target.value)}
                       />
@@ -1107,7 +1107,7 @@ export default function ConversationActionsSheet({
                 onClick={() => setDeleteConfirmOpen(true)}
                 disabled={mutating}
               >
-                Delete Group
+                Delete Hangout
               </Button>
             </Box>
           )}
@@ -1127,10 +1127,10 @@ export default function ConversationActionsSheet({
           },
         }}
       >
-        <DialogTitle sx={{ fontWeight: 900 }}>Delete group?</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 900 }}>Delete hangout?</DialogTitle>
         <DialogContent>
           <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            This will permanently delete the group, its messages, membership rows, and conversation record.
+            This will permanently delete the hangout, its messages, membership rows, and conversation record.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>

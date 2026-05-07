@@ -1315,7 +1315,7 @@ export function NoteDetailSidebar({
                 </Box>
                 <IconButton
                   size="small"
-                  onClick={() => window.open(`/flow/tasks?taskId=${task.$id}`, '_blank')}
+                  onClick={() => window.open(`/flow/goals?taskId=${task.$id}`, '_blank')}
                   sx={{ color: theme.palette.primary.main }}
                 >
                   <OpenIcon fontSize="small" />
@@ -1603,7 +1603,7 @@ export function NoteDetailSidebar({
                 minWidth: 160,
               }}
             >
-              {isCreatingTaskFromNote ? 'Creating...' : 'Create Flow Task'}
+              {isCreatingTaskFromNote ? 'Creating...' : 'Create Flow Goal'}
             </Button>
             <Button
               variant="outlined"
@@ -1642,7 +1642,7 @@ export function NoteDetailSidebar({
               variant="outlined"
               startIcon={<OpenIcon />}
               onClick={() => {
-                window.location.assign(`/flow/tasks?source=note&noteId=${encodeURIComponent(liveNote.$id)}`);
+                window.location.assign(`/flow/goals?source=note&noteId=${encodeURIComponent(liveNote.$id)}`);
                 setShowActionHub(false);
               }}
               sx={{
