@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import {
+  Bot,
   ChevronDown,
   Wallet,
 } from 'lucide-react';
@@ -34,6 +35,7 @@ import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePi
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 
 interface VaultTopbarProps {
   className?: string;
@@ -48,6 +50,7 @@ export default function VaultTopbar({
   className,
 }: VaultTopbarProps) {
   const { user, logout } = useAppwriteVault();
+  const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
   const { requestSudo } = useSudo();
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -240,6 +243,30 @@ export default function VaultTopbar({
                 </Box>
 
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  <Button
+                    onClick={() => {
+                      handleCloseAll();
+                      requestSudo({
+                        onSuccess: () => {
+                          // Wallet unlocked successfully
+                        },
+                      });
+                    }}
+                    sx={{
+                      minWidth: 0,
+                      flex: '1 1 180px',
+                      borderRadius: '16px',
+                      bgcolor: alpha(getAppColor('vault'), 0.09),
+                      color: getAppColor('vault'),
+                      px: 1.5,
+                      py: 1.15,
+                      textTransform: 'none',
+                      '&:hover': { bgcolor: alpha(getAppColor('vault'), 0.15) },
+                    }}
+                    startIcon={<Wallet size={16} />}
+                  >
+                    Wallet
+                  </Button>
                   <Button
                     onClick={() => {
                       handleCloseAll();
@@ -454,13 +481,9 @@ export default function VaultTopbar({
 
             {user && (
               <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
-                <Tooltip title="Wallet">
+                <Tooltip title="Agentic Workspace">
                   <IconButton
-                    onClick={() => requestSudo({
-                      onSuccess: () => {
-                        // Wallet unlocked successfully
-                      }
-                    })}
+                    onClick={openAgenticDrawer}
                     sx={{
                       color: getAppColor('vault'),
                       bgcolor: alpha(getAppColor('vault'), 0.03),
@@ -472,7 +495,7 @@ export default function VaultTopbar({
                       '&:hover': { bgcolor: alpha(getAppColor('vault'), 0.08) },
                     }}
                   >
-                    <Wallet size={18} strokeWidth={1.5} />
+                    <Bot size={18} strokeWidth={1.5} />
                   </IconButton>
                 </Tooltip>
 

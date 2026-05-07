@@ -20,6 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import {
+  Bot,
   ChevronDown,
   Menu,
   RefreshCw,
@@ -41,6 +42,7 @@ import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePi
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 
 interface NoteTopbarProps {
   className?: string;
@@ -61,6 +63,7 @@ export default function NoteTopbar({
   isRefreshing = false,
 }: NoteTopbarProps) {
   const { user, isAuthenticated, logout } = useAuth();
+  const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -642,6 +645,28 @@ export default function NoteTopbar({
                 </Box>
 
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  {!isWebsiteRoute && (
+                    <Button
+                      onClick={() => {
+                        handleCloseAll();
+                        setIsWalletOpen(true);
+                      }}
+                      sx={{
+                        minWidth: 0,
+                        flex: '1 1 180px',
+                        borderRadius: '16px',
+                        bgcolor: alpha(getAppColor('note'), 0.09),
+                        color: getAppColor('note'),
+                        px: 1.5,
+                        py: 1.15,
+                        textTransform: 'none',
+                        '&:hover': { bgcolor: alpha(getAppColor('note'), 0.15) },
+                      }}
+                      startIcon={<Wallet size={16} />}
+                    >
+                      Wallet
+                    </Button>
+                  )}
                   <Button
                     onClick={() => {
                       handleCloseAll();
@@ -870,26 +895,6 @@ export default function NoteTopbar({
               Refresh
             </Button>
           )}
-          {isAuthenticated && !isWebsiteRoute && (
-            <Button
-              fullWidth
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setIsWalletOpen(true);
-              }}
-              sx={{
-                justifyContent: 'flex-start',
-                textTransform: 'none',
-                borderRadius: '14px',
-                color: 'white',
-                bgcolor: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
-              }}
-              startIcon={<Wallet size={16} />}
-            >
-              Wallet
-            </Button>
-          )}
         </Box>
       </Box>
     );
@@ -1080,9 +1085,9 @@ export default function NoteTopbar({
               {isAuthenticated && (
                 <>
                   {!isWebsiteRoute && (
-                    <Tooltip title="Wallet">
+                    <Tooltip title="Agentic Workspace">
                       <IconButton
-                        onClick={() => setIsWalletOpen(true)}
+                        onClick={openAgenticDrawer}
                         sx={{
                           display: 'inline-flex',
                           color: getAppColor('note'),
@@ -1095,7 +1100,7 @@ export default function NoteTopbar({
                           '&:hover': { bgcolor: alpha(getAppColor('note'), 0.08) },
                         }}
                       >
-                        <Wallet size={18} strokeWidth={1.5} />
+                        <Bot size={18} strokeWidth={1.5} />
                       </IconButton>
                     </Tooltip>
                   )}

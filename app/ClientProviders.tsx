@@ -16,6 +16,7 @@ import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
 import { SudoProvider } from '@/context/SudoContext';
 import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
+import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
 import { OverlayProvider } from '@/components/ui/OverlayContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { ToastProvider } from '@/components/ui/Toast';
@@ -36,15 +37,17 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                           <DynamicSidebarProvider>
                             <DrawerStateProvider>
                               <ProUpgradeProvider>
-                                <OverlayProvider>
-                                  <ContextMenuProvider>
-                                    <ToastProvider>
-                                      <PotatoProvider>
-                                        {children}
-                                      </PotatoProvider>
-                                    </ToastProvider>
-                                  </ContextMenuProvider>
-                                </OverlayProvider>
+                                <AgenticDrawerProvider>
+                                  <OverlayProvider>
+                                    <ContextMenuProvider>
+                                      <ToastProvider>
+                                        <PotatoProvider>
+                                          {children}
+                                        </PotatoProvider>
+                                      </ToastProvider>
+                                    </ContextMenuProvider>
+                                  </OverlayProvider>
+                                </AgenticDrawerProvider>
                               </ProUpgradeProvider>
                             </DrawerStateProvider>
                           </DynamicSidebarProvider>

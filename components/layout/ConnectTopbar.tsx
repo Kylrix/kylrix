@@ -17,6 +17,7 @@ import {
   Typography,
 } from '@mui/material';
 import {
+  Bot,
   ChevronDown,
   Wallet,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ import { createEcosystemPanelItems, createTopbarPanelMotion, isTopbarScrollAtBot
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 
 interface ConnectTopbarProps {
   className?: string;
@@ -46,6 +48,7 @@ export default function ConnectTopbar({
   className,
 }: ConnectTopbarProps) {
   const { user, logout } = useAuth();
+  const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
 
   const [isWalletOpen, setIsWalletOpen] = useState(false);
@@ -239,6 +242,26 @@ export default function ConnectTopbar({
                 </Box>
 
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                  <Button
+                    onClick={() => {
+                      handleCloseAll();
+                      setIsWalletOpen(true);
+                    }}
+                    sx={{
+                      minWidth: 0,
+                      flex: '1 1 180px',
+                      borderRadius: '16px',
+                      bgcolor: alpha(getAppColor('connect'), 0.09),
+                      color: getAppColor('connect'),
+                      px: 1.5,
+                      py: 1.15,
+                      textTransform: 'none',
+                      '&:hover': { bgcolor: alpha(getAppColor('connect'), 0.15) },
+                    }}
+                    startIcon={<Wallet size={16} />}
+                  >
+                    Wallet
+                  </Button>
                   <Button
                     onClick={() => {
                       handleCloseAll();
@@ -453,9 +476,9 @@ export default function ConnectTopbar({
 
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
               {user && (
-                <Tooltip title="Wallet">
+                <Tooltip title="Agentic Workspace">
                   <IconButton
-                    onClick={() => setIsWalletOpen(true)}
+                    onClick={openAgenticDrawer}
                     sx={{
                       color: getAppColor('connect'),
                       bgcolor: alpha(getAppColor('connect'), 0.03),
@@ -467,7 +490,7 @@ export default function ConnectTopbar({
                       '&:hover': { bgcolor: alpha(getAppColor('connect'), 0.08) },
                     }}
                   >
-                    <Wallet size={18} strokeWidth={1.5} />
+                    <Bot size={18} strokeWidth={1.5} />
                   </IconButton>
                 </Tooltip>
               )}

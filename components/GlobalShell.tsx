@@ -7,6 +7,7 @@ import { DesktopSidebar } from './Navigation';
 import { useSidebar } from './ui/SidebarContext';
 import { DynamicSidebar, useDynamicSidebar } from './ui/DynamicSidebar';
 import { ProUpgradeDrawer } from './overlays/ProUpgradeDrawer';
+import { AgenticDrawer } from './overlays/AgenticDrawer';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
 import NoteTopbar from '@/components/common/NoteTopbar';
 
@@ -60,6 +61,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
       {isAppRoute && !isSharedPage && <DynamicSidebar />}
       {shouldShowBottomBar && <UnifiedBottomBar />}
+      <AgenticDrawer />
       <ProUpgradeDrawer />
     </Box>
   );
