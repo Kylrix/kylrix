@@ -108,7 +108,7 @@ export default function Sidebar() {
   ];
 
   const handleSmartListClick = (id: string) => {
-    router.push('/goals');
+    router.push('/flow');
     switch (id) {
       case 'inbox':
         selectProject('inbox');
@@ -154,7 +154,7 @@ export default function Sidebar() {
   };
 
   const handleProjectClick = (projectId: string) => {
-    router.push('/goals');
+    router.push('/flow');
     selectProject(projectId);
     setFilter({ ...filter, projectId, status: undefined, dueDate: undefined });
   };
@@ -212,17 +212,17 @@ export default function Sidebar() {
         <ListItem disablePadding sx={{ mb: 0.5 }}>
           <ListItemButton
             component={Link}
-            href="/goals"
-            selected={pathname === '/goals'}
-            sx={navItemStyles('/goals')}
+            href="/flow"
+            selected={pathname === '/flow'}
+            sx={navItemStyles('/flow')}
           >
-            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/goals' ? 'var(--color-brand)' : '#A1A1AA' }}>
+            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/flow' ? 'var(--color-brand)' : '#A1A1AA' }}>
               <CheckSquareIcon size={20} />
             </ListItemIcon>
             <ListItemText 
                 primary="Goals" 
                 primaryTypographyProps={{ 
-                    fontWeight: pathname === '/goals' ? 900 : 700, 
+                    fontWeight: pathname === '/flow' ? 900 : 700, 
                     fontSize: '0.85rem',
                     fontFamily: 'var(--font-satoshi)'
                 }} 
@@ -260,7 +260,7 @@ export default function Sidebar() {
                 {smartLists.map((item) => (
                   <ListItemButton
                     key={item.id}
-                    selected={pathname === '/goals' && (filter.projectId === item.id || (item.id === 'completed' && filter.status?.includes('done')))}
+                    selected={pathname === '/flow' && (filter.projectId === item.id || (item.id === 'completed' && filter.status?.includes('done')))}
                     onClick={() => handleSmartListClick(item.id)}
                     sx={{
                       borderRadius: '10px',
@@ -301,7 +301,7 @@ export default function Sidebar() {
                 {regularProjects.map((project) => (
                   <ListItemButton
                     key={project.id}
-                    selected={pathname === '/goals' && selectedProjectId === project.id}
+                    selected={pathname === '/flow' && selectedProjectId === project.id}
                     onClick={() => handleProjectClick(project.id)}
                     sx={{
                       borderRadius: '10px',

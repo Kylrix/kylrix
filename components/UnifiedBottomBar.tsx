@@ -73,7 +73,7 @@ export function UnifiedBottomBar() {
     }
     if (appContext === 'flow') {
       if (pathname?.includes('/calendar')) return 'calendar';
-      if (pathname?.includes('/goals') || pathname?.includes('/tasks')) return 'goals';
+      if (pathname === '/flow' || pathname?.includes('/tasks')) return 'goals';
       if (pathname?.includes('/settings')) return 'settings';
       return 'overview';
     }
@@ -111,7 +111,7 @@ export function UnifiedBottomBar() {
       const routes: Record<string, string> = {
         overview: '/flow',
         calendar: '/flow/calendar',
-        goals: '/flow/goals',
+        goals: '/flow',
         settings: '/settings',
       };
       router.push(routes[newValue] || '/flow');
