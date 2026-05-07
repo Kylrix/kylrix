@@ -10,8 +10,17 @@ interface EcosystemContextType {
 }
 
 const defaultContext: EcosystemContextType = {
-  authUri: 'https://accounts.kylrix.space',
-  getAppUri: (app: string) => `https://${app}.kylrix.space`,
+  authUri: '/accounts',
+  getAppUri: (app: string) => {
+    const pathMap: Record<string, string> = {
+      'accounts': '/accounts',
+      'note': '/note',
+      'vault': '/vault',
+      'flow': '/flow',
+      'connect': '/connect'
+    };
+    return pathMap[app] || '/' + app;
+  },
   isLocalhost: false,
 };
 

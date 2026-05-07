@@ -204,7 +204,7 @@ export const SocialService = {
                             details: JSON.stringify({
                                 read: false,
                                 originalDetails: `Someone liked your post: ${contentSnippet || '...'}` ,
-                                actionUrl: `https://connect.${process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space'}/post/${momentId}`
+                                actionUrl: `/connect/post/${momentId}`
                             })
                         }
                     );
@@ -637,7 +637,7 @@ export const SocialService = {
                         originalDetails: type === 'post' ? `New post shared: ${content.substring(0, 50)}...` : 
                             type === 'reply' ? `Someone replied to your post: ${content.substring(0, 50)}...` :
                             type === 'pulse' ? `Someone pulsed your post` : `Someone quoted your post`,
-                        actionUrl: `https://connect.${process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space'}/post/${moment.$id}`
+                        actionUrl: `/connect/post/${moment.$id}`
                     })
                 }
             );
