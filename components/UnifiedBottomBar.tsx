@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import {
   FileText as NotesIcon,
-  VpnKey as VaultIcon,
+  Lock as VaultIcon,
   CheckSquare as FlowIcon,
   MessageCircle as ConnectIcon,
   User as AccountsIcon,
