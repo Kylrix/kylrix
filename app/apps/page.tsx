@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
 import {
   alpha,
   BottomNavigation,
@@ -63,7 +63,9 @@ export default function AppsPage() {
 
   return (
     <Box component="main" sx={{ pt: { xs: 10, md: 12 }, pb: { xs: 12, md: 14 } }}>
-      <Navbar />
+      <Suspense fallback={null}>
+        <Navbar />
+      </Suspense>
 
       <Container maxWidth="xl">
         <Grid container spacing={3}>
