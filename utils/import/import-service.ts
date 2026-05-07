@@ -116,12 +116,12 @@ export class ImportService {
         ]);
 
         // Index existing folders
-        existingFolders.forEach(f => {
+        existingFolders.forEach((f: any) => {
             if (f.name) existingFoldersMap.set(f.name.trim(), f.$id);
         });
 
         // Index existing TOTP secrets
-        existingTotps.forEach(t => {
+        existingTotps.forEach((t: any) => {
             if (t.secretKey) existingTotpMap.add(t.secretKey.trim());
         });
 
@@ -331,12 +331,12 @@ export class ImportService {
         ]);
 
         // Index existing folders
-        existingFolders.forEach(f => {
+        existingFolders.forEach((f: any) => {
             if (f.name) existingFoldersMap.set(f.name.trim(), f.$id);
         });
 
         // Index existing TOTP secrets
-        existingTotps.forEach(t => {
+        existingTotps.forEach((t: any) => {
             if (t.secretKey) existingTotpMap.add(t.secretKey.trim());
         });
 

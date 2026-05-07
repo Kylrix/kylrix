@@ -183,7 +183,7 @@ export const UsersService = {
             ];
             
             if (options?.requirePublicKey) {
-                queries.push(Query.notEqual('publicKey', null));
+                queries.push(Query.notEqual('publicKey', ''));
             }
             
             const res = await (tablesDB as any).listRows({

@@ -7,6 +7,8 @@ import { Copy, RefreshCw, Ticket } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { createCouponAction, listCouponsAction } from '../../actions/coupons';
 
+export const dynamic = 'force-dynamic';
+
 type CouponRow = {
   $id: string;
   userId?: string | null;

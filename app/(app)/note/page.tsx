@@ -8,14 +8,14 @@ import { useAuth } from '@/context/auth/AuthContext';
 
 export default function NoteLandingPage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
 
   // Redirect to /notes if already authenticated
   useEffect(() => {
-    if (!loading && user) {
+    if (!isLoading && user) {
       router.push('/note/notes');
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, router]);
 
   return (
     <Box sx={{ 

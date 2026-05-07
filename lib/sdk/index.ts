@@ -17,7 +17,7 @@ export { buildSourceNoteTags, buildVaultNoteTags, mergeNoteTags, extractLinkedNo
 export type { CrossObjectOrigin, CrossObjectMetadata } from './orchestration';
 
 // --- Re-export ecosystem SDK ---
-export { useLastActiveApp, getLastActiveApp, setLastActiveApp } from './ecosystem';
+export { useLastActiveApp, getLastActiveApp } from './ecosystem';
 
 // --- Re-export routing SDK ---
 export { useLastActiveApp as useLastActiveAppRouting } from './routing';

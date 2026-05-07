@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { 
   Box, 
@@ -31,7 +31,9 @@ import VaultGuard from '@/components/layout/VaultGuard';
 import NewTotpDialog from '@/components/app/totp/new';
 import { useSudo } from '@/context/SudoContext';
 
-export default function TOTPPage() {
+export const dynamic = 'force-dynamic';
+
+function TOTPPageContent() {
   const [search, setSearch] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -459,5 +461,19 @@ export default function TOTPPage() {
         </Dialog>
       </Box>
     </VaultGuard>
+  );
+}
+
+export default function TOTPPage() {
+  return (
+    <Suspense
+      fallback={
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#000' }}>
+          <CircularProgress />
+        </Box>
+      }
+    >
+      <TOTPPageContent />
+    </Suspense>
   );
 }

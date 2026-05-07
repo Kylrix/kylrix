@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, Suspense } from 'react';
 import { usePathname } from 'next/navigation';
 import { Box } from '@mui/material';
 import { DesktopSidebar } from './Navigation';
@@ -28,9 +28,11 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   
   // If it's a shared note page, we might want a different shell
   const isSharedPage = pathname?.includes('/shared/');
+  const isVaultResetRoute = pathname?.startsWith('/vault/reset');
   
   const shouldShowBottomBar = Boolean(
     isAppRoute &&
+      !isVaultResetRoute &&
       !isSharedPage &&
       pathname !== '/note' &&
       pathname !== '/settings' &&
@@ -40,9 +42,13 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       {/* /(app) routes get UnifiedTopbar from app/(app)/layout.tsx; website pages share the landing topbar */}
-      {isWebsiteRoute && <NoteTopbar />}
+      {isWebsiteRoute && (
+        <Suspense fallback={null}>
+          <NoteTopbar />
+        </Suspense>
+      )}
       
-      {isAppRoute && !isSharedPage && <DesktopSidebar />}
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && <DesktopSidebar />}
       
       <Box
         component="main"
@@ -60,7 +66,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         {children}
       </Box>
 
-      {isAppRoute && !isSharedPage && <DynamicSidebar />}
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && <DynamicSidebar />}
       {shouldShowBottomBar && <UnifiedBottomBar />}
       <AgenticDrawer />
       <ProUpgradeDrawer />

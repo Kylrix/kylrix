@@ -12,7 +12,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
   try {
     // 1. Get all keychain entries for the user
     const entries = await AppwriteService.listKeychainEntries(userId);
-    const passkeyEntries = entries.filter(k => k.type === 'passkey');
+    const passkeyEntries = entries.filter((k: any) => k.type === 'passkey');
 
     if (passkeyEntries.length === 0) {
       toast.error("No passkeys registered for this account.");
@@ -26,7 +26,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
     const authOptions = {
       challenge: challengeBase64,
       rpId: window.location.hostname,
-      allowCredentials: passkeyEntries.map(entry => ({
+      allowCredentials: passkeyEntries.map((entry: any) => ({
         id: entry.credentialId!,
         type: 'public-key' as const,
         transports: ['internal', 'usb', 'nfc', 'ble'] as AuthenticatorTransport[],
@@ -39,7 +39,7 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
     const authResp = await startAuthentication(authOptions as any);
 
     // 4. Find the matching keychain entry
-    const matchingEntry = passkeyEntries.find(e => e.credentialId === authResp.id);
+    const matchingEntry = passkeyEntries.find((e: any) => e.credentialId === authResp.id);
     if (!matchingEntry) {
       toast.error("Authenticated with an unregistered passkey.");
       return false;
