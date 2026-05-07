@@ -63,7 +63,7 @@ export default function NoteTopbar({
   onRefresh,
   isRefreshing = false,
 }: NoteTopbarProps) {
-  const { user, isAuthenticated, isLoading, logout, openIDMWindow } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
   const pathname = usePathname();
@@ -1073,31 +1073,28 @@ export default function NoteTopbar({
                   <Button
                     onClick={() => {
                       if (isLoading) return;
-                      openIDMWindow();
+                      const source = typeof window !== 'undefined' ? window.location.href : '/connect';
+                      window.location.assign(`/accounts/login?source=${encodeURIComponent(source)}`);
                     }}
                     disabled={isLoading}
                     sx={{
                       color: '#fff',
-                      bgcolor: alpha(getAppColor('connect'), 0.12),
+                      bgcolor: alpha('#6366F1', 0.14),
                       border: '1px solid',
-                      borderColor: alpha(getAppColor('connect'), 0.35),
+                      borderColor: alpha('#6366F1', 0.38),
                       borderRadius: '12px',
-                      minWidth: 104,
+                      minWidth: 98,
                       height: 42,
                       px: 1.5,
                       textTransform: 'none',
                       fontWeight: 800,
-                      gap: 1,
-                      '&:hover': { bgcolor: alpha(getAppColor('connect'), 0.14) },
+                      '&:hover': { bgcolor: alpha('#6366F1', 0.22) },
                     }}
                   >
                     {isLoading ? (
                       <CircularProgress size={16} sx={{ color: 'inherit' }} />
                     ) : (
-                      <>
-                        <Logo app="connect" size={16} variant="icon" />
-                        <span>Connect</span>
-                      </>
+                      <span>Connect</span>
                     )}
                   </Button>
                 </Tooltip>
