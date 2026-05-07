@@ -1,7 +1,5 @@
-import { KYLRIX_AUTH_URI } from '@/constants/ecosystem';
-
 export async function sendKylrixEmailNotification(payload: Record<string, unknown>) {
-  const response = await fetch(`${KYLRIX_AUTH_URI}/api/emails`, {
+  const response = await fetch('/api/emails', {
     method: 'POST',
     credentials: 'include',
     headers: {

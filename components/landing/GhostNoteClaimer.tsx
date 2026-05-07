@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { KYLRIX_AUTH_URI } from '@/constants/ecosystem';
 
 const GHOST_STORAGE_KEY = 'kylrix_ghost_notes_v2';
 const GHOST_SECRET_KEY = 'kylrix_ghost_secret_v2';
@@ -40,7 +39,7 @@ export const GhostNoteClaimer = () => {
                         ? await ecosystemSecurity.encrypt(secret)
                         : secret;
 
-                    const response = await fetch(`${KYLRIX_AUTH_URI}/api/permissions`, {
+                    const response = await fetch('/api/permissions', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

@@ -1,7 +1,7 @@
 import { ID, Permission, Query, Role } from 'appwrite';
 import { account, storage, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
-import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
+import { getEcosystemUrl } from '../constants';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
 import { seedIdentityCache } from '@/lib/identity-cache';
@@ -15,12 +15,12 @@ const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
 const EPOCHS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.EPOCHS;
 const KEY_MAPPING_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const KEY_MAPPING_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
-const ACCOUNTS_API_URL = `${KYLRIX_AUTH_URI}/api/permissions`;
-const ACCOUNTS_MESSAGE_API_URL = `${KYLRIX_AUTH_URI}/api/connect/messages`;
-const ACCOUNTS_MESSAGE_REACTIONS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/message-reactions`;
-const ACCOUNTS_JOIN_REQUESTS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/join-requests`;
-const ACCOUNTS_KEY_REPAIR_API_URL = `${KYLRIX_AUTH_URI}/api/connect/repair`;
-const GROUP_AVATAR_ROUTE = `${KYLRIX_AUTH_URI}/api/connect/group-avatar`;
+const ACCOUNTS_API_URL = `/api/permissions`;
+const ACCOUNTS_MESSAGE_API_URL = `/api/connect/messages`;
+const ACCOUNTS_MESSAGE_REACTIONS_API_URL = `/api/connect/message-reactions`;
+const ACCOUNTS_JOIN_REQUESTS_API_URL = `/api/connect/join-requests`;
+const ACCOUNTS_KEY_REPAIR_API_URL = `/api/connect/repair`;
+const GROUP_AVATAR_ROUTE = `/api/connect/group-avatar`;
 const conversationKeyCache = new Map<string, CryptoKey>();
 const conversationPreviewCache = new Map<string, {
     lastMessageId: string;
