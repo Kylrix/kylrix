@@ -24,6 +24,12 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const isWebsiteRoute = !isAppRoute;
   const { isCollapsed } = useSidebar();
   const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();
+  const shouldShowBottomBar = Boolean(
+    isAppRoute &&
+      !isSharedPage &&
+      pathname !== '/settings' &&
+      (!pathname?.startsWith('/vault') || pathname?.startsWith('/vault/dashboard'))
+  );
 
   // If it's a shared note page, we might want a different shell
   const isSharedPage = pathname?.includes('/shared/');
@@ -52,7 +58,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       </Box>
 
       {isAppRoute && !isSharedPage && <DynamicSidebar />}
-      {isAppRoute && !isSharedPage && <UnifiedBottomBar />}
+      {shouldShowBottomBar && <UnifiedBottomBar />}
       <ProUpgradeDrawer />
     </Box>
   );
