@@ -1491,32 +1491,25 @@ export class VaultService {
       ...(data as Record<string, unknown>),
     };
 
-    try {
-      const { encryptField, masterPassCrypto } = await import(
-        "../masterpass-crypto"
-      );
+    const { encryptField, masterPassCrypto } = await import("../masterpass-crypto");
 
-      if (!masterPassCrypto.isVaultUnlocked()) {
-        throw new Error("Vault is locked - cannot encrypt data");
-      }
+    if (!masterPassCrypto.isVaultUnlocked()) {
+      throw new Error("Vault is locked - cannot encrypt data");
+    }
 
-      for (const field of schema.encrypted) {
-        const fieldValue = result[field];
-        if (this.shouldEncryptField(fieldValue)) {
-          try {
-            result[field] = await encryptField(String(fieldValue));
-          } catch (error: unknown) {
-            console.error(`Failed to encrypt field ${field}:`, error);
-            throw new Error(`Encryption failed for ${field}: ${error}`);
-          }
-        } else {
-          // Remove the field entirely if it's not a non-empty string
-          delete result[field];
+    for (const field of schema.encrypted) {
+      const fieldValue = result[field];
+      if (this.shouldEncryptField(fieldValue)) {
+        try {
+          result[field] = await encryptField(String(fieldValue));
+        } catch (error: unknown) {
+          console.error(`Failed to encrypt field ${field}:`, error);
+          throw new Error(`Encryption failed for ${field}: ${error}`);
         }
+      } else {
+        // Remove the field entirely if it's not a non-empty string
+        delete result[field];
       }
-    } catch (importError) {
-      console.error("Failed to import encryption module:", importError);
-      throw new Error("Encryption module not available");
     }
 
     return result;
@@ -2141,20 +2134,20 @@ export async function listCloudBackups(userId: string) {
 export async function deleteUserAccount(_userId: string) {
   // Delete all user data from the database first
   const [creds, totps, folders, logs, userDoc] = await Promise.all([
-    AppwriteService.listAllCredentials(_userId), // Use listAllCredentials to ensure all are deleted
-    AppwriteService.listTOTPSecrets(_userId),
-    AppwriteService.listFolders(_userId),
-    AppwriteService.listSecurityLogs(_userId),
-    AppwriteService.getUserDoc(_userId),
+    VaultService.listAllCredentials(_userId), // Use listAllCredentials to ensure all are deleted
+    VaultService.listTOTPSecrets(_userId),
+    VaultService.listFolders(_userId),
+    VaultService.listSecurityLogs(_userId),
+    VaultService.getUserDoc(_userId),
   ]);
 
   await Promise.all([
-    ...creds.map((c: Credentials) => AppwriteService.deleteCredential(c.$id)),
-    ...totps.map((t: TotpSecrets) => AppwriteService.deleteTOTPSecret(t.$id)),
-    ...folders.map((f: Folders) => AppwriteService.deleteFolder(f.$id)),
-    ...logs.map((l: SecurityLogs) => AppwriteService.deleteSecurityLog(l.$id)),
+    ...creds.map((c: Credentials) => VaultService.deleteCredential(c.$id)),
+    ...totps.map((t: TotpSecrets) => VaultService.deleteTOTPSecret(t.$id)),
+    ...folders.map((f: Folders) => VaultService.deleteFolder(f.$id)),
+    ...logs.map((l: SecurityLogs) => VaultService.deleteSecurityLog(l.$id)),
     userDoc?.$id
-      ? AppwriteService.deleteUserDoc(userDoc.$id)
+      ? VaultService.deleteUserDoc(userDoc.$id)
       : Promise.resolve(),
   ]);
 
@@ -2170,7 +2163,7 @@ export async function deleteUserAccount(_userId: string) {
  * Check if user has set master password (returns boolean).
  */
 export async function hasMasterpass(userId: string): Promise<boolean> {
-  return await AppwriteService.hasMasterpass(userId);
+  return await VaultService.hasMasterpass(userId);
 }
 
 /**
@@ -2180,7 +2173,7 @@ export async function setMasterpassFlag(
   userId: string,
   email: string,
 ): Promise<void> {
-  return await AppwriteService.setMasterpassFlag(userId, email);
+  return await VaultService.setMasterpassFlag(userId, email);
 }
 
 /**
@@ -2294,7 +2287,7 @@ export async function searchCredentials(
 ): Promise<Credentials[]> {
   // Since 'name' and other fields are encrypted, server-side search won't work effectively.
   // We strictly use client-side search on decrypted data.
-  return await AppwriteService.searchCredentials(userId, searchTerm);
+  return await VaultService.searchCredentials(userId, searchTerm);
 }
 
 /**
@@ -2305,7 +2298,7 @@ export async function listCredentials(
   limit: number = 25,
   offset: number = 0,
 ) {
-  return await AppwriteService.listCredentials(userId, limit, offset);
+  return await VaultService.listCredentials(userId, limit, offset);
 }
 
 /**
@@ -2316,7 +2309,7 @@ export async function listAllCredentials(
   userId: string,
   queries: string[] = [],
 ): Promise<Credentials[]> {
-  return await AppwriteService.listAllCredentials(userId, queries);
+  return await VaultService.listAllCredentials(userId, queries);
 }
 
 /**
@@ -2326,7 +2319,7 @@ export async function createCredential(
   data: CredentialsCreate,
   options?: { linkedNoteIds?: string[] },
 ) {
-  return await AppwriteService.createCredential(data, options);
+  return await VaultService.createCredential(data, options);
 }
 
 /**
@@ -2337,14 +2330,14 @@ export async function updateCredential(
   data: Partial<Credentials>,
   options?: { linkedNoteIds?: string[] },
 ) {
-  return await AppwriteService.updateCredential(id, data, options);
+  return await VaultService.updateCredential(id, data, options);
 }
 
 /**
  * Delete a credential by document ID.
  */
 export async function deleteCredential(id: string) {
-  return await AppwriteService.deleteCredential(id);
+  return await VaultService.deleteCredential(id);
 }
 
 /**
@@ -2479,7 +2472,7 @@ export async function getUnifiedMfaStatus(userId?: string): Promise<{
     // If user has factors, check if MFA is actually enforced by looking at user doc
     if (hasAnyFactor && userId) {
       try {
-        const userDoc = await AppwriteService.getUserDoc(userId);
+        const userDoc = await VaultService.getUserDoc(userId);
         isEnforced = userDoc?.twofa === true;
       } catch (error: unknown) {
         console.warn("Could not check user MFA status from database:", error);
@@ -2493,12 +2486,12 @@ export async function getUnifiedMfaStatus(userId?: string): Promise<{
     // Sync database status if userId is provided
     if (userId) {
       try {
-        const userDoc = await AppwriteService.getUserDoc(userId);
+        const userDoc = await VaultService.getUserDoc(userId);
         const dbMfaStatus = userDoc?.twofa === true;
 
         // If database status doesn't match actual enforcement, update it
         if (dbMfaStatus !== isEnforced && userDoc?.$id) {
-          await AppwriteService.updateUserDoc(userDoc.$id, {
+          await VaultService.updateUserDoc(userDoc.$id, {
             twofa: isEnforced,
           });
         }

@@ -29,6 +29,7 @@ import { unlockWithPasskey } from "@/lib/passkey";
 import { PasskeySetup } from "./PasskeySetup";
 import toast from "react-hot-toast";
 import { getAppTone, type KylrixApp } from "@/lib/sdk/design";
+import { masterPassCrypto } from "@/lib/masterpass-crypto";
 
 interface SudoModalProps {
     isOpen?: boolean;
@@ -98,6 +99,12 @@ export default function SudoModal({
         try {
             const success = await unlockWithPasskey(user.$id);
             if (success && isOpen) {
+                const activeMek = ecosystemSecurity.getMasterKey();
+                if (activeMek) {
+                    const rawMek = await crypto.subtle.exportKey("raw", activeMek);
+                    await masterPassCrypto.importKey(rawMek);
+                    await masterPassCrypto.unlockWithImportedKey();
+                }
                 toast.success("Verified via Passkey");
                 handleSuccessWithSync();
             }
@@ -191,6 +198,12 @@ export default function SudoModal({
 
             const isValid = await ecosystemSecurity.unlock(password, passwordEntry);
             if (isValid) {
+                const activeMek = ecosystemSecurity.getMasterKey();
+                if (activeMek) {
+                    const rawMek = await crypto.subtle.exportKey("raw", activeMek);
+                    await masterPassCrypto.importKey(rawMek);
+                    await masterPassCrypto.unlockWithImportedKey();
+                }
                 toast.success("Verified");
                 handleSuccessWithSync();
             } else {
