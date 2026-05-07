@@ -14,8 +14,8 @@
 | `/api/connect/join-requests` | `lib/services/chat.ts`, `app/(app)/connect/groups/invite/[conversationId]/page.tsx` | `lib/services/internal/joinRequests.ts` | in_progress | pending |
 | `/api/connect/repair` | `lib/services/chat.ts` | `lib/services/internal/connectRepair.ts` | in_progress | pending |
 | `/api/connect/group-avatar` | `lib/services/chat.ts` | `lib/services/internal/connectAvatar.ts` | pending | pending |
-| `/api/billing/checkout` | `app/(app)/(auth)/accounts/subscription/pro/checkout/page.tsx` | `lib/services/internal/billing.ts` | pending | pending |
-| `/api/billing/coupons/claim` | `app/(app)/(auth)/accounts/coupon/[id]/page.tsx` | `lib/services/internal/billing.ts` | pending | pending |
+| `/api/billing/checkout` | `app/(app)/(auth)/accounts/subscription/pro/checkout/page.tsx` | `accounts/actions/billing.ts` | completed | removed |
+| `/api/billing/coupons/claim` | `app/(app)/(auth)/accounts/coupon/[id]/page.tsx` | `accounts/actions/billing.ts` | completed | removed |
 | `/api/admin/stats` | `app/(app)/(auth)/accounts/admin/page.tsx` | `lib/services/internal/admin.ts` | completed | removed |
 | `/api/admin/users` | `app/(app)/(auth)/accounts/admin/users/page.tsx`, `app/(app)/(auth)/accounts/admin/emails/page.tsx` | `lib/services/internal/admin.ts` | completed | removed |
 | `/api/admin/coupons` | `app/(app)/(auth)/accounts/admin/coupons/page.tsx` | `accounts/actions/coupons.ts` | completed | removed |
@@ -55,9 +55,9 @@
 - [ ] Verify no client component imports privileged service modules directly
 
 ## Phase 5 - Billing/Subscription Integrity
-- [ ] Keep checkout/coupon claim behavior parity
-- [ ] Ensure idempotent coupon-apply and subscription activation flow
-- [ ] Keep `/pricing` -> `/accounts/...` transitions stable
+- [x] Keep checkout/coupon claim behavior parity
+- [x] Ensure idempotent coupon-apply and subscription activation flow
+- [x] Keep `/pricing` -> `/accounts/...` transitions stable
 
 ## Phase 6 - Env Consolidation
 - [x] Create `kylrix/.env`
@@ -71,8 +71,8 @@
 - `GOOGLE_API_KEY` and `GEMINI_MODEL_NAME` (duplicated in `flow`/`vault`)
 
 ## Phase 7 - API Shutdown
-- [x] Remove deprecated accounts API handlers after rewires complete (admin stats/users/coupons/emails)
-- [ ] Keep only required external callback endpoints (if any)
+- [x] Remove deprecated accounts API handlers after rewires complete (admin stats/users/coupons/emails + billing checkout/claim)
+- [x] Keep only required external callback endpoints (if any)
 
 ## Phase 8 - Final Sweep
 - [ ] Remove remaining in-app `/api/*` and `KYLRIX_AUTH_URI/api/*` dependencies

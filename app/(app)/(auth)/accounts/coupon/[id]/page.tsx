@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, use } from 'react';
 import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, alpha } from '@mui/material';
 import { CheckCircle2, Loader2, ShieldCheck, Ticket } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
+import { claimCouponAction } from '../../actions/billing';
 
 type CouponClaimResponse = {
   ok?: boolean;
@@ -38,15 +39,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
 
     const run = async () => {
       try {
-        const res = await fetch('/api/billing/coupons/claim', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ couponId }),
-        });
-        const data = (await res.json().catch(() => ({}))) as CouponClaimResponse;
-        if (!res.ok) {
-          throw new Error(data.error || 'Failed to claim coupon.');
-        }
+        const data = (await claimCouponAction(couponId)) as CouponClaimResponse;
 
         setCoupon(data);
 

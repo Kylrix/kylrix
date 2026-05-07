@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Box, Container, Typography, CircularProgress, Paper, Button, Stack, Divider } from '@mui/material';
 import { Rocket, Heart, Globe, Clock } from 'lucide-react';
 import { calculateSubscriptionPrice, PPP_DATA } from '@/lib/subscription/ppp';
-import { account } from '@/lib/appwrite';
+import { createBillingCheckoutSessionAction } from '../../../actions/billing';
 
 function CheckoutContent() {
   const { user, isLoading: authLoading } = useAuth();
@@ -42,28 +42,16 @@ function CheckoutContent() {
       
       setInitializing(true);
       try {
-        // Backend now handles user verification via session cookies or JWT
-        const jwt = await account.createJWT();
-        
-        const response = await fetch('/api/billing/checkout', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${jwt.jwt}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            planId,
-            method: 'CRYPTO',
-            countryCode,
-            months,
-            giftRecipientId: giftRecipientId || undefined,
-            giftRecipientName: giftRecipientName || undefined,
-            giftMessage: giftMessage || undefined,
-            couponId: couponId || undefined,
-          }),
+        const session = await createBillingCheckoutSessionAction({
+          planId,
+          method: 'CRYPTO',
+          countryCode,
+          months,
+          giftRecipientId: giftRecipientId || undefined,
+          giftRecipientName: giftRecipientName || undefined,
+          giftMessage: giftMessage || undefined,
+          couponId: couponId || undefined,
         });
-        const session = await response.json();
-
 
         if (session.url) {
           markBillingSyncPending(user.$id);
