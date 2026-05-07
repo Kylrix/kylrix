@@ -133,7 +133,7 @@ export default function NoteEditorPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '90px', md: 0 } }}>
       <Container maxWidth="lg" sx={{ py: 6 }}>
         <Box sx={{ 
           display: 'flex', 
