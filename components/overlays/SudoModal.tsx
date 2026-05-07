@@ -65,6 +65,9 @@ export default function SudoModal({
     const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
     const appTone = getAppTone(app);
     const accentColor = appTone.secondary;
+    const isKylrixDomain =
+        typeof window !== "undefined" &&
+        (window.location.hostname === "kylrix.space" || window.location.hostname.endsWith(".kylrix.space"));
 
     const handleSuccessWithSync = useCallback(async () => {
         if (user?.$id) {
@@ -112,7 +115,8 @@ export default function SudoModal({
             AppwriteService.listKeychainEntries(user.$id).then(entries => {
                 const passkeyPresent = entries.some((e: any) => e.type === 'passkey');
                 const passwordPresent = entries.some((e: any) => e.type === 'password');
-                setHasPasskey(passkeyPresent);
+                const passkeyAllowed = passkeyPresent && isKylrixDomain;
+                setHasPasskey(passkeyAllowed);
                 setHasMasterpass(passwordPresent);
 
                 // Intent Logic
@@ -140,7 +144,7 @@ export default function SudoModal({
                     return;
                 }
 
-                setMode(passkeyPresent ? "passkey" : "password");
+                setMode(passkeyAllowed ? "passkey" : "password");
                 setIsDetecting(false);
             }).catch(() => {
                 setIsDetecting(false);
