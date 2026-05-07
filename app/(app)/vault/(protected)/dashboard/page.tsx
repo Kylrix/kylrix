@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Credentials, Folders as FolderDoc } from '@/lib/appwrite/types';
 import { useAppwriteVault } from '@/context/appwrite-context';
@@ -66,7 +66,7 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function DashboardPage() {
+function DashboardPageContent() {
   const { user, needsMasterPassword, isVaultUnlocked } = useAppwriteVault();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -704,5 +704,19 @@ export default function DashboardPage() {
         />
       </Box>
     </VaultGuard>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#000' }}>
+          <CircularProgress />
+        </Box>
+      }
+    >
+      <DashboardPageContent />
+    </Suspense>
   );
 }
