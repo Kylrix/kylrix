@@ -269,17 +269,28 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return { ...state, error: action.payload, isLoading: false };
 
     case 'SET_DATA':
-      return {
-        ...state,
-        tasks: action.payload.tasks,
-        projects: action.payload.projects,
-        isLoading: false,
-      };
+      {
+        const uniqueTasks = Array.from(
+          new Map(action.payload.tasks.map((task) => [task.id, task])).values()
+        );
+        const uniqueProjects = Array.from(
+          new Map(action.payload.projects.map((project) => [project.id, project])).values()
+        );
+        return {
+          ...state,
+          tasks: uniqueTasks,
+          projects: uniqueProjects,
+          isLoading: false,
+        };
+      }
 
     case 'SET_USER':
       return { ...state, userId: action.payload };
 
     case 'ADD_TASK':
+      if (state.tasks.some((task) => task.id === action.payload.id)) {
+        return state;
+      }
       return { ...state, tasks: [...state.tasks, action.payload] };
 
     case 'UPDATE_TASK':
@@ -645,6 +656,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     const initRealtime = async () => {
       // Subscribe to Tasks
       unsubTasks = await subscribeToTable<AppwriteTask>(APPWRITE_CONFIG.TABLES.TASKS, ({ type, payload }) => {
+        if (payload.userId !== state.userId) return;
         if (type === 'create') {
           dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(payload) });
         } else if (type === 'update') {
