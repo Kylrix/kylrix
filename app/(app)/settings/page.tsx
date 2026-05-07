@@ -115,7 +115,16 @@ export default function SettingsPage() {
 
     return (
         <>
-            <Box sx={{ maxWidth: 840, mx: 'auto', py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
+            <Box
+                sx={{
+                    maxWidth: 840,
+                    mx: 'auto',
+                    mt: '88px',
+                    pt: { xs: 2, md: 2.5 },
+                    pb: { xs: 3, md: 4 },
+                    px: { xs: 2, md: 3 },
+                }}
+            >
                 <Button
                     variant="outlined"
                     onClick={handleBack}
