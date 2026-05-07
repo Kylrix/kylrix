@@ -36,7 +36,7 @@ import { getProfilePicturePreview } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { getUserProfilePicId } from '@/lib/utils';
 import { getEcosystemUrl } from '@/constants/ecosystem';
-import { TOPBAR_LAYOUT, getAppTone } from '@/lib/sdk/design';
+import { TOPBAR_LAYOUT, getAppTone, type KylrixApp } from '@/lib/sdk/design';
 import { createEcosystemPanelItems, createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtBottom, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
@@ -76,7 +76,15 @@ export default function NoteTopbar({
     pathname?.startsWith('/settings')
   );
   const isLandingRoute = isWebsiteRoute;
-  const logoApp = isWebsiteRoute ? 'root' : 'note';
+  const activeApp = useMemo<KylrixApp>(() => {
+    if (pathname?.startsWith('/vault')) return 'vault';
+    if (pathname?.startsWith('/flow')) return 'flow';
+    if (pathname?.startsWith('/connect')) return 'connect';
+    if (pathname?.startsWith('/accounts')) return 'accounts';
+    if (pathname?.startsWith('/settings')) return 'connect';
+    return 'note';
+  }, [pathname]);
+  const logoApp = isWebsiteRoute ? 'root' : activeApp;
   const showSearchControl = isAuthenticated && !isWebsiteRoute;
   const landingNavItems = [
     { label: 'Developers', href: '/developers' },
@@ -97,7 +105,8 @@ export default function NoteTopbar({
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
-  const tone = getAppTone('note');
+  const tone = getAppTone(activeApp);
+  const accent = getAppColor(activeApp);
   const profileName = user?.name || user?.email || 'Note user';
   const profileUsername = (user as any)?.username || (user as any)?.prefs?.username || null;
   const profileSeed = useMemo(
@@ -264,22 +273,22 @@ export default function NoteTopbar({
 
   const noteApps = useMemo(
     () =>
-      createEcosystemPanelItems('note').map((item) => ({
+      createEcosystemPanelItems(activeApp).map((item) => ({
         ...item,
         href: getEcosystemUrl(item.app === 'kylrix' ? 'kylrix' : item.app),
       })),
-    [],
+    [activeApp],
   );
   const searchSurface = useMemo(
     () =>
       createTopbarSearchSurface({
         query: searchQuery,
-        routeLabel: 'Note',
-        currentApp: 'note',
+        routeLabel: activeApp.charAt(0).toUpperCase() + activeApp.slice(1),
+        currentApp: activeApp,
         snippets: [],
         resolveUrl: (app, path = '') => `${getEcosystemUrl(app === 'kylrix' ? 'kylrix' : app)}${path}`,
       }),
-    [searchQuery],
+    [activeApp, searchQuery],
   );
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 
@@ -655,12 +664,12 @@ export default function NoteTopbar({
                         minWidth: 0,
                         flex: '1 1 180px',
                         borderRadius: '16px',
-                        bgcolor: alpha(getAppColor('note'), 0.09),
-                        color: getAppColor('note'),
+                      bgcolor: alpha(accent, 0.09),
+                      color: accent,
                         px: 1.5,
                         py: 1.15,
                         textTransform: 'none',
-                        '&:hover': { bgcolor: alpha(getAppColor('note'), 0.15) },
+                      '&:hover': { bgcolor: alpha(accent, 0.15) },
                       }}
                       startIcon={<Wallet size={16} />}
                     >
@@ -1090,14 +1099,14 @@ export default function NoteTopbar({
                         onClick={openAgenticDrawer}
                         sx={{
                           display: 'inline-flex',
-                          color: getAppColor('note'),
-                          bgcolor: alpha(getAppColor('note'), 0.03),
+                          color: accent,
+                          bgcolor: alpha(accent, 0.03),
                           border: '1px solid',
-                          borderColor: alpha(getAppColor('note'), 0.1),
+                          borderColor: alpha(accent, 0.1),
                           borderRadius: '12px',
                           width: 42,
                           height: 42,
-                          '&:hover': { bgcolor: alpha(getAppColor('note'), 0.08) },
+                          '&:hover': { bgcolor: alpha(accent, 0.08) },
                         }}
                       >
                         <Bot size={18} strokeWidth={1.5} />
@@ -1121,7 +1130,7 @@ export default function NoteTopbar({
                       sx={{
                         width: 38,
                         height: 38,
-                        bgcolor: profileAvatarUrl ? 'rgba(255,255,255,0.04)' : getAppTone('note').secondary,
+                        bgcolor: profileAvatarUrl ? 'rgba(255,255,255,0.04)' : tone.secondary,
                         color: '#fff',
                         fontWeight: 900,
                         borderRadius: '12px',
