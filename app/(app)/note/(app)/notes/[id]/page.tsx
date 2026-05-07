@@ -116,7 +116,7 @@ export default function NoteEditorPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Container maxWidth={false} disableGutters sx={{ px: { xs: 1, sm: 2, md: 3 }, py: 2 }}>
+      <Container maxWidth={false} disableGutters sx={{ px: { xs: 0.5, sm: 1, md: 1.5 }, py: 1.25 }}>
         <Box component="main" sx={{ 
           perspective: '1200px',
           '& > *': {

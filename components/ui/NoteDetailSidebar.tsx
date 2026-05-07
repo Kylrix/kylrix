@@ -719,7 +719,7 @@ export function NoteDetailSidebar({
   }, [liveNote, onUpdate, promptSudo, showError, showSuccess]);
 
   return (
-    <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
+    <Box sx={{ p: { xs: 2, md: 2.5 }, display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
         <IconButton
           onClick={onBack || closeSidebar}
@@ -862,7 +862,7 @@ export function NoteDetailSidebar({
           borderRadius: '32px',
           border: '1px solid #1C1A18',
           bgcolor: '#161412',
-          p: 4,
+          p: { xs: 2.25, md: 2.75 },
           transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
           boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4)',
           '&:focus-within': {
@@ -903,7 +903,7 @@ export function NoteDetailSidebar({
             InputProps={{
               disableUnderline: true,
               sx: {
-                fontSize: '2rem',
+                fontSize: { xs: '1.2rem', md: '1.5rem' },
                 fontWeight: 900,
                 color: theme.palette.text.primary,
                 fontFamily: 'var(--font-clash-display)',
@@ -916,14 +916,14 @@ export function NoteDetailSidebar({
           />
         ) : (
           <Typography
-            variant="h4"
+            variant="h5"
             onClick={activateTitleEditing}
             sx={{
               fontWeight: 900,
               cursor: 'text',
               color: theme.palette.text.primary,
               fontFamily: 'var(--font-clash-display)',
-              fontSize: '2rem',
+              fontSize: { xs: '1.2rem', md: '1.5rem' },
               lineHeight: 1.2,
               letterSpacing: '-0.02em',
               overflowWrap: 'anywhere',
@@ -945,7 +945,7 @@ export function NoteDetailSidebar({
           borderRadius: '32px',
           border: '1px solid #1C1A18',
           bgcolor: '#161412',
-          p: 4,
+          p: { xs: 2.25, md: 2.75 },
           transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
           boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4)',
           '&:focus-within': {
@@ -1021,7 +1021,7 @@ export function NoteDetailSidebar({
                 InputProps={{
                   disableUnderline: true,
                   sx: {
-                    fontSize: '0.95rem',
+                    fontSize: '0.9rem',
                     color: theme.palette.text.primary,
                     lineHeight: 1.7,
                     fontFamily: 'var(--font-satoshi)'
