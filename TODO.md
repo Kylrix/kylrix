@@ -59,9 +59,15 @@
 - [ ] Keep `/pricing` -> `/accounts/...` transitions stable
 
 ## Phase 6 - Env Consolidation
-- [ ] Create `kylrix/.env`
-- [ ] Merge and dedupe keys from `accounts/.env`, `note/.env`, `flow/.env`, `vault/.env`, `connect/.env`
-- [ ] Track key conflicts here (names only; no secret values)
+- [x] Create `kylrix/.env`
+- [x] Merge and dedupe keys from `accounts/.env`, `note/.env`, `flow/.env`, `vault/.env`, `connect/.env`
+- [x] Track key conflicts here (names only; no secret values)
+
+### Env key conflicts to resolve explicitly
+- `NEXT_PUBLIC_ORIGIN`
+- `NEXT_PUBLIC_APP_URL`
+- `APPWRITE_API` vs `APPWRITE_API_KEY` (both present, different keys)
+- `GOOGLE_API_KEY` and `GEMINI_MODEL_NAME` (duplicated in `flow`/`vault`)
 
 ## Phase 7 - API Shutdown
 - [ ] Remove deprecated accounts API handlers after rewires complete
