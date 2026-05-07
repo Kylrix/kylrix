@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   alpha,
   AppBar,
@@ -71,6 +71,7 @@ export default function Topbar({
   onConnect,
 }: TopbarProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -87,6 +88,8 @@ export default function Topbar({
 
   const profilePicId = initialProfilePicId || accountRecord?.avatar || accountRecord?.profilePicId || null;
   const tone = getAppTone('accounts');
+  const isAccountsLoginRoute = pathname?.startsWith('/accounts/login');
+  const logoApp = !userId && isAccountsLoginRoute ? 'root' : 'accounts';
   const profileName = userName || userEmail || 'Account user';
   const profileUsername = accountRecord?.username || null;
   const profileSeed = useMemo(
@@ -863,7 +866,7 @@ export default function Topbar({
                 position: 'relative',
               }}
             >
-              <Logo app="accounts" size={32} />
+              <Logo app={logoApp as any} size={32} />
               <IconButton
                 size="small"
                 sx={{
@@ -982,16 +985,15 @@ export default function Topbar({
                     disabled={authLoading}
                     sx={{
                       color: '#fff',
-                      bgcolor: alpha('#6366F1', 0.14),
-                      border: '1px solid',
-                      borderColor: alpha('#6366F1', 0.38),
+                      bgcolor: '#6366F1',
                       borderRadius: '12px',
                       minWidth: 98,
                       height: 42,
                       px: 1.5,
                       textTransform: 'none',
                       fontWeight: 800,
-                      '&:hover': { bgcolor: alpha('#6366F1', 0.22) },
+                      boxShadow: '0 16px 36px rgba(99,102,241,0.25)',
+                      '&:hover': { bgcolor: '#5254E8' },
                     }}
                   >
                     {authLoading ? (

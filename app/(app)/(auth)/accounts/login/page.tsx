@@ -8,6 +8,7 @@ import { safeDeleteCurrentSession } from '@/lib/safe-session';
 import { useSource } from '@/lib/source-context';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
+import { useAuth } from '@/context/auth/AuthContext';
 import Logo from '../components/Logo';
 import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 
@@ -38,6 +39,7 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const { source, setSource, setRedirectUri, getBackUrl } = useSource();
   const hasNotifiedRef = useRef(false);
@@ -167,8 +169,13 @@ function LoginContent() {
   }, [searchParams, setSource, setRedirectUri]);
 
   useEffect(() => {
+    if (authLoading) return;
+    if (!isAuthenticated) {
+      setIsCheckingSession(false);
+      return;
+    }
     checkExistingSession();
-  }, [checkExistingSession]);
+  }, [authLoading, checkExistingSession, isAuthenticated]);
 
   useEffect(() => {
     if (searchParams.get('error') === 'oauth_failed' && !message) {
