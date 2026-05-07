@@ -24,7 +24,6 @@ import {
   APPWRITE_BUCKET_PROFILE_PICTURES_ID,
   APPWRITE_COLLECTION_KEYCHAIN_ID
 } from './client';
-import { AppwriteService } from './auth';
 import { buildVaultNoteTags } from "../sdk/crosslinks";
 import type {
   Credentials,
@@ -1711,44 +1710,44 @@ export async function updateTotpSecret(
   data: Partial<TotpSecrets>,
   options?: { linkedNoteIds?: string[] },
 ) {
-  return await AppwriteService.updateTOTPSecret(id, data, options);
+  return await VaultService.updateTOTPSecret(id, data, options);
 }
 
 export async function shareCredential(
   credentialId: string,
   recipient: { userId: string; publicKey: string },
 ) {
-  return await AppwriteService.shareCredential(credentialId, recipient);
+  return await VaultService.shareCredential(credentialId, recipient);
 }
 
 export async function shareTotpSecret(
   totpSecretId: string,
   recipient: { userId: string; publicKey: string },
 ) {
-  return await AppwriteService.shareTotpSecret(totpSecretId, recipient);
+  return await VaultService.shareTotpSecret(totpSecretId, recipient);
 }
 
 export async function listIncomingKeyMappings(userId: string) {
-  return await AppwriteService.listIncomingKeyMappings(userId);
+  return await VaultService.listIncomingKeyMappings(userId);
 }
 
 export async function acceptSharedCredential(mapping: KeyMapping) {
-  return await AppwriteService.acceptSharedCredential(mapping);
+  return await VaultService.acceptSharedCredential(mapping);
 }
 
 export async function acceptSharedTotp(mapping: KeyMapping) {
-  return await AppwriteService.acceptSharedTotp(mapping);
+  return await VaultService.acceptSharedTotp(mapping);
 }
 
 export async function deleteKeyMapping(id: string) {
-  return await AppwriteService.deleteKeyMapping(id);
+  return await VaultService.deleteKeyMapping(id);
 }
 
 /**
  * List the most recently updated credentials for a user.
  */
 export async function listRecentCredentials(userId: string, limit: number = 5) {
-  return await AppwriteService.listRecentCredentials(userId, limit);
+  return await VaultService.listRecentCredentials(userId, limit);
 }
 
 /**
@@ -2042,11 +2041,11 @@ export async function listFolders(userId: string, queries: string[] = []) {
 }
 
 export async function updateFolder(id: string, data: Partial<Folders>) {
-  return await AppwriteService.updateFolder(id, data);
+  return await VaultService.updateFolder(id, data);
 }
 
 export async function deleteFolder(id: string) {
-  return await AppwriteService.deleteFolder(id);
+  return await VaultService.deleteFolder(id);
 }
 
 /**
@@ -2055,7 +2054,7 @@ export async function deleteFolder(id: string) {
 export async function createFolder(
   data: FoldersCreate,
 ) {
-  return await AppwriteService.createFolder(data);
+  return await VaultService.createFolder(data);
 }
 
 /**
@@ -2065,21 +2064,21 @@ export async function createTotpSecret(
   data: TotpSecretsCreate,
   options?: { linkedNoteIds?: string[] },
 ) {
-  return await AppwriteService.createTOTPSecret(data, options);
+  return await VaultService.createTOTPSecret(data, options);
 }
 
 /**
  * List TOTP secrets for a user (decrypted).
  */
 export async function listTotpSecrets(userId: string, queries: string[] = []) {
-  return await AppwriteService.listTOTPSecrets(userId, queries);
+  return await VaultService.listTOTPSecrets(userId, queries);
 }
 
 /**
  * Delete a TOTP secret by document ID.
  */
 export async function deleteTotpSecret(id: string) {
-  return await AppwriteService.deleteTOTPSecret(id);
+  return await VaultService.deleteTOTPSecret(id);
 }
 
 /**
@@ -2102,9 +2101,9 @@ export async function updateUserProfile(
 
   // Update user doc in DB if email was changed
   if (data.email) {
-    const userDoc = await AppwriteService.getUserDoc(userId);
+    const userDoc = await VaultService.getUserDoc(userId);
     if (userDoc?.$id) {
-      await AppwriteService.updateUserDoc(userDoc.$id, { email: data.email });
+      await VaultService.updateUserDoc(userDoc.$id, { email: data.email });
     }
   }
 }
@@ -2117,21 +2116,21 @@ export async function exportAllUserData(userId: string, options?: {
   totpSecrets?: boolean;
   folders?: boolean;
 }) {
-  return await AppwriteService.exportUserData(userId, options);
+  return await VaultService.exportUserData(userId, options);
 }
 
 /**
  * Backup user data to cloud storage.
  */
 export async function cloudBackup(userId: string) {
-  return await AppwriteService.cloudBackup(userId);
+  return await VaultService.cloudBackup(userId);
 }
 
 /**
  * List user's cloud backups.
  */
 export async function listCloudBackups(userId: string) {
-  return await AppwriteService.listCloudBackups(userId);
+  return await VaultService.listCloudBackups(userId);
 }
 
 
