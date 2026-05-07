@@ -255,31 +255,35 @@ export default function DashboardPage() {
     }
   };
 
+  const hydrateVaultData = useCallback(async () => {
+    if (!user?.$id || !isVaultUnlocked()) return;
+
+    await loadAllCredentials();
+
+    void listFolders(user.$id)
+      .then(setFolders)
+      .catch((err: unknown) => {
+        console.error("Failed to fetch folders:", err);
+      });
+
+    void listRecentCredentials(user.$id)
+      .then(setRecentCredentials)
+      .catch((err: unknown) => {
+        console.error("Failed to fetch recent credentials:", err);
+      });
+
+    void listTotpSecrets(user.$id)
+      .then(setDecryptedTotpSecrets)
+      .catch((err: unknown) => {
+        console.error("Failed to fetch TOTP secrets:", err);
+      });
+  }, [user, isVaultUnlocked, loadAllCredentials]);
+
   useEffect(() => {
     if (user?.$id && isVaultUnlocked()) {
-      loadAllCredentials();
-
-      listFolders(user.$id)
-        .then(setFolders)
-        .catch((err: unknown) => {
-          console.error("Failed to fetch folders:", err);
-          toast.error("Could not load your folders.");
-        });
-
-      listRecentCredentials(user.$id)
-        .then(setRecentCredentials)
-        .catch((err: unknown) => {
-          console.error("Failed to fetch recent credentials:", err);
-        });
-
-      // Keep decrypted TOTP entries in memory after unlock for instant TOTP surfaces.
-      listTotpSecrets(user.$id)
-        .then(setDecryptedTotpSecrets)
-        .catch((err: unknown) => {
-          console.error("Failed to fetch TOTP secrets:", err);
-        });
+      void hydrateVaultData();
     }
-  }, [user, loadAllCredentials, isVaultUnlocked]);
+  }, [user, isVaultUnlocked, hydrateVaultData]);
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);
@@ -692,7 +696,10 @@ export default function DashboardPage() {
         <SudoModal
           isOpen={showMasterPassDrawer}
           app="vault"
-          onSuccess={() => setShowMasterPassDrawer(false)}
+          onSuccess={() => {
+            setShowMasterPassDrawer(false);
+            void hydrateVaultData();
+          }}
           onCancel={() => { }}
         />
       </Box>
