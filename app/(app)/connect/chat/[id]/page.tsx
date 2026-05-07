@@ -1,6 +1,6 @@
 'use client';
 
-import { AppShell } from '@/components/layout/AppShell';
+import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { useParams } from 'next/navigation';
 
@@ -9,8 +9,8 @@ export default function ChatPage() {
     const conversationId = params.id as string;
 
     return (
-        <AppShell>
+        <ConnectAppShell>
             <ChatWindow conversationId={conversationId} />
-        </AppShell>
+        </ConnectAppShell>
     );
 }

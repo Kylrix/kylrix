@@ -21,6 +21,7 @@ import { AIProvider } from '@/context/AIContext';
 import { OverlayProvider } from '@/components/ui/OverlayContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { ToastProvider } from '@/components/ui/Toast';
+import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -44,7 +45,9 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                       <ContextMenuProvider>
                                         <ToastProvider>
                                           <PotatoProvider>
-                                            {children}
+                                            <AppChromeProvider>
+                                              {children}
+                                            </AppChromeProvider>
                                           </PotatoProvider>
                                         </ToastProvider>
                                       </ContextMenuProvider>

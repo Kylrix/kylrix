@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, Suspense  } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
+import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
 import { Box, Typography, Container, CircularProgress, Paper, TextField, Button } from '@mui/material';
@@ -30,7 +30,7 @@ export default function CallsPage() {
     };
 
     return (
-        <AppShell>
+        <ConnectAppShell>
             <Container maxWidth="md" sx={{ py: 3, position: 'relative', minHeight: '100vh' }}>
                 <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'center', justifyContent: 'space-between' }}>
                     <Typography variant="h5" fontWeight="bold">Call History</Typography>
@@ -82,6 +82,6 @@ export default function CallsPage() {
 
                 <CallActionModal open={modalOpen} onClose={() => setModalOpen(false)} />
             </Container>
-        </AppShell>
+        </ConnectAppShell>
     );
 }

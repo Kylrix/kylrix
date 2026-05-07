@@ -1,6 +1,6 @@
 'use client';
 
-import { AppShell } from '@/components/layout/AppShell';
+import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { UserSearch } from '@/components/search/UserSearch';
 import { ChatList } from '@/components/chat/ChatList';
 import ChatQuickActionsFab from '@/components/chat/ChatQuickActionsFab';
@@ -168,7 +168,7 @@ export default function Home() {
   }, []);
 
   return (
-        <AppShell>
+        <ConnectAppShell>
         <Suspense fallback={null}>
           <ChatHandler />
         </Suspense>
@@ -232,6 +232,6 @@ export default function Home() {
         )}
         <ChatQuickActionsFab hidden={!isUnlocked} />
       </Box>
-    </AppShell>
+    </ConnectAppShell>
   );
 }

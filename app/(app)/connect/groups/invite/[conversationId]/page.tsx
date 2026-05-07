@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { Users, ShieldCheck, ArrowRight } from 'lucide-react';
 
-import { AppShell } from '@/components/layout/AppShell';
+import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/lib/auth';
 import { KYLRIX_AUTH_URI } from '@/lib/constants';
@@ -146,7 +146,7 @@ export default function HangoutInvitePage() {
   };
 
   return (
-    <AppShell>
+    <ConnectAppShell>
       <Container maxWidth="sm" sx={{ py: 4 }}>
         <Paper
           sx={{
@@ -233,7 +233,7 @@ export default function HangoutInvitePage() {
           </Stack>
         </Paper>
       </Container>
-    </AppShell>
+    </ConnectAppShell>
   );
 }
 

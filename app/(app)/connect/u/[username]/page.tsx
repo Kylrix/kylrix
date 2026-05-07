@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { AppShell } from '@/components/layout/AppShell';
+import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { Profile } from '@/components/profile/Profile';
 import { Container } from '@mui/material';
 
@@ -10,10 +10,10 @@ export default function UserProfilePage() {
     const username = params.username as string;
 
     return (
-        <AppShell>
+        <ConnectAppShell>
             <Container maxWidth="lg" sx={{ py: 3 }}>
                 <Profile username={username} />
             </Container>
-        </AppShell>
+        </ConnectAppShell>
     );
 }

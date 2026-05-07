@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { AppShell } from '@/components/layout/AppShell';
+import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
 import { getEcosystemUrl } from '@/lib/constants';
@@ -1181,7 +1181,7 @@ export function PostViewClient() {
     };
 
     if (loading && !moment) return (
-        <AppShell>
+        <ConnectAppShell>
             <Box sx={{ maxWidth: 'sm', mx: 'auto', py: 4, px: 2 }}>
                 <Stack spacing={2}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -1195,16 +1195,16 @@ export function PostViewClient() {
                     <Skeleton variant="rounded" height={120} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
                 </Stack>
             </Box>
-        </AppShell>
+        </ConnectAppShell>
     );
 
     if (!moment) return (
-        <AppShell>
+        <ConnectAppShell>
             <Box sx={{ textAlign: 'center', py: 10 }}>
                 <Typography variant="h5" color="text.secondary">Moment not found</Typography>
                 <Button sx={{ mt: 2 }} onClick={() => router.back()}>Go Back</Button>
             </Box>
-        </AppShell>
+        </ConnectAppShell>
     );
 
     const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
@@ -1223,7 +1223,7 @@ export function PostViewClient() {
     };
 
     return (
-        <AppShell>
+        <ConnectAppShell>
             <Box
                 onWheelCapture={onWheelCapture}
                 onTouchStartCapture={onTouchStartCapture}
@@ -1762,6 +1762,6 @@ export function PostViewClient() {
                     onSelect={(actor) => { setActorsDrawerOpen(false); router.push(`/@${actor.username || actor.$id}`); }}
                 />
             </Box>
-        </AppShell>
+        </ConnectAppShell>
     );
 }

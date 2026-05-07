@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 import NoteTopbar from '@/components/common/NoteTopbar';
 import VaultTopbar from '@/components/common/VaultTopbar';
-import ConnectTopbar from '@/components/layout/ConnectTopbar';
 import TopbarShell from '@/components/layout/TopbarShell';
 
 /**
@@ -35,7 +34,7 @@ export function UnifiedTopbar() {
     return <VaultTopbar />;
   }
   if (appContext === 'connect') {
-    return <ConnectTopbar />;
+    return <NoteTopbar />;
   }
   if (appContext === 'accounts') {
     return <TopbarShell />;

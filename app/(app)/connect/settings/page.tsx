@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
+import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { 
     Box, 
     Typography, 
@@ -99,7 +99,7 @@ export default function SettingsPage() {
 
 
     return (
-        <AppShell>
+        <ConnectAppShell>
             <Box sx={{ maxWidth: 800, mx: 'auto', py: 4, px: 2 }}>
                 <Typography variant="h4" sx={{ fontWeight: 900, mb: 4, fontFamily: 'var(--font-space-grotesk)' }}>
                     Settings
@@ -254,6 +254,6 @@ export default function SettingsPage() {
                 }}
                 onCancel={() => setUnlockModalOpen(false)}
             />
-        </AppShell>
+        </ConnectAppShell>
     );
 }
