@@ -16,11 +16,13 @@ export default function AppLayout({
 }) {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      {/* Persistent topbar - mounts once, never unmounts */}
-      <UnifiedTopbar />
+      {/* Persistent fixed topbar - mounts once, never unmounts */}
+      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000 }}>
+        <UnifiedTopbar />
+      </Box>
       
-      {/* App content */}
-      <Box component="main" sx={{ pt: '88px' }}>
+      {/* App content with topbar offset */}
+      <Box component="main" sx={{ pt: '88px', width: '100%' }}>
         {children}
       </Box>
     </Box>
