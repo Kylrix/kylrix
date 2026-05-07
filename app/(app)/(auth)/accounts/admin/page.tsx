@@ -25,6 +25,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import AdminLayout from './components/AdminLayout';
+import { getAdminStatsAction } from '../actions/admin';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -33,9 +34,7 @@ export default function AdminDashboard() {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/admin/stats');
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch stats');
+      const data = await getAdminStatsAction();
       setStats(data);
     } catch (error: any) {
       console.error('Failed to fetch stats:', error);

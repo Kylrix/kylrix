@@ -30,7 +30,6 @@ import {
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { EMAIL_TEMPLATES } from '@/lib/email-template-catalog';
-import { KYLRIX_AUTH_URI } from '@/lib/appwrite/config';
 
 interface User {
   id: string;
@@ -161,7 +160,7 @@ export default function EmailOrchestrator() {
           templateId: template,
           subject: customSubject.trim() || selectedTemplate.subject,
           html: customBody.trim() || undefined,
-          ctaUrl: KYLRIX_AUTH_URI,
+          ctaUrl: '/accounts',
         }),
       });
 

@@ -86,7 +86,7 @@ function CheckoutContent() {
     if (!authLoading && !user) {
       if (typeof window !== 'undefined') {
         const currentUrl = window.location.href;
-        window.location.assign(`/login?source=${encodeURIComponent(currentUrl)}`);
+        window.location.assign(`/accounts/login?source=${encodeURIComponent(currentUrl)}`);
       }
     }
   }, [user, authLoading]);

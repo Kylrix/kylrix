@@ -33,6 +33,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { getAdminUsersAction } from '../../actions/admin';
 
 interface User {
   id: string;
@@ -55,9 +56,11 @@ export default function UsersManagement() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/users${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to fetch users');
+      const data = await getAdminUsersAction({
+        search: searchTerm,
+        verifiedOnly: false,
+        limit: 100,
+      });
       setUsers(data.users);
     } catch (err: any) {
       setError(err.message);
