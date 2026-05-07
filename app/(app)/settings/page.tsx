@@ -30,6 +30,7 @@ import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { SudoModal } from '@/components/overlays/SudoModal';
+import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
 import { toast } from 'react-hot-toast';
 
 export default function SettingsPage() {
@@ -104,6 +105,9 @@ export default function SettingsPage() {
                 </Typography>
 
                 <Stack spacing={4}>
+                    {/* Discoverability Settings */}
+                    <DiscoverabilitySettings />
+
                     {/* Security & Privacy */}
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
