@@ -23,9 +23,6 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import CreateNoteForm from './CreateNoteForm';
-import { MobileBottomNav } from '@/components/Navigation';
-
-import { MobileFAB } from '@/components/MobileFAB';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
@@ -781,12 +778,6 @@ export default function NotesPage() {
             />
           </Box>
         )}
-
-        {/* Mobile Bottom Navigation */}
-        <MobileBottomNav />
-
-        {/* Mobile FAB */}
-        <MobileFAB />
       </Box>
     </NotesErrorBoundary>
   );
