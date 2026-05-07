@@ -20,7 +20,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
-      <Navbar />
+      {/* Navbar/Topbar is now in app/(app)/layout.tsx as UnifiedTopbar - don't render it here */}
       
       {!isLanding && !isSharedPage && <DesktopSidebar />}
       
@@ -28,7 +28,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         component="main"
         sx={{
           minWidth: 0,
-          pt: '88px', // Fixed topbar height
+          pt: 0, // No top padding needed - topbar is fixed in app/(app)/layout
           pb: isLanding ? 0 : { xs: 12, md: 4 },
           transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           ml: (!isLanding && !isSharedPage) ? {
