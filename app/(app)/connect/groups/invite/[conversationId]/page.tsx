@@ -18,7 +18,6 @@ import { Users, ShieldCheck, ArrowRight } from 'lucide-react';
 import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/lib/auth';
-import { KYLRIX_AUTH_URI } from '@/lib/constants';
 
 type InvitePreview = {
   resourceType: string;
@@ -73,7 +72,7 @@ export default function HangoutInvitePage() {
       try {
         const requesterId = user?.$id ? `&requesterId=${encodeURIComponent(user.$id)}` : '';
         const response = await fetch(
-          `${KYLRIX_AUTH_URI}/api/connect/join-requests?resourceType=chat.conversation&resourceId=${encodeURIComponent(conversationId)}${requesterId}`,
+          `/api/connect/join-requests?resourceType=chat.conversation&resourceId=${encodeURIComponent(conversationId)}${requesterId}`,
           { credentials: 'include' }
         );
 
@@ -114,7 +113,7 @@ export default function HangoutInvitePage() {
 
     try {
       const authHeaders = user ? await buildAuthHeaders() : {};
-      const response = await fetch(`${KYLRIX_AUTH_URI}/api/connect/join-requests`, {
+      const response = await fetch(`/api/connect/join-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

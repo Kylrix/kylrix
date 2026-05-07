@@ -23,8 +23,6 @@ import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { createNoteCreationService } from '@/lib/sdk';
 import { buildSourceNoteTags } from '@/lib/sdk/crosslinks';
 
-const KYLRIX_AUTH_URI = `https://accounts.${APPWRITE_CONFIG.SYSTEM.DOMAIN}`;
-
 export const APPWRITE_ENDPOINT = APPWRITE_CONFIG.ENDPOINT;
 export const APPWRITE_PROJECT_ID = APPWRITE_CONFIG.PROJECT_ID;
 
@@ -78,7 +76,7 @@ async function updateNoteAccessForUser(
   action: PermissionUpdateAction = 'grant'
 ) {
   const jwt = await account.createJWT();
-  const response = await fetch(`${KYLRIX_AUTH_URI}/api/permissions`, {
+  const response = await fetch(`/api/permissions`, {
     method: action === 'grant' ? 'POST' : 'DELETE',
     headers: {
       'Content-Type': 'application/json',

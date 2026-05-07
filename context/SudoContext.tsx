@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { usePathname } from 'next/navigation';
+import type { KylrixApp } from '@/lib/sdk/design';
 
 interface SudoOptions {
     onSuccess: () => void;
@@ -19,7 +21,17 @@ interface SudoContextType {
 const SudoContext = createContext<SudoContextType | undefined>(undefined);
 
 export function SudoProvider({ children }: { children: ReactNode }) {
+    const pathname = usePathname();
     const [isSudoOpen, setIsSudoOpen] = useState(false);
+    const sudoApp: KylrixApp = (() => {
+        if (pathname?.startsWith('/vault')) return 'vault';
+        if (pathname?.startsWith('/flow')) return 'flow';
+        if (pathname?.startsWith('/connect')) return 'connect';
+        if (pathname?.startsWith('/accounts')) return 'accounts';
+        if (pathname?.startsWith('/settings')) return 'root';
+        return 'note';
+    })();
+
     const [pendingAction, setPendingAction] = useState<SudoOptions | null>(null);
     const [sudoPromise, setSudoPromise] = useState<{ resolve: (v: boolean) => void } | null>(null);
 
@@ -84,6 +96,7 @@ export function SudoProvider({ children }: { children: ReactNode }) {
                 onSuccess={handleSuccess}
                 onCancel={handleCancel}
                 intent={pendingAction?.intent}
+                app={sudoApp}
             />
         </SudoContext.Provider>
     );

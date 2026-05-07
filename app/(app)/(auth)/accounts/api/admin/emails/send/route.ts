@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { ID, Query } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { getEmailTemplateMeta } from '@/lib/email-template-catalog';
 import { renderEmailTemplate } from '@/lib/email-renderer';
+import { verifyUser } from '@/lib/api/permission-updater';
 
 type SendEmailBody = {
   templateId?: string;
@@ -17,8 +18,13 @@ function validateEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const user = await verifyUser(request);
+    if (!user || !Array.isArray((user as any).labels) || !(user as any).labels.includes('admin')) {
+      return NextResponse.json({ error: 'Forbidden: admin privileges required' }, { status: 403 });
+    }
+
     const { users, messaging } = createAdminClient();
 
     const body = (await request.json()) as SendEmailBody;
