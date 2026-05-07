@@ -20,25 +20,26 @@ import {
 /**
  * Persistent unified bottom bar across all apps.
  * Only renders on mobile, mounts once and persists across routes.
+ * Matches the exact styling from the connect app.
  */
 export function UnifiedBottomBar() {
   const theme = useTheme();
   const pathname = usePathname();
   const router = useRouter();
 
-  // Determine which app we're in and active nav item
-  const appContext = useMemo(() => {
+  // Determine which app we're in
+  const appValue = useMemo(() => {
     if (pathname?.startsWith('/note')) return 'note';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/flow')) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
     if (pathname?.startsWith('/accounts')) return 'accounts';
-    return 'note'; // Default
+    return 'note';
   }, [pathname]);
 
   // Get app-specific color for selected state
   const appColor = useMemo(() => {
-    switch (appContext) {
+    switch (appValue) {
       case 'vault':
         return '#10B981'; // Emerald
       case 'flow':
@@ -51,14 +52,17 @@ export function UnifiedBottomBar() {
       default:
         return '#EC4899'; // Pink
     }
-  }, [appContext]);
+  }, [appValue]);
 
-  const handleNavChange = (_: React.SyntheticEvent, newValue: string) => {
-    if (newValue === 'note') router.push('/note');
-    if (newValue === 'vault') router.push('/vault');
-    if (newValue === 'flow') router.push('/flow');
-    if (newValue === 'connect') router.push('/connect');
-    if (newValue === 'accounts') router.push('/accounts');
+  const handleChange = (_: React.SyntheticEvent, newValue: string) => {
+    const routes: Record<string, string> = {
+      note: '/note',
+      vault: '/vault',
+      flow: '/flow',
+      connect: '/connect',
+      accounts: '/accounts',
+    };
+    router.push(routes[newValue] || '/note');
   };
 
   return (
@@ -71,7 +75,7 @@ export function UnifiedBottomBar() {
         transform: 'translateX(-50%)',
         width: 'calc(100% - 48px)',
         maxWidth: '400px',
-        zIndex: theme.zIndex.appBar,
+        zIndex: theme.zIndex.appBar + 1,
       }}
     >
       <Paper
@@ -86,8 +90,8 @@ export function UnifiedBottomBar() {
         }}
       >
         <BottomNavigation
-          value={appContext}
-          onChange={handleNavChange}
+          value={appValue}
+          onChange={handleChange}
           showLabels={false}
           sx={{
             backgroundColor: 'transparent',
