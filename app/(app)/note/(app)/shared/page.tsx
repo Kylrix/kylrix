@@ -22,7 +22,6 @@ import {
   Public as GlobeAltIcon,
   Person as UserIcon,
 } from '@mui/icons-material';
-import { MobileBottomNav } from '@/components/Navigation';
 
 interface SharedNote extends Notes {
   sharedPermission?: string;
@@ -233,8 +232,6 @@ export default function SharedNotesPage() {
         )}
       </Container>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
     </Box>
   );
 }

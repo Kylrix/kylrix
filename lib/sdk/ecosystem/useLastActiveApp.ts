@@ -50,12 +50,12 @@ export function detectCurrentApp(): AppName | null {
 }
 
 /**
- * Get the last active app, or default to 'note' if none found
+ * Get the last active app, or default to 'connect' if none found
  */
 export function getLastActiveApp(): AppName {
-  if (typeof window === 'undefined') return 'note';
+  if (typeof window === 'undefined') return 'connect';
   const saved = localStorage.getItem('kylrix_last_active_app') as AppName | null;
-  return saved || 'note';
+  return saved || 'connect';
 }
 
 /**

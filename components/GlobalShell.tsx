@@ -24,15 +24,16 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const isWebsiteRoute = !isAppRoute;
   const { isCollapsed } = useSidebar();
   const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();
+  
+  // If it's a shared note page, we might want a different shell
+  const isSharedPage = pathname?.includes('/shared/');
+  
   const shouldShowBottomBar = Boolean(
     isAppRoute &&
       !isSharedPage &&
       pathname !== '/settings' &&
       (!pathname?.startsWith('/vault') || pathname?.startsWith('/vault/dashboard'))
   );
-
-  // If it's a shared note page, we might want a different shell
-  const isSharedPage = pathname?.includes('/shared/');
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>

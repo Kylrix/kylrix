@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect } from 'react';
 export type KylrixAppId = 'accounts' | 'note' | 'vault' | 'flow' | 'connect';
 
 const LAST_APP_KEY = 'kylrix_last_active_app';
-const DEFAULT_APP: KylrixAppId = 'note';
+const DEFAULT_APP: KylrixAppId = 'connect';
 
 export interface UseLastActiveAppReturn {
   appId: KylrixAppId;

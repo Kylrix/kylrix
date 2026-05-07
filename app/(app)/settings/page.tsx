@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
     Box, 
     Typography, 
@@ -19,6 +20,7 @@ import {
     alpha
 } from '@mui/material';
 import { 
+    ArrowLeft,
     Lock, 
     Shield, 
     Fingerprint, 
@@ -35,6 +37,7 @@ import { toast } from 'react-hot-toast';
 
 export default function SettingsPage() {
     const { user } = useAuth();
+    const router = useRouter();
     const _muiTheme = useTheme();
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [unlockModalOpen, setUnlockModalOpen] = useState(false);
@@ -97,9 +100,41 @@ export default function SettingsPage() {
         }
     };
 
+    const handleBack = () => {
+        const hasHistory = typeof window !== 'undefined' && window.history.length > 1;
+        const referrer = typeof document !== 'undefined' ? document.referrer : '';
+        const sameOriginReferrer =
+            typeof window !== 'undefined' && !!referrer && referrer.startsWith(window.location.origin);
+
+        if (hasHistory && sameOriginReferrer) {
+            router.back();
+            return;
+        }
+        router.push('/connect');
+    };
+
     return (
         <>
             <Box sx={{ maxWidth: 840, mx: 'auto', py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
+                <Button
+                    variant="outlined"
+                    onClick={handleBack}
+                    startIcon={<ArrowLeft size={16} />}
+                    sx={{
+                        mb: 2.5,
+                        borderRadius: '12px',
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        color: 'rgba(255,255,255,0.78)',
+                        borderColor: 'rgba(255,255,255,0.15)',
+                        '&:hover': {
+                            borderColor: 'rgba(255,255,255,0.3)',
+                            bgcolor: 'rgba(255,255,255,0.04)',
+                        },
+                    }}
+                >
+                    Back
+                </Button>
                 <Box sx={{ mb: 4 }}>
                     <Typography
                         variant="overline"
