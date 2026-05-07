@@ -962,6 +962,26 @@ export default function Topbar({
             )}
 
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
+              {!userId && (
+                <Tooltip title="Open Connect">
+                  <IconButton
+                    onClick={() => window.location.assign(getEcosystemUrl('connect'))}
+                    sx={{
+                      color: getAppColor('connect'),
+                      bgcolor: alpha(getAppColor('connect'), 0.08),
+                      border: '1px solid',
+                      borderColor: alpha(getAppColor('connect'), 0.2),
+                      borderRadius: '12px',
+                      width: 42,
+                      height: 42,
+                      '&:hover': { bgcolor: alpha(getAppColor('connect'), 0.14) },
+                    }}
+                  >
+                    <Logo app="connect" size={18} variant="icon" />
+                  </IconButton>
+                </Tooltip>
+              )}
+
               {userId && (
                 <>
                   <Tooltip title="Wallet">
