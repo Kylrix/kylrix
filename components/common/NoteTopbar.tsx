@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import {
   ChevronDown,
+  Menu,
   RefreshCw,
   Search,
   X as CloseIcon,
@@ -63,9 +64,13 @@ export default function NoteTopbar({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const isLandingRoute = pathname === '/';
+  const logoApp = isLandingRoute ? 'root' : 'note';
+  const showSearchControl = isAuthenticated && !isLandingRoute;
 
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
   const [searchingPeople, setSearchingPeople] = useState(false);
@@ -222,6 +227,7 @@ export default function NoteTopbar({
     setSearchOpen(false);
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
+    setMobileMenuOpen(false);
   }, []);
 
   const openSearch = useCallback(() => {
@@ -261,7 +267,15 @@ export default function NoteTopbar({
   );
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 
-  const activePanel = searchOpen ? 'search' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
+  const activePanel = searchOpen
+    ? 'search'
+    : profileMenuAnchorEl
+      ? 'profile'
+      : appMenuAnchorEl
+        ? 'ecosystem'
+        : mobileMenuOpen
+          ? 'mobile'
+          : null;
 
   useEffect(() => {
     if (!activePanel) return;
@@ -310,7 +324,7 @@ export default function NoteTopbar({
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
             <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-              <Logo app="note" size={18} variant="icon" />
+              <Logo app={logoApp} size={18} variant="icon" />
             </Box>
             <TextField
               inputRef={searchInputRef}
@@ -571,7 +585,7 @@ export default function NoteTopbar({
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1.25 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', color: '#6366F1', bgcolor: alpha('#6366F1', 0.08), border: `1px solid ${alpha('#6366F1', 0.24)}` }}>
-                    <Logo app="note" size={18} variant="icon" />
+                    <Logo app={logoApp} size={18} variant="icon" />
                   </Box>
                   <Box>
                     <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.1 }}>
@@ -755,6 +769,95 @@ export default function NoteTopbar({
     );
   };
 
+  const renderMobileMenuPanel = () => {
+    if (!mobileMenuOpen) return null;
+
+    return (
+      <Box sx={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.05)', bgcolor: '#161412', overflow: 'hidden' }}>
+        <Box sx={{ px: 2, py: 1.5, display: 'grid', gap: 0.75 }}>
+          {!isLandingRoute && (
+            <Button
+              fullWidth
+              onClick={() => {
+                setMobileMenuOpen(false);
+                openSearch();
+              }}
+              sx={{
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                borderRadius: '14px',
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+              startIcon={<Search size={16} />}
+            >
+              Search
+            </Button>
+          )}
+          <Button
+            fullWidth
+            onClick={(event) => {
+              setMobileMenuOpen(false);
+              openAppMenu(event);
+            }}
+            sx={{
+              justifyContent: 'flex-start',
+              textTransform: 'none',
+              borderRadius: '14px',
+              color: 'white',
+              bgcolor: 'rgba(255,255,255,0.02)',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+            startIcon={<ChevronDown size={16} />}
+          >
+            Ecosystem Apps
+          </Button>
+          {mode === 'shared' && onRefresh && (
+            <Button
+              fullWidth
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onRefresh();
+              }}
+              sx={{
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                borderRadius: '14px',
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+              startIcon={<RefreshCw size={16} />}
+            >
+              Refresh
+            </Button>
+          )}
+          {isAuthenticated && !isLandingRoute && (
+            <Button
+              fullWidth
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setIsWalletOpen(true);
+              }}
+              sx={{
+                justifyContent: 'flex-start',
+                textTransform: 'none',
+                borderRadius: '14px',
+                color: 'white',
+                bgcolor: 'rgba(255,255,255,0.02)',
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+              startIcon={<Wallet size={16} />}
+            >
+              Wallet
+            </Button>
+          )}
+        </Box>
+      </Box>
+    );
+  };
+
   return (
     <>
       <AppBar
@@ -807,7 +910,7 @@ export default function NoteTopbar({
                 position: 'relative',
               }}
             >
-              <Logo app="note" size={32} />
+              <Logo app={logoApp} size={32} />
               <IconButton
                 size="small"
                 sx={{
@@ -826,7 +929,7 @@ export default function NoteTopbar({
               </IconButton>
             </Box>
 
-            {isAuthenticated ? (
+            {showSearchControl ? (
               <Box
                 sx={{
                   width: { xs: 44, md: 114 },
@@ -937,12 +1040,13 @@ export default function NoteTopbar({
                 </Tooltip>
               )}
 
-              {isAuthenticated && (
+              {isAuthenticated && !isLandingRoute && (
                 <>
                   <Tooltip title="Wallet">
                     <IconButton
                       onClick={() => setIsWalletOpen(true)}
                       sx={{
+                        display: { xs: 'none', md: 'inline-flex' },
                         color: getAppColor('note'),
                         bgcolor: alpha(getAppColor('note'), 0.03),
                         border: '1px solid',
@@ -984,10 +1088,32 @@ export default function NoteTopbar({
                   </ButtonBase>
                 </>
               )}
+              <Box sx={{ display: { xs: 'inline-flex', md: 'none' } }}>
+                <IconButton
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setAppMenuAnchorEl(null);
+                    setProfileMenuAnchorEl(null);
+                    setMobileMenuOpen((prev) => !prev);
+                  }}
+                  sx={{
+                    color: 'rgba(255,255,255,0.75)',
+                    bgcolor: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '12px',
+                    width: 42,
+                    height: 42,
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
+                  }}
+                >
+                  <Menu size={18} />
+                </IconButton>
+              </Box>
             </Stack>
           </Box>
         </Box>
 
+        {renderMobileMenuPanel()}
         {renderSearchPanel()}
         {renderAppPanel()}
         {renderProfilePanel()}

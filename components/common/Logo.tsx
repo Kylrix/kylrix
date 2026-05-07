@@ -40,11 +40,12 @@ const Logo: React.FC<LogoProps> = ({
 
   const current = appColors[app] || appColors.kylrix;
 
-  // The Identity Split:
-  // Left Hemisphere = Application Specific Color
-  // Right Hemisphere = Ecosystem Indigo (#6366F1)
-  const leftColor = current.secondary;
-  const rightColor = (app === 'kylrix' || app === 'root') ? (isDarkMode ? "#FFFFFF" : "#000000") : current.primary;
+  // Root/Kylrix logo split must remain white-left and indigo-right.
+  // App logos keep app accent on left and ecosystem indigo on right.
+  const leftColor = (app === 'kylrix' || app === 'root')
+    ? (isDarkMode ? "#FFFFFF" : "#000000")
+    : current.secondary;
+  const rightColor = current.primary;
   
   // Center cutout color (punches through to background)
   const cutoutColor = isDarkMode ? "#0A0908" : "#FFFFFF";
