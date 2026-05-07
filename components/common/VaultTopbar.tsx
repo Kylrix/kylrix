@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
-import { WalletSidebar } from '@/components/overlays/WalletSidebar';
+import { useSudo } from '@/context/SudoContext';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
@@ -49,8 +49,7 @@ export default function VaultTopbar({
 }: VaultTopbarProps) {
   const { user, logout } = useAppwriteVault();
   const router = useRouter();
-
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const { requestSudo } = useSudo();
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
@@ -457,7 +456,11 @@ export default function VaultTopbar({
               <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
                 <Tooltip title="Wallet">
                   <IconButton
-                    onClick={() => setIsWalletOpen(true)}
+                    onClick={() => requestSudo({
+                      onSuccess: () => {
+                        // Wallet unlocked successfully
+                      }
+                    })}
                     sx={{
                       color: getAppColor('vault'),
                       bgcolor: alpha(getAppColor('vault'), 0.03),
@@ -506,7 +509,6 @@ export default function VaultTopbar({
         {renderAppPanel()}
         {renderProfilePanel()}
       </AppBar>
-      {isWalletOpen ? <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} /> : null}
     </>
   );
 }
