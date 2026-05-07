@@ -553,9 +553,9 @@ export default function LandingPage() {
   };
 
   return (
-    <Box component="main" sx={{ position: 'relative', overflow: 'clip', bgcolor: '#000', color: '#fff', pt: { xs: 10, md: 12 }, pb: { xs: 10, md: 14 } }}>
+    <Box component="main" sx={{ position: 'relative', overflow: 'clip', bgcolor: '#000', color: '#fff', pt: { xs: 5, md: 6 }, pb: { xs: 10, md: 14 } }}>
       <Container maxWidth="xl" sx={{ position: 'relative' }}>
-        <Stack spacing={4} alignItems="center" textAlign="center" sx={{ pt: { xs: 10, md: 14 }, pb: { xs: 8, md: 12 } }}>
+        <Stack spacing={4} alignItems="center" textAlign="center" sx={{ pt: { xs: 5, md: 7 }, pb: { xs: 8, md: 12 } }}>
           <Box
             sx={{
               display: 'inline-flex',
