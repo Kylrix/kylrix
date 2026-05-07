@@ -266,7 +266,7 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
       return { ...state, isLoading: action.payload };
 
     case 'SET_ERROR':
-      return { ...state, error: action.payload };
+      return { ...state, error: action.payload, isLoading: false };
 
     case 'SET_DATA':
       return {
@@ -611,6 +611,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
         // Fetch tasks and calendars (Nexus Optimized)
         const [tasksList, calendarsList] = await Promise.all([
           fetchOptimized(`f_tasks_${userId}`, () => taskApi.list([
+            Query.equal('userId', userId),
             Query.limit(1000),
             Query.select(['$id', 'userId', 'title', 'description', 'status', 'priority', 'dueDate', 'tags', 'assigneeIds', 'parentId', 'eventId', '$createdAt', '$updatedAt'])
           ])),

@@ -15,6 +15,8 @@ import {
   Settings as SettingsIcon,
   Lock as VaultIcon,
   CheckSquare as FlowIcon,
+  FileText as FormIcon,
+  Zap as EventsIcon,
   MessageCircle as ConnectIcon,
   Home as HomeIcon,
   Phone as CallsIcon,
@@ -72,10 +74,11 @@ export function UnifiedBottomBar() {
       return 'credentials';
     }
     if (appContext === 'flow') {
-      if (pathname?.includes('/calendar')) return 'calendar';
-      if (pathname === '/flow' || pathname?.includes('/tasks')) return 'goals';
+      if (pathname?.includes('/forms')) return 'forms';
+      if (pathname?.includes('/events')) return 'events';
       if (pathname?.includes('/settings')) return 'settings';
-      return 'overview';
+      if (pathname === '/flow' || pathname?.includes('/tasks')) return 'goals';
+      return 'goals';
     }
     if (appContext === 'connect') {
       if (pathname?.includes('/chats')) return 'chats';
@@ -109,9 +112,9 @@ export function UnifiedBottomBar() {
       router.push(routes[newValue] || '/vault/dashboard');
     } else if (appContext === 'flow') {
       const routes: Record<string, string> = {
-        overview: '/flow',
-        calendar: '/flow/calendar',
         goals: '/flow',
+        forms: '/flow/forms',
+        events: '/flow/events',
         settings: '/settings',
       };
       router.push(routes[newValue] || '/flow');
@@ -179,19 +182,19 @@ export function UnifiedBottomBar() {
     if (appContext === 'flow') {
       return [
         <BottomNavigationAction
-          key="overview"
-          value="overview"
-          icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />}
-        />,
-        <BottomNavigationAction
           key="goals"
           value="goals"
           icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
-          key="calendar"
-          value="calendar"
-          icon={<TagsIcon size={24} strokeWidth={1.5} className="lucide" />}
+          key="forms"
+          value="forms"
+          icon={<FormIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="events"
+          value="events"
+          icon={<EventsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
           key="settings"
@@ -231,8 +234,7 @@ export function UnifiedBottomBar() {
     const evaluateDrawerState = () => {
       if (typeof document === 'undefined') return;
       const hasOpenBottomDrawer = Boolean(
-        document.querySelector('.MuiDrawer-root .MuiDrawer-paperAnchorBottom') ||
-          document.querySelector('.MuiDrawer-root .MuiDrawer-paper.MuiDrawer-paperAnchorBottom')
+        document.querySelector('.MuiModal-root:not([aria-hidden="true"]) .MuiDrawer-paperAnchorBottom')
       );
       setHasBottomDrawerOpen(hasOpenBottomDrawer);
     };
