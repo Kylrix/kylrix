@@ -18,7 +18,7 @@ export const ECOSYSTEM_APPS: EcosystemApp[] = [
         description: 'Secure notes and research.',
         subdomain: 'note',
         icon: '📝',
-        color: '#00F0FF'
+        color: '#EC4899'
     },
     {
         id: 'vault',
@@ -26,23 +26,23 @@ export const ECOSYSTEM_APPS: EcosystemApp[] = [
         description: 'Passwords and 2FA.',
         subdomain: 'vault',
         icon: '🛡️',
-        color: '#FACC15'
+        color: '#10B981'
     },
     {
         id: 'flow',
         label: 'Kylrix Flow',
         description: 'Tasks and workflows.',
         subdomain: 'flow',
-        icon: '🌊',
-        color: '#4ADE80'
+        icon: '⚡',
+        color: '#A855F7'
     },
     {
         id: 'connect',
         label: 'Kylrix Connect',
         description: 'Messages and sharing.',
         subdomain: 'connect',
-        icon: '📡',
-        color: '#FF00F5'
+        icon: '💬',
+        color: '#F59E0B'
     },
     {
         id: 'id',
@@ -50,10 +50,14 @@ export const ECOSYSTEM_APPS: EcosystemApp[] = [
         description: 'Account settings.',
         subdomain: KYLRIX_AUTH_SUBDOMAIN,
         icon: '🆔',
-        color: '#8B5CF6'
+        color: '#6366F1'
     }
 ];
 
+/**
+ * Get the path for an app within the unified kylrix application.
+ * All apps are now served from a single domain with route prefixes like /note, /vault, etc.
+ */
 export const getEcosystemUrl = (subdomain: string) => {
     const appBasePaths: Record<string, string> = {
         'accounts': '/accounts',
@@ -66,3 +70,4 @@ export const getEcosystemUrl = (subdomain: string) => {
     };
     return appBasePaths[subdomain] || '/' + subdomain;
 };
+
