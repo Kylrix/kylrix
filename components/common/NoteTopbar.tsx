@@ -76,6 +76,7 @@ export default function NoteTopbar({
     pathname?.startsWith('/settings')
   );
   const isLandingRoute = isWebsiteRoute;
+  const isSettingsRoute = pathname?.startsWith('/settings');
   const activeApp = useMemo<KylrixApp>(() => {
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/flow')) return 'flow';
@@ -84,7 +85,7 @@ export default function NoteTopbar({
     if (pathname?.startsWith('/settings')) return 'connect';
     return 'note';
   }, [pathname]);
-  const logoApp = isWebsiteRoute ? 'root' : activeApp;
+  const logoApp = isWebsiteRoute || isSettingsRoute ? 'root' : activeApp;
   const showSearchControl = isAuthenticated && !isWebsiteRoute;
   const landingNavItems = [
     { label: 'Developers', href: '/developers' },
