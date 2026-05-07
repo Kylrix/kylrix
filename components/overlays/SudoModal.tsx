@@ -478,3 +478,6 @@ export default function SudoModal({
         </Drawer>
     );
 }
+
+// Migration compatibility: some pages import this overlay as a named export.
+export { SudoModal };
