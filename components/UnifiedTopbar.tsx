@@ -4,7 +4,6 @@ import { usePathname } from 'next/navigation';
 import { useMemo } from 'react';
 import NoteTopbar from '@/components/common/NoteTopbar';
 import VaultTopbar from '@/components/common/VaultTopbar';
-import TopbarShell from '@/components/layout/TopbarShell';
 
 /**
  * Persistent unified topbar that transforms based on current route.
@@ -37,7 +36,7 @@ export function UnifiedTopbar() {
     return <NoteTopbar />;
   }
   if (appContext === 'accounts') {
-    return <TopbarShell />;
+    return <NoteTopbar />;
   }
   if (appContext === 'flow') {
     return <NoteTopbar />;
