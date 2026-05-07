@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { TaskList } from '@/components';
 
 export default function Page() {
-  redirect('/flow');
+  return <TaskList />;
 }
