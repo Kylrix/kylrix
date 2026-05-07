@@ -22,6 +22,7 @@ import { OverlayProvider } from '@/components/ui/OverlayContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
+import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -46,7 +47,9 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                         <ToastProvider>
                                           <PotatoProvider>
                                             <AppChromeProvider>
-                                              {children}
+                                              <ChatNotificationProvider>
+                                                {children}
+                                              </ChatNotificationProvider>
                                             </AppChromeProvider>
                                           </PotatoProvider>
                                         </ToastProvider>
