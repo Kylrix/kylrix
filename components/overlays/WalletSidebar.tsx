@@ -168,7 +168,33 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         [wallets]
     );
 
-    const getExplorerUrl = (wallet: WalletSummary) => {
+    const getNetworkLogo = (chain: SupportedWalletChain) => {
+        const logoMap: Record<SupportedWalletChain, string> = {
+            'sol': '◎', // Solana symbol
+            'btc': '₿', // Bitcoin symbol
+            'eth': 'Ξ', // Ethereum symbol
+            'usdc': 'USDC',
+            'base': 'B',
+            'polygon': '⬟', // Polygon symbol
+            'sui': 'S',
+            'arbitrum': 'ARB',
+        };
+        return logoMap[chain] || '?';
+    };
+
+    const getNetworkColor = (chain: SupportedWalletChain) => {
+        const colorMap: Record<SupportedWalletChain, string> = {
+            'sol': '#14F195',
+            'btc': '#F7931A',
+            'eth': '#627EEA',
+            'usdc': '#2775CA',
+            'base': '#0052FF',
+            'polygon': '#8247E5',
+            'sui': '#6FB3D2',
+            'arbitrum': '#28A0F0',
+        };
+        return colorMap[chain] || '#666';
+    };
         switch (wallet.chain) {
             case 'btc':
                 return `https://www.blockchain.com/explorer/addresses/btc/${wallet.address}`;
@@ -404,63 +430,163 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         </Typography>
                     </Box>
 
-                    <Stack gap={1.5} sx={{ mb: 4 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
-                            Live Networks
-                        </Typography>
-                        {wallets.map((wallet) => (
-                            <Paper
-                                key={wallet.chain}
-                                sx={{
-                                    p: 1.5,
-                                    px: 2,
-                                    borderRadius: '18px',
-                                    bgcolor: SURFACE,
-                                    border: '1px solid rgba(255,255,255,0.03)',
-                                    ...rimLight,
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': { bgcolor: HIGHLIGHT, transform: 'translateX(4px)' }
-                                }}
-                            >
-                                <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-                                    <Box sx={{ minWidth: 0 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
-                                            {wallet.label}
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'JetBrains Mono', display: 'block' }}>
-                                            {shortenAddress(wallet.address)}
-                                        </Typography>
-                                    </Box>
-                                    <Stack alignItems="flex-end">
-                                        <Typography variant="body2" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
-                                            0.00 {wallet.symbol}
-                                        </Typography>
-                                        <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleCopyAddress(wallet.address)}
-                                                sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: ACCENT } }}
-                                            >
-                                                <Copy size={14} />
-                                            </IconButton>
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => {
-                                                    const explorerUrl = getExplorerUrl(wallet);
-                                                    if (explorerUrl) {
-                                                        window.open(explorerUrl, '_blank', 'noopener,noreferrer');
-                                                    }
-                                                }}
-                                                sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: 'white' } }}
-                                            >
-                                                <ExternalLink size={14} />
-                                            </IconButton>
+                    {/* Pinned Solana Network */}
+                    {wallets.find(w => w.chain === 'sol') && (
+                        <Stack gap={1.5} sx={{ mb: 4 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                                Pinned Network
+                            </Typography>
+                            {(() => {
+                                const solWallet = wallets.find(w => w.chain === 'sol');
+                                return (
+                                    <Paper
+                                        sx={{
+                                            p: 2,
+                                            px: 2.5,
+                                            borderRadius: '20px',
+                                            bgcolor: HIGHLIGHT,
+                                            border: `2px solid ${getNetworkColor('sol')}33`,
+                                            ...rimLight,
+                                            transition: 'all 0.2s ease',
+                                            '&:hover': { bgcolor: SURFACE, borderColor: `${getNetworkColor('sol')}66`, transform: 'translateX(4px)' }
+                                        }}
+                                    >
+                                        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+                                            <Stack direction="row" alignItems="center" gap={2}>
+                                                <Box sx={{ 
+                                                    width: 40, 
+                                                    height: 40, 
+                                                    borderRadius: '12px',
+                                                    bgcolor: alpha(getNetworkColor('sol'), 0.15),
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: getNetworkColor('sol'),
+                                                    fontWeight: 900,
+                                                    fontSize: '20px'
+                                                }}>
+                                                    {getNetworkLogo('sol')}
+                                                </Box>
+                                                <Box sx={{ minWidth: 0 }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
+                                                        {solWallet?.label}
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'JetBrains Mono', display: 'block' }}>
+                                                        {shortenAddress(solWallet?.address || '')}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+                                            <Stack alignItems="flex-end">
+                                                <Typography variant="body2" sx={{ fontWeight: 900, color: getNetworkColor('sol'), fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
+                                                    0.00 {solWallet?.symbol}
+                                                </Typography>
+                                                <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleCopyAddress(solWallet?.address || '')}
+                                                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: getNetworkColor('sol') } }}
+                                                    >
+                                                        <Copy size={14} />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => {
+                                                            if (solWallet) {
+                                                                const explorerUrl = getExplorerUrl(solWallet);
+                                                                if (explorerUrl) {
+                                                                    window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+                                                                }
+                                                            }
+                                                        }}
+                                                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: 'white' } }}
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                    </IconButton>
+                                                </Stack>
+                                            </Stack>
+                                        </Stack>
+                                    </Paper>
+                                );
+                            })()}
+                        </Stack>
+                    )}
+
+                    {/* Other Live Networks */}
+                    {wallets.filter(w => w.chain !== 'sol').length > 0 && (
+                        <Stack gap={1.5} sx={{ mb: 4 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                                Live Networks
+                            </Typography>
+                            {wallets.filter(w => w.chain !== 'sol').map((wallet) => (
+                                <Paper
+                                    key={wallet.chain}
+                                    sx={{
+                                        p: 1.5,
+                                        px: 2,
+                                        borderRadius: '18px',
+                                        bgcolor: SURFACE,
+                                        border: '1px solid rgba(255,255,255,0.03)',
+                                        ...rimLight,
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': { bgcolor: HIGHLIGHT, transform: 'translateX(4px)' }
+                                    }}
+                                >
+                                    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+                                        <Stack direction="row" alignItems="center" gap={1.5}>
+                                            <Box sx={{ 
+                                                width: 32, 
+                                                height: 32, 
+                                                borderRadius: '8px',
+                                                bgcolor: alpha(getNetworkColor(wallet.chain), 0.15),
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                color: getNetworkColor(wallet.chain),
+                                                fontWeight: 800,
+                                                fontSize: '14px'
+                                            }}>
+                                                {getNetworkLogo(wallet.chain)}
+                                            </Box>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
+                                                    {wallet.label}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'JetBrains Mono', display: 'block' }}>
+                                                    {shortenAddress(wallet.address)}
+                                                </Typography>
+                                            </Box>
+                                        </Stack>
+                                        <Stack alignItems="flex-end">
+                                            <Typography variant="body2" sx={{ fontWeight: 900, color: getNetworkColor(wallet.chain), fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
+                                                0.00 {wallet.symbol}
+                                            </Typography>
+                                            <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleCopyAddress(wallet.address)}
+                                                    sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: getNetworkColor(wallet.chain) } }}
+                                                >
+                                                    <Copy size={14} />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        const explorerUrl = getExplorerUrl(wallet);
+                                                        if (explorerUrl) {
+                                                            window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+                                                        }
+                                                    }}
+                                                    sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: 'white' } }}
+                                                >
+                                                    <ExternalLink size={14} />
+                                                </IconButton>
+                                            </Stack>
                                         </Stack>
                                     </Stack>
-                                </Stack>
-                            </Paper>
-                        ))}
-                    </Stack>
+                                </Paper>
+                            ))}
+                        </Stack>
+                    )}
 
                     {addableNetworks.length > 0 && (
                         <Stack gap={1.5} sx={{ mb: 4 }}>
