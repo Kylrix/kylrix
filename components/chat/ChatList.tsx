@@ -119,11 +119,17 @@ export const ChatList = () => {
         setSearching(true);
         try {
             const res = await UsersService.searchUsers(query);
+            const rows = Array.isArray(res)
+                ? res
+                : Array.isArray((res as any)?.rows)
+                    ? (res as any).rows
+                    : [];
             // Hide current user from results
-            const filtered = res.rows.filter((u: any) => (u.userId || u.$id) !== user?.$id);
+            const filtered = rows.filter((u: any) => (u.userId || u.$id) !== user?.$id);
             setSearchResults(filtered);
         } catch (error) {
             console.error('Global search failed:', error);
+            setSearchResults([]);
         } finally {
             setSearching(false);
         }
