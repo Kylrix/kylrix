@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AppShell } from '@/components/layout/AppShell';
 import { 
     Box, 
     Typography, 
@@ -15,7 +16,8 @@ import {
     ListItem,
     ListItemIcon,
     ListItemText,
-    useTheme
+    useTheme,
+    alpha
 } from '@mui/material';
 import { 
     Lock, 
@@ -97,38 +99,64 @@ export default function SettingsPage() {
     };
 
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '90px', md: 0 }, pt: 11 }}>
-            <Box sx={{ maxWidth: 800, mx: 'auto', py: 4, px: 2 }}>
-                <Typography variant="h4" sx={{ fontWeight: 900, mb: 4, fontFamily: 'var(--font-clash)' }}>
-                    Settings
-                </Typography>
+        <AppShell>
+            <Box sx={{ maxWidth: 840, mx: 'auto', py: { xs: 3, md: 4 }, px: { xs: 2, md: 3 } }}>
+                <Box sx={{ mb: 4 }}>
+                    <Typography
+                        variant="overline"
+                        sx={{
+                            letterSpacing: '0.16em',
+                            color: 'rgba(255,255,255,0.45)',
+                            fontWeight: 800,
+                            fontFamily: 'var(--font-mono)'
+                        }}
+                    >
+                        KYLRIX CONTROL PANEL
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5, fontFamily: 'var(--font-clash)', color: 'white' }}>
+                        Settings
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 1, maxWidth: 560 }}>
+                        Manage identity discoverability, encryption access, passkeys, and device preferences.
+                    </Typography>
+                </Box>
 
                 <Stack spacing={4}>
                     <DiscoverabilitySettings />
                     
                     <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Shield size={20} color="var(--color-primary)" /> Security & Privacy
+                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
+                            <Shield size={20} color="#6366F1" /> Security & Privacy
                         </Typography>
                         
                         <Paper sx={{ 
-                            p: 3, 
-                            borderRadius: '24px', 
-                            bgcolor: 'rgba(255, 255, 255, 0.02)', 
-                            border: '1px solid rgba(255, 255, 255, 0.05)' 
+                            p: { xs: 2.25, md: 3 }, 
+                            borderRadius: '28px', 
+                            bgcolor: '#161412', 
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            backgroundImage: 'none',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)'
                         }}>
                             <Stack spacing={3}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Vault Status</Typography>
-                                        <Typography variant="body2" sx={{ opacity: 0.6 }}>Current encryption state of your session</Typography>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Vault Status</Typography>
+                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Current encryption state of your session</Typography>
                                     </Box>
                                     <Button 
-                                        variant={isUnlocked ? "outlined" : "contained"}
+                                        variant={isUnlocked ? 'outlined' : 'contained'}
                                         onClick={() => isUnlocked ? ecosystemSecurity.lock() : setUnlockModalOpen(true)}
-                                        color={isUnlocked ? "inherit" : "primary"}
+                                        color={isUnlocked ? 'inherit' : 'primary'}
                                         startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
-                                        sx={{ borderRadius: '12px' }}
+                                        sx={{ 
+                                            borderRadius: '12px',
+                                            textTransform: 'none',
+                                            fontWeight: 700,
+                                            minWidth: 132,
+                                            ...(isUnlocked
+                                                ? { borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.85)' }
+                                                : { bgcolor: '#6366F1', '&:hover': { bgcolor: '#5458E8' } })
+                                        }}
                                     >
                                         {isUnlocked ? "Lock Vault" : (hasMasterpass === false ? "Setup" : "Unlock Vault")}
                                     </Button>
@@ -140,8 +168,8 @@ export default function SettingsPage() {
                                 <Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                                         <Box>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Passkeys</Typography>
-                                            <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Passkeys</Typography>
+                                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>
                                                 Use biometrics to unlock your secure session.
                                             </Typography>
                                         </Box>
@@ -151,15 +179,21 @@ export default function SettingsPage() {
                                             startIcon={<Fingerprint size={16} />}
                                             onClick={() => setPasskeySetupOpen(true)}
                                             disabled={hasMasterpass === false}
-                                            sx={{ borderRadius: '10px' }}
+                                            sx={{ 
+                                                borderRadius: '10px',
+                                                bgcolor: '#6366F1',
+                                                textTransform: 'none',
+                                                fontWeight: 700,
+                                                '&:hover': { bgcolor: '#5458E8' }
+                                            }}
                                         >
                                             Add Passkey
                                         </Button>
                                     </Box>
 
-                                    <List sx={{ bgcolor: 'rgba(255, 255, 255, 0.02)', borderRadius: '16px', p: 0, overflow: 'hidden' }}>
+                                    <List sx={{ bgcolor: '#0A0908', borderRadius: '18px', p: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
                                         {passkeyEntries.length === 0 ? (
-                                            <Box sx={{ p: 2, textAlign: 'center', opacity: 0.5 }}>
+                                            <Box sx={{ p: 2, textAlign: 'center', opacity: 0.6 }}>
                                                 <Typography variant="body2">No passkeys registered.</Typography>
                                             </Box>
                                         ) : (
@@ -171,15 +205,16 @@ export default function SettingsPage() {
                                                                 <Trash2 size={18} />
                                                             </IconButton>
                                                         }
+                                                        sx={{ py: 1.25 }}
                                                     >
                                                         <ListItemIcon>
-                                                            <Fingerprint size={20} color="var(--color-primary)" />
+                                                            <Fingerprint size={20} color="#6366F1" />
                                                         </ListItemIcon>
                                                         <ListItemText 
                                                             primary={pk.params?.name || `Passkey ${idx + 1}`}
                                                             secondary="Active"
-                                                            primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
-                                                            secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                                            primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem', color: 'white' }}
+                                                            secondaryTypographyProps={{ fontSize: '0.75rem', color: alpha('#10B981', 0.9) }}
                                                         />
                                                     </ListItem>
                                                     {idx < passkeyEntries.length - 1 && <Divider sx={{ opacity: 0.05 }} />}
@@ -193,16 +228,16 @@ export default function SettingsPage() {
 
                                 {/* App Preferences */}
                                 <Box>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Smartphone size={18} /> App Preferences
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
+                                        <Smartphone size={18} color="#6366F1" /> App Preferences
                                     </Typography>
                                     <Stack spacing={2}>
                                         <FormControlLabel
                                             control={<Switch defaultChecked color="primary" />}
                                             label={
                                                 <Box>
-                                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>Push Notifications</Typography>
-                                                    <Typography variant="caption" sx={{ opacity: 0.6 }}>Get notified of new messages</Typography>
+                                                    <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Push Notifications</Typography>
+                                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Get notified of new messages</Typography>
                                                 </Box>
                                             }
                                             sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
@@ -212,8 +247,8 @@ export default function SettingsPage() {
                                             control={<Switch defaultChecked color="primary" />}
                                             label={
                                                 <Box>
-                                                    <Typography variant="body1" sx={{ fontWeight: 600 }}>Active Status</Typography>
-                                                    <Typography variant="caption" sx={{ opacity: 0.6 }}>Show when you are online</Typography>
+                                                    <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Active Status</Typography>
+                                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Show when you are online</Typography>
                                                 </Box>
                                             }
                                             sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
@@ -245,6 +280,6 @@ export default function SettingsPage() {
                 }}
                 onCancel={() => setUnlockModalOpen(false)}
             />
-        </Box>
+        </AppShell>
     );
 }
