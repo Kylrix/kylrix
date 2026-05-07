@@ -9,21 +9,14 @@ import {
   Box, 
   Typography, 
   Button, 
-  IconButton, 
   CircularProgress, 
-  Container, 
+  Container,
   Dialog, 
   DialogTitle, 
   DialogContent, 
   DialogActions,
-  useTheme, 
-  useMediaQuery,
   alpha
 } from '@mui/material';
-import { 
-  Delete as TrashIcon,
-  ArrowBack as BackIcon
-} from '@mui/icons-material';
 import { useToast } from '@/components/ui/Toast';
 import CommentsSection from '@/app/(app)/note/(app)/notes/Comments';
 import NoteReactions from '@/app/(app)/note/(app)/notes/NoteReactions';
@@ -37,8 +30,6 @@ export default function NoteEditorPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { showSuccess, showError } = useToast();
-  const theme = useTheme();
-  const isMobileViewport = useMediaQuery(theme.breakpoints.down('md'));
   const { fetchOptimized, setCachedData, invalidate, getCachedData } = useDataNexus();
 
   const CACHE_KEY = useMemo(() => id ? `note_${id}` : null, [id]);
@@ -107,14 +98,6 @@ export default function NoteEditorPage() {
     }
   };
 
-  const title = useMemo(() => note?.title || 'Untitled note', [note]);
-
-  const handleMinimize = () => {
-    if (!note?.$id) return;
-    const target = isMobileViewport ? '/note/notes' : `/note/notes?openNoteId=${note.$id}`;
-    router.push(target);
-  };
-
   if (isLoading) {
     return (
       <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
@@ -133,86 +116,7 @@ export default function NoteEditorPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <Container maxWidth="lg" sx={{ py: 6 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between', 
-          gap: 2, 
-          bgcolor: 'rgba(28, 26, 24, 0.95)',
-          borderRadius: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          p: 4,
-          mb: 6,
-          boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.03)',
-        }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-            <IconButton
-              onClick={handleMinimize}
-              disabled={isDeleting}
-              sx={{ 
-                bgcolor: 'rgba(255,255,255,0.03)',
-                borderRadius: '16px',
-                border: '1px solid rgba(255,255,255,0.05)',
-                p: 1.5,
-                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                '&:hover': { 
-                  bgcolor: 'rgba(255,255,255,0.08)',
-                  borderColor: 'rgba(255,255,255,0.2)',
-                  transform: 'translateX(-4px)'
-                }
-              }}
-            >
-              <BackIcon sx={{ fontSize: 28 }} />
-            </IconButton>
-            <Box>
-              <Typography
-                variant="h2"
-                sx={{
-                  fontWeight: 900,
-                  letterSpacing: '-0.04em',
-                  fontFamily: 'var(--font-clash-display)',
-                  lineHeight: 1,
-                  mb: 0.5,
-                  fontSize: { xs: '1.35rem', md: '2.2rem' },
-                  overflowWrap: 'anywhere',
-                  wordBreak: 'break-word',
-                }}
-              >
-                {title}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                Note Editor
-              </Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Button
-              variant="contained"
-              color="error"
-              startIcon={<TrashIcon />}
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isDeleting}
-              sx={{ 
-                borderRadius: '14px',
-                px: 3,
-                py: 1.2,
-                fontWeight: 800,
-                bgcolor: alpha(theme.palette.error.main, 0.1),
-                color: 'error.main',
-                border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`,
-                '&:hover': {
-                  bgcolor: alpha(theme.palette.error.main, 0.2),
-                  borderColor: 'error.main',
-                  transform: 'translateY(-2px)'
-                }
-              }}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </Box>
-        </Box>
-        
+      <Container maxWidth={false} disableGutters sx={{ px: { xs: 1, sm: 2, md: 3 }, py: 2 }}>
         <Box component="main" sx={{ 
           perspective: '1200px',
           '& > *': {
@@ -229,12 +133,12 @@ export default function NoteEditorPage() {
         </Box>
 
         <Box sx={{ 
-          mt: 8, 
-          pt: 6, 
+          mt: 5, 
+          pt: 4, 
           borderTop: '1px solid rgba(255, 255, 255, 0.08)',
           display: 'flex',
           flexDirection: 'column',
-          gap: 4
+          gap: 3
         }}>
           <Box sx={{ 
             p: 4, 
