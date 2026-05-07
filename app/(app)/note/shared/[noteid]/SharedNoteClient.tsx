@@ -7,6 +7,7 @@ import {
   AccessTime as ClockIcon, 
   Visibility as EyeIcon, 
   LocalOffer as TagIcon, 
+  ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowRightIcon,
   Check as CheckIcon,
   ContentCopy as CopyIcon,
@@ -900,6 +901,23 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
       <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: 'white' }}>
         <NoteTopbar mode="shared" onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
         <Container maxWidth="md" sx={{ py: 8, pt: 12 }}>
+          <Box sx={{ mb: 2 }}>
+            <Button
+              component={NextLink}
+              href="/note/notes"
+              startIcon={<ArrowBackIcon />}
+              sx={{
+                borderRadius: '12px',
+                color: 'rgba(255,255,255,0.72)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                textTransform: 'none',
+                fontWeight: 700,
+                px: 1.5,
+              }}
+            >
+              Back
+            </Button>
+          </Box>
           <NoteContent />
           
           <Box sx={{ mt: 4 }}>
@@ -1048,6 +1066,23 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
       </Box>
 
       <Container maxWidth="md" sx={{ py: 8 }}>
+        <Box sx={{ mb: 2 }}>
+          <Button
+            component={NextLink}
+            href="/note/notes"
+            startIcon={<ArrowBackIcon />}
+            sx={{
+              borderRadius: '12px',
+              color: 'rgba(255,255,255,0.72)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              textTransform: 'none',
+              fontWeight: 700,
+              px: 1.5,
+            }}
+          >
+            Back
+          </Button>
+        </Box>
         <NoteContent />
 
         <Box sx={{ mt: 4 }}>

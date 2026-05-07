@@ -52,7 +52,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       </Box>
 
       {isAppRoute && !isSharedPage && <DynamicSidebar />}
-      {isAppRoute && <UnifiedBottomBar />}
+      {isAppRoute && !isSharedPage && <UnifiedBottomBar />}
       <ProUpgradeDrawer />
     </Box>
   );
