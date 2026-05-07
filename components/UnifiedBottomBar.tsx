@@ -7,39 +7,42 @@ import {
   BottomNavigation,
   BottomNavigationAction,
   Paper,
-  useTheme,
 } from '@mui/material';
 import {
   FileText as NotesIcon,
+  Share2 as SharedIcon,
+  Tag as TagsIcon,
+  Settings as SettingsIcon,
   Lock as VaultIcon,
+  Upload as ImportIcon,
   CheckSquare as FlowIcon,
   MessageCircle as ConnectIcon,
-  User as AccountsIcon,
+  Home as HomeIcon,
+  Phone as CallsIcon,
 } from 'lucide-react';
 
 /**
- * Persistent unified bottom bar across all apps.
- * Only renders on mobile, mounts once and persists across routes.
- * Matches the exact styling from the connect app.
+ * Persistent unified app-specific bottom bar.
+ * Shows different icons/tabs based on which app you're in.
+ * Attached to bottom with full width, curved top corners.
  */
 export function UnifiedBottomBar() {
-  const theme = useTheme();
   const pathname = usePathname();
   const router = useRouter();
 
   // Determine which app we're in
-  const appValue = useMemo(() => {
+  const appContext = useMemo(() => {
     if (pathname?.startsWith('/note')) return 'note';
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/flow')) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
     if (pathname?.startsWith('/accounts')) return 'accounts';
-    return 'note';
+    return null;
   }, [pathname]);
 
   // Get app-specific color for selected state
   const appColor = useMemo(() => {
-    switch (appValue) {
+    switch (appContext) {
       case 'vault':
         return '#10B981'; // Emerald
       case 'flow':
@@ -52,46 +55,208 @@ export function UnifiedBottomBar() {
       default:
         return '#EC4899'; // Pink
     }
-  }, [appValue]);
+  }, [appContext]);
 
-  const handleChange = (_: React.SyntheticEvent, newValue: string) => {
-    const routes: Record<string, string> = {
-      note: '/note',
-      vault: '/vault',
-      flow: '/flow',
-      connect: '/connect',
-      accounts: '/accounts',
-    };
-    router.push(routes[newValue] || '/note');
+  // Get current tab based on pathname
+  const getCurrentTab = () => {
+    if (appContext === 'note') {
+      if (pathname?.includes('/shared')) return 'shared';
+      if (pathname?.includes('/tags')) return 'tags';
+      if (pathname?.includes('/settings')) return 'settings';
+      return 'notes';
+    }
+    if (appContext === 'vault') {
+      if (pathname?.includes('/credentials')) return 'credentials';
+      if (pathname?.includes('/import')) return 'import';
+      if (pathname?.includes('/settings')) return 'settings';
+      return 'overview';
+    }
+    if (appContext === 'flow') {
+      if (pathname?.includes('/calendar')) return 'calendar';
+      if (pathname?.includes('/tasks')) return 'tasks';
+      if (pathname?.includes('/settings')) return 'settings';
+      return 'overview';
+    }
+    if (appContext === 'connect') {
+      if (pathname?.includes('/chats')) return 'chats';
+      if (pathname?.includes('/calls')) return 'calls';
+      if (pathname?.includes('/settings')) return 'settings';
+      return 'home';
+    }
+    if (appContext === 'accounts') {
+      if (pathname?.includes('/settings')) return 'settings';
+      return 'overview';
+    }
+    return null;
   };
+
+  const handleNavChange = (_: React.SyntheticEvent, newValue: string) => {
+    if (appContext === 'note') {
+      const routes: Record<string, string> = {
+        notes: '/note/notes',
+        shared: '/note/shared',
+        tags: '/note/tags',
+        settings: '/settings',
+      };
+      router.push(routes[newValue] || '/note/notes');
+    } else if (appContext === 'vault') {
+      const routes: Record<string, string> = {
+        overview: '/vault',
+        credentials: '/vault/credentials',
+        import: '/vault/import',
+        settings: '/settings',
+      };
+      router.push(routes[newValue] || '/vault');
+    } else if (appContext === 'flow') {
+      const routes: Record<string, string> = {
+        overview: '/flow',
+        calendar: '/flow/calendar',
+        tasks: '/flow/tasks',
+        settings: '/settings',
+      };
+      router.push(routes[newValue] || '/flow');
+    } else if (appContext === 'connect') {
+      const routes: Record<string, string> = {
+        home: '/connect',
+        chats: '/connect/chats',
+        calls: '/connect/calls',
+        settings: '/settings',
+      };
+      router.push(routes[newValue] || '/connect');
+    }
+  };
+
+  // Render app-specific navigation
+  const renderNavItems = () => {
+    if (appContext === 'note') {
+      return [
+        <BottomNavigationAction
+          key="notes"
+          value="notes"
+          icon={<NotesIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="shared"
+          value="shared"
+          icon={<SharedIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="tags"
+          value="tags"
+          icon={<TagsIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="settings"
+          value="settings"
+          icon={<SettingsIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+      ];
+    }
+    if (appContext === 'vault') {
+      return [
+        <BottomNavigationAction
+          key="overview"
+          value="overview"
+          icon={<VaultIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="credentials"
+          value="credentials"
+          icon={<NotesIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="import"
+          value="import"
+          icon={<ImportIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="settings"
+          value="settings"
+          icon={<SettingsIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+      ];
+    }
+    if (appContext === 'flow') {
+      return [
+        <BottomNavigationAction
+          key="overview"
+          value="overview"
+          icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="tasks"
+          value="tasks"
+          icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="calendar"
+          value="calendar"
+          icon={<TagsIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="settings"
+          value="settings"
+          icon={<SettingsIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+      ];
+    }
+    if (appContext === 'connect') {
+      return [
+        <BottomNavigationAction
+          key="home"
+          value="home"
+          icon={<HomeIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="chats"
+          value="chats"
+          icon={<ConnectIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="calls"
+          value="calls"
+          icon={<CallsIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+        <BottomNavigationAction
+          key="settings"
+          value="settings"
+          icon={<SettingsIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />,
+      ];
+    }
+    return null;
+  };
+
+  if (!appContext) return null;
 
   return (
     <Box
+      component="footer"
       sx={{
-        display: { xs: 'block', md: 'none' },
         position: 'fixed',
-        bottom: 24,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: 'calc(100% - 48px)',
-        maxWidth: '400px',
-        zIndex: theme.zIndex.appBar + 1,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 1300,
+        display: { xs: 'block', md: 'none' },
       }}
     >
       <Paper
         elevation={0}
         sx={{
-          borderRadius: '24px',
-          overflow: 'hidden',
-          backgroundColor: 'rgba(11, 9, 8, 0.8)',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          width: '100%',
+          bgcolor: '#161412',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          borderBottom: 0,
+          borderRadius: '24px 24px 0 0',
+          px: 2,
+          pt: 0.5,
+          pb: 'calc(1.5rem + env(safe-area-inset-bottom))',
         }}
       >
         <BottomNavigation
-          value={appValue}
-          onChange={handleChange}
+          value={getCurrentTab()}
+          onChange={handleNavChange}
           showLabels={false}
           sx={{
             backgroundColor: 'transparent',
@@ -111,26 +276,7 @@ export function UnifiedBottomBar() {
             },
           }}
         >
-          <BottomNavigationAction
-            value="note"
-            icon={<NotesIcon size={24} strokeWidth={1.5} className="lucide" />}
-          />
-          <BottomNavigationAction
-            value="vault"
-            icon={<VaultIcon size={24} strokeWidth={1.5} className="lucide" />}
-          />
-          <BottomNavigationAction
-            value="flow"
-            icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />}
-          />
-          <BottomNavigationAction
-            value="connect"
-            icon={<ConnectIcon size={24} strokeWidth={1.5} className="lucide" />}
-          />
-          <BottomNavigationAction
-            value="accounts"
-            icon={<AccountsIcon size={24} strokeWidth={1.5} className="lucide" />}
-          />
+          {renderNavItems()}
         </BottomNavigation>
       </Paper>
     </Box>
