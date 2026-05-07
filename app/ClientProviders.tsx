@@ -18,6 +18,7 @@ import { SudoProvider } from '@/context/SudoContext';
 import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
 import { OverlayProvider } from '@/components/ui/OverlayContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
+import { ToastProvider } from '@/components/ui/Toast';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -37,9 +38,11 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                               <ProUpgradeProvider>
                                 <OverlayProvider>
                                   <ContextMenuProvider>
-                                    <PotatoProvider>
-                                      {children}
-                                    </PotatoProvider>
+                                    <ToastProvider>
+                                      <PotatoProvider>
+                                        {children}
+                                      </PotatoProvider>
+                                    </ToastProvider>
                                   </ContextMenuProvider>
                                 </OverlayProvider>
                               </ProUpgradeProvider>
