@@ -72,6 +72,7 @@ export default function NoteTopbar({
     pathname?.startsWith('/accounts') ||
     pathname?.startsWith('/settings')
   );
+  const isLandingRoute = isWebsiteRoute;
   const logoApp = isWebsiteRoute ? 'root' : 'note';
   const showSearchControl = isAuthenticated && !isWebsiteRoute;
   const landingNavItems = [
