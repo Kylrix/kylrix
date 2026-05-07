@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { 
   Card, 
   CardContent, 
@@ -53,7 +52,6 @@ interface NoteCardProps {
 }
 
 const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete, onNoteSelect }) => {
-  const router = useRouter();
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
   const { isPinned, pinNote, unpinNote, upsertNote } = useNotes();
@@ -327,8 +325,14 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       onNoteSelect(note);
       return;
     }
-    // Navigate to note detail page
-    router.push(`/note/notes/${note.$id}`);
+    openSidebar(
+      <NoteDetailSidebar
+        note={note}
+        onUpdate={onUpdate || (() => {})}
+        onDelete={onDelete || (() => {})}
+      />,
+      note.$id || null
+    );
   };
 
   const handleDelete = () => {

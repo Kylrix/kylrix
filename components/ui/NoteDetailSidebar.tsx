@@ -142,8 +142,9 @@ export function NoteDetailSidebar({
   const [crossSuggestions, setCrossSuggestions] = useState<Array<{ id: string; label: string; description: string }>>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const isEncryptedNote = !!noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T4' && !noteMeta?.clientDecrypted;
-  const isT4EncryptedPublicNote = !!isPublic && noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T4';
+  const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
+  const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted;
+  const isT4EncryptedPublicNote = !!isPublic && isT4Encrypted;
   const isLegacyPublicNote = !!isPublic && !isT4EncryptedPublicNote;
   
   // Fetch linked tasks from Kylrix Flow
@@ -456,7 +457,7 @@ export function NoteDetailSidebar({
       metadata,
     };
 
-    if (isT4EncryptedPublicNote || (candidate.isPublic && noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T4')) {
+    if (isT4EncryptedPublicNote || (candidate.isPublic && isT4Encrypted)) {
       if (!lastT4Key) {
         throw new Error('Missing public note key');
       }
@@ -478,7 +479,7 @@ export function NoteDetailSidebar({
     const saved = await updateNote(candidate.$id, payload);
     onUpdate(saved);
     return saved;
-  }, [onUpdate, isT4EncryptedPublicNote, lastT4Key, noteMeta]);
+  }, [onUpdate, isT4EncryptedPublicNote, isT4Encrypted, lastT4Key, noteMeta]);
 
   const { isSaving: isAutosaving, forceSave } = useAutosave(autosaveCandidate, {
     enabled: !!liveNote.$id,
@@ -907,7 +908,9 @@ export function NoteDetailSidebar({
                 color: theme.palette.text.primary,
                 fontFamily: 'var(--font-clash-display)',
                 letterSpacing: '-0.02em',
-                lineHeight: 1.2
+                lineHeight: 1.2,
+                width: '100%',
+                overflowWrap: 'anywhere',
               }
             }}
           />
@@ -923,6 +926,8 @@ export function NoteDetailSidebar({
               fontSize: '2rem',
               lineHeight: 1.2,
               letterSpacing: '-0.02em',
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
               transition: 'color 0.2s ease',
               '&:hover': {
                 color: theme.palette.secondary.main
