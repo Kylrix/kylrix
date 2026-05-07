@@ -28,6 +28,7 @@ import { useAuth } from "@/context/auth/AuthContext";
 import { unlockWithPasskey } from "@/lib/passkey";
 import { PasskeySetup } from "./PasskeySetup";
 import toast from "react-hot-toast";
+import { getAppTone, type KylrixApp } from "@/lib/sdk/design";
 
 interface SudoModalProps {
     isOpen?: boolean;
@@ -36,6 +37,7 @@ interface SudoModalProps {
     onCancel?: () => void;
     onClose?: () => void;
     intent?: "unlock" | "initialize" | "reset";
+    app?: KylrixApp;
 }
 
 export default function SudoModal({
@@ -45,6 +47,7 @@ export default function SudoModal({
     onCancel,
     onClose,
     intent,
+    app = "note",
 }: SudoModalProps) {
     const isOpen = _isOpen ?? open ?? false;
     const cancelHandler = onCancel ?? onClose ?? (() => {});
@@ -60,6 +63,8 @@ export default function SudoModal({
     const [mode, setMode] = useState<"passkey" | "password" | "initialize" | null>(null);
     const [isDetecting, setIsDetecting] = useState(true);
     const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
+    const appTone = getAppTone(app);
+    const accentColor = appTone.secondary;
 
     const handleSuccessWithSync = useCallback(async () => {
         if (user?.$id) {
@@ -266,7 +271,7 @@ export default function SudoModal({
                         <Logo 
                             variant="icon" 
                             size={48} 
-                            app="note"
+                            app={app}
                             sx={{
                                 borderRadius: '18px',
                                 border: '2px solid rgba(255, 255, 255, 0.1)',
@@ -281,12 +286,12 @@ export default function SudoModal({
                             width: 24,
                             height: 24,
                             borderRadius: '8px',
-                            bgcolor: '#A855F7',
+                            bgcolor: accentColor,
                             color: 'white',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4)',
+                            boxShadow: `0 4px 12px ${accentColor}66`,
                             border: '3px solid #0a0a0a',
                             zIndex: 1
                         }}>
@@ -315,7 +320,7 @@ export default function SudoModal({
             <Box sx={{ px: { xs: 2.5, sm: 3 }, py: { xs: 1.5, sm: 2 }, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable', pb: 'calc(8px + env(safe-area-inset-bottom))', bgcolor: '#161412' }}>
                 {isDetecting || (loading && !password) ? (
                     <Box sx={{ display: "flex", justifyContent: "center", py: 2.5 }}>
-                        <CircularProgress sx={{ color: "#A855F7" }} />
+                        <CircularProgress sx={{ color: accentColor }} />
                     </Box>
                 ) : mode === "passkey" ? (
                     <Stack spacing={2} sx={{ mt: 1.5, alignItems: "center" }}>
@@ -357,8 +362,8 @@ export default function SudoModal({
                                 )}
                                 <defs>
                                     <linearGradient id="racingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" stopColor="#A855F7" />
-                                        <stop offset="100%" stopColor="#7E22CE" />
+                                        <stop offset="0%" stopColor={accentColor} />
+                                        <stop offset="100%" stopColor={accentColor} />
                                     </linearGradient>
                                 </defs>
                             </svg>
@@ -369,7 +374,7 @@ export default function SudoModal({
                                 justifyContent: "center",
                                 animation: passkeyLoading ? "pulse-hex 2s infinite ease-in-out" : "none"
                             }}>
-                                <Fingerprint size={32} color={passkeyLoading ? "#A855F7" : "rgba(255, 255, 255, 0.4)"} />
+                                <Fingerprint size={32} color={passkeyLoading ? accentColor : "rgba(255, 255, 255, 0.4)"} />
                             </Box>
                         </Box>
 
@@ -411,7 +416,7 @@ export default function SudoModal({
                                         bgcolor: "rgba(255, 255, 255, 0.03)",
                                         "& fieldset": { borderColor: "rgba(255, 255, 255, 0.1)" },
                                         "&:hover fieldset": { borderColor: "rgba(255, 255, 255, 0.2)" },
-                                        "&.Mui-focused fieldset": { borderColor: "#A855F7" },
+                                        "&.Mui-focused fieldset": { borderColor: accentColor },
                                     },
                                     "& .MuiInputBase-input": { color: "white" }
                                 }}
@@ -426,15 +431,15 @@ export default function SudoModal({
                             sx={{
                                 py: 1.8,
                                 borderRadius: "16px",
-                                background: "linear-gradient(135deg, #A855F7 0%, #7E22CE 100%)",
+                                background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%)`,
                                 color: "#FFFFFF",
                                 fontWeight: 800,
                                 fontFamily: "var(--font-satoshi)",
                                 textTransform: "none",
                                 "&:hover": {
-                                    background: "linear-gradient(135deg, #9333EA 0%, #6B21A8 100%)",
+                                    background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}DD 100%)`,
                                     transform: "translateY(-1px)",
-                                    boxShadow: "0 8px 25px rgba(168, 85, 247, 0.25)"
+                                    boxShadow: `0 8px 25px ${accentColor}40`
                                 }
                             }}
                         >

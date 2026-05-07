@@ -17,6 +17,7 @@ import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
 import { SudoProvider } from '@/context/SudoContext';
 import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
 import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
+import { AIProvider } from '@/context/AIContext';
 import { OverlayProvider } from '@/components/ui/OverlayContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { ToastProvider } from '@/components/ui/Toast';
@@ -38,15 +39,17 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                             <DrawerStateProvider>
                               <ProUpgradeProvider>
                                 <AgenticDrawerProvider>
-                                  <OverlayProvider>
-                                    <ContextMenuProvider>
-                                      <ToastProvider>
-                                        <PotatoProvider>
-                                          {children}
-                                        </PotatoProvider>
-                                      </ToastProvider>
-                                    </ContextMenuProvider>
-                                  </OverlayProvider>
+                                  <AIProvider>
+                                    <OverlayProvider>
+                                      <ContextMenuProvider>
+                                        <ToastProvider>
+                                          <PotatoProvider>
+                                            {children}
+                                          </PotatoProvider>
+                                        </ToastProvider>
+                                      </ContextMenuProvider>
+                                    </OverlayProvider>
+                                  </AIProvider>
                                 </AgenticDrawerProvider>
                               </ProUpgradeProvider>
                             </DrawerStateProvider>
