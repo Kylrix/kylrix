@@ -22,25 +22,26 @@ export const ECOSYSTEM_APPS: EcosystemApp[] = [
 
 export const DEFAULT_ECOSYSTEM_LOGO = '/logo/rall.svg';
 
+/**
+ * Get the path for an app within the unified kylrix application.
+ * All apps are now served from a single domain with route prefixes like /note, /vault, etc.
+ */
 export function getEcosystemUrl(subdomain: string) {
   if (!subdomain) {
     return '#';
   }
 
-  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  // Map subdomain to unified app paths
+  const appPaths: Record<string, string> = {
+    'accounts': '/accounts',
+    'note': '/note',
+    'vault': '/vault',
+    'flow': '/flow',
+    'connect': '/connect',
+    'id': '/accounts',
+    'kylrix': '/'
+  };
 
-  if (isLocalhost) {
-    const ports: Record<string, number> = {
-      accounts: 3000,
-      note: 3001,
-      vault: 3002,
-      flow: 3003,
-      connect: 3004,
-      kylrix: 3005
-    };
-    return `http://localhost:${ports[subdomain] || ports['accounts']}`;
-  }
-
-  return `https://${subdomain}.${KYLRIX_DOMAIN}`;
+  return appPaths[subdomain] || '/' + subdomain;
 }
+
