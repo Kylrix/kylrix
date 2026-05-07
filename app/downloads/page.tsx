@@ -14,7 +14,6 @@ import {
 } from '@mui/material';
 import { 
   Download,
-  Terminal,
   Monitor,
   Smartphone,
   ChevronRight,
@@ -67,15 +66,6 @@ const DownloadCard = ({ platform }: any) => (
 
 export default function DownloadsPage() {
   const platforms = [
-    { 
-      name: 'CLI Tooling', 
-      icon: Terminal, 
-      desc: 'Professional terminal client for managing extensions and P2P orchestration.',
-      links: [
-        { label: 'npm install -g @kylrix/cli' },
-        { label: 'View Source on GitHub' }
-      ]
-    },
     { 
       name: 'Desktop App', 
       icon: Monitor, 

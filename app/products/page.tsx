@@ -13,16 +13,13 @@ import {
   Divider,
 } from '@mui/material';
 import { 
-  ChevronRight, 
   ArrowRight,
   LayoutDashboard,
   MessageSquare,
   Lock,
   StickyNote,
-  Terminal,
   ShieldCheck,
 } from 'lucide-react';
-import NextLink from 'next/link';
 import Navbar from '@/components/Navbar';
 
 const ProductHero = ({ app, reversed = false }: any) => (
@@ -118,14 +115,6 @@ export default function ProductsPage() {
       color: '#A855F7'
     },
     {
-      name: 'CLI',
-      icon: Terminal,
-      tagline: 'DEVELOPER INTERFACE',
-      longDesc: 'A powerful, native terminal client engineered for precision. Manage your entire Kylrix environment, initialize extensions, and monitor secure streams directly from your shell.',
-      features: ['Headless Orchestration', 'Extension Development Kit', 'Security Audit Tools', 'JSON-Native API Support'],
-      color: '#10B981'
-    },
-    {
       name: 'Note',
       icon: StickyNote,
       tagline: 'INTELLIGENT KNOWLEDGE',
@@ -169,13 +158,10 @@ export default function ProductsPage() {
            <Typography variant="h2" sx={{ mb: 4, fontWeight: 900 }}>Ready to upgrade your stack?</Typography>
            <Typography variant="body1" sx={{ mb: 6, opacity: 0.5, maxWidth: 600, mx: 'auto', fontSize: '1.25rem' }}>
              Start your journey with the Kylrix ecosystem today. 
-             Download the clients and join the future of private productivity.
+             Join the future of private productivity.
            </Typography>
            <Stack direction="row" spacing={3} justifyContent="center">
               <Button size="large" variant="contained">Get Started for Free</Button>
-              <NextLink href="/downloads" passHref style={{ textDecoration: 'none' }}>
-                <Button size="large" variant="outlined">Download Clients</Button>
-              </NextLink>
            </Stack>
         </Box>
       </Container>

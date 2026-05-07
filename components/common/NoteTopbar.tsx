@@ -71,7 +71,6 @@ export default function NoteTopbar({
     { label: 'Developers', href: '/developers' },
     { label: 'Docs', href: '/docs' },
     { label: 'Pricing', href: '/pricing' },
-    { label: 'Download CLI', href: 'https://github.com/Kylrix/cli' },
   ] as const;
 
   const [isWalletOpen, setIsWalletOpen] = useState(false);

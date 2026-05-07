@@ -135,7 +135,6 @@ export default function Navbar() {
     { label: 'Developers', href: '/developers' },
     { label: 'Docs', href: '/docs' },
     { label: 'Pricing', href: '/pricing' },
-    { label: 'Download CLI', href: 'https://github.com/Kylrix/cli' },
   ], []);
 
   const activePanel = productsMenuOpen ? 'products' : profileMenuOpen ? 'profile' : navMenuOpen ? 'nav' : searchOpen ? 'search' : null;
