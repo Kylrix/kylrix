@@ -30,11 +30,11 @@ import AdminGuard from './AdminGuard';
 const DRAWER_WIDTH = 280;
 
 const menuItems = [
-  { label: 'Dashboard', icon: LayoutDashboard, href: '/admin' },
-  { label: 'Users', icon: Users, href: '/admin/users' },
-  { label: 'Email Center', icon: Mail, href: '/admin/emails' },
-  { label: 'Coupons', icon: Ticket, href: '/admin/coupons' },
-  { label: 'System Settings', icon: Settings, href: '/admin/settings' },
+  { label: 'Dashboard', icon: LayoutDashboard, href: '/accounts/admin' },
+  { label: 'Users', icon: Users, href: '/accounts/admin/users' },
+  { label: 'Email Center', icon: Mail, href: '/accounts/admin/emails' },
+  { label: 'Coupons', icon: Ticket, href: '/accounts/admin/coupons' },
+  { label: 'System Settings', icon: Settings, href: '/accounts/admin/settings' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

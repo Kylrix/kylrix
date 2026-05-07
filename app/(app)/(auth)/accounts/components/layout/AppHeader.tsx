@@ -202,7 +202,7 @@ export const AppHeader = () => {
       setReferralDrawerOpen(false);
       setReferralNote(null);
       await refreshUser();
-      router.push('/login');
+      router.push('/accounts/login');
     } catch (error) {
       console.error('Logout failed', error);
     }
@@ -316,7 +316,7 @@ export const AppHeader = () => {
             </IconButton>
           ) : (
             <Button
-              href="/login"
+              href="/accounts/login"
               variant="contained"
               size="small"
               sx={{

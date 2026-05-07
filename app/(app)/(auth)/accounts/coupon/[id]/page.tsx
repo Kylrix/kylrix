@@ -29,7 +29,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
   useEffect(() => {
     if (isLoading) return;
     if (!user) {
-      const url = new URL('/login', window.location.origin);
+      const url = new URL('/accounts/login', window.location.origin);
       url.searchParams.set('source', window.location.href);
       url.searchParams.set('return_to', `/coupon/${encodeURIComponent(couponId)}`);
       window.location.assign(url.toString());
@@ -51,7 +51,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
         setCoupon(data);
 
         if (data.requiresPayment && data.couponId) {
-          const checkoutUrl = new URL('/subscription/pro/checkout', window.location.origin);
+          const checkoutUrl = new URL('/accounts/subscription/pro/checkout', window.location.origin);
           checkoutUrl.searchParams.set('planId', data.planId || 'PRO_MONTH');
           checkoutUrl.searchParams.set('months', String(data.months || 1));
           checkoutUrl.searchParams.set('countryCode', (user?.prefs as any)?.region || 'US');
@@ -62,7 +62,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
 
         setState('claimed');
         setMessage(data.message || 'Coupon applied successfully.');
-        const successUrl = new URL('/pro/success', window.location.origin);
+        const successUrl = new URL('/accounts/pro/success', window.location.origin);
         successUrl.searchParams.set('success', 'true');
         window.location.replace(successUrl.toString());
       } catch (error: any) {
@@ -125,7 +125,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
 
             <Button
               variant="contained"
-              href="/subscription/pro/checkout"
+              href="/accounts/subscription/pro/checkout"
               sx={{
                 bgcolor: '#6366F1',
                 color: '#fff',

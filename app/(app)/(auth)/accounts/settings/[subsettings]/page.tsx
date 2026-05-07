@@ -125,7 +125,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
           checkInitialStatus(userData.$id, userData.email);
         }
       } catch (_err) {
-        if (mounted) router.push('/login');
+        if (mounted) router.push('/accounts/login');
       }
     }
     init();
@@ -191,7 +191,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
       }
 
       const normalizedMonths = Math.max(1, Number.parseInt(giftMonths || '1', 10) || 1);
-      const checkoutUrl = new URL('/subscription/pro/checkout', window.location.origin);
+      const checkoutUrl = new URL('/accounts/subscription/pro/checkout', window.location.origin);
       checkoutUrl.searchParams.set('planId', normalizedMonths >= 12 ? 'PRO_YEAR' : 'PRO_MONTH');
       checkoutUrl.searchParams.set('months', String(normalizedMonths));
       checkoutUrl.searchParams.set('giftRecipientId', recipientUserId);

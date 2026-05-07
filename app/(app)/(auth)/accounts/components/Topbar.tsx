@@ -616,7 +616,7 @@ export default function Topbar({
                     onClick={() => {
                       handleCloseAll();
                       if (onManageAccount) onManageAccount();
-                      else router.push('/settings');
+                      else router.push('/accounts/settings');
                     }}
                     sx={{
                       minWidth: 0,

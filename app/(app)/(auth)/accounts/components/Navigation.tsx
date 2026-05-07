@@ -24,11 +24,11 @@ export default function Navigation({ userEmail }: NavProps) {
   const handleSignOut = async () => {
     try {
       await safeDeleteCurrentSession();
-      router.replace('/login');
+      router.replace('/accounts/login');
     } catch (error) {
       console.error('Sign out failed:', error);
       // Fallback redirect
-      router.replace('/login');
+      router.replace('/accounts/login');
     }
   };
 
@@ -88,7 +88,7 @@ export default function Navigation({ userEmail }: NavProps) {
           </Button>
           <Button
             component={Link}
-            href="/settings"
+            href="/accounts/settings"
             startIcon={<Settings size={18} strokeWidth={1.5} />}
             sx={{ color: 'rgba(255, 255, 255, 0.6)', textTransform: 'none', fontWeight: 600, '&:hover': { color: 'white', bgcolor: 'rgba(255, 255, 255, 0.05)' } }}
           >

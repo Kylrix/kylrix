@@ -15,7 +15,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     const checkStatus = async () => {
       if (!isLoading) {
         if (!user || !user.email) {
-          router.push('/login');
+          router.push('/accounts/login');
           return;
         }
 

@@ -250,7 +250,7 @@ export default function AdminDashboard() {
               )}
             </Box>
 
-            <Link href="/admin/users" passHref legacyBehavior>
+            <Link href="/accounts/admin/users" passHref legacyBehavior>
               <Button 
                 fullWidth
                 component="a"

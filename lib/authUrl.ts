@@ -39,7 +39,7 @@ export function getSourceURL(): string {
  */
 export function openAuthPopup(): Window | null {
   const authURL = getAuthURL();
-  const loginPath = "/login";
+  const loginPath = "/accounts/login";
   const normalizedLoginPath = loginPath.startsWith("/")
     ? loginPath
     : `/${loginPath}`;

@@ -51,7 +51,7 @@ function HomeContent() {
 
         if (!userData) {
           // If not logged in, go to login page
-          const loginUrl = source ? `/login?source=${encodeURIComponent(source)}` : '/login';
+          const loginUrl = source ? `/accounts/login?source=${encodeURIComponent(source)}` : '/accounts/login';
           window.location.replace(loginUrl);
           return;
         }
@@ -60,7 +60,7 @@ function HomeContent() {
         console.error('IDM auth check failed:', error);
         // If error (usually 401), redirect to login
         const source = searchParams.get('source');
-        const loginUrl = source ? `/login?source=${encodeURIComponent(source)}` : '/login';
+        const loginUrl = source ? `/accounts/login?source=${encodeURIComponent(source)}` : '/accounts/login';
         window.location.replace(loginUrl);
       } finally {
         markReady();

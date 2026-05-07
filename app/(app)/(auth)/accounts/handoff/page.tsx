@@ -9,7 +9,7 @@ import { useSource } from '@/lib/source-context';
 import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 
 function buildLoginUrl(source: string | null, redirectUri: string) {
-  const url = new URL('/login', window.location.origin);
+  const url = new URL('/accounts/login', window.location.origin);
   url.searchParams.set('redirect_uri', redirectUri);
   url.searchParams.set('return_to', '/handoff');
   if (source) {
@@ -93,7 +93,7 @@ function AppHandoffContent() {
         if (mounted) {
           setStatus('Missing redirect target. Sending you to login.');
         }
-        window.location.replace('/login');
+        window.location.replace('/accounts/login');
         return;
       }
 
