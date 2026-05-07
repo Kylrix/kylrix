@@ -1040,26 +1040,28 @@ export default function NoteTopbar({
                 </Tooltip>
               )}
 
-              {isAuthenticated && !isLandingRoute && (
+              {isAuthenticated && (
                 <>
-                  <Tooltip title="Wallet">
-                    <IconButton
-                      onClick={() => setIsWalletOpen(true)}
-                      sx={{
-                        display: { xs: 'none', md: 'inline-flex' },
-                        color: getAppColor('note'),
-                        bgcolor: alpha(getAppColor('note'), 0.03),
-                        border: '1px solid',
-                        borderColor: alpha(getAppColor('note'), 0.1),
-                        borderRadius: '12px',
-                        width: 42,
-                        height: 42,
-                        '&:hover': { bgcolor: alpha(getAppColor('note'), 0.08) },
-                      }}
-                    >
-                      <Wallet size={18} strokeWidth={1.5} />
-                    </IconButton>
-                  </Tooltip>
+                  {!isLandingRoute && (
+                    <Tooltip title="Wallet">
+                      <IconButton
+                        onClick={() => setIsWalletOpen(true)}
+                        sx={{
+                          display: { xs: 'none', md: 'inline-flex' },
+                          color: getAppColor('note'),
+                          bgcolor: alpha(getAppColor('note'), 0.03),
+                          border: '1px solid',
+                          borderColor: alpha(getAppColor('note'), 0.1),
+                          borderRadius: '12px',
+                          width: 42,
+                          height: 42,
+                          '&:hover': { bgcolor: alpha(getAppColor('note'), 0.08) },
+                        }}
+                      >
+                        <Wallet size={18} strokeWidth={1.5} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
 
                   <ButtonBase
                     onClick={openProfileMenu}
