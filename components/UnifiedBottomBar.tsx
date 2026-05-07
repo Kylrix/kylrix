@@ -227,7 +227,8 @@ export function UnifiedBottomBar() {
     return null;
   };
 
-  if (!appContext) return null;
+  // Hide bottom bar on settings page
+  if (pathname === '/settings') return null;
 
   return (
     <Box
