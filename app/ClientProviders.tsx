@@ -23,11 +23,13 @@ import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
+import { ThemeProvider } from '@/lib/theme-context';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <AppwriteProvider>
+        <ThemeProvider>
         <DocsProvider>
           <SubscriptionProvider>
             <NotesProvider>
@@ -69,6 +71,7 @@ export function ClientProviders({ children }: { children: ReactNode }) {
             </NotesProvider>
           </SubscriptionProvider>
         </DocsProvider>
+        </ThemeProvider>
       </AppwriteProvider>
     </AuthProvider>
   );

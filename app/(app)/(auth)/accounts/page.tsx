@@ -1,78 +1,50 @@
 'use client';
 
 import { useEffect, Suspense, useState } from 'react';
-import { account } from '@/lib/appwrite';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSource } from '@/lib/source-context';
 import { Box, Button, CircularProgress, Typography, alpha } from '@mui/material';
 import { useColors } from '@/lib/theme-context';
+import { useAuth } from '@/context/auth/AuthContext';
 
 function HomeContent() {
   const dynamicColors = useColors();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setSource } = useSource();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    let hasResolved = false;
+    if (authLoading) return;
 
-    const markReady = () => {
-      if (!hasResolved && isMounted) {
-        hasResolved = true;
-        setIsChecking(false);
+    const source = searchParams.get('source');
+    if (source) {
+      setSource(source);
+    }
+
+    if (isAuthenticated) {
+      if (source) {
+        const url = new URL(source.startsWith('http') ? source : `https://${source}`);
+        url.searchParams.set('auth', 'success');
+        window.location.replace(url.toString());
+      } else {
+        router.replace('/accounts/settings/profile');
       }
-    };
+    } else {
+      const loginUrl = source ? `/accounts/login?source=${encodeURIComponent(source)}` : '/accounts/login';
+      window.location.replace(loginUrl);
+    }
 
-    const checkAuth = async () => {
-      try {
-        const source = searchParams.get('source');
-        if (source) {
-          setSource(source);
-        }
-
-        const userData = await account.get();
-        if (userData) {
-          if (source) {
-            const url = new URL(source.startsWith('http') ? source : `https://${source}`);
-            url.searchParams.set('auth', 'success');
-            const redirectUrl = url.toString();
-            
-            markReady();
-            window.location.replace(redirectUrl);
-            return;
-          } else {
-            // If logged in and no source, go to settings profile
-            router.replace('/accounts/settings/profile');
-            return;
-          }
-        }
-
-        if (!userData) {
-          // If not logged in, go to login page
-          const loginUrl = source ? `/accounts/login?source=${encodeURIComponent(source)}` : '/accounts/login';
-          window.location.replace(loginUrl);
-          return;
-        }
-
-      } catch (error: unknown) {
-        console.error('IDM auth check failed:', error);
-        // If error (usually 401), redirect to login
-        const source = searchParams.get('source');
-        const loginUrl = source ? `/accounts/login?source=${encodeURIComponent(source)}` : '/accounts/login';
-        window.location.replace(loginUrl);
-      } finally {
-        markReady();
-      }
-    };
-
-    checkAuth();
+    if (isMounted) {
+      setIsChecking(false);
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [router, searchParams, setSource]);
+  }, [authLoading, isAuthenticated, router, searchParams, setSource]);
 
     if (isChecking) {
     return (
