@@ -13,7 +13,7 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (user) {
-      router.replace("/vault");
+      router.replace("/vault/dashboard");
     }
   }, [user, router]);
 

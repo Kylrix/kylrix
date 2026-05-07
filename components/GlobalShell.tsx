@@ -32,6 +32,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const shouldShowBottomBar = Boolean(
     isAppRoute &&
       !isSharedPage &&
+      pathname !== '/note' &&
       pathname !== '/settings' &&
       (!pathname?.startsWith('/vault') || pathname?.startsWith('/vault/dashboard'))
   );
