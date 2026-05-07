@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Button, Box, Typography, Container } from '@mui/material';
 
 export default function NotFound() {
@@ -38,7 +37,6 @@ export default function NotFound() {
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
           <Button
-            component={Link}
             href="/"
             variant="outlined"
             sx={{ borderColor: 'divider' }}
@@ -46,7 +44,6 @@ export default function NotFound() {
             Home
           </Button>
           <Button
-            component={Link}
             href="/vault"
             variant="contained"
           >

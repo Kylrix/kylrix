@@ -26,7 +26,7 @@ import {
   Wallet,
   RefreshCw,
 } from 'lucide-react';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 import Logo, { KylrixApp } from './Logo';
 import EcosystemPortal from './EcosystemPortal';
@@ -43,7 +43,6 @@ const TOPBAR_HEIGHT = 88;
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated, isLoading, logout, openIDMWindow } = useAuth();
