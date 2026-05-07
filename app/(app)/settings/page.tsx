@@ -15,8 +15,7 @@ import {
     ListItem,
     ListItemIcon,
     ListItemText,
-    useTheme,
-    Container
+    useTheme
 } from '@mui/material';
 import { 
     Lock, 
@@ -99,19 +98,17 @@ export default function SettingsPage() {
 
     return (
         <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', pb: { xs: '90px', md: 0 }, pt: 11 }}>
-            <Container maxWidth="md" sx={{ py: 6 }}>
-                <Typography variant="h4" sx={{ fontWeight: 900, mb: 6, fontFamily: 'var(--font-clash)' }}>
+            <Box sx={{ maxWidth: 800, mx: 'auto', py: 4, px: 2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 900, mb: 4, fontFamily: 'var(--font-clash)' }}>
                     Settings
                 </Typography>
 
                 <Stack spacing={4}>
-                    {/* Discoverability Settings */}
                     <DiscoverabilitySettings />
-
-                    {/* Security & Privacy */}
+                    
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Shield size={20} color="#6366F1" /> Security & Privacy
+                            <Shield size={20} color="var(--color-primary)" /> Security & Privacy
                         </Typography>
                         
                         <Paper sx={{ 
@@ -176,7 +173,7 @@ export default function SettingsPage() {
                                                         }
                                                     >
                                                         <ListItemIcon>
-                                                            <Fingerprint size={20} color="#6366F1" />
+                                                            <Fingerprint size={20} color="var(--color-primary)" />
                                                         </ListItemIcon>
                                                         <ListItemText 
                                                             primary={pk.params?.name || `Passkey ${idx + 1}`}
@@ -205,7 +202,7 @@ export default function SettingsPage() {
                                             label={
                                                 <Box>
                                                     <Typography variant="body1" sx={{ fontWeight: 600 }}>Push Notifications</Typography>
-                                                    <Typography variant="caption" sx={{ opacity: 0.6 }}>Get notified of important updates</Typography>
+                                                    <Typography variant="caption" sx={{ opacity: 0.6 }}>Get notified of new messages</Typography>
                                                 </Box>
                                             }
                                             sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
@@ -227,7 +224,7 @@ export default function SettingsPage() {
                         </Paper>
                     </Box>
                 </Stack>
-            </Container>
+            </Box>
 
             <PasskeySetup 
                 isOpen={passkeySetupOpen}
