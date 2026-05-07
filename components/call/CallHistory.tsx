@@ -127,14 +127,14 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
 
     const startCall = (call: any) => {
         if (call.isLink) {
-            window.location.assign(`/call/${call.$id}`);
+            window.location.assign(`/connect/call/${call.$id}`);
             return;
         }
         if (!call.otherUser?.$id) {
             toast.error("User ID not available for this call");
             return;
         }
-        window.location.assign(`/chat/${call.otherUser.$id}`);
+        window.location.assign(`/connect/chat/${call.otherUser.$id}`);
     };
 
     if (loading) {

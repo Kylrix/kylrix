@@ -111,7 +111,7 @@ export const UserSearch = () => {
             }
 
             if (found) {
-                router.push(`/chat/${found.$id}`);
+                router.push(`/connect/chat/${found.$id}`);
                 return; // Instant jump
             }
         } catch (e) {
@@ -124,7 +124,7 @@ export const UserSearch = () => {
                 try {
                     const participants = targetUserId === user.$id ? [user.$id] : [user.$id, targetUserId];
                     const newConv = await ChatService.createConversation(participants, 'direct');
-                    router.push(`/chat/${newConv.$id}`);
+                    router.push(`/connect/chat/${newConv.$id}`);
                 } catch (error: any) {
                     console.error('Failed to create chat:', error);
                     toast.error(`Failed to create chat: ${error?.message || 'Unknown error'}`);

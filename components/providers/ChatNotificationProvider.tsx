@@ -240,7 +240,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                                     cursor: 'pointer'
                                 }}
                                 onClick={() => {
-                                    window.location.href = `/chat/${activeNotification.id}`;
+                                    window.location.href = `/connect/chat/${activeNotification.id}`;
                                     setActiveNotification(null);
                                 }}
                             >

@@ -114,7 +114,7 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
                 undefined, 
                 duration
             );
-            router.push(`/call/${_link.$id}?caller=true`);
+            router.push(`/connect/call/${_link.$id}?caller=true`);
             onClose();
         } catch (e: any) {
             console.error('[CallActionModal] Failed to start public call:', e);
@@ -159,12 +159,12 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
             toast.error("Please enter a meeting ID");
             return;
         }
-        router.push(`/call/${joinId.trim()}`);
+        router.push(`/connect/call/${joinId.trim()}`);
         onClose();
     };
 
     const handleCallIndividual = (convId: string, type: 'audio' | 'video' = 'video') => {
-        router.push(`/call/${convId}?caller=true&type=${type}`);
+        router.push(`/connect/call/${convId}?caller=true&type=${type}`);
         onClose();
     };
 

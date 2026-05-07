@@ -22,11 +22,13 @@ export default function CallsPage() {
         
         let id = joinInput.trim();
         // If it's a URL, extract the ID
-        if (id.includes('/call/')) {
+        if (id.includes('/connect/call/')) {
+            id = id.split('/connect/call/').pop() || id;
+        } else if (id.includes('/call/')) {
             id = id.split('/call/').pop() || id;
         }
         
-        router.push(`/call/${id}`);
+        router.push(`/connect/call/${id}`);
     };
 
     return (

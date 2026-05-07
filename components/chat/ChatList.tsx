@@ -155,7 +155,7 @@ export const ChatList = () => {
         );
 
         if (found) {
-            router.push(`/chat/${found.$id}`);
+            router.push(`/connect/chat/${found.$id}`);
             return;
         }
 
@@ -166,7 +166,7 @@ export const ChatList = () => {
                     await ecosystemSecurity.ensureE2EIdentity(user.$id);
                     const participants = [user.$id, targetUserId];
                     const newConv = await ChatService.createConversation(participants, 'direct');
-                    router.push(`/chat/${newConv.$id}`);
+                    router.push(`/connect/chat/${newConv.$id}`);
                 } catch (error: any) {
                     console.error('Failed to create chat:', error);
                     toast.error(`Failed to create chat: ${error?.message || 'Unknown error'}`);
@@ -593,12 +593,12 @@ export const ChatList = () => {
                         sx={{
                             width: 40,
                             height: 40,
-                bgcolor: '#000000',
+                bgcolor: '#161412',
                             color: 'text.primary',
                             border: '1px solid rgba(255, 255, 255, 0.06)',
                             boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 16px rgba(245, 158, 11, 0.08)',
                             '&:hover': {
-                                bgcolor: '#000000',
+                                bgcolor: '#161412',
                                 borderColor: 'rgba(255, 255, 255, 0.12)',
                                 boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
                             }
@@ -623,7 +623,7 @@ export const ChatList = () => {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 1,
-                        bgcolor: '#000000',
+                        bgcolor: '#161412',
                         borderRadius: '12px',
                         px: 2,
                         py: 1,
@@ -642,7 +642,7 @@ export const ChatList = () => {
                         },
                         '&:focus-within': {
                             borderColor: '#6366F1',
-                            bgcolor: '#000000'
+                            bgcolor: '#161412'
                         }
                     }}
                 >
@@ -686,11 +686,11 @@ export const ChatList = () => {
                                             sx={{
                                                 borderRadius: '12px',
                                                 py: 1,
-                            bgcolor: '#000000',
+                            bgcolor: '#161412',
                                                 border: '1px solid rgba(255, 255, 255, 0.07)',
                                                 boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.08)',
                                                 '&:hover': {
-                                                    bgcolor: '#000000',
+                                                    bgcolor: '#161412',
                                                     borderColor: 'rgba(255, 255, 255, 0.1)',
                                                     boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
                                                 }
@@ -736,21 +736,21 @@ export const ChatList = () => {
                             <ListItem key={conv.$id} disablePadding sx={{ mb: 0.5 }}>
                                 <ListItemButton
                                     component={Link}
-                                    href={`/chat/${conv.$id}`}
+                                    href={`/connect/chat/${conv.$id}`}
                                         sx={{
                                         borderRadius: '12px',
                                         py: 1.5,
                                         transition: 'all 160ms ease',
-                                        bgcolor: '#000000',
+                                        bgcolor: '#161412',
                                         border: '1px solid rgba(255, 255, 255, 0.07)',
                                         boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.08)',
                                         ...(activePreviewConversationId === conv.$id ? {
-                                                bgcolor: '#000000',
+                                                bgcolor: '#161412',
                                             boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.25), 0 0 30px rgba(99, 102, 241, 0.12)',
                                             transform: 'translateY(-1px)',
                                         } : {}),
                                         '&:hover': {
-                                                    bgcolor: '#000000',
+                                                    bgcolor: '#161412',
                                             borderColor: 'rgba(255, 255, 255, 0.1)',
                                             boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
                                         }

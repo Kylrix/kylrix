@@ -121,7 +121,7 @@ export function isCallActive(call: {
 }
 
 export function buildCallJoinUrl(baseUrl: string, callId: string, params: Record<string, string | number | boolean | null | undefined> = {}) {
-  const url = new URL(`/call/${callId}`, baseUrl);
+  const url = new URL(`/connect/call/${callId}`, baseUrl);
 
   for (const [key, value] of Object.entries(params)) {
     if (value === null || value === undefined || value === '') continue;
