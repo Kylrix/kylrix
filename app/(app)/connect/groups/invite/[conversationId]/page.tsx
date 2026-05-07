@@ -30,7 +30,7 @@ type InvitePreview = {
   inviteEnabled: boolean;
 };
 
-export default function GroupInvitePage() {
+export default function HangoutInvitePage() {
   const params = useParams();
   const router = useRouter();
   const conversationId = params.conversationId as string;
@@ -51,7 +51,7 @@ export default function GroupInvitePage() {
 
   const inviteUrl = useMemo(() => {
     if (!conversationId || typeof window === 'undefined') return '';
-    return `${window.location.origin}/groups/invite/${conversationId}`;
+    return `${window.location.origin}/hangouts/invite/${conversationId}`;
   }, [conversationId]);
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function GroupInvitePage() {
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || 'Group does not exist');
+          throw new Error(data.error || 'Hangout does not exist');
         }
 
         if (!active) return;
@@ -96,7 +96,7 @@ export default function GroupInvitePage() {
         if (!active) return;
         setPreview(null);
         setRequestState('error');
-        setError(loadError?.message || 'Group does not exist');
+        setError(loadError?.message || 'Hangout does not exist');
       }
     };
 
@@ -175,10 +175,10 @@ export default function GroupInvitePage() {
 
             <Box>
               <Typography sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', fontSize: '1.4rem' }}>
-                {preview?.name || 'Group invite'}
+                {preview?.name || 'Hangout invite'}
               </Typography>
               <Typography variant="body2" sx={{ opacity: 0.68, mt: 0.75 }}>
-                {preview?.description || 'Request access to this private group.'}
+                {preview?.description || 'Request access to this private hangout.'}
               </Typography>
             </Box>
 
@@ -192,7 +192,7 @@ export default function GroupInvitePage() {
             {requestState === 'error' ? (
               <Box sx={{ width: '100%' }}>
                 <Typography sx={{ fontWeight: 800, color: '#F87171' }}>
-                  {error || 'Group does not exist'}
+                  {error || 'Hangout does not exist'}
                 </Typography>
               </Box>
             ) : null}
@@ -200,7 +200,7 @@ export default function GroupInvitePage() {
             <Stack spacing={1.25} sx={{ width: '100%' }}>
               {requestState === 'joined' ? (
                 <Typography variant="body2" sx={{ opacity: 0.72, fontWeight: 700 }}>
-                  Already in group
+                  Already in hangout
                 </Typography>
               ) : null}
 

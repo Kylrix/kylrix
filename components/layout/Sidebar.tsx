@@ -108,7 +108,7 @@ export default function Sidebar() {
   ];
 
   const handleSmartListClick = (id: string) => {
-    router.push('/tasks');
+    router.push('/goals');
     switch (id) {
       case 'inbox':
         selectProject('inbox');
@@ -154,7 +154,7 @@ export default function Sidebar() {
   };
 
   const handleProjectClick = (projectId: string) => {
-    router.push('/tasks');
+    router.push('/goals');
     selectProject(projectId);
     setFilter({ ...filter, projectId, status: undefined, dueDate: undefined });
   };
@@ -212,17 +212,17 @@ export default function Sidebar() {
         <ListItem disablePadding sx={{ mb: 0.5 }}>
           <ListItemButton
             component={Link}
-            href="/tasks"
-            selected={pathname === '/tasks'}
-            sx={navItemStyles('/tasks')}
+            href="/goals"
+            selected={pathname === '/goals'}
+            sx={navItemStyles('/goals')}
           >
-            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/tasks' ? 'var(--color-brand)' : '#A1A1AA' }}>
+            <ListItemIcon sx={{ minWidth: 36, color: pathname === '/goals' ? 'var(--color-brand)' : '#A1A1AA' }}>
               <CheckSquareIcon size={20} />
             </ListItemIcon>
             <ListItemText 
-                primary="Tasks" 
+                primary="Goals" 
                 primaryTypographyProps={{ 
-                    fontWeight: pathname === '/tasks' ? 900 : 700, 
+                    fontWeight: pathname === '/goals' ? 900 : 700, 
                     fontSize: '0.85rem',
                     fontFamily: 'var(--font-satoshi)'
                 }} 
@@ -260,7 +260,7 @@ export default function Sidebar() {
                 {smartLists.map((item) => (
                   <ListItemButton
                     key={item.id}
-                    selected={pathname === '/tasks' && (filter.projectId === item.id || (item.id === 'completed' && filter.status?.includes('done')))}
+                    selected={pathname === '/goals' && (filter.projectId === item.id || (item.id === 'completed' && filter.status?.includes('done')))}
                     onClick={() => handleSmartListClick(item.id)}
                     sx={{
                       borderRadius: '10px',
@@ -301,7 +301,7 @@ export default function Sidebar() {
                 {regularProjects.map((project) => (
                   <ListItemButton
                     key={project.id}
-                    selected={pathname === '/tasks' && selectedProjectId === project.id}
+                    selected={pathname === '/goals' && selectedProjectId === project.id}
                     onClick={() => handleProjectClick(project.id)}
                     sx={{
                       borderRadius: '10px',

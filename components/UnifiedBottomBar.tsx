@@ -73,7 +73,7 @@ export function UnifiedBottomBar() {
     }
     if (appContext === 'flow') {
       if (pathname?.includes('/calendar')) return 'calendar';
-      if (pathname?.includes('/tasks')) return 'tasks';
+      if (pathname?.includes('/goals') || pathname?.includes('/tasks')) return 'goals';
       if (pathname?.includes('/settings')) return 'settings';
       return 'overview';
     }
@@ -111,7 +111,7 @@ export function UnifiedBottomBar() {
       const routes: Record<string, string> = {
         overview: '/flow',
         calendar: '/flow/calendar',
-        tasks: '/flow/tasks',
+        goals: '/flow/goals',
         settings: '/settings',
       };
       router.push(routes[newValue] || '/flow');
@@ -184,8 +184,8 @@ export function UnifiedBottomBar() {
           icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
-          key="tasks"
-          value="tasks"
+          key="goals"
+          value="goals"
           icon={<FlowIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
