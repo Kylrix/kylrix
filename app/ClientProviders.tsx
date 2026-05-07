@@ -16,6 +16,8 @@ import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
 import { SudoProvider } from '@/context/SudoContext';
 import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
+import { OverlayProvider } from '@/components/ui/OverlayContext';
+import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -33,9 +35,13 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                           <DynamicSidebarProvider>
                             <DrawerStateProvider>
                               <ProUpgradeProvider>
-                                <PotatoProvider>
-                                  {children}
-                                </PotatoProvider>
+                                <OverlayProvider>
+                                  <ContextMenuProvider>
+                                    <PotatoProvider>
+                                      {children}
+                                    </PotatoProvider>
+                                  </ContextMenuProvider>
+                                </OverlayProvider>
                               </ProUpgradeProvider>
                             </DrawerStateProvider>
                           </DynamicSidebarProvider>
