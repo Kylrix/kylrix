@@ -2666,7 +2666,7 @@ export function getShareableUrl(noteId: string, key?: string): string {
   const baseUrl = typeof window !== 'undefined' 
     ? window.location.origin 
     : process.env.NEXT_PUBLIC_APP_URI || 'http://localhost:3000';
-  return `${baseUrl}/shared/${noteId}${key ? `/${key}` : ''}`;
+  return `${baseUrl}/note/shared/${noteId}${key ? `/${key}` : ''}`;
 }
 
 const publicNoteDecryptionKeyCache = new Map<string, string>();
