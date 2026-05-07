@@ -41,8 +41,7 @@ export function UnifiedTopbar() {
     return <TopbarShell />;
   }
   if (appContext === 'flow') {
-    // Flow also uses TopbarShell-style topbar
-    return <TopbarShell />;
+    return <NoteTopbar />;
   }
   if (appContext === 'settings') {
     return <TopbarShell />;
