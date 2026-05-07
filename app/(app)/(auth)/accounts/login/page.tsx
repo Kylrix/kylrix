@@ -9,6 +9,7 @@ import { useSource } from '@/lib/source-context';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
 import { useAuth } from '@/context/auth/AuthContext';
+import { getLastActiveApp } from '@/lib/sdk/ecosystem/useLastActiveApp';
 import Logo from '../components/Logo';
 import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 
@@ -58,6 +59,14 @@ function LoginContent() {
   const [mfaChallengeOpen, setMfaChallengeOpen] = useState(false);
   const [mfaLoginMethod, setMfaLoginMethod] = useState<'email-otp' | 'oauth2' | 'password' | 'unknown'>('unknown');
   const appName = APPWRITE_CONFIG.SYSTEM?.RP_NAME || 'Kylrix';
+  const getPostAuthDefaultUrl = useCallback(() => {
+    const lastApp = getLastActiveApp();
+    if (lastApp === 'accounts') return '/accounts/settings/profile';
+    if (lastApp === 'note') return '/note';
+    if (lastApp === 'vault') return '/vault/dashboard';
+    if (lastApp === 'flow') return '/flow';
+    return '/connect';
+  }, []);
 
   const resolveLoginMethod = useCallback((provider?: string | null) => {
     const value = (provider || '').toLowerCase();
@@ -187,10 +196,8 @@ function LoginContent() {
     if (!isSuccess || window.opener) return;
 
     const backUrl = getBackUrl();
-    if (!backUrl) return;
-
-    window.location.replace(backUrl);
-  }, [getBackUrl, isSuccess]);
+    window.location.replace(backUrl || getPostAuthDefaultUrl());
+  }, [getBackUrl, getPostAuthDefaultUrl, isSuccess]);
 
   const handleOAuthLogin = async (provider: OAuthProvider) => {
     setLoading(true);
@@ -374,7 +381,7 @@ function LoginContent() {
                 window.close();
               } else {
                 const backUrl = getBackUrl();
-                window.location.href = backUrl || '/';
+                window.location.href = backUrl || getPostAuthDefaultUrl();
               }
             }}
             sx={{
@@ -550,7 +557,7 @@ function LoginContent() {
             <Button
               onClick={() => {
                 const backUrl = getBackUrl();
-                window.location.href = backUrl || '/';
+                window.location.href = backUrl || getPostAuthDefaultUrl();
               }}
               sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase' }}
             >
