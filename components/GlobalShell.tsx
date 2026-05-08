@@ -30,12 +30,16 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const isSharedPage = pathname?.includes('/shared/');
   const isVaultResetRoute = pathname?.startsWith('/vault/reset');
   
+  /** Full-page note at /note/notes/[id] — bottom tabs clash with editor chrome; list/shared/tags still get the bar. */
+  const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
+
   const shouldShowBottomBar = Boolean(
     isAppRoute &&
       !isVaultResetRoute &&
       !isSharedPage &&
       pathname !== '/note' &&
       pathname !== '/settings' &&
+      !isNoteFullPageDetail &&
       (!pathname?.startsWith('/vault') || pathname?.startsWith('/vault/dashboard'))
   );
 
