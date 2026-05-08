@@ -13,6 +13,13 @@ export interface AppActivity {
     timestamp?: string;
 }
 
+type LiveCallActivity = {
+    t: 'call';
+    id: string;
+    src?: 'connect' | 'note' | 'flow' | 'space';
+    s?: 'live' | 'ended';
+};
+
 /**
  * ActivityService: The "Nervous System" of the Kylrix Ecosystem.
  * Orchestrates cross-app synergies by observing and reacting to user actions.
@@ -95,5 +102,19 @@ export const ActivityService = {
         // 3. Trigger local notifications via Connect
 
         return activities; // Placeholder for actual analysis logic
-    }
+    },
+
+    async setLiveCallActivity(userId: string, callId: string, source: LiveCallActivity['src'] = 'connect') {
+        const payload: LiveCallActivity = {
+            t: 'call',
+            id: callId,
+            src: source,
+            s: 'live',
+        };
+        return this.updatePresence(userId, 'busy', JSON.stringify(payload));
+    },
+
+    async clearLiveCallActivity(userId: string) {
+        return this.updatePresence(userId, 'online', undefined);
+    },
 };

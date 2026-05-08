@@ -21,12 +21,14 @@ import {
   ChatBubbleOutline as CommentIcon,
   Archive as ArchiveIcon,
   ContentCopy as CopyIcon,
+  VideoCall as VideoCallIcon,
 } from '@mui/icons-material';
 import { useMediaQuery, useTheme } from '@mui/material';
 import { format, isToday, isTomorrow, isPast, isThisWeek } from 'date-fns';
 import { Task, Priority } from '@/types';
 import { useTask } from '@/context/TaskContext';
 import { useLayout } from '@/context/LayoutContext';
+import { useCallLauncher } from '@/context/CallLauncherContext';
 
 interface TaskItemProps {
   task: Task;
@@ -53,6 +55,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { completeTask, deleteTask, updateTask, labels, projects, selectTask } = useTask();
   const { openSecondarySidebar } = useLayout();
+  const { openCallLauncher } = useCallLauncher();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -83,6 +86,17 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   const handleArchive = () => {
     handleMenuClose();
     updateTask(task.id, { isArchived: true });
+  };
+
+  const handleStartTaskHuddle = () => {
+    handleMenuClose();
+    const participantIds = Array.from(new Set([task.creatorId, ...(task.assigneeIds || [])].filter(Boolean)));
+    openCallLauncher({
+      source: 'task',
+      taskId: task.id,
+      participantIds,
+      title: task.title ? `Task Huddle: ${task.title}` : 'Task Huddle',
+    });
   };
 
   const formatDueDate = (date: Date) => {
@@ -311,6 +325,10 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
         <MenuItem onClick={handleArchive}>
           <ListItemIcon><ArchiveIcon sx={{ fontSize: 16, color: '#A1A1AA' }} /></ListItemIcon>
           <ListItemText primary="Archive" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
+        </MenuItem>
+        <MenuItem onClick={handleStartTaskHuddle}>
+          <ListItemIcon><VideoCallIcon sx={{ fontSize: 16, color: '#A1A1AA' }} /></ListItemIcon>
+          <ListItemText primary="Start Huddle" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
         </MenuItem>
         <Box sx={{ my: 0.5, height: '1px', backgroundColor: '#222222' }} />
         <MenuItem onClick={handleDelete} sx={{ color: '#ef4444' }}>

@@ -50,6 +50,7 @@ import { updateNote, listFlowTasks, listFlowEvents, listKeepCredentials, Query, 
 import { formatFileSize } from '@/lib/utils';
 import {
   PlaylistAddCheck as TaskIcon,
+  VideoCall as VideoCallIcon,
   OpenInNew as OpenIcon,
   Event as EventIcon,
   VpnKey as KeyIcon,
@@ -59,6 +60,7 @@ import {
 } from '@mui/icons-material';
 import { useAutosave } from '@/hooks/useAutosave';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { useCallLauncher } from '@/context/CallLauncherContext';
 
 interface NoteDetailSidebarProps {
   note: Notes;
@@ -231,6 +233,7 @@ export function NoteDetailSidebar({
   const { promptSudo } = useSudo();
   const router = useRouter();
   const { closeSidebar } = useDynamicSidebar();
+  const { openCallLauncher } = useCallLauncher();
 
   const pinned = isPinned(liveNote.$id);
 
@@ -718,6 +721,27 @@ export function NoteDetailSidebar({
     }
   }, [liveNote, onUpdate, promptSudo, showError, showSuccess]);
 
+  const handleStartNoteHuddle = useCallback(() => {
+    const ownerId = String((liveNote as any).userId || '').trim();
+    const collaborators = Array.isArray((liveNote as any).collaborators)
+      ? (liveNote as any).collaborators
+          .map((entry: any) => {
+            if (typeof entry === 'string') return entry;
+            if (entry && typeof entry === 'object') return entry.userId || entry.id || '';
+            return '';
+          })
+          .filter(Boolean)
+      : [];
+    const participantIds = Array.from(new Set([ownerId, ...collaborators].filter(Boolean)));
+
+    openCallLauncher({
+      source: 'note',
+      noteId: liveNote.$id,
+      participantIds,
+      title: liveNote.title ? `Huddle: ${liveNote.title}` : 'Note Huddle',
+    });
+  }, [liveNote, openCallLauncher]);
+
   return (
     <Box sx={{ p: { xs: 2, md: 2.5 }, display: 'flex', flexDirection: 'column', gap: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
@@ -742,6 +766,18 @@ export function NoteDetailSidebar({
               }}
             >
               <ActionIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Start note huddle">
+            <IconButton
+              onClick={handleStartNoteHuddle}
+              sx={{
+                color: theme.palette.primary.main,
+                bgcolor: alpha(theme.palette.primary.main, 0.08),
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.14) }
+              }}
+            >
+              <VideoCallIcon fontSize="small" />
             </IconButton>
           </Tooltip>
           {showExpandButton && (

@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { WebRTCManager } from '@/lib/webrtc/WebRTCManager';
 import { useAuth } from '@/lib/auth';
 import { CallService } from '@/lib/services/call';
+import { ActivityService } from '@/lib/services/activity';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useRouter } from 'next/navigation';
@@ -333,8 +334,11 @@ export const CallInterface = ({
         if (rtcManager.current) {
             rtcManager.current.cleanup();
         }
+        if (user?.$id) {
+            ActivityService.clearLiveCallActivity(user.$id).catch(() => undefined);
+        }
         router.back();
-    }, [router]);
+    }, [router, user?.$id]);
 
     // Presence & Participant Tracking
     useEffect(() => {

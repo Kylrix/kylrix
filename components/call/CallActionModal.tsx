@@ -44,6 +44,9 @@ import { useAuth } from '@/lib/auth';
 import { CallService } from '@/lib/services/call';
 import toast from 'react-hot-toast';
 import type { CallLaunchContext } from '@/context/CallLauncherContext';
+import { updateNote } from '@/lib/appwrite/note';
+import { tasks as taskApi } from '@/lib/kylrixflow';
+import { ActivityService } from '@/lib/services/activity';
 
 // Brand Colors
 const COLORS = {
@@ -79,6 +82,21 @@ export const CallActionModal = ({
     const [duration, setDuration] = useState(120); // Default 2 hours
     const [creating, setCreating] = useState(false);
     const isScopedLaunch = Boolean(launchContext?.conversationId);
+    const isNoteLaunch = Boolean(launchContext?.noteId);
+    const isTaskLaunch = Boolean(launchContext?.taskId);
+
+    const annotateTaskHuddle = async (taskId: string, callId: string, startedAtIso: string, durationMinutes: number) => {
+        try {
+            const task = await taskApi.get(taskId);
+            const baseDescription = String(task?.description || '').trim();
+            const stamp = `\n\n[Kylrix Huddle]\ncallId=${callId}\nstartedAt=${startedAtIso}\ndurationMinutes=${durationMinutes}`;
+            await taskApi.update(taskId, {
+                description: `${baseDescription}${stamp}`.trim(),
+            });
+        } catch (error) {
+            console.warn('[CallActionModal] Failed to annotate task huddle metadata', error);
+        }
+    };
 
     const loadConversations = useCallback(async () => {
         if (!user) return;
@@ -135,6 +153,40 @@ export const CallActionModal = ({
                     isPrivate: true,
                     allowGuests: false,
                 });
+            } else if (launchContext?.noteId) {
+                const participants = Array.from(new Set(launchContext.participantIds || [user.$id]));
+                _link = await CallService.createScopedCallLink({
+                    userId: user.$id,
+                    type: 'video',
+                    title: instantTitle || launchContext.title || 'Note Huddle',
+                    durationMinutes: duration,
+                    scope: 'note',
+                    sourceApp: 'note',
+                    noteId: launchContext.noteId,
+                    participantIds: participants,
+                    isPrivate: true,
+                    allowGuests: false,
+                });
+                const startedAtIso = new Date().toISOString();
+                await updateNote(launchContext.noteId, {
+                    huddleCallId: _link.$id,
+                    huddleStartedAt: startedAtIso,
+                    huddleDurationMinutes: duration,
+                } as any);
+            } else if (launchContext?.taskId) {
+                const participants = Array.from(new Set(launchContext.participantIds || [user.$id]));
+                _link = await CallService.createScopedCallLink({
+                    userId: user.$id,
+                    type: 'video',
+                    title: instantTitle || launchContext.title || 'Task Huddle',
+                    durationMinutes: duration,
+                    scope: 'huddle',
+                    sourceApp: 'flow',
+                    participantIds: participants,
+                    isPrivate: true,
+                    allowGuests: false,
+                });
+                await annotateTaskHuddle(launchContext.taskId, _link.$id, new Date().toISOString(), duration);
             } else {
                 _link = await CallService.createCallLink(
                     user.$id,
@@ -145,6 +197,11 @@ export const CallActionModal = ({
                     duration
                 );
             }
+            await ActivityService.setLiveCallActivity(
+                user.$id,
+                _link.$id,
+                isNoteLaunch ? 'note' : isTaskLaunch ? 'flow' : 'connect',
+            ).catch(() => undefined);
             router.push(`/connect/call/${_link.$id}?caller=true`);
             onClose();
         } catch (e: any) {
@@ -194,9 +251,34 @@ export const CallActionModal = ({
         onClose();
     };
 
-    const handleCallIndividual = (convId: string, type: 'audio' | 'video' = 'video') => {
-        router.push(`/connect/call/${convId}?caller=true&type=${type}`);
-        onClose();
+    const handleCallIndividual = async (convId: string, type: 'audio' | 'video' = 'video') => {
+        if (!user) return;
+        setCreating(true);
+        try {
+            const conversation = conversations.find((c: any) => c.$id === convId);
+            const participantIds = Array.isArray(conversation?.participants)
+                ? Array.from(new Set(conversation.participants))
+                : [];
+            const link = await CallService.createScopedCallLink({
+                userId: user.$id,
+                type,
+                title: conversation?.name || (type === 'audio' ? 'Audio Call' : 'Video Call'),
+                durationMinutes: duration,
+                scope: conversation?.type === 'group' ? 'group' : 'direct',
+                sourceApp: 'connect',
+                conversationId: convId,
+                participantIds,
+                isPrivate: true,
+                allowGuests: false,
+            });
+            await ActivityService.setLiveCallActivity(user.$id, link.$id, 'connect').catch(() => undefined);
+            router.push(`/connect/call/${link.$id}?caller=true&type=${type}`);
+            onClose();
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to start call');
+        } finally {
+            setCreating(false);
+        }
     };
 
     const inputStyles = {
@@ -264,7 +346,7 @@ export const CallActionModal = ({
                         letterSpacing: '-0.02em',
                         color: 'white'
                     }}>
-                        {showScheduleForm ? 'Schedule Session' : showJoinWithId ? 'Join with ID' : isScopedLaunch ? 'Start Call Here' : 'New Session'}
+                        {showScheduleForm ? 'Schedule Session' : showJoinWithId ? 'Join with ID' : (isScopedLaunch || isNoteLaunch || isTaskLaunch) ? 'Start Call Here' : 'New Session'}
                     </Typography>
                 </Stack>
                 <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: COLORS.hover } }}>
@@ -331,9 +413,9 @@ export const CallActionModal = ({
                                     }
                                 }}
                             >
-                                {isScopedLaunch ? 'Start in This Chat' : 'Start Now'}
+                                {isScopedLaunch ? 'Start in This Chat' : isNoteLaunch ? 'Start Note Huddle' : isTaskLaunch ? 'Start Task Huddle' : 'Start Now'}
                             </Button>
-                            {!isScopedLaunch && (
+                            {!isScopedLaunch && !isNoteLaunch && !isTaskLaunch && (
                                 <Button
                                     fullWidth
                                     variant="outlined"
@@ -359,7 +441,7 @@ export const CallActionModal = ({
                             )}
                         </Stack>
 
-                        {!isScopedLaunch && (
+                        {!isScopedLaunch && !isNoteLaunch && !isTaskLaunch && (
                             <Button
                                 fullWidth
                                 variant="text"
@@ -378,9 +460,9 @@ export const CallActionModal = ({
                             </Button>
                         )}
 
-                        {!isScopedLaunch && <Divider sx={{ opacity: 0.05, my: 1 }} />}
+                        {!isScopedLaunch && !isNoteLaunch && !isTaskLaunch && <Divider sx={{ opacity: 0.05, my: 1 }} />}
 
-                        {!isScopedLaunch && <Box sx={{ mt: 1 }}>
+                        {!isScopedLaunch && !isNoteLaunch && !isTaskLaunch && <Box sx={{ mt: 1 }}>
                             <Typography variant="caption" sx={{ 
                                 fontWeight: 900, 
                                 color: 'rgba(255,255,255,0.3)', 
