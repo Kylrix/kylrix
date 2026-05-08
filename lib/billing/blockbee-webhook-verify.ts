@@ -33,6 +33,7 @@ export function verifyBlockBeeWebhookPostSignature(
   }
 }
 
-export function blockBeeSignatureVerificationEnabled(): boolean {
+/** When false, signature verification is skipped (local/debug only — never enable in production). */
+export function shouldVerifyBlockBeeWebhookSignature(): boolean {
   return process.env.BLOCKBEE_ALLOW_UNSIGNED_WEBHOOKS !== 'true';
 }

@@ -5,6 +5,7 @@ import { billingManager } from '@/lib/billing/provider-factory';
 import { StripeProvider } from '@/lib/billing/providers/stripe-provider';
 import { CryptoPaymentProvider } from '@/lib/billing/providers/crypto-provider';
 import { PaymentMethod } from '@/lib/billing/types';
+import { registerBlockBeePendingCheckout } from '@/lib/services/internal/blockbee-pending-checkout';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
@@ -170,7 +171,7 @@ export async function createBillingCheckoutSessionAction(input: {
     }
   }
 
-  return provider.createCheckoutSession(
+  const session = await provider.createCheckoutSession(
     planId,
     user.$id,
     countryCode || 'US',
@@ -184,6 +185,34 @@ export async function createBillingCheckoutSessionAction(input: {
       baseUrl: baseUrl || null,
     },
   );
+
+  if (
+    String(method).toUpperCase() === PaymentMethod.CRYPTO &&
+    session?.id &&
+    session.provider === PaymentMethod.CRYPTO
+  ) {
+    const expectedAmountUsd =
+      typeof adjustedAmountUsd === 'number' && Number.isFinite(adjustedAmountUsd)
+        ? adjustedAmountUsd
+        : calculateSubscriptionPrice(String(planId), String(countryCode || 'US'), 'CRYPTO', normalizedMonths);
+
+    await registerBlockBeePendingCheckout({
+      paymentId: session.id,
+      payerUserId: user.$id,
+      planId: String(planId),
+      months: normalizedMonths,
+      countryCode: String(countryCode || 'US'),
+      expectedAmountUsd,
+      giftRecipientId: giftRecipientId || undefined,
+      giftRecipientName: giftRecipientName || undefined,
+      giftMessage: giftMessage || undefined,
+      couponId: couponRow?.$id || undefined,
+    }).catch((err) => {
+      console.error('[Billing] BlockBee pending checkout registry failed', err);
+    });
+  }
+
+  return session;
 }
 
 export async function claimCouponAction(couponIdInput?: string, jwtInput?: string) {
