@@ -20,16 +20,9 @@ export const CallService = {
     },
 
     async getCallLinkByCode(code: string) {
-        try {
-            const res = await tablesDB.listRows({
-                databaseId: DB_ID,
-                tableId: LINKS_TABLE,
-                queries: [Query.equal('code', code), Query.limit(1)],
-            });
-            return res.rows[0] || null;
-        } catch (_e) {
-            return await this.getCallLink(code);
-        }
+        // Legacy helper name kept for compatibility:
+        // calls are identified by row $id in the live schema (no "code" column).
+        return await this.getCallLink(code);
     },
 
     async createCallLink(
@@ -47,18 +40,18 @@ export const CallService = {
             // Expire based on duration (default 2 hours)
             const expiresAt = new Date(startTime.getTime() + durationMinutes * 60 * 1000).toISOString();
 
-            // Create the row with the new concise structure
+            // Live "calls" schema does not include a "code" attribute.
             const payload: any = {
                 userId,
                 type,
                 expiresAt,
                 startsAt: startTime.toISOString(),
-                code: ID.unique()
             };
 
             if (title) payload.title = title;
             if (metadata) payload.metadata = metadata;
             else if (conversationId) payload.metadata = JSON.stringify({ conversationId });
+            if (conversationId) payload.conversationId = conversationId;
 
             console.log('[CallService] Creating call in new table with payload:', payload);
 
