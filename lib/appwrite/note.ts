@@ -1491,9 +1491,7 @@ export async function createTaskFromNote(note: Notes) {
   const user = await getCurrentUser();
   if (!user || !user.$id) throw new Error("User not authenticated");
 
-  // Plan check
-  const plan = user.prefs?.subscriptionTier || 'FREE';
-  if (plan !== 'PRO' && plan !== 'ORG' && plan !== 'LIFETIME') {
+  if (!hasPaidKylrixPlan(user)) {
     throw new Error("AI Actions are available for PRO subscribers only.");
   }
 
