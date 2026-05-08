@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useSubscription } from '../context/SubscriptionContext';
+import { useSubscription } from '../SubscriptionContext';
 import { SubscriptionTier } from '../lib/ppp';
 
 interface PaywallWrapperProps {
@@ -19,11 +19,20 @@ export function PaywallWrapper({
 
   if (isLoading) return null;
 
-  const tiers: (SubscriptionTier | 'FREE')[] = ['FREE', 'PRO'];
-  const userTierIndex = tiers.indexOf(currentTier);
-  const requiredTierIndex = tiers.indexOf(requiredTier);
+  const tierRank = (tier: typeof currentTier) => {
+    if (tier === 'FREE') return 0;
+    if (tier === 'PRO') return 1;
+    if (tier === 'ORG' || tier === 'LIFETIME') return 2;
+    return 0;
+  };
 
-  const hasAccess = userTierIndex >= requiredTierIndex;
+  const requiredRankMap: Record<string, number> = { FREE: 0, PRO: 1 };
+  const requiredRank =
+    typeof requiredTier === 'string' && requiredRankMap[requiredTier] !== undefined
+      ? requiredRankMap[requiredTier]
+      : 1;
+
+  const hasAccess = tierRank(currentTier) >= requiredRank;
 
   if (!hasAccess) {
     return fallback || (

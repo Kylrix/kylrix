@@ -1,5 +1,10 @@
 // Utility helpers
 
+import {
+  billingTierHasPaidAccess,
+  normalizeBillingPrefsTier,
+} from '@/lib/subscription/tier-resolution';
+
 // Safely get a user field preferring top-level value, then legacy prefs
 // Example: getUserField(user, 'profilePicId') will return user.profilePicId || user.prefs?.profilePicId
 export function getUserField<T = any>(user: any, field: string): T | null {
@@ -29,9 +34,26 @@ export function getUserWalletAddress(user: any): string | null {
   return getUserField<string>(user, 'walletEth') || getUserField<string>(user, 'walletAddress');
 }
 
-// Subscription tier (fallback to FREE string) - do not import enum here to avoid cycles
+/**
+ * Client-side tier for paywalls (`subscriptionExpiresAt`-aware; never trusts `tier`/`subscriptionTier`
+ * alone for PRO unless expiry is valid).
+ */
 export function getUserSubscriptionTier(user: any): string {
-  return getUserField<string>(user, 'subscriptionTier') || 'FREE';
+  if (!user) return 'FREE';
+  const base = user.prefs && typeof user.prefs === 'object' ? { ...(user.prefs as object) } : {};
+  const merged: Record<string, unknown> = { ...base };
+  const sub = getUserField<string>(user, 'subscriptionTier');
+  const tg = getUserField<string>(user, 'tier');
+  const exp = getUserField<string>(user, 'subscriptionExpiresAt');
+  if (sub) merged.subscriptionTier = sub;
+  if (tg) merged.tier = tg;
+  if (exp) merged.subscriptionExpiresAt = exp;
+  return normalizeBillingPrefsTier(merged);
+}
+
+/** Prefer this over comparing to PRO only — includes ORG/LIFETIME. */
+export function hasPaidKylrixPlan(user: any): boolean {
+  return billingTierHasPaidAccess(getUserSubscriptionTier(user));
 }
 
 export function getUserSubscriptionExpiresAt(user: any): string | null {

@@ -13,13 +13,6 @@ export function SubscriptionBadge({ showFree = false }: SubscriptionBadgeProps) 
   if (isLoading) return null;
   if (!showFree && currentTier === 'FREE') return null;
 
-  const tierLabel =
-    currentTier === 'FREE'
-      ? 'FREE'
-      : currentTier === 'PRO'
-        ? 'PRO'
-        : currentTier;
-
   const styles: Record<string, React.CSSProperties> = {
     badge: {
       padding: '2px 8px',
@@ -59,7 +52,7 @@ export function SubscriptionBadge({ showFree = false }: SubscriptionBadgeProps) 
 
   return (
     <span style={{ ...styles.badge, ...currentStyle }}>
-      {tierLabel}
+      {currentTier}
     </span>
   );
 }

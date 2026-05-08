@@ -22,6 +22,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { createNoteCreationService } from '@/lib/sdk';
 import { buildSourceNoteTags } from '@/lib/sdk/crosslinks';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 export const APPWRITE_ENDPOINT = APPWRITE_CONFIG.ENDPOINT;
 export const APPWRITE_PROJECT_ID = APPWRITE_CONFIG.PROJECT_ID;

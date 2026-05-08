@@ -37,6 +37,7 @@ import { updateNote, createNote, toggleNoteVisibility, rotatePublicNoteLink, cre
 import { useToast } from './Toast';
 import { useSudo } from '@/context/SudoContext';
 import { useAuth } from '@/context/auth/AuthContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { generateAIAction } from '@/lib/ai-actions';
 import {
   PlaylistAdd as TodoIcon,

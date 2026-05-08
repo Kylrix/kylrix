@@ -15,6 +15,7 @@ import {
 } from '@/lib/appwrite';
 import type { Notes } from '@/types/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useDataNexus } from './DataNexusContext';
 
 interface NotesContextType {

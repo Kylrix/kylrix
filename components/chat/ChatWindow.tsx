@@ -79,7 +79,7 @@ import { useCallLauncher } from '@/context/CallLauncherContext';
 import MuralPattern from './MuralPattern';
 import { IdentityAvatar, IdentityName } from '../common/IdentityBadge';
 import { buildNoteAttachmentMetadata } from '@/lib/sdk';
-import { getUserSubscriptionTier } from '@/lib/utils';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 
 type ChatMessage = Models.Row & Record<string, any>;
@@ -444,7 +444,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [reactionPopoverMessageId, setReactionPopoverMessageId] = useState<string | null>(null);
     const initialLoadRef = useRef<string | null>(null);
     const [, startTransition] = useTransition();
-    const isProPlan = getUserSubscriptionTier(user) === 'PRO';
+    const isProPlan = hasPaidKylrixPlan(user);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);

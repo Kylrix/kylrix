@@ -70,7 +70,7 @@ import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { formatPostTimestamp } from '@/lib/time';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
-import { getUserSubscriptionTier } from '@/lib/utils';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 
 import toast from 'react-hot-toast';
@@ -246,7 +246,7 @@ const PostComposer = React.memo(function PostComposer({
 }) {
     const [filePreviews, setFilePreviews] = React.useState<ComposerFilePreview[]>([]);
     const mediaInputRef = React.useRef<HTMLInputElement | null>(null);
-    const isProPlan = getUserSubscriptionTier(user) === 'PRO';
+    const isProPlan = hasPaidKylrixPlan(user);
 
     React.useEffect(() => {
         if (!isOpen) return;
