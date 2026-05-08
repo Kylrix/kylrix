@@ -3,6 +3,7 @@ import { Query } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getCorsHeaders, verifyUser } from '@/lib/api/permission-updater';
+import { deleteCallIfExpired } from '@/lib/services/internal/calls';
 
 function isAdminUser(user: any) {
   return Array.isArray(user?.labels) && user.labels.includes('admin');
@@ -14,14 +15,11 @@ async function deleteExpiredCalls(databases: ReturnType<typeof createAdminClient
 
   if (callId) {
     const call = await databases.getDocument(DB_ID, LINKS_TABLE, callId);
-    if (String(call?.userId || '') !== userId) {
+    if (String((call as any)?.userId || '') !== userId) {
       throw new Error('Forbidden');
     }
-    const expiresAt = String(call?.expiresAt || '');
-    const isExpired = expiresAt ? new Date(expiresAt).getTime() <= Date.now() : true;
-    if (!isExpired) return { deleted: 0, callIds: [] as string[] };
-    await databases.deleteDocument(DB_ID, LINKS_TABLE, callId);
-    return { deleted: 1, callIds: [callId] };
+    const result = await deleteCallIfExpired(databases as any, callId);
+    return result.deleted ? { deleted: 1, callIds: [callId] } : { deleted: 0, callIds: [] as string[] };
   }
 
   const expiredRows = await databases.listDocuments(DB_ID, LINKS_TABLE, [
