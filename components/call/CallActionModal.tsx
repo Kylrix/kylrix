@@ -193,8 +193,17 @@ export const CallActionModal = ({
             resolveDefaultInstantTitle().then((title) => {
                 if (title) setInstantTitle(title);
             }).catch(() => undefined);
+            if (launchContext?.existingCallId) {
+                const participants = Array.from(new Set([user.$id, ...(launchContext.participantIds || [])]));
+                setLiveCallState({
+                    callId: launchContext.existingCallId,
+                    title: launchContext.title || launchContext.conversationName || 'Live Call',
+                    participantIds: participants,
+                    type: 'video',
+                });
+            }
         }
-    }, [open, user, loadConversations, resolveDefaultInstantTitle]);
+    }, [launchContext, open, user, loadConversations, resolveDefaultInstantTitle]);
 
     const handleStartPublicCall = async () => {
         if (!user) return;

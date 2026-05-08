@@ -554,9 +554,20 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   ]);
 
   const handleJoinSharedNoteHuddle = useCallback(() => {
-    if (!existingHuddleId) return;
-    window.location.assign(`/connect/call/${existingHuddleId}?view=dock`);
-  }, [existingHuddleId]);
+    if (!existingHuddleId || !verifiedNote) return;
+    const participantIds = Array.from(
+      new Set(
+        [verifiedNote.userId, ...(verifiedNote.collaborators ?? []), user?.$id].filter(Boolean) as string[]
+      )
+    );
+    openCallLauncher({
+      source: 'note',
+      noteId: verifiedNote.$id,
+      title: verifiedNote.title || 'Shared Note',
+      participantIds,
+      existingCallId: existingHuddleId,
+    });
+  }, [existingHuddleId, openCallLauncher, user?.$id, verifiedNote]);
 
   if (!verifiedNote) {
     return (
