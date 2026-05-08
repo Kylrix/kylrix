@@ -202,7 +202,7 @@ export const CallActionModal = ({
                 _link.$id,
                 isNoteLaunch ? 'note' : isTaskLaunch ? 'flow' : 'connect',
             ).catch(() => undefined);
-            router.push(`/connect/call/${_link.$id}?caller=true`);
+            router.push(`/connect/call/${_link.$id}?caller=true&view=dock`);
             onClose();
         } catch (e: any) {
             console.error('[CallActionModal] Failed to start public call:', e);
@@ -272,7 +272,7 @@ export const CallActionModal = ({
                 allowGuests: false,
             });
             await ActivityService.setLiveCallActivity(user.$id, link.$id, 'connect').catch(() => undefined);
-            router.push(`/connect/call/${link.$id}?caller=true&type=${type}`);
+            router.push(`/connect/call/${link.$id}?caller=true&type=${type}&view=dock`);
             onClose();
         } catch (error: any) {
             toast.error(error?.message || 'Failed to start call');

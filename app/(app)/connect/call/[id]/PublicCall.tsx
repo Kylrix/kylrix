@@ -42,6 +42,7 @@ export function PublicCall({ id }: { id: string }) {
     const searchParams = useSearchParams();
     const callerRequested = searchParams.get('caller') === 'true';
     const requestedType = searchParams.get('type') === 'audio' ? 'audio' : 'video';
+    const requestedView = searchParams.get('view') === 'dock' ? 'dock' : 'fullscreen';
     const [linkData, setLinkData] = useState<any>(null);
     const [hostProfile, setHostProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -325,6 +326,7 @@ export function PublicCall({ id }: { id: string }) {
                 autoInitiate={interfaceAutoInitiate}
                 callTitle={interfaceTitle}
                 expiresAt={linkData.expiresAt}
+                initialPresentation={requestedView}
             />
         );
     }
