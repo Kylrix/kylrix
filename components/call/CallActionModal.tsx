@@ -236,7 +236,7 @@ export const CallActionModal = ({
                     allowGuests: false,
                 });
             } else if (launchContext?.noteId) {
-                const participants = Array.from(new Set(launchContext.participantIds || [user.$id]));
+                const participants: string[] = Array.from(new Set(launchContext.participantIds || [user.$id]));
                 _link = await CallService.createScopedCallLink({
                     userId: user.$id,
                     type: 'video',
@@ -256,7 +256,7 @@ export const CallActionModal = ({
                     huddleDurationMinutes: duration,
                 } as any);
             } else if (launchContext?.taskId) {
-                const participants = Array.from(new Set(launchContext.participantIds || [user.$id]));
+                const participants: string[] = Array.from(new Set(launchContext.participantIds || [user.$id]));
                 _link = await CallService.createScopedCallLink({
                     userId: user.$id,
                     type: 'video',
@@ -346,7 +346,7 @@ export const CallActionModal = ({
         setCreating(true);
         try {
             const conversation = conversations.find((c: any) => c.$id === convId);
-            const participantIds = Array.isArray(conversation?.participants)
+            const participantIds: string[] = Array.isArray(conversation?.participants)
                 ? Array.from(new Set(conversation.participants))
                 : [];
             const link = await CallService.createScopedCallLink({
