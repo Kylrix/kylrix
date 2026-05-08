@@ -214,8 +214,14 @@ export const CallActionModal = ({
             if (launchContext?.conversationId) {
                 const conversation = await ChatService.getConversationById(launchContext.conversationId, user.$id);
                 const participants = Array.isArray(conversation?.participants)
-                    ? Array.from(new Set(conversation.participants))
-                    : (launchContext.participantIds || []);
+                    ? Array.from(new Set(
+                        conversation.participants.filter(
+                            (id: unknown): id is string => typeof id === 'string' && id.trim().length > 0
+                        )
+                    ))
+                    : (launchContext.participantIds || []).filter(
+                        (id): id is string => typeof id === 'string' && id.trim().length > 0
+                    );
 
                 _link = await CallService.createScopedCallLink({
                     userId: user.$id,
