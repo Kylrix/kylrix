@@ -416,9 +416,8 @@ export async function pinNote(noteId: string): Promise<string[]> {
   
   if (currentPins.includes(noteId)) return currentPins;
 
-  // Plan-based limits
-  const plan = user.prefs?.subscriptionTier || 'FREE';
-  const limit = (plan === 'PRO' || plan === 'ORG' || plan === 'LIFETIME') ? 10 : 3;
+  // Plan-based limits (expiresAt-aware prefs)
+  const limit = hasPaidKylrixPlan(user) ? 10 : 3;
 
   if (currentPins.length >= limit) {
     throw new Error(`Pin limit reached (${limit} notes). Upgrade for more pins.`);

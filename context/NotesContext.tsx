@@ -74,8 +74,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   // Plan-based pinning limits for UI
   const effectivePinnedIds = useMemo(() => {
     if (!user) return [];
-    const plan = user.prefs?.subscriptionTier || 'FREE';
-    const limit = (plan === 'PRO' || plan === 'ORG' || plan === 'LIFETIME') ? 10 : 3;
+    const premium = hasPaidKylrixPlan(user);
+    const limit = premium ? 10 : 3;
     return pinnedIds.slice(0, limit);
   }, [pinnedIds, user]);
 

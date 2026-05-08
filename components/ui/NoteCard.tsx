@@ -66,9 +66,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const [isAIProcessing, setIsAIProcessing] = React.useState(false);
   const isPublic = getNotePublicState(note);
 
-  const isPro = user?.prefs?.subscriptionTier === 'PRO' || 
-                user?.prefs?.subscriptionTier === 'ORG' || 
-                user?.prefs?.subscriptionTier === 'LIFETIME';
+  const isPro = hasPaidKylrixPlan(user);
   const noteMeta = (() => {
     try {
       return JSON.parse(note.metadata || '{}');
