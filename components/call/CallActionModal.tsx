@@ -43,6 +43,7 @@ import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
 import { CallService } from '@/lib/services/call';
 import toast from 'react-hot-toast';
+import type { CallLaunchContext } from '@/context/CallLauncherContext';
 
 // Brand Colors
 const COLORS = {
@@ -54,7 +55,15 @@ const COLORS = {
     rim: 'rgba(255, 255, 255, 0.05)'
 };
 
-export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () => void }) => {
+export const CallActionModal = ({
+    open,
+    onClose,
+    launchContext,
+}: {
+    open: boolean;
+    onClose: () => void;
+    launchContext?: CallLaunchContext;
+}) => {
     const { user } = useAuth();
     const router = useRouter();
     const theme = useTheme();
@@ -69,6 +78,7 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
     const [joinId, setJoinId] = useState('');
     const [duration, setDuration] = useState(120); // Default 2 hours
     const [creating, setCreating] = useState(false);
+    const isScopedLaunch = Boolean(launchContext?.conversationId);
 
     const loadConversations = useCallback(async () => {
         if (!user) return;
@@ -106,14 +116,35 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
         if (!user) return;
         setCreating(true);
         try {
-            const _link = await CallService.createCallLink(
-                user.$id, 
-                'video', 
-                undefined, 
-                instantTitle || undefined, 
-                undefined, 
-                duration
-            );
+            let _link;
+            if (launchContext?.conversationId) {
+                const conversation = await ChatService.getConversationById(launchContext.conversationId, user.$id);
+                const participants = Array.isArray(conversation?.participants)
+                    ? Array.from(new Set(conversation.participants))
+                    : (launchContext.participantIds || []);
+
+                _link = await CallService.createScopedCallLink({
+                    userId: user.$id,
+                    type: 'video',
+                    title: instantTitle || launchContext.title || conversation?.name || undefined,
+                    durationMinutes: duration,
+                    scope: conversation?.type === 'group' ? 'group' : 'direct',
+                    sourceApp: 'connect',
+                    conversationId: launchContext.conversationId,
+                    participantIds: participants,
+                    isPrivate: true,
+                    allowGuests: false,
+                });
+            } else {
+                _link = await CallService.createCallLink(
+                    user.$id,
+                    'video',
+                    undefined,
+                    instantTitle || undefined,
+                    undefined,
+                    duration
+                );
+            }
             router.push(`/connect/call/${_link.$id}?caller=true`);
             onClose();
         } catch (e: any) {
@@ -227,13 +258,13 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
                             <ArrowLeft size={20} />
                         </IconButton>
                     )}
-                    <Typography variant="h6" sx={{ 
+                <Typography variant="h6" sx={{
                         fontWeight: 900, 
                         fontFamily: 'var(--font-clash)',
                         letterSpacing: '-0.02em',
                         color: 'white'
                     }}>
-                        {showScheduleForm ? 'Schedule Session' : showJoinWithId ? 'Join with ID' : 'New Session'}
+                        {showScheduleForm ? 'Schedule Session' : showJoinWithId ? 'Join with ID' : isScopedLaunch ? 'Start Call Here' : 'New Session'}
                     </Typography>
                 </Stack>
                 <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: COLORS.hover } }}>
@@ -265,7 +296,7 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
                             <TextField
                                 fullWidth
                                 label="Meeting Title (Optional)"
-                                placeholder="e.g. Quick Sync"
+                                placeholder={launchContext?.conversationName ? `e.g. ${launchContext.conversationName}` : "e.g. Quick Sync"}
                                 value={instantTitle}
                                 onChange={(e) => setInstantTitle(e.target.value)}
                                 sx={inputStyles}
@@ -300,52 +331,56 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
                                     }
                                 }}
                             >
-                                Start Now
+                                {isScopedLaunch ? 'Start in This Chat' : 'Start Now'}
                             </Button>
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                onClick={() => setShowScheduleForm(true)}
-                                startIcon={<Calendar size={18} />}
-                                sx={{ 
-                                    borderColor: COLORS.rim, 
-                                    color: 'white',
-                                    py: 2, 
-                                    borderRadius: '16px', 
-                                    fontWeight: 900,
-                                    textTransform: 'none',
-                                    fontFamily: 'var(--font-satoshi)',
-                                    bgcolor: 'rgba(255,255,255,0.01)',
-                                    '&:hover': { 
-                                        borderColor: 'rgba(255,255,255,0.1)',
-                                        bgcolor: COLORS.hover 
-                                    }
-                                }}
-                            >
-                                Schedule
-                            </Button>
+                            {!isScopedLaunch && (
+                                <Button
+                                    fullWidth
+                                    variant="outlined"
+                                    onClick={() => setShowScheduleForm(true)}
+                                    startIcon={<Calendar size={18} />}
+                                    sx={{
+                                        borderColor: COLORS.rim,
+                                        color: 'white',
+                                        py: 2,
+                                        borderRadius: '16px',
+                                        fontWeight: 900,
+                                        textTransform: 'none',
+                                        fontFamily: 'var(--font-satoshi)',
+                                        bgcolor: 'rgba(255,255,255,0.01)',
+                                        '&:hover': {
+                                            borderColor: 'rgba(255,255,255,0.1)',
+                                            bgcolor: COLORS.hover
+                                        }
+                                    }}
+                                >
+                                    Schedule
+                                </Button>
+                            )}
                         </Stack>
 
-                        <Button
-                            fullWidth
-                            variant="text"
-                            onClick={() => setShowJoinWithId(true)}
-                            startIcon={<Hash size={18} />}
-                            sx={{ 
-                                color: 'rgba(255,255,255,0.4)',
-                                py: 1, 
-                                borderRadius: '12px', 
-                                fontWeight: 800,
-                                textTransform: 'none',
-                                '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.05)' }
-                            }}
-                        >
-                            Join with Meeting ID
-                        </Button>
+                        {!isScopedLaunch && (
+                            <Button
+                                fullWidth
+                                variant="text"
+                                onClick={() => setShowJoinWithId(true)}
+                                startIcon={<Hash size={18} />}
+                                sx={{
+                                    color: 'rgba(255,255,255,0.4)',
+                                    py: 1,
+                                    borderRadius: '12px',
+                                    fontWeight: 800,
+                                    textTransform: 'none',
+                                    '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.05)' }
+                                }}
+                            >
+                                Join with Meeting ID
+                            </Button>
+                        )}
 
-                        <Divider sx={{ opacity: 0.05, my: 1 }} />
+                        {!isScopedLaunch && <Divider sx={{ opacity: 0.05, my: 1 }} />}
 
-                        <Box sx={{ mt: 1 }}>
+                        {!isScopedLaunch && <Box sx={{ mt: 1 }}>
                             <Typography variant="caption" sx={{ 
                                 fontWeight: 900, 
                                 color: 'rgba(255,255,255,0.3)', 
@@ -417,7 +452,7 @@ export const CallActionModal = ({ open, onClose }: { open: boolean, onClose: () 
                                     ))}
                                 </List>
                             )}
-                        </Box>
+                        </Box>}
                     </>
                 ) : showJoinWithId ? (
                     <Stack spacing={3}>

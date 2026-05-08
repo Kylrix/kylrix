@@ -75,6 +75,7 @@ import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
 import { FormattedText } from '../common/FormattedText';
 import { markConversationRead } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
+import { useCallLauncher } from '@/context/CallLauncherContext';
 import MuralPattern from './MuralPattern';
 import { IdentityAvatar, IdentityName } from '../common/IdentityBadge';
 import { buildNoteAttachmentMetadata } from '@/lib/sdk';
@@ -416,6 +417,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
 export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
     const { markConversationRead: markConversationReadInContext } = useChatNotifications();
+    const { openCallLauncher } = useCallLauncher();
     const { presence, getPresence } = usePresence() as any;
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
@@ -1157,7 +1159,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     };
 
     const handleCall = (type: 'audio' | 'video' = 'audio') => {
-        router.push(`/connect/call/${conversationId}?caller=true&type=${type}`);
+        openCallLauncher({
+            source: 'chat',
+            conversationId,
+            conversationName: conversation?.name,
+            participantIds: Array.isArray(conversation?.participants) ? conversation.participants : [],
+            title: type === 'audio' ? 'Audio Call' : 'Video Call',
+        });
     };
 
     const _handleAttachClick = (event: React.MouseEvent<HTMLElement>) => {
