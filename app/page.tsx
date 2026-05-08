@@ -597,7 +597,7 @@ export default function LandingPage() {
                 fontFamily: 'var(--font-clash)',
               }}
             >
-              The only E2EE workspace where your productivity tools and autonomous agents coexist.
+              The E2EE workspace where tools and autonomous agents work together.
             </Typography>
 
             <Typography
