@@ -433,6 +433,34 @@ export default function Topbar({
             />
           </Box>
 
+          {liveCallId ? (
+            <Box
+              sx={{
+                mt: 1.25,
+                px: 1.5,
+                py: 1.1,
+                borderRadius: '16px',
+                border: '1px solid rgba(99,102,241,0.28)',
+                bgcolor: 'rgba(99,102,241,0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+              }}
+            >
+              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.84rem' }}>
+                Live activity: Call in progress
+              </Typography>
+              <Button
+                size="small"
+                onClick={() => router.push(`/connect/call/${liveCallId}?view=dock`)}
+                sx={{ textTransform: 'none', fontWeight: 800, color: '#A5B4FC' }}
+              >
+                Open
+              </Button>
+            </Box>
+          ) : null}
+
           <Stack spacing={1.25} sx={{ mt: 1.25 }}>
             <Box sx={{ display: 'grid', gap: 1 }}>
               {!hasQuery && (
@@ -975,13 +1003,7 @@ export default function Topbar({
                   </Paper>
                 ) : (
                   <Button
-                    onClick={() => {
-                      if (liveCallId) {
-                        router.push(`/connect/call/${liveCallId}`);
-                        return;
-                      }
-                      openSearch();
-                    }}
+                    onClick={openSearch}
                     sx={{
                       width: { xs: 44, md: 170 },
                       minWidth: { xs: 44, md: 170 },
