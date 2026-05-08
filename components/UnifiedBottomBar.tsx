@@ -233,10 +233,15 @@ export function UnifiedBottomBar() {
   useEffect(() => {
     const evaluateDrawerState = () => {
       if (typeof document === 'undefined') return;
-      const hasOpenBottomDrawer = Boolean(
-        document.querySelector('.MuiModal-root:not([aria-hidden="true"]) .MuiDrawer-paperAnchorBottom')
-      );
-      setHasBottomDrawerOpen(hasOpenBottomDrawer);
+      /** Only count *visible* bottom-anchor MUI drawers. keepMounted + loose aria-hidden caused false positives and hid this bar on /note/notes. */
+      const modals = document.querySelectorAll('.MuiModal-root');
+      let open = false;
+      modals.forEach((modal) => {
+        if (modal.getAttribute('aria-hidden') === 'true') return;
+        if (modal.classList.contains('MuiModal-hidden')) return;
+        if (modal.querySelector('.MuiDrawer-paperAnchorBottom')) open = true;
+      });
+      setHasBottomDrawerOpen(open);
     };
 
     evaluateDrawerState();
@@ -249,14 +254,16 @@ export function UnifiedBottomBar() {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['class', 'style'],
+      attributeFilter: ['class', 'aria-hidden', 'style'],
     });
 
     return () => observer.disconnect();
   }, []);
 
-  // Hide bottom bar on settings page
-  if (pathname === '/settings' || hasBottomDrawerOpen) return null;
+  const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
+
+  // Hide bottom bar on settings page, when a real bottom sheet is open, or on full-page note editor
+  if (pathname === '/settings' || hasBottomDrawerOpen || isNoteFullPageDetail) return null;
 
   return (
     <Box
