@@ -29,8 +29,18 @@ export function billingAuthErrorResponse() {
   return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 }
 
-export async function getAuthenticatedUserForBillingAction() {
+export async function getAuthenticatedUserForBillingAction(options?: { jwt?: string | null }) {
   const client = new Client().setEndpoint(APPWRITE_CONFIG.ENDPOINT).setProject(APPWRITE_CONFIG.PROJECT_ID);
+  const jwt = String(options?.jwt || '').trim();
+  if (jwt) {
+    client.setJWT(jwt);
+    const account = new Account(client);
+    try {
+      return await account.get();
+    } catch {
+      // fall through to header/cookie path
+    }
+  }
   const h = await headers();
   const authHeader = h.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {

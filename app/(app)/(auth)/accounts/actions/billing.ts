@@ -71,10 +71,11 @@ export async function createBillingCheckoutSessionAction(input: {
   giftRecipientName?: string;
   giftMessage?: string;
   couponId?: string;
+  jwt?: string;
 }) {
-  const user = await getAuthenticatedUserForBillingAction();
+  const { planId, method, countryCode, months, giftRecipientId, giftRecipientName, giftMessage, couponId, jwt } = input;
+  const user = await getAuthenticatedUserForBillingAction({ jwt });
   if (!user) throw new Error('Authentication required');
-  const { planId, method, countryCode, months, giftRecipientId, giftRecipientName, giftMessage, couponId } = input;
   if (!planId || !method) throw new Error('Missing parameters');
   const provider = billingManager.getProvider(method as PaymentMethod);
   const normalizedMonths = parsePositiveInteger(months, 1);
@@ -178,8 +179,8 @@ export async function createBillingCheckoutSessionAction(input: {
   );
 }
 
-export async function claimCouponAction(couponIdInput?: string) {
-  const user = await getAuthenticatedUserForBillingAction();
+export async function claimCouponAction(couponIdInput?: string, jwtInput?: string) {
+  const user = await getAuthenticatedUserForBillingAction({ jwt: jwtInput });
   if (!user) throw new Error('Authentication required');
 
   const { databases, users } = createAdminClient();

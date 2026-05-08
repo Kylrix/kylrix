@@ -5,6 +5,7 @@ import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typograp
 import { CheckCircle2, Loader2, ShieldCheck, Ticket } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { claimCouponAction } from '../../actions/billing';
+import { account } from '@/lib/appwrite/client';
 
 type CouponClaimResponse = {
   ok?: boolean;
@@ -39,7 +40,8 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
 
     const run = async () => {
       try {
-        const data = (await claimCouponAction(couponId)) as CouponClaimResponse;
+        const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => '');
+        const data = (await claimCouponAction(couponId, jwt || undefined)) as CouponClaimResponse;
 
         setCoupon(data);
 

@@ -7,6 +7,7 @@ import { Box, Container, Typography, CircularProgress, Paper, Button, Stack, Div
 import { Rocket, Heart, Globe, Clock } from 'lucide-react';
 import { calculateSubscriptionPrice, PPP_DATA } from '@/lib/subscription/ppp';
 import { createBillingCheckoutSessionAction } from '../../../actions/billing';
+import { account } from '@/lib/appwrite/client';
 
 function CheckoutContent() {
   const { user, isLoading: authLoading } = useAuth();
@@ -42,6 +43,7 @@ function CheckoutContent() {
       
       setInitializing(true);
       try {
+        const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => '');
         const session = await createBillingCheckoutSessionAction({
           planId,
           method: 'CRYPTO',
@@ -51,6 +53,7 @@ function CheckoutContent() {
           giftRecipientName: giftRecipientName || undefined,
           giftMessage: giftMessage || undefined,
           couponId: couponId || undefined,
+          jwt: jwt || undefined,
         });
 
         if (session.url) {
