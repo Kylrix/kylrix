@@ -1020,9 +1020,21 @@ export default function Topbar({
                       bgcolor: '#000',
                       color: 'white',
                       borderRadius: '999px',
-                      boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 26px rgba(0,0,0,0.55)',
+                      boxShadow: liveCallId
+                        ? '0 0 0 1px rgba(99,102,241,0.45), 0 0 26px rgba(99,102,241,0.4)'
+                        : '0 0 0 1px rgba(255,255,255,0.04), 0 0 26px rgba(0,0,0,0.55)',
                       textTransform: 'none',
                       '&:hover': { bgcolor: '#0f0f0f', transform: 'translateY(-1px)' },
+                      ...(liveCallId
+                        ? {
+                            animation: 'kylrixLivePulse 1.4s ease-in-out infinite',
+                            '@keyframes kylrixLivePulse': {
+                              '0%': { boxShadow: '0 0 0 1px rgba(99,102,241,0.45), 0 0 8px rgba(99,102,241,0.18)' },
+                              '50%': { boxShadow: '0 0 0 1px rgba(99,102,241,0.75), 0 0 22px rgba(99,102,241,0.45)' },
+                              '100%': { boxShadow: '0 0 0 1px rgba(99,102,241,0.45), 0 0 8px rgba(99,102,241,0.18)' },
+                            },
+                          }
+                        : {}),
                     }}
                   >
                     {liveCallId ? <Phone size={16} strokeWidth={2.25} /> : <Search size={16} strokeWidth={2.25} />}

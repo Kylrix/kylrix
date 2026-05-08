@@ -372,7 +372,10 @@ export function PublicCall({ id }: { id: string }) {
                                 {interfaceTitle}
                             </Typography>
                             <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>
-                                {contactLabel} <span style={{ color: '#6366F1' }}>@{hostProfile?.username || 'user'}</span>
+                                {contactLabel}{' '}
+                                <span style={{ color: '#6366F1' }}>
+                                    {hostProfile?.displayName || hostProfile?.name || hostProfile?.username || 'Call host'}
+                                </span>
                             </Typography>
                         </Box>
 

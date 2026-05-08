@@ -13,6 +13,7 @@ export interface CallLaunchContext {
   noteId?: string;
   taskId?: string;
   title?: string;
+  existingCallId?: string;
 }
 
 type CallLauncherContextValue = {
