@@ -96,6 +96,15 @@ export function PublicCall({ id }: { id: string }) {
             }
 
             if (link) {
+                const canJoin = CallService.canUserJoinCall(link, user?.$id);
+                if (!canJoin && user?.$id) {
+                    toast.error('This call is private to selected participants.');
+                    setLinkData(link);
+                    setCallMode('link');
+                    setResolvedTargetId(link.userId);
+                    setLoading(false);
+                    return;
+                }
                 setCallMode('link');
                 setLinkData(link);
                 setShowPreCheck(false);
@@ -198,6 +207,11 @@ export function PublicCall({ id }: { id: string }) {
     }, [localUser, requestStatus, id]);
 
     const handleJoinRequest = async () => {
+        if (!CallService.canUserJoinCall(linkData, localUser?.$id || user?.$id)) {
+            toast.error('This call is private to selected participants.');
+            return;
+        }
+
         if (!displayName.trim() && !localUser) {
             toast.error("Please enter your name");
             return;
