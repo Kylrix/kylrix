@@ -213,7 +213,7 @@ export const CallActionModal = ({
             let _link;
             if (launchContext?.conversationId) {
                 const conversation = await ChatService.getConversationById(launchContext.conversationId, user.$id);
-                const participants = Array.isArray(conversation?.participants)
+                const participants: string[] = Array.isArray(conversation?.participants)
                     ? Array.from(new Set(
                         conversation.participants.filter(
                             (id: unknown): id is string => typeof id === 'string' && id.trim().length > 0
