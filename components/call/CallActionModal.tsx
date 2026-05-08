@@ -36,7 +36,11 @@ import {
     Type,
     Timer,
     ArrowLeft,
-    Hash
+    Hash,
+    Copy,
+    ExternalLink,
+    Mic,
+    VideoIcon
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
@@ -91,6 +95,12 @@ export const CallActionModal = ({
     const [joinId, setJoinId] = useState('');
     const [duration, setDuration] = useState(120); // Default 2 hours
     const [creating, setCreating] = useState(false);
+    const [liveCallState, setLiveCallState] = useState<null | {
+        callId: string;
+        title: string;
+        participantIds: string[];
+        type: 'audio' | 'video';
+    }>(null);
     const isScopedLaunch = Boolean(launchContext?.conversationId);
     const isNoteLaunch = Boolean(launchContext?.noteId);
     const isTaskLaunch = Boolean(launchContext?.taskId);
@@ -179,6 +189,7 @@ export const CallActionModal = ({
             setScheduleTime('');
             setJoinId('');
             setDuration(120);
+            setLiveCallState(null);
             resolveDefaultInstantTitle().then((title) => {
                 if (title) setInstantTitle(title);
             }).catch(() => undefined);
@@ -257,8 +268,16 @@ export const CallActionModal = ({
                 _link.$id,
                 isNoteLaunch ? 'note' : isTaskLaunch ? 'flow' : 'connect',
             ).catch(() => undefined);
-            router.push(`/connect/call/${_link.$id}?caller=true&view=dock`);
-            onClose();
+            const participants = Array.from(new Set([
+                user.$id,
+                ...(launchContext?.participantIds || []),
+            ]));
+            setLiveCallState({
+                callId: _link.$id,
+                title: instantTitle || launchContext?.title || 'Live Call',
+                participantIds: participants,
+                type: 'video',
+            });
         } catch (e: any) {
             console.error('[CallActionModal] Failed to start public call:', e);
             const errorMessage = e.message || "Failed to start public call";
@@ -327,14 +346,20 @@ export const CallActionModal = ({
                 allowGuests: false,
             });
             await ActivityService.setLiveCallActivity(user.$id, link.$id, 'connect').catch(() => undefined);
-            router.push(`/connect/call/${link.$id}?caller=true&type=${type}&view=dock`);
-            onClose();
+            setLiveCallState({
+                callId: link.$id,
+                title: conversation?.name || (type === 'audio' ? 'Audio Call' : 'Video Call'),
+                participantIds: Array.from(new Set([user.$id, ...participantIds])),
+                type,
+            });
         } catch (error: any) {
             toast.error(error?.message || 'Failed to start call');
         } finally {
             setCreating(false);
         }
     };
+
+    const liveCallUrl = liveCallState ? `/connect/call/${liveCallState.callId}` : '';
 
     const inputStyles = {
         '& .MuiOutlinedInput-root': {
@@ -446,7 +471,53 @@ export const CallActionModal = ({
                     </Box>
                 )}
 
-                {!showScheduleForm && !showJoinWithId ? (
+                {liveCallState ? (
+                    <Stack spacing={2}>
+                        <Paper sx={{ p: 2, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.03)', border: `1px solid ${COLORS.rim}` }}>
+                            <Typography sx={{ color: 'white', fontWeight: 900, fontFamily: 'var(--font-clash)' }}>
+                                {liveCallState.title}
+                            </Typography>
+                            <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.82rem', mt: 0.5 }}>
+                                Live now in this drawer
+                            </Typography>
+                            <Stack direction="row" spacing={1} sx={{ mt: 1.5, flexWrap: 'wrap' }}>
+                                {liveCallState.participantIds.slice(0, 6).map((id, idx) => (
+                                    <Avatar key={id} sx={{ width: 32, height: 32, bgcolor: idx === 0 ? COLORS.primary : '#2A2724', fontSize: '0.72rem', fontWeight: 800 }}>
+                                        {idx === 0 ? 'You' : (id.slice(0, 2).toUpperCase())}
+                                    </Avatar>
+                                ))}
+                            </Stack>
+                            <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                                <IconButton sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: 'white' }}>
+                                    <Mic size={16} />
+                                </IconButton>
+                                <IconButton sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: 'white' }}>
+                                    <VideoIcon size={16} />
+                                </IconButton>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<Copy size={14} />}
+                                    onClick={async () => {
+                                        await navigator.clipboard.writeText(typeof window !== 'undefined' ? `${window.location.origin}${liveCallUrl}` : liveCallUrl);
+                                        toast.success('Invite link copied');
+                                    }}
+                                    sx={{ ml: 'auto', borderColor: COLORS.rim, color: 'white', textTransform: 'none', fontWeight: 800 }}
+                                >
+                                    Copy Invite
+                                </Button>
+                            </Stack>
+                        </Paper>
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            startIcon={<ExternalLink size={16} />}
+                            onClick={() => router.push(`${liveCallUrl}?caller=true&view=dock`)}
+                            sx={{ bgcolor: COLORS.primary, textTransform: 'none', fontWeight: 900, borderRadius: '14px', py: 1.4 }}
+                        >
+                            Expand to Full Call UI
+                        </Button>
+                    </Stack>
+                ) : !showScheduleForm && !showJoinWithId ? (
                     <>
                         <Stack direction="row" spacing={2}>
                             <Button

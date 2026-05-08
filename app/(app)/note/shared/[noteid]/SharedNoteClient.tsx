@@ -64,6 +64,7 @@ import { decryptGhostData } from '@/lib/encryption/ghost-crypto';
 import { useParams } from 'next/navigation';
 import { getConnectPrimaryColor } from '@/lib/ecosystem-app-colors';
 import { useCallLauncher } from '@/context/CallLauncherContext';
+import { CallService } from '@/lib/services/call';
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -135,6 +136,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   const { showSuccess, showError } = useToast();
   const { setCachedData, getCachedData, invalidate } = useDataNexus();
   const { openCallLauncher } = useCallLauncher();
+  const [existingHuddleId, setExistingHuddleId] = useState<string | null>(null);
 
   const CACHE_KEY = useMemo(() => `public_note_${noteId}`, [noteId]);
   const SHARED_NOTE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days standard
@@ -481,8 +483,38 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     if (!isAuthenticated || !user?.$id || !verifiedNote) return false;
     const ownerId = verifiedNote.userId;
     const collaborators = Array.isArray(verifiedNote.collaborators) ? verifiedNote.collaborators : [];
-    return Boolean(ownerId && (user.$id === ownerId || collaborators.includes(user.$id)));
-  }, [isAuthenticated, user?.$id, verifiedNote]);
+    const meta = parseSharedNoteMeta(verifiedNote);
+    const writeCollaborators = Array.isArray(meta?.writeCollaborators)
+      ? (meta.writeCollaborators as string[])
+      : collaborators;
+    const hasWriteAccess = user.$id === ownerId || writeCollaborators.includes(user.$id);
+    return Boolean(hasWriteAccess && !existingHuddleId);
+  }, [existingHuddleId, isAuthenticated, user?.$id, verifiedNote, parseSharedNoteMeta]);
+
+  useEffect(() => {
+    let active = true;
+    const resolveExistingHuddle = async () => {
+      if (!verifiedNote) {
+        if (active) setExistingHuddleId(null);
+        return;
+      }
+      const meta = parseSharedNoteMeta(verifiedNote);
+      const huddleId = (meta?.huddleCallId || (verifiedNote as any)?.huddleCallId || null) as string | null;
+      if (!huddleId) {
+        if (active) setExistingHuddleId(null);
+        return;
+      }
+      try {
+        const call = await CallService.getCallLink(huddleId);
+        if (!active) return;
+        setExistingHuddleId(call?.$id || null);
+      } catch {
+        if (active) setExistingHuddleId(null);
+      }
+    };
+    void resolveExistingHuddle();
+    return () => { active = false; };
+  }, [parseSharedNoteMeta, verifiedNote]);
 
   const handleStartSharedNoteHuddle = useCallback(() => {
     if (!verifiedNote) return;
@@ -520,6 +552,11 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     user?.$id,
     verifiedNote,
   ]);
+
+  const handleJoinSharedNoteHuddle = useCallback(() => {
+    if (!existingHuddleId) return;
+    window.location.assign(`/connect/call/${existingHuddleId}?view=dock`);
+  }, [existingHuddleId]);
 
   if (!verifiedNote) {
     return (
@@ -719,27 +756,29 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
                   {isPostingMoment ? 'Posting...' : 'Post as Moment'}
                 </Button>
               )}
-              <Button
-                onClick={handleStartSharedNoteHuddle}
-                startIcon={<HuddleIcon color={getConnectPrimaryColor()} />}
-                variant="outlined"
-                sx={{
-                  borderRadius: '14px',
-                  borderColor: getConnectPrimaryColor(),
-                  color: getConnectPrimaryColor(),
-                  fontWeight: 800,
-                  textTransform: 'none',
-                  px: 3,
-                  height: 44,
-                  whiteSpace: 'nowrap',
-                  '&:hover': { 
-                    borderColor: getConnectPrimaryColor(), 
-                    bgcolor: `${getConnectPrimaryColor()}0d`
-                  }
-                }}
-              >
-                Start Huddle
-              </Button>
+              {(canStartSharedNoteHuddle || existingHuddleId) && (
+                <Button
+                  onClick={existingHuddleId ? handleJoinSharedNoteHuddle : handleStartSharedNoteHuddle}
+                  startIcon={<HuddleIcon color={getConnectPrimaryColor()} />}
+                  variant="outlined"
+                  sx={{
+                    borderRadius: '14px',
+                    borderColor: getConnectPrimaryColor(),
+                    color: getConnectPrimaryColor(),
+                    fontWeight: 800,
+                    textTransform: 'none',
+                    px: 3,
+                    height: 44,
+                    whiteSpace: 'nowrap',
+                    '&:hover': {
+                      borderColor: getConnectPrimaryColor(),
+                      bgcolor: `${getConnectPrimaryColor()}0d`
+                    }
+                  }}
+                >
+                  {existingHuddleId ? 'Join Huddle' : 'Start Huddle'}
+                </Button>
+              )}
               {(!user || user.$id !== verifiedNote.userId) && (
                 <Box>
                 {isAuthenticated ? (
