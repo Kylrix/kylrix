@@ -143,7 +143,7 @@ export const CallActionModal = ({
 
                 const pair = Array.from(new Set([user.$id, ...participants])).slice(0, 2);
                 if (pair.length >= 2) {
-                    const profiles = await Promise.all(pair.map((id) => UsersService.getProfileById(id).catch(() => null)));
+                    const profiles = await Promise.all(pair.map((id) => UsersService.getProfileById(id as string).catch(() => null)));
                     const names = profiles.map((profile, idx) => {
                         const fallback = idx === 0 ? 'You' : 'Guest';
                         return profile?.username || profile?.displayName || fallback;
