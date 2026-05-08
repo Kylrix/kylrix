@@ -3,6 +3,10 @@
 import { startAuthentication } from '@simplewebauthn/browser';
 import { AppwriteService } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import {
+  resolvePasskeyRpId,
+  transportsForPasskeyEntry,
+} from '@/lib/passkey-webauthn-options';
 import toast from 'react-hot-toast';
 
 /**
@@ -23,20 +27,22 @@ export async function unlockWithPasskey(userId: string): Promise<boolean> {
     const challenge = crypto.getRandomValues(new Uint8Array(32));
     const challengeBase64 = btoa(String.fromCharCode(...Array.from(challenge)));
 
+    const rpId = resolvePasskeyRpId(window.location.hostname);
+
     const authOptions = {
       challenge: challengeBase64,
-      rpId: window.location.hostname,
+      rpId,
       allowCredentials: passkeyEntries.map((entry: any) => ({
         id: entry.credentialId!,
         type: 'public-key' as const,
-        transports: ['internal', 'usb', 'nfc', 'ble'] as AuthenticatorTransport[],
+        transports: transportsForPasskeyEntry(entry),
       })),
       userVerification: 'preferred' as UserVerificationRequirement,
       timeout: 60000,
     };
 
-    // 3. Start WebAuthn authentication
-    const authResp = await startAuthentication(authOptions as any);
+    // 3. Start WebAuthn authentication (optionsJSON matches Note / SimpleWebAuthn v13)
+    const authResp = await startAuthentication({ optionsJSON: authOptions });
 
     // 4. Find the matching keychain entry
     const matchingEntry = passkeyEntries.find((e: any) => e.credentialId === authResp.id);

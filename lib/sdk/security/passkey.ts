@@ -1,9 +1,14 @@
 import { startAuthentication } from '@simplewebauthn/browser';
+import {
+  resolvePasskeyRpId,
+  transportsForPasskeyEntry,
+} from '@/lib/passkey-webauthn-options';
 
 export type PasskeyEntry = {
   credentialId?: string | null;
   wrappedKey: string;
   type?: string;
+  params?: string | null;
 };
 
 export type PasskeyUnlockContext = {
@@ -16,7 +21,9 @@ export type PasskeyUnlockContext = {
 };
 
 export async function unlockWithPasskeyCore(context: PasskeyUnlockContext): Promise<boolean> {
-  const rpId = context.rpId || 'kylrix.space';
+  const host =
+    typeof window !== 'undefined' ? window.location.hostname : 'kylrix.space';
+  const rpId = context.rpId ?? resolvePasskeyRpId(host);
 
   try {
     const entries = await context.listKeychainEntries(context.userId);
@@ -36,13 +43,13 @@ export async function unlockWithPasskeyCore(context: PasskeyUnlockContext): Prom
       allowCredentials: passkeyEntries.map((entry) => ({
         id: entry.credentialId!,
         type: 'public-key' as const,
-        transports: ['internal', 'usb', 'nfc', 'ble'] as AuthenticatorTransport[],
+        transports: transportsForPasskeyEntry(entry),
       })),
       userVerification: 'preferred' as UserVerificationRequirement,
       timeout: 60000,
     };
 
-    const authResp = await startAuthentication({ optionsJSON: authOptions as any });
+    const authResp = await startAuthentication({ optionsJSON: authOptions });
     const matchingEntry = passkeyEntries.find((entry) => entry.credentialId === authResp.id);
 
     if (!matchingEntry) {

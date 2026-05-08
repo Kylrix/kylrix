@@ -22,6 +22,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import FingerprintIcon from '@mui/icons-material/Fingerprint';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
+import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
 
 interface PasskeySetupProps {
   isOpen: boolean;
@@ -101,11 +102,12 @@ export function PasskeySetup({
       const challengeBase64 = arrayBufferToBase64(challenge.buffer);
 
       const userIdBytes = new TextEncoder().encode(userId);
+      const rpId = resolvePasskeyRpId(window.location.hostname);
       const registrationOptions = {
         challenge: challengeBase64,
         rp: {
           name: "Kylrix",
-          id: window.location.hostname,
+          id: rpId,
         },
         user: {
           id: arrayBufferToBase64(userIdBytes.buffer as ArrayBuffer),
@@ -167,7 +169,7 @@ export function PasskeySetup({
           counter: 0,
           transports: regResp.response.transports || [],
           created: new Date().toISOString(),
-          rpId: window.location.hostname,
+          rpId,
         }),
         isBackup: false
       });

@@ -20,6 +20,7 @@ import { AppwriteService } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -127,11 +128,12 @@ export function PasskeySetup({
       const challengeBase64 = arrayBufferToBase64(challenge.buffer);
 
       const userIdBytes = new TextEncoder().encode(userId);
+      const rpId = resolvePasskeyRpId(window.location.hostname);
       const registrationOptions = {
         challenge: challengeBase64,
         rp: {
           name: "Kylrix",
-          id: "kylrix.space",
+          id: rpId,
         },
         user: {
           id: arrayBufferToBase64(userIdBytes.buffer as ArrayBuffer),
@@ -188,7 +190,7 @@ export function PasskeySetup({
           counter: 0,
           transports: regResp.response.transports || [],
           created: new Date().toISOString(),
-          rpId: "kylrix.space",
+          rpId,
         }),
         isBackup: false
       });
