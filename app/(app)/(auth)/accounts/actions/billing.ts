@@ -11,6 +11,7 @@ import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { notifySubscriptionActivated } from '@/lib/billing/subscription-notifications';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
 import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/billing';
+import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
 
 billingManager.registerProvider(new StripeProvider());
 billingManager.registerProvider(new CryptoPaymentProvider());
@@ -316,5 +317,20 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     subscriptionId: subscription.$id,
     currentPeriodEnd: currentPeriodEnd.toISOString(),
     payerUserId: payerUserId || null,
+  };
+}
+
+/** Server-only Pro entitlement check — never infer Pro from the success URL alone. */
+export async function verifyProEntitlementAction(jwt?: string | null) {
+  const user = await getAuthenticatedUserForBillingAction({ jwt: jwt ?? undefined });
+  if (!user) {
+    return { authenticated: false as const, active: false, expiresAt: null as string | null, source: 'none' as const };
+  }
+  const ent = await getVerifiedProEntitlementForUser(user.$id);
+  return {
+    authenticated: true as const,
+    active: ent.active,
+    expiresAt: ent.expiresAt,
+    source: ent.source,
   };
 }
