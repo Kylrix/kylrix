@@ -29,6 +29,7 @@ import {
   Link as LinkIcon,
   Refresh as RefreshIcon,
   LocalOffer as LocalOfferIcon,
+  MoreHoriz as MoreHorizIcon,
 } from '@mui/icons-material';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { ShareNoteModal } from '../ShareNoteModal';
@@ -111,19 +112,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     }
   };
 
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const touchStartPosRef = useRef<{ x: number, y: number } | null>(null);
-  const isLongPressActive = useRef(false);
-
   const pinned = isPinned(note.$id);
-
-  useEffect(() => {
-    return () => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
-    };
-  }, []);
 
   const handlePinToggle = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -257,7 +246,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (isLongPressActive.current) return;
     openMenu({
       x: e.clientX,
       y: e.clientY,
@@ -265,53 +253,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     });
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
-    isLongPressActive.current = false;
-
-    longPressTimerRef.current = setTimeout(() => {
-      isLongPressActive.current = true;
-      if (window.navigator.vibrate) {
-        window.navigator.vibrate(50);
-      }
-      openMenu({
-        x: touch.clientX,
-        y: touch.clientY,
-        items: contextMenuItems
-      });
-    }, 600); // 600ms for long press
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartPosRef.current) return;
-    
-    const touch = e.touches[0];
-    const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
-    const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
-    
-    // If moved more than 10px, cancel long press (prevents trigger during scroll)
-    if (dx > 10 || dy > 10) {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-  };
-
   const handleClick = () => {
-    // If it was a long press, don't trigger the click
-    if (isLongPressActive.current) {
-      isLongPressActive.current = false;
-      return;
-    }
     if (onNoteSelect) {
       onNoteSelect(note);
       return;
@@ -397,6 +339,17 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     }
   ];
 
+  const openCardActionsMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    openMenu({
+      x: rect.left,
+      y: rect.bottom + 4,
+      items: contextMenuItems,
+    });
+  };
+
   return (
     <>
       <ShareNoteModal 
@@ -415,9 +368,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         {...sidebarIgnoreProps}
         onClick={handleClick}
         onContextMenu={handleRightClick}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
         sx={{
           height: { xs: 160, sm: 180, md: 200, lg: 220 },
           display: 'flex',
@@ -537,6 +487,24 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                   }}
                 >
                   {pinned ? <PinIcon sx={{ fontSize: 16 }} /> : <PinOutlinedIcon sx={{ fontSize: 16 }} />}
+                </IconButton>
+                <IconButton
+                  size="small"
+                  aria-label="Note actions"
+                  onClick={openCardActionsMenu}
+                  sx={{
+                    p: 0.5,
+                    color: 'text.secondary',
+                    opacity: 0.55,
+                    borderRadius: '8px',
+                    '&:hover': {
+                      color: 'primary.main',
+                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+                      opacity: 1,
+                    },
+                  }}
+                >
+                  <MoreHorizIcon sx={{ fontSize: 18 }} />
                 </IconButton>
 
                 {note.attachments && note.attachments.length > 0 && (

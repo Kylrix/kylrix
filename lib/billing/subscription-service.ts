@@ -105,18 +105,22 @@ export class SubscriptionService {
     });
 
     const { databases } = createAdminClient();
-    await databases.createDocument(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
-      userId: actorUserId,
-      action: 'MANUAL_ENABLE_PRO',
-      targetType: 'subscription',
-      targetId: targetUserId,
-      details: JSON.stringify({
-        reason: trimmedReason,
-        actorEmail,
-        durationMonths: months,
-      }),
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      await databases.createDocument(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
+        userId: actorUserId,
+        action: 'MANUAL_ENABLE_PRO',
+        targetType: 'subscription',
+        targetId: targetUserId,
+        details: JSON.stringify({
+          reason: trimmedReason,
+          actorEmail,
+          durationMonths: months,
+        }),
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('[SubscriptionService] Activity log row skipped:', err);
+    }
   }
 
   /**
@@ -148,14 +152,18 @@ export class SubscriptionService {
     }
 
     const { databases } = createAdminClient();
-    await databases.createDocument(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
-      userId: actorUserId,
-      action: 'GRANT_CATEGORY_ACCESS',
-      targetType: 'subscription_batch',
-      targetId: 'BATCH',
-      details: JSON.stringify({ category: cat, count: uniqueIds.length, actorEmail }),
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      await databases.createDocument(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
+        userId: actorUserId,
+        action: 'GRANT_CATEGORY_ACCESS',
+        targetType: 'subscription_batch',
+        targetId: 'BATCH',
+        details: JSON.stringify({ category: cat, count: uniqueIds.length, actorEmail }),
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('[SubscriptionService] Batch activity log skipped:', err);
+    }
   }
 }
 
