@@ -1,0 +1,23 @@
+---
+name: kylrix-brand
+description: Applies Kylrix brand language (logo, palette, typography, surface hierarchy) while preserving readability and UX clarity. Use for top-level UI visual decisions.
+disable-model-invocation: true
+---
+
+# Kylrix Brand
+
+## Source of truth
+
+- `logo.md`
+- `design.md`
+- `DESIGN.V2.md`
+- `brand.design.md`
+- `components/common/Logo.tsx`
+
+## Rules
+
+1. Preserve canonical logo geometry and app-color mapping.
+2. Use muted dark surfaces with deliberate contrast.
+3. Keep visuals clean; avoid effect-heavy overlays that hurt usability.
+4. Prioritize legibility and interaction clarity over decorative styling.
+
