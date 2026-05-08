@@ -34,6 +34,7 @@ import { client, account as authAccount } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { ChatService } from '@/lib/services/chat';
 import { getEcosystemUrl } from '@/lib/constants';
+import { ActivityService } from '@/lib/services/activity';
 
 export function PublicCall({ id }: { id: string }) {
     const { user } = useAuth();
@@ -257,6 +258,11 @@ export function PublicCall({ id }: { id: string }) {
         setIsAdmitted(true);
         setShowPreCheck(false);
     };
+
+    useEffect(() => {
+        if (!localUser?.$id || !isAdmitted) return;
+        ActivityService.setLiveCallActivity(localUser.$id, id, 'connect').catch(() => undefined);
+    }, [id, isAdmitted, localUser?.$id]);
 
     const isConversationCall = callMode === 'conversation';
     const interfaceIsCaller = isConversationCall ? callerRequested : localUser?.$id === linkData?.userId;
