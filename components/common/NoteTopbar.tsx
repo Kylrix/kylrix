@@ -44,6 +44,7 @@ import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { ActivityService } from '@/lib/services/activity';
 
 interface NoteTopbarProps {
   className?: string;
@@ -103,7 +104,44 @@ export default function NoteTopbar({
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [liveCallId, setLiveCallId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    let active = true;
+    let intervalId: number | null = null;
+
+    const loadActivity = async () => {
+      if (!user?.$id || !isAuthenticated) {
+        if (active) setLiveCallId(null);
+        return;
+      }
+      try {
+        const presence = await ActivityService.getUserPresence(user.$id);
+        const raw = String(presence?.customStatus || '');
+        if (!raw) {
+          if (active) setLiveCallId(null);
+          return;
+        }
+        const parsed = JSON.parse(raw) as { t?: string; id?: string; s?: string };
+        if (parsed?.t === 'call' && parsed?.id && parsed?.s !== 'ended') {
+          if (active) setLiveCallId(parsed.id);
+        } else if (active) {
+          setLiveCallId(null);
+        }
+      } catch {
+        if (active) setLiveCallId(null);
+      }
+    };
+
+    void loadActivity();
+    intervalId = window.setInterval(loadActivity, 12000);
+
+    return () => {
+      active = false;
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, [isAuthenticated, user?.$id]);
+
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
@@ -1034,7 +1072,13 @@ export default function NoteTopbar({
                   </Paper>
                 ) : (
                   <Button
-                    onClick={openSearch}
+                    onClick={() => {
+                      if (liveCallId) {
+                        router.push(`/connect/call/${liveCallId}`);
+                        return;
+                      }
+                      openSearch();
+                    }}
                     sx={{
                       width: { xs: 44, md: 170 },
                       minWidth: { xs: 44, md: 170 },
@@ -1056,9 +1100,9 @@ export default function NoteTopbar({
                       '&:hover': { bgcolor: '#0f0f0f', transform: 'translateY(-1px)' },
                     }}
                   >
-                    <Search size={16} strokeWidth={2.25} />
+                    {liveCallId ? <RefreshCw size={16} strokeWidth={2.25} /> : <Search size={16} strokeWidth={2.25} />}
                     <Typography sx={{ display: { xs: 'none', md: 'block' }, fontWeight: 800 }}>
-                      Search
+                      {liveCallId ? 'Live Call' : 'Search'}
                     </Typography>
                   </Button>
                 )}

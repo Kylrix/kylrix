@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import {
   ChevronDown,
+  Phone,
   Search,
   X as CloseIcon,
   Wallet,
@@ -38,6 +39,7 @@ import { createProfilePreviewManager } from '@/lib/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { getEcosystemUrl } from '@/lib/ecosystem';
+import { ActivityService } from '@/lib/services/activity';
 
 interface TopbarProps {
   userId?: string;
@@ -82,8 +84,45 @@ export default function Topbar({
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [accountRecord, setAccountRecord] = useState<any>(null);
+  const [liveCallId, setLiveCallId] = useState<string | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    let active = true;
+    let intervalId: number | null = null;
+
+    const loadActivity = async () => {
+      if (!userId) {
+        if (active) setLiveCallId(null);
+        return;
+      }
+      try {
+        const presence = await ActivityService.getUserPresence(userId);
+        const raw = String(presence?.customStatus || '');
+        if (!raw) {
+          if (active) setLiveCallId(null);
+          return;
+        }
+        const parsed = JSON.parse(raw) as { t?: string; id?: string; s?: string };
+        if (parsed?.t === 'call' && parsed?.id && parsed?.s !== 'ended') {
+          if (active) setLiveCallId(parsed.id);
+        } else if (active) {
+          setLiveCallId(null);
+        }
+      } catch {
+        if (active) setLiveCallId(null);
+      }
+    };
+
+    void loadActivity();
+    intervalId = window.setInterval(loadActivity, 12000);
+
+    return () => {
+      active = false;
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, [userId]);
+
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const profilePicId = initialProfilePicId || accountRecord?.avatar || accountRecord?.profilePicId || null;
@@ -936,7 +975,13 @@ export default function Topbar({
                   </Paper>
                 ) : (
                   <Button
-                    onClick={openSearch}
+                    onClick={() => {
+                      if (liveCallId) {
+                        router.push(`/connect/call/${liveCallId}`);
+                        return;
+                      }
+                      openSearch();
+                    }}
                     sx={{
                       width: { xs: 44, md: 170 },
                       minWidth: { xs: 44, md: 170 },
@@ -958,9 +1003,9 @@ export default function Topbar({
                       '&:hover': { bgcolor: '#0f0f0f', transform: 'translateY(-1px)' },
                     }}
                   >
-                    <Search size={16} strokeWidth={2.25} />
+                    {liveCallId ? <Phone size={16} strokeWidth={2.25} /> : <Search size={16} strokeWidth={2.25} />}
                     <Typography sx={{ display: { xs: 'none', md: 'block' }, fontWeight: 800 }}>
-                      Search
+                      {liveCallId ? 'Live Call' : 'Search'}
                     </Typography>
                   </Button>
                 )}
