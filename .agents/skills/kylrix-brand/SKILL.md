@@ -20,4 +20,6 @@ disable-model-invocation: true
 2. Use muted dark surfaces with deliberate contrast.
 3. Keep visuals clean; avoid effect-heavy overlays that hurt usability.
 4. Prioritize legibility and interaction clarity over decorative styling.
+5. Product positioning copy should emphasize: E2EE workspace, autonomous agents, and effortless execution.
+6. Prefer chain-agnostic "agentic wallet infrastructure" language over chain-specific branding in product marketing surfaces.
 
