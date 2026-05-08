@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 import { resolveCurrentUser } from '@/lib/appwrite';
+import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
 
 export async function POST(req: Request) {
   try {
@@ -20,13 +21,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "AI service not configured" }, { status: 500 });
     }
 
-    // Pro Check: If using system key, user must be PRO/ORG/LIFETIME
+    // Pro Check: If using system key, entitlement must match subscriptions ledger (not prefs-only spoof).
     if (!userKey) {
-      const plan = user.prefs?.subscriptionTier || 'FREE';
-      const isPro = ['PRO', 'ORG', 'LIFETIME'].includes(plan);
-      if (!isPro) {
-        return NextResponse.json({ 
-          error: "AI features require a Pro account. Upgrade to continue or provide your own API key in settings." 
+      const ok = await userHasPaidAiAccess(user.$id);
+      if (!ok) {
+        return NextResponse.json({
+          error:
+            'AI features require a Pro account. Upgrade to continue or provide your own API key in settings.',
         }, { status: 403 });
       }
     }

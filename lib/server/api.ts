@@ -2,6 +2,7 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { resolveCurrentUser } from '@/lib/appwrite/client';
+import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
 import { headers } from 'next/headers';
 
 type AIChatMessage = {
@@ -76,9 +77,8 @@ export async function generateAIResponse(data: {
     }
 
     if (!data.apiKey) {
-      const plan = (user).prefs?.subscriptionTier || 'FREE';
-      const isPro = ['PRO', 'ORG', 'LIFETIME'].includes(plan);
-      if (!isPro) {
+      const ok = await userHasPaidAiAccess((user as { $id: string }).$id);
+      if (!ok) {
         throw new Error('AI features require a Pro account. Upgrade to continue or provide your own API key in settings.');
       }
     }
