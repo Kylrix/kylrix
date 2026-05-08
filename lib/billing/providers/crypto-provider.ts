@@ -39,7 +39,9 @@ export class CryptoPaymentProvider implements PaymentProvider {
       if (giftDetails.recipientName) notifyUrl.searchParams.set('gift_recipient_name', giftDetails.recipientName);
       if (giftDetails.giftMessage) notifyUrl.searchParams.set('gift_message', giftDetails.giftMessage);
     }
-    const successUrl = `${resolvedBaseUrl}/pro/success`;
+    // Correlate BlockBee checkout webhooks: `redirect_url` is echoed in the IPN payload.
+    const successUrlObj = new URL(`${resolvedBaseUrl}/pro/success`);
+    successUrlObj.searchParams.set('order_id', userId);
 
     // Dynamic Pricing based on PPP
     const baseAmount = calculateSubscriptionPrice(planId, countryCode, 'CRYPTO', months);
@@ -53,7 +55,7 @@ export class CryptoPaymentProvider implements PaymentProvider {
         apikey: blockbeeApiKey,
         value: amount.toString(),
         currency: 'USD',
-        redirect_url: successUrl,
+        redirect_url: successUrlObj.toString(),
         notify_url: notifyUrl.toString(),
         post: '1' // Receive IPN as POST
       };
@@ -71,10 +73,12 @@ export class CryptoPaymentProvider implements PaymentProvider {
         throw new Error(`BlockBee API Error: ${data.message || 'Unknown error'}`);
       }
 
+      const paymentId = String(data.payment_id || '').trim();
+
       return {
-        id: data.payment_id,
+        id: paymentId,
         url: data.payment_url,
-        provider: this.name
+        provider: this.name,
       };
     } catch (error) {
       console.error('[BlockBee] Failed to create session:', error);
