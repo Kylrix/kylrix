@@ -476,6 +476,51 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     checkDuplicate();
   }, [isAuthenticated, verifiedNote, user]);
 
+  // Define these hooks before any conditional returns
+  const canStartSharedNoteHuddle = useMemo(() => {
+    if (!isAuthenticated || !user?.$id || !verifiedNote) return false;
+    const ownerId = verifiedNote.userId;
+    const collaborators = Array.isArray(verifiedNote.collaborators) ? verifiedNote.collaborators : [];
+    return Boolean(ownerId && (user.$id === ownerId || collaborators.includes(user.$id)));
+  }, [isAuthenticated, user?.$id, verifiedNote]);
+
+  const handleStartSharedNoteHuddle = useCallback(() => {
+    if (!verifiedNote) return;
+
+    if (!isAuthenticated || !user?.$id) {
+      const source = typeof window !== 'undefined'
+        ? encodeURIComponent(window.location.origin + window.location.pathname)
+        : '';
+      window.location.assign(`${getEcosystemUrl('accounts')}/login?source=${source}`);
+      return;
+    }
+
+    if (!canStartSharedNoteHuddle) {
+      showError('Only the note owner or collaborators can start a huddle from this shared note.');
+      return;
+    }
+
+    const participantIds = Array.from(
+      new Set(
+        [verifiedNote.userId, ...(verifiedNote.collaborators ?? []), user.$id].filter(Boolean) as string[]
+      )
+    );
+
+    openCallLauncher({
+      source: 'note',
+      noteId: verifiedNote.$id,
+      title: verifiedNote.title || 'Shared Note',
+      participantIds,
+    });
+  }, [
+    canStartSharedNoteHuddle,
+    isAuthenticated,
+    openCallLauncher,
+    showError,
+    user?.$id,
+    verifiedNote,
+  ]);
+
   if (!verifiedNote) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 4 }}>
@@ -598,50 +643,6 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
       setIsPostingMoment(false);
     }
   };
-
-  const canStartSharedNoteHuddle = useMemo(() => {
-    if (!isAuthenticated || !user?.$id || !verifiedNote) return false;
-    const ownerId = verifiedNote.userId;
-    const collaborators = Array.isArray(verifiedNote.collaborators) ? verifiedNote.collaborators : [];
-    return Boolean(ownerId && (user.$id === ownerId || collaborators.includes(user.$id)));
-  }, [isAuthenticated, user?.$id, verifiedNote]);
-
-  const handleStartSharedNoteHuddle = useCallback(() => {
-    if (!verifiedNote) return;
-
-    if (!isAuthenticated || !user?.$id) {
-      const source = typeof window !== 'undefined'
-        ? encodeURIComponent(window.location.origin + window.location.pathname)
-        : '';
-      window.location.assign(`${getEcosystemUrl('accounts')}/login?source=${source}`);
-      return;
-    }
-
-    if (!canStartSharedNoteHuddle) {
-      showError('Only the note owner or collaborators can start a huddle from this shared note.');
-      return;
-    }
-
-    const participantIds = Array.from(
-      new Set(
-        [verifiedNote.userId, ...(verifiedNote.collaborators ?? []), user.$id].filter(Boolean) as string[]
-      )
-    );
-
-    openCallLauncher({
-      source: 'note',
-      noteId: verifiedNote.$id,
-      title: verifiedNote.title || 'Shared Note',
-      participantIds,
-    });
-  }, [
-    canStartSharedNoteHuddle,
-    isAuthenticated,
-    openCallLauncher,
-    showError,
-    user?.$id,
-    verifiedNote,
-  ]);
 
   if (isLoading) {
     return (
