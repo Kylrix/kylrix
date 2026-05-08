@@ -42,6 +42,7 @@ import { useRouter } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
 import { CallService } from '@/lib/services/call';
+import { UsersService } from '@/lib/services/users';
 import toast from 'react-hot-toast';
 import type { CallLaunchContext } from '@/context/CallLauncherContext';
 import { updateNote } from '@/lib/appwrite/note';
@@ -57,6 +58,15 @@ const COLORS = {
     secondary: '#F59E0B', // Connect Primary (Amber)
     rim: 'rgba(255, 255, 255, 0.05)'
 };
+
+const truncate = (value: string, max = 44) => {
+    const text = String(value || '').trim();
+    if (text.length <= max) return text;
+    return `${text.slice(0, Math.max(0, max - 1)).trimEnd()}…`;
+};
+
+const shortTime = () =>
+    new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(new Date());
 
 export const CallActionModal = ({
     open,
@@ -98,6 +108,48 @@ export const CallActionModal = ({
         }
     };
 
+    const resolveDefaultInstantTitle = useCallback(async () => {
+        if (!launchContext) return '';
+
+        const now = shortTime();
+
+        if (launchContext.noteId) {
+            const base = truncate(launchContext.title || 'Shared Note', 42);
+            return `${base} • ${now}`;
+        }
+
+        if (launchContext.conversationId && user?.$id) {
+            try {
+                const conversation = await ChatService.getConversationById(launchContext.conversationId, user.$id);
+                const participants = Array.isArray(conversation?.participants)
+                    ? Array.from(new Set(conversation.participants.filter((id: unknown): id is string => typeof id === 'string' && id.trim().length > 0)))
+                    : Array.from(new Set((launchContext.participantIds || []).filter((id): id is string => typeof id === 'string' && id.trim().length > 0)));
+
+                if (conversation?.type === 'group') {
+                    const groupName = truncate(conversation?.name || launchContext.conversationName || 'Group', 34);
+                    return `${groupName} • ${now}`;
+                }
+
+                const pair = Array.from(new Set([user.$id, ...participants])).slice(0, 2);
+                if (pair.length >= 2) {
+                    const profiles = await Promise.all(pair.map((id) => UsersService.getProfileById(id).catch(() => null)));
+                    const names = profiles.map((profile, idx) => {
+                        const fallback = idx === 0 ? 'You' : 'Guest';
+                        return profile?.username || profile?.displayName || fallback;
+                    });
+                    return `${names[0]} + ${names[1]} • ${now}`;
+                }
+            } catch {
+                // fallback handled below
+            }
+
+            const fallbackName = truncate(launchContext.conversationName || 'Call', 34);
+            return `${fallbackName} • ${now}`;
+        }
+
+        return '';
+    }, [launchContext, user?.$id]);
+
     const loadConversations = useCallback(async () => {
         if (!user) return;
         setLoading(true);
@@ -127,8 +179,11 @@ export const CallActionModal = ({
             setScheduleTime('');
             setJoinId('');
             setDuration(120);
+            resolveDefaultInstantTitle().then((title) => {
+                if (title) setInstantTitle(title);
+            }).catch(() => undefined);
         }
-    }, [open, user, loadConversations]);
+    }, [open, user, loadConversations, resolveDefaultInstantTitle]);
 
     const handleStartPublicCall = async () => {
         if (!user) return;
