@@ -3,6 +3,9 @@
   --foreground: #f2f2f2;
   --surface: #161514;
   --surface-2: #1F1D1B;
+  /* Alias: components use --color-surface (e.g. DynamicSidebar); must map to real tokens */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --font-satoshi: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-clash: "Clash Display", "Satoshi", sans-serif;
   --font-clash-display: "Clash Display", "Satoshi", sans-serif;

@@ -36,7 +36,7 @@ import PaywallDrawer from '../NoteContextMenu';
 import { updateNote, createNote, toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl, getNotePublicState } from '@/lib/appwrite';
 import { useToast } from './Toast';
 import { useSudo } from '@/context/SudoContext';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 import { generateAIAction } from '@/lib/ai-actions';
 import {
   PlaylistAdd as TodoIcon,
@@ -55,15 +55,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
   const { isPinned, pinNote, unpinNote, upsertNote } = useNotes();
-  
-  // Gracefully degrade if useAuth is not available
-  let user = null;
-  try {
-    const auth = useAuth();
-    user = auth.user;
-  } catch {
-    // useAuth not available in this context, continue without it
-  }
+  const { user } = useAuth();
   
   const { promptSudo } = useSudo();
   const { showSuccess, showError, showInfo } = useToast();

@@ -20,6 +20,7 @@ import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
 import { AIProvider } from '@/context/AIContext';
 import { OverlayProvider } from '@/components/ui/OverlayContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
+import { GlobalContextMenu } from '@/components/ui/GlobalContextMenu';
 import { ToastProvider } from '@/components/ui/Toast';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
@@ -46,6 +47,7 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                   <AIProvider>
                                     <OverlayProvider>
                                       <ContextMenuProvider>
+                                        <GlobalContextMenu />
                                         <ToastProvider>
                                           <PotatoProvider>
                                             <AppChromeProvider>
