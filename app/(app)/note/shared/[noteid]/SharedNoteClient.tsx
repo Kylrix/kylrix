@@ -63,6 +63,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { decryptGhostData } from '@/lib/encryption/ghost-crypto';
 import { useParams } from 'next/navigation';
 import { getConnectPrimaryColor } from '@/lib/ecosystem-app-colors';
+import { useCallLauncher } from '@/context/CallLauncherContext';
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -133,6 +134,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   const [isCopied, setIsCopied] = React.useState(false);
   const { showSuccess, showError } = useToast();
   const { setCachedData, getCachedData, invalidate } = useDataNexus();
+  const { openCallLauncher } = useCallLauncher();
 
   const CACHE_KEY = useMemo(() => `public_note_${noteId}`, [noteId]);
   const SHARED_NOTE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days standard
@@ -597,6 +599,50 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     }
   };
 
+  const canStartSharedNoteHuddle = useMemo(() => {
+    if (!isAuthenticated || !user?.$id || !verifiedNote) return false;
+    const ownerId = verifiedNote.userId;
+    const collaborators = Array.isArray(verifiedNote.collaborators) ? verifiedNote.collaborators : [];
+    return Boolean(ownerId && (user.$id === ownerId || collaborators.includes(user.$id)));
+  }, [isAuthenticated, user?.$id, verifiedNote]);
+
+  const handleStartSharedNoteHuddle = useCallback(() => {
+    if (!verifiedNote) return;
+
+    if (!isAuthenticated || !user?.$id) {
+      const source = typeof window !== 'undefined'
+        ? encodeURIComponent(window.location.origin + window.location.pathname)
+        : '';
+      window.location.assign(`${getEcosystemUrl('accounts')}/login?source=${source}`);
+      return;
+    }
+
+    if (!canStartSharedNoteHuddle) {
+      showError('Only the note owner or collaborators can start a huddle from this shared note.');
+      return;
+    }
+
+    const participantIds = Array.from(
+      new Set(
+        [verifiedNote.userId, ...(verifiedNote.collaborators ?? []), user.$id].filter(Boolean) as string[]
+      )
+    );
+
+    openCallLauncher({
+      source: 'note',
+      noteId: verifiedNote.$id,
+      title: verifiedNote.title || 'Shared Note',
+      participantIds,
+    });
+  }, [
+    canStartSharedNoteHuddle,
+    isAuthenticated,
+    openCallLauncher,
+    showError,
+    user?.$id,
+    verifiedNote,
+  ]);
+
   if (isLoading) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -673,11 +719,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
                 </Button>
               )}
               <Button
-                component={MuiLink}
-                href={isAuthenticated
-                  ? `${getEcosystemUrl('connect')}/calls?source=shared-note&noteId=${verifiedNote.$id}&title=${encodeURIComponent(verifiedNote.title || 'Shared Note')}`
-                  : `${getEcosystemUrl('accounts')}/login?source=${typeof window !== 'undefined' ? encodeURIComponent(window.location.origin + window.location.pathname) : ''}`
-                }
+                onClick={handleStartSharedNoteHuddle}
                 startIcon={<HuddleIcon color={getConnectPrimaryColor()} />}
                 variant="outlined"
                 sx={{

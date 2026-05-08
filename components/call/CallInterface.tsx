@@ -70,7 +70,8 @@ export const CallInterface = ({
     initialMediaSettings = { video: true, audio: true, companion: false },
     autoInitiate = false,
     callTitle,
-    expiresAt
+    expiresAt,
+    initialPresentation = 'fullscreen'
 }: { 
     conversationId?: string, 
     isCaller: boolean, 
@@ -80,7 +81,8 @@ export const CallInterface = ({
     initialMediaSettings?: { video: boolean, audio: boolean, companion: boolean },
     autoInitiate?: boolean,
     callTitle?: string,
-    expiresAt?: string
+    expiresAt?: string,
+    initialPresentation?: 'fullscreen' | 'dock'
 }) => {
     const { user } = useAuth();
     const [status, setStatus] = useState('Initializing...');
@@ -88,6 +90,7 @@ export const CallInterface = ({
     const [isVideoOff, setIsVideoOff] = useState(!initialMediaSettings.video || initialMediaSettings.companion);
     const [isCompanion, _setIsCompanion] = useState(initialMediaSettings.companion);
     const [targetId, setTargetId] = useState<string | undefined>(initialTargetId);
+    const [isFullscreen, setIsFullscreen] = useState(initialPresentation !== 'dock');
     const [timeRemaining, setTimeRemaining] = useState<string>('');
     const [copied, setCopied] = useState(false);
     
@@ -107,6 +110,7 @@ export const CallInterface = ({
     const hasInitiatedCall = useRef(false);
     const router = useRouter();
     const callStartTime = useRef<number | null>(null);
+    const touchStartYRef = useRef<number | null>(null);
     
     useEffect(() => {
         if (callStartTime.current === null) {
@@ -423,6 +427,20 @@ export const CallInterface = ({
         toast.success("Meeting ID copied");
     };
 
+    const handleDockTouchStart = (event: React.TouchEvent) => {
+        touchStartYRef.current = event.touches[0]?.clientY ?? null;
+    };
+
+    const handleDockTouchEnd = (event: React.TouchEvent) => {
+        if (touchStartYRef.current == null) return;
+        const endY = event.changedTouches[0]?.clientY ?? touchStartYRef.current;
+        const delta = touchStartYRef.current - endY;
+        if (delta > 36) {
+            setIsFullscreen(true);
+        }
+        touchStartYRef.current = null;
+    };
+
     const toggleMute = () => {
         if (localVideoRef.current?.srcObject) {
             const stream = localVideoRef.current.srcObject as MediaStream;
@@ -442,13 +460,52 @@ export const CallInterface = ({
     return (
         <Box sx={{ 
             position: 'fixed', 
-            top: 0, left: 0, right: 0, bottom: 0, 
+            top: isFullscreen ? 0 : 'auto',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: isFullscreen ? '100dvh' : { xs: '72dvh', md: '68dvh' },
             bgcolor: '#0A0908', 
             zIndex: 1300,
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            borderTopLeftRadius: isFullscreen ? 0 : 24,
+            borderTopRightRadius: isFullscreen ? 0 : 24,
+            border: isFullscreen ? 'none' : '1px solid rgba(255,255,255,0.08)',
+            boxShadow: isFullscreen ? 'none' : '0 -30px 60px rgba(0,0,0,0.55)',
+            transition: 'all 260ms cubic-bezier(0.16, 1, 0.3, 1)'
         }}>
+            {!isFullscreen && (
+                <Box
+                    onTouchStart={handleDockTouchStart}
+                    onTouchEnd={handleDockTouchEnd}
+                    sx={{
+                        pt: 'max(10px, env(safe-area-inset-top))',
+                        pb: 1,
+                        px: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        bgcolor: '#161412',
+                        position: 'relative',
+                    }}
+                >
+                    <Box sx={{ width: 42, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.28)', mx: 'auto', position: 'absolute', left: 0, right: 0, top: 8 }} />
+                    <Typography sx={{ color: 'rgba(255,255,255,0.75)', fontWeight: 800, fontSize: '0.78rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        Live Call
+                    </Typography>
+                    <Button
+                        size="small"
+                        onClick={() => setIsFullscreen(true)}
+                        startIcon={<ChevronUp size={14} />}
+                        sx={{ color: '#A5B4FC', fontWeight: 800, textTransform: 'none' }}
+                    >
+                        Expand
+                    </Button>
+                </Box>
+            )}
             {/* Main Viewport */}
             <Box sx={{ flex: 1, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
                 <Paper 
