@@ -32,6 +32,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   
   /** Full-page note at /note/notes/[id] — bottom tabs clash with editor chrome; list/shared/tags still get the bar. */
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
+  const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
 
   const shouldShowBottomBar = Boolean(
     isAppRoute &&
@@ -40,6 +41,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       pathname !== '/note' &&
       pathname !== '/settings' &&
       !isNoteFullPageDetail &&
+      !isConnectCallDetail &&
       (!pathname?.startsWith('/vault') || pathname?.startsWith('/vault/dashboard'))
   );
 

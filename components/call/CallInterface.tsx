@@ -103,6 +103,8 @@ export const CallInterface = ({
     const [isRecording, setIsRecording] = useState(false);
     const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
     const [deviceMenuAnchor, setDeviceMenuAnchor] = useState<null | HTMLElement>(null);
+    const [remoteTrackLive, setRemoteTrackLive] = useState(false);
+    const [micLevel, setMicLevel] = useState(0);
     
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -111,12 +113,17 @@ export const CallInterface = ({
     const router = useRouter();
     const callStartTime = useRef<number | null>(null);
     const touchStartYRef = useRef<number | null>(null);
+    const micAudioContextRef = useRef<AudioContext | null>(null);
+    const micAnimationFrameRef = useRef<number | null>(null);
     
     useEffect(() => {
         if (callStartTime.current === null) {
             callStartTime.current = Date.now();
         }
     }, []);
+
+    const normalizedStatus = String(status || '').toLowerCase();
+    const isPeerLive = remoteTrackLive || normalizedStatus === 'connected' || normalizedStatus === 'completed';
 
     const handleDeviceMenuOpen = async (event: React.MouseEvent<HTMLElement>) => {
         const devs = await rtcManager.current?.getDevices();
@@ -217,6 +224,11 @@ export const CallInterface = ({
                 if (remoteVideoRef.current) {
                     remoteVideoRef.current.srcObject = stream;
                 }
+                const hasRemoteTrack = stream.getTracks().length > 0;
+                setRemoteTrackLive(hasRemoteTrack);
+                if (hasRemoteTrack) {
+                    setStatus('connected');
+                }
             },
             onStateChange: (state: string) => setStatus(state),
             onSignal: async (signal: any) => {
@@ -315,8 +327,65 @@ export const CallInterface = ({
             if (rtcManager.current) {
                 rtcManager.current.cleanup();
             }
+            if (micAnimationFrameRef.current) {
+                cancelAnimationFrame(micAnimationFrameRef.current);
+                micAnimationFrameRef.current = null;
+            }
+            if (micAudioContextRef.current) {
+                micAudioContextRef.current.close().catch(() => undefined);
+                micAudioContextRef.current = null;
+            }
         };
     }, [user, isCaller, autoInitiate, callCode, conversationId, initialMediaSettings.audio, initialMediaSettings.video, isCompanion, targetId]);
+
+    useEffect(() => {
+        const stream = localVideoRef.current?.srcObject as MediaStream | null;
+        const audioTrack = stream?.getAudioTracks?.()[0];
+        if (!audioTrack || isMuted) {
+            setMicLevel(0);
+            if (micAnimationFrameRef.current) {
+                cancelAnimationFrame(micAnimationFrameRef.current);
+                micAnimationFrameRef.current = null;
+            }
+            if (micAudioContextRef.current) {
+                micAudioContextRef.current.close().catch(() => undefined);
+                micAudioContextRef.current = null;
+            }
+            return;
+        }
+
+        const audioContext = new AudioContext();
+        micAudioContextRef.current = audioContext;
+        const source = audioContext.createMediaStreamSource(new MediaStream([audioTrack]));
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        const samples = new Uint8Array(analyser.frequencyBinCount);
+        source.connect(analyser);
+
+        const tick = () => {
+            analyser.getByteTimeDomainData(samples);
+            let sum = 0;
+            for (let i = 0; i < samples.length; i += 1) {
+                const centered = (samples[i] - 128) / 128;
+                sum += centered * centered;
+            }
+            const rms = Math.sqrt(sum / samples.length);
+            setMicLevel(Math.min(1, rms * 4.2));
+            micAnimationFrameRef.current = requestAnimationFrame(tick);
+        };
+        micAnimationFrameRef.current = requestAnimationFrame(tick);
+
+        return () => {
+            if (micAnimationFrameRef.current) {
+                cancelAnimationFrame(micAnimationFrameRef.current);
+                micAnimationFrameRef.current = null;
+            }
+            audioContext.close().catch(() => undefined);
+            if (micAudioContextRef.current === audioContext) {
+                micAudioContextRef.current = null;
+            }
+        };
+    }, [isMuted, status]);
 
     const handleAcceptRequest = async (request: JoinRequest) => {
         if (!user) return;
@@ -512,22 +581,25 @@ export const CallInterface = ({
                 <Paper 
                     elevation={24}
                     sx={{ 
-                        width: '100%', height: '100%', maxWidth: '1200px', maxHeight: '800px',
+                        width: '100%',
+                        height: '100%',
+                        maxWidth: '1200px',
+                        maxHeight: { xs: 'calc(100% - 120px)', md: '800px' },
                         bgcolor: '#161412', borderRadius: '32px', overflow: 'hidden', position: 'relative',
                         border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         boxShadow: '0 50px 100px -20px rgba(0,0,0,0.7)'
                     }}
                 >
-                    <Box 
+                        <Box 
                         component="video" ref={remoteVideoRef} autoPlay playsInline 
                         sx={{ 
                             width: '100%', height: '100%', objectFit: 'cover', 
-                            display: status === 'connected' && !isVideoOff ? 'block' : 'none',
+                            display: isPeerLive && !isVideoOff ? 'block' : 'none',
                             transform: 'scaleX(-1)'
                         }} 
                     />
                     
-                    {((status as any) !== 'connected' || (status as any) === 'failed') && (
+                    {!isPeerLive && normalizedStatus !== 'failed' && (
                         <Box sx={{ textAlign: 'center', color: 'white', zIndex: 1, px: 3 }}>
                             <Avatar sx={{ width: 120, height: 120, mb: 3, mx: 'auto', bgcolor: alpha('#6366F1', 0.1), border: '2px solid #6366F1' }}>
                                 <Users size={64} color="#6366F1" />
@@ -542,15 +614,15 @@ export const CallInterface = ({
                                         Share this link or ID to start the session
                                     </Typography>
                                     
-                                    <Stack direction="row" spacing={1} sx={{ width: '100%', maxWidth: 400 }}>
+                                    <Stack direction="row" spacing={1} sx={{ width: '100%', maxWidth: 420, minWidth: 0 }}>
                                         <Paper sx={{ 
                                             flex: 1, p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', 
                                             border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3,
-                                            display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden'
+                                            display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden', minWidth: 0
                                         }}>
                                             <Typography variant="caption" sx={{ 
                                                 color: 'rgba(255,255,255,0.4)', fontWeight: 800, 
-                                                whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' 
+                                                whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', minWidth: 0
                                             }}>
                                                 {`${window.location.origin.replace(/^https?:\/\//, '')}/call/${callCode || conversationId}`}
                                             </Typography>
@@ -559,10 +631,10 @@ export const CallInterface = ({
                                             </IconButton>
                                         </Paper>
 
-                                        <Paper sx={{ 
+                                        <Paper sx={{
                                             p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', 
                                             border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3,
-                                            display: 'flex', alignItems: 'center', gap: 1
+                                            display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0
                                         }}>
                                             <Hash size={14} color="rgba(255,255,255,0.3)" />
                                             <Typography variant="caption" sx={{ color: 'white', fontWeight: 900, fontFamily: 'var(--font-jetbrains)' }}>
@@ -576,7 +648,7 @@ export const CallInterface = ({
                                 </Stack>
                             )}
 
-                            {(!isCaller || targetId) && status === 'Initializing...' && (
+                            {(!isCaller || targetId) && normalizedStatus === 'initializing...' && (
                                 <CircularProgress size={24} sx={{ mt: 4, color: '#6366F1' }} />
                             )}
                         </Box>
@@ -586,7 +658,11 @@ export const CallInterface = ({
                 <Paper 
                     elevation={12}
                     sx={{ 
-                        position: 'absolute', bottom: 40, right: 40, width: { xs: 120, sm: 180 }, height: { xs: 160, sm: 240 }, 
+                        position: 'absolute',
+                        bottom: { xs: 16, sm: 26, md: 40 },
+                        right: { xs: 16, sm: 20, md: 40 },
+                        width: { xs: 112, sm: 160, md: 180 },
+                        height: { xs: 150, sm: 210, md: 240 }, 
                         bgcolor: '#161412', borderRadius: '24px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)',
                         boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 1301, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
                     }}
@@ -600,7 +676,17 @@ export const CallInterface = ({
                 </Paper>
 
                 {joinRequests.length > 0 && (
-                    <Box sx={{ position: 'absolute', top: 100, right: 40, width: 300, zIndex: 1305, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{
+                        position: 'absolute',
+                        top: { xs: 12, md: 100 },
+                        right: { xs: 12, md: 40 },
+                        left: { xs: 12, md: 'auto' },
+                        width: { xs: 'auto', md: 300 },
+                        zIndex: 1305,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1
+                    }}>
                         {joinRequests.map(req => (
                             <Paper key={req.senderId} sx={{ p: 2, bgcolor: '#161412', border: '1px solid #6366F1', borderRadius: 3 }}>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'white', mb: 1.5 }}>{req.senderName} wants to join</Typography>
@@ -613,42 +699,90 @@ export const CallInterface = ({
                     </Box>
                 )}
 
-                <Box sx={{ position: 'absolute', top: 40, left: 40, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{
+                    position: 'absolute',
+                    top: { xs: 12, md: 40 },
+                    left: { xs: 12, md: 40 },
+                    right: { xs: 12, md: 'auto' },
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.1,
+                    maxWidth: { xs: 'calc(100% - 24px)', md: 420 },
+                    zIndex: 1302
+                }}>
                     {callTitle && (
-                        <Paper sx={{ px: 2, py: 1, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 900, color: 'white', fontFamily: 'var(--font-clash)' }}>{callTitle.toUpperCase()}</Typography>
+                        <Paper sx={{ px: 1.5, py: 0.9, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <Typography variant="subtitle2" noWrap sx={{ fontWeight: 900, color: 'white', fontFamily: 'var(--font-clash)' }}>{callTitle.toUpperCase()}</Typography>
                         </Paper>
                     )}
-                    <Stack direction="row" spacing={1.5}>
-                        <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <Box sx={{ width: 8, height: 8, bgcolor: status === 'connected' ? '#10B981' : '#F59E0B', borderRadius: '50%', boxShadow: `0 0 10px ${status === 'connected' ? '#10B981' : '#F59E0B'}` }} />
-                            <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.05em', color: 'white' }}>{status.toUpperCase()}</Typography>
+                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                        <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.8, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
+                            <Box sx={{ width: 8, height: 8, bgcolor: isPeerLive ? '#10B981' : '#F59E0B', borderRadius: '50%', boxShadow: `0 0 10px ${isPeerLive ? '#10B981' : '#F59E0B'}` }} />
+                            <Typography variant="caption" noWrap sx={{ fontWeight: 800, letterSpacing: '0.05em', color: 'white', maxWidth: 140 }}>{status.toUpperCase()}</Typography>
                         </Paper>
                         {timeRemaining && (
-                            <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2, py: 1, bgcolor: 'rgba(239, 68, 68, 0.1)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                            <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.8, bgcolor: 'rgba(239, 68, 68, 0.1)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                                 <Clock size={12} color="#EF4444" />
-                                <Typography variant="caption" sx={{ fontWeight: 900, color: '#EF4444', fontFamily: 'var(--font-jetbrains)' }}>{timeRemaining}</Typography>
+                                <Typography variant="caption" noWrap sx={{ fontWeight: 900, color: '#EF4444', fontFamily: 'var(--font-jetbrains)' }}>{timeRemaining}</Typography>
                             </Paper>
                         )}
                     </Stack>
-                    <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.8, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
                         <Users size={14} color="#6366F1" />
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'white', opacity: 0.8 }}>
-                            {participants.length || 1} {participants.length === 1 ? 'PARTICIPANT' : 'PARTICIPANTS'}
+                        <Typography variant="caption" noWrap sx={{ fontWeight: 800, color: 'white', opacity: 0.8 }}>
+                            {Math.max(participants.length || 0, isPeerLive ? 2 : 1)} {Math.max(participants.length || 0, isPeerLive ? 2 : 1) === 1 ? 'PARTICIPANT' : 'PARTICIPANTS'}
                         </Typography>
                     </Paper>
-                    <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 2, py: 1, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.8, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
                         <ShieldCheck size={14} color="#6366F1" />
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'white', opacity: 0.8 }}>E2E ENCRYPTED P2P</Typography>
+                        <Typography variant="caption" noWrap sx={{ fontWeight: 800, color: 'white', opacity: 0.8 }}>E2E ENCRYPTED P2P</Typography>
                     </Paper>
                 </Box>
             </Box>
 
             {/* Bottom Controls */}
             <Box sx={{ height: 120, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: { xs: 1, sm: 4 }, bgcolor: 'transparent', pb: 4, px: 2 }}>
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        bottom: 96,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        px: 1.25,
+                        py: 0.55,
+                        borderRadius: '999px',
+                        border: '1px solid',
+                        borderColor: !isMuted && micLevel > 0.08 ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.14)',
+                        bgcolor: !isMuted && micLevel > 0.08 ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.06)',
+                        boxShadow: !isMuted && micLevel > 0.08 ? '0 0 18px rgba(16,185,129,0.35)' : 'none',
+                        transition: 'all 140ms ease',
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            fontWeight: 900,
+                            letterSpacing: '0.04em',
+                            color: !isMuted && micLevel > 0.08 ? '#10B981' : 'rgba(255,255,255,0.72)',
+                        }}
+                    >
+                        {isMuted ? 'MIC MUTED' : micLevel > 0.08 ? 'MIC INPUT DETECTED' : 'MIC LISTENING'}
+                    </Typography>
+                </Box>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                     <Tooltip title={isMuted ? "Unmute" : "Mute"}>
-                        <IconButton onClick={toggleMute} sx={{ width: 56, height: 56, bgcolor: isMuted ? '#EF4444' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', '&:hover': { bgcolor: isMuted ? '#DC2626' : 'rgba(255,255,255,0.1)' } }}>
+                        <IconButton onClick={toggleMute} sx={{
+                            width: 56,
+                            height: 56,
+                            bgcolor: isMuted ? '#EF4444' : 'rgba(255,255,255,0.05)',
+                            color: 'white',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            boxShadow: !isMuted && micLevel > 0.08 ? `0 0 ${Math.max(8, 24 * micLevel)}px rgba(16,185,129,${Math.min(0.75, 0.25 + micLevel)})` : 'none',
+                            transform: !isMuted ? `scale(${1 + micLevel * 0.08})` : 'scale(1)',
+                            transition: 'box-shadow 120ms linear, transform 120ms linear, background-color 140ms ease',
+                            '&:hover': { bgcolor: isMuted ? '#DC2626' : 'rgba(255,255,255,0.1)' }
+                        }}>
                             {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
                         </IconButton>
                     </Tooltip>

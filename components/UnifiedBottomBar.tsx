@@ -261,9 +261,10 @@ export function UnifiedBottomBar() {
   }, []);
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
+  const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
 
   // Hide bottom bar on settings page, when a real bottom sheet is open, or on full-page note editor
-  if (pathname === '/settings' || hasBottomDrawerOpen || isNoteFullPageDetail) return null;
+  if (pathname === '/settings' || hasBottomDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
 
   return (
     <Box

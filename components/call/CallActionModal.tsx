@@ -17,6 +17,7 @@ import {
     Divider,
     Button,
     Stack,
+    Paper,
     alpha,
     useTheme,
     useMediaQuery,
