@@ -232,7 +232,7 @@ export const CallInterface = ({
             },
             onStateChange: (state: string) => setStatus(state),
             onSignal: async (signal: any) => {
-                if (['join_request', 'let_in', 'presence', 'chat_message'].includes(signal.type)) {
+                        if (['join_request', 'let_in', 'presence', 'chat_message', 'offer', 'answer', 'candidate'].includes(signal.type)) {
                     if (signal.target) {
                         try {
                             // Include callId in signal for better tracking
@@ -601,17 +601,16 @@ export const CallInterface = ({
                     
                     {!isPeerLive && normalizedStatus !== 'failed' && (
                         <Box sx={{ textAlign: 'center', color: 'white', zIndex: 1, px: 3 }}>
-                            <Avatar sx={{ width: 120, height: 120, mb: 3, mx: 'auto', bgcolor: alpha('#6366F1', 0.1), border: '2px solid #6366F1' }}>
-                                <Users size={64} color="#6366F1" />
-                            </Avatar>
-                            <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', mb: 1 }}>
-                                {status === 'Initializing...' ? 'Kylrix Connect' : status === 'new' ? 'Connecting...' : status}
-                            </Typography>
-                            
+                            <Paper sx={{ px: 2, py: 1.2, bgcolor: 'rgba(22,20,18,0.72)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 3, backdropFilter: 'blur(8px)' }}>
+                                <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', color: 'rgba(255,255,255,0.86)' }}>
+                                    {status === 'Initializing...' ? 'Waiting for participants...' : status === 'new' ? 'Connecting...' : status}
+                                </Typography>
+                            </Paper>
+
                             {isCaller && !targetId && (
                                 <Stack spacing={2} alignItems="center" sx={{ mt: 3 }}>
-                                    <Typography variant="body1" sx={{ opacity: 0.5, fontWeight: 700 }}>
-                                        Share this link or ID to start the session
+                                    <Typography variant="body2" sx={{ opacity: 0.6, fontWeight: 700 }}>
+                                        Share code to invite participant
                                     </Typography>
                                     
                                     <Stack direction="row" spacing={1} sx={{ width: '100%', maxWidth: 420, minWidth: 0 }}>
@@ -620,11 +619,12 @@ export const CallInterface = ({
                                             border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3,
                                             display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden', minWidth: 0
                                         }}>
-                                            <Typography variant="caption" sx={{ 
-                                                color: 'rgba(255,255,255,0.4)', fontWeight: 800, 
-                                                whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', minWidth: 0
+                                            <Typography variant="caption" sx={{
+                                                color: 'rgba(255,255,255,0.6)', fontWeight: 900,
+                                                whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', minWidth: 0,
+                                                fontFamily: 'var(--font-jetbrains)'
                                             }}>
-                                                {`${window.location.origin.replace(/^https?:\/\//, '')}/call/${callCode || conversationId}`}
+                                                {(callCode || conversationId || '').slice(0, 7)}
                                             </Typography>
                                             <IconButton size="small" onClick={handleCopyLink} sx={{ color: COLORS.primary }}>
                                                 {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -741,44 +741,30 @@ export const CallInterface = ({
             </Box>
 
             {/* Bottom Controls */}
-            <Box sx={{ height: 120, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: { xs: 1, sm: 4 }, bgcolor: 'transparent', pb: 4, px: 2 }}>
-                <Box
+            <Box sx={{ height: 108, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'transparent', pb: 3, px: 2 }}>
+                <Paper
                     sx={{
-                        position: 'absolute',
-                        bottom: 96,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        px: 1.25,
-                        py: 0.55,
-                        borderRadius: '999px',
-                        border: '1px solid',
-                        borderColor: !isMuted && micLevel > 0.08 ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.14)',
-                        bgcolor: !isMuted && micLevel > 0.08 ? 'rgba(16,185,129,0.14)' : 'rgba(255,255,255,0.06)',
-                        boxShadow: !isMuted && micLevel > 0.08 ? '0 0 18px rgba(16,185,129,0.35)' : 'none',
-                        transition: 'all 140ms ease',
-                        pointerEvents: 'none',
+                        width: 'min(760px, 100%)',
+                        px: { xs: 1, sm: 1.5 },
+                        py: 1,
+                        borderRadius: '18px',
+                        bgcolor: 'rgba(22,20,18,0.9)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        backdropFilter: 'blur(10px)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 0.8,
                     }}
                 >
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            fontWeight: 900,
-                            letterSpacing: '0.04em',
-                            color: !isMuted && micLevel > 0.08 ? '#10B981' : 'rgba(255,255,255,0.72)',
-                        }}
-                    >
-                        {isMuted ? 'MIC MUTED' : micLevel > 0.08 ? 'MIC INPUT DETECTED' : 'MIC LISTENING'}
-                    </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', gap: 1 }}>
                     <Tooltip title={isMuted ? "Unmute" : "Mute"}>
                         <IconButton onClick={toggleMute} sx={{
-                            width: 56,
-                            height: 56,
+                            width: 48,
+                            height: 48,
                             bgcolor: isMuted ? '#EF4444' : 'rgba(255,255,255,0.05)',
                             color: 'white',
                             border: '1px solid rgba(255,255,255,0.1)',
-                            boxShadow: !isMuted && micLevel > 0.08 ? `0 0 ${Math.max(8, 24 * micLevel)}px rgba(16,185,129,${Math.min(0.75, 0.25 + micLevel)})` : 'none',
+                            boxShadow: !isMuted && micLevel > 0.08 ? `0 0 ${Math.max(8, 20 * micLevel)}px rgba(245,158,11,${Math.min(0.75, 0.3 + micLevel)})` : 'none',
                             transform: !isMuted ? `scale(${1 + micLevel * 0.08})` : 'scale(1)',
                             transition: 'box-shadow 120ms linear, transform 120ms linear, background-color 140ms ease',
                             '&:hover': { bgcolor: isMuted ? '#DC2626' : 'rgba(255,255,255,0.1)' }
@@ -786,32 +772,22 @@ export const CallInterface = ({
                             {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
                         </IconButton>
                     </Tooltip>
-                    <IconButton onClick={handleDeviceMenuOpen} size="small" sx={{ color: 'rgba(255,255,255,0.3)', mt: -2 }}>
-                        <ChevronUp size={16} />
-                    </IconButton>
-                </Box>
 
                 <Tooltip title={isScreenSharing ? "Stop Sharing" : "Share Screen"}>
-                    <IconButton onClick={toggleScreenShare} sx={{ width: 56, height: 56, bgcolor: isScreenSharing ? '#6366F1' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <Monitor size={22} />
+                    <IconButton onClick={toggleScreenShare} sx={{ width: 48, height: 48, bgcolor: isScreenSharing ? '#6366F1' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <Monitor size={20} />
                     </IconButton>
-                </Tooltip>
-
-                <Tooltip title="End Call">
-                    <Fab onClick={endCall} sx={{ width: 72, height: 72, bgcolor: '#EF4444', color: 'white', '&:hover': { bgcolor: '#DC2626', transform: 'scale(1.05)' }, transition: 'all 0.2s' }}>
-                        <PhoneOff size={32} />
-                    </Fab>
                 </Tooltip>
 
                 <Tooltip title={isVideoOff ? "Start Video" : "Stop Video"}>
-                    <IconButton onClick={toggleVideo} sx={{ width: 56, height: 56, bgcolor: isVideoOff ? '#EF4444' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', '&:hover': { bgcolor: isVideoOff ? '#DC2626' : 'rgba(255,255,255,0.1)' } }}>
-                        {isVideoOff ? <VideoOff size={22} /> : <Video size={22} />}
+                    <IconButton onClick={toggleVideo} sx={{ width: 48, height: 48, bgcolor: isVideoOff ? '#EF4444' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', '&:hover': { bgcolor: isVideoOff ? '#DC2626' : 'rgba(255,255,255,0.1)' } }}>
+                        {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
                     </IconButton>
                 </Tooltip>
 
                 <Tooltip title={isRecording ? "Stop Recording" : "Record Call"}>
-                    <IconButton onClick={toggleRecording} sx={{ width: 56, height: 56, bgcolor: 'rgba(255,255,255,0.05)', color: isRecording ? '#EF4444' : 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        {isRecording ? <Square size={20} /> : <Circle size={20} fill={isRecording ? '#EF4444' : 'none'} />}
+                    <IconButton onClick={toggleRecording} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: isRecording ? '#EF4444' : 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        {isRecording ? <Square size={18} /> : <Circle size={18} fill={isRecording ? '#EF4444' : 'none'} />}
                     </IconButton>
                 </Tooltip>
 
@@ -823,17 +799,30 @@ export const CallInterface = ({
                                 setUnreadChatCount(0);
                             }} 
                             sx={{ 
-                                width: 56, height: 56,
+                                width: 48, height: 48,
                                 bgcolor: isChatOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
                                 color: 'white', 
                                 border: '1px solid rgba(255,255,255,0.1)',
                                 '&:hover': { bgcolor: isChatOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
                             }}
                         >
-                            <MessageSquare size={22} />
+                            <MessageSquare size={20} />
                         </IconButton>
                     </Badge>
                 </Tooltip>
+
+                <Tooltip title="Audio/Video Devices">
+                    <IconButton onClick={handleDeviceMenuOpen} sx={{ width: 40, height: 40, color: 'rgba(255,255,255,0.65)' }}>
+                        <ChevronUp size={16} />
+                    </IconButton>
+                </Tooltip>
+
+                <Tooltip title="End Call">
+                    <Fab onClick={endCall} sx={{ width: 54, height: 54, bgcolor: '#EF4444', color: 'white', '&:hover': { bgcolor: '#DC2626', transform: 'scale(1.05)' }, transition: 'all 0.2s', boxShadow: '0 8px 26px rgba(239,68,68,0.45)' }}>
+                        <PhoneOff size={22} />
+                    </Fab>
+                </Tooltip>
+                </Paper>
             </Box>
 
             <Menu
