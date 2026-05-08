@@ -54,6 +54,7 @@ function CheckoutContent() {
           giftMessage: giftMessage || undefined,
           couponId: couponId || undefined,
           jwt: jwt || undefined,
+          baseUrl: `${window.location.origin}/accounts`,
         });
 
         if (session.url) {

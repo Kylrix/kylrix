@@ -72,8 +72,9 @@ export async function createBillingCheckoutSessionAction(input: {
   giftMessage?: string;
   couponId?: string;
   jwt?: string;
+  baseUrl?: string;
 }) {
-  const { planId, method, countryCode, months, giftRecipientId, giftRecipientName, giftMessage, couponId, jwt } = input;
+  const { planId, method, countryCode, months, giftRecipientId, giftRecipientName, giftMessage, couponId, jwt, baseUrl } = input;
   const user = await getAuthenticatedUserForBillingAction({ jwt });
   if (!user) throw new Error('Authentication required');
   if (!planId || !method) throw new Error('Missing parameters');
@@ -175,6 +176,7 @@ export async function createBillingCheckoutSessionAction(input: {
       couponId: couponRow?.$id || null,
       discountPercent: couponDiscountPercent,
       adjustedAmountUsd,
+      baseUrl: baseUrl || null,
     },
   );
 }

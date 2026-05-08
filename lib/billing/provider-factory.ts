@@ -23,6 +23,7 @@ export interface PaymentProvider {
       couponId?: string | null;
       discountPercent?: number | null;
       adjustedAmountUsd?: number | null;
+      baseUrl?: string | null;
     },
   ): Promise<CheckoutSession>;
   verifyTransaction(transactionId: string): Promise<boolean>;

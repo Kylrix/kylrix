@@ -12,9 +12,11 @@ export class CryptoPaymentProvider implements PaymentProvider {
     months: number = 1,
     email?: string,
     giftDetails?: { recipientUserId: string; recipientName?: string; giftMessage?: string },
-    options?: { couponId?: string | null; discountPercent?: number | null; adjustedAmountUsd?: number | null },
+    options?: { couponId?: string | null; discountPercent?: number | null; adjustedAmountUsd?: number | null; baseUrl?: string | null },
   ): Promise<CheckoutSession> {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.com';
+    const resolvedBaseUrl = String(options?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.com')
+      .trim()
+      .replace(/\/+$/, '');
     const blockbeeApiKey = process.env.BLOCKBEE_API;
 
     if (!blockbeeApiKey) {
@@ -22,7 +24,7 @@ export class CryptoPaymentProvider implements PaymentProvider {
     }
 
     // Pro Tier specifics from user mandate
-    const notifyUrl = new URL(`${baseUrl}/api/pro/notify`);
+    const notifyUrl = new URL(`${resolvedBaseUrl}/api/pro/notify`);
     notifyUrl.searchParams.set('order_id', userId);
     notifyUrl.searchParams.set('plan_id', planId);
     notifyUrl.searchParams.set('months', String(months));
@@ -37,7 +39,7 @@ export class CryptoPaymentProvider implements PaymentProvider {
       if (giftDetails.recipientName) notifyUrl.searchParams.set('gift_recipient_name', giftDetails.recipientName);
       if (giftDetails.giftMessage) notifyUrl.searchParams.set('gift_message', giftDetails.giftMessage);
     }
-    const successUrl = `${baseUrl}/pro/success`;
+    const successUrl = `${resolvedBaseUrl}/pro/success`;
 
     // Dynamic Pricing based on PPP
     const baseAmount = calculateSubscriptionPrice(planId, countryCode, 'CRYPTO', months);
