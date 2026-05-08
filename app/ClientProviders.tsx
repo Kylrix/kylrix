@@ -25,6 +25,7 @@ import { ToastProvider } from '@/components/ui/Toast';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 import { ThemeProvider } from '@/lib/theme-context';
+import { CallLauncherProvider } from '@/context/CallLauncherContext';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -52,7 +53,9 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                           <PotatoProvider>
                                             <AppChromeProvider>
                                               <ChatNotificationProvider>
-                                                {children}
+                                                <CallLauncherProvider>
+                                                  {children}
+                                                </CallLauncherProvider>
                                               </ChatNotificationProvider>
                                             </AppChromeProvider>
                                           </PotatoProvider>

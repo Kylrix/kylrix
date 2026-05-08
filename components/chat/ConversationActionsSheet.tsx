@@ -37,6 +37,7 @@ import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';
 import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
 import { fetchProfilePreview } from '@/lib/profile-preview';
+import { useCallLauncher } from '@/context/CallLauncherContext';
 
 type ConversationActionsSheetProps = {
   conversation: any | null;
@@ -157,6 +158,7 @@ export default function ConversationActionsSheet({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
   const { user } = useAuth();
+  const { openCallLauncher } = useCallLauncher();
 
   const [currentConversation, setCurrentConversation] = useState<any | null>(conversation);
   const [directProfile, setDirectProfile] = useState<any | null>(null);
@@ -387,7 +389,13 @@ export default function ConversationActionsSheet({
 
   const handleCall = () => {
     if (!currentConversation) return;
-    router.push(`/connect/call/${currentConversation.$id}?caller=true&type=video`);
+    openCallLauncher({
+      source: currentConversation?.type === 'group' ? 'group' : 'chat',
+      conversationId: currentConversation.$id,
+      conversationName: currentConversation.name,
+      participantIds: Array.isArray(currentConversation?.participants) ? currentConversation.participants : [],
+      title: currentConversation.name || 'Call',
+    });
     onClose();
   };
 
