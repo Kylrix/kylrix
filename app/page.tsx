@@ -42,9 +42,9 @@ const surfaceShadow =
   'inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0,0,0,0.8)';
 
 const heroMetrics = [
-  { value: 'Encrypted', label: 'by default' },
-  { value: 'Yours', label: 'always' },
-  { value: '4 apps', label: 'one system' },
+  { value: 'E2EE', label: 'by default' },
+  { value: 'Agents', label: 'inside your workspace' },
+  { value: 'One system', label: 'for people and AI' },
 ];
 
 const livePanels = [
@@ -143,21 +143,21 @@ const integrationCards = [
 
 const infraPanels = [
   {
-    title: 'AI Agents',
+    title: 'Autonomous agents in the workspace',
     label: 'AI agents',
-    copy: 'AI can help inside the apps without making you move your data somewhere else.',
+    copy: 'Assign work to agents where your notes, tasks, and conversations already live.',
     icon: Zap,
   },
   {
-    title: 'Non-custodial financial layer',
-    label: 'Payments',
-    copy: 'Payments and settlement can live alongside your work, not outside it.',
+    title: 'Agentic wallet infrastructure',
+    label: 'Wallets',
+    copy: 'Wallet-native flows can power agent actions and settlement without locking your stack to one chain.',
     icon: Wallet,
   },
   {
-    title: 'Crypto-exclusive subscriptions',
+    title: 'Built for cloud execution',
     label: 'Billing',
-    copy: 'Pricing and subscriptions can run on crypto instead of card rails.',
+    copy: 'Coordinate human and agent work in one control plane so work can continue while you sleep.',
     icon: Waypoints,
   },
 ];
@@ -597,7 +597,7 @@ export default function LandingPage() {
                 fontFamily: 'var(--font-clash)',
               }}
             >
-              The Sovereign Work OS.
+              The only E2EE workspace where your productivity tools and autonomous agents coexist.
             </Typography>
 
             <Typography
@@ -611,8 +611,8 @@ export default function LandingPage() {
                 fontWeight: 400,
               }}
             >
-              The open-source, E2EE Notion/Discord alternative. Notes, voice huddles, forms, and a secure vault—
-              deeply integrated so your tools finally talk to each other, without giving up ownership.
+              Work while you sleep. Kylrix unifies notes, tasks, calls, and secure operations in one agent-ready
+              workspace, so people and AI can execute from the same context.
             </Typography>
           </Box>
 
@@ -771,8 +771,8 @@ export default function LandingPage() {
                   See the real app screens.
                 </Typography>
                 <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.85, maxWidth: 460 }}>
-                  These are the four apps people will actually use. Each panel shows the real icon and the exact job
-                  that app does.
+                  These are the core surfaces where teams and agents collaborate together, with shared context and
+                  secure defaults.
                 </Typography>
                 <Box
                   sx={{
@@ -838,8 +838,8 @@ export default function LandingPage() {
             Notes, tasks, calls, and posts work together.
           </Typography>
           <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.85, maxWidth: 720 }}>
-            Kylrix is not four separate apps. It is one system, so the things you make in one place can show up where
-            you need them next.
+            Kylrix is not disconnected tooling. It is one execution surface where your work, collaborators, and
+            autonomous agents share the same source of truth.
           </Typography>
         </Stack>
 
@@ -931,7 +931,7 @@ export default function LandingPage() {
               fontFamily: 'var(--font-clash)',
             }}
           >
-            AI, payments, and billing are part of the product.
+            Agent operations are native to the product.
           </Typography>
         </Stack>
 
@@ -1031,10 +1031,10 @@ export default function LandingPage() {
               justifyContent="space-between"
             >
               <Typography variant="h4" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em' }}>
-                Kylrix. A sovereign entity.
+                Kylrix. Effortless work, secured by design.
               </Typography>
               <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', maxWidth: 540, lineHeight: 1.8 }}>
-                Privacy as a power, not a feature. Built to feel like hardware, not a generic SaaS landing page.
+                The E2EE workspace where productivity tools and autonomous agents coexist in one unified system.
               </Typography>
             </Stack>
           </Stack>

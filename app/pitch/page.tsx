@@ -158,9 +158,9 @@ const slides: Slide[] = [
   {
     key: 'hero',
     eyebrow: 'Kylrix',
-    title: 'One system for private work.',
-    copy: 'Kylrix keeps notes, tasks, calls, and secrets together in one open-source, E2EE product set.',
-    bullets: ['Open source', 'E2EE by default', 'One session across all apps'],
+    title: 'The E2EE workspace for people and autonomous agents.',
+    copy: 'Kylrix keeps notes, tasks, calls, and secure operations in one execution surface so teams and agents can work from the same context.',
+    bullets: ['E2EE by default', 'One session across all apps', 'Work continues while you sleep'],
     accent: '#6366F1',
     scene: (
       <Frame title="Four apps" subtitle="One session" accent="#6366F1">
@@ -434,9 +434,9 @@ const slides: Slide[] = [
   {
     key: 'agents',
     eyebrow: 'AI agents',
-    title: 'AI that stays inside the system.',
-    copy: 'Agents can summarize, route, and act across the apps without sending your work somewhere else first.',
-    bullets: ['Works across Note, Flow, Connect, Vault', 'No extra copy and paste', 'Can stay local or controlled'],
+    title: 'Agents that execute where work already happens.',
+    copy: 'Assign, route, and complete work across the suite without splitting your productivity stack from your agent stack.',
+    bullets: ['Works across Note, Flow, Connect, Vault', 'No tool-chain juggling', 'Cloud-ready agent workflows'],
     accent: '#A855F7',
     scene: (
       <Frame title="Agents" subtitle="Inside the system" accent="#A855F7">
@@ -463,8 +463,8 @@ const slides: Slide[] = [
     key: 'business',
     eyebrow: 'Business model',
     title: 'Open core, sovereign pro.',
-    copy: 'The core stays open source. Pro adds managed encrypted sync, advanced agent features, and crypto-native billing.',
-    bullets: ['Open-source core', 'Managed encrypted sync', 'Crypto-only subscriptions'],
+    copy: 'The core stays open source. Pro adds managed encrypted sync, advanced agent features, and agentic wallet infrastructure.',
+    bullets: ['Open-source core', 'Managed encrypted sync', 'Agentic wallet infrastructure'],
     accent: '#F59E0B',
     scene: (
       <Frame title="Business" subtitle="Revenue" accent="#F59E0B">
@@ -472,7 +472,7 @@ const slides: Slide[] = [
           {[
             ['Open core', 'Free and open source', '#6366F1'],
             ['Sovereign Pro', 'Managed sync and agents', '#A855F7'],
-            ['Crypto billing', 'Subscriptions in crypto', '#10B981'],
+            ['Agentic wallets', 'Wallet-native settlement rails', '#10B981'],
           ].map(([title, copy, color]) => (
             <Grid key={title} size={{ xs: 12 }}>
               <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.06)' }}>
