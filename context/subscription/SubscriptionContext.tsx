@@ -1,17 +1,26 @@
 'use client';
 
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
-import { Client, Account } from 'appwrite';
-import { 
-  SubscriptionTier, 
-  PaymentMethod, 
-  RegionConfig, 
-  PPP_DATA, 
-  calculateSubscriptionPrice 
-} from '@/lib/subscription/ppp';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+} from 'react';
+import type { BillingUiTier } from '@/lib/subscription/tier-resolution';
+import type { SubscriptionTier, PaymentMethod, RegionConfig } from '@/lib/subscription/ppp';
+import { PPP_DATA, calculateSubscriptionPrice } from '@/lib/subscription/ppp';
+import { account } from '@/lib/appwrite/client';
+import { useAuth } from '@/context/auth/AuthContext';
+import { verifyProEntitlementAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { normalizeBillingPrefsTier } from '@/lib/subscription/tier-resolution';
+
+export type { BillingUiTier };
 
 interface SubscriptionState {
-  currentTier: SubscriptionTier | 'FREE';
+  /** Tier after server entitlement + synced prefs gate (never from URL alone). */
+  currentTier: BillingUiTier;
   detectedRegion: RegionConfig & { countryCode: string };
   paymentMethod: PaymentMethod;
   isLoading: boolean;
@@ -20,34 +29,29 @@ interface SubscriptionState {
   setPaymentMethod: (method: PaymentMethod) => void;
   setRegion: (countryCode: string) => void;
   refreshPrices: () => void;
+  /** Re-query trusted entitlement (payments, ledger, staff prefs tracks). */
+  refreshEntitlement: () => Promise<void>;
 }
 
 const SubscriptionContext = createContext<SubscriptionState | undefined>(undefined);
 
-export function SubscriptionProvider({ 
-  children,
-  endpoint = 'https://fra.cloud.appwrite.io/v1',
-  projectId = '67fe9627001d97e37ef3'
-}: { 
-  children: React.ReactNode,
-  endpoint?: string,
-  projectId?: string
-}) {
-  const [currentTier, setCurrentTier] = useState<SubscriptionTier | 'FREE'>('FREE');
+export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
+  const { user, isLoading: authLoading } = useAuth();
+
+  const [currentTier, setCurrentTier] = useState<BillingUiTier>('FREE');
   const [regionCode, setRegionCode] = useState<string>('DEFAULT');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CRYPTO');
-  const [isLoading, setIsLoading] = useState(true);
+  const [tierLoading, setTierLoading] = useState(true);
+  const [regionLoading, setRegionLoading] = useState(true);
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({ USD: 1 });
-
-  const client = useMemo(() => new Client().setEndpoint(endpoint).setProject(projectId), [endpoint, projectId]);
-  const account = useMemo(() => new Account(client), [client]);
 
   const detectedRegion = useMemo(() => {
     const data = PPP_DATA[regionCode] || PPP_DATA.DEFAULT;
     return { ...data, countryCode: regionCode === 'DEFAULT' ? 'US' : regionCode };
   }, [regionCode]);
 
-  // Fetch exchange rates
+  const isLoading = authLoading || tierLoading || regionLoading;
+
   useEffect(() => {
     const fetchRates = async () => {
       try {
@@ -56,52 +60,101 @@ export function SubscriptionProvider({
         if (data.rates) {
           setExchangeRates({ USD: 1, ...data.rates });
         }
-      } catch (e) {
-        console.error('Failed to fetch exchange rates', e);
+      } catch {
+        console.error('[Subscription] Failed to fetch exchange rates');
       }
     };
     fetchRates();
   }, []);
 
-  const prices = useMemo(() => ({
-    PRO: calculateSubscriptionPrice('PRO', regionCode, paymentMethod),
-  }), [regionCode, paymentMethod]);
+  const prices = useMemo(
+    () => ({
+      PRO: calculateSubscriptionPrice('PRO', regionCode, paymentMethod),
+    }),
+    [regionCode, paymentMethod],
+  );
+
+  const applyRegionPrefs = useCallback(async () => {
+    setRegionLoading(true);
+    try {
+      const prefs = await account.getPrefs().catch(() => null);
+      if (prefs?.region && PPP_DATA[prefs.region as string]) {
+        setRegionCode(prefs.region as string);
+        return;
+      }
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        const data = await res.json();
+        if (data.country_code && PPP_DATA[data.country_code]) setRegionCode(data.country_code);
+      } catch {
+        // leave DEFAULT
+      }
+    } finally {
+      setRegionLoading(false);
+    }
+  }, []);
+
+  const refreshEntitlement = useCallback(async () => {
+    if (authLoading) return;
+    setTierLoading(true);
+    try {
+      if (!user || (user as { isPulse?: boolean }).isPulse) {
+        setCurrentTier('FREE');
+        return;
+      }
+      try {
+        const jwt = await account.createJWT().then((r: { jwt?: string }) => r?.jwt || '').catch(() => '');
+        const result = await verifyProEntitlementAction(jwt || undefined);
+        if (result.authenticated) {
+          setCurrentTier(result.uiTier);
+          return;
+        }
+      } catch {
+        /* fall through — prefs normalization */
+      }
+
+      try {
+        const prefs = await account.getPrefs().catch(() => null);
+        setCurrentTier(normalizeBillingPrefsTier(prefs as Record<string, unknown> | null));
+      } catch {
+        setCurrentTier('FREE');
+      }
+    } finally {
+      setTierLoading(false);
+    }
+  }, [user, authLoading]);
 
   useEffect(() => {
-    const initSubscription = async () => {
-      try {
-        const prefs = await account.getPrefs();
-        if (prefs?.tier) setCurrentTier(prefs.tier as SubscriptionTier);
-        if (prefs?.region && PPP_DATA[prefs.region]) setRegionCode(prefs.region);
-        else {
-          const res = await fetch('https://ipapi.co/json/');
-          const data = await res.json();
-          if (data.country_code && PPP_DATA[data.country_code]) setRegionCode(data.country_code);
-        }
-      } catch (e) {
-        try {
-          const res = await fetch('https://ipapi.co/json/');
-          const data = await res.json();
-          if (data.country_code && PPP_DATA[data.country_code]) setRegionCode(data.country_code);
-        } catch (ipErr) {}
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    initSubscription();
-  }, [account]);
+    void applyRegionPrefs();
+  }, [applyRegionPrefs]);
 
-  const value: SubscriptionState = {
-    currentTier,
-    detectedRegion,
-    paymentMethod,
-    isLoading,
-    prices,
-    exchangeRates,
-    setPaymentMethod,
-    setRegion: setRegionCode,
-    refreshPrices: () => {},
-  };
+  useEffect(() => {
+    void refreshEntitlement();
+  }, [refreshEntitlement]);
+
+  const value: SubscriptionState = useMemo(
+    () => ({
+      currentTier,
+      detectedRegion,
+      paymentMethod,
+      isLoading,
+      prices,
+      exchangeRates,
+      setPaymentMethod,
+      setRegion: setRegionCode,
+      refreshPrices: () => {},
+      refreshEntitlement,
+    }),
+    [
+      currentTier,
+      detectedRegion,
+      paymentMethod,
+      isLoading,
+      prices,
+      exchangeRates,
+      refreshEntitlement,
+    ],
+  );
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;
 }

@@ -4,6 +4,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { notifyGiftCouponIssued, notifySubscriptionActivated } from '@/lib/billing/subscription-notifications';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
+import { applyProSubscriptionWindowToPrefs } from '@/lib/services/internal/subscription-prefs-merge';
 
 // Constants for readability
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.NOTE; // Using NOTE db as per config for subscriptions
@@ -304,10 +305,10 @@ export async function POST(req: Request) {
         }
       }
 
-      // 3. Update User Prefs
+      // 3. Update User Prefs (ledger-aligned keys — never rely on `tier` alone)
       try {
-        const prefs = await users.getPrefs(userId);
-        await users.updatePrefs(userId, { ...prefs, tier: 'PRO' });
+        const prefs = (await users.getPrefs(userId)) as Record<string, unknown>;
+        await users.updatePrefs(userId, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString()));
       } catch (err) {
         console.error('[BlockBee IPN] Failed to update user prefs:', err);
       }

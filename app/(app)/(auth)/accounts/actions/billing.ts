@@ -12,6 +12,7 @@ import { notifySubscriptionActivated } from '@/lib/billing/subscription-notifica
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
 import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/billing';
 import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
+import { applyProSubscriptionWindowToPrefs } from '@/lib/services/internal/subscription-prefs-merge';
 
 billingManager.registerProvider(new StripeProvider());
 billingManager.registerProvider(new CryptoPaymentProvider());
@@ -144,8 +145,11 @@ export async function createBillingCheckoutSessionAction(input: {
         }),
       });
       try {
-        const prefs = await users.getPrefs(user.$id);
-        await users.updatePrefs(user.$id, { ...prefs, tier: 'PRO' });
+        const prefs = (await users.getPrefs(user.$id)) as Record<string, unknown>;
+        await users.updatePrefs(
+          user.$id,
+          applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString()),
+        );
       } catch {}
 
       await notifySubscriptionActivated({
@@ -284,8 +288,8 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   });
 
   try {
-    const prefs = await users.getPrefs(user.$id);
-    await users.updatePrefs(user.$id, { ...prefs, tier: 'PRO' });
+    const prefs = (await users.getPrefs(user.$id)) as Record<string, unknown>;
+    await users.updatePrefs(user.$id, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString()));
   } catch {}
 
   try {
@@ -324,7 +328,13 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
 export async function verifyProEntitlementAction(jwt?: string | null) {
   const user = await getAuthenticatedUserForBillingAction({ jwt: jwt ?? undefined });
   if (!user) {
-    return { authenticated: false as const, active: false, expiresAt: null as string | null, source: 'none' as const };
+    return {
+      authenticated: false as const,
+      active: false,
+      expiresAt: null as string | null,
+      source: 'none' as const,
+      uiTier: 'FREE' as const,
+    };
   }
   const ent = await getVerifiedProEntitlementForUser(user.$id);
   return {
@@ -332,5 +342,6 @@ export async function verifyProEntitlementAction(jwt?: string | null) {
     active: ent.active,
     expiresAt: ent.expiresAt,
     source: ent.source,
+    uiTier: ent.uiTier,
   };
 }

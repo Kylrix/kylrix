@@ -2,25 +2,29 @@ import { Query } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
+import { normalizeBillingPrefsTier, type BillingUiTier } from '@/lib/subscription/tier-resolution';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const SUBSCRIPTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
 
-function parsePrefsTier(prefs: Record<string, unknown>): string {
-  const st = prefs.subscriptionTier;
-  const t = prefs.tier;
-  return String((st != null ? st : t) || 'FREE').toUpperCase();
-}
+export type SubscriptionEntitlementSource =
+  | 'subscription_row'
+  | 'prefs_lifetime'
+  | 'prefs_org'
+  | 'none';
 
 /**
- * Authoritative Pro check for UI gates that must not trust the URL alone.
- * 1) Active subscription row with unexpired currentPeriodEnd (normal paid track).
- * 2) Prefs: LIFETIME / ORG (legacy / grants) with optional expiry for ORG.
+ * Trusted Pro entitlement for gates that must mirror the ledger.
+ * - Paid Pro: requires an active, unexpired subscriptions row (`plan: 'pro'`).
+ * - LIFETIME / ORG: inferred from synced prefs only (staff / program tracks).
+ *
+ * Untrusted paths (e.g. `prefs.tier === 'PRO'` without a ledger row): **never** confer paid Pro here.
  */
 export async function getVerifiedProEntitlementForUser(userId: string): Promise<{
   active: boolean;
   expiresAt: string | null;
-  source: 'subscription_row' | 'prefs_lifetime' | 'prefs_org' | 'none';
+  source: SubscriptionEntitlementSource;
+  uiTier: BillingUiTier;
 }> {
   const { databases, users } = createAdminClient();
   const now = new Date();
@@ -45,6 +49,7 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
         active: true,
         expiresAt: latest.currentPeriodEnd || null,
         source: 'subscription_row',
+        uiTier: 'PRO',
       };
     }
   } catch {
@@ -53,20 +58,33 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
 
   try {
     const prefs = (await users.getPrefs(userId)) as Record<string, unknown>;
-    const tier = parsePrefsTier(prefs);
+    const tier = normalizeBillingPrefsTier(prefs);
     const expRaw = prefs.subscriptionExpiresAt;
-    const exp = typeof expRaw === 'string' && expRaw ? new Date(expRaw) : null;
-    const expiryOk = !exp || (!Number.isNaN(exp.getTime()) && exp > now);
 
     if (tier === 'LIFETIME') {
-      return { active: true, expiresAt: null, source: 'prefs_lifetime' };
+      return {
+        active: true,
+        expiresAt: null,
+        source: 'prefs_lifetime',
+        uiTier: 'LIFETIME',
+      };
     }
-    if (tier === 'ORG' && expiryOk) {
-      return { active: true, expiresAt: typeof expRaw === 'string' ? expRaw : null, source: 'prefs_org' };
+    if (tier === 'ORG') {
+      return {
+        active: true,
+        expiresAt: typeof expRaw === 'string' ? expRaw : null,
+        source: 'prefs_org',
+        uiTier: 'ORG',
+      };
     }
   } catch {
     // ignore
   }
 
-  return { active: false, expiresAt: null, source: 'none' };
+  return {
+    active: false,
+    expiresAt: null,
+    source: 'none',
+    uiTier: 'FREE',
+  };
 }

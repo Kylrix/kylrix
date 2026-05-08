@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useSubscription } from '../context/SubscriptionContext';
+import { useSubscription } from '../SubscriptionContext';
 
 export interface SubscriptionBadgeProps {
   showFree?: boolean;
@@ -12,6 +12,13 @@ export function SubscriptionBadge({ showFree = false }: SubscriptionBadgeProps) 
 
   if (isLoading) return null;
   if (!showFree && currentTier === 'FREE') return null;
+
+  const tierLabel =
+    currentTier === 'FREE'
+      ? 'FREE'
+      : currentTier === 'PRO'
+        ? 'PRO'
+        : currentTier;
 
   const styles: Record<string, React.CSSProperties> = {
     badge: {
@@ -32,9 +39,19 @@ export function SubscriptionBadge({ showFree = false }: SubscriptionBadgeProps) 
       border: '1px solid rgba(255, 255, 255, 0.2)',
     },
     PRO: {
-      backgroundColor: 'rgba(0, 112, 243, 0.1)',
-      color: '#0070f3',
-      border: '1px solid rgba(0, 112, 243, 0.3)',
+      backgroundColor: 'rgba(99, 102, 241, 0.12)',
+      color: '#A5B4FC',
+      border: '1px solid rgba(99, 102, 241, 0.35)',
+    },
+    ORG: {
+      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+      color: '#34D399',
+      border: '1px solid rgba(16, 185, 129, 0.35)',
+    },
+    LIFETIME: {
+      backgroundColor: 'rgba(236, 72, 153, 0.1)',
+      color: '#F472B6',
+      border: '1px solid rgba(236, 72, 153, 0.35)',
     },
   };
 
@@ -42,7 +59,7 @@ export function SubscriptionBadge({ showFree = false }: SubscriptionBadgeProps) 
 
   return (
     <span style={{ ...styles.badge, ...currentStyle }}>
-      {currentTier}
+      {tierLabel}
     </span>
   );
 }
