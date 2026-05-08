@@ -1,6 +1,8 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
 import { createRateLimiter } from '@/lib/rate-limit-middleware';
+import { createAdminClient } from '@/lib/appwrite-admin';
+import { deleteCallIfExpired } from '@/lib/services/internal/calls';
 
 const rateLimiter = createRateLimiter({
   max: 10,
@@ -32,6 +34,30 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ note
         { error: 'Note not found or not public' },
         { status: 404 }
       );
+    }
+
+    // Secure stale-huddle cleanup: if this public note references a call that already expired,
+    // remove that call row immediately via server SDK so clients do not join dead sessions.
+    const extractHuddleCallId = (input: any): string | null => {
+      const direct = String(input?.huddleCallId || '').trim();
+      if (direct) return direct;
+      try {
+        const metadata = JSON.parse(String(input?.metadata || '{}'));
+        const fromMeta = String(metadata?.huddleCallId || '').trim();
+        return fromMeta || null;
+      } catch {
+        return null;
+      }
+    };
+
+    const huddleCallId = extractHuddleCallId(note as any);
+    if (huddleCallId) {
+      try {
+        const { databases } = createAdminClient();
+        await deleteCallIfExpired(databases as any, huddleCallId);
+      } catch (cleanupError) {
+        console.warn('[Shared Note] stale call cleanup skipped:', cleanupError);
+      }
     }
 
     return NextResponse.json(note);
