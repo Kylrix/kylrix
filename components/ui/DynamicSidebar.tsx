@@ -7,6 +7,7 @@ import {
   Typography, 
   IconButton
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Close as CloseIcon, ArrowBack as BackIcon } from '@mui/icons-material';
 
 interface DynamicSidebarContextType {
@@ -73,7 +74,11 @@ export function useDynamicSidebar() {
 }
 
 export function DynamicSidebar() {
+  const theme = useTheme();
   const { isOpen, content, closeSidebar } = useDynamicSidebar();
+  const panelBg = theme.palette.background.paper;
+  const iconHoverBg =
+    theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : theme.palette.action.hover;
 
   return (
     <Drawer
@@ -90,7 +95,7 @@ export function DynamicSidebar() {
             md: 450,
             lg: 500
           },
-          bgcolor: 'var(--color-surface)',
+          bgcolor: panelBg,
           borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
           backgroundImage: 'none',
           display: 'flex',
@@ -107,6 +112,7 @@ export function DynamicSidebar() {
         alignItems: 'center', 
         justifyContent: 'space-between', 
         p: { xs: 2, sm: 3 },
+        bgcolor: panelBg,
         borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -116,7 +122,7 @@ export function DynamicSidebar() {
             sx={{ 
               display: { xs: 'inline-flex', sm: 'none' },
               color: 'rgba(255, 255, 255, 0.5)',
-              '&:hover': { color: '#6366F1', bgcolor: 'var(--color-surface-2)' }
+              '&:hover': { color: '#6366F1', bgcolor: iconHoverBg }
             }}
           >
             <BackIcon />
@@ -141,7 +147,7 @@ export function DynamicSidebar() {
           sx={{ 
             display: { xs: 'none', sm: 'inline-flex' },
             color: 'rgba(255, 255, 255, 0.5)',
-            '&:hover': { color: '#6366F1', bgcolor: 'var(--color-surface-2)' }
+            '&:hover': { color: '#6366F1', bgcolor: iconHoverBg }
           }}
         >
           <CloseIcon />
@@ -149,7 +155,7 @@ export function DynamicSidebar() {
       </Box>
 
       {/* Content */}
-      <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0, bgcolor: panelBg }}>
         {content}
       </Box>
     </Drawer>
