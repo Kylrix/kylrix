@@ -316,7 +316,8 @@ export const CallActionModal = ({
                     border: `1px solid ${COLORS.rim}`,
                     maxWidth: '480px',
                     width: '100%',
-                    height: isMobile ? '92vh' : '100%',
+                    height: isMobile ? '60dvh' : '100%',
+                    maxHeight: isMobile ? '60dvh' : '100vh',
                     boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                     overflow: 'hidden'
                 }
