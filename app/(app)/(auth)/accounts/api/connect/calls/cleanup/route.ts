@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getCorsHeaders, verifyUser } from '@/lib/api/permission-updater';
 import { deleteCallIfExpired } from '@/lib/services/internal/calls';
+import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/live-call-presence-reconcile';
 
 function isAdminUser(user: any) {
   return Array.isArray(user?.labels) && user.labels.includes('admin');
@@ -90,6 +91,9 @@ export async function POST(req: NextRequest) {
 
       return NextResponse.json({ deleted: rows.documents.length, callIds: rows.documents.map((row) => row.$id) }, { headers: corsHeaders });
     }
+
+    const presenceUser = targetUserId || requester.$id;
+    await reconcileStaleLiveCallPresenceForUser(presenceUser).catch(() => undefined);
 
     return NextResponse.json(result, { headers: corsHeaders });
   } catch (error: any) {
