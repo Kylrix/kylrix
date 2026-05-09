@@ -5716,6 +5716,553 @@
                     ]
                 }
             ]
+        },
+        {
+            "$id": "engagement_views",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "engagement_views",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "rowType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 24,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "eventId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "idempotencyKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "appId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ownerUserId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "viewerKind",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "viewerUserId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "viewerTokenHash",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "fingerprintHash",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "ipHash",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "uaHash",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "conversationId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "messageId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "receiptType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 24,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isCounted",
+                    "type": "boolean",
+                    "required": false,
+                    "default": true,
+                    "array": false
+                },
+                {
+                    "key": "bucketDay",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "bucketMonth",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 7,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "occurredAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "uniq_views_event",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "eventId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "uniq_views_idempotency",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "idempotencyKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_views_content_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "contentType",
+                        "contentId",
+                        "bucketDay"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_views_owner_month",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerUserId",
+                        "bucketMonth"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_views_viewer_dedupe",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "viewerKind",
+                        "viewerUserId",
+                        "contentId",
+                        "bucketDay"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_views_receipts",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "messageId",
+                        "receiptType",
+                        "occurredAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_views_app_time",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "appId",
+                        "occurredAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "engagement_view_rollups",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "engagement_view_rollups",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "rowType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 24,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "rollupKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metricType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 48,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "appId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scopeType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scopeId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ownerUserId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "bucketDay",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "bucketMonth",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 7,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "uniqueViewCount",
+                    "type": "integer",
+                    "required": false,
+                    "min": 0,
+                    "max": 2147483647,
+                    "default": 0,
+                    "array": false
+                },
+                {
+                    "key": "totalViewCount",
+                    "type": "integer",
+                    "required": false,
+                    "min": 0,
+                    "max": 2147483647,
+                    "default": 0,
+                    "array": false
+                },
+                {
+                    "key": "receiptCount",
+                    "type": "integer",
+                    "required": false,
+                    "min": 0,
+                    "max": 2147483647,
+                    "default": 0,
+                    "array": false
+                },
+                {
+                    "key": "weightedScore",
+                    "type": "integer",
+                    "required": false,
+                    "min": 0,
+                    "max": 2147483647,
+                    "default": 0,
+                    "array": false
+                },
+                {
+                    "key": "trustScore",
+                    "type": "integer",
+                    "required": false,
+                    "min": 0,
+                    "max": 2147483647,
+                    "default": 0,
+                    "array": false
+                },
+                {
+                    "key": "lastEventAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "uniq_rollup_key",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "rollupKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_rollup_scope_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "scopeType",
+                        "scopeId",
+                        "bucketDay"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_rollup_owner_month",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerUserId",
+                        "bucketMonth"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_rollup_content_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "contentType",
+                        "contentId",
+                        "bucketDay"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_rollup_metric_month",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "metricType",
+                        "bucketMonth"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
         }
     ],
     "buckets": [

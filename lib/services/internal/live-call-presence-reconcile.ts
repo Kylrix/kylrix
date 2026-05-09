@@ -28,6 +28,7 @@ export async function reconcileStaleLiveCallPresenceForUser(
 
   const rows = await db.listDocuments(CHAT_DB, APP_ACTIVITY, [
     Query.equal('userId', trimmed),
+    Query.orderDesc('$updatedAt'),
     Query.limit(1),
     Query.select(['$id', 'userId', 'status', 'customStatus', 'lastSeen']),
   ]);
