@@ -1,6 +1,6 @@
 ---
 name: kylrix-brand
-description: Applies Kylrix brand language (logo, palette, typography, surface hierarchy) while preserving readability and UX clarity. Use for top-level UI visual decisions.
+description: Applies Kylrix brand language (logo, palette, typography, surface hierarchy) while preserving readability and UX clarity. Use for top-level UI visual decisions. For Muted V3 tokens, drawers, typography variables, and prohibited patterns in the Next.js app, use kylrix-muted-v3-design.
 disable-model-invocation: true
 ---
 
@@ -13,6 +13,7 @@ disable-model-invocation: true
 - `DESIGN.V2.md`
 - `brand.design.md`
 - `components/common/Logo.tsx`
+- **Implementation / MUI / Next.js:** `.agents/skills/kylrix-muted-v3-design/SKILL.md`
 
 ## Rules
 

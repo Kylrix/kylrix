@@ -38,7 +38,6 @@ export function UnifiedBottomBar() {
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/flow')) return 'flow';
     if (pathname?.startsWith('/connect')) return 'connect';
-    if (pathname?.startsWith('/accounts')) return 'accounts';
     return null;
   }, [pathname]);
 
@@ -51,8 +50,6 @@ export function UnifiedBottomBar() {
         return '#A855F7'; // Amethyst
       case 'connect':
         return '#F59E0B'; // Amber
-      case 'accounts':
-        return '#6366F1'; // Indigo
       case 'note':
       default:
         return '#EC4899'; // Pink
@@ -85,10 +82,6 @@ export function UnifiedBottomBar() {
       if (pathname?.includes('/calls')) return 'calls';
       if (pathname?.includes('/settings')) return 'settings';
       return 'home';
-    }
-    if (appContext === 'accounts') {
-      if (pathname?.includes('/settings')) return 'settings';
-      return 'overview';
     }
     return null;
   };
@@ -262,6 +255,10 @@ export function UnifiedBottomBar() {
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
   const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
+
+  // Accounts: never use unified bottom chrome — `/accounts/settings/*` renders its own bottom nav in layout;
+  // billing/success/checkout/login and other interim flows should stay full-bleed with no duplicate empty bar.
+  if (pathname?.startsWith('/accounts')) return null;
 
   // Hide bottom bar on settings page, when a real bottom sheet is open, or on full-page note editor
   if (pathname === '/settings' || hasBottomDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
