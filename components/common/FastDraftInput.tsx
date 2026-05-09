@@ -1,6 +1,6 @@
 'use client';
 
-import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import { Box, alpha } from '@mui/material';
 
 export interface FastDraftInputHandle {
@@ -39,6 +39,13 @@ export const FastDraftInput = forwardRef<FastDraftInputHandle, FastDraftInputPro
     return () => window.cancelAnimationFrame(frame);
   }, [autoFocus]);
 
+  const syncEmptyState = useCallback((value: string) => {
+    const isEmpty = !value.trim();
+    if (isEmpty === lastEmptyRef.current) return;
+    lastEmptyRef.current = isEmpty;
+    onEmptyChange?.(isEmpty);
+  }, [onEmptyChange]);
+
   useEffect(() => {
     onEmptyChange?.(lastEmptyRef.current);
   }, [onEmptyChange]);
@@ -51,22 +58,17 @@ export const FastDraftInput = forwardRef<FastDraftInputHandle, FastDraftInputPro
         inputRef.current.value = next;
         inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
       }
+      syncEmptyState(next);
     },
     clear: () => {
       if (inputRef.current) {
         inputRef.current.value = '';
         inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
       }
+      syncEmptyState('');
     },
     focus: () => inputRef.current?.focus(),
-  }), []);
-
-  const syncEmptyState = (value: string) => {
-    const isEmpty = !value.trim();
-    if (isEmpty === lastEmptyRef.current) return;
-    lastEmptyRef.current = isEmpty;
-    onEmptyChange?.(isEmpty);
-  };
+  }), [syncEmptyState]);
 
   return (
     <Box

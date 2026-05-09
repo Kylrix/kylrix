@@ -73,7 +73,8 @@ import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
-import { sharePublicNoteAsMomentSecure } from '@/lib/actions/secure-ops';
+import { mintNoteShareMomentSecure } from '@/lib/actions/secure-ops';
+import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 
 import toast from 'react-hot-toast';
 
@@ -125,6 +126,7 @@ const feedSubheaderSx = {
 } as const;
 const feedBodySx = {
     color: 'text.primary',
+    fontFamily: 'var(--font-mono)',
     fontSize: '0.92rem',
     lineHeight: 1.45,
     display: '-webkit-box',
@@ -266,6 +268,10 @@ const PostComposer = React.memo(function PostComposer({
         return () => clearTimeout(t);
     }, [composerKey, editingMoment?.caption, draftInputRef, isOpen, setHasDraftText]);
 
+    const handleDraftEmptyChange = React.useCallback((isEmpty: boolean) => {
+        setHasDraftText(!isEmpty);
+    }, [setHasDraftText]);
+
     React.useEffect(() => {
         const previews = selectedFiles.map((file) => ({
             file,
@@ -338,7 +344,7 @@ const PostComposer = React.memo(function PostComposer({
                                     placeholder={editingMoment ? 'Update your moment...' : 'Share an update with the ecosystem...'}
                                     rows={isMobile ? 4 : 2}
                                     autoFocus
-                                    onEmptyChange={setHasDraftText}
+                                    onEmptyChange={handleDraftEmptyChange}
                                 />
                             </Box>
                             {editingMoment && (
@@ -1357,39 +1363,37 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                 }
 
                 const type = pulseTarget ? 'quote' : 'post';
-                const isPublicNoteSharePost =
-                    type === 'post' &&
-                    Boolean(selectedNote?.$id) &&
-                    !selectedEvent &&
-                    !selectedCall &&
-                    !pulseTarget &&
-                    mediaIds.length === 0;
+                // Note shares use the same client TablesDB session as standalone posts. Server Actions
+                // cannot rely on Appwrite cookies being visible to getActor() in all deployments.
+                const noteSearchFallback =
+                    selectedNote?.$id && String(selectedNote?.title || '').trim()
+                        ? String(selectedNote.title).trim()
+                        : null;
 
-                let createdMoment: any;
-                let tokenMintResult: any = null;
+                const createdMoment = await SocialService.createMoment(
+                    user!.$id,
+                    draftText,
+                    type,
+                    mediaIds,
+                    'public',
+                    selectedNote?.$id,
+                    selectedEvent?.$id,
+                    pulseTarget?.$id,
+                    selectedCall?.$id,
+                    noteSearchFallback,
+                );
 
-                if (isPublicNoteSharePost) {
-                    const payload = await sharePublicNoteAsMomentSecure({
-                        noteId: String(selectedNote.$id),
-                        text: draftText,
-                    });
-                    if (!payload?.moment) throw new Error('Failed to share note as moment');
-                    createdMoment = payload.moment;
-                    tokenMintResult = payload.tokenMint || null;
-                } else {
-                    createdMoment = await SocialService.createMoment(
-                        user!.$id,
-                        draftText,
-                        type,
-                        mediaIds,
-                        'public',
-                        selectedNote?.$id,
-                        selectedEvent?.$id,
-                        pulseTarget?.$id,
-                        selectedCall?.$id,
-                    );
+                let noteShareMintDetail: Record<string, unknown> | null = null;
+                if (getNoteAttachmentIdFromMomentFileId((createdMoment as { fileId?: string })?.fileId)) {
+                    try {
+                        const { tokenMint } = await mintNoteShareMomentSecure({ momentId: String(createdMoment.$id) });
+                        noteShareMintDetail = tokenMint as Record<string, unknown>;
+                    } catch (_mintErr) {
+                        console.warn('Note-share token mint skipped', _mintErr);
+                        noteShareMintDetail = { accepted: false, reason: 'MINT_UNAVAILABLE' };
+                    }
                 }
-                
+
                 // Enrich and add to local state immediately for instant feedback
                 const enriched = await SocialService.enrichMoment(createdMoment, user!.$id);
                 setMoments(prev => {
@@ -1400,18 +1404,19 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                     return updated;
                 });
                 toast.success('Moment shared');
-                if (tokenMintResult) {
+                if (noteShareMintDetail) {
+                    const mintOk = Boolean(noteShareMintDetail.accepted);
                     window.dispatchEvent(
                         new CustomEvent('kylrix:token-event', {
                             detail: {
                                 kind: 'mint',
-                                status: tokenMintResult?.accepted ? 'success' : 'failed',
-                                title: tokenMintResult?.accepted ? 'Token Minted' : 'Mint Attempt Recorded',
-                                message: tokenMintResult?.accepted
-                                    ? `You earned ${tokenMintResult?.amount} ${tokenMintResult?.symbol || '$KYLRIX'}.`
-                                    : `Moment posted, but minting did not settle: ${String(tokenMintResult?.reason || 'not eligible right now')}.`,
-                                amount: tokenMintResult?.accepted ? String(tokenMintResult?.amount || '') : null,
-                                symbol: String(tokenMintResult?.symbol || '$KYLRIX'),
+                                status: mintOk ? 'success' : 'failed',
+                                title: mintOk ? 'Token Minted' : 'Mint Attempt Recorded',
+                                message: mintOk
+                                    ? `You earned ${noteShareMintDetail.amount} ${String(noteShareMintDetail.symbol || '$KYLRIX')}.`
+                                    : `Moment posted, but minting did not settle: ${String(noteShareMintDetail.reason || 'not eligible right now')}.`,
+                                amount: mintOk ? String(noteShareMintDetail.amount || '') : null,
+                                symbol: String(noteShareMintDetail.symbol || '$KYLRIX'),
                             },
                         }),
                     );
@@ -2033,6 +2038,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                                         WebkitLineClamp: 2, 
                                         WebkitBoxOrient: 'vertical', 
                                         overflow: 'hidden',
+                                        fontFamily: 'var(--font-mono)',
                                         fontSize: '0.76rem',
                                         lineHeight: 1.4,
                                         fontStyle: 'italic'

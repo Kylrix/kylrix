@@ -559,7 +559,8 @@ export const SocialService = {
         return storage.getFilePreview(APPWRITE_CONFIG.BUCKETS.MESSAGES, fileId, width, height).toString();
     },
 
-    async createMoment(creatorId: string, content: string, type: 'post' | 'reply' | 'pulse' | 'quote' = 'post', mediaIds: string[] = [], _visibility: 'public' | 'private' | 'followers' = 'public', noteId?: string, eventId?: string, sourceId?: string, callId?: string) {
+    /** When caption is empty, `fallbackSearchTitle` is used for indexing (e.g. attached note title). */
+    async createMoment(creatorId: string, content: string, type: 'post' | 'reply' | 'pulse' | 'quote' = 'post', mediaIds: string[] = [], _visibility: 'public' | 'private' | 'followers' = 'public', noteId?: string, eventId?: string, sourceId?: string, callId?: string, fallbackSearchTitle?: string | null) {
         const permissions = [
             `read("user:${creatorId}")`,
             `update("user:${creatorId}")`,
@@ -576,6 +577,13 @@ export const SocialService = {
         if (callId) metadata.attachments.push({ type: 'call', id: callId });
 
         const effectiveFileId = JSON.stringify(metadata);
+
+        const captionTrim = typeof content === 'string' ? content.trim() : '';
+        const fallbackTrim =
+            fallbackSearchTitle != null && String(fallbackSearchTitle).trim() !== ''
+                ? String(fallbackSearchTitle).trim()
+                : '';
+        const searchTitleRow = captionTrim.length > 0 ? captionTrim : fallbackTrim.length > 0 ? fallbackTrim : null;
 
         // Prevent duplicate pulses: if this is a pulse and the user already has a pulse
         // for the same sourceId, return the existing moment instead of creating another.
@@ -605,7 +613,7 @@ export const SocialService = {
             type: 'image', // Database schema only accepts image/video
             momentKind: type,
             sourceId: sourceId || null,
-            searchTitle: content || null,
+            searchTitle: searchTitleRow,
             fileId: effectiveFileId, 
             createdAt: new Date().toISOString(),
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() 

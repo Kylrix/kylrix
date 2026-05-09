@@ -373,6 +373,7 @@ const ThreadPostView = ({
                 variant="body2"
                 sx={{
                     color: 'text.primary',
+                    fontFamily: 'var(--font-mono)',
                     fontSize: '0.95rem',
                     lineHeight: 1.35,
                     whiteSpace: 'pre-wrap',
@@ -503,6 +504,7 @@ const QuoteMomentView = ({
                 variant="body1"
                 sx={{
                     color: 'text.primary',
+                    fontFamily: 'var(--font-mono)',
                     fontSize: '0.94rem',
                     lineHeight: 1.5,
                     whiteSpace: 'pre-wrap',
@@ -550,7 +552,7 @@ const QuoteMomentView = ({
                 <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>{quotedName}</Typography>
                 <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>{quotedHandle}</Typography>
             </Stack>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.72)', lineHeight: 1.45, fontSize: '0.84rem' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.72)', fontFamily: 'var(--font-mono)', lineHeight: 1.45, fontSize: '0.84rem' }}>
                 {quotedCaption}
             </Typography>
         </Paper>
