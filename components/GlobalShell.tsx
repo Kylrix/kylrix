@@ -24,7 +24,18 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   );
   const isWebsiteRoute = !isAppRoute;
   const { isCollapsed } = useSidebar();
+  const [hideDesktopSidebar, setHideDesktopSidebar] = React.useState(false);
   const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();
+
+  React.useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ open?: boolean }>;
+      setHideDesktopSidebar(Boolean(custom.detail?.open));
+    };
+
+    window.addEventListener('kylrix-topbar-sidebar', handler as EventListener);
+    return () => window.removeEventListener('kylrix-topbar-sidebar', handler as EventListener);
+  }, []);
   
   // If it's a shared note page, we might want a different shell
   const isSharedPage = pathname?.includes('/shared/');
@@ -54,7 +65,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         </Suspense>
       )}
       
-      {isAppRoute && !isSharedPage && !isVaultResetRoute && <DesktopSidebar />}
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && !hideDesktopSidebar && <DesktopSidebar />}
       
       <Box
         component="main"
@@ -64,7 +75,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           pb: isWebsiteRoute ? 0 : { xs: 12, md: 4 },
           transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           ml: (isAppRoute && !isSharedPage) ? {
-            md: isCollapsed ? '80px' : '280px'
+            md: hideDesktopSidebar ? 0 : (isCollapsed ? '80px' : '280px')
           } : 0,
           mr: isDynamicSidebarOpen ? { md: '28rem', lg: '32rem' } : 0
         }}

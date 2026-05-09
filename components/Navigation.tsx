@@ -112,6 +112,17 @@ export const DesktopSidebar: React.FC = () => {
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const pathname = usePathname();
   const { } = useAuth();
+  const [hiddenByTopbarSidebar, setHiddenByTopbarSidebar] = React.useState(false);
+
+  React.useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ open?: boolean }>;
+      setHiddenByTopbarSidebar(Boolean(custom.detail?.open));
+    };
+
+    window.addEventListener('kylrix-topbar-sidebar', handler as EventListener);
+    return () => window.removeEventListener('kylrix-topbar-sidebar', handler as EventListener);
+  }, []);
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path);
   const appContext = pathname?.startsWith('/vault')
@@ -140,6 +151,7 @@ export const DesktopSidebar: React.FC = () => {
       component="aside"
       sx={{
         display: { xs: 'none', md: 'flex' },
+        ...(hiddenByTopbarSidebar ? { display: 'none' } : {}),
         flexDirection: 'column',
         position: 'fixed',
         left: 0,

@@ -367,6 +367,15 @@ export default function Topbar({
     return () => window.removeEventListener('pointerdown', handlePointerDown, true);
   }, [activePanel, handleCloseAll]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const open = Boolean(isDesktop && activePanel);
+    window.dispatchEvent(new CustomEvent('kylrix-topbar-sidebar', { detail: { open } }));
+    return () => {
+      window.dispatchEvent(new CustomEvent('kylrix-topbar-sidebar', { detail: { open: false } }));
+    };
+  }, [activePanel, isDesktop]);
+
   const renderSearchPanel = () => {
     if (!searchOpen) return null;
 
@@ -907,7 +916,7 @@ export default function Topbar({
           elevation={0}
           sx={{
             position: 'fixed',
-            top: 0,
+            top: `${TOPBAR_LAYOUT.height}px`,
             left: 0,
             bottom: 0,
             width: 'min(360px, 92vw)',
@@ -917,7 +926,8 @@ export default function Topbar({
             zIndex: 1200,
             overflowY: 'auto',
             p: 2,
-            pt: `calc(${TOPBAR_LAYOUT.height}px + 12px)`,
+            height: `calc(100vh - ${TOPBAR_LAYOUT.height}px)`,
+            pt: 2,
           }}
         >
           {activePanel === 'ecosystem' && (
