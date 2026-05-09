@@ -1,9 +1,11 @@
-import { tablesDB } from '../appwrite';
+import { Permission, Role } from 'appwrite';
+import { tablesDB, storage } from '../appwrite';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getEcosystemUrl } from '../constants/ecosystem';
 
+/** Ecosystem profiles / directory (same as standalone Connect): CHAT » profiles */
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-const TABLE_ID = APPWRITE_CONFIG.TABLES.VAULT.USER; // 'user' table in chat DB is used for profiles
+const TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
 async function syncProfileEvent(payload: {
     type: 'username_change' | 'profile_sync';
@@ -89,7 +91,6 @@ export const UsersService = {
     },
 
     async createProfile(userId: string, username: string, data: any = {}) {
-        const { Permission, Role } = await import("appwrite");
         return await tablesDB.createRow(
             DATABASE_ID,
             TABLE_ID,
@@ -98,8 +99,8 @@ export const UsersService = {
                 userId,
                 username,
                 displayName: data.displayName || username,
-                appsActive: data.appsActive || ['vault'],
                 publicKey: data.publicKey || null,
+                avatar: data.avatar ?? null,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 bio: data.bio || ''
@@ -121,7 +122,7 @@ export const UsersService = {
                     publicKey: data.publicKey || null,
                 },
                 metadata: {
-                    source: 'vault.users-service.createProfile',
+                    source: 'chat.profiles-service.createProfile',
                 },
             });
             return row;
@@ -226,6 +227,47 @@ export const UsersService = {
             console.warn('[UsersService] Force sync failed:', error);
             return null;
         }
+    },
+
+    /**
+     * Toggle global discoverability: Role.any read on profile row enables directory / username search surfacing.
+     */
+    async setProfileDiscoverable(userId: string, isDiscoverable: boolean) {
+        const profile = await this.getProfileById(userId);
+        if (!profile) throw new Error('Profile not found');
+
+        const permissions = [
+            Permission.read(Role.user(userId)),
+            Permission.update(Role.user(userId)),
+            Permission.delete(Role.user(userId)),
+        ];
+
+        if (isDiscoverable) {
+            permissions.push(Permission.read(Role.any()));
+        }
+
+        return await tablesDB.updateRow(DATABASE_ID, TABLE_ID, profile.$id, {}, permissions);
+    },
+
+    /**
+     * Toggle whether the profile picture file in storage is readable by guests (search / public cards).
+     */
+    async setAvatarVisible(userId: string, fileId: string, isVisible: boolean) {
+        const bucketId = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
+
+        const permissions = [
+            Permission.read(Role.user(userId)),
+            Permission.update(Role.user(userId)),
+            Permission.delete(Role.user(userId)),
+        ];
+
+        if (isVisible) {
+            permissions.push(Permission.read(Role.any()));
+        }
+
+        await storage.updateFile(bucketId, fileId, undefined, permissions);
+
+        return await this.updateProfile(userId, { avatar: fileId });
     }
 
 };

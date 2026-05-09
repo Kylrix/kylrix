@@ -211,7 +211,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const popup = openAuthPopup();
+      const popup = openAuthPopup((url) => router.push(url));
       if (popup) {
         idmWindowRef.current = popup;
         setIDMWindowOpen(true);

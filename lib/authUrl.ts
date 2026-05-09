@@ -37,7 +37,7 @@ export function getSourceURL(): string {
 /**
  * Open the IDM authentication popup or redirect if necessary
  */
-export function openAuthPopup(): Window | null {
+export function openAuthPopup(navigate?: (url: string) => void): Window | null {
   const authURL = getAuthURL();
   const loginPath = "/accounts/login";
   const normalizedLoginPath = loginPath.startsWith("/")
@@ -55,7 +55,8 @@ export function openAuthPopup(): Window | null {
   fullUrl = `${fullUrl}${separator}source=${encodeURIComponent(sourceURL)}`;
 
   if (isMobile) {
-    window.open(fullUrl, "_self");
+    if (navigate) navigate(fullUrl);
+    else window.open(fullUrl, "_blank", "noopener,noreferrer");
     return null; // Signals that we redirected
   }
 
@@ -67,7 +68,8 @@ export function openAuthPopup(): Window | null {
 
   if (!popup) {
     console.warn("Popup blocked, falling back to redirect in kylrixvault");
-    window.open(fullUrl, "_self");
+    if (navigate) navigate(fullUrl);
+    else window.open(fullUrl, "_blank", "noopener,noreferrer");
     return null;
   }
 

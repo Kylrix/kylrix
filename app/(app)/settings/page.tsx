@@ -310,7 +310,7 @@ export default function SettingsPage() {
             <PasskeySetup 
                 open={passkeySetupOpen}
                 onClose={() => setPasskeySetupOpen(false)}
-                userId={user?.userId || ""}
+                userId={user?.$id || ""}
                 onSuccess={() => {
                     setPasskeySetupOpen(false);
                     loadPasskeys();
