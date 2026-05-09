@@ -8,7 +8,6 @@ import {
     Drawer,
     Stack,
     Button,
-    alpha,
     Divider,
     useMediaQuery,
     useTheme,
@@ -50,14 +49,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user } = useAuth();
     
-    // Make useSudo optional - gracefully handle missing provider
-    let requestSudo: ((options: { onSuccess: () => void }) => void) | null = null;
-    try {
-      const sudoContext = useSudo();
-      requestSudo = sudoContext?.requestSudo || null;
-    } catch (e) {
-      // SudoProvider not available, that's fine
-    }
+    const { requestSudo } = useSudo();
     
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -67,15 +59,13 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const [error, setError] = useState<string | null>(null);
     const [loadingLabel, setLoadingLabel] = useState('Preparing your secure wallet...');
     const [pendingChain, setPendingChain] = useState<SupportedWalletChain | null>(null);
+    const [unlockPromptedForSession, setUnlockPromptedForSession] = useState(false);
 
-    const ACCENT = '#EC4899'; // Note Pink
+    const ACCENT = '#6366F1';
     const SURFACE = '#161412';
     const HIGHLIGHT = '#1C1A18';
-    const VOID = '#0A0908';
-
-    const rimLight = {
-        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4)',
-    };
+    const EDGE = '#34322F';
+    const MUTED = '#9B9691';
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -124,6 +114,29 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     }, [isOpen, isUnlocked, refreshWallets]);
 
     useEffect(() => {
+        if (!isOpen) {
+            setUnlockPromptedForSession(false);
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen || hasMasterpass !== true || ecosystemSecurity.status.isUnlocked || unlockPromptedForSession) {
+            return;
+        }
+        setUnlockPromptedForSession(true);
+        requestSudo({
+            intent: 'unlock',
+            onSuccess: async () => {
+                toast.success('Wallet unlocked');
+                await refreshWallets();
+            },
+            onCancel: () => {
+                toast('Wallet remains locked');
+            },
+        });
+    }, [hasMasterpass, isOpen, refreshWallets, requestSudo, unlockPromptedForSession]);
+
+    useEffect(() => {
         if (isOpen && hasMasterpass === false) {
             const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
             const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
@@ -132,8 +145,8 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     }, [isOpen, hasMasterpass]);
 
     const handleUnlock = () => {
-        if (!requestSudo) return;
         requestSudo({
+            intent: 'unlock',
             onSuccess: async () => {
                 toast.success('Wallet Unlocked');
                 await refreshWallets();
@@ -168,6 +181,11 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         () => WalletService.supportedChains.filter((chain) => !wallets.some((wallet) => wallet.chain === chain)),
         [wallets]
     );
+
+    const orderedWallets = useMemo(() => {
+        const order: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
+        return [...wallets].sort((a, b) => order.indexOf(a.chain) - order.indexOf(b.chain));
+    }, [wallets]);
 
     const getNetworkLogo = (chain: SupportedWalletChain) => {
         const logoMap: Record<SupportedWalletChain, string> = {
@@ -226,10 +244,10 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                     <Box sx={{
                         p: 1,
                         borderRadius: '12px',
-                        bgcolor: alpha(ACCENT, 0.1),
+                        bgcolor: '#1C1A18',
+                        border: `1px solid ${EDGE}`,
                         color: ACCENT,
-                        display: 'flex',
-                        ...rimLight
+                        display: 'flex'
                     }}>
                         <WalletIcon size={20} />
                     </Box>
@@ -237,19 +255,19 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white' }}>
                             Kylrix Wallet
                         </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)', fontWeight: 700, fontFamily: 'Satoshi' }}>
+                        <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
                             T4 Non-Custodial Layer
                         </Typography>
                     </Box>
                 </Stack>
-                <IconButton onClick={onClose} sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
+                <IconButton onClick={onClose} sx={{ color: MUTED, '&:hover': { color: 'white', bgcolor: HIGHLIGHT } }}>
                     <X size={20} />
                 </IconButton>
             </Stack>
 
             {!user ? (
                 <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', px: 2 }}>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', maxWidth: 260, fontFamily: 'Satoshi' }}>
+                    <Typography variant="body2" sx={{ color: MUTED, maxWidth: 260, fontFamily: 'var(--font-satoshi)' }}>
                         Sign in to initialize your wallet mesh.
                     </Typography>
                 </Box>
@@ -272,15 +290,15 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         mb: 3,
-                        ...rimLight,
-                        color: 'rgba(255, 255, 255, 0.2)'
+                        border: `1px solid ${EDGE}`,
+                        color: MUTED
                     }}>
                         <Lock size={32} />
                     </Box>
-                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'var(--font-satoshi)', color: 'white' }}>
                         Vault Setup Required
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, maxWidth: 260, fontFamily: 'Satoshi' }}>
+                    <Typography variant="body2" sx={{ color: MUTED, mb: 4, maxWidth: 260, fontFamily: 'var(--font-satoshi)' }}>
                         Wallet provisioning becomes automatic once your MasterPass exists for Tier 3 encryption.
                     </Typography>
                     <Button
@@ -298,9 +316,9 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                             px: 4,
                             py: 1.5,
                             textTransform: 'none',
-                            fontFamily: 'Satoshi',
-                            ...rimLight,
-                            '&:hover': { bgcolor: alpha('#fff', 0.9), transform: 'translateY(-1px)' },
+                            fontFamily: 'var(--font-satoshi)',
+                            border: `1px solid ${EDGE}`,
+                            '&:hover': { bgcolor: '#E4E4E7', transform: 'translateY(-1px)' },
                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                         }}
                     >
@@ -326,15 +344,15 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         mb: 3,
-                        ...rimLight,
+                        border: `1px solid ${EDGE}`,
                         color: ACCENT
                     }}>
                         <Lock size={32} />
                     </Box>
-                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'var(--font-satoshi)', color: 'white' }}>
                         Wallet is Locked
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, maxWidth: 240, fontFamily: 'Satoshi' }}>
+                    <Typography variant="body2" sx={{ color: MUTED, mb: 4, maxWidth: 240, fontFamily: 'var(--font-satoshi)' }}>
                         Unlock your secure vault and Connect will auto-provision your main wallet addresses with zero extra input.
                     </Typography>
                     <Button
@@ -349,9 +367,9 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                             px: 4,
                             py: 1.5,
                             textTransform: 'none',
-                            fontFamily: 'Satoshi',
-                            ...rimLight,
-                            '&:hover': { bgcolor: alpha(ACCENT, 0.9), transform: 'translateY(-1px)' },
+                            fontFamily: 'var(--font-satoshi)',
+                            border: `1px solid ${EDGE}`,
+                            '&:hover': { bgcolor: '#575CF0', transform: 'translateY(-1px)' },
                             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
                         }}
                     >
@@ -369,10 +387,10 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                     px: 2
                 }}>
                     <CircularProgress sx={{ color: ACCENT, mb: 3 }} />
-                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 700, mb: 1, fontFamily: 'var(--font-satoshi)', color: 'white' }}>
                         Auto-Provisioning Wallets
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 280, fontFamily: 'Satoshi' }}>
+                    <Typography variant="body2" sx={{ color: MUTED, maxWidth: 280, fontFamily: 'var(--font-satoshi)' }}>
                         {loadingLabel}
                     </Typography>
                 </Box>
@@ -382,14 +400,14 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         p: 3,
                         borderRadius: '20px',
                         bgcolor: SURFACE,
-                        ...rimLight,
+                        border: `1px solid ${EDGE}`,
                         textAlign: 'center',
                         maxWidth: 280
                     }}>
-                        <Typography variant="body1" sx={{ fontWeight: 800, mb: 1, fontFamily: 'Satoshi', color: 'white' }}>
+                        <Typography variant="body1" sx={{ fontWeight: 800, mb: 1, fontFamily: 'var(--font-satoshi)', color: 'white' }}>
                             Wallet Sync Failed
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: 2, fontFamily: 'Satoshi' }}>
+                        <Typography variant="body2" sx={{ color: MUTED, mb: 2, fontFamily: 'var(--font-satoshi)' }}>
                             {error}
                         </Typography>
                         <Button
@@ -397,11 +415,11 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                             variant="outlined"
                             sx={{
                                 borderRadius: '12px',
-                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderColor: EDGE,
                                 color: 'white',
                                 textTransform: 'none',
-                                fontFamily: 'Satoshi',
-                                '&:hover': { bgcolor: HIGHLIGHT, borderColor: 'rgba(255,255,255,0.2)' }
+                                fontFamily: 'var(--font-satoshi)',
+                                '&:hover': { bgcolor: HIGHLIGHT, borderColor: '#4A4743' }
                             }}
                         >
                             Retry
@@ -409,7 +427,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                     </Paper>
                 </Box>
             ) : (
-                <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '10px' } }}>
+                <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
                     {/* Simplified Balance Header */}
                     <Box sx={{ 
                         p: 3, 
@@ -417,30 +435,29 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         textAlign: 'center',
                         bgcolor: SURFACE,
                         borderRadius: '24px',
-                        ...rimLight,
                         position: 'relative',
                         overflow: 'hidden',
-                        border: '1px solid rgba(255, 255, 255, 0.03)'
+                        border: `1px solid ${EDGE}`
                     }}>
-                        <Typography variant="caption" sx={{ color: ACCENT, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'Satoshi', opacity: 0.8 }}>
+                        <Typography variant="caption" sx={{ color: ACCENT, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'var(--font-satoshi)' }}>
                             Estimated Balance
                         </Typography>
                         <Typography variant="h3" sx={{ fontWeight: 900, mt: 0.5, fontFamily: 'var(--font-clash)', color: 'white', letterSpacing: '-0.02em' }}>
                             $0.00
                         </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontWeight: 700, fontFamily: 'Satoshi' }}>
-                            {wallets.length} active networks
+                        <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
+                            {orderedWallets.length} active networks
                         </Typography>
                     </Box>
 
                     {/* Pinned Solana Network */}
-                    {wallets.find(w => w.chain === 'sol') && (
+                    {orderedWallets.find(w => w.chain === 'sol') && (
                         <Stack gap={1.5} sx={{ mb: 4 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
                                 Pinned Network
                             </Typography>
                             {(() => {
-                                const solWallet = wallets.find(w => w.chain === 'sol');
+                                const solWallet = orderedWallets.find(w => w.chain === 'sol');
                                 return (
                                     <Paper
                                         sx={{
@@ -448,10 +465,9 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                             px: 2.5,
                                             borderRadius: '20px',
                                             bgcolor: HIGHLIGHT,
-                                            border: `2px solid ${getNetworkColor('sol')}33`,
-                                            ...rimLight,
+                                            border: `1px solid ${EDGE}`,
                                             transition: 'all 0.2s ease',
-                                            '&:hover': { bgcolor: SURFACE, borderColor: `${getNetworkColor('sol')}66`, transform: 'translateX(4px)' }
+                                            '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' }
                                         }}
                                     >
                                         <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
@@ -460,7 +476,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                                     width: 40, 
                                                     height: 40, 
                                                     borderRadius: '12px',
-                                                    bgcolor: alpha(getNetworkColor('sol'), 0.15),
+                                                    bgcolor: '#252321',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
@@ -471,23 +487,23 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                                     {getNetworkLogo('sol')}
                                                 </Box>
                                                 <Box sx={{ minWidth: 0 }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
                                                         {solWallet?.label}
                                                     </Typography>
-                                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'JetBrains Mono', display: 'block' }}>
+                                                    <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
                                                         {shortenAddress(solWallet?.address || '')}
                                                     </Typography>
                                                 </Box>
                                             </Stack>
                                             <Stack alignItems="flex-end">
-                                                <Typography variant="body2" sx={{ fontWeight: 900, color: getNetworkColor('sol'), fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 900, color: getNetworkColor('sol'), fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
                                                     0.00 {solWallet?.symbol}
                                                 </Typography>
                                                 <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
                                                     <IconButton
                                                         size="small"
                                                         onClick={() => handleCopyAddress(solWallet?.address || '')}
-                                                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: getNetworkColor('sol') } }}
+                                                        sx={{ p: 0.5, color: MUTED, '&:hover': { color: getNetworkColor('sol') } }}
                                                     >
                                                         <Copy size={14} />
                                                     </IconButton>
@@ -501,7 +517,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                                                 }
                                                             }
                                                         }}
-                                                        sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: 'white' } }}
+                                                        sx={{ p: 0.5, color: MUTED, '&:hover': { color: 'white' } }}
                                                     >
                                                         <ExternalLink size={14} />
                                                     </IconButton>
@@ -515,12 +531,12 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                     )}
 
                     {/* Other Live Networks */}
-                    {wallets.filter(w => w.chain !== 'sol').length > 0 && (
+                    {orderedWallets.filter(w => w.chain !== 'sol').length > 0 && (
                         <Stack gap={1.5} sx={{ mb: 4 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
                                 Live Networks
                             </Typography>
-                            {wallets.filter(w => w.chain !== 'sol').map((wallet) => (
+                            {orderedWallets.filter(w => w.chain !== 'sol').map((wallet) => (
                                 <Paper
                                     key={wallet.chain}
                                     sx={{
@@ -528,8 +544,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                         px: 2,
                                         borderRadius: '18px',
                                         bgcolor: SURFACE,
-                                        border: '1px solid rgba(255,255,255,0.03)',
-                                        ...rimLight,
+                                        border: `1px solid ${EDGE}`,
                                         transition: 'all 0.2s ease',
                                         '&:hover': { bgcolor: HIGHLIGHT, transform: 'translateX(4px)' }
                                     }}
@@ -540,7 +555,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                                 width: 32, 
                                                 height: 32, 
                                                 borderRadius: '8px',
-                                                bgcolor: alpha(getNetworkColor(wallet.chain), 0.15),
+                                                bgcolor: '#252321',
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
@@ -551,23 +566,23 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                                 {getNetworkLogo(wallet.chain)}
                                             </Box>
                                             <Box sx={{ minWidth: 0 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'Satoshi' }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
                                                     {wallet.label}
                                                 </Typography>
-                                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'JetBrains Mono', display: 'block' }}>
+                                                <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
                                                     {shortenAddress(wallet.address)}
                                                 </Typography>
                                             </Box>
                                         </Stack>
                                         <Stack alignItems="flex-end">
-                                            <Typography variant="body2" sx={{ fontWeight: 900, color: getNetworkColor(wallet.chain), fontFamily: 'JetBrains Mono', fontSize: '0.8rem' }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 900, color: getNetworkColor(wallet.chain), fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
                                                 0.00 {wallet.symbol}
                                             </Typography>
                                             <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleCopyAddress(wallet.address)}
-                                                    sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: getNetworkColor(wallet.chain) } }}
+                                                    sx={{ p: 0.5, color: MUTED, '&:hover': { color: getNetworkColor(wallet.chain) } }}
                                                 >
                                                     <Copy size={14} />
                                                 </IconButton>
@@ -579,7 +594,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                                             window.open(explorerUrl, '_blank', 'noopener,noreferrer');
                                                         }
                                                     }}
-                                                    sx={{ p: 0.5, color: 'rgba(255,255,255,0.2)', '&:hover': { color: 'white' } }}
+                                                    sx={{ p: 0.5, color: MUTED, '&:hover': { color: 'white' } }}
                                                 >
                                                     <ExternalLink size={14} />
                                                 </IconButton>
@@ -593,7 +608,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
 
                     {addableNetworks.length > 0 && (
                         <Stack gap={1.5} sx={{ mb: 4 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
                                 Add Network
                             </Typography>
                             <Stack direction="row" gap={1} flexWrap="wrap">
@@ -606,13 +621,12 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                         disabled={pendingChain !== null}
                                         sx={{
                                             borderRadius: '12px',
-                                            borderColor: 'rgba(255,255,255,0.08)',
-                                            color: 'rgba(255,255,255,0.7)',
+                                            borderColor: EDGE,
+                                            color: '#D4D4D8',
                                             textTransform: 'none',
                                             fontWeight: 800,
-                                            fontFamily: 'Satoshi',
-                                            ...rimLight,
-                                            '&:hover': { bgcolor: HIGHLIGHT, borderColor: alpha(ACCENT, 0.3), color: 'white' }
+                                            fontFamily: 'var(--font-satoshi)',
+                                            '&:hover': { bgcolor: HIGHLIGHT, borderColor: '#4A4743', color: 'white' }
                                         }}
                                     >
                                         {WalletService.networkDefinitions[chain].label}
@@ -623,19 +637,18 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                     )}
 
                     <Stack gap={2}>
-                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Satoshi' }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
                             Recent Activity
                         </Typography>
                         <Box sx={{
                             p: 4,
                             textAlign: 'center',
                             borderRadius: '24px',
-                            border: '1px dashed rgba(255,255,255,0.05)',
-                            bgcolor: 'rgba(255,255,255,0.01)',
-                            ...rimLight
+                            border: `1px solid ${EDGE}`,
+                            bgcolor: HIGHLIGHT
                         }}>
-                            <History size={24} color="rgba(255,255,255,0.1)" style={{ marginBottom: 12 }} />
-                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 700, fontFamily: 'Satoshi' }}>
+                            <History size={24} color={MUTED} style={{ marginBottom: 12 }} />
+                            <Typography variant="body2" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
                                 No transactions yet
                             </Typography>
                         </Box>
@@ -643,12 +656,12 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                 </Box>
             )}
 
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', my: 2 }} />
+            <Divider sx={{ borderColor: EDGE, my: 2 }} />
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.15)', fontWeight: 700, fontFamily: 'Satoshi' }}>
+                <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
                     Auto-provisioned once unlocked
                 </Typography>
-                <IconButton size="small" sx={{ color: 'rgba(255, 255, 255, 0.15)', '&:hover': { color: 'white' } }}>
+                <IconButton size="small" sx={{ color: MUTED, '&:hover': { color: 'white' } }}>
                     <Settings size={16} />
                 </IconButton>
             </Stack>
@@ -664,8 +677,8 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                 PaperProps={{
                     sx: {
                         height: isExpanded ? '100%' : '75%',
-                        bgcolor: VOID,
-                        borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                        bgcolor: SURFACE,
+                        borderTop: `1px solid ${EDGE}`,
                         borderRadius: isExpanded ? '0' : '32px 32px 0 0',
                         backgroundImage: 'none',
                         transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -685,12 +698,12 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                     onClick={() => setIsExpanded(!isExpanded)}
                 >
                     {isExpanded ? (
-                        <Stack direction="row" alignItems="center" gap={1} sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                        <Stack direction="row" alignItems="center" gap={1} sx={{ color: MUTED }}>
                             <ChevronLeft size={20} />
-                            <Typography variant="caption" sx={{ fontWeight: 800, textTransform: 'uppercase', fontFamily: 'Satoshi' }}>Back</Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 800, textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)' }}>Back</Typography>
                         </Stack>
                     ) : (
-                        <Box sx={{ width: 40, height: 4, bgcolor: 'rgba(255, 255, 255, 0.1)', borderRadius: '2px' }} />
+                        <Box sx={{ width: 40, height: 4, bgcolor: '#4A4743', borderRadius: '2px' }} />
                     )}
                 </Box>
                 {renderWalletContent()}
@@ -706,10 +719,10 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
             PaperProps={{
                 sx: {
                     width: 400,
-                    bgcolor: VOID,
-                    borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+                    bgcolor: SURFACE,
+                    borderLeft: `1px solid ${EDGE}`,
                     backgroundImage: 'none',
-                    boxShadow: '-40px 0 80px rgba(0,0,0,0.9)'
+                    boxShadow: 'none'
                 }
             }}
         >

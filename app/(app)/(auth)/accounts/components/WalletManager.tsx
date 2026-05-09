@@ -141,18 +141,18 @@ export default function WalletManager({
       {connectedWallet && (
         <Box
           sx={{
-            backgroundColor: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
+            backgroundColor: '#1C1A18',
+            border: '1px solid #34322F',
             borderRadius: '16px',
             p: 3,
             mb: 3,
           }}
         >
           <Stack spacing={1}>
-            <Typography sx={{ fontSize: '0.875rem', color: 'rgba(255, 255, 255, 0.5)', mb: 0.5 }}>
+            <Typography sx={{ fontSize: '0.875rem', color: '#9B9691', mb: 0.5, fontFamily: 'var(--font-satoshi)' }}>
               Connected Wallet Address
             </Typography>
-            <Typography sx={{ fontSize: '1rem', color: 'white', fontFamily: 'monospace', wordBreak: 'break-all' }}>
+            <Typography sx={{ fontSize: '1rem', color: 'white', fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>
               {connectedWallet}
             </Typography>
           </Stack>
@@ -175,8 +175,9 @@ export default function WalletManager({
               borderRadius: '12px',
               px: 3,
               py: 1.2,
-              '&:hover': { backgroundColor: '#4f46e5' },
+              '&:hover': { backgroundColor: '#575CF0' },
               '&:disabled': { opacity: 0.5 },
+              fontFamily: 'var(--font-satoshi)',
             }}
           >
             {loading ? 'Connecting...' : 'Connect Wallet'}
@@ -188,13 +189,14 @@ export default function WalletManager({
             variant="outlined"
             sx={{
               color: '#ef4444',
-              borderColor: 'rgba(239, 68, 68, 0.3)',
+              borderColor: '#7F1D1D',
               textTransform: 'none',
               borderRadius: '12px',
               px: 3,
               py: 1.2,
-              '&:hover': { backgroundColor: 'rgba(239, 68, 68, 0.1)', borderColor: '#ef4444' },
+              '&:hover': { backgroundColor: '#2A1818', borderColor: '#EF4444' },
               '&:disabled': { opacity: 0.5 },
+              fontFamily: 'var(--font-satoshi)',
             }}
           >
             {loading ? 'Disconnecting...' : 'Disconnect Wallet'}
@@ -224,13 +226,13 @@ export default function WalletManager({
         PaperProps={{
           sx: {
             borderRadius: '24px',
-            bgcolor: '#0A0908',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            bgcolor: '#161412',
+            border: '1px solid #34322F',
             backgroundImage: 'none',
           }
         }}
       >
-        <DialogTitle sx={{ color: 'white', fontWeight: 800 }}>
+        <DialogTitle sx={{ color: 'white', fontWeight: 800, fontFamily: 'var(--font-clash)' }}>
           Disconnect Wallet
         </DialogTitle>
         <DialogContent sx={{ color: 'white', minWidth: { xs: '100%', sm: 400 } }}>
@@ -242,7 +244,7 @@ export default function WalletManager({
         <DialogActions sx={{ p: 3 }}>
           <Button
             onClick={() => setDisconnectConfirm(false)}
-            sx={{ color: 'rgba(255, 255, 255, 0.6)', textTransform: 'none' }}
+            sx={{ color: '#9B9691', textTransform: 'none', fontFamily: 'var(--font-satoshi)' }}
           >
             Cancel
           </Button>
@@ -254,6 +256,7 @@ export default function WalletManager({
               borderRadius: '12px',
               textTransform: 'none',
               fontWeight: 700,
+              fontFamily: 'var(--font-satoshi)',
               '&:hover': { backgroundColor: '#dc2626' },
             }}
           >

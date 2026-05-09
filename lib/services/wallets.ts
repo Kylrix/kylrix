@@ -124,8 +124,8 @@ const NETWORKS: Record<SupportedWalletChain, WalletNetworkDefinition> = {
     },
 };
 
-const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['eth', 'usdc', 'sol', 'btc'];
-const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['eth', 'usdc', 'sol', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
+const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc'];
+const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
 
 const ownerIdForUser = (userId: string) => `user:${userId}`;
 
