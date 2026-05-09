@@ -19,8 +19,10 @@ import { Save as SaveIcon, Update as UpdateIcon } from '@mui/icons-material';
 import AttachmentsManager from '@/components/AttachmentsManager';
 import NoteContent from '@/components/NoteContent';
 import { formatFileSize } from '@/lib/utils';
-import { createNote, updateNote, getNote } from '@/lib/appwrite';
+import { createNote, updateNote, getNote, getNotePublicState, toggleNoteVisibility } from '@/lib/appwrite';
 import { useDataNexus } from '@/context/DataNexusContext';
+import { useSudo } from '@/context/SudoContext';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
 interface AttachmentMeta { id: string; name: string; size: number; mime: string | null; }
 
@@ -109,8 +111,10 @@ export default function NoteEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [internalNoteId, setInternalNoteId] = useState<string | undefined>(externalNoteId);
+  const [persistedIsPublic, setPersistedIsPublic] = useState(false);
   const effectiveNoteId = internalNoteId || externalNoteId;
   const { fetchOptimized, setCachedData, getCachedData } = useDataNexus();
+  const { promptSudo } = useSudo();
 
   useEffect(() => {
     if (externalNoteId && externalNoteId !== internalNoteId) {
@@ -122,7 +126,9 @@ export default function NoteEditor({
         setTitle(cached.title || '');
         setContent(cached.content || '');
         setFormat((cached.format as 'text' | 'doodle') || 'text');
-        setIsPublic(!!cached.isPublic);
+        const cachedPublic = getNotePublicState(cached);
+        setIsPublic(cachedPublic);
+        setPersistedIsPublic(cachedPublic);
       }
 
       (async () => {
@@ -132,7 +138,9 @@ export default function NoteEditor({
             setTitle(n.title || '');
             setContent(n.content || '');
             setFormat((n.format as 'text' | 'doodle') || 'text');
-            setIsPublic(!!n.isPublic);
+            const loadedPublic = getNotePublicState(n);
+            setIsPublic(loadedPublic);
+            setPersistedIsPublic(loadedPublic);
           }
         } catch {}
       })();
@@ -151,24 +159,47 @@ export default function NoteEditor({
           title: title.trim(), 
           content: content.trim(),
           format,
-          isPublic
+          // Visibility transitions are handled via secure toggle.
+          isPublic: persistedIsPublic
         });
-        // Update cache
-        setCachedData(`note_${effectiveNoteId}`, saved);
       } else {
         saved = await createNote({ 
           title: title.trim(), 
           content: content.trim(), 
           format,
-          isPublic,
+          // New notes are created private, then securely toggled if needed.
+          isPublic: false,
           tags: [] 
         });
         const newId = saved?.$id || saved?.id;
         setInternalNoteId(newId);
-        // Update cache
-        if (newId) setCachedData(`note_${newId}`, saved);
         onNoteCreated?.(saved);
       }
+
+      if (saved?.$id && isPublic !== persistedIsPublic) {
+        const applySecureVisibility = async () => {
+          try {
+            const toggled = await toggleNoteVisibility(saved.$id);
+            if (!toggled) throw new Error('Failed to update note visibility.');
+            return toggled;
+          } catch (toggleError: any) {
+            if (toggleError?.message === 'VAULT_LOCKED') {
+              const unlocked = await promptSudo();
+              if (!unlocked) throw new Error('Vault unlock required to make this note public.');
+              const retried = await toggleNoteVisibility(saved.$id);
+              if (!retried) throw new Error('Failed to update note visibility.');
+              return retried;
+            }
+            throw toggleError;
+          }
+        };
+        saved = await applySecureVisibility();
+      }
+
+      const livePublicState = getNotePublicState(saved);
+      setPersistedIsPublic(livePublicState);
+      setIsPublic(livePublicState);
+      if (saved?.$id) setCachedData(`note_${saved.$id}`, saved);
       onSave?.(saved);
     } catch (err: any) {
       setError(err?.message || 'Failed to save note');
@@ -275,7 +306,16 @@ export default function NoteEditor({
               </Button>
               <Button
                 size="small"
-                onClick={() => setIsPublic(true)}
+                onClick={async () => {
+                  if (!ecosystemSecurity.status.isUnlocked) {
+                    const unlocked = await promptSudo();
+                    if (!unlocked) {
+                      setError('Unlock MasterPass before enabling public sharing.');
+                      return;
+                    }
+                  }
+                  setIsPublic(true);
+                }}
                 sx={{
                   minWidth: '70px',
                   borderRadius: '10px',

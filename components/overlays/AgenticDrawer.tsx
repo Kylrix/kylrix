@@ -205,7 +205,65 @@ export function AgenticDrawer() {
               </Box>
             </Stack>
 
-            <Stack spacing={1} sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.25 }}>
+            {isDesktop && (
+              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+                <Button
+                  size="small"
+                  onClick={() => setStage('planner')}
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: '10px',
+                    color: '#F4F4F5',
+                    bgcolor: VOID,
+                    border: BORDER,
+                    fontWeight: 700,
+                    px: 1.2,
+                  }}
+                >
+                  Planner
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => openProUpgrade('Agent Scheduling')}
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: '10px',
+                    color: '#F4F4F5',
+                    bgcolor: VOID,
+                    border: BORDER,
+                    fontWeight: 700,
+                    px: 1.2,
+                  }}
+                >
+                  Schedule
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => setStage('framework')}
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: '10px',
+                    color: '#F4F4F5',
+                    bgcolor: VOID,
+                    border: BORDER,
+                    fontWeight: 700,
+                    px: 1.2,
+                  }}
+                >
+                  Runtime
+                </Button>
+              </Stack>
+            )}
+
+            <Stack
+              spacing={1}
+              sx={{
+                maxHeight: { xs: 210, md: 180 },
+                overflowY: 'auto',
+                pr: 0.25,
+                flexShrink: 0,
+              }}
+            >
               {suggestedInstructions.map((item) => (
                 <Button
                   key={item}

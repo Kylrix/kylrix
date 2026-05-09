@@ -39,12 +39,13 @@ import {
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useToast } from '@/components/ui/Toast';
-import { createNote, getNote, updateNote } from '@/lib/appwrite';
+import { createNote, getNote, getNotePublicState, toggleNoteVisibility, updateNote } from '@/lib/appwrite';
 import type { Notes } from '@/types/appwrite';
 import DoodleCanvas from '@/components/DoodleCanvas';
 import { useNotes } from '@/context/NotesContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { useSudo } from '@/context/SudoContext';
 
 interface CreateNoteFormProps {
   onNoteCreated: (note: Notes) => void;
@@ -71,6 +72,7 @@ export default function CreateNoteForm({
   const { showSuccess, showError } = useToast();
   const { notes: allNotes } = useNotes();
   const { fetchOptimized, getCachedData, setCachedData } = useDataNexus();
+  const { promptSudo } = useSudo();
   const hasMasterKey = ecosystemSecurity.status.hasKey;
 
   const [title, setTitle] = useState(initialContent?.title || '');
@@ -83,6 +85,7 @@ export default function CreateNoteForm({
   const [isSaving, setIsSaving] = useState(false);
   const [showDoodleEditor, setShowDoodleEditor] = useState(initialFormat === 'doodle');
   const [resolvedNoteId, setResolvedNoteId] = useState<string | undefined>(noteId);
+  const [persistedIsPublic, setPersistedIsPublic] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
   const [hasPaywall, setHasPaywall] = useState(false);
@@ -135,7 +138,9 @@ export default function CreateNoteForm({
         setContent(cached.content || '');
         setFormat((cached.format as 'text' | 'doodle') || initialFormat);
         setTags(normalizeTags(cached.tags || []));
-        setIsPublic(!!cached.isPublic);
+        const cachedPublic = getNotePublicState(cached as Notes);
+        setIsPublic(cachedPublic);
+        setPersistedIsPublic(cachedPublic);
         const paywall = (cached as any).metadata?.paywall;
         setHasPaywall(!!paywall?.enabled);
         setPaywallAmount(paywall?.amount || 0);
@@ -159,7 +164,9 @@ export default function CreateNoteForm({
         setContent(loaded.content || '');
         setFormat((loaded.format as 'text' | 'doodle') || initialFormat);
         setTags(normalizeTags(loaded.tags || []));
-        setIsPublic(!!loaded.isPublic);
+        const loadedPublic = getNotePublicState(loaded as Notes);
+        setIsPublic(loadedPublic);
+        setPersistedIsPublic(loadedPublic);
         const paywall = (loaded as any).metadata?.paywall;
         setHasPaywall(!!paywall?.enabled);
         setPaywallAmount(paywall?.amount || 0);
@@ -264,11 +271,15 @@ export default function CreateNoteForm({
       if (resolvedNoteId) {
         saved = (await updateNote(resolvedNoteId, {
           ...payload,
+          // Public/private transitions must go through secure toggle flow.
+          isPublic: persistedIsPublic,
           title: generatedTitle,
         })) as Notes;
       } else {
         saved = (await createNote({
           ...payload,
+          // New notes always start private, then securely toggle if requested.
+          isPublic: false,
           title: generatedTitle,
         })) as Notes;
         setResolvedNoteId(saved.$id);
@@ -280,6 +291,39 @@ export default function CreateNoteForm({
       }
 
       if (saved?.$id) {
+        if (isPublic !== persistedIsPublic) {
+          const applySecureVisibility = async (): Promise<Notes> => {
+            try {
+              const toggled = await toggleNoteVisibility(saved.$id);
+              if (!toggled) throw new Error('Failed to update note visibility.');
+              return toggled as Notes;
+            } catch (error: any) {
+              if (error?.message === 'VAULT_LOCKED') {
+                const unlocked = await promptSudo();
+                if (!unlocked) {
+                  throw new Error('Vault unlock required to make this note public.');
+                }
+                const retried = await toggleNoteVisibility(saved.$id);
+                if (!retried) throw new Error('Failed to update note visibility.');
+                return retried as Notes;
+              }
+              throw error;
+            }
+          };
+
+          saved = await applySecureVisibility();
+          onNoteCreated(saved);
+          showSuccess(
+            getNotePublicState(saved) ? 'Note is now Public' : 'Note is now Private',
+            getNotePublicState(saved)
+              ? 'Encrypted sharing is enabled for this note.'
+              : 'This note is now private.'
+          );
+        }
+
+        const livePublicState = getNotePublicState(saved);
+        setPersistedIsPublic(livePublicState);
+        setIsPublic(livePublicState);
         setCachedData(`note_${saved.$id}`, saved);
         const paywall = (saved as any).metadata?.paywall;
         setLastSavedSnapshot(JSON.stringify({
@@ -287,7 +331,7 @@ export default function CreateNoteForm({
           content: saved.content || '',
           format: (saved.format as 'text' | 'doodle') || format,
           tags: normalizeTags((saved.tags || []) as string[]),
-          isPublic: !!saved.isPublic,
+          isPublic: livePublicState,
           hasPaywall: !!paywall?.enabled,
           paywallAmount: paywall?.amount || 0,
           resolvedNoteId: saved.$id,
@@ -304,7 +348,7 @@ export default function CreateNoteForm({
     } finally {
       setIsSaving(false);
     }
-  }, [content, format, isPublic, hasPaywall, paywallAmount, onNoteCreated, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
+  }, [content, format, hasPaywall, isPublic, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
 
   const handleClose = useCallback(async () => {
     const shouldPersist = Boolean((resolvedNoteId && isDirty) || (!resolvedNoteId && (title.trim() || content.trim())));
@@ -398,7 +442,18 @@ export default function CreateNoteForm({
               value={isPublic}
               exclusive
               size="small"
-              onChange={(_, value) => value !== null && setIsPublic(value)}
+              onChange={async (_, value) => {
+                if (value === null) return;
+                if (value === true && !ecosystemSecurity.status.isUnlocked) {
+                  const unlocked = await promptSudo();
+                  if (!unlocked) {
+                    setIsPublic(false);
+                    showError('Vault Locked', 'Unlock MasterPass before enabling public sharing.');
+                    return;
+                  }
+                }
+                setIsPublic(value);
+              }}
               sx={{
                 bgcolor: 'rgba(255,255,255,0.04)',
                 borderRadius: '14px',
