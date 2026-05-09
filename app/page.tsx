@@ -31,6 +31,7 @@ import {
   Waypoints,
 } from 'lucide-react';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
+import NextLink from 'next/link';
 
 import Logo, { KylrixApp } from '@/components/Logo';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
@@ -594,6 +595,7 @@ export default function LandingPage() {
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <Button
+              component={NextLink}
               href="/skill.md"
               size="large"
               variant="contained"
@@ -613,7 +615,10 @@ export default function LandingPage() {
             </Button>
 
             <Button
+              component="a"
               href="https://github.com/kylrix"
+              target="_blank"
+              rel="noreferrer"
               size="large"
               variant="outlined"
               startIcon={<Github size={18} />}
