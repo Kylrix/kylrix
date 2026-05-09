@@ -185,6 +185,8 @@ export async function createMomentOpenGraphImage(momentId: string) {
                             }}
                         >
                             {avatarDataUri ? (
+                                // OG Image Response markup — plain img + data URI; next/image not applicable here.
+                                // eslint-disable-next-line @next/next/no-img-element -- OG raster markup with avatarDataUri
                                 <img
                                     src={avatarDataUri}
                                     width={132}
