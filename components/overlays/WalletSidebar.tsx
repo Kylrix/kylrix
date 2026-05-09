@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
     Box,
@@ -25,6 +26,7 @@ import {
     Unlock,
     Copy,
     ExternalLink,
+    PanelRight,
     Plus,
     History,
     Settings,
@@ -38,6 +40,7 @@ import { KylrixTokenService } from '@/lib/services/token';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { useTokenOps } from '@/context/TokenOpsContext';
 import type { TokenWalletIntent } from '@/context/WalletOverlayContext';
+import Logo from '@/components/Logo';
 
 interface WalletSidebarProps {
     isOpen: boolean;
@@ -159,6 +162,26 @@ function ledgerRowKey(row: Record<string, unknown>, index: number): string {
     const tx = row.txId != null ? String(row.txId) : '';
     const idem = row.idempotencyKey != null ? String(row.idempotencyKey) : '';
     return id || `${tx}:${idem}:${index}`;
+}
+
+const SOLANA_SYMBOL_SRC = '/brands/solana-symbol.svg';
+
+function PinnedNetworkIconSolana({ size }: { size: number }) {
+    return (
+        <Image
+            src={SOLANA_SYMBOL_SRC}
+            alt=""
+            width={size}
+            height={size}
+            unoptimized
+            style={{ display: 'block', width: size, height: size }}
+        />
+    );
+}
+
+/** Same shortened form as on-chain addresses (Appwrite user id). */
+function shortenUserId(id: string) {
+    return shortenAddress(id);
 }
 
 export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTokenIntent }: WalletSidebarProps) => {
@@ -944,7 +967,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     {ktsMode ? (
                     <Stack gap={1.5} sx={{ mb: 4 }}>
                         <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
-                            Kylrix Token System
+                            Kylrix
                         </Typography>
                         <Paper
                             sx={{
@@ -955,9 +978,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                 border: `2px solid rgba(99,102,241,0.35)`,
                                 transition: 'all 0.2s ease',
                                 '&:hover': { bgcolor: SURFACE, borderColor: ACCENT, transform: 'translateY(-1px)' },
-                                cursor: 'pointer',
                             }}
-                            onClick={handleKylrixCardClick}
                         >
                             <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
                                 <Stack direction="row" alignItems="center" gap={2}>
@@ -969,25 +990,44 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: ACCENT,
-                                        fontWeight: 900,
-                                        fontSize: '1.1rem',
-                                        fontFamily: 'var(--font-mono)'
+                                        lineHeight: 0,
                                     }}>
-                                        K
+                                        <Logo app="root" variant="icon" size={28} />
                                     </Box>
                                     <Box sx={{ minWidth: 0, textAlign: 'left' }}>
                                         <Typography variant="body1" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                                            Kylrix Token
+                                            Kylrix
                                         </Typography>
                                         <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
-                                            Tap for send & receive
+                                            {user?.$id ? shortenUserId(user.$id) : '—'}
                                         </Typography>
                                     </Box>
                                 </Stack>
-                                <Typography variant="h6" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
-                                    {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
-                                </Typography>
+                                <Stack alignItems="flex-end" gap={0.5}>
+                                    <Typography variant="h6" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
+                                        {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
+                                    </Typography>
+                                    {user?.$id ? (
+                                        <Stack direction="row" gap={0.5}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleCopyAddress(user.$id)}
+                                                sx={{ p: 0.5, color: MUTED, '&:hover': { color: ACCENT } }}
+                                                aria-label="Copy Kylrix wallet id"
+                                            >
+                                                <Copy size={14} />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleKylrixCardClick()}
+                                                sx={{ p: 0.5, color: MUTED, '&:hover': { color: 'white' } }}
+                                                aria-label="Open Kylrix ledger"
+                                            >
+                                                <PanelRight size={14} />
+                                            </IconButton>
+                                        </Stack>
+                                    ) : null}
+                                </Stack>
                             </Stack>
                         </Paper>
                         <Typography variant="caption" sx={{ color: MUTED, textAlign: 'center', lineHeight: 1.5, px: 1 }}>
@@ -1022,11 +1062,8 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: getNetworkColor('sol'),
-                                        fontWeight: 900,
-                                        fontSize: '20px'
                                     }}>
-                                        {getNetworkLogo('sol')}
+                                        <PinnedNetworkIconSolana size={22} />
                                     </Box>
                                     <Box sx={{ minWidth: 0 }}>
                                         <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
@@ -1095,9 +1132,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                     border: `1px solid ${EDGE}`,
                                     transition: 'all 0.2s ease',
                                     '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' },
-                                    cursor: 'pointer'
                                 }}
-                                onClick={handleKylrixCardClick}
                             >
                                 <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
                                     <Stack direction="row" alignItems="center" gap={2}>
@@ -1109,25 +1144,44 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            color: ACCENT,
-                                            fontWeight: 900,
-                                            fontSize: '16px',
-                                            fontFamily: 'var(--font-mono)'
+                                            lineHeight: 0,
                                         }}>
-                                            K
+                                            <Logo app="root" variant="icon" size={22} />
                                         </Box>
                                         <Box sx={{ minWidth: 0 }}>
                                             <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                                                Kylrix Token
+                                                Kylrix
                                             </Typography>
                                             <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
-                                                {kylrixTicker(kylrixBalance?.symbol)}
+                                                {user?.$id ? shortenUserId(user.$id) : '—'}
                                             </Typography>
                                         </Box>
                                     </Stack>
-                                    <Typography variant="body2" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-                                        {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
-                                    </Typography>
+                                    <Stack alignItems="flex-end">
+                                        <Typography variant="body2" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+                                            {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
+                                        </Typography>
+                                        {user?.$id ? (
+                                            <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleCopyAddress(user.$id)}
+                                                    sx={{ p: 0.5, color: MUTED, '&:hover': { color: ACCENT } }}
+                                                    aria-label="Copy Kylrix wallet id"
+                                                >
+                                                    <Copy size={14} />
+                                                </IconButton>
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => handleKylrixCardClick()}
+                                                    sx={{ p: 0.5, color: MUTED, '&:hover': { color: 'white' } }}
+                                                    aria-label="Open Kylrix ledger"
+                                                >
+                                                    <PanelRight size={14} />
+                                                </IconButton>
+                                            </Stack>
+                                        ) : null}
+                                    </Stack>
                                 </Stack>
                             </Paper>
                     </Stack>
