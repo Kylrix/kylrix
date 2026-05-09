@@ -42,7 +42,7 @@ import { getEcosystemUrl } from '@/lib/ecosystem';
 import { ActivityService } from '@/lib/services/activity';
 import { reconcileStaleLiveCallPresenceFromClient } from '@/lib/client/session-runtime-fetch';
 import UserQuickProfileDrawer from '@/components/common/UserQuickProfileDrawer';
-import { WalletSidebar as SharedWalletSidebar } from '@/components/overlays/WalletSidebar';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 interface TopbarProps {
   userId?: string;
@@ -79,8 +79,8 @@ export default function Topbar({
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const router = useRouter();
   const pathname = usePathname();
+  const { openWallet } = useWalletOverlay();
 
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
@@ -1028,7 +1028,7 @@ export default function Topbar({
                 fullWidth
                 onClick={() => {
                   handleCloseAll();
-                  setIsWalletOpen(true);
+                  openWallet();
                 }}
                 sx={{ justifyContent: 'flex-start', px: 1.25, py: 1, borderRadius: '14px', color: 'white', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', textTransform: 'none' }}
               >
@@ -1425,7 +1425,7 @@ export default function Topbar({
                 <>
                   <Tooltip title="Wallet">
                     <IconButton
-                      onClick={() => setIsWalletOpen(true)}
+                      onClick={openWallet}
                       sx={{
                         color: getAppColor('accounts'),
                         bgcolor: alpha(getAppColor('accounts'), 0.03),
@@ -1482,9 +1482,6 @@ export default function Topbar({
           </>
         )}
       </AppBar>
-      {isWalletOpen ? (
-        <SharedWalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
-      ) : null}
       <UserQuickProfileDrawer
         open={personProfileOpen}
         onClose={() => setPersonProfileOpen(false)}

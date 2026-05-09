@@ -36,7 +36,7 @@ import { useColorMode } from '@/context/ThemeContext';
 import { getUserProfilePicId } from '@/lib/utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePreview';
 import { InputBase, Paper, Tooltip } from '@mui/material';
-import { WalletSidebar } from './overlays/WalletSidebar';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 const TOPBAR_HEIGHT = 88;
 
@@ -46,6 +46,7 @@ export default function Navbar() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user, isAuthenticated, isLoading, logout, openIDMWindow } = useAuth();
+  const { openWallet } = useWalletOverlay();
   const { mode } = useColorMode();
 
   const isLanding = pathname === '/';
@@ -59,7 +60,6 @@ export default function Navbar() {
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -486,7 +486,7 @@ export default function Navbar() {
                 {isApp && isAuthenticated && (
                    <Tooltip title="Wallet">
                     <IconButton
-                      onClick={() => setIsWalletOpen(true)}
+                      onClick={openWallet}
                       sx={{
                         color: '#6366F1',
                         bgcolor: 'rgba(99, 102, 241, 0.03)',
@@ -576,7 +576,6 @@ export default function Navbar() {
       <Box sx={{ height: `${TOPBAR_HEIGHT}px` }} />
 
       <EcosystemPortal open={isEcosystemPortalOpen} onClose={() => setIsEcosystemPortalOpen(false)} />
-      <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
     </>
   );
 }

@@ -603,7 +603,9 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
           bgcolor: SURFACE_COLOR,
           border: isMobile ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
           width: isMobile ? '100%' : '420px',
-          maxHeight: isMobile ? '90vh' : '100%',
+          maxHeight: isMobile ? '90vh' : 'calc(100dvh - 88px)',
+          height: isMobile ? 'auto' : 'calc(100dvh - 88px)',
+          top: isMobile ? 0 : '88px',
         }
       }}
     >

@@ -35,7 +35,7 @@ import { createProfilePreviewManager } from '@/lib/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { getEcosystemUrl, APP_BASE_PATHS } from '@/lib/ecosystem';
-import { WalletSidebar as SharedWalletSidebar } from '@/components/overlays/WalletSidebar';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 interface TopbarProps {
   userId?: string;
@@ -65,8 +65,8 @@ export default function Topbar({
   profilePicId: initialProfilePicId,
 }: TopbarProps) {
   const router = useRouter();
+  const { openWallet } = useWalletOverlay();
 
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
@@ -949,7 +949,7 @@ export default function Topbar({
                 <>
                   <Tooltip title="Wallet">
                     <IconButton
-                      onClick={() => setIsWalletOpen(true)}
+                      onClick={openWallet}
                       sx={{
                         color: getAppColor('accounts'),
                         bgcolor: alpha(getAppColor('accounts'), 0.03),
@@ -1000,9 +1000,6 @@ export default function Topbar({
         {renderAppPanel()}
         {renderProfilePanel()}
       </AppBar>
-      {isWalletOpen ? (
-        <SharedWalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
-      ) : null}
     </>
   );
 }
