@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, globalSessionPromise } from '@/lib/appwrite';
+import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache } from '@/lib/appwrite';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 
 interface User {
@@ -45,6 +45,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const pathname = usePathname();
   const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
   const attemptSilentAuthRef = useRef<() => Promise<void>>(async () => {});
+  const sessionVerifySeq = useRef(0);
 
   // 2. Background Revalidation (Mandatory account.get)
   const attemptSilentAuth = useCallback(async () => {
@@ -100,34 +101,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const refreshUser = useCallback(async (): Promise<User | null> => {
     try {
-      // Use the pre-started global promise for maximum speed
-      const session = await globalSessionPromise;
+      const session = await getCurrentUser(false);
       if (session) {
         setUser(session as any);
         setKylrixPulse(session);
-        
+
         if (typeof window !== 'undefined' && window.location.search.includes('auth=success')) {
           const url = new URL(window.location.href);
           url.searchParams.delete('auth');
           window.history.replaceState({}, '', url.toString());
         }
-      } else {
-        // If local session check fails, try silent auth
-        await attemptSilentAuthRef.current?.();
 
-        // Re-check session after silent auth might have succeeded
-        const retrySession = await getCurrentUser(true);
-        if (retrySession) {
-          setUser(retrySession as any);
-          setKylrixPulse(retrySession);
-          return retrySession as any;
-        }
+        const seq = ++sessionVerifySeq.current;
+        void getCurrentUser(true).then((verified) => {
+          if (seq !== sessionVerifySeq.current) return;
+          if (!verified) {
+            setUser(null);
+            clearKylrixPulse();
+            return;
+          }
+          setUser(verified as any);
+          setKylrixPulse(verified);
+        });
 
-        setUser(null);
-        clearKylrixPulse();
+        return session as any;
       }
-      return session as any;
-    } catch (error) {
+
+      await attemptSilentAuthRef.current?.();
+
+      const retrySession = await getCurrentUser(true);
+      if (retrySession) {
+        setUser(retrySession as any);
+        setKylrixPulse(retrySession);
+        return retrySession as any;
+      }
+
+      setUser(null);
+      clearKylrixPulse();
+      return null;
+    } catch (_error) {
       setUser(null);
       clearKylrixPulse();
       return null;
@@ -203,9 +215,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 
   const logout = useCallback(async () => {
+    sessionVerifySeq.current += 1;
     try {
       await account.deleteSession('current');
     } finally {
+      invalidateCurrentUserCache();
       setUser(null);
       clearKylrixPulse();
       setIDMWindowOpen(false);

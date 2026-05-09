@@ -13,6 +13,7 @@ import NoteTopbar from '@/components/common/NoteTopbar';
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const isSendSurface = Boolean(pathname?.startsWith('/send'));
   const isLanding = pathname === '/';
   const isAppRoute = Boolean(
     pathname?.startsWith('/note') ||
@@ -59,7 +60,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       {/* /(app) routes get UnifiedTopbar from app/(app)/layout.tsx; website pages share the landing topbar */}
-      {isWebsiteRoute && (
+      {isWebsiteRoute && !isSendSurface && (
         <Suspense fallback={null}>
           <NoteTopbar />
         </Suspense>
@@ -71,7 +72,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         component="main"
         sx={{
           minWidth: 0,
-          pt: '88px', // Offset for fixed topbar
+          pt: isSendSurface ? 0 : '88px', // Send uses its own in-page chrome
           pb: isWebsiteRoute ? 0 : { xs: 12, md: 4 },
           transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           ml: (isAppRoute && !isSharedPage) ? {

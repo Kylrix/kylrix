@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useRef, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useRef, useCallback, useEffect, ReactNode } from 'react';
+import { NEXUS_INVALIDATE_EVENT } from '@/lib/ecosystem/nexus-bridge';
 
 /**
  * KYLRIX ECOSYSTEM DATA NEXUS
@@ -18,6 +19,13 @@ interface DataNexusContextType {
     setCachedData: <T>(key: string, data: T, ttl?: number) => void;
     fetchOptimized: <T>(key: string, fetcher: () => Promise<T>, ttl?: number) => Promise<T>;
     invalidate: (key: string) => void;
+    /** Non-blocking refresh; uses a separate flight map so it never stalls `fetchOptimized`. */
+    refreshInBackground: <T>(
+        key: string,
+        fetcher: () => Promise<T>,
+        ttl?: number,
+        onSettled?: (result: { data?: T; error?: unknown }) => void,
+    ) => void;
 }
 
 const DataNexusContext = createContext<DataNexusContextType | undefined>(undefined);
@@ -29,6 +37,7 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
     const memoryCache = useRef<Map<string, CacheEntry<any>>>(new Map());
     // Active request tracking for deduplication
     const activeRequests = useRef<Map<string, Promise<any>>>(new Map());
+    const backgroundRefreshRequests = useRef<Map<string, Promise<void>>>(new Map());
 
     const getCachedData = useCallback(function<T>(key: string, ttl: number = DEFAULT_TTL): T | null {
         // 1. Check memory cache first
@@ -80,10 +89,47 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
 
     const invalidate = useCallback((key: string) => {
         memoryCache.current.delete(key);
+        activeRequests.current.delete(key);
+        backgroundRefreshRequests.current.delete(key);
         if (typeof window !== 'undefined') {
             localStorage.removeItem(`k_nexus_${key}`);
         }
     }, []);
+
+    const refreshInBackground = useCallback(function<T>(
+        key: string,
+        fetcher: () => Promise<T>,
+        ttl: number = DEFAULT_TTL,
+        onSettled?: (result: { data?: T; error?: unknown }) => void,
+    ) {
+        if (typeof window === 'undefined') return;
+        if (backgroundRefreshRequests.current.has(key)) return;
+
+        const req = (async () => {
+            try {
+                const data = await fetcher();
+                setCachedData(key, data, ttl);
+                onSettled?.({ data });
+            } catch (error) {
+                onSettled?.({ error });
+            } finally {
+                backgroundRefreshRequests.current.delete(key);
+            }
+        })();
+
+        backgroundRefreshRequests.current.set(key, req);
+    }, [setCachedData]);
+
+    useEffect(() => {
+        const handler = (event: Event) => {
+            const key = (event as CustomEvent<{ key?: string }>).detail?.key;
+            if (typeof key === 'string' && key.length > 0) {
+                invalidate(key);
+            }
+        };
+        window.addEventListener(NEXUS_INVALIDATE_EVENT, handler);
+        return () => window.removeEventListener(NEXUS_INVALIDATE_EVENT, handler);
+    }, [invalidate]);
 
     const fetchOptimized = useCallback(async function<T>(
         key: string, 
@@ -115,7 +161,7 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
     }, [getCachedData, setCachedData]);
 
     return (
-        <DataNexusContext.Provider value={{ getCachedData, setCachedData, fetchOptimized, invalidate }}>
+        <DataNexusContext.Provider value={{ getCachedData, setCachedData, fetchOptimized, invalidate, refreshInBackground }}>
             {children}
         </DataNexusContext.Provider>
     );

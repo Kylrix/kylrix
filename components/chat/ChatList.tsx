@@ -89,6 +89,7 @@ export const ChatList = () => {
     const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
     const conversationsRef = React.useRef<any[]>([]);
     const loadRequestRef = React.useRef(0);
+    const loadConversationsInflightRef = React.useRef<Promise<void> | null>(null);
     const handledMessageIdsRef = React.useRef<Set<string>>(new Set());
     const [livePreviewByConversation, setLivePreviewByConversation] = useState<Record<string, {
         lastMessageId: string;
@@ -213,6 +214,13 @@ export const ChatList = () => {
     }, []);
 
     const loadConversations = React.useCallback(async () => {
+        const existingRun = loadConversationsInflightRef.current;
+        if (existingRun) {
+            await existingRun;
+            return;
+        }
+
+        const run = (async () => {
         const requestId = ++loadRequestRef.current;
         try {
             if (!ecosystemSecurity.status.isUnlocked) {
@@ -426,6 +434,16 @@ export const ChatList = () => {
         } finally {
             setLoading(false);
         }
+        })();
+
+        loadConversationsInflightRef.current = run;
+        try {
+            await run;
+        } finally {
+            if (loadConversationsInflightRef.current === run) {
+                loadConversationsInflightRef.current = null;
+            }
+        }
     }, [user]);
 
     useEffect(() => {
@@ -499,7 +517,10 @@ export const ChatList = () => {
 
                 let livePreviewText = formatPreviewFromMessage(payload);
                 try {
-                    const latest = await ChatService.getMessages(relatedConversationId, 1, 0, user?.$id);
+                    const convRow = conversationsRef.current[existingIndex];
+                    const latest = await ChatService.getMessages(relatedConversationId, 1, 0, user?.$id, {
+                        prefetchedConversation: convRow,
+                    });
                     const latestMessage = latest.rows?.[0];
                     if (latestMessage) {
                         livePreviewText = formatPreviewFromMessage(latestMessage);

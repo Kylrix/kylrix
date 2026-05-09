@@ -407,6 +407,8 @@ export const COLLECTION_SCHEMAS = {
 export class VaultService {
   private static credentialsListCache = new Map<string, Credentials[]>();
   private static totpSecretsCache = new Map<string, TotpSecrets[]>();
+  private static credentialsListInflight = new Map<string, Promise<Credentials[]>>();
+  private static totpSecretsInflight = new Map<string, Promise<TotpSecrets[]>>();
   private static runtimeHooksInitialized = false;
 
   private static ensureRuntimeSecurityHooks() {
@@ -416,6 +418,8 @@ export class VaultService {
     window.addEventListener("vault-locked", () => {
       this.credentialsListCache.clear();
       this.totpSecretsCache.clear();
+      this.credentialsListInflight.clear();
+      this.totpSecretsInflight.clear();
     });
   }
 
@@ -428,6 +432,16 @@ export class VaultService {
     for (const key of this.totpSecretsCache.keys()) {
       if (key.startsWith(`${userId}:`)) {
         this.totpSecretsCache.delete(key);
+      }
+    }
+    for (const key of this.credentialsListInflight.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        this.credentialsListInflight.delete(key);
+      }
+    }
+    for (const key of this.totpSecretsInflight.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        this.totpSecretsInflight.delete(key);
       }
     }
   }
@@ -1154,44 +1168,56 @@ export class VaultService {
     const cacheKey = `${userId}:${JSON.stringify(queries)}`;
     const cached = this.credentialsListCache.get(cacheKey);
     if (cached) {
-      return cached;
+      return cached.map((doc) => ({ ...doc }));
     }
 
-    let documents: Credentials[] = [];
-    let offset = 0;
-    const limit = 100; // Max limit per request
-    let response;
+    const pending = this.credentialsListInflight.get(cacheKey);
+    if (pending) {
+      return pending;
+    }
 
-    do {
-      response = await listDocumentsWithRetry(
-        APPWRITE_COLLECTION_CREDENTIALS_ID,
-        [
-          Query.equal("userId", userId),
-          Query.limit(limit),
-          Query.offset(offset),
-          ...queries,
-        ],
+    const request = (async () => {
+      let documents: Credentials[] = [];
+      let offset = 0;
+      const limit = 100; // Max limit per request
+      let response;
+
+      do {
+        response = await listDocumentsWithRetry(
+          APPWRITE_COLLECTION_CREDENTIALS_ID,
+          [
+            Query.equal("userId", userId),
+            Query.limit(limit),
+            Query.offset(offset),
+            ...queries,
+          ],
+        );
+
+        const decryptedDocuments = await Promise.all(
+          response.documents.map(
+            (doc: Models.Document) =>
+              this.decryptDocumentFields(
+                doc,
+                "credentials",
+              ) as unknown as Credentials,
+          ),
+        );
+
+        documents = documents.concat(decryptedDocuments);
+        offset += limit;
+      } while (
+        response.documents.length > 0 &&
+        documents.length < response.total
       );
 
-      const decryptedDocuments = await Promise.all(
-        response.documents.map(
-          (doc: Models.Document) =>
-            this.decryptDocumentFields(
-              doc,
-              "credentials",
-            ) as unknown as Credentials,
-        ),
-      );
+      this.credentialsListCache.set(cacheKey, documents);
+      return documents;
+    })().finally(() => {
+      this.credentialsListInflight.delete(cacheKey);
+    });
 
-      documents = documents.concat(decryptedDocuments);
-      offset += limit;
-    } while (
-      response.documents.length > 0 &&
-      documents.length < response.total
-    );
-
-    this.credentialsListCache.set(cacheKey, documents);
-    return documents;
+    this.credentialsListInflight.set(cacheKey, request);
+    return request;
   }
 
   static async listRecentCredentials(
@@ -1225,25 +1251,37 @@ export class VaultService {
     const cacheKey = `${userId}:${JSON.stringify(queries)}`;
     const cached = this.totpSecretsCache.get(cacheKey);
     if (cached) {
-      return cached;
+      return cached.map((doc) => ({ ...doc }));
     }
 
-    const response = await appwriteDatabases.listDocuments(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_COLLECTION_TOTPSECRETS_ID,
-      [Query.equal("userId", userId), ...queries],
-    );
-    const decryptedSecrets = await Promise.all(
-      response.documents.map(
-        (doc: Models.Document) =>
-          this.decryptDocumentFields(
-            doc,
-            "totpSecrets",
-          ) as Promise<TotpSecrets>,
-      ),
-    );
-    this.totpSecretsCache.set(cacheKey, decryptedSecrets);
-    return decryptedSecrets;
+    const pending = this.totpSecretsInflight.get(cacheKey);
+    if (pending) {
+      return pending;
+    }
+
+    const request = (async () => {
+      const response = await appwriteDatabases.listDocuments(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_COLLECTION_TOTPSECRETS_ID,
+        [Query.equal("userId", userId), ...queries],
+      );
+      const decryptedSecrets = await Promise.all(
+        response.documents.map(
+          (doc: Models.Document) =>
+            this.decryptDocumentFields(
+              doc,
+              "totpSecrets",
+            ) as Promise<TotpSecrets>,
+        ),
+      );
+      this.totpSecretsCache.set(cacheKey, decryptedSecrets);
+      return decryptedSecrets;
+    })().finally(() => {
+      this.totpSecretsInflight.delete(cacheKey);
+    });
+
+    this.totpSecretsInflight.set(cacheKey, request);
+    return request;
   }
 
   static async listFolders(

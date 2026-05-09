@@ -24,10 +24,15 @@ const PROFILE_SETUP_KEY = 'kylrix_profile_initialized';
 
 export const ProfileProvider = ({ children }: { children: React.ReactNode }) => {
     const { user } = useAuth();
-    const { fetchOptimized, invalidate } = useDataNexus();
+    const { fetchOptimized, invalidate, refreshInBackground } = useDataNexus();
     const [profile, setProfile] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const bootstrapRequestRef = useRef<Promise<any | null> | null>(null);
+    const activeUserIdRef = useRef<string | undefined>(undefined);
+
+    useEffect(() => {
+        activeUserIdRef.current = user?.$id;
+    }, [user?.$id]);
 
     const queueProfileBootstrap = useCallback((currentUser: { $id: string; email?: string; name?: string; prefs?: Record<string, any> }) => {
         if (!currentUser?.$id) return Promise.resolve(null);
@@ -85,6 +90,21 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
             const needsBootstrap = !cachedProfile || !setupComplete || !cachedProfile.username || !cachedProfile.displayName;
             if (!needsBootstrap) {
                 setIsLoading(false);
+                const profileUserId = user.$id;
+                refreshInBackground(
+                    `profile_${profileUserId}`,
+                    async () => {
+                        const fetched = await UsersService.getProfileById(profileUserId);
+                        if (fetched) seedIdentityCache(fetched);
+                        return fetched;
+                    },
+                    1000 * 60 * 60,
+                    ({ data, error }) => {
+                        if (error || !data) return;
+                        if (activeUserIdRef.current !== profileUserId) return;
+                        setProfile(data);
+                    },
+                );
                 return;
             }
 
@@ -115,7 +135,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         } finally {
             setIsLoading(false);
         }
-    }, [user, fetchOptimized, invalidate, queueProfileBootstrap]);
+    }, [user, fetchOptimized, invalidate, refreshInBackground, queueProfileBootstrap]);
 
     useEffect(() => {
         if (!user?.$id) return;
