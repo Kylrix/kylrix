@@ -38,6 +38,7 @@ import { getCachedIdentityByUsername, seedIdentityCache, subscribeIdentityCache 
 import { getProfileView, stageProfileView } from '@/lib/profile-handoff';
 import { IdentityAvatar, IdentityName, computeIdentityFlags } from '../common/IdentityBadge';
 import ReportUserDialog from './ReportUserDialog';
+import { useTokenOps } from '@/context/TokenOpsContext';
 
 interface ProfileProps {
     username?: string;
@@ -63,6 +64,7 @@ export const Profile = ({ username }: ProfileProps) => {
     const [followLoading, setFollowLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+    const { openTokenUserSearch } = useTokenOps();
 
     const [moments, setMoments] = useState<any[]>([]);
     const [momentsLoading, setMomentsLoading] = useState(false);
@@ -304,6 +306,34 @@ export const Profile = ({ username }: ProfileProps) => {
         router.push(`/chats?userId=${targetId}`);
     };
 
+    const handleTip = () => {
+        if (!currentUser || !profile) return;
+        openTokenUserSearch({
+            mode: 'send',
+            fromUserId: currentUser.$id,
+            source: 'profile_tip',
+            preselectedUser: {
+                id: String(profile.userId || profile.$id || ''),
+                username: String(profile.username || ''),
+                displayName: String(profile.displayName || profile.username || 'User'),
+            },
+        });
+    };
+
+    const handleRequest = () => {
+        if (!currentUser || !profile) return;
+        openTokenUserSearch({
+            mode: 'request',
+            fromUserId: currentUser.$id,
+            source: 'profile_request',
+            preselectedUser: {
+                id: String(profile.userId || profile.$id || ''),
+                username: String(profile.username || ''),
+                displayName: String(profile.displayName || profile.username || 'User'),
+            },
+        });
+    };
+
     if (loading && !profile) {
         return (
             <Box sx={{ maxWidth: 800, mx: 'auto', p: 2, pt: 4 }}>
@@ -512,6 +542,46 @@ export const Profile = ({ username }: ProfileProps) => {
                                         onClick={handleMessage}
                                     >
                                         Message
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        sx={{
+                                            borderRadius: '14px',
+                                            px: 3,
+                                            py: 1,
+                                            fontWeight: 700,
+                                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                                            color: '#6366F1',
+                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            '&:hover': {
+                                                borderColor: '#6366F1',
+                                                bgcolor: alpha('#6366F1', 0.05)
+                                            }
+                                        }}
+                                        onClick={handleTip}
+                                        disabled={!currentUser}
+                                    >
+                                        Tip
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        sx={{
+                                            borderRadius: '14px',
+                                            px: 3,
+                                            py: 1,
+                                            fontWeight: 700,
+                                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                                            color: '#F59E0B',
+                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            '&:hover': {
+                                                borderColor: '#F59E0B',
+                                                bgcolor: alpha('#F59E0B', 0.08)
+                                            }
+                                        }}
+                                        onClick={handleRequest}
+                                        disabled={!currentUser}
+                                    >
+                                        Request Tokens
                                     </Button>
                                     <Button
                                         variant="outlined"

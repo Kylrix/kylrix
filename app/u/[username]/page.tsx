@@ -1,10 +1,17 @@
-import { redirect } from 'next/navigation';
-import { getEcosystemUrl } from '@/lib/ecosystem';
+import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
+import { Profile } from '@/components/profile/Profile';
+import { Container } from '@mui/material';
 
-export default function UserProfileRedirectPage({
+export default function UserProfilePage({
   params,
 }: {
   params: { username: string };
 }) {
-  redirect(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(params.username)}`);
+  return (
+    <ConnectAppShell>
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Profile username={params.username} />
+      </Container>
+    </ConnectAppShell>
+  );
 }
