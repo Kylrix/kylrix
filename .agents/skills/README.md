@@ -22,4 +22,5 @@ single-codebase workflow.
 - `kylrix-muted-v3-design`
 - `kylrix-appwrite-audit`
 - `kylrix-sdk-consistency`
+- `kylrix-token-ops-security`
 
