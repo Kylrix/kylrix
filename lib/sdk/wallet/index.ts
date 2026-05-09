@@ -103,8 +103,8 @@ const NETWORKS: Record<SupportedWalletChain, WalletNetworkDefinition> = {
   arbitrum: { chain: 'arbitrum', label: 'Arbitrum', symbol: 'ARB', family: 'evm', publicProfile: true, aliasOf: 'eth' },
 };
 
-export const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['eth', 'usdc', 'sol', 'btc'];
-export const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['eth', 'usdc', 'sol', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
+export const DEFAULT_MAIN_CHAINS: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc'];
+export const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
 
 const ownerIdForUser = (userId: string) => `user:${userId}`;
 

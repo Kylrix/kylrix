@@ -102,6 +102,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ rows }, { headers: corsHeaders });
     }
 
+    if (action === 'balance') {
+      const userId = String(body?.userId || actor.$id || '').trim();
+      if (!admin && userId !== actor.$id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: corsHeaders });
+      }
+      const balance = await InternalKylrixTokenService.getUserBalance(userId);
+      return NextResponse.json(balance, { headers: corsHeaders });
+    }
+
     if (action === 'fine_to_root') {
       if (!admin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: corsHeaders });

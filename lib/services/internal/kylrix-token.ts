@@ -500,4 +500,15 @@ export const InternalKylrixTokenService = {
     ]);
     return rows.documents;
   },
+
+  async getUserBalance(userId: string) {
+    await requireStateRow();
+    const balanceMicro = await getLatestBalanceMicro(userId);
+    return {
+      userId,
+      amountMicro: toMicro(balanceMicro),
+      amount: toToken(balanceMicro),
+      symbol: contract.policy.symbol,
+    };
+  },
 };
