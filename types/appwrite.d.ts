@@ -88,6 +88,20 @@ export enum CallsType {
     VIDEO = "video"
 }
 
+export enum JoinRequestsStatus {
+    PENDING = "pending",
+    ACCEPTED = "accepted",
+    REJECTED = "rejected"
+}
+
+export enum UnorganicEmailsStatus {
+    QUEUED = "queued",
+    SENDING = "sending",
+    SENT = "sent",
+    SUPPRESSED = "suppressed",
+    FAILED = "failed"
+}
+
 export enum FormsStatus {
     DRAFT = "draft",
     PUBLISHED = "published",
@@ -267,6 +281,7 @@ export type Credentials = Models.Row & {
     createdAt: string | null;
     updatedAt: string | null;
     username: string | null;
+    sharedFrom: string | null;
 }
 
 export type Identities = Models.Row & {
@@ -332,6 +347,7 @@ export type TotpSecrets = Models.Row & {
     lastUsedAt: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    sharedFrom: string | null;
 }
 
 export type Keychain = Models.Row & {
@@ -407,6 +423,7 @@ export type Conversations = Models.Row & {
     tags: string[];
     contextType: string | null;
     contextId: string | null;
+    inviteMeta: string | null;
 }
 
 export type Contacts = Models.Row & {
@@ -469,6 +486,17 @@ export type Calls = Models.Row & {
     conversationId: string | null;
 }
 
+export type Epochs = Models.Row & {
+    resourceId: string;
+    epochNumber: number;
+    createdBy: string;
+}
+
+export type ConversationMembers = Models.Row & {
+    conversationId: string;
+    userId: string;
+}
+
 export type Profiles = Models.Row & {
     username: string;
     displayName: string | null;
@@ -481,15 +509,42 @@ export type Profiles = Models.Row & {
     userId: string;
 }
 
-export type Epochs = Models.Row & {
-    resourceId: string;
-    epochNumber: number;
-    createdBy: string;
+export type MessageReactions = Models.Row & {
+    conversationId: string;
+    messageId: string;
+    userId: string;
+    emoji: string;
+    createdAt: string;
 }
 
-export type ConversationMembers = Models.Row & {
-    conversationId: string;
-    userId: string;
+export type JoinRequests = Models.Row & {
+    resourceType: string;
+    resourceId: string;
+    requesterId: string;
+    status: JoinRequestsStatus | null;
+    createdAt: string | null;
+    resolvedAt: string | null;
+    resolvedBy: string | null;
+}
+
+export type UnorganicEmails = Models.Row & {
+    eventType: string;
+    sourceApp: string;
+    actorId: string | null;
+    recipientId: string | null;
+    recipientEmail: string | null;
+    resourceType: string | null;
+    resourceId: string | null;
+    templateKey: string;
+    priority: number;
+    status: UnorganicEmailsStatus;
+    dedupeKey: string;
+    attempts: number;
+    sentAt: string | null;
+    expiresAt: string | null;
+    processedAt: string | null;
+    blockedReason: string | null;
+    metadata: string | null;
 }
 
 export type FocusSessions = Models.Row & {
@@ -571,4 +626,32 @@ export type Agents = Models.Row & {
     publicKey: string;
     config: string;
     status: string;
+}
+
+export type KylrixTokenLedger = Models.Row & {
+    rowType: string;
+    txId: string;
+    idempotencyKey: string;
+    eventType: string | null;
+    userId: string | null;
+    counterpartyUserId: string | null;
+    amountMicro: string | null;
+    deltaMicro: string | null;
+    balanceAfterMicro: string | null;
+    status: string;
+    sourceType: string | null;
+    sourceId: string | null;
+    metadata: string | null;
+    createdAt: string;
+    genesisAt: string | null;
+    contractVersion: string | null;
+    maxSupplyMicro: string | null;
+    totalMintedMicro: string | null;
+    totalBurnedMicro: string | null;
+    circulatingMicro: string | null;
+    rootBalanceMicro: string | null;
+    riskLevel: string | null;
+    lastActivityAt: string | null;
+    lastSpikeAt: string | null;
+    updatedAt: string | null;
 }
