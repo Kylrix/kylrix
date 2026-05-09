@@ -26,3 +26,4 @@ disable-model-invocation: true
 7. **Opaque UI:** No gradient fills and no translucent (`rgba` / `alpha` / opacity) **backgrounds** on product chrome—see `design.md` and `kylrix-muted-v3-design`.
 8. **Do not cram copy:** Keep hero and drawer copy short. Prefer one clear sentence per block and clear whitespace between text groups.
 9. **Authorized fonts only:** Use `var(--font-satoshi)`, `var(--font-clash)`, and `var(--font-mono)`; never introduce ad-hoc or default fallback-only typography for primary UI.
+10. **Drawer-to-sidebar responsiveness:** Topbar drawers become sidebars on desktop (top drawer -> left sidebar, bottom drawer -> right sidebar). Avoid desktop topbar extension panels.

@@ -59,6 +59,11 @@ MUI defaults are **not** brand fonts:
 4. **Safe area:** `paddingBottom: max(theme spacing, env(safe-area-inset-bottom))`.
 5. **Scroll:** One obvious scroll region.
 6. **No text walls:** keep copy minimal; avoid dense multi-line stacks in compact surfaces.
+7. **Responsive drawer mapping (no hardcoding by route):**
+   - Mobile **bottom drawer** => Desktop **right sidebar**
+   - Mobile **top drawer / topbar extension** => Desktop **left sidebar**
+   - This is behavior-driven by drawer orientation, not by page-specific hardcoded exceptions.
+8. **Desktop rule:** do not render expanding topbar drawer panels on desktop; translate them into sidebars per mapping above.
 
 ## Content density + type quality
 
