@@ -60,7 +60,7 @@ import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePrevi
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { decryptGhostData } from '@/lib/encryption/ghost-crypto';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { getConnectPrimaryColor } from '@/lib/ecosystem-app-colors';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { CallService } from '@/lib/services/call';
@@ -118,6 +118,7 @@ function isRenderableImageSrc(value?: string | null) {
 }
 
 export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClientProps) {
+  const router = useRouter();
   const params = useParams();
   const rawKey = params.key;
   const key = initialKey || (Array.isArray(rawKey) ? rawKey.join('/') : (rawKey as string));
@@ -522,7 +523,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
       const source = typeof window !== 'undefined'
         ? encodeURIComponent(window.location.origin + window.location.pathname)
         : '';
-      window.location.assign(`${getEcosystemUrl('accounts')}/login?source=${source}`);
+      router.push(`${getEcosystemUrl('accounts')}/login?source=${source}`);
       return;
     }
 
@@ -703,7 +704,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
         window.sessionStorage.setItem('kylrix:compose-note-intent', JSON.stringify(payload));
       }
       showSuccess('Open Composer', 'Add your text, then post from the Connect composer.');
-      window.location.assign(`${getEcosystemUrl('connect')}?compose=1`);
+      router.push(`${getEcosystemUrl('connect')}?compose=1`);
     } catch (err: any) {
       showError('Post Failed', err.message || 'Failed to post note as a moment.');
     } finally {

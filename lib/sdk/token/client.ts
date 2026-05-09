@@ -1,3 +1,5 @@
+import { runTokenOperationSecure } from '@/lib/actions/secure-ops';
+
 export type KylrixTokenAction =
   | 'state'
   | 'initialize'
@@ -155,32 +157,14 @@ function validateRequest(request: TokenOperationRequest) {
 }
 
 export function createKylrixTokenOperationsClient(options: KylrixTokenClientOptions = {}) {
-  const endpoint = options.endpoint || '/accounts/api/token/operations';
+  const endpoint = options.endpoint || 'in-code-secure-op';
   const baseHeaders = options.headers || {};
 
   const execute = async <T = any>(request: TokenOperationRequest): Promise<T> => {
     validateRequest(request);
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        ...baseHeaders,
-      },
-      body: JSON.stringify(request),
-    });
-
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const message = String(payload?.error || `TOKEN_CLIENT_HTTP_${response.status}`);
-      const error = new Error(message) as Error & { status?: number; payload?: unknown };
-      error.status = response.status;
-      error.payload = payload;
-      throw error;
-    }
-
-    return payload as T;
+    void endpoint;
+    void baseHeaders;
+    return (await runTokenOperationSecure(request)) as T;
   };
 
   return {

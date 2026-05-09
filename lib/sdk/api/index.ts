@@ -32,7 +32,7 @@ export function createApiModulePaths(basePath = '/api'): ApiModulePaths {
       repair: buildApiPath(basePath, 'connect', 'repair'),
     },
     token: {
-      operations: buildApiPath('/accounts/api', 'token', 'operations'),
+      operations: 'in-code-secure-op',
     },
     forward: {
       conversations: buildApiPath(basePath, 'forward', 'conversations'),

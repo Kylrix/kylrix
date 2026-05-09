@@ -46,9 +46,9 @@ import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { ActivityService } from '@/lib/services/activity';
-import { reconcileStaleLiveCallPresenceFromClient } from '@/lib/client/session-runtime-fetch';
 import UserQuickProfileDrawer from '@/components/common/UserQuickProfileDrawer';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
+import { cleanupStaleCallsSecure } from '@/lib/actions/secure-ops';
 
 interface NoteTopbarProps {
   className?: string;
@@ -125,14 +125,7 @@ export default function NoteTopbar({
         return;
       }
       try {
-        await reconcileStaleLiveCallPresenceFromClient();
-        // Belt-and-suspenders cleanup: force session-scoped stale call prune via secure accounts API.
-        await fetch('/accounts/api/connect/calls/cleanup', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({ userId: user.$id }),
-        }).catch(() => undefined);
+        await cleanupStaleCallsSecure({ userId: user.$id }).catch(() => undefined);
         const presence = await ActivityService.getUserPresence(user.$id);
         const raw = String(presence?.customStatus || '');
         if (!raw) {
@@ -536,7 +529,7 @@ export default function NoteTopbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -576,7 +569,7 @@ export default function NoteTopbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -681,7 +674,7 @@ export default function NoteTopbar({
         if (username) {
           stageProfileView(profileSeed as any, profileSeed.avatar || null);
           handleCloseAll();
-          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
         }
       }
     };
@@ -830,7 +823,7 @@ export default function NoteTopbar({
                         if (username) {
                         stageProfileView(profileSeed as any, profileSeed.avatar || null);
                           handleCloseAll();
-                          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
                         }
                       }
                     }}
@@ -879,7 +872,7 @@ export default function NoteTopbar({
                     fullWidth
                     onClick={() => {
                       handleCloseAll();
-                      window.location.assign(item.href);
+                      router.push(item.href);
                     }}
                     sx={{
                       justifyContent: 'flex-start',
@@ -932,7 +925,7 @@ export default function NoteTopbar({
                 fullWidth
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  window.location.assign(item.href);
+                  router.push(item.href);
                 }}
                 sx={{
                   justifyContent: 'flex-start',
@@ -1035,7 +1028,7 @@ export default function NoteTopbar({
                   key={item.href}
                   onClick={() => {
                     handleCloseAll();
-                    window.location.assign(item.href);
+                    router.push(item.href);
                   }}
                   sx={{
                     justifyContent: 'flex-start',
@@ -1102,7 +1095,7 @@ export default function NoteTopbar({
                   fullWidth
                   onClick={() => {
                     handleCloseAll();
-                    window.location.assign(item.href);
+                    router.push(item.href);
                   }}
                   sx={{
                     justifyContent: 'flex-start',
@@ -1152,7 +1145,7 @@ export default function NoteTopbar({
                   fullWidth
                   onClick={() => {
                     handleCloseAll();
-                    window.location.assign(item.href);
+                    router.push(item.href);
                   }}
                   sx={{
                     justifyContent: 'flex-start',
@@ -1199,7 +1192,7 @@ export default function NoteTopbar({
                   if (!username) return;
                   stageProfileView(profileSeed as any, profileSeed.avatar || null);
                   handleCloseAll();
-                  window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                  router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
                 }}
                 sx={{
                   justifyContent: 'flex-start',
@@ -1237,7 +1230,7 @@ export default function NoteTopbar({
                 fullWidth
                 onClick={() => {
                   handleCloseAll();
-                  window.location.assign('/settings');
+                  router.push('/settings');
                 }}
                 sx={{
                   justifyContent: 'flex-start',
@@ -1347,7 +1340,7 @@ export default function NoteTopbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -1387,7 +1380,7 @@ export default function NoteTopbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -1677,7 +1670,7 @@ export default function NoteTopbar({
                   Products
                 </Button>
                 <Button
-                  onClick={() => window.location.assign('/pricing')}
+                  onClick={() => router.push('/pricing')}
                   sx={{
                     color: 'rgba(255,255,255,0.9)',
                     fontFamily: 'var(--font-satoshi)',
@@ -1723,7 +1716,7 @@ export default function NoteTopbar({
                     onClick={() => {
                       if (isLoading) return;
                       const source = typeof window !== 'undefined' ? window.location.href : '/connect';
-                      window.location.assign(`/accounts/login?source=${encodeURIComponent(source)}`);
+                      router.push(`/accounts/login?source=${encodeURIComponent(source)}`);
                     }}
                     disabled={isLoading}
                     sx={{

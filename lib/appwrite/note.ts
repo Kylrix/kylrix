@@ -23,6 +23,7 @@ import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { createNoteCreationService } from '@/lib/sdk';
 import { buildSourceNoteTags } from '@/lib/sdk/crosslinks';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { sharePublicNoteAsMomentSecure } from '@/lib/actions/secure-ops';
 
 export const APPWRITE_ENDPOINT = APPWRITE_CONFIG.ENDPOINT;
 export const APPWRITE_PROJECT_ID = APPWRITE_CONFIG.PROJECT_ID;
@@ -555,19 +556,7 @@ export async function createNote(data: Partial<Notes>) {
 }
 
 export async function createMomentFromNote(note: Pick<Notes, '$id'>) {
-  const response = await fetch('/accounts/api/connect/moments/share-note', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({
-      noteId: note.$id,
-    }),
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(payload?.error || 'Failed to share note as moment');
-  }
-  return payload;
+  return sharePublicNoteAsMomentSecure({ noteId: note.$id });
 }
 
 export async function getNote(noteId: string): Promise<Notes> {

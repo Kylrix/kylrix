@@ -163,7 +163,7 @@ export default function Navbar() {
               fullWidth
               onClick={() => {
                 handleCloseAll();
-                window.location.assign(item.href);
+                router.push(item.href);
               }}
               sx={{
                 justifyContent: 'flex-start',
@@ -210,7 +210,7 @@ export default function Navbar() {
                 key={item.label}
                 onClick={() => {
                   handleCloseAll();
-                  window.location.assign(item.href);
+                  router.push(item.href);
                 }}
                 sx={{
                   justifyContent: 'flex-start',
@@ -295,7 +295,7 @@ export default function Navbar() {
               <Button
                 onClick={() => {
                   handleCloseAll();
-                  window.location.href = `${getEcosystemUrl('accounts')}/settings?source=${encodeURIComponent(window.location.origin)}`;
+                  router.push(`${getEcosystemUrl('accounts')}/settings?source=${encodeURIComponent(window.location.origin)}`);
                 }}
                 fullWidth
                 sx={{
@@ -424,7 +424,7 @@ export default function Navbar() {
                   {navItems.map((item) => (
                     <Button
                       key={item.label}
-                      onClick={() => window.location.assign(item.href)}
+                      onClick={() => router.push(item.href)}
                       sx={{
                         textTransform: 'none',
                         fontWeight: 700,

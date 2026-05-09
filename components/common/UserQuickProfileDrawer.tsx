@@ -18,6 +18,7 @@ import {
 import { Copy, MessageCircle, Send, Wallet, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { KylrixApp } from '@/lib/sdk/design';
+import { getQuickProfileSecure } from '@/lib/actions/secure-ops';
 
 type UserSeed = {
   userId: string;
@@ -87,13 +88,9 @@ export default function UserQuickProfileDrawer({
       setPayload(null);
       setLoading(true);
       try {
-        const res = await fetch(`/accounts/api/users/${encodeURIComponent(activeUserId)}/quick-profile`, {
-          cache: 'no-store',
-          credentials: 'include',
-        });
-        const data = (await res.json().catch(() => null)) as ProfilePayload | null;
+        const data = (await getQuickProfileSecure(activeUserId)) as ProfilePayload | null;
         if (!active) return;
-        if (!res.ok || !data) {
+        if (!data) {
           setPayload({ profile: null, wallets: [] });
           return;
         }
