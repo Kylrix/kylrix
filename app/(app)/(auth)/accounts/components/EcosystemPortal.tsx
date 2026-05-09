@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     Dialog,
@@ -28,6 +29,7 @@ interface EcosystemPortalProps {
 }
 
 export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps) {
+    const router = useRouter();
     const [search, setSearch] = useState('');
 
     const filteredApps = ECOSYSTEM_APPS.filter(app =>
@@ -38,7 +40,7 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
     );
 
     const handleAppClick = (subdomain: string) => {
-        window.location.href = getEcosystemUrl(subdomain);
+        router.push(getEcosystemUrl(subdomain));
         onClose();
     };
 

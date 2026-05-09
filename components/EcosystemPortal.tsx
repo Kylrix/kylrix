@@ -21,6 +21,7 @@ import {
     Waypoints,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
 import Logo, { KylrixApp } from './Logo';
@@ -47,6 +48,7 @@ interface EcosystemPortalProps {
 }
 
 export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps) {
+    const router = useRouter();
     const [search, setSearch] = useState('');
 
     const filteredApps = ECOSYSTEM_APPS.filter(app => 
@@ -58,7 +60,7 @@ export default function EcosystemPortal({ open, onClose }: EcosystemPortalProps)
 
     const handleAppClick = (subdomain: string) => {
         const url = getEcosystemUrl(subdomain);
-        window.location.assign(url);
+        router.push(url);
         onClose();
     };
 

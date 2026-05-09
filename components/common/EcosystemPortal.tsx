@@ -17,6 +17,7 @@ import {
     Zap,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/constants/ecosystem';
 import { KylrixApp } from '@/lib/sdk';
 import Logo from './Logo';
@@ -27,6 +28,7 @@ interface EcosystemPortalProps {
 }
 
 export function EcosystemPortal({ open: controlledOpen, onClose: controlledOnClose }: EcosystemPortalProps) {
+    const router = useRouter();
     const [internalOpen, setInternalOpen] = useState(false);
     const [search, setSearch] = useState('');
 
@@ -71,7 +73,7 @@ export function EcosystemPortal({ open: controlledOpen, onClose: controlledOnClo
         }
 
         const url = getEcosystemUrl(subdomain);
-        window.location.assign(url);
+        router.push(url);
         onClose();
     };
 
