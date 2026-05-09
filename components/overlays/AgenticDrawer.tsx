@@ -10,6 +10,8 @@ import {
   Stack,
   TextField,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import { Bot, CalendarClock, Mic, Play, Plug, X } from 'lucide-react';
 
@@ -42,6 +44,8 @@ const INDIGO_HOVER = '#575CF0';
 const BORDER = `1px solid ${BORDER_EDGE}`;
 
 export function AgenticDrawer() {
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { isOpen, closeAgenticDrawer } = useAgenticDrawer();
   const { openProUpgrade } = useProUpgrade();
 
@@ -76,18 +80,36 @@ export function AgenticDrawer() {
 
   return (
     <Drawer
-      anchor="bottom"
+      anchor={isDesktop ? 'right' : 'bottom'}
       open={isOpen}
       onClose={closeAgenticDrawer}
       sx={{
         '& .MuiDrawer-paper': {
-          height: 'min(62dvh, 540px)',
-          maxHeight: 'min(62dvh, 540px)',
-          borderTopLeftRadius: '24px',
-          borderTopRightRadius: '24px',
+          ...(isDesktop
+            ? {
+                top: '88px',
+                right: 0,
+                height: 'calc(100vh - 88px)',
+                width: 'min(420px, 92vw)',
+                maxWidth: 'min(420px, 92vw)',
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: 0,
+                borderBottomLeftRadius: 0,
+                borderBottomRightRadius: 0,
+                borderLeft: BORDER,
+                borderTop: BORDER,
+                borderBottom: 0,
+                borderRight: 0,
+              }
+            : {
+                height: 'min(62dvh, 540px)',
+                maxHeight: 'min(62dvh, 540px)',
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: '24px',
+                border: BORDER,
+                borderBottom: 0,
+              }),
           bgcolor: SURFACE_NAV,
-          border: BORDER,
-          borderBottom: 0,
           boxShadow: 'none',
           backgroundImage: 'none',
           overflow: 'hidden',
@@ -96,11 +118,14 @@ export function AgenticDrawer() {
         },
       }}
     >
-      <Box sx={{ pt: 'max(8px, env(safe-area-inset-top))' }} />
-
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
-        <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
-      </Box>
+      {!isDesktop && (
+        <>
+          <Box sx={{ pt: 'max(8px, env(safe-area-inset-top))' }} />
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+            <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
+          </Box>
+        </>
+      )}
 
       <Box
         sx={{
