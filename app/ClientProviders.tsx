@@ -27,6 +27,7 @@ import { ChatNotificationProvider } from '@/components/providers/ChatNotificatio
 import { ThemeProvider } from '@/lib/theme-context';
 import { CallLauncherProvider } from '@/context/CallLauncherContext';
 import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
+import { TokenOpsProvider } from '@/context/TokenOpsContext';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -53,13 +54,15 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                         <ToastProvider>
                                           <PotatoProvider>
                                             <AppChromeProvider>
-                                              <WalletOverlayProvider>
-                                                <ChatNotificationProvider>
-                                                  <CallLauncherProvider>
-                                                    {children}
-                                                  </CallLauncherProvider>
-                                                </ChatNotificationProvider>
-                                              </WalletOverlayProvider>
+                                              <TokenOpsProvider>
+                                                <WalletOverlayProvider>
+                                                  <ChatNotificationProvider>
+                                                    <CallLauncherProvider>
+                                                      {children}
+                                                    </CallLauncherProvider>
+                                                  </ChatNotificationProvider>
+                                                </WalletOverlayProvider>
+                                              </TokenOpsProvider>
                                             </AppChromeProvider>
                                           </PotatoProvider>
                                         </ToastProvider>

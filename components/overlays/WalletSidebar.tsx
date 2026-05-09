@@ -33,6 +33,7 @@ import { toast } from 'react-hot-toast';
 import { WalletService, type SupportedWalletChain, type WalletSummary } from '@/lib/services/wallets';
 import { createKylrixTokenOperationsClient } from '@/lib/sdk/token';
 import { KeychainService } from '@/lib/appwrite/keychain';
+import { useTokenOps } from '@/context/TokenOpsContext';
 
 interface WalletSidebarProps {
     isOpen: boolean;
@@ -62,6 +63,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const [pendingChain, setPendingChain] = useState<SupportedWalletChain | null>(null);
     const [unlockPromptedForSession, setUnlockPromptedForSession] = useState(false);
     const [kylrixBalance, setKylrixBalance] = useState<{ amount: string; symbol: string } | null>(null);
+    const { openTokenUserSearch } = useTokenOps();
 
     const ACCENT = '#6366F1';
     const SURFACE = '#161412';
@@ -193,6 +195,15 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         } finally {
             setPendingChain(null);
         }
+    };
+
+    const handleKylrixCardClick = () => {
+        if (!user?.$id) return;
+        openTokenUserSearch({
+            mode: 'send',
+            fromUserId: user.$id,
+            source: 'wallet_sidebar',
+        });
     };
 
     const addableNetworks = useMemo(
@@ -567,8 +578,10 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                                     bgcolor: HIGHLIGHT,
                                     border: `1px solid ${EDGE}`,
                                     transition: 'all 0.2s ease',
-                                    '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' }
+                                    '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' },
+                                    cursor: 'pointer'
                                 }}
+                                onClick={handleKylrixCardClick}
                             >
                                 <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
                                     <Stack direction="row" alignItems="center" gap={2}>

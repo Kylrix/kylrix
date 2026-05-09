@@ -705,6 +705,22 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
         'Moment Posted',
         mintedAmount ? `Posted successfully and minted ${mintedAmount} $KYLRIX.` : 'This note has been posted as a moment.',
       );
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('kylrix:token-event', {
+            detail: {
+              kind: 'mint',
+              status: result?.tokenMint?.accepted ? 'success' : 'failed',
+              title: result?.tokenMint?.accepted ? 'Token Minted' : 'Mint Attempt Recorded',
+              message: result?.tokenMint?.accepted
+                ? `You earned ${result?.tokenMint?.amount} ${result?.tokenMint?.symbol || '$KYLRIX'} for sharing a public note as a moment.`
+                : `Moment posted, but minting did not settle: ${String(result?.tokenMint?.reason || 'not eligible right now')}.`,
+              amount: result?.tokenMint?.accepted ? String(result?.tokenMint?.amount || '') : null,
+              symbol: String(result?.tokenMint?.symbol || '$KYLRIX'),
+            },
+          }),
+        );
+      }
       window.location.assign(`${getEcosystemUrl('connect')}/post/${moment.$id}`);
     } catch (err: any) {
       showError('Post Failed', err.message || 'Failed to post note as a moment.');
