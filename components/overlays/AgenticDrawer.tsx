@@ -29,6 +29,10 @@ const frameworks: Array<{ id: AgentFramework; title: string; description: string
 
 const connectorHints = ['Research from this note', 'Create a Flow goal', 'Fetch related vault secrets', 'Draft a Connect post'];
 
+/** Typography: Satoshi UI + Clash Display for emphatic headings (Muted V3 signature trio). */
+const fontUi = 'var(--font-satoshi)';
+const fontDisplay = 'var(--font-clash)';
+
 export function AgenticDrawer() {
   const { isOpen, closeAgenticDrawer } = useAgenticDrawer();
   const { openProUpgrade } = useProUpgrade();
@@ -69,7 +73,17 @@ export function AgenticDrawer() {
         },
       }}
     >
-      <Box sx={{ p: { xs: 2, md: 2.5 }, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          p: { xs: 2, md: 2.5 },
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: fontUi,
+          '& .MuiButton-root': { fontFamily: fontUi },
+          '& .MuiChip-label': { fontFamily: fontUi },
+        }}
+      >
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
           <Stack direction="row" alignItems="center" spacing={1.25}>
             <Box
@@ -86,8 +100,18 @@ export function AgenticDrawer() {
               <Bot size={18} color="#A5B4FC" />
             </Box>
             <Box>
-              <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: '0.95rem' }}>Agentic Workspace</Typography>
-              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.78rem' }}>Live agents and orchestration</Typography>
+              <Typography
+                sx={{
+                  color: '#fff',
+                  fontWeight: 900,
+                  fontSize: '0.95rem',
+                  fontFamily: fontDisplay,
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                Agentic Workspace
+              </Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.78rem', fontFamily: fontUi }}>Live agents and orchestration</Typography>
             </Box>
           </Stack>
           <IconButton onClick={closeAgenticDrawer} sx={{ color: 'rgba(255,255,255,0.7)' }}>
@@ -101,19 +125,41 @@ export function AgenticDrawer() {
           <Stack spacing={1.5} sx={{ minHeight: 0, flex: 1 }}>
             <Paper sx={{ p: 1.25, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.82rem' }}>Running Agents</Typography>
-                <Chip size="small" label="1 Active" sx={{ bgcolor: alpha('#10B981', 0.15), color: '#10B981', fontWeight: 800 }} />
+                <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.82rem', fontFamily: fontDisplay, letterSpacing: '-0.02em' }}>
+                  Running Agents
+                </Typography>
+                <Chip
+                  size="small"
+                  label="1 Active"
+                  sx={{
+                    bgcolor: alpha('#10B981', 0.15),
+                    color: '#10B981',
+                    fontWeight: 800,
+                    fontFamily: fontUi,
+                  }}
+                />
               </Stack>
-              <Typography sx={{ color: 'rgba(255,255,255,0.65)', mt: 0.8, fontSize: '0.78rem' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.65)', mt: 0.8, fontSize: '0.78rem', fontFamily: fontUi }}>
                 Kylrix Internal is watching connectors and waiting for your next instruction.
               </Typography>
             </Paper>
 
             <Paper sx={{ p: 1.25, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid rgba(255,255,255,0.08)', minHeight: 0, flex: 1, overflowY: 'auto' }}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem' }}>Type an instruction and stream it live:</Typography>
+              <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', fontFamily: fontUi }}>
+                Type an instruction and stream it live:
+              </Typography>
               <Stack spacing={0.75} sx={{ mt: 1 }}>
                 {suggestedInstructions.map((item) => (
-                  <Chip key={item} label={item} sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.84)', justifyContent: 'flex-start' }} />
+                  <Chip
+                    key={item}
+                    label={item}
+                    sx={{
+                      bgcolor: 'rgba(255,255,255,0.05)',
+                      color: 'rgba(255,255,255,0.84)',
+                      justifyContent: 'flex-start',
+                      fontFamily: fontUi,
+                    }}
+                  />
                 ))}
               </Stack>
             </Paper>
@@ -129,9 +175,12 @@ export function AgenticDrawer() {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: '12px',
                     color: '#fff',
+                    fontFamily: fontUi,
                     bgcolor: 'rgba(255,255,255,0.03)',
                     '& fieldset': { borderColor: 'rgba(255,255,255,0.12)' },
                   },
+                  '& .MuiInputBase-input': { fontFamily: fontUi },
+                  '& .MuiInputBase-input::placeholder': { opacity: 0.45 },
                 }}
               />
               <IconButton sx={{ borderRadius: '12px', bgcolor: alpha('#6366F1', 0.18), color: '#A5B4FC' }}>
@@ -152,7 +201,9 @@ export function AgenticDrawer() {
 
         {stage === 'framework' && (
           <Stack spacing={1.25} sx={{ minHeight: 0, flex: 1, overflowY: 'auto' }}>
-            <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem' }}>Choose Agentic Framework</Typography>
+            <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', fontFamily: fontDisplay, letterSpacing: '-0.02em' }}>
+              Choose Agentic Framework
+            </Typography>
             {frameworks.map((item) => (
               <Paper
                 key={item.id}
@@ -165,8 +216,10 @@ export function AgenticDrawer() {
                   cursor: 'pointer',
                 }}
               >
-                <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.84rem' }}>{item.title}</Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.62)', mt: 0.5, fontSize: '0.75rem' }}>{item.description}</Typography>
+                <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.84rem', fontFamily: fontDisplay, letterSpacing: '-0.02em' }}>
+                  {item.title}
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.62)', mt: 0.5, fontSize: '0.75rem', fontFamily: fontUi }}>{item.description}</Typography>
               </Paper>
             ))}
             <Button variant="text" onClick={() => setStage('live')} sx={{ alignSelf: 'flex-start', color: 'rgba(255,255,255,0.7)' }}>
@@ -177,14 +230,21 @@ export function AgenticDrawer() {
 
         {stage === 'planner' && (
           <Stack spacing={1.25} sx={{ minHeight: 0, flex: 1, overflowY: 'auto' }}>
-            <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem' }}>Kylrix Internal Planner</Typography>
+            <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.86rem', fontFamily: fontDisplay, letterSpacing: '-0.02em' }}>
+              Kylrix Internal Planner
+            </Typography>
             <Paper sx={{ p: 1.5, borderRadius: '14px', bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)' }}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem' }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', fontFamily: fontUi }}>
                 Select connectors and actions to compose your agent run.
               </Typography>
               <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" sx={{ mt: 1.2 }}>
                 {['Note', 'Flow', 'Vault', 'Connect'].map((connector) => (
-                  <Chip key={connector} icon={<Plug size={14} />} label={connector} sx={{ color: '#fff', bgcolor: 'rgba(255,255,255,0.06)' }} />
+                  <Chip
+                    key={connector}
+                    icon={<Plug size={14} />}
+                    label={connector}
+                    sx={{ color: '#fff', bgcolor: 'rgba(255,255,255,0.06)', fontFamily: fontUi }}
+                  />
                 ))}
               </Stack>
             </Paper>
