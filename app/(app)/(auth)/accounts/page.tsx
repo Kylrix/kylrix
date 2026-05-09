@@ -28,13 +28,13 @@ function HomeContent() {
       if (source) {
         const url = new URL(source.startsWith('http') ? source : `https://${source}`);
         url.searchParams.set('auth', 'success');
-        window.location.replace(url.toString());
+        router.replace(url.toString());
       } else {
         router.replace('/accounts/settings/profile');
       }
     } else {
       const loginUrl = source ? `/accounts/login?source=${encodeURIComponent(source)}` : '/accounts/login';
-      window.location.replace(loginUrl);
+      router.replace(loginUrl);
     }
 
     if (isMounted) {
@@ -96,7 +96,7 @@ function HomeContent() {
             <Button
               variant="contained"
               fullWidth
-              onClick={() => window.location.href = redirectUrl}
+              onClick={() => router.push(redirectUrl)}
               sx={{
                 height: 56,
                 borderRadius: '0.75rem',

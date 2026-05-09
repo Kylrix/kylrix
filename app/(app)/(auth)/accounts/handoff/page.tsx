@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { account } from '@/lib/appwrite';
 import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
@@ -19,6 +19,7 @@ function buildLoginUrl(source: string | null, redirectUri: string) {
 }
 
 function AppHandoffContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { setSource, setRedirectUri } = useSource();
   const [status, setStatus] = useState('Preparing app handoff...');
@@ -57,7 +58,7 @@ function AppHandoffContent() {
       const target = new URL(redirectUri);
       target.searchParams.set('secret', secret);
       target.searchParams.set('userId', userId);
-      window.location.replace(target.toString());
+      router.replace(target.toString());
     } catch (_error) {
       const err = _error as any;
       if (err?.type === 'user_more_factors_required' || err?.message?.includes('more_factors_required')) {
@@ -93,7 +94,7 @@ function AppHandoffContent() {
         if (mounted) {
           setStatus('Missing redirect target. Sending you to login.');
         }
-        window.location.replace('/accounts/login');
+        router.replace('/accounts/login');
         return;
       }
 
@@ -133,7 +134,7 @@ function AppHandoffContent() {
           }
         }
 
-        window.location.replace(buildLoginUrl(source, redirectUri));
+        router.replace(buildLoginUrl(source, redirectUri));
         return;
       }
 

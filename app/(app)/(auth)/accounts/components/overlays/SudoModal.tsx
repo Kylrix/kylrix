@@ -34,6 +34,7 @@ import { unlockWithPasskey } from '@/lib/passkey';
 import { useAuth } from '@/context/auth/AuthContext';
 import toast from 'react-hot-toast';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
@@ -50,6 +51,7 @@ export default function SudoModal({
     onCancel,
     intent,
 }: SudoModalProps) {
+    const router = useRouter();
     const { user, logout } = useAuth();
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -82,7 +84,7 @@ export default function SudoModal({
                 
                 if (intent === "reset") {
                     const callbackUrl = encodeURIComponent(window.location.href);
-                    window.location.href = `/vault/masterpass/reset?callbackUrl=${callbackUrl}`;
+                    router.push(`/vault/masterpass/reset?callbackUrl=${callbackUrl}`);
                     return;
                 }
 
@@ -119,7 +121,7 @@ export default function SudoModal({
 
     const handleRedirectToVaultSetup = useCallback(() => {
         const callbackUrl = encodeURIComponent(window.location.href);
-        window.location.href = `/vault/masterpass?callbackUrl=${callbackUrl}`;
+        router.push(`/vault/masterpass?callbackUrl=${callbackUrl}`);
     }, []);
 
     const handleInitializeMasterPass = async (e: React.FormEvent) => {
@@ -186,7 +188,7 @@ export default function SudoModal({
     const handleFinalReset = async (e: React.FormEvent) => {
         e.preventDefault();
         const callbackUrl = encodeURIComponent(window.location.href);
-                    window.location.href = `/vault/masterpass/reset?callbackUrl=${callbackUrl}`;
+                    router.push(`/vault/masterpass/reset?callbackUrl=${callbackUrl}`);
     };
 
     useEffect(() => {

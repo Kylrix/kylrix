@@ -373,7 +373,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         idmOriginRef.current = idmUrlObj.origin;
 
         if (isMobileDevice) {
-          window.location.assign(targetUrl);
+          router.push(targetUrl);
           return;
         }
 
@@ -393,7 +393,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           if (!windowRef) {
             console.warn('Popup blocked, falling back to redirect in kylrixnote');
-            window.location.assign(targetUrl);
+            router.push(targetUrl);
             return;
           }
 

@@ -187,7 +187,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const windowRef = window.open(targetUrl, 'KylrixAccounts', `width=${width},height=${height},left=${left},top=${top}`);
 
     if (!windowRef) {
-      window.location.assign(targetUrl);
+      router.push(targetUrl);
       return;
     }
 

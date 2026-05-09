@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, use } from 'react';
+import { useRouter } from 'next/navigation';
 import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, alpha } from '@mui/material';
 import { CheckCircle2, Loader2, ShieldCheck, Ticket } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -21,6 +22,7 @@ type CouponClaimResponse = {
 };
 
 export default function CouponLandingPage(props: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
   const params = use(props.params);
   const { user, isLoading } = useAuth();
   const couponId = useMemo(() => (params.id || '').trim(), [params.id]);
@@ -34,7 +36,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
       const url = new URL('/accounts/login', window.location.origin);
       url.searchParams.set('source', window.location.href);
       url.searchParams.set('return_to', `/accounts/coupon/${encodeURIComponent(couponId)}`);
-      window.location.assign(url.toString());
+      router.push(url.toString());
       return;
     }
 
@@ -51,7 +53,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
           checkoutUrl.searchParams.set('months', String(data.months || 1));
           checkoutUrl.searchParams.set('countryCode', (user?.prefs as any)?.region || 'US');
           checkoutUrl.searchParams.set('couponId', data.couponId);
-          window.location.assign(checkoutUrl.toString());
+          router.push(checkoutUrl.toString());
           return;
         }
 
@@ -59,7 +61,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
         setMessage(data.message || 'Coupon applied successfully.');
         const successUrl = new URL('/accounts/pro/success', window.location.origin);
         successUrl.searchParams.set('success', 'true');
-        window.location.replace(successUrl.toString());
+        router.replace(successUrl.toString());
       } catch (error: any) {
         setState('error');
         setMessage(error?.message || 'Coupon could not be applied.');

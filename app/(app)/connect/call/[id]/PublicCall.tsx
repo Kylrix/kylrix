@@ -465,7 +465,7 @@ export function PublicCall({ id }: { id: string }) {
                                         startIcon={<LogIn size={18} />}
                                         onClick={() => {
                                             const loginUrl = `${getEcosystemUrl('accounts')}/login?source=${encodeURIComponent(window.location.href)}`;
-                                            window.location.href = loginUrl;
+                                            router.push(loginUrl);
                                         }}
                                         sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 800 }}
                                     >

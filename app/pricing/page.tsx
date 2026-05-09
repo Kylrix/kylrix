@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Box, 
   Container, 
@@ -22,6 +23,7 @@ import { getEcosystemUrl } from '@/lib/ecosystem';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 
 export default function PricingPage() {
+  const router = useRouter();
   const { isAuthenticated, openIDMWindow } = useAuth();
   const { prices, detectedRegion } = useSubscription();
   const [months, setMonths] = useState(1);
@@ -55,7 +57,7 @@ export default function PricingPage() {
     }
     
     setIsRedirecting(true);
-    window.location.assign(checkoutUrl);
+    router.push(checkoutUrl);
   };
 
   const pppSavings = useMemo(() => {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, Container, Typography, CircularProgress, Paper, Button, Stack, Divider } from '@mui/material';
 import { Rocket, Heart, Globe, Clock } from 'lucide-react';
 import { calculateSubscriptionPrice, PPP_DATA } from '@/lib/subscription/ppp';
@@ -10,6 +10,7 @@ import { createBillingCheckoutSessionAction } from '../../../actions/billing';
 import { account } from '@/lib/appwrite/client';
 
 function CheckoutContent() {
+  const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ function CheckoutContent() {
 
         if (session.url) {
           markBillingSyncPending(user.$id);
-          window.location.assign(session.url);
+          router.push(session.url);
         } else {
           const sessionError = 'error' in session ? session.error : undefined;
           setError(typeof sessionError === 'string' ? sessionError : 'Failed to create checkout session');
@@ -79,7 +80,7 @@ function CheckoutContent() {
     if (!authLoading && !user) {
       if (typeof window !== 'undefined') {
         const currentUrl = window.location.href;
-        window.location.assign(`/accounts/login?source=${encodeURIComponent(currentUrl)}`);
+        router.push(`/accounts/login?source=${encodeURIComponent(currentUrl)}`);
       }
     }
   }, [user, authLoading]);

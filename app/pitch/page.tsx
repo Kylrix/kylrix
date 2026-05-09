@@ -15,6 +15,7 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
@@ -530,6 +531,7 @@ const slides: Slide[] = [
 ];
 
 export default function PitchPage() {
+  const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const reduceMotion = useReducedMotion();
@@ -591,11 +593,11 @@ export default function PitchPage() {
   };
 
   const openApps = () => {
-    window.location.assign('/apps');
+    router.push('/apps');
   };
 
   const openDocs = () => {
-    window.location.assign('/docs');
+    router.push('/docs');
   };
 
   return (

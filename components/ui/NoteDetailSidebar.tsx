@@ -1689,7 +1689,7 @@ export function NoteDetailSidebar({
               variant="outlined"
               startIcon={<OpenIcon />}
               onClick={() => {
-                window.location.assign(`/flow?source=note&noteId=${encodeURIComponent(liveNote.$id)}`);
+                router.push(`/flow?source=note&noteId=${encodeURIComponent(liveNote.$id)}`);
                 setShowActionHub(false);
               }}
               sx={{
@@ -1742,7 +1742,7 @@ export function NoteDetailSidebar({
                       size="small"
                       variant="text"
                       onClick={() => {
-                        window.location.assign(`https://kylrix.space/integrations?source=note&action=${encodeURIComponent(suggestion.id)}`);
+                        window.open(`https://kylrix.space/integrations?source=note&action=${encodeURIComponent(suggestion.id)}`, '_blank', 'noopener,noreferrer');
                         setShowActionHub(false);
                       }}
                       sx={{ color: theme.palette.primary.main, fontWeight: 800 }}

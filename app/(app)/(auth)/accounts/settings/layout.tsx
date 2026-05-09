@@ -200,7 +200,7 @@ function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
             <Box
                 onClick={() => {
                     const backUrl = getBackUrl();
-                    if (backUrl) window.location.href = backUrl;
+                    if (backUrl) router.push(backUrl);
                 }}
                 sx={{
                     display: 'flex',

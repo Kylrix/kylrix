@@ -1,10 +1,11 @@
 'use client';
 
 import { useAuth } from '@/lib/auth';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { getEcosystemUrl } from '@/lib/constants';
 
 export const AuthOverlay = () => {
+    const router = useRouter();
     const { user, isLoading } = useAuth();
     const pathname = usePathname();
 
@@ -62,7 +63,7 @@ export const AuthOverlay = () => {
                     <button
                         onClick={() => {
                             const loginUrl = `${getEcosystemUrl('accounts')}/login?source=${encodeURIComponent(window.location.href)}`;
-                            window.location.href = loginUrl;
+                            router.push(loginUrl);
                         }}
                         style={{
                             backgroundColor: 'var(--color-electric)',

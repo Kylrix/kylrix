@@ -197,7 +197,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
       checkoutUrl.searchParams.set('giftRecipientId', recipientUserId);
       checkoutUrl.searchParams.set('giftRecipientName', recipientLabel || recipientUserId);
 
-      window.location.assign(checkoutUrl.toString());
+      router.push(checkoutUrl.toString());
     } catch (error: unknown) {
       setGiftError((error as Error)?.message || 'Failed to start gift checkout.');
     } finally {

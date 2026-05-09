@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Client, Account, OAuthProvider, ID } from 'appwrite';
 import { Box, Typography, Stack, TextField, Button, Alert, CircularProgress, alpha, InputAdornment } from '@mui/material';
 import { safeDeleteCurrentSession } from '@/lib/safe-session';
@@ -40,6 +40,7 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
+  const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const { source, setSource, setRedirectUri, getBackUrl } = useSource();
@@ -119,7 +120,7 @@ function LoginContent() {
         if (redirectUri) {
           target.searchParams.set('redirect_uri', redirectUri);
         }
-        window.location.replace(target.toString());
+        router.replace(target.toString());
         return;
       }
 
@@ -137,7 +138,7 @@ function LoginContent() {
             const target = new URL(redirectUri);
             target.searchParams.set('secret', secret);
             target.searchParams.set('userId', userId);
-            window.location.href = target.toString();
+            router.push(target.toString());
             return;
           }
         } catch (e) {
@@ -196,7 +197,7 @@ function LoginContent() {
     if (!isSuccess || window.opener) return;
 
     const backUrl = getBackUrl();
-    window.location.replace(backUrl || getPostAuthDefaultUrl());
+    router.replace(backUrl || getPostAuthDefaultUrl());
   }, [getBackUrl, getPostAuthDefaultUrl, isSuccess]);
 
   const handleOAuthLogin = async (provider: OAuthProvider) => {
@@ -381,7 +382,7 @@ function LoginContent() {
                 window.close();
               } else {
                 const backUrl = getBackUrl();
-                window.location.href = backUrl || getPostAuthDefaultUrl();
+                router.push(backUrl || getPostAuthDefaultUrl());
               }
             }}
             sx={{
@@ -557,7 +558,7 @@ function LoginContent() {
             <Button
               onClick={() => {
                 const backUrl = getBackUrl();
-                window.location.href = backUrl || getPostAuthDefaultUrl();
+                router.push(backUrl || getPostAuthDefaultUrl());
               }}
               sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase' }}
             >

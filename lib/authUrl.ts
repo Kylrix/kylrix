@@ -55,7 +55,7 @@ export function openAuthPopup(): Window | null {
   fullUrl = `${fullUrl}${separator}source=${encodeURIComponent(sourceURL)}`;
 
   if (isMobile) {
-    window.location.assign(fullUrl);
+    window.open(fullUrl, "_self");
     return null; // Signals that we redirected
   }
 
@@ -67,7 +67,7 @@ export function openAuthPopup(): Window | null {
 
   if (!popup) {
     console.warn("Popup blocked, falling back to redirect in kylrixvault");
-    window.location.assign(fullUrl);
+    window.open(fullUrl, "_self");
     return null;
   }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Box, Typography, Button, Paper, Container, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import { Refresh, Home, ErrorOutline, ExpandMore } from '@mui/icons-material';
 
@@ -11,6 +12,7 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
   useEffect(() => {
     console.error('Global application error:', error);
   }, [error]);
@@ -126,7 +128,7 @@ export default function GlobalError({
                   variant="outlined"
                   fullWidth
                   startIcon={<Home />}
-                  onClick={() => window.location.href = '/'}
+                  onClick={() => router.push('/')}
                   sx={{
                     py: 1.5,
                     borderRadius: 3,

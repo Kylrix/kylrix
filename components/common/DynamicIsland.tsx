@@ -652,7 +652,7 @@ export const DynamicIslandPanelSurface: React.FC<{
                   return (
                     <ListItemButton
                       key={app.id}
-                      onClick={() => window.location.assign(getEcosystemUrl(app.subdomain))}
+                      onClick={() => router.push(getEcosystemUrl(app.subdomain))}
                       sx={{
                         borderRadius: '18px',
                         bgcolor: selected ? alpha(app.color, 0.1) : 'rgba(255,255,255,0.03)',
