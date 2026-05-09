@@ -588,7 +588,7 @@ export default function LandingPage() {
                 fontFamily: 'var(--font-satoshi)',
               }}
             >
-              Notes, tasks, calls, and secure operations in one place.
+              The only E2EE workspace where your productivity tools and autonomous agents coexist; work while you sleep.
             </Typography>
           </Box>
 
