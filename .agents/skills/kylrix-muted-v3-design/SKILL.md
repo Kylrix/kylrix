@@ -58,6 +58,14 @@ MUI defaults are **not** brand fonts:
 3. **Primary chrome buttons** (mic, FAB-like controls): fill with **solid** ecosystem primary (`#6366F1`), white icon — not tinted translucency.
 4. **Safe area:** `paddingBottom: max(theme spacing, env(safe-area-inset-bottom))`.
 5. **Scroll:** One obvious scroll region.
+6. **No text walls:** keep copy minimal; avoid dense multi-line stacks in compact surfaces.
+
+## Content density + type quality
+
+- Prefer short headings and one-sentence support copy.
+- Add vertical rhythm between title, support text, and actions; avoid cramped text blocks.
+- Use only Kylrix font tokens for product UI: `--font-satoshi`, `--font-clash`, `--font-mono`.
+- Reduce aggressive negative tracking in large hero text when readability drops.
 
 ## Polishing checklist
 
@@ -66,6 +74,8 @@ MUI defaults are **not** brand fonts:
 - [ ] Solid hex borders for separation
 - [ ] Fonts use `--font-satoshi` / `--font-clash` / `--font-mono`
 - [ ] Bottom sheet surface matches unified bottom bar treatment
+- [ ] Copy is concise and not crammed
+- [ ] Only approved font tokens are used
 
 ## Reference implementation
 

@@ -24,3 +24,5 @@ disable-model-invocation: true
 5. Product positioning copy should emphasize: E2EE workspace, autonomous agents, and effortless execution.
 6. Prefer chain-agnostic "agentic wallet infrastructure" language over chain-specific branding in product marketing surfaces.
 7. **Opaque UI:** No gradient fills and no translucent (`rgba` / `alpha` / opacity) **backgrounds** on product chrome—see `design.md` and `kylrix-muted-v3-design`.
+8. **Do not cram copy:** Keep hero and drawer copy short. Prefer one clear sentence per block and clear whitespace between text groups.
+9. **Authorized fonts only:** Use `var(--font-satoshi)`, `var(--font-clash)`, and `var(--font-mono)`; never introduce ad-hoc or default fallback-only typography for primary UI.
