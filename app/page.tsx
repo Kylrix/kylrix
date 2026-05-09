@@ -619,6 +619,10 @@ export default function LandingPage() {
               href="https://github.com/kylrix"
               target="_blank"
               rel="noreferrer"
+              onClick={(event) => {
+                event.preventDefault();
+                window.open('https://github.com/kylrix', '_blank', 'noopener,noreferrer');
+              }}
               size="large"
               variant="outlined"
               startIcon={<Github size={18} />}
