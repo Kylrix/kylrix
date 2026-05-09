@@ -1,5 +1,5 @@
 import { ID, Permission, Query, Role } from 'node-appwrite';
-import { createAdminClient } from '@/lib/appwrite-admin';
+import { createAdminClient, createAdminTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   createKylrixTokenContract,
@@ -13,6 +13,9 @@ const TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.KYLRIX_TOKEN_LEDGER;
 const STATE_ROW_ID = 'state';
 
 const contract = createKylrixTokenContract();
+
+/** TablesDB ledger access — KYLRIX_TOKEN_LEDGER is Tables-only; Documents API reads/writes the wrong projection. */
+const ledgerTables = () => createAdminTablesDB();
 
 interface TokenStateRow {
   $id: string;
@@ -46,6 +49,7 @@ const toMicro = (v: bigint) => v.toString();
 const toToken = (micro: bigint) => (Number(micro) / 1_000_000).toFixed(6).replace(/\.?0+$/, '');
 const isInitialized = (row: any): row is TokenStateRow => Boolean(row && row.rowType === 'state');
 
+/** Ledger row visibility: primary `userId` always gets read. When set (transfers, fines↔root), counterparty gets read too — mint_activity omits counterparty so only the recipient sees it. */
 function tokenReadPermissions(userId: string, counterpartyUserId?: string | null) {
   const perms = new Set<string>();
   perms.add(Permission.read(Role.user(userId)));
@@ -54,9 +58,12 @@ function tokenReadPermissions(userId: string, counterpartyUserId?: string | null
 }
 
 async function getStateRow() {
-  const { databases } = createAdminClient();
   try {
-    return await databases.getDocument(DB_ID, TABLE_ID, STATE_ROW_ID);
+    return await ledgerTables().getRow({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      rowId: STATE_ROW_ID,
+    });
   } catch {
     return null;
   }
@@ -82,53 +89,113 @@ async function requireOrInitializeStateRow() {
 }
 
 async function updateStateRow(patch: Partial<TokenStateRow>) {
-  const { databases } = createAdminClient();
   const current = await requireStateRow();
-  return databases.updateDocument(DB_ID, TABLE_ID, STATE_ROW_ID, {
-    ...current,
-    ...patch,
-    updatedAt: nowIso(),
+  return ledgerTables().updateRow({
+    databaseId: DB_ID,
+    tableId: TABLE_ID,
+    rowId: STATE_ROW_ID,
+    data: {
+      ...current,
+      ...patch,
+      updatedAt: nowIso(),
+    },
   });
 }
 
-async function getLatestBalanceMicro(userId: string) {
-  const { databases } = createAdminClient();
-  const rows = await databases.listDocuments(DB_ID, TABLE_ID, [
+async function listUserEventsDescending(userId: string, limit: number) {
+  const tables = ledgerTables();
+  const base = [
     Query.equal('rowType', 'event'),
     Query.equal('userId', userId),
-    Query.orderDesc('createdAt'),
-    Query.limit(1),
-  ]);
-  const row = rows.documents[0] as any;
-  if (!row) return 0n;
-  return asMicro(row.balanceAfterMicro);
+  ];
+  try {
+    const res = await tables.listRows({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      queries: [...base, Query.orderDesc('$createdAt'), Query.limit(limit)],
+    });
+    return res.rows ?? [];
+  } catch {
+    const res = await tables.listRows({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      queries: [...base, Query.orderDesc('createdAt'), Query.limit(limit)],
+    });
+    return res.rows ?? [];
+  }
+}
+
+/** Latest ledger balance from event rows — does **not** require the singleton `state` row to exist on TablesDB. */
+async function getLatestBalanceMicro(userId: string) {
+  const tables = ledgerTables();
+  const withBal = [
+    Query.equal('rowType', 'event'),
+    Query.equal('userId', userId),
+    Query.isNotNull('balanceAfterMicro'),
+    Query.limit(80),
+  ];
+  const tries: string[][] = [
+    [...withBal.slice(0, 3), Query.orderDesc('$createdAt'), withBal[3]],
+    [...withBal.slice(0, 3), Query.orderDesc('createdAt'), withBal[3]],
+  ];
+  for (const queries of tries) {
+    try {
+      const res = await tables.listRows({
+        databaseId: DB_ID,
+        tableId: TABLE_ID,
+        queries,
+      });
+      for (const doc of res.rows ?? []) {
+        const bal = (doc as any)?.balanceAfterMicro;
+        if (bal === null || bal === undefined) continue;
+        if (String(bal).trim() === '') continue;
+        return asMicro(bal);
+      }
+    } catch {
+      /* order or isNotNull may be unsupported — fall through */
+    }
+  }
+  const rows = await listUserEventsDescending(userId, 200);
+  for (const doc of rows) {
+    const bal = (doc as any)?.balanceAfterMicro;
+    if (bal === null || bal === undefined) continue;
+    if (String(bal).trim() === '') continue;
+    return asMicro(bal);
+  }
+  return 0n;
 }
 
 async function getUserDailyMinted(userId: string) {
-  const { databases } = createAdminClient();
   const since = new Date();
   since.setUTCHours(0, 0, 0, 0);
-  const rows = await databases.listDocuments(DB_ID, TABLE_ID, [
-    Query.equal('rowType', 'event'),
-    Query.equal('userId', userId),
-    Query.equal('eventType', 'mint_activity'),
-    Query.greaterThanEqual('createdAt', since.toISOString()),
-    Query.limit(5000),
-  ]);
-  return rows.documents.reduce((sum, doc: any) => sum + asMicro(doc.amountMicro), 0n);
+  const { rows } = await ledgerTables().listRows({
+    databaseId: DB_ID,
+    tableId: TABLE_ID,
+    queries: [
+      Query.equal('rowType', 'event'),
+      Query.equal('userId', userId),
+      Query.equal('eventType', 'mint_activity'),
+      Query.greaterThanEqual('createdAt', since.toISOString()),
+      Query.limit(5000),
+    ],
+  });
+  return (rows ?? []).reduce((sum, doc: any) => sum + asMicro(doc.amountMicro), 0n);
 }
 
 async function getRecentUserMintActivityCount(userId: string, windowHours = 24) {
-  const { databases } = createAdminClient();
   const since = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
-  const rows = await databases.listDocuments(DB_ID, TABLE_ID, [
-    Query.equal('rowType', 'event'),
-    Query.equal('userId', userId),
-    Query.equal('eventType', 'mint_activity'),
-    Query.greaterThanEqual('createdAt', since),
-    Query.limit(200),
-  ]);
-  return rows.documents.length;
+  const { rows } = await ledgerTables().listRows({
+    databaseId: DB_ID,
+    tableId: TABLE_ID,
+    queries: [
+      Query.equal('rowType', 'event'),
+      Query.equal('userId', userId),
+      Query.equal('eventType', 'mint_activity'),
+      Query.greaterThanEqual('createdAt', since),
+      Query.limit(200),
+    ],
+  });
+  return rows?.length ?? 0;
 }
 
 async function getTotalUserCount() {
@@ -142,24 +209,30 @@ async function getTotalUserCount() {
 }
 
 async function getRecentSystemVolume(windowMinutes: number) {
-  const { databases } = createAdminClient();
   const since = new Date(Date.now() - windowMinutes * 60_000).toISOString();
-  const rows = await databases.listDocuments(DB_ID, TABLE_ID, [
-    Query.equal('rowType', 'event'),
-    Query.greaterThanEqual('createdAt', since),
-    Query.limit(5000),
-  ]);
-  return rows.documents.length;
+  const { rows } = await ledgerTables().listRows({
+    databaseId: DB_ID,
+    tableId: TABLE_ID,
+    queries: [
+      Query.equal('rowType', 'event'),
+      Query.greaterThanEqual('createdAt', since),
+      Query.limit(5000),
+    ],
+  });
+  return rows?.length ?? 0;
 }
 
 async function ensureNoDuplicateIdempotency(idempotencyKey: string) {
-  const { databases } = createAdminClient();
-  const rows = await databases.listDocuments(DB_ID, TABLE_ID, [
-    Query.equal('rowType', 'event'),
-    Query.equal('idempotencyKey', idempotencyKey),
-    Query.limit(1),
-  ]);
-  return rows.documents[0] || null;
+  const { rows } = await ledgerTables().listRows({
+    databaseId: DB_ID,
+    tableId: TABLE_ID,
+    queries: [
+      Query.equal('rowType', 'event'),
+      Query.equal('idempotencyKey', idempotencyKey),
+      Query.limit(1),
+    ],
+  });
+  return rows?.[0] || null;
 }
 
 async function appendEvent(input: {
@@ -176,15 +249,15 @@ async function appendEvent(input: {
   sourceId?: string | null;
   metadata?: Record<string, unknown> | null;
 }) {
-  const { databases } = createAdminClient();
   const existing = await ensureNoDuplicateIdempotency(input.idempotencyKey);
   if (existing) return existing;
 
-  return databases.createDocument(
-    DB_ID,
-    TABLE_ID,
-    ID.unique(),
-    {
+  const createdAt = nowIso();
+  return ledgerTables().createRow({
+    databaseId: DB_ID,
+    tableId: TABLE_ID,
+    rowId: ID.unique(),
+    data: {
       rowType: 'event',
       txId: input.txId,
       idempotencyKey: input.idempotencyKey,
@@ -201,10 +274,10 @@ async function appendEvent(input: {
       sourceType: input.sourceType || null,
       sourceId: input.sourceId || null,
       metadata: input.metadata ? JSON.stringify(input.metadata) : null,
-      createdAt: nowIso(),
+      createdAt,
     },
-    tokenReadPermissions(input.userId, input.counterpartyUserId),
-  );
+    permissions: tokenReadPermissions(input.userId, input.counterpartyUserId),
+  });
 }
 
 export const InternalKylrixTokenService = {
@@ -217,16 +290,15 @@ export const InternalKylrixTokenService = {
   },
 
   async initializeState() {
-    const { databases } = createAdminClient();
     const existing = await getStateRow();
     if (isInitialized(existing)) return existing;
 
     const timestamp = nowIso();
-    return databases.createDocument(
-      DB_ID,
-      TABLE_ID,
-      STATE_ROW_ID,
-      {
+    return ledgerTables().createRow({
+      databaseId: DB_ID,
+      tableId: TABLE_ID,
+      rowId: STATE_ROW_ID,
+      data: {
         rowType: 'state',
         txId: 'state:singleton',
         idempotencyKey: 'state:singleton',
@@ -243,8 +315,8 @@ export const InternalKylrixTokenService = {
         lastSpikeAt: null,
         updatedAt: timestamp,
       },
-      [Permission.read(Role.users())],
-    );
+      permissions: [Permission.read(Role.users())],
+    });
   },
 
   async mintForActivity(input: {
@@ -532,19 +604,36 @@ export const InternalKylrixTokenService = {
   },
 
   async listUserLedger(userId: string, limit = 100) {
-    await requireStateRow();
-    const { databases } = createAdminClient();
-    const rows = await databases.listDocuments(DB_ID, TABLE_ID, [
-      Query.equal('rowType', 'event'),
-      Query.equal('userId', userId),
-      Query.orderDesc('createdAt'),
-      Query.limit(Math.max(1, Math.min(limit, 250))),
-    ]);
-    return rows.documents;
+    const capped = Math.max(1, Math.min(limit, 250));
+    const tables = ledgerTables();
+    try {
+      const result = await tables.listRows({
+        databaseId: DB_ID,
+        tableId: TABLE_ID,
+        queries: [
+          Query.equal('rowType', 'event'),
+          Query.equal('userId', userId),
+          Query.orderDesc('$createdAt'),
+          Query.limit(capped),
+        ],
+      });
+      return result.rows ?? [];
+    } catch {
+      const result = await tables.listRows({
+        databaseId: DB_ID,
+        tableId: TABLE_ID,
+        queries: [
+          Query.equal('rowType', 'event'),
+          Query.equal('userId', userId),
+          Query.orderDesc('createdAt'),
+          Query.limit(capped),
+        ],
+      });
+      return result.rows ?? [];
+    }
   },
 
   async getUserBalance(userId: string) {
-    await requireStateRow();
     const balanceMicro = await getLatestBalanceMicro(userId);
     return {
       userId,

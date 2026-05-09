@@ -88,6 +88,7 @@ const tokenPermissionsForUser = (userId: string) => [
   Permission.update(Role.user(userId)),
 ];
 
+/** Mirrors internal ledger: read for `userId`; add counterparty read for paired flows (transfer_out/in, fine/recovery). */
 const tokenPermissionsForSystemEvent = (userId: string, counterpartyUserId?: string | null) => {
   const grants = new Set<string>();
   grants.add(Permission.read(Role.user(userId)));
@@ -154,21 +155,32 @@ async function lookupEventByIdempotency(idempotencyKey: string) {
   return result.rows?.[0] || null;
 }
 
+async function listUserLedgerEventsDescending(userId: string, limit: number) {
+  const base = [Query.equal('rowType', 'event'), Query.equal('userId', userId)];
+  try {
+    const result = await tablesDB.listRows({
+      databaseId: TOKEN_DB_ID,
+      tableId: TOKEN_TABLE_ID,
+      queries: [...base, Query.orderDesc('$createdAt'), Query.limit(limit)],
+    });
+    return result.rows ?? [];
+  } catch {
+    const result = await tablesDB.listRows({
+      databaseId: TOKEN_DB_ID,
+      tableId: TOKEN_TABLE_ID,
+      queries: [...base, Query.orderDesc('createdAt'), Query.limit(limit)],
+    });
+    return result.rows ?? [];
+  }
+}
+
 async function getUserLatestBalanceMicro(userId: string) {
-  const result = await tablesDB.listRows({
-    databaseId: TOKEN_DB_ID,
-    tableId: TOKEN_TABLE_ID,
-    queries: [
-      Query.equal('rowType', 'event'),
-      Query.equal('userId', userId),
-      Query.orderDesc('createdAt'),
-      Query.limit(1),
-    ],
-  });
-  const row = result.rows?.[0];
-  if (!row) return 0n;
-  if (row.balanceAfterMicro !== null && row.balanceAfterMicro !== undefined) {
-    return parseMicro(row.balanceAfterMicro);
+  const rows = await listUserLedgerEventsDescending(userId, 200);
+  for (const row of rows) {
+    const bal = (row as { balanceAfterMicro?: unknown }).balanceAfterMicro;
+    if (bal === null || bal === undefined) continue;
+    if (String(bal).trim() === '') continue;
+    return parseMicro(bal);
   }
   return 0n;
 }
@@ -447,17 +459,23 @@ export const KylrixTokenService = {
   },
 
   async listUserLedger(userId: string, limit = 100) {
-    const result = await tablesDB.listRows({
-      databaseId: TOKEN_DB_ID,
-      tableId: TOKEN_TABLE_ID,
-      queries: [
-        Query.equal('rowType', 'event'),
-        Query.equal('userId', userId),
-        Query.orderDesc('createdAt'),
-        Query.limit(Math.max(1, Math.min(limit, 500))),
-      ],
-    });
-    return result.rows || [];
+    const capped = Math.max(1, Math.min(limit, 500));
+    const base = [Query.equal('rowType', 'event'), Query.equal('userId', userId)];
+    try {
+      const result = await tablesDB.listRows({
+        databaseId: TOKEN_DB_ID,
+        tableId: TOKEN_TABLE_ID,
+        queries: [...base, Query.orderDesc('$createdAt'), Query.limit(capped)],
+      });
+      return result.rows || [];
+    } catch {
+      const result = await tablesDB.listRows({
+        databaseId: TOKEN_DB_ID,
+        tableId: TOKEN_TABLE_ID,
+        queries: [...base, Query.orderDesc('createdAt'), Query.limit(capped)],
+      });
+      return result.rows || [];
+    }
   },
 
   async evaluateUserRisk(userId: string) {

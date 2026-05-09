@@ -153,6 +153,13 @@ function validateRequest(request: TokenOperationRequest) {
   }
 }
 
+/**
+ * Calls **`runTokenOperationSecure`** Server Actions (`'use server'`). Auth is **`createServerClient()` +
+ * Appwrite session cookies** on that request — if Actions do not receive the session cookie chain, you get Unauthorized.
+ *
+ * **Read-only** balance / ledger while signed in via the SDK in the browser: use `KylrixTokenService`
+ * (`@/lib/services/token`) with TablesDB row permissions (`read("user:…")` on ledger events).
+ */
 export function createKylrixTokenOperationsClient(options: KylrixTokenClientOptions = {}) {
   const endpoint = options.endpoint || 'in-code-secure-op';
   const baseHeaders = options.headers || {};

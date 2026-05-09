@@ -14,6 +14,8 @@ import {
     useTheme,
     CircularProgress,
     Paper,
+    Switch,
+    FormControlLabel,
 } from '@mui/material';
 import {
     X,
@@ -32,7 +34,7 @@ import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { toast } from 'react-hot-toast';
 import { WalletService, type SupportedWalletChain, type WalletSummary } from '@/lib/services/wallets';
-import { createKylrixTokenOperationsClient } from '@/lib/sdk/token';
+import { KylrixTokenService } from '@/lib/services/token';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { useTokenOps } from '@/context/TokenOpsContext';
 import type { TokenWalletIntent } from '@/context/WalletOverlayContext';
@@ -49,6 +51,115 @@ const shortenAddress = (address: string) => {
     if (address.length <= 12) return address;
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
+
+const KTS_STORAGE_KEY = 'kylrix_wallet_kts_mode_v1';
+
+function kylrixTicker(symbol?: string | null) {
+    const s = String(symbol || '$KYLRIX').trim();
+    return s.startsWith('$') ? s.slice(1) : s;
+}
+
+/** Reads KYLRIX ledger via browser TablesDB session — not Server Actions (`runTokenOperationSecure` lacks cookies → Unauthorized). */
+async function fetchKylrixLedgerBalance(userId: string) {
+    const balance = await KylrixTokenService.getUserBalance(userId);
+    return {
+        amount: String(balance?.amount ?? '0'),
+        symbol: String(balance?.symbol ?? '$KYLRIX'),
+    };
+}
+
+const LEDGER_MICRO = 1_000_000n;
+
+function microToLedgerDisplay(microAbs: bigint): string {
+    const intPart = microAbs / LEDGER_MICRO;
+    const fracRaw = (microAbs % LEDGER_MICRO).toString().padStart(6, '0').replace(/0+$/, '');
+    return fracRaw ? `${intPart}.${fracRaw}` : intPart.toString();
+}
+
+/** e.g. +0.65 or −12.5 (ASCII hyphen for deltas) */
+function formatLedgerDelta(deltaMicroRaw: unknown): string {
+    let delta = 0n;
+    try {
+        delta = BigInt(String(deltaMicroRaw ?? '0'));
+    } catch {
+        return '0';
+    }
+    if (delta === 0n) return '0';
+    const neg = delta < 0n;
+    const abs = neg ? -delta : delta;
+    const core = microToLedgerDisplay(abs);
+    return neg ? `-${core}` : `+${core}`;
+}
+
+/** Signed running balance snapshot on the row (if present). */
+function formatLedgerBalanceAfter(raw: unknown): string | null {
+    if (raw === null || raw === undefined || String(raw).trim() === '') return null;
+    try {
+        const v = BigInt(String(raw));
+        const neg = v < 0n;
+        const core = microToLedgerDisplay(neg ? -v : v);
+        return neg ? `-${core}` : core;
+    } catch {
+        return null;
+    }
+}
+
+function parseLedgerMeta(row: Record<string, unknown>): Record<string, unknown> {
+    const m = row.metadata;
+    if (m != null && typeof m === 'object' && !Array.isArray(m)) return m as Record<string, unknown>;
+    if (typeof m === 'string' && m.trim()) {
+        try {
+            const p = JSON.parse(m) as unknown;
+            return typeof p === 'object' && p !== null && !Array.isArray(p) ? (p as Record<string, unknown>) : {};
+        } catch {
+            return {};
+        }
+    }
+    return {};
+}
+
+function describeLedgerRow(row: Record<string, unknown>): string {
+    const eventType = String(row.eventType || '');
+    const sourceType = String(row.sourceType || '');
+    const meta = parseLedgerMeta(row);
+    const activityType = String(meta.activityType || '');
+    const reason = String(meta.reason || '').trim();
+
+    if (eventType === 'mint_activity') {
+        if (sourceType === 'moment_share_note' || activityType === 'share_public_note_moment') {
+            return 'Mint · shared public note (moment)';
+        }
+        if (activityType) return `Mint · ${activityType.replace(/_/g, ' ')}`;
+        if (sourceType) return `Mint · ${sourceType.replace(/_/g, ' ')}`;
+        return 'Mint · activity reward';
+    }
+    if (eventType === 'transfer_out') return 'Transfer · sent';
+    if (eventType === 'transfer_in') return 'Transfer · received';
+    if (eventType === 'fine') return reason ? `Fine · ${reason}` : 'Fine · debited to root';
+    if (eventType === 'recovery') return reason ? `Recovery · ${reason}` : 'Recovery · credit from root';
+    if (eventType === 'claim_lock') return 'Claim · locked for withdrawal';
+    if (eventType === 'claim_settled') return 'Claim · settled on-chain';
+    if (eventType === 'burn') return 'Burn';
+    if (eventType) return eventType.replace(/_/g, ' ');
+    return 'Ledger entry';
+}
+
+function formatLedgerWhen(row: Record<string, unknown>): string {
+    const raw = row.createdAt ?? row.$createdAt;
+    if (raw == null || raw === '') return '';
+    try {
+        return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(String(raw)));
+    } catch {
+        return String(raw);
+    }
+}
+
+function ledgerRowKey(row: Record<string, unknown>, index: number): string {
+    const id = row.$id != null ? String(row.$id) : '';
+    const tx = row.txId != null ? String(row.txId) : '';
+    const idem = row.idempotencyKey != null ? String(row.idempotencyKey) : '';
+    return id || `${tx}:${idem}:${index}`;
+}
 
 export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTokenIntent }: WalletSidebarProps) => {
     const router = useRouter();
@@ -73,6 +184,10 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const [showReceive, setShowReceive] = useState(false);
     const [kylrixSendAmount, setKylrixSendAmount] = useState('');
     const [kylrixIntentRecipient, setKylrixIntentRecipient] = useState<{ id: string; username: string; displayName: string } | null>(null);
+    const [ktsMode, setKtsModeState] = useState(false);
+    const [ledgerHistoryRows, setLedgerHistoryRows] = useState<Record<string, unknown>[]>([]);
+    const [ledgerHistoryLoading, setLedgerHistoryLoading] = useState(false);
+    const [ledgerHistoryError, setLedgerHistoryError] = useState<string | null>(null);
 
     const ACCENT = '#6366F1';
     const SURFACE = '#161412';
@@ -89,6 +204,46 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
 
         return () => clearInterval(interval);
     }, [isUnlocked]);
+
+    useEffect(() => {
+        try {
+            if (typeof window !== 'undefined' && localStorage.getItem(KTS_STORAGE_KEY) === '1') {
+                setKtsModeState(true);
+            }
+        } catch (_e: unknown) {
+            /* noop */
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isOpen || !user?.$id) return undefined;
+        const onEarn = () => {
+            void (async () => {
+                try {
+                    setKylrixBalance(await fetchKylrixLedgerBalance(user.$id!));
+                } catch (_e: unknown) {
+                    /* noop */
+                }
+            })();
+        };
+        window.addEventListener('kylrix:token-event', onEarn);
+        return () => window.removeEventListener('kylrix:token-event', onEarn);
+    }, [isOpen, user?.$id]);
+
+    useEffect(() => {
+        if (!isOpen || !user?.$id || !isUnlocked || hasMasterpass !== true) return undefined;
+        const id = window.setInterval(() => {
+            void (async () => {
+                try {
+                    const next = await fetchKylrixLedgerBalance(user.$id!);
+                    setKylrixBalance(next);
+                } catch (_e: unknown) {
+                    /* noop */
+                }
+            })();
+        }, 28000);
+        return () => clearInterval(id);
+    }, [isOpen, user?.$id, isUnlocked, hasMasterpass]);
 
     const refreshWallets = useCallback(async () => {
         if (!user?.$id || !isOpen) return;
@@ -120,14 +275,10 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             }
             setWallets(readyWallets);
             try {
-                const tokenClient = createKylrixTokenOperationsClient();
-                const balance = await tokenClient.getBalance({ userId: user.$id }) as { amount?: string; symbol?: string };
-                setKylrixBalance({
-                    amount: String(balance?.amount || '0'),
-                    symbol: String(balance?.symbol || '$KYLRIX'),
-                });
-            } catch {
-                setKylrixBalance(null);
+                setKylrixBalance(await fetchKylrixLedgerBalance(user.$id));
+            } catch (ledgerErr: unknown) {
+                console.warn('[WalletSidebar] KYL ledger snapshot failed', ledgerErr);
+                setKylrixBalance({ amount: '0', symbol: '$KYLRIX' });
             }
         } catch (walletError) {
             console.error('[WalletSidebar] Failed to load wallets', walletError);
@@ -136,6 +287,46 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             setLoading(false);
         }
     }, [isOpen, user?.$id]);
+
+    const loadLedgerHistory = useCallback(async () => {
+        if (!user?.$id) return;
+        setLedgerHistoryLoading(true);
+        setLedgerHistoryError(null);
+        try {
+            const rows = await KylrixTokenService.listUserLedger(user.$id, 100);
+            setLedgerHistoryRows(Array.isArray(rows) ? (rows as Record<string, unknown>[]) : []);
+        } catch (err: unknown) {
+            setLedgerHistoryRows([]);
+            setLedgerHistoryError(err instanceof Error ? err.message : 'Could not load KYLRIX history');
+        } finally {
+            setLedgerHistoryLoading(false);
+        }
+    }, [user?.$id]);
+
+    const sortedLedgerHistory = useMemo(() => {
+        return [...ledgerHistoryRows].sort((a, b) => {
+            const ta = Date.parse(String(a?.createdAt ?? a?.$createdAt ?? 0));
+            const tb = Date.parse(String(b?.createdAt ?? b?.$createdAt ?? 0));
+            const da = Number.isFinite(ta) ? ta : 0;
+            const db = Number.isFinite(tb) ? tb : 0;
+            return db - da;
+        });
+    }, [ledgerHistoryRows]);
+
+    useEffect(() => {
+        if (!showKylrixDetail || !user?.$id) return undefined;
+        void loadLedgerHistory();
+        return undefined;
+    }, [showKylrixDetail, user?.$id, loadLedgerHistory]);
+
+    useEffect(() => {
+        if (!isOpen || !showKylrixDetail || !user?.$id) return undefined;
+        const onEarn = () => {
+            void loadLedgerHistory();
+        };
+        window.addEventListener('kylrix:token-event', onEarn);
+        return () => window.removeEventListener('kylrix:token-event', onEarn);
+    }, [isOpen, showKylrixDetail, user?.$id, loadLedgerHistory]);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -236,6 +427,9 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             setShowReceive(false);
             setKylrixSendAmount('');
             setKylrixIntentRecipient(null);
+            setLedgerHistoryRows([]);
+            setLedgerHistoryError(null);
+            setLedgerHistoryLoading(false);
         }
     }, [isOpen]);
 
@@ -251,13 +445,13 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     Back
                 </Button>
                 <Typography variant="caption" sx={{ color: ACCENT, fontFamily: 'var(--font-satoshi)', fontWeight: 800 }}>
-                    $KYLRIX
+                    {kylrixTicker(kylrixBalance?.symbol)}
                 </Typography>
             </Stack>
             <Paper sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, mb: 2 }}>
                 <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)' }}>Balance</Typography>
                 <Typography sx={{ color: ACCENT, fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-mono)' }}>
-                    {kylrixBalance?.amount || '0'} {kylrixBalance?.symbol || '$KYLRIX'}
+                    {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
                 </Typography>
             </Paper>
             <Stack gap={1.5} sx={{ mb: 2 }}>
@@ -292,7 +486,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                 </Button>
                 {showReceive ? (
                     <Paper sx={{ p: 2, borderRadius: '14px', bgcolor: '#1C1A18', border: `1px solid ${EDGE}` }}>
-                        <Typography sx={{ color: MUTED, fontSize: '0.78rem' }}>Your $KYLRIX Address (User ID)</Typography>
+                        <Typography sx={{ color: MUTED, fontSize: '0.78rem' }}>Your KYLRIX address (User ID)</Typography>
                         <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', wordBreak: 'break-all', mb: 1 }}>
                             {user?.$id || 'Unavailable'}
                         </Typography>
@@ -305,6 +499,127 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         </Button>
                     </Paper>
                 ) : null}
+            </Stack>
+
+            <Divider sx={{ my: 2.5, borderColor: EDGE }} />
+
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.25 }}>
+                <Stack direction="row" alignItems="center" gap={0.85}>
+                    <History size={16} color={MUTED} aria-hidden />
+                    <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.9rem', fontFamily: 'var(--font-satoshi)' }}>
+                        Activity
+                    </Typography>
+                </Stack>
+                <Button
+                    size="small"
+                    onClick={() => void loadLedgerHistory()}
+                    disabled={ledgerHistoryLoading}
+                    sx={{
+                        color: ACCENT,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        minWidth: 0,
+                    }}
+                >
+                    Refresh
+                </Button>
+            </Stack>
+
+            {ledgerHistoryLoading ? (
+                <Box sx={{ py: 3, display: 'flex', justifyContent: 'center' }}>
+                    <CircularProgress size={28} sx={{ color: ACCENT }} />
+                </Box>
+            ) : null}
+
+            {ledgerHistoryError ? (
+                <Typography sx={{ color: '#fca5a5', fontSize: '0.8rem', mb: 1 }}>
+                    {ledgerHistoryError}
+                </Typography>
+            ) : null}
+
+            {!ledgerHistoryLoading && !ledgerHistoryError && sortedLedgerHistory.length === 0 ? (
+                <Paper sx={{ p: 2, borderRadius: '14px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}` }}>
+                    <Typography sx={{ color: MUTED, fontSize: '0.82rem', lineHeight: 1.45 }}>
+                        No ledger movements loaded for your account yet. If you expected a mint here but see rows in Appwrite with a
+                        different userId, balances will stay at zero until the IDs match your session user.
+                    </Typography>
+                </Paper>
+            ) : null}
+
+            <Stack gap={1.1} sx={{ mt: ledgerHistoryLoading ? 1 : 0 }}>
+                {!ledgerHistoryLoading
+                    ? sortedLedgerHistory.map((row, index) => {
+                          const deltaStr = formatLedgerDelta(row.deltaMicro);
+                          let deltaColor = ACCENT;
+                          try {
+                              const n = BigInt(String(row.deltaMicro ?? '0'));
+                              if (n < 0n) deltaColor = '#f87171';
+                              else if (n === 0n) deltaColor = MUTED;
+                          } catch {
+                              deltaColor = MUTED;
+                          }
+                          const after = formatLedgerBalanceAfter(row.balanceAfterMicro);
+                          const status = String(row.status || '').toLowerCase();
+                          return (
+                              <Paper
+                                  key={ledgerRowKey(row, index)}
+                                  sx={{
+                                      p: 1.35,
+                                      borderRadius: '14px',
+                                      bgcolor: HIGHLIGHT,
+                                      border: `1px solid ${EDGE}`,
+                                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+                                  }}
+                              >
+                                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1.25}>
+                                      <Box sx={{ minWidth: 0 }}>
+                                          <Typography
+                                              sx={{
+                                                  color: 'white',
+                                                  fontWeight: 700,
+                                                  fontSize: '0.82rem',
+                                                  fontFamily: 'var(--font-satoshi)',
+                                                  lineHeight: 1.35,
+                                              }}
+                                          >
+                                              {describeLedgerRow(row)}
+                                          </Typography>
+                                          <Typography sx={{ color: MUTED, fontSize: '0.72rem', mt: 0.35 }}>
+                                              {formatLedgerWhen(row)}
+                                          </Typography>
+                                          {status === 'pending' ? (
+                                              <Typography sx={{ color: '#FBBF24', fontSize: '0.7rem', fontWeight: 600, mt: 0.35 }}>
+                                                  Pending
+                                              </Typography>
+                                          ) : null}
+                                      </Box>
+                                      <Typography
+                                          sx={{
+                                              color: deltaColor,
+                                              fontFamily: 'var(--font-mono)',
+                                              fontWeight: 800,
+                                              fontSize: '0.88rem',
+                                              flexShrink: 0,
+                                              textAlign: 'right',
+                                              lineHeight: 1.35,
+                                          }}
+                                      >
+                                          {deltaStr}{' '}
+                                          <Box component="span" sx={{ color: MUTED, fontWeight: 600, fontSize: '0.72rem' }}>
+                                              {kylrixTicker(kylrixBalance?.symbol)}
+                                          </Box>
+                                      </Typography>
+                                  </Stack>
+                                  {after ? (
+                                      <Typography sx={{ color: MUTED, fontSize: '0.7rem', mt: 0.85 }}>
+                                          After · {after} {kylrixTicker(kylrixBalance?.symbol)}
+                                      </Typography>
+                                  ) : null}
+                              </Paper>
+                          );
+                      })
+                    : null}
             </Stack>
         </Box>
     );
@@ -575,16 +890,112 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         border: `1px solid ${EDGE}`
                     }}>
                         <Typography variant="caption" sx={{ color: ACCENT, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', fontFamily: 'var(--font-satoshi)' }}>
-                            Estimated Balance
+                            {ktsMode ? 'Kylrix Balance (KTS)' : 'Estimated Balance'}
                         </Typography>
                         <Typography variant="h3" sx={{ fontWeight: 900, mt: 0.5, fontFamily: 'var(--font-clash)', color: 'white', letterSpacing: '-0.02em' }}>
-                            $0.00
+                            {ktsMode ? (
+                                <>
+                                    {kylrixBalance?.amount || '0'}{' '}
+                                    <Box component="span" sx={{ color: ACCENT }}>{kylrixTicker(kylrixBalance?.symbol)}</Box>
+                                </>
+                            ) : (
+                                <>
+                                    $0.00
+                                    <Box component="div" sx={{ mt: 1, fontSize: '1rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.55)' }}>
+                                        {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}{' '}
+                                        <Box component="span" sx={{ fontSize: '0.72rem', fontFamily: 'var(--font-satoshi)', color: MUTED }}>ledger</Box>
+                                    </Box>
+                                </>
+                            )}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                            {orderedWallets.length} active networks
+                        <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)', display: 'block', mt: 0.75 }}>
+                            {ktsMode
+                                ? 'Kylrix Token System — on-chain wallets hidden'
+                                : `Fiat estimate excludes KYLRIX · ${orderedWallets.length} active chains`}
                         </Typography>
+                        <FormControlLabel
+                            sx={{ mt: 1.5, justifyContent: 'center', m: 0, display: 'flex', gap: 1 }}
+                            control={(
+                                <Switch
+                                    checked={ktsMode}
+                                    onChange={(_, checked) => {
+                                        setKtsModeState(checked);
+                                        try {
+                                            localStorage.setItem(KTS_STORAGE_KEY, checked ? '1' : '0');
+                                        } catch (_e: unknown) {
+                                            /* noop */
+                                        }
+                                    }}
+                                    size="small"
+                                    sx={{
+                                        '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT },
+                                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: `${ACCENT} !important`, opacity: 0.38 },
+                                    }}
+                                />
+                            )}
+                            label={(
+                                <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
+                                    KTS mode (Kylrix ledger only)
+                                </Typography>
+                            )}
+                        />
                     </Box>
 
+                    {ktsMode ? (
+                    <Stack gap={1.5} sx={{ mb: 4 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
+                            Kylrix Token System
+                        </Typography>
+                        <Paper
+                            sx={{
+                                p: 2.75,
+                                px: 3,
+                                borderRadius: '22px',
+                                bgcolor: HIGHLIGHT,
+                                border: `2px solid rgba(99,102,241,0.35)`,
+                                transition: 'all 0.2s ease',
+                                '&:hover': { bgcolor: SURFACE, borderColor: ACCENT, transform: 'translateY(-1px)' },
+                                cursor: 'pointer',
+                            }}
+                            onClick={handleKylrixCardClick}
+                        >
+                            <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+                                <Stack direction="row" alignItems="center" gap={2}>
+                                    <Box sx={{
+                                        width: 48,
+                                        height: 48,
+                                        borderRadius: '14px',
+                                        bgcolor: '#252321',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: ACCENT,
+                                        fontWeight: 900,
+                                        fontSize: '1.1rem',
+                                        fontFamily: 'var(--font-mono)'
+                                    }}>
+                                        K
+                                    </Box>
+                                    <Box sx={{ minWidth: 0, textAlign: 'left' }}>
+                                        <Typography variant="body1" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
+                                            Kylrix Token
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
+                                            Tap for send & receive
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                                <Typography variant="h6" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
+                                    {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
+                                </Typography>
+                            </Stack>
+                        </Paper>
+                        <Typography variant="caption" sx={{ color: MUTED, textAlign: 'center', lineHeight: 1.5, px: 1 }}>
+                            KTS mode shows your Kylrix ledger balance as the headline total. Turn off the toggle to expose Solana, ETH, and other networks.
+                        </Typography>
+                    </Stack>
+                    ) : (
+                    <>
                     {/* Pinned Solana + KYLRIX */}
                     <Stack gap={1.5} sx={{ mb: 4 }}>
                         <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
@@ -710,12 +1121,12 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                                 Kylrix Token
                                             </Typography>
                                             <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
-                                                {kylrixBalance?.symbol || '$KYLRIX'}
+                                                {kylrixTicker(kylrixBalance?.symbol)}
                                             </Typography>
                                         </Box>
                                     </Stack>
                                     <Typography variant="body2" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-                                        {kylrixBalance?.amount || '0'} {kylrixBalance?.symbol || '$KYLRIX'}
+                                        {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
                                     </Typography>
                                 </Stack>
                             </Paper>
@@ -844,6 +1255,8 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                             </Typography>
                         </Box>
                     </Stack>
+                    </>
+                    )}
                 </Box>
             )}
 
