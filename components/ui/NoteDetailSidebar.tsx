@@ -43,6 +43,7 @@ import {
 import { useToast } from '@/components/ui/Toast';
 import { useRouter } from 'next/navigation';
 import { useSudo } from '@/context/SudoContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useNotes } from '@/context/NotesContext';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
@@ -231,6 +232,7 @@ export function NoteDetailSidebar({
 
   const { showSuccess, showError } = useToast();
   const { promptSudo } = useSudo();
+  const { openProUpgrade } = useProUpgrade();
   const router = useRouter();
   const { closeSidebar } = useDynamicSidebar();
   const { openCallLauncher } = useCallLauncher();
@@ -248,7 +250,11 @@ export function NoteDetailSidebar({
       }
     } catch (err: any) {
       const isLimitError = err.message?.includes('limit reached');
-      showError(err.message || 'Failed to update pin status', undefined, isLimitError);
+      if (isLimitError) {
+        openProUpgrade('Pinned Notes');
+        return;
+      }
+      showError(err.message || 'Failed to update pin status');
     }
   };
 

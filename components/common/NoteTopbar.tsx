@@ -48,6 +48,7 @@ import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { ActivityService } from '@/lib/services/activity';
 import { reconcileStaleLiveCallPresenceFromClient } from '@/lib/client/session-runtime-fetch';
+import UserQuickProfileDrawer from '@/components/common/UserQuickProfileDrawer';
 
 interface NoteTopbarProps {
   className?: string;
@@ -111,6 +112,8 @@ export default function NoteTopbar({
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [liveCallId, setLiveCallId] = useState<string | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<any | null>(null);
+  const [personProfileOpen, setPersonProfileOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const desktopPanelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -302,6 +305,19 @@ export default function NoteTopbar({
     setAppMenuAnchorEl(null);
     setMobileMenuOpen(false);
     setDevelopersMenuOpen(false);
+  }, []);
+
+  const handleOpenPersonProfile = useCallback((person: any) => {
+    const userId = String(person?.userId || person?.id || person?.$id || '').trim();
+    if (!userId) return;
+    setSelectedPerson({
+      userId,
+      username: person?.username || null,
+      displayName: person?.displayName || person?.name || null,
+      avatar: person?.avatar || null,
+    });
+    setPersonProfileOpen(true);
+    setSearchOpen(false);
   }, []);
 
   const openSearch = useCallback(() => {
@@ -609,9 +625,7 @@ export default function NoteTopbar({
                       <Box
                         key={person.$id || person.id}
                         component="button"
-                        onClick={() => {
-                          setSearchQuery(person.displayName || person.username || person.name || '');
-                        }}
+                        onClick={() => handleOpenPersonProfile(person)}
                         sx={{
                           width: '100%',
                           display: 'flex',
@@ -1851,6 +1865,12 @@ export default function NoteTopbar({
         )}
       </AppBar>
       {isWalletOpen ? <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} /> : null}
+      <UserQuickProfileDrawer
+        open={personProfileOpen}
+        onClose={() => setPersonProfileOpen(false)}
+        user={selectedPerson}
+        currentApp={activeApp}
+      />
     </>
   );
 }

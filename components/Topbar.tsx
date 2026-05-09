@@ -19,7 +19,6 @@ import {
   TextField,
   Tooltip,
   Typography,
-  Dialog,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -32,7 +31,6 @@ import {
 } from 'lucide-react';
 
 import Logo from './Logo';
-import WalletManager from './WalletManager';
 import { IdentityAvatar } from './IdentityBadge';
 import { AppwriteService } from '@/lib/appwrite';
 import { TOPBAR_LAYOUT, getAppTone } from '@/lib/sdk/design';
@@ -43,6 +41,8 @@ import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { ActivityService } from '@/lib/services/activity';
 import { reconcileStaleLiveCallPresenceFromClient } from '@/lib/client/session-runtime-fetch';
+import UserQuickProfileDrawer from '@/components/common/UserQuickProfileDrawer';
+import { WalletSidebar as SharedWalletSidebar } from '@/components/overlays/WalletSidebar';
 
 interface TopbarProps {
   userId?: string;
@@ -90,6 +90,8 @@ export default function Topbar({
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [accountRecord, setAccountRecord] = useState<any>(null);
   const [liveCallId, setLiveCallId] = useState<string | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<any | null>(null);
+  const [personProfileOpen, setPersonProfileOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const desktopPanelRef = useRef<HTMLDivElement | null>(null);
@@ -288,6 +290,19 @@ export default function Topbar({
     setSearchOpen(false);
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
+  }, []);
+
+  const handleOpenPersonProfile = useCallback((person: any) => {
+    const userId = String(person?.userId || person?.id || person?.$id || '').trim();
+    if (!userId) return;
+    setSelectedPerson({
+      userId,
+      username: person?.username || null,
+      displayName: person?.displayName || person?.name || null,
+      avatar: person?.avatar || null,
+    });
+    setPersonProfileOpen(true);
+    setSearchOpen(false);
   }, []);
 
   const openSearch = useCallback(() => {
@@ -583,9 +598,7 @@ export default function Topbar({
                       <Box
                         key={person.$id || person.id}
                         component="button"
-                        onClick={() => {
-                          setSearchQuery(person.displayName || person.username || person.name || '');
-                        }}
+                        onClick={() => handleOpenPersonProfile(person)}
                         sx={{
                           width: '100%',
                           display: 'flex',
@@ -1470,53 +1483,14 @@ export default function Topbar({
         )}
       </AppBar>
       {isWalletOpen ? (
-        <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
+        <SharedWalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
       ) : null}
+      <UserQuickProfileDrawer
+        open={personProfileOpen}
+        onClose={() => setPersonProfileOpen(false)}
+        user={selectedPerson}
+        currentApp="accounts"
+      />
     </>
-  );
-}
-
-function WalletSidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  // Use Dialog for now as in the original accounts implementation if Drawer is too complex
-  // but let's try to match the Note look if possible.
-  // Actually, Note uses a separate WalletSidebar component.
-  // Let's keep the Dialog from accounts for now but style it premium.
-  return (
-    <Dialog
-      open={isOpen}
-      onClose={onClose}
-      fullWidth
-      maxWidth="sm"
-      PaperProps={{
-        sx: {
-          bgcolor: '#0A0908',
-          borderRadius: '28px',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backgroundImage: 'none',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.8)'
-        },
-      }}
-    >
-      <Box sx={{ px: 3, py: 2.5, borderBottom: '1px solid rgba(255,255,255,0.05)', bgcolor: '#161412', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box>
-          <Typography sx={{ color: 'white', fontWeight: 900, letterSpacing: '-0.02em', fontSize: '1.05rem' }}>
-            Wallet
-          </Typography>
-          <Typography sx={{ mt: 0.5, color: 'rgba(255,255,255,0.55)', fontSize: '0.84rem', fontWeight: 600 }}>
-            Connect or disconnect your wallet.
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose} size="small" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-            <CloseIcon size={18} />
-        </IconButton>
-      </Box>
-      <Box sx={{ px: 3, py: 3 }}>
-        <WalletManager 
-            userId={""} // Pass dummy or real if available
-            onWalletConnected={() => {}}
-            onWalletDisconnected={() => {}}
-        />
-      </Box>
-    </Dialog>
   );
 }

@@ -37,6 +37,7 @@ import PaywallDrawer from '../NoteContextMenu';
 import { updateNote, createNote, toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl, getNotePublicState } from '@/lib/appwrite';
 import { useToast } from './Toast';
 import { useSudo } from '@/context/SudoContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { generateAIAction } from '@/lib/ai-actions';
@@ -61,6 +62,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const { user } = useAuth();
   
   const { promptSudo } = useSudo();
+  const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError, showInfo } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
@@ -127,7 +129,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       }
     } catch (err: any) {
       const isLimitError = err.message?.includes('limit reached');
-      showError(err.message || 'Failed to update pin status', undefined, isLimitError);
+      if (isLimitError) {
+        openProUpgrade('Pinned Notes');
+        return;
+      }
+      showError(err.message || 'Failed to update pin status');
     }
   };
 
