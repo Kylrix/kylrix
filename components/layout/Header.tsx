@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { 
   AppBar, 
   Toolbar, 
@@ -42,8 +42,8 @@ import Logo from '../common/Logo';
 import { getUserProfilePicId } from '@/lib/utils';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
-import { WalletSidebar } from '../overlays/WalletSidebar';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 // Pages that should use the simplified layout (no sidebar/header)
 const SIMPLIFIED_LAYOUT_PATHS = ["/"];
@@ -58,24 +58,11 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { openAIModal } = useAI();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    if (searchParams.get('openWallet') === 'true') {
-      setIsWalletOpen(true);
-      // Optional: Clean up URL
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('openWallet');
-      const newQuery = params.toString();
-      router.replace(pathname + (newQuery ? `?${newQuery}` : ''));
-    }
-  }, [searchParams, router, pathname]);
+  const { openWallet } = useWalletOverlay();
 
   const [anchorElAccount, setAnchorElAccount] = useState<null | HTMLElement>(null);
   const [anchorElNotifications, setAnchorElNotifications] = useState<null | HTMLElement>(null);
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [profileRecord, setProfileRecord] = useState<any>(null);
   const profileUsername = String((user?.prefs as any)?.username || user?.name || '').trim();
@@ -302,7 +289,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
           <Tooltip title="Secure Wallet">
             <IconButton 
-              onClick={() => setIsWalletOpen(true)}
+              onClick={openWallet}
               sx={{ 
                 color: '#10B981',
                 bgcolor: alpha('#10B981', 0.03),
@@ -550,10 +537,6 @@ export function Header({ onMenuClick }: HeaderProps) {
           onClose={() => setIsEcosystemPortalOpen(false)} 
         />
 
-        <WalletSidebar
-          isOpen={isWalletOpen}
-          onClose={() => setIsWalletOpen(false)}
-        />
         </Toolbar>
         </AppBar>
         );

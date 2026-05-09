@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
-import { WalletSidebar } from '@/components/overlays/WalletSidebar';
 import { useAuth } from '@/lib/auth';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { getUserProfilePicId } from '@/lib/utils';
@@ -34,6 +33,7 @@ import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePi
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 interface ConnectTopbarProps {
   className?: string;
@@ -48,10 +48,10 @@ export default function ConnectTopbar({
   className,
 }: ConnectTopbarProps) {
   const { user, logout } = useAuth();
+  const { openWallet } = useWalletOverlay();
   const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
 
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
@@ -245,7 +245,7 @@ export default function ConnectTopbar({
                   <Button
                     onClick={() => {
                       handleCloseAll();
-                      setIsWalletOpen(true);
+                        openWallet();
                     }}
                     sx={{
                       minWidth: 0,
@@ -527,7 +527,6 @@ export default function ConnectTopbar({
         {renderAppPanel()}
         {renderProfilePanel()}
       </AppBar>
-      {isWalletOpen ? <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} /> : null}
     </>
   );
 }

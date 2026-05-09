@@ -93,7 +93,8 @@ export const APPWRITE_CONFIG = {
             FOLLOWS: 'follows',
             MOMENTS: 'moments',
             INTERACTIONS: 'interactions',
-            CONTACTS: 'contacts'
+            CONTACTS: 'contacts',
+            KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger'
         },
         CHAT: {
             USERS: 'users',
@@ -112,7 +113,8 @@ export const APPWRITE_CONFIG = {
             FOLLOWS: 'follows',
             MOMENTS: 'moments',
             INTERACTIONS: 'interactions',
-            CONTACTS: 'contacts'
+            CONTACTS: 'contacts',
+            KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger'
         }
     },
     BUCKETS: {

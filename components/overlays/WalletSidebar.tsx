@@ -98,7 +98,10 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         setLoadingLabel('Provisioning your T4 wallet mesh...');
 
         try {
-            const readyWallets = await WalletService.ensureMainWallets(user.$id);
+            let readyWallets = await WalletService.ensureMainWallets(user.$id);
+            if (!readyWallets.some((wallet) => wallet.chain === 'sol')) {
+                readyWallets = await WalletService.addNetwork(user.$id, 'sol');
+            }
             setWallets(readyWallets);
         } catch (walletError) {
             console.error('[WalletSidebar] Failed to load wallets', walletError);
@@ -722,7 +725,9 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                     bgcolor: SURFACE,
                     borderLeft: `1px solid ${EDGE}`,
                     backgroundImage: 'none',
-                    boxShadow: 'none'
+                    boxShadow: 'none',
+                    top: '88px',
+                    height: 'calc(100dvh - 88px)'
                 }
             }}
         >

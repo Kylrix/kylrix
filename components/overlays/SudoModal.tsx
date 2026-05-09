@@ -254,12 +254,13 @@ export default function SudoModal({
                     boxShadow: '0 25px 50px rgba(0, 0, 0, 0.8)',
                     width: isDesktop ? 'min(100vw, 420px)' : '100%',
                     maxWidth: '100vw',
-                    height: isDesktop ? '100dvh' : 'auto',
-                    maxHeight: isDesktop ? '100dvh' : 'calc(100dvh - 12px)',
+                    height: isDesktop ? 'calc(100dvh - 88px)' : 'auto',
+                    maxHeight: isDesktop ? 'calc(100dvh - 88px)' : 'calc(100dvh - 12px)',
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
                     zIndex: 2201,
+                    top: isDesktop ? '88px' : 0,
                 }
             }}
         >

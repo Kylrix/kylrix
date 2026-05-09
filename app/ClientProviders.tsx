@@ -26,6 +26,7 @@ import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 import { ThemeProvider } from '@/lib/theme-context';
 import { CallLauncherProvider } from '@/context/CallLauncherContext';
+import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -52,11 +53,13 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                         <ToastProvider>
                                           <PotatoProvider>
                                             <AppChromeProvider>
-                                              <ChatNotificationProvider>
-                                                <CallLauncherProvider>
-                                                  {children}
-                                                </CallLauncherProvider>
-                                              </ChatNotificationProvider>
+                                              <WalletOverlayProvider>
+                                                <ChatNotificationProvider>
+                                                  <CallLauncherProvider>
+                                                    {children}
+                                                  </CallLauncherProvider>
+                                                </ChatNotificationProvider>
+                                              </WalletOverlayProvider>
                                             </AppChromeProvider>
                                           </PotatoProvider>
                                         </ToastProvider>

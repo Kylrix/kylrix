@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useColorMode } from '@/components/providers/ThemeProvider';
 import { useAuth } from '@/lib/auth';
-import { WalletSidebar } from '../overlays/WalletSidebar';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 const drawerWidth = 280;
 
@@ -35,13 +35,13 @@ export const Navigation = () => {
     const theme = useTheme();
     const _colorMode = useColorMode();
     const { user, logout } = useAuth();
-    const [isWalletOpen, setIsWalletOpen] = useState(false);
+    const { openWallet } = useWalletOverlay();
 
     const navItems = [
         { label: 'Home', href: '/', icon: <Home size={20} strokeWidth={1.5} /> },
         { label: 'Chats', href: '/chats', icon: <MessageSquare size={20} strokeWidth={1.5} /> },
         { label: 'Calls', href: '/calls', icon: <Phone size={20} strokeWidth={1.5} /> },
-        { label: 'Wallet', onClick: () => setIsWalletOpen(true), icon: <Wallet size={20} strokeWidth={1.5} /> },
+        { label: 'Wallet', onClick: openWallet, icon: <Wallet size={20} strokeWidth={1.5} /> },
         // Profile moved to account menu -> now links to external/account-managed settings; remove from sidebar
     ];
 
@@ -168,7 +168,6 @@ export const Navigation = () => {
                     </Box>
                 )}
             </Box>
-            <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
         </Drawer>
     );
 };

@@ -9,6 +9,7 @@ export * from './social';
 export * from './messaging';
 export * from './huddles';
 export * from './extensions';
+export * from './token';
 
 // --- Re-export crosslinks SDK ---
 export { buildSourceNoteTags, buildVaultNoteTags, mergeNoteTags, extractLinkedNoteIdsFromTags, buildNoteAttachmentMetadata } from './crosslinks';

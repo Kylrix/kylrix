@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { motion } from 'framer-motion';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   alpha,
   AppBar,
@@ -33,7 +33,6 @@ import {
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
-import { WalletSidebar } from '@/components/overlays/WalletSidebar';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
@@ -49,6 +48,7 @@ import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { ActivityService } from '@/lib/services/activity';
 import { reconcileStaleLiveCallPresenceFromClient } from '@/lib/client/session-runtime-fetch';
 import UserQuickProfileDrawer from '@/components/common/UserQuickProfileDrawer';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 interface NoteTopbarProps {
   className?: string;
@@ -71,10 +71,10 @@ export default function NoteTopbar({
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { openWallet } = useWalletOverlay();
   const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const isWebsiteRoute = !(
     pathname?.startsWith('/note') ||
     pathname?.startsWith('/vault') ||
@@ -101,7 +101,6 @@ export default function NoteTopbar({
     { label: 'Pricing', href: '/pricing' },
   ] as const;
 
-  const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [developersMenuOpen, setDevelopersMenuOpen] = useState(false);
@@ -178,16 +177,6 @@ export default function NoteTopbar({
       }),
     [],
   );
-
-  useEffect(() => {
-    if (searchParams.get('openWallet') === 'true') {
-      setIsWalletOpen(true);
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('openWallet');
-      const nextQuery = params.toString();
-      router.replace(pathname + (nextQuery ? `?${nextQuery}` : ''));
-    }
-  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -765,7 +754,7 @@ export default function NoteTopbar({
                     <Button
                       onClick={() => {
                         handleCloseAll();
-                        setIsWalletOpen(true);
+                        openWallet();
                       }}
                       sx={{
                         minWidth: 0,
@@ -1222,7 +1211,7 @@ export default function NoteTopbar({
                 fullWidth
                 onClick={() => {
                   handleCloseAll();
-                  setIsWalletOpen(true);
+                  openWallet();
                 }}
                 sx={{
                   justifyContent: 'flex-start',
@@ -1864,7 +1853,6 @@ export default function NoteTopbar({
           </>
         )}
       </AppBar>
-      {isWalletOpen ? <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} /> : null}
       <UserQuickProfileDrawer
         open={personProfileOpen}
         onClose={() => setPersonProfileOpen(false)}

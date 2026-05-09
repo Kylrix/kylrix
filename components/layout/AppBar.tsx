@@ -43,8 +43,9 @@ import { getUserProfilePicId } from '@/lib/utils';
 import { Button } from '@mui/material';
 import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 type IslandNotification = {
   app?: string;
@@ -57,7 +58,6 @@ type IslandNotification = {
 
 const AICommandModal = dynamic(() => import('@/components/ai/AICommandModal').then(mod => mod.AICommandModal), { ssr: false });
 const EcosystemPortal = dynamic(() => import('@/components/common/EcosystemPortal'), { ssr: false });
-const WalletSidebar = dynamic(() => import('@/components/overlays/WalletSidebar').then(mod => mod.WalletSidebar), { ssr: false });
 
 function getInitials(user: { name?: string | null; email?: string | null } | null) {
   const text = user?.name?.trim() || user?.email?.split('@')[0] || '';
@@ -79,7 +79,7 @@ export default function AppBar() {
   const [appsAnchorEl, setAppsAnchorEl] = useState<null | HTMLElement>(null);
   const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
   const [aiModalOpen, setAiModalOpen] = useState(false);
-  const [walletOpen, setWalletOpen] = useState(false);
+  const { openWallet } = useWalletOverlay();
   const [profileUrl, setProfileUrl] = useState<string | null>(null);
   const [profileRecord, setProfileRecord] = useState<any>(null);
   const [islandNotification, setIslandNotification] = useState<IslandNotification | null>(null);
@@ -88,19 +88,6 @@ export default function AppBar() {
   const profileUsername = String((user?.prefs as any)?.username || user?.name || '').trim();
 
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-
-  React.useEffect(() => {
-    if (searchParams.get('openWallet') === 'true') {
-      setWalletOpen(true);
-      // Optional: Clean up URL
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('openWallet');
-      const newQuery = params.toString();
-      router.replace(pathname + (newQuery ? `?${newQuery}` : ''));
-    }
-  }, [searchParams, router, pathname]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -381,7 +368,7 @@ export default function AppBar() {
           {/* Wallet Toggle */}
           <Tooltip title="Secure Wallet">
             <IconButton
-              onClick={() => setWalletOpen(true)}
+              onClick={openWallet}
               sx={{
                 backgroundColor: alpha('#A855F7', 0.03),
                 color: '#A855F7',
@@ -791,7 +778,6 @@ export default function AppBar() {
       </Toolbar>
       <AICommandModal isOpen={aiModalOpen} onClose={() => setAiModalOpen(false)} />
       <EcosystemPortal open={portalOpen} onClose={() => setPortalOpen(false)} />
-      <WalletSidebar isOpen={walletOpen} onClose={() => setWalletOpen(false)} />
 
       <Menu
         anchorEl={islandAnchorEl}
