@@ -11,6 +11,8 @@ import {
   Divider,
   Fab,
   Grid,
+  Menu,
+  MenuItem,
   Paper,
   Stack,
   Typography,
@@ -186,7 +188,7 @@ const AppSwitcherFab = React.memo(function AppSwitcherFab() {
         right: { xs: 16, md: 28 },
         bottom: { xs: 16, md: 28 },
         zIndex: theme.zIndex.appBar + 5,
-        display: 'flex',
+        display: { xs: 'flex', md: 'none' },
         flexDirection: 'column',
         alignItems: 'flex-end',
         gap: 1.25,
@@ -522,6 +524,8 @@ function LiveSurfaceCard({
 }
 
 export default function LandingPage() {
+  const [productsAnchor, setProductsAnchor] = useState<null | HTMLElement>(null);
+  const [developersAnchor, setDevelopersAnchor] = useState<null | HTMLElement>(null);
   const showcaseRef = useRef<HTMLDivElement | null>(null);
   const { scrollYProgress } = useScroll({
     target: showcaseRef,
@@ -532,7 +536,96 @@ export default function LandingPage() {
   return (
     <Box component="main" sx={{ position: 'relative', overflow: 'clip', bgcolor: '#000', color: '#fff', pt: { xs: 2, md: 3 }, pb: { xs: 10, md: 14 } }}>
       <Container maxWidth="xl" sx={{ position: 'relative' }}>
-        <Stack spacing={4} alignItems="center" textAlign="center" sx={{ pt: { xs: 2, md: 3 }, pb: { xs: 8, md: 12 } }}>
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'flex' },
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            py: 1.5,
+            mb: 2,
+            borderRadius: 2,
+          }}
+        >
+          <Button
+            component={NextLink}
+            href="/"
+            sx={{ p: 0.5, minWidth: 0, borderRadius: 2, textTransform: 'none' }}
+            aria-label="Kylrix home"
+          >
+            <Logo app="root" size={32} variant="icon" />
+          </Button>
+
+          <Stack direction="row" spacing={1}>
+            <Button
+              onClick={(event) => setProductsAnchor(event.currentTarget)}
+              sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)', fontWeight: 700, textTransform: 'none', px: 2 }}
+            >
+              Products
+            </Button>
+            <Button
+              component={NextLink}
+              href="/pricing"
+              sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)', fontWeight: 700, textTransform: 'none', px: 2 }}
+            >
+              Pricing
+            </Button>
+            <Button
+              onClick={(event) => setDevelopersAnchor(event.currentTarget)}
+              sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)', fontWeight: 700, textTransform: 'none', px: 2 }}
+            >
+              Developers
+            </Button>
+          </Stack>
+
+          <Button
+            component={NextLink}
+            href="/skill.md"
+            variant="contained"
+            sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 800, textTransform: 'none', borderRadius: 2 }}
+          >
+            Install Skill
+          </Button>
+        </Box>
+
+        <Menu
+          anchorEl={productsAnchor}
+          open={Boolean(productsAnchor)}
+          onClose={() => setProductsAnchor(null)}
+          PaperProps={{ sx: { bgcolor: '#161412', border: '1px solid #34322F', mt: 0.5 } }}
+        >
+          {appOrder.map((id) => {
+            const app = ECOSYSTEM_APPS.find((item) => item.id === id);
+            if (!app) return null;
+            return (
+              <MenuItem
+                key={app.id}
+                onClick={() => {
+                  setProductsAnchor(null);
+                  openApp(app.subdomain);
+                }}
+                sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)' }}
+              >
+                {app.label}
+              </MenuItem>
+            );
+          })}
+        </Menu>
+
+        <Menu
+          anchorEl={developersAnchor}
+          open={Boolean(developersAnchor)}
+          onClose={() => setDevelopersAnchor(null)}
+          PaperProps={{ sx: { bgcolor: '#161412', border: '1px solid #34322F', mt: 0.5 } }}
+        >
+          <MenuItem component={NextLink} href="/developers" onClick={() => setDevelopersAnchor(null)} sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)' }}>
+            Developers
+          </MenuItem>
+          <MenuItem component={NextLink} href="/docs" onClick={() => setDevelopersAnchor(null)} sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)' }}>
+            Docs
+          </MenuItem>
+        </Menu>
+
+        <Stack spacing={5} alignItems="center" textAlign="center" sx={{ pt: { xs: 2, md: 4 }, pb: { xs: 9, md: 14 } }}>
           <Box
             sx={{
               display: 'inline-flex',
@@ -566,8 +659,8 @@ export default function LandingPage() {
               component="h1"
               sx={{
                 fontSize: { xs: '3.2rem', sm: '4.8rem', lg: '6.6rem' },
-                lineHeight: 0.98,
-                letterSpacing: '-0.045em',
+                lineHeight: 1.02,
+                letterSpacing: '-0.03em',
                 fontWeight: 900,
                 color: '#fff',
                 textWrap: 'balance',
@@ -580,11 +673,11 @@ export default function LandingPage() {
             <Typography
               variant="h6"
               sx={{
-                mt: 3,
+                mt: 3.5,
                 mx: 'auto',
                 maxWidth: 720,
                 color: 'rgba(255,255,255,0.74)',
-                lineHeight: 1.65,
+                lineHeight: 1.72,
                 fontWeight: 400,
                 fontFamily: 'var(--font-satoshi)',
               }}
