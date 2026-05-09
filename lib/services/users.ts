@@ -2,10 +2,56 @@ import { Permission, Role } from 'appwrite';
 import { tablesDB, storage } from '../appwrite';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getEcosystemUrl } from '../constants/ecosystem';
+import { seedIdentityCache } from '../identity-cache';
 
 /** Ecosystem profiles / directory (same as standalone Connect): CHAT » profiles */
 const DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
+
+const PROFILE_ROW_TTL_MS = 15 * 60 * 1000;
+const profileRowCache = new Map<string, { row: any; at: number }>();
+const profileRowInflight = new Map<string, Promise<any | null>>();
+
+function rememberProfileRow(row: any | null, lookupKey: string) {
+  const at = Date.now();
+  profileRowCache.set(lookupKey, { row, at });
+  if (row?.$id) profileRowCache.set(row.$id, { row, at });
+  const uid = row?.userId;
+  if (uid && uid !== lookupKey && uid !== row?.$id) {
+    profileRowCache.set(uid, { row, at });
+  }
+}
+
+export function invalidateUsersProfileRowCache(userId?: string | null) {
+  if (!userId) return;
+  profileRowCache.delete(userId);
+  profileRowInflight.delete(userId);
+}
+
+async function fetchProfileRowRaw(userId: string): Promise<any | null> {
+  try {
+    return await tablesDB.getRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLE_ID,
+      rowId: userId,
+    });
+  } catch (_e: any) {
+    try {
+      const { Query } = await import('appwrite');
+      const res = await (tablesDB as any).listRows({
+        databaseId: DATABASE_ID,
+        tableId: TABLE_ID,
+        queries: [
+          Query.or([Query.equal('userId', userId), Query.equal('$id', userId)]),
+          Query.limit(1),
+        ],
+      });
+      return res.rows[0] || null;
+    } catch (_inner) {
+      return null;
+    }
+  }
+}
 
 async function syncProfileEvent(payload: {
     type: 'username_change' | 'profile_sync';
@@ -35,31 +81,29 @@ async function syncProfileEvent(payload: {
 
 export const UsersService = {
     async getProfileById(userId: string) {
-        try {
-            return await tablesDB.getRow({
-                databaseId: DATABASE_ID,
-                tableId: TABLE_ID,
-                rowId: userId
-            });
-        } catch (_e: any) {
-            try {
-                const { Query } = await import("appwrite");
-                const res = await (tablesDB as any).listRows({
-                    databaseId: DATABASE_ID,
-                    tableId: TABLE_ID,
-                    queries: [
-                        Query.or([
-                            Query.equal('userId', userId),
-                            Query.equal('$id', userId)
-                        ]),
-                        Query.limit(1)
-                    ]
-                });
-                return res.rows[0] || null;
-            } catch (_inner) {
-                return null;
-            }
+        const hit = profileRowCache.get(userId);
+        if (hit && Date.now() - hit.at < PROFILE_ROW_TTL_MS) {
+            return hit.row ? { ...hit.row } : null;
         }
+
+        const pending = profileRowInflight.get(userId);
+        if (pending) {
+            const row = await pending;
+            return row ? { ...row } : null;
+        }
+
+        const request = fetchProfileRowRaw(userId)
+            .then((row) => {
+                rememberProfileRow(row, userId);
+                return row;
+            })
+            .finally(() => {
+                profileRowInflight.delete(userId);
+            });
+
+        profileRowInflight.set(userId, request);
+        const row = await request;
+        return row ? { ...row } : null;
     },
 
     async updateProfile(userId: string, data: any) {
@@ -71,6 +115,14 @@ export const UsersService = {
                 profile.$id,
                 data
             );
+            invalidateUsersProfileRowCache(userId);
+            invalidateUsersProfileRowCache(profile.$id);
+            if (result) {
+                rememberProfileRow(result, userId);
+                rememberProfileRow(result, result.$id);
+                if (result.userId) rememberProfileRow(result, result.userId);
+                seedIdentityCache(result);
+            }
             await syncProfileEvent({
                 type: Object.prototype.hasOwnProperty.call(data, 'username') ? 'username_change' : 'profile_sync',
                 userId,
@@ -111,6 +163,8 @@ export const UsersService = {
                 Permission.delete(Role.user(userId))
             ]
         ).then(async (row: any) => {
+            rememberProfileRow(row, userId);
+            seedIdentityCache(row);
             await syncProfileEvent({
                 type: 'username_change',
                 userId,
@@ -246,7 +300,16 @@ export const UsersService = {
             permissions.push(Permission.read(Role.any()));
         }
 
-        return await tablesDB.updateRow(DATABASE_ID, TABLE_ID, profile.$id, {}, permissions);
+        const updated = await tablesDB.updateRow(DATABASE_ID, TABLE_ID, profile.$id, {}, permissions);
+        invalidateUsersProfileRowCache(userId);
+        invalidateUsersProfileRowCache(profile.$id);
+        if (updated) {
+            rememberProfileRow(updated, userId);
+            rememberProfileRow(updated, updated.$id);
+            if (updated.userId) rememberProfileRow(updated, updated.userId);
+            seedIdentityCache(updated);
+        }
+        return updated;
     },
 
     /**

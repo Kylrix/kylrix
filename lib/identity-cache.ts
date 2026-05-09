@@ -29,7 +29,8 @@ type IdentityInput = Partial<CachedIdentity> & {
 
 const STORAGE_KEY = 'kylrix_connect_identity_cache_v1';
 const IDENTITY_UPDATED_EVENT = 'kylrix:identity-cache-updated';
-const DEFAULT_STALE_AFTER_MS = 30_000;
+/** Served instantly while rare background refresh keeps UX fresh — fewer profile TablesDB reads. */
+const DEFAULT_STALE_AFTER_MS = 5 * 60 * 1000;
 
 const memoryCache = new Map<string, CachedIdentity>();
 const inFlight = new Map<string, Promise<CachedIdentity | null>>();

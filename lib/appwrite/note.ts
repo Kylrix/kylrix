@@ -147,6 +147,55 @@ function setCached<T>(key: string, data: T, ttlMs: number = 5 * 60 * 1000): void
   queryCache.set(key, { data, expiresAt: Date.now() + ttlMs });
 }
 
+/** Single-tab SPA: coalesce + short TTL client cache for note rows (tags pivot included). Server/RSC bypasses cache. */
+const NOTE_ROW_CLIENT_TTL_MS = 12 * 60 * 1000;
+const noteRowClientCache = new Map<string, { payload: Notes; at: number }>();
+const noteRowClientInflight = new Map<string, Promise<Notes>>();
+
+function cloneNoteForCacheReturn(doc: Notes): Notes {
+  const d = doc as any;
+  const next: any = { ...d };
+  if (Array.isArray(d.tags)) next.tags = [...d.tags];
+  if (Array.isArray(d.attachments)) next.attachments = [...d.attachments];
+  return next as Notes;
+}
+
+export function invalidateNoteRowClientCache(noteId?: string | null) {
+  if (!noteId) return;
+  noteRowClientCache.delete(noteId);
+  noteRowClientInflight.delete(noteId);
+}
+
+async function loadNoteRowFromOrigin(noteId: string): Promise<Notes> {
+  const doc = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId) as any;
+
+  hydrateVirtualAttributes(doc);
+
+  try {
+    const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+    const pivot = await databases.listDocuments(
+      APPWRITE_DATABASE_ID,
+      noteTagsCollection,
+      [Query.equal('noteId', noteId), Query.limit(200)] as any
+    );
+    if (pivot.documents.length) {
+      const tags = Array.from(new Set(pivot.documents.map((p: any) => p.tag).filter(Boolean)));
+      (doc as any).tags = tags;
+    }
+  } catch (_e: any) {
+    // Non-fatal
+  }
+  if (!(doc as any).attachments || !Array.isArray((doc as any).attachments)) {
+    (doc as any).attachments = [];
+  }
+
+  const out = doc as Notes;
+  if (typeof window !== 'undefined') {
+    noteRowClientCache.set(noteId, { payload: cloneNoteForCacheReturn(out), at: Date.now() });
+  }
+  return out;
+}
+
 // Cleanup old cache entries every 10 minutes
 if (typeof window === 'undefined') {
   setInterval(() => {
@@ -557,29 +606,27 @@ export async function createMomentFromNote(note: Pick<Notes, '$id'>) {
 }
 
 export async function getNote(noteId: string): Promise<Notes> {
-  const doc = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId) as any;
-  
-  // Extract virtual attributes from metadata JSON
-  hydrateVirtualAttributes(doc);
+  let promise: Promise<Notes>;
 
-  try {
-    const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-    const pivot = await databases.listDocuments(
-      APPWRITE_DATABASE_ID,
-      noteTagsCollection,
-      [Query.equal('noteId', noteId), Query.limit(200)] as any
-    );
-    if (pivot.documents.length) {
-      const tags = Array.from(new Set(pivot.documents.map((p: any) => p.tag).filter(Boolean)));
-      (doc as any).tags = tags;
+  if (typeof window !== 'undefined') {
+    const cached = noteRowClientCache.get(noteId);
+    if (cached && Date.now() - cached.at < NOTE_ROW_CLIENT_TTL_MS) {
+      return cloneNoteForCacheReturn(cached.payload);
     }
-  } catch (e: any) {
-    // Non-fatal
+    const inflight = noteRowClientInflight.get(noteId);
+    if (inflight) {
+      const doc = await inflight;
+      return cloneNoteForCacheReturn(doc);
+    }
+    promise = loadNoteRowFromOrigin(noteId);
+    noteRowClientInflight.set(noteId, promise);
+    promise.finally(() => noteRowClientInflight.delete(noteId));
+  } else {
+    promise = loadNoteRowFromOrigin(noteId);
   }
-  if (!(doc as any).attachments || !Array.isArray((doc as any).attachments)) {
-    (doc as any).attachments = [];
-  }
-  return doc as Notes;
+
+  const doc = await promise;
+  return cloneNoteForCacheReturn(doc);
 }
 
 export async function updateNote(noteId: string, data: Partial<Notes>) {
@@ -724,6 +771,7 @@ export async function updateNote(noteId: string, data: Partial<Notes>) {
   } catch (e: any) {
     console.error('dual-write note_tags update error', e);
   }
+  invalidateNoteRowClientCache(noteId);
   return doc as Notes;
 }
 
@@ -748,7 +796,11 @@ export async function deleteNote(noteId: string) {
   } catch (err: any) {
     console.error('deleteNote cascade cleanup failed:', err);
   }
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId);
+  try {
+    return await databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId);
+  } finally {
+    invalidateNoteRowClientCache(noteId);
+  }
 }
 
 export async function listNotes(queries: any[] = [], limit: number = 100) {
