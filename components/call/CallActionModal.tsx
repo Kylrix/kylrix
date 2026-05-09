@@ -347,7 +347,11 @@ export const CallActionModal = ({
         try {
             const conversation = conversations.find((c: any) => c.$id === convId);
             const participantIds: string[] = Array.isArray(conversation?.participants)
-                ? Array.from(new Set(conversation.participants))
+                ? Array.from(
+                      new Set(
+                          (conversation.participants as unknown[]).map((id) => String(id)),
+                      ),
+                  )
                 : [];
             const link = await CallService.createScopedCallLink({
                 userId: user.$id,
