@@ -40,11 +40,14 @@ const Logo: React.FC<LogoProps> = ({
 
   const current = appColors[app] || appColors.accounts;
 
-  // The Identity Split:
-  // Left Hemisphere = Application Specific Color
-  // Right Hemisphere = Ecosystem Indigo (#6366F1)
-  const leftColor = current.secondary;
-  const rightColor = app === 'accounts' || app === 'kylrix' ? (isDarkMode ? "#FFFFFF" : "#000000") : current.primary;
+  const ecosystemPrimary = '#6366F1';
+  // Satellite apps: left = app accent, right = ecosystem primary.
+  // Accounts / root / kylrix: left = white (dark) / black (light), right = ecosystem primary.
+  const isEcosystemBrand = app === 'root' || app === 'accounts' || app === 'kylrix';
+  const leftColor = isEcosystemBrand
+    ? (isDarkMode ? '#FFFFFF' : '#000000')
+    : current.secondary;
+  const rightColor = isEcosystemBrand ? ecosystemPrimary : current.primary;
   
   // Center cutout color (punches through to background)
   const cutoutColor = isDarkMode ? "#0A0908" : "#FFFFFF";
@@ -78,6 +81,7 @@ const Logo: React.FC<LogoProps> = ({
         );
       case 'accounts': // Diamond
       case 'kylrix':
+      case 'root':
       default:
         return <polygon points="50,38 62,50 50,62 38,50" fill={cutoutColor} />;
     }
