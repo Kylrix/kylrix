@@ -2,9 +2,9 @@
 name: kylrix-muted-v3-design
 description: >-
   Kylrix Next.js mono app — Muted V3 Deep Earth UI system (palette, typography,
-  rim-light surfaces, bottom chrome parity, prohibited patterns). Use when styling
-  MUI surfaces, drawers, shells, navigation, cards, typography, spacing, brand polish,
-  or reviewing visuals for drift from ecosystem design docs.
+  opaque surfaces, hairline borders, bottom chrome parity, prohibited patterns).
+  Use when styling MUI surfaces, drawers, shells, navigation, cards, typography,
+  spacing, brand polish, or reviewing visuals for drift from ecosystem design docs.
 disable-model-invocation: true
 ---
 
@@ -13,58 +13,60 @@ disable-model-invocation: true
 ## Sources of truth (read before large UI changes)
 
 - Repo root / parent: `AGENTS.md` (colors, typography trio, mandates)
-- `/design.md` — gradients prohibition, rim rules, typography hierarchy
-- `/DESIGN.V2.md` — Deep Earth palette, logo matrix, rim-lighting note
+- `/design.md` — gradients + **zero translucent fills** policy, typography hierarchy
+- `/DESIGN.V2.md` — Deep Earth palette, logo matrix
 - `kylrix/app/globals.css` — CSS variables consumed by Next.js (`--font-*`, surfaces)
 - **`kylrix/components/UnifiedBottomBar.tsx`** — canonical mobile bottom chrome (match drawers/sheets to this)
 - **`kylrix/components/common/Logo.tsx`** — ecosystem / app hemisphere logic
 
 Companion skills: **`kylrix-brand`** (positioning copy, logo doc pointers), **`kylrix-drawer-ui`** (drawer patterns).
 
-## Palette (implement with solids)
+## Palette (implement with opaque solids only)
+
+Do **not** use `rgba`, `alpha()`, `hsla`, or `opacity` \< 1 for **background fills** on product UI. Layer depth with discrete hex steps.
 
 | Role | Hex | Typical use |
 | :--- | :--- | :--- |
-| Canvas / void | `#000000` or `#0A0908` (see `globals.css`; prefer tokens) | Behind panels, cutout punches |
-| Primary surface | `#161412` | Drawer paper, shared bottom nav shell, lifted panels |
-| Hover / lifted | `#1C1A18` or `--surface-2` from `globals.css` | List row hover, pressed affordances |
-| Rim / hairline | `1px solid rgba(255, 255, 255, 0.05)` | Top edge of bottom sheets, cards (align with `UnifiedBottomBar` Paper) |
-| Ecosystem primary | `#6366F1` | Primary actions, selection stroke (low saturation tints only) |
+| Canvas / void | `#0A0908` or `#000000` | Inset panels, input wells |
+| Primary surface | `#161412` | Drawer paper, bottom nav shell (`UnifiedBottomBar`) |
+| Hover / lifted | `#1C1A18` (`#1F1D1B` in `globals`) | Rows, hover fill |
+| Opaque edge / hairline | e.g. `#34322F` on `#161412` | Borders (replaces translucent white strokes) |
+| Ecosystem primary | `#6366F1` — hover e.g. `#575CF0` solid | Primary buttons, emphasis (solid only) |
 
-App accents (Connect Amber, Note Pink, etc.) — use from `AGENTS.md` only for app-scoped UI, not global chrome.
+App accents — from `AGENTS.md` — only for app-scoped UI.
 
 ## Typography (always wire explicitly in MUI when needed)
 
-MUI defaults are **not** brand fonts. Use CSS variables so `next/font` / loaded faces apply:
+MUI defaults are **not** brand fonts:
 
-- **UI / body / buttons / inputs:** `fontFamily: 'var(--font-satoshi)'`
-- **Display / section titles / strong headers:** `fontFamily: 'var(--font-clash)'`, often `letterSpacing: '-0.02em'`
-- **Code / IDs / timers / technical:** `fontFamily: 'var(--font-mono)'`
-
-Defined in `app/globals.css`: `--font-satoshi`, `--font-clash`, `--font-mono`.
+- **UI / body:** `fontFamily: 'var(--font-satoshi)'`
+- **Display / titles:** `fontFamily: 'var(--font-clash)'`, optional `letterSpacing: '-0.02em'`
+- **Technical:** `fontFamily: 'var(--font-mono)'`
+- **Muted text:** opaque hex (`#9B9691`), not translucent white `rgba`.
 
 ## Prohibited (do not ship)
 
-- **Gradients** as background fills (`linear-gradient`, `radial-gradient`, etc.) on shells, drawers, nav, cards, or buttons. See `design.md` § Gradients.
-- **Glass / backdrop blur** on product surfaces (`backdrop-filter: blur(...)`) — `design.md` § Glassmorphism.
-- **Tailwind** in this ecosystem — **MUI + CSS** only (`AGENTS.md`).
+- **Gradient fills** on shells, drawers, nav, cards, buttons (`design.md`).
+- **Translucent fills** (`rgba`, `alpha()`, opacity-scaled backgrounds) on panels, sheets, chrome buttons, chips, icon tiles, inputs — solids only (`design.md` §3 Architectural).
+- **Backdrop blur / glass** on product surfaces.
+- **Tailwind** — MUI + CSS only (`AGENTS.md`).
 
-## Bottom sheets & drawers (UX + parity)
+## Bottom sheets & drawers (UX)
 
-1. **Match global bottom bar:** `bgcolor: '#161412'`, `border: '1px solid rgba(255, 255, 255, 0.05)'`, `borderBottom: 0`, `borderRadius: '24px 24px 0 0'`, no gradient `backgroundImage`, `boxShadow: 'none'` unless a specific surface spec requires elevation.
-2. **Breathing room:** generous vertical padding (`3`–`4` theme units minimum on content), explicit section spacing (`gap` / `spacing={2}`+), avoid dense `Chip` grids for primary actions — prefer **full-width tap targets** (min ~44px height).
-3. **Hierarchy:** optional top **drag handle** (neutral pill); optional **section label** row (Satoshi, small caps feel via `letterSpacing`, muted opacity).
-4. **Safe area:** respect `paddingBottom: max(theme spacing, env(safe-area-inset-bottom))`.
-5. **Scroll:** one obvious scroll region; header/composer pinned when possible.
+1. **Chrome parity:** Same opaque surface & hairline convention as `UnifiedBottomBar`; no gradient `backgroundImage`.
+2. **Copy discipline:** Prefer short titles; avoid stacked paragraphs unless the flow is explanatory.
+3. **Primary chrome buttons** (mic, FAB-like controls): fill with **solid** ecosystem primary (`#6366F1`), white icon — not tinted translucency.
+4. **Safe area:** `paddingBottom: max(theme spacing, env(safe-area-inset-bottom))`.
+5. **Scroll:** One obvious scroll region.
 
 ## Polishing checklist
 
-- [ ] No gradients on the surface
-- [ ] Fonts use `--font-satoshi` / `--font-clash` / `--font-mono` where appropriate
-- [ ] Bottom sheet colors match `UnifiedBottomBar` Paper
-- [ ] Rim border `rgba(255,255,255,0.05)` — not heavier unless spec says
-- [ ] Touch targets and vertical rhythm feel calm, not cramped
+- [ ] No gradients
+- [ ] No translucent backgrounds on interactive / panel chrome
+- [ ] Solid hex borders for separation
+- [ ] Fonts use `--font-satoshi` / `--font-clash` / `--font-mono`
+- [ ] Bottom sheet surface matches unified bottom bar treatment
 
 ## Reference implementation
 
-- `kylrix/components/overlays/AgenticDrawer.tsx` — intended as a conforming bottom sheet (chrome + typography + spacing).
+- `kylrix/components/overlays/AgenticDrawer.tsx` — minimal copy, solid controls, opaque palette.
