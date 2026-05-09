@@ -14,7 +14,6 @@ import {
   Paper,
   Stack,
   Typography,
-  useMediaQuery,
   useTheme,
   Zoom,
 } from '@mui/material';
@@ -522,35 +521,12 @@ function LiveSurfaceCard({
 }
 
 export default function LandingPage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const showcaseRef = useRef<HTMLDivElement | null>(null);
   const { scrollYProgress } = useScroll({
     target: showcaseRef,
     offset: ['start end', 'end start'],
   });
   const showcaseGlowY = useTransform(scrollYProgress, [0, 1], [0, -90]);
-
-  const initiateEcosystem = () => {
-    const accountsUrl = getEcosystemUrl('accounts');
-    const targetUrl = `${accountsUrl}/login?source=${encodeURIComponent(window.location.origin)}`;
-
-    if (isMobile) {
-      window.location.assign(targetUrl);
-      return;
-    }
-
-    const width = 560;
-    const height = 760;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
-
-    window.open(
-      targetUrl,
-      'KylrixAccounts',
-      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`,
-    );
-  };
 
   return (
     <Box component="main" sx={{ position: 'relative', overflow: 'clip', bgcolor: '#000', color: '#fff', pt: { xs: 2, md: 3 }, pb: { xs: 10, md: 14 } }}>
@@ -589,15 +565,15 @@ export default function LandingPage() {
               component="h1"
               sx={{
                 fontSize: { xs: '3.2rem', sm: '4.8rem', lg: '6.6rem' },
-                lineHeight: 0.92,
-                letterSpacing: '-0.07em',
+                lineHeight: 0.98,
+                letterSpacing: '-0.045em',
                 fontWeight: 900,
                 color: '#fff',
                 textWrap: 'balance',
                 fontFamily: 'var(--font-clash)',
               }}
             >
-              The E2EE workspace where tools and autonomous agents work together.
+              Secure work for people and agents.
             </Typography>
 
             <Typography
@@ -605,20 +581,20 @@ export default function LandingPage() {
               sx={{
                 mt: 3,
                 mx: 'auto',
-                maxWidth: 820,
+                maxWidth: 720,
                 color: 'rgba(255,255,255,0.74)',
-                lineHeight: 1.85,
+                lineHeight: 1.65,
                 fontWeight: 400,
+                fontFamily: 'var(--font-satoshi)',
               }}
             >
-              Work while you sleep. Kylrix unifies notes, tasks, calls, and secure operations in one agent-ready
-              workspace, so people and AI can execute from the same context.
+              Notes, tasks, calls, and secure operations in one place.
             </Typography>
           </Box>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <Button
-              onClick={initiateEcosystem}
+              href="/skill.md"
               size="large"
               variant="contained"
               endIcon={<ArrowRight size={18} />}
@@ -633,7 +609,7 @@ export default function LandingPage() {
                 '&:hover': { bgcolor: '#5254E8' },
               }}
             >
-              Initiate Ecosystem
+              Install Agent Skill
             </Button>
 
             <Button
@@ -1033,8 +1009,8 @@ export default function LandingPage() {
               <Typography variant="h4" sx={{ color: '#fff', fontWeight: 900, letterSpacing: '-0.04em' }}>
                 Kylrix. Effortless work, secured by design.
               </Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', maxWidth: 540, lineHeight: 1.8 }}>
-                The E2EE workspace where productivity tools and autonomous agents coexist in one unified system.
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', maxWidth: 540, lineHeight: 1.7 }}>
+                One secure surface for notes, tasks, calls, and autonomous execution.
               </Typography>
             </Stack>
           </Stack>
