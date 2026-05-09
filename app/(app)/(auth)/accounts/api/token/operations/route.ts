@@ -2,8 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCorsHeaders, verifyUser } from '@/lib/api/permission-updater';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
 
-function isAdminUser(user: any) {
-  return Array.isArray(user?.labels) && user.labels.includes('admin');
+function getAdminEmailSet() {
+  return new Set(
+    String(process.env.ADMINS || '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+function isEnvAdminUser(user: any) {
+  const email = String(user?.email || '').trim().toLowerCase();
+  if (!email) return false;
+  const admins = getAdminEmailSet();
+  return admins.has(email);
 }
 
 export async function OPTIONS(req: NextRequest) {
@@ -28,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || '').trim();
-    const admin = isAdminUser(actor);
+    const admin = isEnvAdminUser(actor);
 
     if (!action) {
       return NextResponse.json({ error: 'action is required' }, { status: 400, headers: corsHeaders });
