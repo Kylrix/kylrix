@@ -304,6 +304,7 @@ export const KylrixTokenService = {
     sourceId: string;
     metadata?: Record<string, unknown>;
   }) {
+    throw new Error('SERVER_ONLY_TOKEN_OPERATIONS: use InternalKylrixTokenService via /accounts/api/token/operations');
     const state = await ensureStateRow();
     const recentVolume = await getRecentVolume(contract.policy.spikeWindowMinutes);
     const userDailyMintedMicro = await getUserDailyMintedMicro(input.userId);
@@ -388,6 +389,7 @@ export const KylrixTokenService = {
     sourceId: string;
     metadata?: Record<string, unknown>;
   }) {
+    throw new Error('SERVER_ONLY_TOKEN_OPERATIONS: use InternalKylrixTokenService via /accounts/api/token/operations');
     const amountMicro = parseMicro(input.amount);
     const transferCheck = contract.validateTransfer(amountMicro);
     if (!transferCheck.allowed) {
@@ -482,6 +484,7 @@ export const KylrixTokenService = {
     sourceId: string;
     metadata?: Record<string, unknown>;
   }) {
+    throw new Error('SERVER_ONLY_TOKEN_OPERATIONS: use InternalKylrixTokenService via /accounts/api/token/operations');
     const amountMicro = parseMicro(input.amount);
     if (amountMicro <= 0n) return { accepted: false, reason: 'INVALID_FINE_AMOUNT' };
 
@@ -542,6 +545,7 @@ export const KylrixTokenService = {
     chain: string;
     idempotencyKey: string;
   }) {
+    throw new Error('SERVER_ONLY_TOKEN_OPERATIONS: use InternalKylrixTokenService via /accounts/api/token/operations');
     const amountMicro = parseMicro(input.amount);
     if (amountMicro <= 0n) return { accepted: false, reason: 'INVALID_CLAIM_AMOUNT' };
 
@@ -582,6 +586,7 @@ export const KylrixTokenService = {
     onchainTxHash: string;
     idempotencyKey: string;
   }) {
+    throw new Error('SERVER_ONLY_TOKEN_OPERATIONS: use InternalKylrixTokenService via /accounts/api/token/operations');
     const amountMicro = parseMicro(input.amount);
     if (amountMicro <= 0n) return { accepted: false, reason: 'INVALID_CLAIM_AMOUNT' };
 
