@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from 'framer-motion';
 import NextLink from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import Logo, { KylrixApp } from '@/components/Logo';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
@@ -162,11 +163,7 @@ const infraPanels = [
   },
 ];
 
-function openApp(subdomain: string) {
-  window.location.assign(getEcosystemUrl(subdomain));
-}
-
-const AppSwitcherFab = React.memo(function AppSwitcherFab() {
+const AppSwitcherFab = React.memo(function AppSwitcherFab({ onOpenApp }: { onOpenApp: (subdomain: string) => void }) {
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const theme = useTheme();
@@ -231,7 +228,7 @@ const AppSwitcherFab = React.memo(function AppSwitcherFab() {
                 aria-label={`Open ${app.label}`}
                 onClick={() => {
                   setOpen(false);
-                  openApp(app.subdomain);
+                  onOpenApp(app.subdomain);
                 }}
                 sx={{
                   width: 52,
@@ -341,10 +338,12 @@ function LiveSurfaceCard({
   panel,
   index,
   scrollYProgress,
+  onOpenApp,
 }: {
   panel: (typeof livePanels)[number];
   index: number;
   scrollYProgress: MotionValue<number>;
+  onOpenApp: (subdomain: string) => void;
 }) {
   const reduceMotion = useReducedMotion();
   const appMeta = ECOSYSTEM_APPS.find((item) => item.id === panel.id)!;
@@ -354,7 +353,7 @@ function LiveSurfaceCard({
 
   return (
     <ButtonBase
-      onClick={() => openApp(panel.id)}
+      onClick={() => onOpenApp(panel.id)}
       sx={{
         width: '100%',
         height: '100%',
@@ -522,6 +521,8 @@ function LiveSurfaceCard({
 }
 
 export default function LandingPage() {
+  const router = useRouter();
+  const openApp = (subdomain: string) => router.push(getEcosystemUrl(subdomain));
   const showcaseRef = useRef<HTMLDivElement | null>(null);
   const { scrollYProgress } = useScroll({
     target: showcaseRef,
@@ -789,6 +790,7 @@ export default function LandingPage() {
                     panel={panel}
                     index={index}
                     scrollYProgress={scrollYProgress}
+                    onOpenApp={openApp}
                   />
                 ))}
               </Stack>
@@ -1026,7 +1028,7 @@ export default function LandingPage() {
         </Paper>
       </Container>
 
-      <AppSwitcherFab />
+      <AppSwitcherFab onOpenApp={openApp} />
     </Box>
   );
 }
