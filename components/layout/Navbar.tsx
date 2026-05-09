@@ -26,7 +26,7 @@ import { alpha } from '@mui/material/styles';
 import { useState, useEffect } from 'react';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { useAI } from '@/context/AIContext';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import EcosystemPortal from '../common/EcosystemPortal';
 import Logo from '../common/Logo';
@@ -41,6 +41,7 @@ const PasswordGenerator = dynamic(() => import("@/components/ui/PasswordGenerato
 });
 
 export function Navbar() {
+  const router = useRouter();
   const { user, logout } = useAppwriteVault();
   const { openAIModal } = useAI();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -232,7 +233,7 @@ export function Navbar() {
               variant="contained"
               size="small"
               onClick={() => {
-                window.location.href = `/accounts/login?source=${encodeURIComponent(window.location.origin)}`;
+                router.push(`/accounts/login?source=${encodeURIComponent(window.location.origin)}`);
               }}
               sx={{ 
                 bgcolor: '#6366F1',
@@ -297,7 +298,7 @@ export function Navbar() {
                 <MenuItem 
                   onClick={() => {
                     if (profileUsername) {
-                      window.location.href = `${getEcosystemUrl('CONNECT')}/u/${encodeURIComponent(profileUsername)}?transition=profile`;
+                      router.push(`${getEcosystemUrl('CONNECT')}/u/${encodeURIComponent(profileUsername)}?transition=profile`);
                     }
                     handleCloseMenu();
                   }} 
@@ -308,7 +309,7 @@ export function Navbar() {
                 </MenuItem>
                 <MenuItem 
                   onClick={() => {
-                    window.location.href = `/accounts/settings?source=${encodeURIComponent(window.location.origin)}`;
+                    router.push(`/accounts/settings?source=${encodeURIComponent(window.location.origin)}`);
                     handleCloseMenu();
                   }} 
                   sx={{ py: 1.8, px: 2.5, gap: 2, borderRadius: '14px', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.03)' } }}
@@ -322,7 +323,7 @@ export function Navbar() {
                     import("@/lib/masterpass-crypto").then(({ masterPassCrypto }) => {
                       masterPassCrypto.lockNow();
                       sessionStorage.setItem("masterpass_return_to", window.location.pathname);
-                      window.location.replace("/vault");
+                      router.replace("/vault");
                     });
                     handleCloseMenu();
                   }}

@@ -495,7 +495,7 @@ export const Profile = ({ username }: ProfileProps) => {
                                         onClick={() => {
                                             const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
                                             const idSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
-                                            window.location.href = `https://${idSubdomain}.${domain}/settings?source=${encodeURIComponent(window.location.origin)}`;
+                                            router.push(`/accounts/settings?source=${encodeURIComponent(window.location.origin)}`);
                                         }}
                                     >
                                         Settings

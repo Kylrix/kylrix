@@ -1,10 +1,12 @@
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 import Topbar from '../Topbar';
 
 export default function TopbarShell() {
+  const router = useRouter();
   const { user, logout } = useAuth();
 
   return (
@@ -15,14 +17,14 @@ export default function TopbarShell() {
       profilePicId={(user?.prefs as any)?.profilePicId || null}
       connectedWallet={(user?.prefs as any)?.walletEth || (user?.prefs as any)?.walletAddress || null}
       onManageAccount={() => {
-        window.location.href = '/accounts/settings/profile';
+        router.push('/accounts/settings/profile');
       }}
       onSignOut={logout}
       onSessionsClick={() => {
-        window.location.href = '/accounts/settings/sessions';
+        router.push('/accounts/settings/sessions');
       }}
       onActivityClick={() => {
-        window.location.href = '/accounts/settings/activity';
+        router.push('/accounts/settings/activity');
       }}
     />
   );

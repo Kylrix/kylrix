@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { useSubscription } from '../SubscriptionContext';
 import { SubscriptionTier } from '../lib/ppp';
 
@@ -15,6 +16,7 @@ export function PaywallWrapper({
   requiredTier, 
   fallback 
 }: PaywallWrapperProps) {
+  const router = useRouter();
   const { currentTier, isLoading } = useSubscription();
 
   if (isLoading) return null;
@@ -49,7 +51,7 @@ export function PaywallWrapper({
           This feature is only available for {requiredTier} subscribers.
         </p>
         <button 
-          onClick={() => window.location.href = '/pricing'}
+          onClick={() => router.push('/pricing')}
           style={{
             padding: '8px 16px',
             borderRadius: '8px',

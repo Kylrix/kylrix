@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Drawer,
     DialogTitle,
@@ -45,6 +46,7 @@ export default function SudoModal({
     onCancel: _onCancel,
     intent,
 }: SudoModalProps) {
+    const router = useRouter();
     const { user } = useAuth();
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
@@ -95,7 +97,7 @@ export default function SudoModal({
 
     const handleRedirectToVaultSetup = useCallback(() => {
         const callbackUrl = encodeURIComponent(window.location.href);
-        window.location.href = `/vault/masterpass?callbackUrl=${callbackUrl}`;
+        router.push(`/vault/masterpass?callbackUrl=${callbackUrl}`);
     }, []);
 
     const handlePasswordVerify = async (e?: React.FormEvent) => {
@@ -192,7 +194,7 @@ export default function SudoModal({
 
                 if (intent === "reset") {
                     const callbackUrl = encodeURIComponent(window.location.href);
-                    window.location.href = `/vault/masterpass/reset?callbackUrl=${callbackUrl}`;
+                    router.push(`/vault/masterpass/reset?callbackUrl=${callbackUrl}`);
                     return;
                 }
 
@@ -578,7 +580,7 @@ export default function SudoModal({
                                 size="small"
                                 onClick={() => {
                                     const callbackUrl = encodeURIComponent(window.location.href);
-                                    window.location.href = `/vault/masterpass/reset?callbackUrl=${callbackUrl}`;
+                                    router.push(`/vault/masterpass/reset?callbackUrl=${callbackUrl}`);
                                 }}
                                 sx={{
                                     color: 'error.main',

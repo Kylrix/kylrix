@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
     Box,
     Typography,
@@ -50,6 +51,7 @@ const shortenAddress = (address: string) => {
 };
 
 export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTokenIntent }: WalletSidebarProps) => {
+    const router = useRouter();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user } = useAuth();
@@ -167,7 +169,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         if (isOpen && hasMasterpass === false) {
             const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
             const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
-            window.location.href = `/vault/masterpass?callbackUrl=${callbackUrl}`;
+            router.push(`/vault/masterpass?callbackUrl=${callbackUrl}`);
         }
     }, [isOpen, hasMasterpass]);
 
@@ -437,7 +439,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         onClick={() => {
                             const baseUrl = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
                             const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
-                            window.location.href = `/vault/masterpass?callbackUrl=${callbackUrl}`;
+                            router.push(`/vault/masterpass?callbackUrl=${callbackUrl}`);
                         }}
                         sx={{
                             bgcolor: 'white',

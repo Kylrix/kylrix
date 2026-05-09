@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 
 export type PotatoSnippetKind = 'note' | 'tag' | 'shared' | 'extension' | 'settings' | 'context';
@@ -167,7 +167,7 @@ function matchesTerms(query: string, terms: string[]) {
   return terms.some((term) => term.includes(query) || query.includes(term));
 }
 
-function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet[]) {
+function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet[], navigate: (href: string) => void) {
   const normalized = normalizeQuery(query);
 
   const quickActions: PotatoAction[] = [
@@ -179,7 +179,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
         href: '/note/notes/new',
       accent: '#EC4899',
       terms: ['note', 'draft', 'capture', 'write'],
-      onSelect: () => window.location.assign('/note/notes/new'),
+      onSelect: () => navigate('/note/notes/new'),
     },
     {
       id: 'browse-notes',
@@ -189,7 +189,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
         href: '/note/notes',
       accent: '#EC4899',
       terms: ['notes', 'note', 'workspace', 'home'],
-      onSelect: () => window.location.assign('/note/notes'),
+      onSelect: () => navigate('/note/notes'),
     },
     {
       id: 'browse-shared',
@@ -199,7 +199,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
         href: '/note/shared',
       accent: '#6366F1',
       terms: ['shared', 'share', 'public', 'link'],
-      onSelect: () => window.location.assign('/note/shared'),
+      onSelect: () => navigate('/note/shared'),
     },
     {
       id: 'open-tags',
@@ -209,7 +209,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
         href: '/note/tags',
       accent: '#6366F1',
       terms: ['tag', 'tags', 'organize', 'cluster'],
-      onSelect: () => window.location.assign('/note/tags'),
+      onSelect: () => navigate('/note/tags'),
     },
     {
       id: 'open-extensions',
@@ -219,7 +219,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
         href: '/note/extensions',
       accent: '#6366F1',
       terms: ['extension', 'extensions', 'automation', 'plugin'],
-      onSelect: () => window.location.assign('/note/extensions'),
+      onSelect: () => navigate('/note/extensions'),
     },
   ];
 
@@ -232,7 +232,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
         href: `/note/notes?search=${encodeURIComponent(query)}`,
       accent: '#EC4899',
       terms: ['note', 'notes', 'writing', 'draft'],
-      onSelect: () => window.location.assign(`/note/notes?search=${encodeURIComponent(query)}`),
+      onSelect: () => navigate(`/note/notes?search=${encodeURIComponent(query)}`),
     },
     {
       id: 'search-shared',
@@ -242,7 +242,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
         href: `/note/shared?search=${encodeURIComponent(query)}`,
       accent: '#6366F1',
       terms: ['shared', 'public', 'link', 'share'],
-      onSelect: () => window.location.assign(`/note/shared?search=${encodeURIComponent(query)}`),
+      onSelect: () => navigate(`/note/shared?search=${encodeURIComponent(query)}`),
     },
     {
       id: 'search-tags',
@@ -252,7 +252,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
         href: `/note/tags?search=${encodeURIComponent(query)}`,
       accent: '#6366F1',
       terms: ['tag', 'tags', 'topic', 'cluster'],
-      onSelect: () => window.location.assign(`/note/tags?search=${encodeURIComponent(query)}`),
+      onSelect: () => navigate(`/note/tags?search=${encodeURIComponent(query)}`),
     },
     {
       id: 'search-extensions',
@@ -262,7 +262,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
       href: `/extensions?search=${encodeURIComponent(query)}`,
       accent: '#6366F1',
       terms: ['extension', 'extensions', 'automation', 'plugin'],
-      onSelect: () => window.location.assign(`/extensions?search=${encodeURIComponent(query)}`),
+      onSelect: () => navigate(`/extensions?search=${encodeURIComponent(query)}`),
     },
     {
       id: 'search-settings',
@@ -272,7 +272,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
       href: `/settings?search=${encodeURIComponent(query)}`,
       accent: '#6366F1',
       terms: ['setting', 'settings', 'privacy', 'workspace'],
-      onSelect: () => window.location.assign(`/settings?search=${encodeURIComponent(query)}`),
+      onSelect: () => navigate(`/settings?search=${encodeURIComponent(query)}`),
     },
   ];
 
@@ -286,7 +286,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
     terms: [snippet.title, snippet.description, routeLabel].map((value) => value.toLowerCase()),
     onSelect: () => {
       if (snippet.href) {
-        window.location.assign(snippet.href);
+        navigate(snippet.href);
       }
     },
   }));
@@ -304,6 +304,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
 }
 
 export function PotatoProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const pathname = usePathname();
   const { user } = useAuth();
   const [snippets, setSnippets] = useState<PotatoSnippet[]>(() => routeSnippets(pathname, user));
@@ -328,8 +329,9 @@ export function PotatoProvider({ children }: { children: React.ReactNode }) {
     snippets,
     pushSnippet,
     clearSnippets,
-    buildSearchSurface: (query: string) => buildSurface(query, routeLabelFromPath(pathname), snippets),
-  }), [clearSnippets, pathname, pushSnippet, snippets]);
+    buildSearchSurface: (query: string) =>
+      buildSurface(query, routeLabelFromPath(pathname), snippets, (href: string) => router.push(href)),
+  }), [clearSnippets, pathname, pushSnippet, snippets, router]);
 
   return <PotatoContext.Provider value={value}>{children}</PotatoContext.Provider>;
 }

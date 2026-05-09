@@ -13,6 +13,7 @@ import { MessageCircle, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
 import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
+import { useRouter } from 'next/navigation';
 
 interface ChatNotification {
     id: string;
@@ -32,6 +33,7 @@ interface ChatNotificationContextType {
 const ChatNotificationContext = createContext<ChatNotificationContextType | undefined>(undefined);
 
 export function ChatNotificationProvider({ children }: { children: ReactNode }) {
+    const router = useRouter();
     const { user } = useAuth();
     const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set());
     const [lastMessage, setLastMessage] = useState<any | null>(null);
@@ -240,7 +242,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                                     cursor: 'pointer'
                                 }}
                                 onClick={() => {
-                                    window.location.href = `/connect/chat/${activeNotification.id}`;
+                                    router.push(`/connect/chat/${activeNotification.id}`);
                                     setActiveNotification(null);
                                 }}
                             >

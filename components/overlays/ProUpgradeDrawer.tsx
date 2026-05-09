@@ -13,8 +13,10 @@ import {
   alpha,
 } from '@mui/material';
 import { Zap, ExternalLink } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export function ProUpgradeDrawer() {
+  const router = useRouter();
   const { showProUpgrade, closeProUpgrade, feature } = useProUpgrade();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -155,7 +157,7 @@ export function ProUpgradeDrawer() {
             }}
             onClick={() => {
               closeProUpgrade();
-              window.location.href = '/accounts/settings/billing';
+              router.push('/accounts/settings/billing');
             }}
             endIcon={<ExternalLink size={18} />}
           >
