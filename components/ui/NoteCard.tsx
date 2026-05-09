@@ -54,6 +54,7 @@ interface NoteCardProps {
 }
 
 const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete, onNoteSelect }) => {
+  const NAV_SURFACE = '#161412';
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
   const { isPinned, pinNote, unpinNote, upsertNote } = useNotes();
@@ -375,7 +376,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           cursor: 'pointer',
           position: 'relative',
           overflow: 'hidden',
-          bgcolor: '#161412',
+          bgcolor: NAV_SURFACE,
           border: '1px solid',
           borderColor: '#34322F',
           borderRadius: '28px',
@@ -391,12 +392,11 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           '&:hover': {
             transform: 'perspective(1200px) translateY(-12px) scale(1.02)',
             borderColor: (theme) => alpha(theme.palette.secondary.main, 0.5),
-            bgcolor: '#1C1A18',
+            bgcolor: NAV_SURFACE,
             boxShadow: (theme) => theme.palette.mode === 'dark'
               ? `0 40px 80px -20px rgba(0, 0, 0, 0.9), 
-                 0 0 20px ${alpha(theme.palette.primary.main, 0.1)}, 
                  inset 0 1px 0 rgba(255, 255, 255, 0.1)`
-              : `0 30px 60px -15px rgba(15, 23, 42, 0.15), 0 0 25px rgba(99, 102, 241, 0.1), inset 0 1px 1px rgba(255, 255, 255, 1)`,
+              : `0 30px 60px -15px rgba(15, 23, 42, 0.15), inset 0 1px 1px rgba(255, 255, 255, 1)`,
           }
         }}
       >
