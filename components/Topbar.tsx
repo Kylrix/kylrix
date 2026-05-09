@@ -20,6 +20,8 @@ import {
   Tooltip,
   Typography,
   Dialog,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   ChevronDown,
@@ -73,6 +75,8 @@ export default function Topbar({
   authLoading = false,
   onConnect,
 }: TopbarProps) {
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const router = useRouter();
   const pathname = usePathname();
 
@@ -88,6 +92,7 @@ export default function Topbar({
   const [liveCallId, setLiveCallId] = useState<string | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const desktopPanelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let active = true;
     let intervalId: number | null = null;
@@ -352,7 +357,9 @@ export default function Topbar({
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
-      if (!target || (headerRef.current && headerRef.current.contains(target))) return;
+      if (!target) return;
+      if (headerRef.current && headerRef.current.contains(target)) return;
+      if (desktopPanelRef.current && desktopPanelRef.current.contains(target)) return;
       handleCloseAll();
     };
 
@@ -884,6 +891,142 @@ export default function Topbar({
     );
   };
 
+  const renderDesktopSidebarPanel = () => {
+    if (!isDesktop || !activePanel) return null;
+
+    return (
+      <motion.div
+        key={`desktop-${activePanel}`}
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: -20, opacity: 0 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+      >
+        <Paper
+          ref={desktopPanelRef}
+          elevation={0}
+          sx={{
+            position: 'fixed',
+            top: TOPBAR_LAYOUT.height,
+            left: 0,
+            bottom: 0,
+            width: 'min(360px, 92vw)',
+            borderRadius: 0,
+            bgcolor: '#161412',
+            borderRight: '1px solid rgba(255,255,255,0.08)',
+            zIndex: 1200,
+            overflowY: 'auto',
+            p: 2,
+          }}
+        >
+          {activePanel === 'ecosystem' && (
+            <Stack spacing={0.75}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+                Products
+              </Typography>
+              {accountsApps.map((item) => (
+                <Button
+                  key={item.href}
+                  fullWidth
+                  onClick={() => {
+                    handleCloseAll();
+                    window.location.assign(item.href);
+                  }}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    px: 1.25,
+                    py: 1,
+                    borderRadius: '14px',
+                    color: 'white',
+                    bgcolor: item.selected ? alpha('#6366F1', 0.08) : 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    textTransform: 'none',
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </Stack>
+          )}
+
+          {activePanel === 'profile' && (
+            <Stack spacing={0.75}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+                Profile
+              </Typography>
+              <Button
+                fullWidth
+                onClick={() => {
+                  const username = profileUsername ? String(profileUsername).replace(/^@+/, '').toLowerCase() : null;
+                  if (!username) return;
+                  stageProfileView(profileSeed as any, profileSeed.avatar || null);
+                  handleCloseAll();
+                  window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                }}
+                sx={{ justifyContent: 'flex-start', px: 1.25, py: 1, borderRadius: '14px', color: 'white', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', textTransform: 'none' }}
+              >
+                View profile
+              </Button>
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  setIsWalletOpen(true);
+                }}
+                sx={{ justifyContent: 'flex-start', px: 1.25, py: 1, borderRadius: '14px', color: 'white', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', textTransform: 'none' }}
+              >
+                Wallet
+              </Button>
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  onManageAccount?.();
+                }}
+                sx={{ justifyContent: 'flex-start', px: 1.25, py: 1, borderRadius: '14px', color: 'white', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', textTransform: 'none' }}
+              >
+                Manage account
+              </Button>
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  onSignOut?.();
+                }}
+                sx={{ justifyContent: 'flex-start', px: 1.25, py: 1, borderRadius: '14px', color: '#FF4D4D', bgcolor: 'rgba(255, 77, 77, 0.08)', border: '1px solid rgba(255,255,255,0.08)', textTransform: 'none' }}
+              >
+                Sign out
+              </Button>
+            </Stack>
+          )}
+
+          {activePanel === 'search' && (
+            <Stack spacing={1}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+                Search
+              </Typography>
+              <TextField
+                inputRef={searchInputRef}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search people and routes"
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    color: 'white',
+                    bgcolor: '#0A0908',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.08)' },
+                  },
+                }}
+              />
+            </Stack>
+          )}
+        </Paper>
+      </motion.div>
+    );
+  };
+
   return (
     <>
       <AppBar
@@ -898,7 +1041,7 @@ export default function Topbar({
           boxShadow: '0 16px 42px rgba(0,0,0,0.42)',
           backgroundImage: 'none',
           overflow: 'hidden',
-          height: activePanel ? 'auto' : '88px',
+          height: activePanel && !isDesktop ? 'auto' : '88px',
         }}
       >
         <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, width: '100%' }}>
@@ -1137,9 +1280,15 @@ export default function Topbar({
           </Box>
         </Box>
 
-        {renderSearchPanel()}
-        {renderAppPanel()}
-        {renderProfilePanel()}
+        {isDesktop ? (
+          renderDesktopSidebarPanel()
+        ) : (
+          <>
+            {renderSearchPanel()}
+            {renderAppPanel()}
+            {renderProfilePanel()}
+          </>
+        )}
       </AppBar>
       {isWalletOpen ? (
         <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} />
