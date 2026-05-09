@@ -19,6 +19,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   Bot,
@@ -65,6 +67,8 @@ export default function NoteTopbar({
   onRefresh,
   isRefreshing = false,
 }: NoteTopbarProps) {
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
@@ -108,6 +112,7 @@ export default function NoteTopbar({
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [liveCallId, setLiveCallId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const desktopPanelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     let active = true;
     let intervalId: number | null = null;
@@ -356,7 +361,9 @@ export default function NoteTopbar({
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
-      if (!target || (headerRef.current && headerRef.current.contains(target))) return;
+      if (!target) return;
+      if (headerRef.current && headerRef.current.contains(target)) return;
+      if (desktopPanelRef.current && desktopPanelRef.current.contains(target)) return;
       handleCloseAll();
     };
 
@@ -1035,6 +1042,236 @@ export default function NoteTopbar({
     );
   };
 
+  const renderDesktopSidebarPanel = () => {
+    if (!isDesktop || !activePanel || activePanel === 'mobile') return null;
+
+    return (
+      <motion.div
+        key={`desktop-${activePanel}`}
+        initial={{ x: -20, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: -20, opacity: 0 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+      >
+        <Paper
+          ref={desktopPanelRef}
+          elevation={0}
+          sx={{
+            position: 'fixed',
+            top: TOPBAR_LAYOUT.height,
+            left: 0,
+            bottom: 0,
+            width: 'min(360px, 92vw)',
+            borderRadius: 0,
+            bgcolor: '#161412',
+            borderRight: '1px solid rgba(255,255,255,0.08)',
+            zIndex: 1200,
+            overflowY: 'auto',
+            p: 2,
+          }}
+        >
+          {activePanel === 'ecosystem' && (
+            <Stack spacing={0.75}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+                Products
+              </Typography>
+              {noteApps.map((item) => (
+                <Button
+                  key={item.href}
+                  fullWidth
+                  onClick={() => {
+                    handleCloseAll();
+                    window.location.assign(item.href);
+                  }}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
+                    px: 1.25,
+                    py: 1,
+                    borderRadius: '14px',
+                    color: 'white',
+                    bgcolor: item.selected ? alpha('#6366F1', 0.08) : 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    textTransform: 'none',
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </Stack>
+          )}
+
+          {activePanel === 'developers' && (
+            <Stack spacing={0.75}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+                Developers
+              </Typography>
+              {[
+                { label: 'Developers', href: '/developers' },
+                { label: 'Docs', href: '/docs' },
+              ].map((item) => (
+                <Button
+                  key={item.href}
+                  fullWidth
+                  onClick={() => {
+                    handleCloseAll();
+                    window.location.assign(item.href);
+                  }}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    px: 1.25,
+                    py: 1,
+                    borderRadius: '14px',
+                    color: 'white',
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    textTransform: 'none',
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </Stack>
+          )}
+
+          {activePanel === 'profile' && (
+            <Stack spacing={0.75}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+                Profile
+              </Typography>
+              <Button
+                fullWidth
+                onClick={() => {
+                  const username = profileUsername ? String(profileUsername).replace(/^@+/, '').toLowerCase() : null;
+                  if (!username) return;
+                  stageProfileView(profileSeed as any, profileSeed.avatar || null);
+                  handleCloseAll();
+                  window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                }}
+                sx={{
+                  justifyContent: 'flex-start',
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: '14px',
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  textTransform: 'none',
+                }}
+              >
+                View profile
+              </Button>
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  setIsWalletOpen(true);
+                }}
+                sx={{
+                  justifyContent: 'flex-start',
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: '14px',
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  textTransform: 'none',
+                }}
+              >
+                Wallet
+              </Button>
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  window.location.assign('/settings');
+                }}
+                sx={{
+                  justifyContent: 'flex-start',
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: '14px',
+                  color: 'white',
+                  bgcolor: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  textTransform: 'none',
+                }}
+              >
+                Settings
+              </Button>
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  void logout();
+                }}
+                sx={{
+                  justifyContent: 'flex-start',
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: '14px',
+                  color: '#FF4D4D',
+                  bgcolor: 'rgba(255, 77, 77, 0.08)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  textTransform: 'none',
+                }}
+              >
+                Sign out
+              </Button>
+            </Stack>
+          )}
+
+          {activePanel === 'search' && (
+            <Stack spacing={1}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
+                Search
+              </Typography>
+              <TextField
+                inputRef={searchInputRef}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search notes, people, shared links"
+                size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '12px',
+                    color: 'white',
+                    bgcolor: '#0A0908',
+                    '& fieldset': { borderColor: 'rgba(255,255,255,0.08)' },
+                  },
+                }}
+              />
+              <Stack spacing={0.5}>
+                {(searchQuery.trim().length < 2 ? searchSurface.snippets.slice(0, 4) : []).map((item) => (
+                  <Button
+                    key={item.id}
+                    fullWidth
+                    onClick={() => {
+                      handleCloseAll();
+                      window.location.assign(item.url);
+                    }}
+                    sx={{
+                      justifyContent: 'flex-start',
+                      px: 1.25,
+                      py: 1,
+                      borderRadius: '14px',
+                      color: 'white',
+                      bgcolor: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      textTransform: 'none',
+                    }}
+                  >
+                    {item.title}
+                  </Button>
+                ))}
+              </Stack>
+            </Stack>
+          )}
+        </Paper>
+      </motion.div>
+    );
+  };
+
   return (
     <>
       <AppBar
@@ -1407,11 +1644,17 @@ export default function NoteTopbar({
           </Box>
         </Box>
 
-        {renderMobileMenuPanel()}
-        {renderSearchPanel()}
-        {renderAppPanel()}
-        {renderDevelopersPanel()}
-        {renderProfilePanel()}
+        {isDesktop ? (
+          renderDesktopSidebarPanel()
+        ) : (
+          <>
+            {renderMobileMenuPanel()}
+            {renderSearchPanel()}
+            {renderAppPanel()}
+            {renderDevelopersPanel()}
+            {renderProfilePanel()}
+          </>
+        )}
       </AppBar>
       {isWalletOpen ? <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} /> : null}
     </>
