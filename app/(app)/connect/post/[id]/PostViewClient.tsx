@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { SocialService } from '@/lib/services/social';
@@ -42,6 +42,12 @@ import {
     SlidersHorizontal,
     ArrowDownWideNarrow,
     ArrowLeft,
+    FileText,
+    Calendar,
+    Clock,
+    MapPin,
+    Phone,
+    Video,
 } from 'lucide-react';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
@@ -251,12 +257,269 @@ const drawSendIcon = (ctx: CanvasRenderingContext2D, x: number, y: number, size:
     ctx.restore();
 };
 
+type MomentAttachmentNav = {
+    onOpenNote?: (note: any) => void;
+    onOpenEvent?: (event: any) => void;
+    onOpenCall?: (call: any) => void;
+};
+
+/** Matches Feed.tsx attachment rendering (images + note / event / call cards). */
+function ConnectMomentAttachments({
+    attachments,
+    attachedNote,
+    attachedEvent,
+    attachedCall,
+    nav,
+    stopPropagationOnClick,
+}: {
+    attachments?: { type: string; id: string }[];
+    attachedNote?: any;
+    attachedEvent?: any;
+    attachedCall?: any;
+    nav?: MomentAttachmentNav;
+    stopPropagationOnClick?: boolean;
+}) {
+    const images = (attachments || []).filter((a) => a.type === 'image');
+    const wrap = (fn?: () => void) => (e: React.MouseEvent) => {
+        if (stopPropagationOnClick) e.stopPropagation();
+        fn?.();
+    };
+
+    const noteTags = Array.isArray(attachedNote?.tags) ? attachedNote.tags : [];
+
+    if (!images.length && !attachedNote && !attachedEvent && !attachedCall) return null;
+
+    return (
+        <Stack spacing={1.5} sx={{ mt: 1.25, maxWidth: 425 }}>
+            {images.length > 0 ? (
+                <Box sx={{
+                    display: 'grid',
+                    gap: 1,
+                    gridTemplateColumns: images.length === 1 ? '1fr' : '1fr 1fr',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    bgcolor: 'rgba(0,0,0,0.2)',
+                }}>
+                    {images.map((att, i) => (
+                        <Box
+                            key={`${att.id}-${i}`}
+                            component="img"
+                            src={SocialService.getMediaPreview(att.id, 800, 600)}
+                            alt=""
+                            sx={{
+                                width: '100%',
+                                height: images.length === 1 ? 300 : 180,
+                                objectFit: 'cover',
+                                display: 'block',
+                            }}
+                        />
+                    ))}
+                </Box>
+            ) : null}
+
+            {attachedNote ? (
+                <Paper
+                    variant="outlined"
+                    onClick={wrap(nav?.onOpenNote ? () => nav.onOpenNote!(attachedNote) : undefined)}
+                    sx={{
+                        p: 0,
+                        borderRadius: 4,
+                        bgcolor: '#161412',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        cursor: nav?.onOpenNote ? 'pointer' : 'default',
+                        overflow: 'hidden',
+                        '&:hover': nav?.onOpenNote ? {
+                            borderColor: 'rgba(99,102,241,0.35)',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                        } : undefined,
+                    }}
+                >
+                    <Box sx={{ p: 2, background: 'rgba(99,102,241,0.04)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.25 }}>
+                            <Box sx={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 1.5,
+                                bgcolor: 'rgba(99,102,241,0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mr: 2,
+                            }}>
+                                <FileText size={20} color="#6366F1" strokeWidth={1.5} />
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: 'text.primary' }}>
+                                    {attachedNote.title || 'Untitled Note'}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                    Public Note • {new Date(attachedNote.updatedAt || attachedNote.$updatedAt || Date.now()).toLocaleDateString()}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Typography variant="body2" sx={{
+                            color: 'rgba(255,255,255,0.72)',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.84rem',
+                            lineHeight: 1.45,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 4,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                        }}>
+                            {String(attachedNote.content || '').replace(/[#*`]/g, '')}
+                        </Typography>
+                    </Box>
+                    <Box sx={{ px: 2, py: 1.25, bgcolor: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
+                            Shared via Kylrix Note
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            {noteTags.slice(0, 2).map((tag: string, idx: number) => (
+                                <Box key={idx} sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: 'rgba(255,255,255,0.05)', fontSize: '0.62rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>
+                                    #{tag}
+                                </Box>
+                            ))}
+                        </Box>
+                    </Box>
+                </Paper>
+            ) : null}
+
+            {attachedEvent ? (
+                <Paper
+                    variant="outlined"
+                    onClick={wrap(nav?.onOpenEvent ? () => nav.onOpenEvent!(attachedEvent) : undefined)}
+                    sx={{
+                        p: 0,
+                        borderRadius: 4,
+                        bgcolor: '#161412',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        cursor: nav?.onOpenEvent ? 'pointer' : 'default',
+                        overflow: 'hidden',
+                        '&:hover': nav?.onOpenEvent ? {
+                            borderColor: 'rgba(0,163,255,0.35)',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                        } : undefined,
+                    }}
+                >
+                    <Box sx={{ p: 2, background: 'rgba(0,163,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.25 }}>
+                            <Box sx={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 1.5,
+                                bgcolor: 'rgba(0,163,255,0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mr: 2,
+                            }}>
+                                <Calendar size={20} color="#00A3FF" strokeWidth={1.5} />
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: 'text.primary' }}>
+                                    {attachedEvent.title || 'Untitled Event'}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                    Kylrix Flow Event • {new Date(attachedEvent.startTime || attachedEvent.$createdAt || Date.now()).toLocaleDateString()}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Stack spacing={0.75}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255,255,255,0.6)' }}>
+                                <Clock size={13} strokeWidth={1.5} />
+                                <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
+                                    {attachedEvent.startTime && attachedEvent.endTime
+                                        ? `${new Date(attachedEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} – ${new Date(attachedEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                        : 'Time TBD'}
+                                </Typography>
+                            </Box>
+                            {attachedEvent.location ? (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255,255,255,0.6)' }}>
+                                    <MapPin size={13} strokeWidth={1.5} />
+                                    <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
+                                        {attachedEvent.location}
+                                    </Typography>
+                                </Box>
+                            ) : null}
+                        </Stack>
+                    </Box>
+                    <Box sx={{ px: 2, py: 1.25, bgcolor: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Typography variant="caption" sx={{ color: '#00A3FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
+                            Scheduled via Kylrix Flow
+                        </Typography>
+                    </Box>
+                </Paper>
+            ) : null}
+
+            {attachedCall ? (
+                <Paper
+                    variant="outlined"
+                    onClick={wrap(nav?.onOpenCall ? () => nav.onOpenCall!(attachedCall) : undefined)}
+                    sx={{
+                        p: 0,
+                        borderRadius: 4,
+                        bgcolor: '#161412',
+                        borderColor: 'rgba(255,255,255,0.08)',
+                        cursor: nav?.onOpenCall ? 'pointer' : 'default',
+                        overflow: 'hidden',
+                        '&:hover': nav?.onOpenCall ? {
+                            borderColor: 'rgba(245,158,11,0.35)',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                        } : undefined,
+                    }}
+                >
+                    <Box sx={{ p: 2, background: 'rgba(245,158,11,0.04)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.25 }}>
+                            <Box sx={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 1.5,
+                                bgcolor: 'rgba(245,158,11,0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mr: 2,
+                            }}>
+                                {attachedCall.type === 'video' ? (
+                                    <Video size={20} color="#F59E0B" strokeWidth={1.5} />
+                                ) : (
+                                    <Phone size={20} color="#F59E0B" strokeWidth={1.5} />
+                                )}
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: 'text.primary' }}>
+                                    {attachedCall.title || `${String(attachedCall.type || 'voice').charAt(0).toUpperCase()}${String(attachedCall.type || '').slice(1)} Call`}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                    Kylrix Connect Call • {attachedCall.startsAt ? new Date(attachedCall.startsAt).toLocaleDateString() : 'Scheduled'}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        {attachedCall.startsAt ? (
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.72rem' }}>
+                                Starts: {new Date(attachedCall.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Typography>
+                        ) : null}
+                    </Box>
+                </Paper>
+            ) : null}
+        </Stack>
+    );
+}
+
 type ThreadPostViewProps = {
     name: string;
     handle: string;
     timeLabel: string;
     caption: string;
     attachments?: { type: string; id: string }[];
+    attachedNote?: any;
+    attachedEvent?: any;
+    attachedCall?: any;
+    attachmentNav?: MomentAttachmentNav;
+    stopPropagationOnAttachmentClick?: boolean;
     avatarSrc?: string | null;
     avatarLabel: string;
     replyingTo?: string | null;
@@ -274,7 +537,12 @@ const ThreadPostView = ({
     handle,
     timeLabel,
     caption,
-    attachments: _attachments,
+    attachments,
+    attachedNote,
+    attachedEvent,
+    attachedCall,
+    attachmentNav,
+    stopPropagationOnAttachmentClick,
     avatarSrc,
     avatarLabel,
     replyingTo,
@@ -380,6 +648,14 @@ const ThreadPostView = ({
                     wordBreak: 'break-word',
                 }}
             />
+            <ConnectMomentAttachments
+                attachments={attachments}
+                attachedNote={attachedNote}
+                attachedEvent={attachedEvent}
+                attachedCall={attachedCall}
+                nav={attachmentNav}
+                stopPropagationOnClick={stopPropagationOnAttachmentClick}
+            />
             <Box sx={{ display: 'flex', justifyContent: 'space-between', maxWidth: 425, mt: 1.25, color: 'text.secondary', fontSize: '0.8rem' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                     <IconButton size="small" sx={{ p: 0.35, color: '#536471' }}>
@@ -422,6 +698,10 @@ const QuoteMomentView = ({
     quotedName,
     quotedHandle,
     attachments,
+    attachedNote,
+    attachedEvent,
+    attachedCall,
+    attachmentNav,
     stats,
     onClick,
     onLike,
@@ -439,6 +719,10 @@ const QuoteMomentView = ({
     quotedName: string;
     quotedHandle: string;
     attachments?: { type: string; id: string }[];
+    attachedNote?: any;
+    attachedEvent?: any;
+    attachedCall?: any;
+    attachmentNav?: MomentAttachmentNav;
     stats: { replies?: number; pulses?: number; likes?: number; views?: number };
     onClick?: () => void;
     onLike?: (event: React.MouseEvent) => void;
@@ -513,30 +797,13 @@ const QuoteMomentView = ({
                 />
         )}
 
-        {!!attachments?.length && (
-            <Box sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: attachments.filter((a) => a.type === 'image').length === 1 ? '1fr' : '1fr 1fr',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.08)',
-                bgcolor: 'rgba(0,0,0,0.2)',
-            }}>
-                {attachments.filter((a) => a.type === 'image').map((att, i) => (
-                    <Box
-                        key={`${att.id}-${i}`}
-                        component="img"
-                        src={SocialService.getMediaPreview(att.id, 800, 600)}
-                        sx={{
-                            width: '100%',
-                            height: attachments.filter((a) => a.type === 'image').length === 1 ? 300 : 180,
-                            objectFit: 'cover',
-                        }}
-                    />
-                ))}
-            </Box>
-        )}
+        <ConnectMomentAttachments
+            attachments={attachments}
+            attachedNote={attachedNote}
+            attachedEvent={attachedEvent}
+            attachedCall={attachedCall}
+            nav={attachmentNav}
+        />
 
         <Paper
             sx={{
@@ -556,31 +823,6 @@ const QuoteMomentView = ({
                 {quotedCaption}
             </Typography>
         </Paper>
-
-        {!!attachments?.length && (
-            <Box sx={{
-                display: 'grid',
-                gap: 1,
-                gridTemplateColumns: attachments.filter((a) => a.type === 'image').length === 1 ? '1fr' : '1fr 1fr',
-                borderRadius: '16px',
-                overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.08)',
-                bgcolor: 'rgba(0,0,0,0.2)',
-            }}>
-                {attachments.filter((a) => a.type === 'image').map((att, i) => (
-                    <Box
-                        key={`${att.id}-${i}`}
-                        component="img"
-                        src={SocialService.getMediaPreview(att.id, 800, 600)}
-                        sx={{
-                            width: '100%',
-                            height: attachments.filter((a) => a.type === 'image').length === 1 ? 300 : 180,
-                            objectFit: 'cover',
-                        }}
-                    />
-                ))}
-            </Box>
-        )}
 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', maxWidth: 425, color: 'text.secondary', fontSize: '0.8rem' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
@@ -881,6 +1123,21 @@ export function PostViewClient() {
 
         return { ...data, creator: { ...creator, avatar } };
     }, []);
+
+    const attachmentNav = useMemo<MomentAttachmentNav>(() => ({
+        onOpenNote: (note: any) => {
+            if (!note?.$id) return;
+            router.push(`/note/notes/${note.$id}`);
+        },
+        onOpenEvent: (ev: any) => {
+            if (!ev?.$id) return;
+            router.push(`/flow/events/${ev.$id}`);
+        },
+        onOpenCall: (call: any) => {
+            if (!call?.$id) return;
+            router.push(`/connect/call/${call.$id}`);
+        },
+    }), [router]);
 
     const fetchAncestorThread = useCallback(async (sourceMomentId: string): Promise<any[]> => {
         const ancestors: any[] = [];
@@ -1358,6 +1615,11 @@ export function PostViewClient() {
                                     timeLabel={formatPostTimestamp(ancestor.$createdAt, ancestor.$updatedAt)}
                                     caption={ancestor.caption}
                                     attachments={ancestor.metadata?.attachments}
+                                    attachedNote={ancestor.attachedNote}
+                                    attachedEvent={ancestor.attachedEvent}
+                                    attachedCall={ancestor.attachedCall}
+                                    attachmentNav={attachmentNav}
+                                    stopPropagationOnAttachmentClick
                                     avatarSrc={ancestor.creator?.avatar}
                                     avatarLabel={resolvedAncestor.displayName?.charAt(0).toUpperCase()}
                                     stats={{
@@ -1386,6 +1648,10 @@ export function PostViewClient() {
                                     timeLabel={formatPostTimestamp(moment.$createdAt, moment.$updatedAt)}
                                     caption={moment.caption}
                                     attachments={moment.metadata?.attachments}
+                                    attachedNote={moment.attachedNote}
+                                    attachedEvent={moment.attachedEvent}
+                                    attachedCall={moment.attachedCall}
+                                    attachmentNav={attachmentNav}
                                     avatarSrc={creatorAvatar}
                                     avatarLabel={creatorName.replace(/^@/, '').charAt(0).toUpperCase()}
                                 quotedAvatarSrc={moment.sourceMoment.creator?.avatar}
@@ -1412,6 +1678,10 @@ export function PostViewClient() {
                                 timeLabel={formatPostTimestamp(moment.$createdAt, moment.$updatedAt)}
                                 caption={moment.caption}
                                 attachments={moment.metadata?.attachments}
+                                attachedNote={moment.attachedNote}
+                                attachedEvent={moment.attachedEvent}
+                                attachedCall={moment.attachedCall}
+                                attachmentNav={attachmentNav}
                                 avatarSrc={creatorAvatar}
                                 avatarLabel={creatorName.replace(/^@/, '').charAt(0).toUpperCase()}
                                 replyingTo={moment.metadata?.sourceId && moment.sourceMoment
@@ -1498,6 +1768,12 @@ export function PostViewClient() {
                                         handle={rResolvedCreator.handle}
                                         timeLabel={formatPostTimestamp(reply.$createdAt, reply.$updatedAt)}
                                         caption={reply.caption}
+                                        attachments={reply.metadata?.attachments}
+                                        attachedNote={reply.attachedNote}
+                                        attachedEvent={reply.attachedEvent}
+                                        attachedCall={reply.attachedCall}
+                                        attachmentNav={attachmentNav}
+                                        stopPropagationOnAttachmentClick
                                         avatarSrc={reply.creator?.avatar}
                                         avatarLabel={rCreatorName.replace(/^@/, '').charAt(0).toUpperCase()}
                                         replyingTo={reply.metadata?.sourceId ? `@${creatorName.replace(/^@/, '')}` : null}
