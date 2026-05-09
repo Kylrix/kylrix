@@ -12,4 +12,4 @@ disable-model-invocation: true
 2. Keep scroll containment explicit and prevent overflow clipping.
 3. Ensure clear close/expand affordances and keyboard accessibility.
 4. Keep drawer content concise; split crowded flows.
-
+5. **Spacing & parity:** Follow `.agents/skills/kylrix-muted-v3-design/SKILL.md` — match mobile bottom chrome (`UnifiedBottomBar`), no gradient fills, safe-area padding, full-width tap targets instead of cramped chip grids when listing actions.

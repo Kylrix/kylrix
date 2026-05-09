@@ -19,6 +19,7 @@ single-codebase workflow.
 - `kylrix-navigation-policy`
 - `kylrix-drawer-ui`
 - `kylrix-brand`
+- `kylrix-muted-v3-design`
 - `kylrix-appwrite-audit`
 - `kylrix-sdk-consistency`
 
