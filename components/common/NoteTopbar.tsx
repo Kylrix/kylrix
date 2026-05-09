@@ -126,6 +126,13 @@ export default function NoteTopbar({
       }
       try {
         await reconcileStaleLiveCallPresenceFromClient();
+        // Belt-and-suspenders cleanup: force session-scoped stale call prune via secure accounts API.
+        await fetch('/accounts/api/connect/calls/cleanup', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ userId: user.$id }),
+        }).catch(() => undefined);
         const presence = await ActivityService.getUserPresence(user.$id);
         const raw = String(presence?.customStatus || '');
         if (!raw) {

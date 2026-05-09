@@ -33,6 +33,7 @@ export const ActivityService = {
             // Check if presence record exists
             const existing = await tablesDB.listRows(DB_ID, ACTIVITY_TABLE, [
                 Query.equal('userId', userId),
+                Query.orderDesc('$updatedAt'),
                 Query.limit(1)
             ]);
 
@@ -59,6 +60,7 @@ export const ActivityService = {
     async getUserPresence(userId: string) {
         const result = await tablesDB.listRows(DB_ID, ACTIVITY_TABLE, [
             Query.equal('userId', userId),
+            Query.orderDesc('$updatedAt'),
             Query.limit(1)
         ]);
         return result.rows[0] || null;

@@ -94,7 +94,9 @@ export const APPWRITE_CONFIG = {
             MOMENTS: 'moments',
             INTERACTIONS: 'interactions',
             CONTACTS: 'contacts',
-            KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger'
+            KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger',
+            ENGAGEMENT_VIEWS: 'engagement_views',
+            ENGAGEMENT_VIEW_ROLLUPS: 'engagement_view_rollups'
         },
         CHAT: {
             USERS: 'users',
@@ -114,7 +116,9 @@ export const APPWRITE_CONFIG = {
             MOMENTS: 'moments',
             INTERACTIONS: 'interactions',
             CONTACTS: 'contacts',
-            KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger'
+            KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger',
+            ENGAGEMENT_VIEWS: 'engagement_views',
+            ENGAGEMENT_VIEW_ROLLUPS: 'engagement_view_rollups'
         }
     },
     BUCKETS: {
