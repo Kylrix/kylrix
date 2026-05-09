@@ -99,6 +99,7 @@ export default function NoteTopbar({
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [developersMenuOpen, setDevelopersMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
   const [searchingPeople, setSearchingPeople] = useState(false);
@@ -295,21 +296,25 @@ export default function NoteTopbar({
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
     setMobileMenuOpen(false);
+    setDevelopersMenuOpen(false);
   }, []);
 
   const openSearch = useCallback(() => {
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
+    setDevelopersMenuOpen(false);
     setSearchOpen(true);
   }, []);
 
   const openAppMenu = useCallback((event: MouseEvent<HTMLElement>) => {
     setSearchOpen(false);
+    setDevelopersMenuOpen(false);
     setAppMenuAnchorEl(event.currentTarget);
   }, []);
 
   const openProfileMenu = useCallback((event: MouseEvent<HTMLElement>) => {
     setSearchOpen(false);
+    setDevelopersMenuOpen(false);
     setProfileMenuAnchorEl(event.currentTarget);
   }, []);
 
@@ -340,6 +345,8 @@ export default function NoteTopbar({
       ? 'profile'
       : appMenuAnchorEl
         ? 'ecosystem'
+        : developersMenuOpen
+          ? 'developers'
         : mobileMenuOpen
           ? 'mobile'
           : null;
@@ -979,6 +986,55 @@ export default function NoteTopbar({
     );
   };
 
+  const renderDevelopersPanel = () => {
+    if (!developersMenuOpen) return null;
+
+    return (
+      <motion.div
+        key="developers-panel"
+        initial={appPanelMotion.initial}
+        animate={appPanelMotion.animate}
+        exit={appPanelMotion.exit}
+        transition={appPanelMotion.transition}
+        style={{ width: '100%', transformOrigin: 'top center' }}
+      >
+        <Box sx={{ width: '100%', bgcolor: '#161412', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Box sx={{ px: { xs: 2, md: 4 }, py: 1.5 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              {[
+                { label: 'Developers', href: '/developers' },
+                { label: 'Docs', href: '/docs' },
+              ].map((item) => (
+                <Button
+                  key={item.href}
+                  onClick={() => {
+                    handleCloseAll();
+                    window.location.assign(item.href);
+                  }}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    textAlign: 'left',
+                    px: 1.5,
+                    py: 1.1,
+                    borderRadius: '16px',
+                    color: 'white',
+                    bgcolor: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    textTransform: 'none',
+                    minWidth: { xs: '100%', sm: 180 },
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </Stack>
+          </Box>
+        </Box>
+      </motion.div>
+    );
+  };
+
   return (
     <>
       <AppBar
@@ -1143,6 +1199,78 @@ export default function NoteTopbar({
                   </Button>
                 )}
               </Box>
+            ) : isWebsiteRoute ? (
+              <Stack
+                direction="row"
+                spacing={0.5}
+                alignItems="center"
+                sx={{
+                  flex: 1,
+                  justifyContent: 'center',
+                  display: { xs: 'none', md: 'flex' },
+                }}
+              >
+                <Button
+                  onClick={(event) => {
+                    setSearchOpen(false);
+                    setProfileMenuAnchorEl(null);
+                    setMobileMenuOpen(false);
+                    if (appMenuAnchorEl) {
+                      setAppMenuAnchorEl(null);
+                    } else {
+                      setDevelopersMenuOpen(false);
+                      setAppMenuAnchorEl(event.currentTarget);
+                    }
+                  }}
+                  sx={{
+                    color: 'rgba(255,255,255,0.9)',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    px: 1.75,
+                    borderRadius: '12px',
+                    bgcolor: appMenuAnchorEl ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                  }}
+                >
+                  Products
+                </Button>
+                <Button
+                  onClick={() => window.location.assign('/pricing')}
+                  sx={{
+                    color: 'rgba(255,255,255,0.9)',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    px: 1.75,
+                    borderRadius: '12px',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                  }}
+                >
+                  Pricing
+                </Button>
+                <Button
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setProfileMenuAnchorEl(null);
+                    setAppMenuAnchorEl(null);
+                    setMobileMenuOpen(false);
+                    setDevelopersMenuOpen((prev) => !prev);
+                  }}
+                  sx={{
+                    color: 'rgba(255,255,255,0.9)',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    px: 1.75,
+                    borderRadius: '12px',
+                    bgcolor: developersMenuOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                  }}
+                >
+                  Developers
+                </Button>
+              </Stack>
             ) : (
               <Box sx={{ flex: 1 }} />
             )}
@@ -1282,6 +1410,7 @@ export default function NoteTopbar({
         {renderMobileMenuPanel()}
         {renderSearchPanel()}
         {renderAppPanel()}
+        {renderDevelopersPanel()}
         {renderProfilePanel()}
       </AppBar>
       {isWalletOpen ? <WalletSidebar isOpen={isWalletOpen} onClose={() => setIsWalletOpen(false)} /> : null}
