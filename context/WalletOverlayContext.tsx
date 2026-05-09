@@ -7,7 +7,13 @@ import { WalletSidebar } from '@/components/overlays/WalletSidebar';
 interface WalletOverlayContextType {
   isWalletOpen: boolean;
   openWallet: () => void;
+  openWalletWithIntent: (intent: TokenWalletIntent) => void;
   closeWallet: () => void;
+}
+
+export interface TokenWalletIntent {
+  mode: 'send';
+  toUser: { id: string; username: string; displayName: string } | null;
 }
 
 const WalletOverlayContext = createContext<WalletOverlayContextType | undefined>(undefined);
@@ -17,9 +23,15 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isWalletOpen, setIsWalletOpen] = useState(false);
+  const [tokenIntent, setTokenIntent] = useState<TokenWalletIntent | null>(null);
 
   const openWallet = useCallback(() => setIsWalletOpen(true), []);
+  const openWalletWithIntent = useCallback((intent: TokenWalletIntent) => {
+    setTokenIntent(intent);
+    setIsWalletOpen(true);
+  }, []);
   const closeWallet = useCallback(() => setIsWalletOpen(false), []);
+  const consumeTokenIntent = useCallback(() => setTokenIntent(null), []);
 
   useEffect(() => {
     if (searchParams.get('openWallet') !== 'true') return;
@@ -31,14 +43,21 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
   }, [pathname, router, searchParams]);
 
   const value = useMemo<WalletOverlayContextType>(
-    () => ({ isWalletOpen, openWallet, closeWallet }),
-    [closeWallet, isWalletOpen, openWallet]
+    () => ({ isWalletOpen, openWallet, openWalletWithIntent, closeWallet }),
+    [closeWallet, isWalletOpen, openWallet, openWalletWithIntent]
   );
 
   return (
     <WalletOverlayContext.Provider value={value}>
       {children}
-      {isWalletOpen ? <WalletSidebar isOpen={isWalletOpen} onClose={closeWallet} /> : null}
+      {isWalletOpen ? (
+        <WalletSidebar
+          isOpen={isWalletOpen}
+          onClose={closeWallet}
+          tokenIntent={tokenIntent}
+          onConsumeTokenIntent={consumeTokenIntent}
+        />
+      ) : null}
     </WalletOverlayContext.Provider>
   );
 }

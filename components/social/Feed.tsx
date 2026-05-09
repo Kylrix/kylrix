@@ -79,16 +79,20 @@ const CACHE_KEY = 'kylrix_feed_cache';
 const profileRegistry = new Map<string, any>();
 const momentCardSx = {
     borderRadius: '20px',
-    bgcolor: '#161412',
-    border: '1px solid rgba(255, 255, 255, 0.07)',
-    boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 30px rgba(245, 158, 11, 0.12), 0 22px 48px rgba(0, 0, 0, 0.34)',
+    background: '#161412 !important',
+    backgroundImage: 'none !important',
+    bgcolor: '#161412 !important',
+    border: '1px solid #34322F',
+    boxShadow: 'none',
     overflow: 'hidden',
-    transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'border-color 0.2s ease',
     '&:hover': {
-        bgcolor: '#161412',
-        transform: 'translateY(-2px)',
-        borderColor: 'rgba(245, 158, 11, 0.18)',
-        boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.1), 0 0 38px rgba(245, 158, 11, 0.2), 0 24px 56px rgba(0, 0, 0, 0.38)'
+        background: '#161412 !important',
+        backgroundImage: 'none !important',
+        bgcolor: '#161412 !important',
+        transform: 'none',
+        borderColor: '#34322F',
+        boxShadow: 'none'
     }
 } as const;
 type FeedCacheRecord = {
@@ -170,7 +174,7 @@ const writeFeedCache = (view: string, rows: any[], cachedAt: number = Date.now()
 const FeedSkeleton = () => (
     <Stack spacing={3}>
         {[1, 2, 3].map((i) => (
-                    <Card key={i} sx={{ borderRadius: '20px', bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.07)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.04), 0 0 24px rgba(245, 158, 11, 0.08)' }} elevation={0}>
+                    <Card key={i} sx={{ borderRadius: '20px', background: '#161412 !important', backgroundImage: 'none !important', bgcolor: '#161412 !important', border: '1px solid #34322F', boxShadow: 'none' }} elevation={0}>
                         <CardHeader
                     avatar={<Skeleton variant="circular" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
                     title={<Skeleton width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
@@ -205,6 +209,7 @@ const PostComposer = React.memo(function PostComposer({
     onSubmit,
     onSelectFiles,
     onOpenNote,
+    onPreviewSelectedNote,
     onOpenEvent,
     onOpenCall,
     onClearNote,
@@ -233,6 +238,7 @@ const PostComposer = React.memo(function PostComposer({
     onSubmit: (content: string) => Promise<void>;
     onSelectFiles: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onOpenNote: () => void;
+    onPreviewSelectedNote: () => void;
     onOpenEvent: () => void;
     onOpenCall: () => void;
     onClearNote: () => void;
@@ -303,8 +309,11 @@ const PostComposer = React.memo(function PostComposer({
                     <Card sx={{
                         mb: isMobile ? 0 : 4,
                         borderRadius: isMobile ? '16px' : '24px',
-                        bgcolor: isMobile ? 'transparent' : 'rgba(255, 255, 255, 0.03)',
-                        border: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)'
+                        background: isMobile ? 'transparent' : '#161412',
+                        backgroundImage: 'none',
+                        bgcolor: isMobile ? 'transparent' : '#161412',
+                        border: isMobile ? 'none' : '1px solid #34322F',
+                        boxShadow: 'none'
                     }} elevation={0}>
                         <CardContent sx={{ p: isMobile ? 1 : 3 }}>
                             {isMobile && (
@@ -345,7 +354,11 @@ const PostComposer = React.memo(function PostComposer({
                                 </Box>
                             )}
                             {selectedNote && (
-                                <Paper variant="outlined" sx={{ mt: 2, p: 2, borderRadius: 3, display: 'flex', alignItems: 'center', bgcolor: 'rgba(0, 240, 255, 0.03)', borderColor: 'rgba(0, 240, 255, 0.2)', position: 'relative' }}>
+                                <Paper
+                                    variant="outlined"
+                                    onClick={onPreviewSelectedNote}
+                                    sx={{ mt: 2, p: 2, borderRadius: 3, display: 'flex', alignItems: 'center', bgcolor: 'rgba(0, 240, 255, 0.03)', borderColor: 'rgba(0, 240, 255, 0.2)', position: 'relative', cursor: 'pointer' }}
+                                >
                                     <FileText size={20} color="#6366F1" style={{ marginRight: '16px' }} strokeWidth={1.5} />
                                     <Box sx={{ flex: 1, minWidth: 0 }}>
                                         <Typography variant="subtitle2" fontWeight={800} noWrap>
@@ -355,7 +368,14 @@ const PostComposer = React.memo(function PostComposer({
                                             {selectedNote.content?.substring(0, 60).replace(/[#*`]/g, '')}...
                                         </Typography>
                                     </Box>
-                                    <IconButton size="small" onClick={onClearNote} sx={{ ml: 1 }}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            onClearNote();
+                                        }}
+                                        sx={{ ml: 1 }}
+                                    >
                                         <X size={16} strokeWidth={1.5} />
                                     </IconButton>
                                 </Paper>
@@ -558,6 +578,7 @@ const MobileComposerDock = React.memo(forwardRef<MobileComposerDockHandle, {
     onSubmit: (content: string) => Promise<void>;
     onSelectFiles: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onOpenNote: () => void;
+    onPreviewSelectedNote: () => void;
     onOpenEvent: () => void;
     onOpenCall: () => void;
     onClearNote: () => void;
@@ -585,6 +606,7 @@ function MobileComposerDock({
     onSubmit,
     onSelectFiles,
     onOpenNote,
+    onPreviewSelectedNote,
     onOpenEvent,
     onOpenCall,
     onClearNote,
@@ -695,6 +717,7 @@ function MobileComposerDock({
                 onSubmit={onSubmit}
                 onSelectFiles={onSelectFiles}
                 onOpenNote={onOpenNote}
+                onPreviewSelectedNote={onPreviewSelectedNote}
                 onOpenEvent={onOpenEvent}
                 onOpenCall={onOpenCall}
                 onClearNote={onClearNote}
@@ -767,9 +790,15 @@ const NewPostsWidget = ({ pendingMoments, onClick }: { pendingMoments: any[], on
 
 interface FeedProps {
     view?: 'personal' | 'trending' | 'search';
+    composeIntent?: {
+        noteId: string;
+        noteTitle?: string;
+        noteLink?: string;
+        draftText?: string;
+    } | null;
 }
 
-export const Feed = ({ view = 'personal' }: FeedProps) => {
+export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => {
     const { user } = useAuth();
     const { profile: myProfile } = useProfile();
     const router = useRouter();
@@ -814,10 +843,50 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
     const feedPrefetchRef = React.useRef<Record<string, Promise<void> | undefined>>({});
     const draftInputRef = React.useRef<FastDraftInputHandle | null>(null);
     const mobileComposerDockRef = React.useRef<MobileComposerDockHandle | null>(null);
+    const composeIntentHandledRef = React.useRef<string | null>(null);
     const userAvatarUrl = useCachedProfilePreview(myProfile?.avatar || getCachedIdentityById(user?.$id)?.avatar || ((user?.prefs as any)?.profilePicId as string | undefined) || null, 64, 64);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
+
+    useEffect(() => {
+        if (!composeIntent?.noteId) return;
+        if (composeIntentHandledRef.current === composeIntent.noteId) return;
+
+        const hydrateNoteAttachment = async () => {
+            let noteTitle = composeIntent.noteTitle || 'Shared Note';
+            let noteContent = 'Public shared note attachment';
+
+            if (!noteContent) {
+                try {
+                    const response = await fetch(`/api/shared/${encodeURIComponent(composeIntent.noteId)}`, { cache: 'no-store' });
+                    const payload = await response.json().catch(() => ({}));
+                    if (response.ok && payload) {
+                        noteTitle = String(payload?.title || noteTitle).trim();
+                        noteContent = String(payload?.content || '').slice(0, 240);
+                    }
+                } catch {}
+            }
+
+            setSelectedNote({
+                $id: composeIntent.noteId,
+                title: noteTitle,
+                content: noteContent,
+            });
+            setSelectedEvent(null);
+            setSelectedCall(null);
+            setPulseTarget(null);
+            setSelectedFiles([]);
+            setEditingMoment(null);
+            setHasDraftText(Boolean(composeIntent.draftText || ''));
+            draftInputRef.current?.setValue(composeIntent.draftText || '');
+            mobileComposerDockRef.current?.open();
+            composeIntentHandledRef.current = composeIntent.noteId;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        void hydrateNoteAttachment();
+    }, [composeIntent]);
 
     useLayoutEffect(() => {
         // Hydrate the current view immediately so tab switches feel instant.
@@ -1228,7 +1297,46 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                 }
 
                 const type = pulseTarget ? 'quote' : 'post';
-                const createdMoment = await SocialService.createMoment(user!.$id, draftText, type, mediaIds, 'public', selectedNote?.$id, selectedEvent?.$id, pulseTarget?.$id, selectedCall?.$id);
+                const isPublicNoteSharePost =
+                    type === 'post' &&
+                    Boolean(selectedNote?.$id) &&
+                    !selectedEvent &&
+                    !selectedCall &&
+                    !pulseTarget &&
+                    mediaIds.length === 0;
+
+                let createdMoment: any;
+                let tokenMintResult: any = null;
+
+                if (isPublicNoteSharePost) {
+                    const response = await fetch('/accounts/api/connect/moments/share-note', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            noteId: String(selectedNote.$id),
+                            text: draftText,
+                        }),
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok || !payload?.moment) {
+                        throw new Error(String(payload?.error || 'Failed to share note as moment'));
+                    }
+                    createdMoment = payload.moment;
+                    tokenMintResult = payload.tokenMint || null;
+                } else {
+                    createdMoment = await SocialService.createMoment(
+                        user!.$id,
+                        draftText,
+                        type,
+                        mediaIds,
+                        'public',
+                        selectedNote?.$id,
+                        selectedEvent?.$id,
+                        pulseTarget?.$id,
+                        selectedCall?.$id,
+                    );
+                }
                 
                 // Enrich and add to local state immediately for instant feedback
                 const enriched = await SocialService.enrichMoment(createdMoment, user!.$id);
@@ -1240,6 +1348,22 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     return updated;
                 });
                 toast.success('Moment shared');
+                if (tokenMintResult) {
+                    window.dispatchEvent(
+                        new CustomEvent('kylrix:token-event', {
+                            detail: {
+                                kind: 'mint',
+                                status: tokenMintResult?.accepted ? 'success' : 'failed',
+                                title: tokenMintResult?.accepted ? 'Token Minted' : 'Mint Attempt Recorded',
+                                message: tokenMintResult?.accepted
+                                    ? `You earned ${tokenMintResult?.amount} ${tokenMintResult?.symbol || '$KYLRIX'}.`
+                                    : `Moment posted, but minting did not settle: ${String(tokenMintResult?.reason || 'not eligible right now')}.`,
+                                amount: tokenMintResult?.accepted ? String(tokenMintResult?.amount || '') : null,
+                                symbol: String(tokenMintResult?.symbol || '$KYLRIX'),
+                            },
+                        }),
+                    );
+                }
             }
             handleCancelComposer();
             // Scroll to top to see own post
@@ -1686,6 +1810,11 @@ export const Feed = ({ view = 'personal' }: FeedProps) => {
                     onSubmit={handlePost}
                     onSelectFiles={handleFileSelect}
                     onOpenNote={() => setIsNoteSelectorOpen(true)}
+                    onPreviewSelectedNote={() => {
+                        if (!selectedNote) return;
+                        setViewingNote(selectedNote);
+                        setIsNoteDrawerOpen(true);
+                    }}
                     onOpenEvent={() => setIsEventSelectorOpen(true)}
                     onOpenCall={() => setIsCallSelectorOpen(true)}
                     onClearNote={() => setSelectedNote(null)}

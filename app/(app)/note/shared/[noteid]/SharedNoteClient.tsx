@@ -23,7 +23,6 @@ import { NoteContentRenderer } from '@/components/NoteContentRenderer';
 import PaywallDisplay from '@/components/PaywallDisplay';
 import { 
   createNote, 
-  createMomentFromNote,
   listNotes,
   realtime,
   APPWRITE_DATABASE_ID,
@@ -692,36 +691,14 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
 
     setIsPostingMoment(true);
     try {
-      const result = await createMomentFromNote({
-        $id: verifiedNote.$id,
-      });
-      const moment = result?.moment;
-      if (!moment?.$id) {
-        throw new Error('Moment creation failed');
-      }
-      const mintedAmount = result?.tokenMint?.accepted ? result?.tokenMint?.amount : null;
-
-      showSuccess(
-        'Moment Posted',
-        mintedAmount ? `Posted successfully and minted ${mintedAmount} $KYLRIX.` : 'This note has been posted as a moment.',
+      const noteTitle = encodeURIComponent(String(verifiedNote.title || 'Shared Note'));
+      const noteLink = typeof window !== 'undefined'
+        ? encodeURIComponent(window.location.href)
+        : '';
+      showSuccess('Open Composer', 'Add your text, then post from the Connect composer.');
+      window.location.assign(
+        `${getEcosystemUrl('connect')}/connect?compose=1&noteId=${encodeURIComponent(verifiedNote.$id)}&noteTitle=${noteTitle}&noteLink=${noteLink}`,
       );
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('kylrix:token-event', {
-            detail: {
-              kind: 'mint',
-              status: result?.tokenMint?.accepted ? 'success' : 'failed',
-              title: result?.tokenMint?.accepted ? 'Token Minted' : 'Mint Attempt Recorded',
-              message: result?.tokenMint?.accepted
-                ? `You earned ${result?.tokenMint?.amount} ${result?.tokenMint?.symbol || '$KYLRIX'} for sharing a public note as a moment.`
-                : `Moment posted, but minting did not settle: ${String(result?.tokenMint?.reason || 'not eligible right now')}.`,
-              amount: result?.tokenMint?.accepted ? String(result?.tokenMint?.amount || '') : null,
-              symbol: String(result?.tokenMint?.symbol || '$KYLRIX'),
-            },
-          }),
-        );
-      }
-      window.location.assign(`${getEcosystemUrl('connect')}/post/${moment.$id}`);
     } catch (err: any) {
       showError('Post Failed', err.message || 'Failed to post note as a moment.');
     } finally {

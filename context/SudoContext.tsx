@@ -10,11 +10,12 @@ interface SudoOptions {
     onSuccess: () => void;
     onCancel?: () => void;
     intent?: "unlock" | "initialize" | "reset";
+    forcePrompt?: boolean;
 }
 
 interface SudoContextType {
     requestSudo: (options: SudoOptions) => void;
-    promptSudo: (intent?: "unlock" | "initialize" | "reset") => Promise<boolean>;
+    promptSudo: (intent?: "unlock" | "initialize" | "reset", forcePrompt?: boolean) => Promise<boolean>;
     isUnlocked: boolean;
 }
 
@@ -38,7 +39,7 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     const isUnlocked = ecosystemSecurity.status.isUnlocked;
 
     const requestSudo = useCallback((options: SudoOptions) => {
-        if (ecosystemSecurity.status.isUnlocked) {
+        if (ecosystemSecurity.status.isUnlocked && !options.forcePrompt) {
             options.onSuccess();
             return;
         }
@@ -47,13 +48,14 @@ export function SudoProvider({ children }: { children: ReactNode }) {
         setIsSudoOpen(true);
     }, []);
 
-    const promptSudo = useCallback((intent: "unlock" | "initialize" | "reset" = "unlock") => {
-        if (ecosystemSecurity.status.isUnlocked) return Promise.resolve(true);
+    const promptSudo = useCallback((intent: "unlock" | "initialize" | "reset" = "unlock", forcePrompt = false) => {
+        if (ecosystemSecurity.status.isUnlocked && !forcePrompt) return Promise.resolve(true);
 
         return new Promise<boolean>((resolve) => {
             setSudoPromise({ resolve });
             setPendingAction({ 
                 intent,
+                forcePrompt,
                 onSuccess: () => resolve(true),
                 onCancel: () => resolve(false)
             });

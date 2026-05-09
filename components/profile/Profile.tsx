@@ -39,6 +39,7 @@ import { getProfileView, stageProfileView } from '@/lib/profile-handoff';
 import { IdentityAvatar, IdentityName, computeIdentityFlags } from '../common/IdentityBadge';
 import ReportUserDialog from './ReportUserDialog';
 import { useTokenOps } from '@/context/TokenOpsContext';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 interface ProfileProps {
     username?: string;
@@ -65,6 +66,7 @@ export const Profile = ({ username }: ProfileProps) => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isReportModalOpen, setIsReportModalOpen] = useState(false);
     const { openTokenUserSearch } = useTokenOps();
+    const { openWalletWithIntent } = useWalletOverlay();
 
     const [moments, setMoments] = useState<any[]>([]);
     const [momentsLoading, setMomentsLoading] = useState(false);
@@ -308,11 +310,9 @@ export const Profile = ({ username }: ProfileProps) => {
 
     const handleTip = () => {
         if (!currentUser || !profile) return;
-        openTokenUserSearch({
+        openWalletWithIntent({
             mode: 'send',
-            fromUserId: currentUser.$id,
-            source: 'profile_tip',
-            preselectedUser: {
+            toUser: {
                 id: String(profile.userId || profile.$id || ''),
                 username: String(profile.username || ''),
                 displayName: String(profile.displayName || profile.username || 'User'),

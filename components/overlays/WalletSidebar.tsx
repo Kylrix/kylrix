@@ -34,10 +34,13 @@ import { WalletService, type SupportedWalletChain, type WalletSummary } from '@/
 import { createKylrixTokenOperationsClient } from '@/lib/sdk/token';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { useTokenOps } from '@/context/TokenOpsContext';
+import type { TokenWalletIntent } from '@/context/WalletOverlayContext';
 
 interface WalletSidebarProps {
     isOpen: boolean;
     onClose: () => void;
+    tokenIntent?: TokenWalletIntent | null;
+    onConsumeTokenIntent?: () => void;
 }
 
 const shortenAddress = (address: string) => {
@@ -46,7 +49,7 @@ const shortenAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
-export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
+export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTokenIntent }: WalletSidebarProps) => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user } = useAuth();
@@ -64,6 +67,10 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const [unlockPromptedForSession, setUnlockPromptedForSession] = useState(false);
     const [kylrixBalance, setKylrixBalance] = useState<{ amount: string; symbol: string } | null>(null);
     const { openTokenUserSearch } = useTokenOps();
+    const [showKylrixDetail, setShowKylrixDetail] = useState(false);
+    const [showReceive, setShowReceive] = useState(false);
+    const [kylrixSendAmount, setKylrixSendAmount] = useState('');
+    const [kylrixIntentRecipient, setKylrixIntentRecipient] = useState<{ id: string; username: string; displayName: string } | null>(null);
 
     const ACCENT = '#6366F1';
     const SURFACE = '#161412';
@@ -198,13 +205,107 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     };
 
     const handleKylrixCardClick = () => {
+        setShowKylrixDetail(true);
+        setShowReceive(false);
+    };
+
+    const handleKylrixSend = () => {
         if (!user?.$id) return;
         openTokenUserSearch({
             mode: 'send',
             fromUserId: user.$id,
             source: 'wallet_sidebar',
+            preselectedUser: kylrixIntentRecipient,
+            prefilledAmount: kylrixSendAmount,
         });
     };
+
+    useEffect(() => {
+        if (!isOpen || !tokenIntent || tokenIntent.mode !== 'send') return;
+        setShowKylrixDetail(true);
+        setShowReceive(false);
+        setKylrixIntentRecipient(tokenIntent.toUser || null);
+        onConsumeTokenIntent?.();
+    }, [isOpen, onConsumeTokenIntent, tokenIntent]);
+
+    useEffect(() => {
+        if (!isOpen) {
+            setShowKylrixDetail(false);
+            setShowReceive(false);
+            setKylrixSendAmount('');
+            setKylrixIntentRecipient(null);
+        }
+    }, [isOpen]);
+
+    const renderKylrixDetail = () => (
+        <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Button
+                    size="small"
+                    onClick={() => setShowKylrixDetail(false)}
+                    startIcon={<ChevronLeft size={14} />}
+                    sx={{ color: MUTED, textTransform: 'none', borderRadius: '10px' }}
+                >
+                    Back
+                </Button>
+                <Typography variant="caption" sx={{ color: ACCENT, fontFamily: 'var(--font-satoshi)', fontWeight: 800 }}>
+                    $KYLRIX
+                </Typography>
+            </Stack>
+            <Paper sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, mb: 2 }}>
+                <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)' }}>Balance</Typography>
+                <Typography sx={{ color: ACCENT, fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-mono)' }}>
+                    {kylrixBalance?.amount || '0'} {kylrixBalance?.symbol || '$KYLRIX'}
+                </Typography>
+            </Paper>
+            <Stack gap={1.5} sx={{ mb: 2 }}>
+                <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.9rem' }}>Send</Typography>
+                <Box component="input"
+                    value={kylrixSendAmount}
+                    onChange={(e: any) => setKylrixSendAmount(e.target.value)}
+                    placeholder="Enter amount"
+                    style={{ width: '100%', background: '#1C1A18', border: `1px solid ${EDGE}`, borderRadius: 10, color: 'white', padding: '10px 12px', outline: 'none' }}
+                />
+                {kylrixIntentRecipient ? (
+                    <Typography sx={{ color: MUTED, fontSize: '0.8rem' }}>
+                        Tip target: @{kylrixIntentRecipient.username}
+                    </Typography>
+                ) : null}
+                <Button
+                    onClick={handleKylrixSend}
+                    disabled={!kylrixSendAmount || Number(kylrixSendAmount) <= 0}
+                    variant="contained"
+                    sx={{ bgcolor: ACCENT, color: 'black', borderRadius: '12px', fontWeight: 800, textTransform: 'none' }}
+                >
+                    Select Recipient & Confirm MasterPass
+                </Button>
+            </Stack>
+            <Stack gap={1.5}>
+                <Button
+                    onClick={() => setShowReceive((prev) => !prev)}
+                    variant="outlined"
+                    sx={{ borderColor: EDGE, color: 'white', borderRadius: '12px', textTransform: 'none', fontWeight: 700 }}
+                >
+                    {showReceive ? 'Hide Receive' : 'Receive'}
+                </Button>
+                {showReceive ? (
+                    <Paper sx={{ p: 2, borderRadius: '14px', bgcolor: '#1C1A18', border: `1px solid ${EDGE}` }}>
+                        <Typography sx={{ color: MUTED, fontSize: '0.78rem' }}>Your $KYLRIX Address (User ID)</Typography>
+                        <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.82rem', wordBreak: 'break-all', mb: 1 }}>
+                            {user?.$id || 'Unavailable'}
+                        </Typography>
+                        <Button
+                            size="small"
+                            onClick={() => user?.$id && handleCopyAddress(user.$id)}
+                            sx={{ color: ACCENT, textTransform: 'none', p: 0 }}
+                        >
+                            Copy Address
+                        </Button>
+                    </Paper>
+                ) : null}
+            </Stack>
+        </Box>
+    );
 
     const addableNetworks = useMemo(
         () => WalletService.supportedChains.filter((chain) => !wallets.some((wallet) => wallet.chain === chain)),
@@ -456,6 +557,8 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         </Button>
                     </Paper>
                 </Box>
+            ) : showKylrixDetail ? (
+                renderKylrixDetail()
             ) : (
                 <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5, '&::-webkit-scrollbar': { width: '4px' }, '&::-webkit-scrollbar-thumb': { bgcolor: '#2A2825', borderRadius: '10px' } }}>
                     {/* Simplified Balance Header */}

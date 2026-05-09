@@ -297,11 +297,11 @@ const ThreadPostView = ({
             position: 'relative',
             cursor: onClick ? 'pointer' : 'default',
             bgcolor: variant === 'card' ? '#161412' : 'transparent',
-            border: variant === 'card' ? '1px solid rgba(255,255,255,0.07)' : 'none',
+            border: variant === 'card' ? '1px solid #34322F' : 'none',
             borderRadius: variant === 'card' ? '20px' : 0,
-            boxShadow: variant === 'card' ? '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 30px rgba(245, 158, 11, 0.12), 0 18px 42px rgba(0, 0, 0, 0.34)' : 'none',
+            boxShadow: 'none',
             overflow: 'hidden',
-            '&:hover': onClick ? { bgcolor: variant === 'card' ? '#1F1D1B' : 'rgba(255,255,255,0.02)', borderColor: 'rgba(245, 158, 11, 0.16)' } : undefined,
+            '&:hover': onClick ? { bgcolor: variant === 'card' ? '#161412' : 'rgba(255,255,255,0.02)', borderColor: '#34322F' } : undefined,
         }}
     >
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 1.5, flexShrink: 0, width: 48 }}>
@@ -457,11 +457,11 @@ const QuoteMomentView = ({
             position: 'relative',
             cursor: onClick ? 'pointer' : 'default',
             bgcolor: '#161412',
-            border: '1px solid rgba(255,255,255,0.07)',
+            border: '1px solid #34322F',
             borderRadius: '20px',
-            boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 30px rgba(245, 158, 11, 0.12), 0 18px 42px rgba(0, 0, 0, 0.34)',
+            boxShadow: 'none',
             overflow: 'hidden',
-            '&:hover': onClick ? { bgcolor: '#161412', borderColor: 'rgba(245, 158, 11, 0.16)' } : undefined,
+            '&:hover': onClick ? { bgcolor: '#161412', borderColor: '#34322F' } : undefined,
         }}
     >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
@@ -542,8 +542,8 @@ const QuoteMomentView = ({
                 p: 1.5,
                 borderRadius: '16px',
                 bgcolor: '#161412',
-                border: '1px solid rgba(255,255,255,0.06)',
-                boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 24px rgba(245, 158, 11, 0.08)',
+                border: '1px solid #34322F',
+                boxShadow: 'none',
             }}
         >
             <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.25 }}>
@@ -1335,9 +1335,9 @@ export function PostViewClient() {
                 {(!isQuoteMoment && showAncestors && threadAncestors.length > 0) || moment ? (
                     <Box
                         sx={{
-                            bgcolor: '#000000',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 28px rgba(245, 158, 11, 0.1)',
+                            bgcolor: '#161412',
+                            border: '1px solid #34322F',
+                            boxShadow: 'none',
                             borderRadius: '20px',
                             overflow: 'hidden',
                             maxHeight: { xs: '58dvh', md: '60dvh' },
@@ -1554,7 +1554,7 @@ export function PostViewClient() {
                 </Menu>
 
                 {user && !isMobile && (
-                    <Box id="reply-box" sx={{ mt: 2, p: 1.5, bgcolor: '#161514', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.07)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 24px rgba(245, 158, 11, 0.08)' }}>
+                    <Box id="reply-box" sx={{ mt: 2, p: 1.5, bgcolor: '#161412', borderRadius: '18px', border: '1px solid #34322F', boxShadow: 'none' }}>
                         <Stack direction="row" spacing={2}>
                             <Avatar src={userAvatarUrl || undefined} sx={{ width: 30, height: 30, borderRadius: '8px' }}>
                                 {user.name?.charAt(0)}
@@ -1641,7 +1641,7 @@ export function PostViewClient() {
                                 Add your reply below.
                             </Typography>
 
-                            <Stack direction="row" spacing={2} sx={{ bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '20px', p: 1.5, boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 24px rgba(245, 158, 11, 0.08)' }}>
+                            <Stack direction="row" spacing={2} sx={{ bgcolor: '#161412', border: '1px solid #34322F', borderRadius: '20px', p: 1.5, boxShadow: 'none' }}>
                                 <Avatar src={userAvatarUrl || undefined} sx={{ width: 30, height: 30, borderRadius: '8px' }}>
                                     {user.name?.charAt(0)}
                                 </Avatar>
@@ -1686,10 +1686,10 @@ export function PostViewClient() {
                     onClose={() => setShareDrawerOpen(false)}
                     PaperProps={{
                         sx: {
-                            bgcolor: '#000000',
+                            bgcolor: '#161412',
                             borderTopLeftRadius: '28px',
                             borderTopRightRadius: '28px',
-                            border: '1px solid rgba(255,255,255,0.07)',
+                            border: '1px solid #34322F',
                             backgroundImage: 'none',
                             maxWidth: 720,
                             mx: 'auto',
@@ -1713,9 +1713,9 @@ export function PostViewClient() {
                             sx={{
                                 mb: 1,
                                 borderRadius: '16px',
-                                bgcolor: '#000000',
-                                border: '1px solid rgba(245, 158, 11, 0.14)',
-                                boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 24px rgba(245, 158, 11, 0.08)',
+                                bgcolor: '#161412',
+                                border: '1px solid #34322F',
+                                boxShadow: 'none',
                             }}
                         >
                             <ListItemIcon sx={{ color: '#F59E0B', minWidth: 40 }}>
@@ -1734,9 +1734,9 @@ export function PostViewClient() {
                             onClick={() => { handleCopyLink(); setShareDrawerOpen(false); }}
                             sx={{
                                 borderRadius: '16px',
-                                bgcolor: '#000000',
-                                border: '1px solid rgba(255,255,255,0.07)',
-                                boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.04), 0 0 20px rgba(245, 158, 11, 0.06)',
+                                bgcolor: '#161412',
+                                border: '1px solid #34322F',
+                                boxShadow: 'none',
                             }}
                         >
                             <ListItemIcon sx={{ color: '#6366F1', minWidth: 40 }}>

@@ -52,7 +52,13 @@ type TokenUser = {
 
 interface TokenOpsContextType {
   notifyTokenEvent: (event: TokenEventPayload) => void;
-  openTokenUserSearch: (input: { mode: TokenSearchMode; fromUserId: string; source?: string; preselectedUser?: TokenUser | null }) => void;
+  openTokenUserSearch: (input: {
+    mode: TokenSearchMode;
+    fromUserId: string;
+    source?: string;
+    preselectedUser?: TokenUser | null;
+    prefilledAmount?: string;
+  }) => void;
 }
 
 const TokenOpsContext = createContext<TokenOpsContextType | undefined>(undefined);
@@ -104,14 +110,20 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
     setEventOpen(true);
   }, []);
 
-  const openTokenUserSearch = useCallback((input: { mode: TokenSearchMode; fromUserId: string; source?: string; preselectedUser?: TokenUser | null }) => {
+  const openTokenUserSearch = useCallback((input: {
+    mode: TokenSearchMode;
+    fromUserId: string;
+    source?: string;
+    preselectedUser?: TokenUser | null;
+    prefilledAmount?: string;
+  }) => {
     setSearchMode(input.mode);
     setFromUserId(input.fromUserId);
     setSource(input.source || "wallet");
     setSelectedUser(input.preselectedUser || null);
     setQuery("");
     setResults([]);
-    setAmount("");
+    setAmount(String(input.prefilledAmount || ""));
     setSearchOpen(true);
   }, []);
 
@@ -261,9 +273,9 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const unlocked = await promptSudo("unlock");
+      const unlocked = await promptSudo("unlock", true);
       if (!unlocked) {
-        throw new Error("MasterPass unlock is required.");
+        throw new Error("MasterPass confirmation is required.");
       }
 
       const amountMicro = String(Math.floor(amountNum * 1_000_000));
