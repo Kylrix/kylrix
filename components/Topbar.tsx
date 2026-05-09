@@ -40,6 +40,7 @@ import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { ActivityService } from '@/lib/services/activity';
+import { reconcileStaleLiveCallPresenceFromClient } from '@/lib/client/session-runtime-fetch';
 
 interface TopbarProps {
   userId?: string;
@@ -97,6 +98,7 @@ export default function Topbar({
         return;
       }
       try {
+        await reconcileStaleLiveCallPresenceFromClient();
         const presence = await ActivityService.getUserPresence(userId);
         const raw = String(presence?.customStatus || '');
         if (!raw) {
