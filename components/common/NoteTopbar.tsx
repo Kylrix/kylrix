@@ -1087,16 +1087,32 @@ export default function NoteTopbar({
                   sx={{
                     justifyContent: 'flex-start',
                     textAlign: 'left',
-                    px: 1.25,
-                    py: 1,
-                    borderRadius: '14px',
+                    px: 1.5,
+                    py: 1.1,
+                    borderRadius: '18px',
                     color: 'white',
                     bgcolor: item.selected ? alpha('#6366F1', 0.08) : 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    border: '1px solid transparent',
+                    '&:hover': {
+                      bgcolor: alpha('#6366F1', 0.12),
+                      borderColor: alpha('#6366F1', 0.24),
+                    },
                     textTransform: 'none',
                   }}
                 >
-                  {item.label}
+                  <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
+                    <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(getAppTone(item.app).secondary, 0.08), color: getAppTone(item.app).secondary, flexShrink: 0 }}>
+                      <Logo app={item.app} size={16} variant="icon" />
+                    </Box>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                        {item.label}
+                      </Typography>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                        {item.description}
+                      </Typography>
+                    </Box>
+                  </Stack>
                 </Button>
               ))}
             </Stack>
@@ -1136,10 +1152,26 @@ export default function NoteTopbar({
           )}
 
           {activePanel === 'profile' && (
-            <Stack spacing={0.75}>
+            <Stack spacing={1.1}>
               <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
                 Profile
               </Typography>
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', p: 1.25, borderRadius: '18px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.02)' }}>
+                <Avatar
+                  src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
+                  sx={{ width: 64, height: 64, bgcolor: profileAvatarUrl ? 'rgba(255,255,255,0.04)' : tone.secondary, color: '#fff', fontWeight: 900, borderRadius: '18px' }}
+                >
+                  {profileName.slice(0, 1).toUpperCase()}
+                </Avatar>
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1rem', lineHeight: 1.05 }} noWrap>
+                    {profileName}
+                  </Typography>
+                  <Typography sx={{ color: alpha('#fff', 0.62), fontWeight: 700, fontSize: '0.84rem', lineHeight: 1.35 }} noWrap>
+                    {profileUsername ? `@${String(profileUsername).replace(/^@+/, '')}` : 'profile'}
+                  </Typography>
+                </Box>
+              </Box>
               <Button
                 fullWidth
                 onClick={() => {
