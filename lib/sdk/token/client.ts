@@ -3,6 +3,7 @@ export type KylrixTokenAction =
   | 'initialize'
   | 'mint_activity'
   | 'transfer'
+  | 'balance'
   | 'ledger'
   | 'fine_to_root'
   | 'lock_claim'
@@ -58,6 +59,11 @@ type LedgerRequest = TokenRequestBase & {
   limit?: number;
 };
 
+type BalanceRequest = TokenRequestBase & {
+  action: 'balance';
+  userId?: string;
+};
+
 type FineToRootRequest = TokenRequestBase & {
   action: 'fine_to_root';
   userId: string;
@@ -92,6 +98,7 @@ type TokenOperationRequest =
   | TokenRequestBase
   | MintActivityRequest
   | TransferRequest
+  | BalanceRequest
   | LedgerRequest
   | FineToRootRequest
   | LockClaimRequest
@@ -121,6 +128,7 @@ function validateRequest(request: TokenOperationRequest) {
       assertNonEmpty(request.idempotencyKey, 'idempotencyKey');
       break;
     case 'ledger':
+    case 'balance':
       break;
     case 'fine_to_root':
       assertNonEmpty(request.userId, 'userId');
@@ -183,6 +191,8 @@ export function createKylrixTokenOperationsClient(options: KylrixTokenClientOpti
       execute({ action: 'mint_activity', ...request }),
     transfer: (request: Omit<TransferRequest, 'action'>) =>
       execute({ action: 'transfer', ...request }),
+    getBalance: (request: Omit<BalanceRequest, 'action'> = {}) =>
+      execute({ action: 'balance', ...request }),
     listLedger: (request: Omit<LedgerRequest, 'action'> = {}) =>
       execute({ action: 'ledger', ...request }),
     fineToRoot: (request: Omit<FineToRootRequest, 'action'>) =>

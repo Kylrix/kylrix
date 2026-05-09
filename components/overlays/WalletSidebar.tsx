@@ -30,8 +30,9 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { toast } from 'react-hot-toast';
-import { AppwriteService } from '@/lib/appwrite';
 import { WalletService, type SupportedWalletChain, type WalletSummary } from '@/lib/services/wallets';
+import { createKylrixTokenOperationsClient } from '@/lib/sdk/token';
+import { KeychainService } from '@/lib/appwrite/keychain';
 
 interface WalletSidebarProps {
     isOpen: boolean;
@@ -60,6 +61,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
     const [loadingLabel, setLoadingLabel] = useState('Preparing your secure wallet...');
     const [pendingChain, setPendingChain] = useState<SupportedWalletChain | null>(null);
     const [unlockPromptedForSession, setUnlockPromptedForSession] = useState(false);
+    const [kylrixBalance, setKylrixBalance] = useState<{ amount: string; symbol: string } | null>(null);
 
     const ACCENT = '#6366F1';
     const SURFACE = '#161412';
@@ -82,7 +84,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
 
         setError(null);
 
-        const masterpassPresent = await AppwriteService.hasMasterpass(user.$id);
+        const masterpassPresent = await KeychainService.hasMasterpass(user.$id);
         setHasMasterpass(masterpassPresent);
 
         if (!masterpassPresent) {
@@ -98,11 +100,24 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         setLoadingLabel('Provisioning your T4 wallet mesh...');
 
         try {
-            let readyWallets = await WalletService.ensureMainWallets(user.$id);
+            let readyWallets = await WalletService.listMainWallets(user.$id);
+            if (!readyWallets.length) {
+                readyWallets = await WalletService.ensureMainWallets(user.$id);
+            }
             if (!readyWallets.some((wallet) => wallet.chain === 'sol')) {
                 readyWallets = await WalletService.addNetwork(user.$id, 'sol');
             }
             setWallets(readyWallets);
+            try {
+                const tokenClient = createKylrixTokenOperationsClient();
+                const balance = await tokenClient.getBalance({ userId: user.$id }) as { amount?: string; symbol?: string };
+                setKylrixBalance({
+                    amount: String(balance?.amount || '0'),
+                    symbol: String(balance?.symbol || '$KYLRIX'),
+                });
+            } catch {
+                setKylrixBalance(null);
+            }
         } catch (walletError) {
             console.error('[WalletSidebar] Failed to load wallets', walletError);
             setError(walletError instanceof Error ? walletError.message : 'Failed to load wallet');
@@ -189,6 +204,7 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
         const order: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'btc', 'sui', 'base', 'polygon', 'arbitrum'];
         return [...wallets].sort((a, b) => order.indexOf(a.chain) - order.indexOf(b.chain));
     }, [wallets]);
+    const solWallet = useMemo(() => orderedWallets.find((wallet) => wallet.chain === 'sol') || null, [orderedWallets]);
 
     const getNetworkLogo = (chain: SupportedWalletChain) => {
         const logoMap: Record<SupportedWalletChain, string> = {
@@ -453,85 +469,139 @@ export const WalletSidebar = ({ isOpen, onClose }: WalletSidebarProps) => {
                         </Typography>
                     </Box>
 
-                    {/* Pinned Solana Network */}
-                    {orderedWallets.find(w => w.chain === 'sol') && (
-                        <Stack gap={1.5} sx={{ mb: 4 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
-                                Pinned Network
-                            </Typography>
-                            {(() => {
-                                const solWallet = orderedWallets.find(w => w.chain === 'sol');
-                                return (
-                                    <Paper
-                                        sx={{
-                                            p: 2,
-                                            px: 2.5,
-                                            borderRadius: '20px',
-                                            bgcolor: HIGHLIGHT,
-                                            border: `1px solid ${EDGE}`,
-                                            transition: 'all 0.2s ease',
-                                            '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' }
-                                        }}
-                                    >
-                                        <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
-                                            <Stack direction="row" alignItems="center" gap={2}>
-                                                <Box sx={{ 
-                                                    width: 40, 
-                                                    height: 40, 
-                                                    borderRadius: '12px',
-                                                    bgcolor: '#252321',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: getNetworkColor('sol'),
-                                                    fontWeight: 900,
-                                                    fontSize: '20px'
-                                                }}>
-                                                    {getNetworkLogo('sol')}
-                                                </Box>
-                                                <Box sx={{ minWidth: 0 }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                                                        {solWallet?.label}
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
-                                                        {shortenAddress(solWallet?.address || '')}
-                                                    </Typography>
-                                                </Box>
-                                            </Stack>
-                                            <Stack alignItems="flex-end">
-                                            <Typography variant="body2" sx={{ fontWeight: 900, color: getNetworkColor('sol'), fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-                                                    0.00 {solWallet?.symbol}
-                                                </Typography>
-                                                <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => handleCopyAddress(solWallet?.address || '')}
-                                                        sx={{ p: 0.5, color: MUTED, '&:hover': { color: getNetworkColor('sol') } }}
-                                                    >
-                                                        <Copy size={14} />
-                                                    </IconButton>
-                                                    <IconButton
-                                                        size="small"
-                                                        onClick={() => {
-                                                            if (solWallet) {
-                                                                const explorerUrl = getExplorerUrl(solWallet);
-                                                                if (explorerUrl) {
-                                                                    window.open(explorerUrl, '_blank', 'noopener,noreferrer');
-                                                                }
-                                                            }
-                                                        }}
-                                                        sx={{ p: 0.5, color: MUTED, '&:hover': { color: 'white' } }}
-                                                    >
-                                                        <ExternalLink size={14} />
-                                                    </IconButton>
-                                                </Stack>
-                                            </Stack>
+                    {/* Pinned Solana + KYLRIX */}
+                    <Stack gap={1.5} sx={{ mb: 4 }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: ACCENT, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-satoshi)' }}>
+                            Pinned Network
+                        </Typography>
+                        <Paper
+                            sx={{
+                                p: 2,
+                                px: 2.5,
+                                borderRadius: '20px',
+                                bgcolor: HIGHLIGHT,
+                                border: `1px solid ${EDGE}`,
+                                transition: 'all 0.2s ease',
+                                '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' }
+                            }}
+                        >
+                            <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+                                <Stack direction="row" alignItems="center" gap={2}>
+                                    <Box sx={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: '12px',
+                                        bgcolor: '#252321',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: getNetworkColor('sol'),
+                                        fontWeight: 900,
+                                        fontSize: '20px'
+                                    }}>
+                                        {getNetworkLogo('sol')}
+                                    </Box>
+                                    <Box sx={{ minWidth: 0 }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
+                                            {solWallet?.label || 'Solana'}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
+                                            {solWallet ? shortenAddress(solWallet.address) : 'Provisioning required'}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                                <Stack alignItems="flex-end">
+                                    <Typography variant="body2" sx={{ fontWeight: 900, color: getNetworkColor('sol'), fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+                                        0.00 {solWallet?.symbol || 'SOL'}
+                                    </Typography>
+                                    {solWallet ? (
+                                        <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleCopyAddress(solWallet.address)}
+                                                sx={{ p: 0.5, color: MUTED, '&:hover': { color: getNetworkColor('sol') } }}
+                                            >
+                                                <Copy size={14} />
+                                            </IconButton>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => {
+                                                    const explorerUrl = getExplorerUrl(solWallet);
+                                                    if (explorerUrl) {
+                                                        window.open(explorerUrl, '_blank', 'noopener,noreferrer');
+                                                    }
+                                                }}
+                                                sx={{ p: 0.5, color: MUTED, '&:hover': { color: 'white' } }}
+                                            >
+                                                <ExternalLink size={14} />
+                                            </IconButton>
                                         </Stack>
-                                    </Paper>
-                                );
-                            })()}
-                        </Stack>
-                    )}
+                                    ) : (
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => handleAddNetwork('sol')}
+                                            disabled={pendingChain !== null}
+                                            sx={{
+                                                mt: 0.5,
+                                                minWidth: 0,
+                                                borderRadius: '10px',
+                                                borderColor: EDGE,
+                                                color: 'white',
+                                                textTransform: 'none',
+                                                fontFamily: 'var(--font-satoshi)',
+                                                '&:hover': { bgcolor: HIGHLIGHT, borderColor: '#4A4743' }
+                                            }}
+                                        >
+                                            Add SOL
+                                        </Button>
+                                    )}
+                                </Stack>
+                            </Stack>
+                        </Paper>
+                            <Paper
+                                sx={{
+                                    p: 2,
+                                    px: 2.5,
+                                    borderRadius: '20px',
+                                    bgcolor: HIGHLIGHT,
+                                    border: `1px solid ${EDGE}`,
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': { bgcolor: SURFACE, borderColor: '#4A4743', transform: 'translateX(4px)' }
+                                }}
+                            >
+                                <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2}>
+                                    <Stack direction="row" alignItems="center" gap={2}>
+                                        <Box sx={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: '12px',
+                                            bgcolor: '#252321',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: ACCENT,
+                                            fontWeight: 900,
+                                            fontSize: '16px',
+                                            fontFamily: 'var(--font-mono)'
+                                        }}>
+                                            K
+                                        </Box>
+                                        <Box sx={{ minWidth: 0 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
+                                                Kylrix Token
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ color: MUTED, fontFamily: 'var(--font-mono)', display: 'block' }}>
+                                                {kylrixBalance?.symbol || '$KYLRIX'}
+                                            </Typography>
+                                        </Box>
+                                    </Stack>
+                                    <Typography variant="body2" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+                                        {kylrixBalance?.amount || '0'} {kylrixBalance?.symbol || '$KYLRIX'}
+                                    </Typography>
+                                </Stack>
+                            </Paper>
+                    </Stack>
 
                     {/* Other Live Networks */}
                     {orderedWallets.filter(w => w.chain !== 'sol').length > 0 && (

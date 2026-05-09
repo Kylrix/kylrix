@@ -8,10 +8,10 @@ import * as ecc from 'tiny-secp256k1';
 import { derivePath } from 'ed25519-hd-key';
 import { Keypair } from '@solana/web3.js';
 import { Ed25519Keypair as SuiEd25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { databases as tablesDB } from '../appwrite';
+import { tablesDB } from '../appwrite';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { ecosystemSecurity } from '../ecosystem/security';
-import { updateUser } from '../appwrite';
+import { UsersService } from './users';
 
 bitcoin.initEccLib(ecc);
 
@@ -263,13 +263,13 @@ const parseRootEnvelope = async (encryptedSecret: string): Promise<WalletRootEnv
 };
 
 const listWalletRows = async (userId: string) => {
-    const response = await tablesDB.listDocuments(PASSWORD_MANAGER_DB, WALLETS_TABLE, [
+    const response = await tablesDB.listRows(PASSWORD_MANAGER_DB, WALLETS_TABLE, [
         Query.equal('ownerId', ownerIdForUser(userId)),
         Query.equal('type', 'main'),
         Query.limit(100),
     ]);
 
-    return sortWallets(response.documents);
+    return sortWallets(response.rows);
 };
 
 const createWalletRow = async (
@@ -281,19 +281,28 @@ const createWalletRow = async (
     const address = await deriveAddress(root, chain, cache);
     const encryptedSecret = await ecosystemSecurity.encrypt(JSON.stringify(root));
 
-    return tablesDB.createDocument(
-        PASSWORD_MANAGER_DB,
-        WALLETS_TABLE,
-        ID.unique(),
-        {
-            ownerId: ownerIdForUser(userId),
-            address,
-            chain,
-            encryptedSecret,
-            type: 'main',
-        },
-        walletPermissions(userId)
-    );
+    const walletId = `main-${chain}-${userId}`;
+
+    try {
+        return await tablesDB.createRow(
+            PASSWORD_MANAGER_DB,
+            WALLETS_TABLE,
+            walletId,
+            {
+                ownerId: ownerIdForUser(userId),
+                address,
+                chain,
+                encryptedSecret,
+                type: 'main',
+            },
+            walletPermissions(userId)
+        );
+    } catch (error: any) {
+        if (error?.code === 409) {
+            return await tablesDB.getRow(PASSWORD_MANAGER_DB, WALLETS_TABLE, walletId);
+        }
+        throw error;
+    }
 };
 
 const syncWalletMap = async (userId: string, wallets: any[]) => {
@@ -305,24 +314,24 @@ const syncWalletMap = async (userId: string, wallets: any[]) => {
         )
     );
 
-    const existing = await tablesDB.listDocuments(NOTE_DB, WALLET_MAP_TABLE, [
+    const existing = await tablesDB.listRows(NOTE_DB, WALLET_MAP_TABLE, [
         Query.equal('userId', userId),
         Query.limit(100),
     ]);
 
-    for (const row of existing.documents) {
+    for (const row of existing.rows) {
         if (!publicAddresses.includes(row.walletAddressLower)) {
-            await tablesDB.deleteDocument(NOTE_DB, WALLET_MAP_TABLE, row.$id);
+            await tablesDB.deleteRow(NOTE_DB, WALLET_MAP_TABLE, row.$id);
         }
     }
 
-    const existingAddresses = new Set(existing.documents.map((row: any) => row.walletAddressLower));
+    const existingAddresses = new Set(existing.rows.map((row: any) => row.walletAddressLower));
 
     for (const walletAddressLower of publicAddresses) {
         if (existingAddresses.has(walletAddressLower)) continue;
 
         try {
-            await tablesDB.createDocument(
+            await tablesDB.createRow(
                 NOTE_DB,
                 WALLET_MAP_TABLE,
                 ID.unique(),
@@ -342,9 +351,9 @@ const syncWalletMap = async (userId: string, wallets: any[]) => {
 const publishWalletAddresses = async (userId: string, wallets: any[]) => {
     const serialized = buildPublicWalletPayload(wallets);
 
-    await updateUser(userId, {
+    await UsersService.updateProfile(userId, {
         walletAddress: serialized,
-    } as any);
+    });
 
     await syncWalletMap(userId, wallets);
 };
