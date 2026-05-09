@@ -5,6 +5,9 @@ export interface ApiModulePaths {
     joinRequests: string;
     repair: string;
   };
+  token: {
+    operations: string;
+  };
   forward: {
     conversations: string;
     send: string;
@@ -27,6 +30,9 @@ export function createApiModulePaths(basePath = '/api'): ApiModulePaths {
       reactions: buildApiPath(basePath, 'connect', 'message-reactions'),
       joinRequests: buildApiPath(basePath, 'connect', 'join-requests'),
       repair: buildApiPath(basePath, 'connect', 'repair'),
+    },
+    token: {
+      operations: buildApiPath('/accounts/api', 'token', 'operations'),
     },
     forward: {
       conversations: buildApiPath(basePath, 'forward', 'conversations'),

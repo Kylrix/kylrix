@@ -339,6 +339,156 @@ export const InternalKylrixTokenService = {
     return { accepted: true, debit, credit, amountMicro: toMicro(amount), amount: toToken(amount), symbol: contract.policy.symbol };
   },
 
+  async fineToRoot(input: {
+    userId: string;
+    amountMicro: string;
+    idempotencyKey: string;
+    reason: string;
+    sourceType: string;
+    sourceId: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    const state = await requireStateRow();
+    const amount = asMicro(input.amountMicro);
+    if (amount <= 0n) return { accepted: false, reason: 'INVALID_FINE_AMOUNT' };
+
+    const userBalance = await getLatestBalanceMicro(input.userId);
+    const fineAmount = userBalance >= amount ? amount : userBalance;
+    if (fineAmount <= 0n) return { accepted: false, reason: 'USER_BALANCE_ZERO' };
+
+    const rootId = contract.policy.rootWalletId;
+    const rootBalance = await getLatestBalanceMicro(rootId);
+    const tx = `fine:${input.userId}:${input.sourceId}:${input.idempotencyKey}`;
+
+    const debit = await appendEvent({
+      txId: `${tx}:user`,
+      idempotencyKey: `${input.idempotencyKey}:fine-user`,
+      eventType: 'fine',
+      userId: input.userId,
+      counterpartyUserId: rootId,
+      amountMicro: fineAmount,
+      deltaMicro: -fineAmount,
+      balanceAfterMicro: userBalance - fineAmount,
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+      metadata: { reason: input.reason, ...(input.metadata || {}) },
+    });
+
+    const credit = await appendEvent({
+      txId: `${tx}:root`,
+      idempotencyKey: `${input.idempotencyKey}:fine-root`,
+      eventType: 'recovery',
+      userId: rootId,
+      counterpartyUserId: input.userId,
+      amountMicro: fineAmount,
+      deltaMicro: fineAmount,
+      balanceAfterMicro: rootBalance + fineAmount,
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+      metadata: { reason: input.reason, ...(input.metadata || {}) },
+    });
+
+    await updateStateRow({
+      rootBalanceMicro: toMicro(rootBalance + fineAmount),
+      lastActivityAt: nowIso(),
+      riskLevel: state.riskLevel,
+    });
+
+    return {
+      accepted: true,
+      debit,
+      credit,
+      finedAmountMicro: toMicro(fineAmount),
+      finedAmount: toToken(fineAmount),
+      symbol: contract.policy.symbol,
+    };
+  },
+
+  async lockClaim(input: {
+    userId: string;
+    amountMicro: string;
+    destinationWallet: string;
+    chain: string;
+    idempotencyKey: string;
+  }) {
+    await requireStateRow();
+    const amount = asMicro(input.amountMicro);
+    if (amount <= 0n) return { accepted: false, reason: 'INVALID_CLAIM_AMOUNT' };
+
+    const userBalance = await getLatestBalanceMicro(input.userId);
+    if (userBalance < amount) return { accepted: false, reason: 'INSUFFICIENT_BALANCE' };
+
+    const event = await appendEvent({
+      txId: `claim-lock:${input.userId}:${input.idempotencyKey}`,
+      idempotencyKey: input.idempotencyKey,
+      eventType: 'claim_lock',
+      userId: input.userId,
+      amountMicro: amount,
+      deltaMicro: -amount,
+      balanceAfterMicro: userBalance - amount,
+      status: 'pending',
+      sourceType: 'claim',
+      sourceId: input.destinationWallet,
+      metadata: { destinationWallet: input.destinationWallet, chain: input.chain },
+    });
+
+    await updateStateRow({ lastActivityAt: nowIso() });
+    return {
+      accepted: true,
+      event,
+      lockedAmountMicro: toMicro(amount),
+      lockedAmount: toToken(amount),
+      symbol: contract.policy.symbol,
+    };
+  },
+
+  async settleClaim(input: {
+    userId: string;
+    amountMicro: string;
+    destinationWallet: string;
+    chain: string;
+    onchainTxHash: string;
+    idempotencyKey: string;
+  }) {
+    const state = await requireStateRow();
+    const amount = asMicro(input.amountMicro);
+    if (amount <= 0n) return { accepted: false, reason: 'INVALID_CLAIM_AMOUNT' };
+
+    const event = await appendEvent({
+      txId: `claim-settled:${input.userId}:${input.onchainTxHash}`,
+      idempotencyKey: input.idempotencyKey,
+      eventType: 'claim_settled',
+      userId: input.userId,
+      amountMicro: amount,
+      deltaMicro: 0n,
+      status: 'settled',
+      sourceType: 'claim',
+      sourceId: input.destinationWallet,
+      metadata: {
+        destinationWallet: input.destinationWallet,
+        chain: input.chain,
+        onchainTxHash: input.onchainTxHash,
+      },
+    });
+
+    const nextBurned = asMicro(state.totalBurnedMicro) + amount;
+    const nextMinted = asMicro(state.totalMintedMicro);
+    await updateStateRow({
+      totalBurnedMicro: toMicro(nextBurned),
+      circulatingMicro: toMicro(nextMinted - nextBurned),
+      lastActivityAt: nowIso(),
+    });
+
+    return {
+      accepted: true,
+      event,
+      settledAmountMicro: toMicro(amount),
+      settledAmount: toToken(amount),
+      symbol: contract.policy.symbol,
+      onchainTxHash: input.onchainTxHash,
+    };
+  },
+
   async listUserLedger(userId: string, limit = 100) {
     await requireStateRow();
     const { databases } = createAdminClient();

@@ -90,6 +90,51 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ rows }, { headers: corsHeaders });
     }
 
+    if (action === 'fine_to_root') {
+      if (!admin) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: corsHeaders });
+      }
+      const result = await InternalKylrixTokenService.fineToRoot({
+        userId: String(body?.userId || '').trim(),
+        amountMicro: String(body?.amountMicro || ''),
+        idempotencyKey: String(body?.idempotencyKey || '').trim(),
+        reason: String(body?.reason || 'policy_violation'),
+        sourceType: String(body?.sourceType || 'moderation'),
+        sourceId: String(body?.sourceId || ''),
+        metadata: body?.metadata || undefined,
+      });
+      return NextResponse.json(result, { headers: corsHeaders });
+    }
+
+    if (action === 'lock_claim') {
+      if (!admin) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: corsHeaders });
+      }
+      const result = await InternalKylrixTokenService.lockClaim({
+        userId: String(body?.userId || '').trim(),
+        amountMicro: String(body?.amountMicro || ''),
+        destinationWallet: String(body?.destinationWallet || '').trim(),
+        chain: String(body?.chain || 'sol').trim(),
+        idempotencyKey: String(body?.idempotencyKey || '').trim(),
+      });
+      return NextResponse.json(result, { headers: corsHeaders });
+    }
+
+    if (action === 'settle_claim') {
+      if (!admin) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403, headers: corsHeaders });
+      }
+      const result = await InternalKylrixTokenService.settleClaim({
+        userId: String(body?.userId || '').trim(),
+        amountMicro: String(body?.amountMicro || ''),
+        destinationWallet: String(body?.destinationWallet || '').trim(),
+        chain: String(body?.chain || 'sol').trim(),
+        onchainTxHash: String(body?.onchainTxHash || '').trim(),
+        idempotencyKey: String(body?.idempotencyKey || '').trim(),
+      });
+      return NextResponse.json(result, { headers: corsHeaders });
+    }
+
     return NextResponse.json({ error: `Unsupported action: ${action}` }, { status: 400, headers: corsHeaders });
   } catch (error: any) {
     const message = String(error?.message || 'Token operation failed');
