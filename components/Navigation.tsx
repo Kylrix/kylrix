@@ -143,15 +143,15 @@ export const DesktopSidebar: React.FC = () => {
         flexDirection: 'column',
         position: 'fixed',
         left: 0,
-        top: 0,
-        height: '100vh',
+        top: '88px',
+        height: 'calc(100vh - 88px)',
         bgcolor: '#0A0908',
         borderRight: '1px solid rgba(255, 255, 255, 0.05)',
         boxShadow: '10px 0 30px rgba(0,0,0,0.5), inset -1px 0 0 rgba(0, 0, 0, 0.4)',
         transition: 'width 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         width: isCollapsed ? '80px' : '280px',
         zIndex: 1200,
-        pt: '88px'
+        pt: 0
       }}
     >
       <Box sx={{ 
