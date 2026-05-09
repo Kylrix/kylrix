@@ -380,23 +380,14 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           border: '1px solid',
           borderColor: '#34322F',
           borderRadius: '28px',
-          // Hybrid 3D design: Deep stage shadows + rim lighting
-          boxShadow: (theme) => theme.palette.mode === 'dark' 
-            ? `0 12px 24px -10px rgba(0, 0, 0, 0.8), 
-               0 2px 4px rgba(0,0,0,0.5), 
-               inset 0 1px 0 rgba(255, 255, 255, 0.05),
-               inset 0 -1px 0 rgba(0, 0, 0, 0.4)`
-            : `0 10px 30px rgba(15, 23, 42, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.9)`,
-          transform: 'perspective(1200px) translateY(0px)',
-          transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+          boxShadow: 'none',
+          transform: 'none',
+          transition: 'border-color 0.2s ease',
           '&:hover': {
-            transform: 'perspective(1200px) translateY(-12px) scale(1.02)',
+            transform: 'none',
             borderColor: (theme) => alpha(theme.palette.secondary.main, 0.5),
             bgcolor: NAV_SURFACE,
-            boxShadow: (theme) => theme.palette.mode === 'dark'
-              ? `0 40px 80px -20px rgba(0, 0, 0, 0.9), 
-                 inset 0 1px 0 rgba(255, 255, 255, 0.1)`
-              : `0 30px 60px -15px rgba(15, 23, 42, 0.15), inset 0 1px 1px rgba(255, 255, 255, 1)`,
+            boxShadow: 'none',
           }
         }}
       >
