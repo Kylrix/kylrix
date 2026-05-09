@@ -388,7 +388,7 @@ export default function Topbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -428,7 +428,7 @@ export default function Topbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -535,7 +535,7 @@ export default function Topbar({
         if (username) {
           stageProfileView(profileSeed as any, profileSeed.avatar || null);
           handleCloseAll();
-          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
         }
       }
     };
@@ -701,7 +701,7 @@ export default function Topbar({
                         if (username) {
                           stageProfileView(profileSeed as any, profileSeed.avatar || null);
                           handleCloseAll();
-                          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
                         }
                       }
                     }}
@@ -750,7 +750,7 @@ export default function Topbar({
                     fullWidth
                     onClick={() => {
                       handleCloseAll();
-                      window.location.assign(item.href!);
+                      router.push(item.href!);
                     }}
                     sx={{
                       justifyContent: 'flex-start',

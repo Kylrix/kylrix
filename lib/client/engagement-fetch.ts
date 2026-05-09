@@ -1,5 +1,7 @@
 'use client';
 
+import { trackEngagementViewSecure } from '@/lib/actions/secure-ops';
+
 interface TrackEngagementPayload {
   appId: string;
   contentType: string;
@@ -14,16 +16,12 @@ interface TrackEngagementPayload {
 
 export async function trackEngagementFromClient(payload: TrackEngagementPayload) {
   try {
-    const response = await fetch('/accounts/api/engagement/views', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(payload),
+    return await trackEngagementViewSecure({
+      ...payload,
+      ip: null,
+      userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : null,
+      occurredAt: new Date().toISOString(),
     });
-    return await response.json().catch(() => ({}));
   } catch {
     return { accepted: false, error: 'ENGAGEMENT_TRACK_FAILED' };
   }

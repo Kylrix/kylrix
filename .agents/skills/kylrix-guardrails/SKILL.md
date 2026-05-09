@@ -17,4 +17,5 @@ disable-model-invocation: true
 7. Keep changes surgical and avoid unrelated refactors.
 8. For privileged operations, enforce `ADMINS` email allowlist checks server-side; do not rely only on role labels.
 9. For token/network operations, require explicit singleton state-row checks before allowing mutations.
+10. Do not create or use app-exposed API route surfaces (`/api/*`, `/accounts/api/*`) for core app operations. Implement secure in-code server functions/actions and call those directly from the codebase.
 

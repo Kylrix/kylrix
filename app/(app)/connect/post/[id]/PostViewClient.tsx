@@ -1269,7 +1269,7 @@ export function PostViewClient() {
                         action={
                             <Button color="inherit" size="small" onClick={() => {
                                 const loginUrl = `${getEcosystemUrl('accounts')}/login?source=${encodeURIComponent(window.location.href)}`;
-                                window.location.href = loginUrl;
+                                router.push(loginUrl);
                             }} sx={{ fontWeight: 800 }}>
                                 LOGIN
                             </Button>

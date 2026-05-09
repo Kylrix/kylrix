@@ -168,7 +168,7 @@ export default function VaultTopbar({
         if (username) {
           stageProfileView(profileSeed as any, profileSeed.avatar || null);
           handleCloseAll();
-          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
         }
       }
     };
@@ -319,7 +319,7 @@ export default function VaultTopbar({
                         if (username) {
                           stageProfileView(profileSeed as any, profileSeed.avatar || null);
                           handleCloseAll();
-                          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
                         }
                       }
                     }}
@@ -368,7 +368,7 @@ export default function VaultTopbar({
                     fullWidth
                     onClick={() => {
                       handleCloseAll();
-                      window.location.assign(item.href);
+                      router.push(item.href);
                     }}
                     sx={{
                       justifyContent: 'flex-start',
@@ -487,7 +487,7 @@ export default function VaultTopbar({
                     onClick={() => {
                       if (loading) return;
                       const source = typeof window !== 'undefined' ? window.location.href : '/vault';
-                      window.location.assign(`/accounts/login?source=${encodeURIComponent(source)}`);
+                      router.push(`/accounts/login?source=${encodeURIComponent(source)}`);
                     }}
                     disabled={loading}
                     sx={{

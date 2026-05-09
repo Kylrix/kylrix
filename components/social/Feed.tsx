@@ -72,8 +72,8 @@ import { formatPostTimestamp } from '@/lib/time';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
-import { account } from '@/lib/appwrite/client';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { sharePublicNoteAsMomentSecure } from '@/lib/actions/secure-ops';
 
 import toast from 'react-hot-toast';
 
@@ -1369,24 +1369,11 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                 let tokenMintResult: any = null;
 
                 if (isPublicNoteSharePost) {
-                    let authHeader: Record<string, string> = {};
-                    try {
-                        const jwt = await account.createJWT();
-                        if (jwt?.jwt) authHeader = { Authorization: `Bearer ${jwt.jwt}` };
-                    } catch {}
-                    const response = await fetch('/accounts/api/connect/moments/share-note', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...authHeader },
-                        credentials: 'include',
-                        body: JSON.stringify({
-                            noteId: String(selectedNote.$id),
-                            text: draftText,
-                        }),
+                    const payload = await sharePublicNoteAsMomentSecure({
+                        noteId: String(selectedNote.$id),
+                        text: draftText,
                     });
-                    const payload = await response.json().catch(() => ({}));
-                    if (!response.ok || !payload?.moment) {
-                        throw new Error(String(payload?.error || 'Failed to share note as moment'));
-                    }
+                    if (!payload?.moment) throw new Error('Failed to share note as moment');
                     createdMoment = payload.moment;
                     tokenMintResult = payload.tokenMint || null;
                 } else {

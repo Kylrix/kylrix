@@ -513,7 +513,7 @@ export default function Topbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -553,7 +553,7 @@ export default function Topbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -658,7 +658,7 @@ export default function Topbar({
         if (username) {
           stageProfileView(profileSeed as any, profileSeed.avatar || null);
           handleCloseAll();
-          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
         }
       }
     };
@@ -824,7 +824,7 @@ export default function Topbar({
                         if (username) {
                           stageProfileView(profileSeed as any, profileSeed.avatar || null);
                           handleCloseAll();
-                          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
                         }
                       }
                     }}
@@ -873,7 +873,7 @@ export default function Topbar({
                     fullWidth
                     onClick={() => {
                       handleCloseAll();
-                      window.location.assign(item.href!);
+                      router.push(item.href!);
                     }}
                     sx={{
                       justifyContent: 'flex-start',
@@ -954,7 +954,7 @@ export default function Topbar({
                   fullWidth
                   onClick={() => {
                     handleCloseAll();
-                    window.location.assign(item.href);
+                    router.push(item.href);
                   }}
                   sx={{
                     justifyContent: 'flex-start',
@@ -1018,7 +1018,7 @@ export default function Topbar({
                   if (!username) return;
                   stageProfileView(profileSeed as any, profileSeed.avatar || null);
                   handleCloseAll();
-                  window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                  router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
                 }}
                 sx={{ justifyContent: 'flex-start', px: 1.25, py: 1, borderRadius: '14px', color: 'white', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', textTransform: 'none' }}
               >
@@ -1130,7 +1130,7 @@ export default function Topbar({
                     <Box
                       key={action.id}
                       component="button"
-                      onClick={() => window.location.assign(action.href)}
+                      onClick={() => router.push(action.href)}
                       sx={{
                         width: '100%',
                         display: 'flex',
@@ -1396,7 +1396,7 @@ export default function Topbar({
                         return;
                       }
                       const source = typeof window !== 'undefined' ? window.location.href : '/accounts';
-                      window.location.assign(`/accounts/login?source=${encodeURIComponent(source)}`);
+                      router.push(`/accounts/login?source=${encodeURIComponent(source)}`);
                     }}
                     disabled={authLoading}
                     sx={{

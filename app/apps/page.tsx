@@ -22,6 +22,7 @@ import {
   Waypoints,
   Zap,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import Navbar from '@/components/Navbar';
 import Logo, { KylrixApp } from '@/components/Logo';
@@ -31,6 +32,7 @@ const desktopOrder = ['note', 'vault', 'flow', 'connect', 'accounts'] as const;
 const mobileOrder = ['note', 'vault', 'flow', 'connect'] as const;
 
 export default function AppsPage() {
+  const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [selected, setSelected] = useState<'note' | 'vault' | 'flow' | 'connect' | 'accounts'>('note');
@@ -291,7 +293,7 @@ export default function AppsPage() {
               label={app.label}
               icon={<Logo app={app.id as KylrixApp} size={26} variant="icon" />}
               onClick={() => {
-                window.location.assign(getEcosystemUrl(app.subdomain));
+                router.push(getEcosystemUrl(app.subdomain));
               }}
             />
           ))}

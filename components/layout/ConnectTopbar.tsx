@@ -166,7 +166,7 @@ export default function ConnectTopbar({
         if (username) {
           stageProfileView(profileSeed as any, profileSeed.avatar || null);
           handleCloseAll();
-          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
         }
       }
     };
@@ -313,7 +313,7 @@ export default function ConnectTopbar({
                         if (username) {
                           stageProfileView(profileSeed as any, profileSeed.avatar || null);
                           handleCloseAll();
-                          window.location.href = `${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`;
+                          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
                         }
                       }
                     }}
@@ -362,7 +362,7 @@ export default function ConnectTopbar({
                     fullWidth
                     onClick={() => {
                       handleCloseAll();
-                      window.location.assign(item.href);
+                      router.push(item.href);
                     }}
                     sx={{
                       justifyContent: 'flex-start',
