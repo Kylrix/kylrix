@@ -10,6 +10,7 @@ export type KylrixTokenEventType =
 
 export type KylrixActivityType =
   | 'note_view'
+  | 'share_public_note_moment'
   | 'chat_message'
   | 'call_participation'
   | 'comment'
@@ -36,6 +37,8 @@ export interface KylrixActivitySignal {
   trustScore: number;
   recentSpikeFactorBps: number;
   accountAgeDays: number;
+  userBaseCount?: number;
+  recentActivityCount?: number;
 }
 
 export interface KylrixEmissionSnapshot {
@@ -69,6 +72,7 @@ export const DEFAULT_KYLRIX_TOKEN_POLICY: KylrixTokenPolicy = {
 
 const ACTIVITY_BASE_REWARD_MICRO: Record<KylrixActivityType, bigint> = {
   note_view: 25_000n, // 0.025
+  share_public_note_moment: 650_000n, // 0.65
   chat_message: 15_000n, // 0.015
   call_participation: 70_000n, // 0.07
   comment: 20_000n, // 0.02
@@ -114,8 +118,9 @@ export function createKylrixTokenContract(policy: KylrixTokenPolicy = DEFAULT_KY
   const computeTightenBps = (signal: KylrixActivitySignal) => {
     const spikePenalty = Math.min(policy.spikeTightenBps, Math.max(0, signal.recentSpikeFactorBps));
     const lowTrustPenalty = signal.trustScore < policy.reputationFloor ? 1500 : 0;
+    const repeatPenalty = Math.min(5500, Math.max(0, (signal.recentActivityCount || 0) * 900));
     const ageBoost = signal.accountAgeDays >= 60 ? 800 : signal.accountAgeDays >= 14 ? 300 : 0;
-    const tighten = clampBps(10_000 - spikePenalty - lowTrustPenalty + ageBoost);
+    const tighten = clampBps(10_000 - spikePenalty - lowTrustPenalty - repeatPenalty + ageBoost);
     return tighten;
   };
 
@@ -133,7 +138,9 @@ export function createKylrixTokenContract(policy: KylrixTokenPolicy = DEFAULT_KY
     }
 
     const uniqueActorBoostBps = Math.min(5000, signal.uniqueActors * 70);
-    const boosted = applyBps(base, 10_000 + uniqueActorBoostBps);
+    const userBase = Math.max(1, signal.userBaseCount || 1);
+    const networkScaleBps = userBase <= 500 ? 2500 : userBase <= 2_000 ? 1400 : userBase <= 10_000 ? 500 : -1200;
+    const boosted = applyBps(base, Math.max(2000, 10_000 + uniqueActorBoostBps + networkScaleBps));
     const tightenBps = computeTightenBps(signal);
     let amount = applyBps(boosted, tightenBps);
 

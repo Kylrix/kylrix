@@ -554,35 +554,20 @@ export async function createNote(data: Partial<Notes>) {
   return noteCreationService.createNote(data as any);
 }
 
-export async function createMomentFromNote(note: Pick<Notes, '$id' | 'title' | 'userId'>) {
-  const noteTitle = (note.title || 'Untitled Note').trim();
-  const caption = `Shared note: ${noteTitle}`;
-  const metadata = {
-    type: 'post',
-    attachments: [{ type: 'note', id: note.$id }],
-  };
-
-  return databases.createDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    CONNECT_COLLECTION_ID_MOMENTS,
-    ID.unique(),
-    {
-      userId: note.userId,
-      caption,
-      type: 'image',
-      momentKind: 'post',
-      sourceId: null,
-      searchTitle: noteTitle,
-      fileId: JSON.stringify(metadata),
-      createdAt: new Date().toISOString(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    },
-    [
-      `read("user:${note.userId}")`,
-      `update("user:${note.userId}")`,
-      `delete("user:${note.userId}")`,
-    ],
-  );
+export async function createMomentFromNote(note: Pick<Notes, '$id'>) {
+  const response = await fetch('/accounts/api/connect/moments/share-note', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({
+      noteId: note.$id,
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Failed to share note as moment');
+  }
+  return payload;
 }
 
 export async function getNote(noteId: string): Promise<Notes> {

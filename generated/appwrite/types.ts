@@ -1187,6 +1187,98 @@ export type KylrixTokenLedger = Models.Row & {
     "updatedAt"?: string | null;
 }
 
+export type EngagementViewsCreate = {
+    "rowType": string;
+    "eventId": string;
+    "idempotencyKey": string;
+    "appId": string;
+    "contentType": string;
+    "contentId": string;
+    "ownerUserId"?: string | null;
+    "viewerKind": string;
+    "viewerUserId"?: string | null;
+    "viewerTokenHash"?: string | null;
+    "fingerprintHash"?: string | null;
+    "ipHash"?: string | null;
+    "uaHash"?: string | null;
+    "conversationId"?: string | null;
+    "messageId"?: string | null;
+    "receiptType"?: string | null;
+    "isCounted"?: boolean;
+    "bucketDay": string;
+    "bucketMonth": string;
+    "occurredAt": string;
+    "metadata"?: string | null;
+}
+
+export type EngagementViews = Models.Row & {
+    "rowType": string;
+    "eventId": string;
+    "idempotencyKey": string;
+    "appId": string;
+    "contentType": string;
+    "contentId": string;
+    "ownerUserId"?: string | null;
+    "viewerKind": string;
+    "viewerUserId"?: string | null;
+    "viewerTokenHash"?: string | null;
+    "fingerprintHash"?: string | null;
+    "ipHash"?: string | null;
+    "uaHash"?: string | null;
+    "conversationId"?: string | null;
+    "messageId"?: string | null;
+    "receiptType"?: string | null;
+    "isCounted"?: boolean;
+    "bucketDay": string;
+    "bucketMonth": string;
+    "occurredAt": string;
+    "metadata"?: string | null;
+}
+
+export type EngagementViewRollupsCreate = {
+    "rowType": string;
+    "rollupKey": string;
+    "metricType": string;
+    "appId": string;
+    "scopeType": string;
+    "scopeId": string;
+    "contentType"?: string | null;
+    "contentId"?: string | null;
+    "ownerUserId"?: string | null;
+    "bucketDay": string;
+    "bucketMonth": string;
+    "uniqueViewCount"?: number;
+    "totalViewCount"?: number;
+    "receiptCount"?: number;
+    "weightedScore"?: number;
+    "trustScore"?: number;
+    "lastEventAt"?: string | null;
+    "updatedAt": string;
+    "metadata"?: string | null;
+}
+
+export type EngagementViewRollups = Models.Row & {
+    "rowType": string;
+    "rollupKey": string;
+    "metricType": string;
+    "appId": string;
+    "scopeType": string;
+    "scopeId": string;
+    "contentType"?: string | null;
+    "contentId"?: string | null;
+    "ownerUserId"?: string | null;
+    "bucketDay": string;
+    "bucketMonth": string;
+    "uniqueViewCount"?: number;
+    "totalViewCount"?: number;
+    "receiptCount"?: number;
+    "weightedScore"?: number;
+    "trustScore"?: number;
+    "lastEventAt"?: string | null;
+    "updatedAt": string;
+    "metadata"?: string | null;
+}
+
 declare const __roleStringBrand: unique symbol;
 export type RoleString = string & { readonly [__roleStringBrand]: never };
 
@@ -2268,6 +2360,104 @@ export type DatabaseTableMap = {
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<KylrixTokenLedger>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; notEqual: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; lessThan: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; lessThanEqual: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; greaterThan: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; greaterThanEqual: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; contains: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; search: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<KylrixTokenLedger>>(field: K) => string; isNotNull: <K extends QueryableKeys<KylrixTokenLedger>>(field: K) => string; startsWith: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: string) => string; between: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, start: ExtractQueryValue<KylrixTokenLedger[K]>, end: ExtractQueryValue<KylrixTokenLedger[K]>) => string; select: <K extends keyof KylrixTokenLedger>(fields: K[]) => string; orderAsc: <K extends keyof KylrixTokenLedger>(field: K) => string; orderDesc: <K extends keyof KylrixTokenLedger>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: KylrixTokenLedger[] }>;
+    };
+    "engagement_views": {
+      create: (data: {
+        "rowType": string;
+        "eventId": string;
+        "idempotencyKey": string;
+        "appId": string;
+        "contentType": string;
+        "contentId": string;
+        "ownerUserId"?: string | null;
+        "viewerKind": string;
+        "viewerUserId"?: string | null;
+        "viewerTokenHash"?: string | null;
+        "fingerprintHash"?: string | null;
+        "ipHash"?: string | null;
+        "uaHash"?: string | null;
+        "conversationId"?: string | null;
+        "messageId"?: string | null;
+        "receiptType"?: string | null;
+        "isCounted"?: boolean;
+        "bucketDay": string;
+        "bucketMonth": string;
+        "occurredAt": string;
+        "metadata"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<EngagementViews>;
+      get: (id: string) => Promise<EngagementViews>;
+      update: (id: string, data: Partial<{
+        "rowType": string;
+        "eventId": string;
+        "idempotencyKey": string;
+        "appId": string;
+        "contentType": string;
+        "contentId": string;
+        "ownerUserId"?: string | null;
+        "viewerKind": string;
+        "viewerUserId"?: string | null;
+        "viewerTokenHash"?: string | null;
+        "fingerprintHash"?: string | null;
+        "ipHash"?: string | null;
+        "uaHash"?: string | null;
+        "conversationId"?: string | null;
+        "messageId"?: string | null;
+        "receiptType"?: string | null;
+        "isCounted"?: boolean;
+        "bucketDay": string;
+        "bucketMonth": string;
+        "occurredAt": string;
+        "metadata"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<EngagementViews>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<EngagementViews>>(field: K, value: ExtractQueryValue<EngagementViews[K]>) => string; notEqual: <K extends QueryableKeys<EngagementViews>>(field: K, value: ExtractQueryValue<EngagementViews[K]>) => string; lessThan: <K extends QueryableKeys<EngagementViews>>(field: K, value: ExtractQueryValue<EngagementViews[K]>) => string; lessThanEqual: <K extends QueryableKeys<EngagementViews>>(field: K, value: ExtractQueryValue<EngagementViews[K]>) => string; greaterThan: <K extends QueryableKeys<EngagementViews>>(field: K, value: ExtractQueryValue<EngagementViews[K]>) => string; greaterThanEqual: <K extends QueryableKeys<EngagementViews>>(field: K, value: ExtractQueryValue<EngagementViews[K]>) => string; contains: <K extends QueryableKeys<EngagementViews>>(field: K, value: ExtractQueryValue<EngagementViews[K]>) => string; search: <K extends QueryableKeys<EngagementViews>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<EngagementViews>>(field: K) => string; isNotNull: <K extends QueryableKeys<EngagementViews>>(field: K) => string; startsWith: <K extends QueryableKeys<EngagementViews>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<EngagementViews>>(field: K, value: string) => string; between: <K extends QueryableKeys<EngagementViews>>(field: K, start: ExtractQueryValue<EngagementViews[K]>, end: ExtractQueryValue<EngagementViews[K]>) => string; select: <K extends keyof EngagementViews>(fields: K[]) => string; orderAsc: <K extends keyof EngagementViews>(field: K) => string; orderDesc: <K extends keyof EngagementViews>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: EngagementViews[] }>;
+    };
+    "engagement_view_rollups": {
+      create: (data: {
+        "rowType": string;
+        "rollupKey": string;
+        "metricType": string;
+        "appId": string;
+        "scopeType": string;
+        "scopeId": string;
+        "contentType"?: string | null;
+        "contentId"?: string | null;
+        "ownerUserId"?: string | null;
+        "bucketDay": string;
+        "bucketMonth": string;
+        "uniqueViewCount"?: number;
+        "totalViewCount"?: number;
+        "receiptCount"?: number;
+        "weightedScore"?: number;
+        "trustScore"?: number;
+        "lastEventAt"?: string | null;
+        "updatedAt": string;
+        "metadata"?: string | null;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<EngagementViewRollups>;
+      get: (id: string) => Promise<EngagementViewRollups>;
+      update: (id: string, data: Partial<{
+        "rowType": string;
+        "rollupKey": string;
+        "metricType": string;
+        "appId": string;
+        "scopeType": string;
+        "scopeId": string;
+        "contentType"?: string | null;
+        "contentId"?: string | null;
+        "ownerUserId"?: string | null;
+        "bucketDay": string;
+        "bucketMonth": string;
+        "uniqueViewCount"?: number;
+        "totalViewCount"?: number;
+        "receiptCount"?: number;
+        "weightedScore"?: number;
+        "trustScore"?: number;
+        "lastEventAt"?: string | null;
+        "updatedAt": string;
+        "metadata"?: string | null;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<EngagementViewRollups>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: ExtractQueryValue<EngagementViewRollups[K]>) => string; notEqual: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: ExtractQueryValue<EngagementViewRollups[K]>) => string; lessThan: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: ExtractQueryValue<EngagementViewRollups[K]>) => string; lessThanEqual: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: ExtractQueryValue<EngagementViewRollups[K]>) => string; greaterThan: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: ExtractQueryValue<EngagementViewRollups[K]>) => string; greaterThanEqual: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: ExtractQueryValue<EngagementViewRollups[K]>) => string; contains: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: ExtractQueryValue<EngagementViewRollups[K]>) => string; search: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<EngagementViewRollups>>(field: K) => string; isNotNull: <K extends QueryableKeys<EngagementViewRollups>>(field: K) => string; startsWith: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<EngagementViewRollups>>(field: K, value: string) => string; between: <K extends QueryableKeys<EngagementViewRollups>>(field: K, start: ExtractQueryValue<EngagementViewRollups[K]>, end: ExtractQueryValue<EngagementViewRollups[K]>) => string; select: <K extends keyof EngagementViewRollups>(fields: K[]) => string; orderAsc: <K extends keyof EngagementViewRollups>(field: K) => string; orderDesc: <K extends keyof EngagementViewRollups>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: EngagementViewRollups[] }>;
     }
   };
   "whisperrflow": {

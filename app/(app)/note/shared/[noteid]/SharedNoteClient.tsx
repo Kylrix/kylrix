@@ -673,17 +673,38 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   };
 
   const handlePostAsMoment = async () => {
-    if (!verifiedNote || !user || user.$id !== verifiedNote.userId || isPostingMoment) return;
+    if (!verifiedNote || !user || isPostingMoment) return;
+    const ownerId = String(verifiedNote.userId || '').trim();
+    const collaborators = Array.isArray(verifiedNote.collaborators)
+      ? verifiedNote.collaborators
+          .map((entry: any) => {
+            if (typeof entry === 'string') return entry;
+            if (entry && typeof entry === 'object') return entry.userId || entry.id || '';
+            return '';
+          })
+          .filter(Boolean)
+      : [];
+    const writeCollaborators = Array.isArray(verifiedNoteMeta?.writeCollaborators)
+      ? (verifiedNoteMeta.writeCollaborators as string[])
+      : collaborators;
+    const canPost = user.$id === ownerId || writeCollaborators.includes(user.$id);
+    if (!canPost) return;
 
     setIsPostingMoment(true);
     try {
-      const moment = await createMomentFromNote({
+      const result = await createMomentFromNote({
         $id: verifiedNote.$id,
-        title: verifiedNote.title,
-        userId: verifiedNote.userId,
       });
+      const moment = result?.moment;
+      if (!moment?.$id) {
+        throw new Error('Moment creation failed');
+      }
+      const mintedAmount = result?.tokenMint?.accepted ? result?.tokenMint?.amount : null;
 
-      showSuccess('Moment Posted', 'This note has been posted as a moment.');
+      showSuccess(
+        'Moment Posted',
+        mintedAmount ? `Posted successfully and minted ${mintedAmount} $KYLRIX.` : 'This note has been posted as a moment.',
+      );
       window.location.assign(`${getEcosystemUrl('connect')}/post/${moment.$id}`);
     } catch (err: any) {
       showError('Post Failed', err.message || 'Failed to post note as a moment.');
@@ -746,7 +767,23 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
 
             {/* Duplicate Button Logic */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-              {isAuthenticated && user?.$id === verifiedNote.userId && (verifiedNote.isPublic || isEditableByAnyone) && (
+              {isAuthenticated && (verifiedNote.isPublic || isEditableByAnyone) && (() => {
+                const ownerId = String(verifiedNote.userId || '').trim();
+                const collaborators = Array.isArray(verifiedNote.collaborators)
+                  ? verifiedNote.collaborators
+                      .map((entry: any) => {
+                        if (typeof entry === 'string') return entry;
+                        if (entry && typeof entry === 'object') return entry.userId || entry.id || '';
+                        return '';
+                      })
+                      .filter(Boolean)
+                  : [];
+                const writeCollaborators = Array.isArray(verifiedNoteMeta?.writeCollaborators)
+                  ? (verifiedNoteMeta.writeCollaborators as string[])
+                  : collaborators;
+                const canPost = !!user?.$id && (user.$id === ownerId || writeCollaborators.includes(user.$id));
+                if (!canPost) return null;
+                return (
                 <Button
                   variant="outlined"
                   onClick={handlePostAsMoment}
@@ -766,7 +803,8 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
                 >
                   {isPostingMoment ? 'Posting...' : 'Post as Moment'}
                 </Button>
-              )}
+                );
+              })()}
               {(canStartSharedNoteHuddle || existingHuddleId) && (
                 <Button
                   onClick={existingHuddleId ? handleJoinSharedNoteHuddle : handleStartSharedNoteHuddle}

@@ -107,6 +107,29 @@ async function getUserDailyMinted(userId: string) {
   return rows.documents.reduce((sum, doc: any) => sum + asMicro(doc.amountMicro), 0n);
 }
 
+async function getRecentUserMintActivityCount(userId: string, windowHours = 24) {
+  const { databases } = createAdminClient();
+  const since = new Date(Date.now() - windowHours * 60 * 60 * 1000).toISOString();
+  const rows = await databases.listDocuments(DB_ID, TABLE_ID, [
+    Query.equal('rowType', 'event'),
+    Query.equal('userId', userId),
+    Query.equal('eventType', 'mint_activity'),
+    Query.greaterThanEqual('createdAt', since),
+    Query.limit(200),
+  ]);
+  return rows.documents.length;
+}
+
+async function getTotalUserCount() {
+  const { users } = createAdminClient();
+  try {
+    const response = await users.list([Query.limit(1)]);
+    return Math.max(1, Number(response.total || 1));
+  } catch {
+    return 1;
+  }
+}
+
 async function getRecentSystemVolume(windowMinutes: number) {
   const { databases } = createAdminClient();
   const since = new Date(Date.now() - windowMinutes * 60_000).toISOString();
@@ -226,12 +249,18 @@ export const InternalKylrixTokenService = {
     const state = await requireStateRow();
     const recentVolume = await getRecentSystemVolume(contract.policy.spikeWindowMinutes);
     const userDailyMinted = await getUserDailyMinted(input.userId);
+    const [recentActivityCount, userBaseCount] = await Promise.all([
+      getRecentUserMintActivityCount(input.userId, 24),
+      getTotalUserCount(),
+    ]);
     const signal: KylrixActivitySignal = {
       activityType: input.activityType,
       uniqueActors: input.uniqueActors,
       trustScore: input.trustScore,
       recentSpikeFactorBps: recentVolume >= contract.policy.spikeEventThreshold ? contract.policy.spikeTightenBps : 0,
       accountAgeDays: 0,
+      recentActivityCount,
+      userBaseCount,
     };
 
     const decision = contract.decideMintForActivity(
@@ -262,6 +291,8 @@ export const InternalKylrixTokenService = {
         activityType: input.activityType,
         uniqueActors: input.uniqueActors,
         trustScore: input.trustScore,
+        recentActivityCount,
+        userBaseCount,
         tightenBps: decision.tightenBps,
         ...(input.metadata || {}),
       },

@@ -655,3 +655,49 @@ export type KylrixTokenLedger = Models.Row & {
     lastSpikeAt: string | null;
     updatedAt: string | null;
 }
+
+export type EngagementViews = Models.Row & {
+    rowType: string;
+    eventId: string;
+    idempotencyKey: string;
+    appId: string;
+    contentType: string;
+    contentId: string;
+    ownerUserId: string | null;
+    viewerKind: string;
+    viewerUserId: string | null;
+    viewerTokenHash: string | null;
+    fingerprintHash: string | null;
+    ipHash: string | null;
+    uaHash: string | null;
+    conversationId: string | null;
+    messageId: string | null;
+    receiptType: string | null;
+    isCounted: boolean;
+    bucketDay: string;
+    bucketMonth: string;
+    occurredAt: string;
+    metadata: string | null;
+}
+
+export type EngagementViewRollups = Models.Row & {
+    rowType: string;
+    rollupKey: string;
+    metricType: string;
+    appId: string;
+    scopeType: string;
+    scopeId: string;
+    contentType: string | null;
+    contentId: string | null;
+    ownerUserId: string | null;
+    bucketDay: string;
+    bucketMonth: string;
+    uniqueViewCount: number;
+    totalViewCount: number;
+    receiptCount: number;
+    weightedScore: number;
+    trustScore: number;
+    lastEventAt: string | null;
+    updatedAt: string;
+    metadata: string | null;
+}
