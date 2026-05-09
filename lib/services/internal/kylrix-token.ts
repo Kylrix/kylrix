@@ -70,6 +70,17 @@ async function requireStateRow() {
   return state;
 }
 
+async function requireOrInitializeStateRow() {
+  const state = await getStateRow();
+  if (isInitialized(state)) return state;
+  await InternalKylrixTokenService.initializeState();
+  const initialized = await getStateRow();
+  if (!isInitialized(initialized)) {
+    throw new Error('TOKEN_NOT_INITIALIZED');
+  }
+  return initialized;
+}
+
 async function updateStateRow(patch: Partial<TokenStateRow>) {
   const { databases } = createAdminClient();
   const current = await requireStateRow();
@@ -246,7 +257,7 @@ export const InternalKylrixTokenService = {
     sourceId: string;
     metadata?: Record<string, unknown>;
   }) {
-    const state = await requireStateRow();
+    const state = await requireOrInitializeStateRow();
     const recentVolume = await getRecentSystemVolume(contract.policy.spikeWindowMinutes);
     const userDailyMinted = await getUserDailyMinted(input.userId);
     const [recentActivityCount, userBaseCount] = await Promise.all([

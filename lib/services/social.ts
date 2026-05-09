@@ -280,8 +280,8 @@ export const SocialService = {
             try {
                 if (att.type === 'note') {
                     const note = await tablesDB.getRow(
-                        APPWRITE_CONFIG.DATABASES.KYLRIXNOTE,
-                        APPWRITE_CONFIG.TABLES.KYLRIXNOTE.USERS === '67ff05c900247b5673d3' ? '67ff05f3002502ef239e' : 'notes',
+                        APPWRITE_CONFIG.DATABASES.NOTE,
+                        APPWRITE_CONFIG.TABLES.NOTE.NOTES,
                         att.id
                     );
                     enriched.attachedNote = note;

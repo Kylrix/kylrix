@@ -29,17 +29,19 @@ export default async function EcosystemAliasRedirectPage({
   const subdomain = ALIAS_TO_SUBDOMAIN[alias?.toLowerCase() || ''];
   if (!subdomain) notFound();
 
-  const target = new URL(buildTargetUrl(subdomain, slug || []));
+  const targetPath = buildTargetUrl(subdomain, slug || []);
+  const targetSearchParams = new URLSearchParams();
   if (resolvedSearchParams) {
     for (const [key, value] of Object.entries(resolvedSearchParams)) {
       if (typeof value === 'undefined') continue;
       if (Array.isArray(value)) {
-        for (const item of value) target.searchParams.append(key, item);
+        for (const item of value) targetSearchParams.append(key, item);
       } else {
-        target.searchParams.set(key, value);
+        targetSearchParams.set(key, value);
       }
     }
   }
 
-  redirect(target.toString());
+  const query = targetSearchParams.toString();
+  redirect(query ? `${targetPath}?${query}` : targetPath);
 }

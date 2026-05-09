@@ -691,14 +691,19 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
 
     setIsPostingMoment(true);
     try {
-      const noteTitle = encodeURIComponent(String(verifiedNote.title || 'Shared Note'));
-      const noteLink = typeof window !== 'undefined'
-        ? encodeURIComponent(window.location.href)
-        : '';
+      if (typeof window !== 'undefined') {
+        const payload = {
+          noteId: String(verifiedNote.$id || '').trim(),
+          noteTitle: String(verifiedNote.title || 'Shared Note').trim(),
+          noteContent: String(verifiedNote.content || '').slice(0, 240),
+          noteLink: window.location.href,
+          draftText: '',
+          createdAt: Date.now(),
+        };
+        window.sessionStorage.setItem('kylrix:compose-note-intent', JSON.stringify(payload));
+      }
       showSuccess('Open Composer', 'Add your text, then post from the Connect composer.');
-      window.location.assign(
-        `${getEcosystemUrl('connect')}/connect?compose=1&noteId=${encodeURIComponent(verifiedNote.$id)}&noteTitle=${noteTitle}&noteLink=${noteLink}`,
-      );
+      window.location.assign(`${getEcosystemUrl('connect')}?compose=1`);
     } catch (err: any) {
       showError('Post Failed', err.message || 'Failed to post note as a moment.');
     } finally {

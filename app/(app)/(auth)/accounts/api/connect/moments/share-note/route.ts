@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     }
 
     const noteTitle = String(note?.title || 'Untitled Note').trim();
-    const composed = text ? `${text}\n\nShared note: ${noteTitle}` : `Shared note: ${noteTitle}`;
+    const composed = text;
     const metadata = {
       type: 'post',
       attachments: [{ type: 'note', id: noteId }],

@@ -72,6 +72,8 @@ import { formatPostTimestamp } from '@/lib/time';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
+import { account } from '@/lib/appwrite/client';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 
 import toast from 'react-hot-toast';
 
@@ -633,6 +635,72 @@ function MobileComposerDock({
                 mode: 'compact',
                 label: editingMoment ? 'Edit moment' : 'Compose',
             });
+
+const PostDetailSidebarContent = React.memo(function PostDetailSidebarContent({
+    momentId,
+    onOpenFull,
+}: {
+    momentId: string;
+    onOpenFull: () => void;
+}) {
+    const [moment, setMoment] = useState<any>(null);
+    const [replies, setReplies] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const [root, threadReplies] = await Promise.all([
+                    SocialService.getMomentById(momentId),
+                    SocialService.getReplies(momentId),
+                ]);
+                if (cancelled) return;
+                setMoment(root || null);
+                setReplies(Array.isArray(threadReplies) ? threadReplies : []);
+            } catch {
+                if (cancelled) return;
+                setMoment(null);
+                setReplies([]);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        void load();
+        return () => {
+            cancelled = true;
+        };
+    }, [momentId]);
+
+    return (
+        <Box sx={{ p: 2.5, display: 'grid', gap: 1.5 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography sx={{ color: 'white', fontWeight: 800 }}>Post Details</Typography>
+                <Button size="small" onClick={onOpenFull} sx={{ textTransform: 'none', color: '#A5B4FC' }}>
+                    Expand
+                </Button>
+            </Stack>
+            {loading ? (
+                <CircularProgress size={18} sx={{ color: '#6366F1' }} />
+            ) : moment ? (
+                <>
+                    <Paper sx={{ bgcolor: '#161412', border: '1px solid #34322F', borderRadius: '14px', p: 1.5 }}>
+                        <Typography sx={{ color: '#F5F3F0', whiteSpace: 'pre-wrap' }}>
+                            {String(moment.caption || '').trim() || 'No caption'}
+                        </Typography>
+                    </Paper>
+                    <Typography sx={{ color: '#9B9691', fontSize: '0.84rem' }}>
+                        {replies.length} repl{replies.length === 1 ? 'y' : 'ies'}
+                    </Typography>
+                </>
+            ) : (
+                <Typography sx={{ color: '#C7C2BC', fontSize: '0.9rem' }}>
+                    Could not load this post preview.
+                </Typography>
+            )}
+        </Box>
+    );
+});
             return;
         }
 
@@ -793,6 +861,7 @@ interface FeedProps {
     composeIntent?: {
         noteId: string;
         noteTitle?: string;
+        noteContent?: string;
         noteLink?: string;
         draftText?: string;
     } | null;
@@ -802,6 +871,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
     const { user } = useAuth();
     const { profile: myProfile } = useProfile();
     const router = useRouter();
+    const { openSidebar } = useDynamicSidebar();
     const initialFeedCache = getInitialFeedCache(view);
     const [moments, setMoments] = useState<any[]>(() => initialFeedCache?.rows || []);
     const [loading, setLoading] = useState<boolean>(() => !initialFeedCache);
@@ -854,19 +924,8 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
         if (composeIntentHandledRef.current === composeIntent.noteId) return;
 
         const hydrateNoteAttachment = async () => {
-            let noteTitle = composeIntent.noteTitle || 'Shared Note';
-            let noteContent = 'Public shared note attachment';
-
-            if (!noteContent) {
-                try {
-                    const response = await fetch(`/api/shared/${encodeURIComponent(composeIntent.noteId)}`, { cache: 'no-store' });
-                    const payload = await response.json().catch(() => ({}));
-                    if (response.ok && payload) {
-                        noteTitle = String(payload?.title || noteTitle).trim();
-                        noteContent = String(payload?.content || '').slice(0, 240);
-                    }
-                } catch {}
-            }
+            const noteTitle = composeIntent.noteTitle || 'Shared Note';
+            const noteContent = composeIntent.noteContent || 'Public shared note attachment';
 
             setSelectedNote({
                 $id: composeIntent.noteId,
@@ -1260,6 +1319,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
     };
 
     const handleCancelComposer = useCallback(() => {
+        mobileComposerDockRef.current?.close();
         setEditingMoment(null);
         setHasDraftText(false);
         draftInputRef.current?.clear();
@@ -1309,9 +1369,14 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                 let tokenMintResult: any = null;
 
                 if (isPublicNoteSharePost) {
+                    let authHeader: Record<string, string> = {};
+                    try {
+                        const jwt = await account.createJWT();
+                        if (jwt?.jwt) authHeader = { Authorization: `Bearer ${jwt.jwt}` };
+                    } catch {}
                     const response = await fetch('/accounts/api/connect/moments/share-note', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 'Content-Type': 'application/json', ...authHeader },
                         credentials: 'include',
                         body: JSON.stringify({
                             noteId: String(selectedNote.$id),
@@ -1364,13 +1429,39 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                         }),
                     );
                 }
+                if (isMobile) {
+                    router.push(`/connect/post/${createdMoment.$id}`);
+                } else {
+                    openSidebar(
+                        <PostDetailSidebarContent
+                            momentId={createdMoment.$id}
+                            onOpenFull={() => router.push(`/connect/post/${createdMoment.$id}`)}
+                        />,
+                        `connect_post_${createdMoment.$id}`,
+                    );
+                }
             }
             handleCancelComposer();
             // Scroll to top to see own post
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error: unknown) {
             console.error('Failed to post:', error);
-            toast.error(editingMoment ? 'Failed to update moment' : 'Failed to post moment');
+            const message = String((error as any)?.message || 'Failed to post moment');
+            const isUnauthorized = message.toLowerCase().includes('unauthorized');
+            toast.error(isUnauthorized ? 'Session expired. Please sign in again.' : (editingMoment ? 'Failed to update moment' : 'Failed to post moment'));
+            window.dispatchEvent(
+                new CustomEvent('kylrix:token-event', {
+                    detail: {
+                        kind: 'mint',
+                        status: 'failed',
+                        title: isUnauthorized ? 'Authentication Required' : 'Moment Post Failed',
+                        message: isUnauthorized
+                            ? 'Your session was not accepted by the secure API. Please sign in again, then retry.'
+                            : message,
+                    },
+                }),
+            );
+            handleCancelComposer();
         } finally {
             setPosting(false);
         }
