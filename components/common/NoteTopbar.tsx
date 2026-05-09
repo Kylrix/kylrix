@@ -45,6 +45,7 @@ import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { ActivityService } from '@/lib/services/activity';
+import { reconcileStaleLiveCallPresenceFromClient } from '@/lib/client/session-runtime-fetch';
 
 interface NoteTopbarProps {
   className?: string;
@@ -116,6 +117,7 @@ export default function NoteTopbar({
         return;
       }
       try {
+        await reconcileStaleLiveCallPresenceFromClient();
         const presence = await ActivityService.getUserPresence(user.$id);
         const raw = String(presence?.customStatus || '');
         if (!raw) {
