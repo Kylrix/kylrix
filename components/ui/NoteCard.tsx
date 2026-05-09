@@ -377,6 +377,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           position: 'relative',
           overflow: 'hidden',
           bgcolor: NAV_SURFACE,
+          backgroundImage: 'none',
           border: '1px solid',
           borderColor: '#34322F',
           borderRadius: '28px',
