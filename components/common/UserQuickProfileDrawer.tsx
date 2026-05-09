@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Avatar,
@@ -112,33 +112,33 @@ export default function UserQuickProfileDrawer({
   const displayName = profile?.displayName || user?.displayName || profile?.username || user?.username || 'Person';
   const username = profile?.username || user?.username || null;
   const avatar = profile?.avatar || user?.avatar || null;
-  const wallets = payload?.wallets || [];
+  const wallets = useMemo(() => payload?.wallets ?? [], [payload?.wallets]);
 
-  const messageAction = () => {
+  const messageAction = useCallback(() => {
     if (!activeUserId) return;
     onClose();
     router.push(`/connect/chats?userId=${encodeURIComponent(activeUserId)}`);
-  };
+  }, [activeUserId, onClose, router]);
 
-  const noteAction = () => {
+  const noteAction = useCallback(() => {
     if (!activeUserId) return;
     onClose();
     router.push(`/note/notes?shareTo=${encodeURIComponent(activeUserId)}`);
-  };
+  }, [activeUserId, onClose, router]);
 
-  const flowAction = () => {
+  const flowAction = useCallback(() => {
     if (!activeUserId) return;
     onClose();
     router.push(`/flow/tasks?assignee=${encodeURIComponent(activeUserId)}`);
-  };
+  }, [activeUserId, onClose, router]);
 
-  const openProfileAction = () => {
+  const openProfileAction = useCallback(() => {
     if (!username) return;
     onClose();
     router.push(`/connect/u/${encodeURIComponent(username.replace(/^@+/, ''))}`);
-  };
+  }, [username, onClose, router]);
 
-  const tipAction = async () => {
+  const tipAction = useCallback(async () => {
     if (!wallets.length) {
       toast.error('No published wallet address found for this user.');
       return;
@@ -152,7 +152,7 @@ export default function UserQuickProfileDrawer({
     }
     onClose();
     router.push(`/vault/dashboard?tipTo=${encodeURIComponent(activeUserId)}&address=${encodeURIComponent(target.address)}`);
-  };
+  }, [wallets, activeUserId, onClose, router]);
 
   const appActions = useMemo(() => {
     const actions = [
@@ -169,7 +169,7 @@ export default function UserQuickProfileDrawer({
       actions.push({ label: 'View Profile', onClick: openProfileAction, icon: <Send size={16} /> });
     }
     return actions;
-  }, [currentApp, username]);
+  }, [currentApp, username, flowAction, messageAction, noteAction, openProfileAction, tipAction]);
 
   return (
     <Drawer

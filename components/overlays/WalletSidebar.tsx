@@ -171,7 +171,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             const callbackUrl = encodeURIComponent(baseUrl + '?openWallet=true');
             router.push(`/vault/masterpass?callbackUrl=${callbackUrl}`);
         }
-    }, [isOpen, hasMasterpass]);
+    }, [isOpen, hasMasterpass, router]);
 
     const handleUnlock = () => {
         requestSudo({

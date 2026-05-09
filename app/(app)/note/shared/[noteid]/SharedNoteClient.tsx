@@ -551,6 +551,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     showError,
     user?.$id,
     verifiedNote,
+    router,
   ]);
 
   const handleJoinSharedNoteHuddle = useCallback(() => {

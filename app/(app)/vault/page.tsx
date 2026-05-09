@@ -50,7 +50,7 @@ export default function LandingPage() {
                 lineHeight: 1.6,
                 fontSize: '1.05rem'
               }}>
-                Create powerful, random passwords instantly. No sign-up required. Keep them safe with your vault when you're ready.
+                Create powerful, random passwords instantly. No sign-up required. Keep them safe with your vault when you&apos;re ready.
               </Typography>
             </Box>
 

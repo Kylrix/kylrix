@@ -1,0 +1,23 @@
+
+Oops! Something went wrong! :(
+
+ESLint: 9.39.3
+
+TypeError: Converting circular structure to JSON
+    --> starting at object with constructor 'Object'
+    |     property 'configs' -> object with constructor 'Object'
+    |     property 'flat' -> object with constructor 'Object'
+    |     ...
+    |     property 'plugins' -> object with constructor 'Object'
+    --- property 'react' closes the circle
+Referenced from: 
+    at JSON.stringify (<anonymous>)
+    at file:///home/nathfavour/code/kylrix/kylrix/node_modules/.pnpm/@eslint+eslintrc@3.3.4/node_modules/@eslint/eslintrc/lib/shared/config-validator.js:308:45
+    at Array.map (<anonymous>)
+    at ConfigValidator.formatErrors (file:///home/nathfavour/code/kylrix/kylrix/node_modules/.pnpm/@eslint+eslintrc@3.3.4/node_modules/@eslint/eslintrc/lib/shared/config-validator.js:299:23)
+    at ConfigValidator.validateConfigSchema (file:///home/nathfavour/code/kylrix/kylrix/node_modules/.pnpm/@eslint+eslintrc@3.3.4/node_modules/@eslint/eslintrc/lib/shared/config-validator.js:330:84)
+    at ConfigArrayFactory._normalizeConfigData (file:///home/nathfavour/code/kylrix/kylrix/node_modules/.pnpm/@eslint+eslintrc@3.3.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js:676:19)
+    at ConfigArrayFactory._loadConfigData (file:///home/nathfavour/code/kylrix/kylrix/node_modules/.pnpm/@eslint+eslintrc@3.3.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js:641:21)
+    at ConfigArrayFactory._loadExtendedShareableConfig (file:///home/nathfavour/code/kylrix/kylrix/node_modules/.pnpm/@eslint+eslintrc@3.3.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js:946:21)
+    at ConfigArrayFactory._loadExtends (file:///home/nathfavour/code/kylrix/kylrix/node_modules/.pnpm/@eslint+eslintrc@3.3.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js:814:25)
+    at ConfigArrayFactory._normalizeObjectConfigDataBody (file:///home/nathfavour/code/kylrix/kylrix/node_modules/.pnpm/@eslint+eslintrc@3.3.4/node_modules/@eslint/eslintrc/lib/config-array-factory.js:752:25)

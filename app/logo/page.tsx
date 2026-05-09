@@ -78,9 +78,9 @@ export default function LogoPage() {
 
           <Grid container spacing={8}>
             <Grid size={{ xs: 12, md: 6 }}>
-              <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>The "K" Skeleton</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800, mb: 3 }}>{'The "K" Skeleton'}</Typography>
               <Typography sx={{ opacity: 0.7, lineHeight: 1.8 }}>
-                Every app in the Kylrix ecosystem is a mutation of the same structural "K". This ensures 
+                Every app in the Kylrix ecosystem is a mutation of the same structural {'"K"'}. This ensures 
                 that while each tool has its own visual personality, they are all clearly part of the 
                 same autonomous lineage.
               </Typography>

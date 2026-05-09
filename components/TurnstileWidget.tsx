@@ -27,9 +27,11 @@ export function TurnstileWidget({ onToken, onError, onExpire, theme = 'auto', si
   const errorCallbackRef = useRef(onError);
   const expireCallbackRef = useRef(onExpire);
 
-  tokenCallbackRef.current = onToken;
-  errorCallbackRef.current = onError;
-  expireCallbackRef.current = onExpire;
+  useEffect(() => {
+    tokenCallbackRef.current = onToken;
+    errorCallbackRef.current = onError;
+    expireCallbackRef.current = onExpire;
+  }, [onToken, onError, onExpire]);
 
   useEffect(() => {
     if (!containerRef.current || !TURNSTILE_SITE_KEY) return;

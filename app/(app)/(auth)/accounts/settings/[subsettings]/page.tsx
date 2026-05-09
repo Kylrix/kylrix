@@ -203,7 +203,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
     } finally {
       setGiftLoading(false);
     }
-  }, [giftMonths, giftUsername]);
+  }, [giftMonths, giftUsername, router]);
 
   const refreshTwoFactorStatus = useCallback(async () => {
     try {

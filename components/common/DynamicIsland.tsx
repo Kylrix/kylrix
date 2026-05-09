@@ -564,7 +564,7 @@ export const DynamicIslandPanelSurface: React.FC<{
 }> = ({ panel, onClosePanel }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'), { noSsr: true });
-  const _router = useRouter();
+  const router = useRouter();
   const { user, logout: _logout } = useAuth();
 
   const panelTone = panel === 'profile' ? '#6366F1' : APP_TONES.connect.secondary;

@@ -98,7 +98,7 @@ export default function SudoModal({
     const handleRedirectToVaultSetup = useCallback(() => {
         const callbackUrl = encodeURIComponent(window.location.href);
         router.push(`/vault/masterpass?callbackUrl=${callbackUrl}`);
-    }, []);
+    }, [router]);
 
     const handlePasswordVerify = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -225,7 +225,7 @@ export default function SudoModal({
             setPasskeyLoading(false);
             setIsDetecting(true);
         }
-    }, [isOpen, user?.$id, intent, handleRedirectToVaultSetup]);
+    }, [isOpen, user?.$id, intent, handleRedirectToVaultSetup, router]);
 
     useEffect(() => {
         if (isOpen && mode === "passkey" && hasPasskey && !passkeyLoading) {

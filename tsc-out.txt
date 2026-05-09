@@ -1,0 +1,410 @@
+.next/types/validator.ts(755,39): error TS2307: Cannot find module '../../app/(app)/(auth)/accounts/api/connect/calls/cleanup/route.js' or its corresponding type declarations.
+components/common/DynamicIsland.tsx(655,38): error TS2552: Cannot find name 'router'. Did you mean '_router'?
+components/layout/Header.tsx(135,40): error TS2304: Cannot find name 'pathname'.
+components/social/Feed.tsx(1423,26): error TS2304: Cannot find name 'PostDetailSidebarContent'.
+generated/appwrite/types.ts(1383,117): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1383,217): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1383,317): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1383,422): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1383,525): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1383,633): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1383,733): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1383,1196): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1383,1230): error TS2536: Type 'K' cannot be used to index type 'Notes'.
+generated/appwrite/types.ts(1410,116): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1410,214): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1410,312): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1410,415): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1410,516): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1410,622): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1410,720): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1410,1176): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1410,1209): error TS2536: Type 'K' cannot be used to index type 'Tags'.
+generated/appwrite/types.ts(1429,120): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1429,226): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1429,332): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1429,443): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1429,552): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1429,666): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1429,772): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1429,1256): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1429,1293): error TS2536: Type 'K' cannot be used to index type 'Comments'.
+generated/appwrite/types.ts(1456,122): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1456,232): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1456,342): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1456,457): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1456,570): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1456,688): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1456,798): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1456,1296): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1456,1335): error TS2536: Type 'K' cannot be used to index type 'Extensions'.
+generated/appwrite/types.ts(1494,125): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1494,241): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1494,357): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1494,478): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1494,597): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1494,721): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1494,837): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1494,1356): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1494,1398): error TS2536: Type 'K' cannot be used to index type 'Collaborators'.
+generated/appwrite/types.ts(1515,123): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1515,235): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1515,347): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1515,464): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1515,579): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1515,699): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1515,811): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1515,1316): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1515,1356): error TS2536: Type 'K' cannot be used to index type 'ActivityLog'.
+generated/appwrite/types.ts(1534,120): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1534,226): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1534,332): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1534,443): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1534,552): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1534,666): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1534,772): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1534,1256): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1534,1293): error TS2536: Type 'K' cannot be used to index type 'Settings'.
+generated/appwrite/types.ts(1549,121): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1549,229): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1549,337): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1549,450): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1549,561): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1549,677): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1549,785): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1549,1276): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1549,1314): error TS2536: Type 'K' cannot be used to index type 'WalletMap'.
+generated/appwrite/types.ts(1568,120): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1568,226): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1568,332): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1568,443): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1568,552): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1568,666): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1568,772): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1568,1256): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1568,1293): error TS2536: Type 'K' cannot be used to index type 'NoteTags'.
+generated/appwrite/types.ts(1597,125): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1597,241): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1597,357): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1597,478): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1597,597): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1597,721): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1597,837): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1597,1356): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1597,1398): error TS2536: Type 'K' cannot be used to index type 'NoteRevisions'.
+generated/appwrite/types.ts(1622,125): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1622,241): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1622,357): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1622,478): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1622,597): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1622,721): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1622,837): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1622,1356): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1622,1398): error TS2536: Type 'K' cannot be used to index type 'Subscriptions'.
+generated/appwrite/types.ts(1651,124): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1651,238): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1651,352): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1651,471): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1651,588): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1651,710): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1651,824): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1651,1336): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1651,1377): error TS2536: Type 'K' cannot be used to index type 'SecurityLogs'.
+generated/appwrite/types.ts(1712,123): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1712,235): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1712,347): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1712,464): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1712,579): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1712,699): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1712,811): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1712,1316): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1712,1356): error TS2536: Type 'K' cannot be used to index type 'Credentials'.
+generated/appwrite/types.ts(1751,122): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1751,232): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1751,342): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1751,457): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1751,570): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1751,688): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1751,798): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1751,1296): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1751,1335): error TS2536: Type 'K' cannot be used to index type 'Identities'.
+generated/appwrite/types.ts(1784,116): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1784,214): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1784,312): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1784,415): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1784,516): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1784,622): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1784,720): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1784,1176): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1784,1209): error TS2536: Type 'K' cannot be used to index type 'User'.
+generated/appwrite/types.ts(1813,119): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1813,223): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1813,327): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1813,436): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1813,543): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1813,655): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1813,759): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1813,1236): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1813,1272): error TS2536: Type 'K' cannot be used to index type 'Folders'.
+generated/appwrite/types.ts(1856,123): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1856,235): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1856,347): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1856,464): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1856,579): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1856,699): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1856,811): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1856,1316): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1856,1356): error TS2536: Type 'K' cannot be used to index type 'TotpSecrets'.
+generated/appwrite/types.ts(1883,120): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1883,226): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1883,332): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1883,443): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1883,552): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1883,666): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1883,772): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1883,1256): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1883,1293): error TS2536: Type 'K' cannot be used to index type 'Keychain'.
+generated/appwrite/types.ts(1902,122): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1902,232): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1902,342): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1902,457): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1902,570): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1902,688): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1902,798): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1902,1296): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1902,1335): error TS2536: Type 'K' cannot be used to index type 'KeyMapping'.
+generated/appwrite/types.ts(1950,120): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(1950,226): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(1950,332): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(1950,443): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(1950,552): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(1950,666): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(1950,772): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(1950,1256): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(1950,1293): error TS2536: Type 'K' cannot be used to index type 'Messages'.
+generated/appwrite/types.ts(2025,125): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2025,241): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2025,357): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2025,478): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2025,597): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2025,721): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2025,837): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2025,1356): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2025,1398): error TS2536: Type 'K' cannot be used to index type 'Conversations'.
+generated/appwrite/types.ts(2056,120): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2056,226): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2056,332): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2056,443): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2056,552): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2056,666): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2056,772): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2056,1256): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2056,1293): error TS2536: Type 'K' cannot be used to index type 'Contacts'.
+generated/appwrite/types.ts(2077,119): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2077,223): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2077,327): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2077,436): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2077,543): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2077,655): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2077,759): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2077,1236): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2077,1272): error TS2536: Type 'K' cannot be used to index type 'Follows'.
+generated/appwrite/types.ts(2094,123): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2094,235): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2094,347): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2094,464): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2094,579): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2094,699): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2094,811): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2094,1316): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2094,1356): error TS2536: Type 'K' cannot be used to index type 'AppActivity'.
+generated/appwrite/types.ts(2138,119): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2138,223): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2138,327): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2138,436): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2138,543): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2138,655): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2138,759): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2138,1236): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2138,1272): error TS2536: Type 'K' cannot be used to index type 'Moments'.
+generated/appwrite/types.ts(2163,117): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2163,217): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2163,317): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2163,422): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2163,525): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2163,633): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2163,733): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2163,1196): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2163,1230): error TS2536: Type 'K' cannot be used to index type 'Calls'.
+generated/appwrite/types.ts(2218,120): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2218,226): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2218,332): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2218,443): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2218,552): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2218,666): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2218,772): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2218,1256): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2218,1293): error TS2536: Type 'K' cannot be used to index type 'Profiles'.
+generated/appwrite/types.ts(2260,124): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2260,238): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2260,352): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2260,471): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2260,588): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2260,710): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2260,824): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2260,1336): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2260,1377): error TS2536: Type 'K' cannot be used to index type 'JoinRequests'.
+generated/appwrite/types.ts(2303,127): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2303,247): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2303,367): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2303,492): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2303,615): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2303,743): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2303,863): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2303,1396): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2303,1440): error TS2536: Type 'K' cannot be used to index type 'UnorganicEmails'.
+generated/appwrite/types.ts(2362,129): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2362,253): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2362,377): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2362,506): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2362,633): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2362,765): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2362,889): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2362,1436): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2362,1482): error TS2536: Type 'K' cannot be used to index type 'KylrixTokenLedger'.
+generated/appwrite/types.ts(2413,127): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2413,247): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2413,367): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2413,492): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2413,615): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2413,743): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2413,863): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2413,1396): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2413,1440): error TS2536: Type 'K' cannot be used to index type 'EngagementViews'.
+generated/appwrite/types.ts(2460,133): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2460,265): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2460,397): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2460,534): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2460,669): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2460,809): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2460,941): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2460,1516): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2460,1566): error TS2536: Type 'K' cannot be used to index type 'EngagementViewRollups'.
+generated/appwrite/types.ts(2483,125): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2483,241): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2483,357): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2483,478): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2483,597): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2483,721): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2483,837): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2483,1356): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2483,1398): error TS2536: Type 'K' cannot be used to index type 'FocusSessions'.
+generated/appwrite/types.ts(2502,123): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2502,235): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2502,347): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2502,464): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2502,579): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2502,699): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2502,811): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2502,1316): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2502,1356): error TS2536: Type 'K' cannot be used to index type 'EventGuests'.
+generated/appwrite/types.ts(2537,118): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2537,220): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2537,322): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2537,429): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2537,534): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2537,644): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2537,746): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2537,1216): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2537,1251): error TS2536: Type 'K' cannot be used to index type 'Events'.
+generated/appwrite/types.ts(2554,121): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2554,229): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2554,337): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2554,450): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2554,561): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2554,677): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2554,785): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2554,1276): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2554,1314): error TS2536: Type 'K' cannot be used to index type 'Calendars'.
+generated/appwrite/types.ts(2587,117): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2587,217): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2587,317): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2587,422): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2587,525): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2587,633): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2587,733): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2587,1196): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2587,1230): error TS2536: Type 'K' cannot be used to index type 'Tasks'.
+generated/appwrite/types.ts(2610,117): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2610,217): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2610,317): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2610,422): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2610,525): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2610,633): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2610,733): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2610,1196): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2610,1230): error TS2536: Type 'K' cannot be used to index type 'Forms'.
+generated/appwrite/types.ts(2629,127): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2629,247): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2629,367): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2629,492): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2629,615): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2629,743): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2629,863): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2629,1396): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2629,1440): error TS2536: Type 'K' cannot be used to index type 'FormSubmissions'.
+generated/appwrite/types.ts(2648,118): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+generated/appwrite/types.ts(2648,220): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+generated/appwrite/types.ts(2648,322): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+generated/appwrite/types.ts(2648,429): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+generated/appwrite/types.ts(2648,534): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+generated/appwrite/types.ts(2648,644): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+generated/appwrite/types.ts(2648,746): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+generated/appwrite/types.ts(2648,1216): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+generated/appwrite/types.ts(2648,1251): error TS2536: Type 'K' cannot be used to index type 'Agents'.
+lib/sdk/security/masterpass.test.ts(2,10): error TS2305: Module '"./masterpass"' has no exported member 'MasterpassState'.
+lib/sdk/security/masterpass.test.ts(2,27): error TS2305: Module '"./masterpass"' has no exported member 'unwrapMasterKey'.
+lib/sdk/security/masterpass.test.ts(2,44): error TS2305: Module '"./masterpass"' has no exported member 'wrapMasterKey'.
+lib/sdk/token/client.ts(121,30): error TS2339: Property 'userId' does not exist on type 'TokenRequestBase | MintActivityRequest'.
+  Property 'userId' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(122,30): error TS2339: Property 'idempotencyKey' does not exist on type 'TokenRequestBase | MintActivityRequest'.
+  Property 'idempotencyKey' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(123,30): error TS2339: Property 'sourceId' does not exist on type 'TokenRequestBase | MintActivityRequest'.
+  Property 'sourceId' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(124,30): error TS2339: Property 'sourceType' does not exist on type 'TokenRequestBase | MintActivityRequest'.
+  Property 'sourceType' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(127,30): error TS2339: Property 'fromUserId' does not exist on type 'TokenRequestBase | TransferRequest'.
+  Property 'fromUserId' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(128,30): error TS2339: Property 'toUserId' does not exist on type 'TokenRequestBase | TransferRequest'.
+  Property 'toUserId' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(129,30): error TS2339: Property 'amountMicro' does not exist on type 'TokenRequestBase | TransferRequest'.
+  Property 'amountMicro' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(130,30): error TS2339: Property 'idempotencyKey' does not exist on type 'TokenRequestBase | TransferRequest'.
+  Property 'idempotencyKey' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(136,30): error TS2339: Property 'userId' does not exist on type 'TokenRequestBase | FineToRootRequest'.
+  Property 'userId' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(137,30): error TS2339: Property 'amountMicro' does not exist on type 'TokenRequestBase | FineToRootRequest'.
+  Property 'amountMicro' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(138,30): error TS2339: Property 'idempotencyKey' does not exist on type 'TokenRequestBase | FineToRootRequest'.
+  Property 'idempotencyKey' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(139,30): error TS2339: Property 'reason' does not exist on type 'TokenRequestBase | FineToRootRequest'.
+  Property 'reason' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(142,30): error TS2339: Property 'userId' does not exist on type 'TokenRequestBase | LockClaimRequest'.
+  Property 'userId' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(143,30): error TS2339: Property 'amountMicro' does not exist on type 'TokenRequestBase | LockClaimRequest'.
+  Property 'amountMicro' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(144,30): error TS2339: Property 'destinationWallet' does not exist on type 'TokenRequestBase | LockClaimRequest'.
+  Property 'destinationWallet' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(145,30): error TS2339: Property 'idempotencyKey' does not exist on type 'TokenRequestBase | LockClaimRequest'.
+  Property 'idempotencyKey' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(148,30): error TS2339: Property 'userId' does not exist on type 'TokenRequestBase | SettleClaimRequest'.
+  Property 'userId' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(149,30): error TS2339: Property 'amountMicro' does not exist on type 'TokenRequestBase | SettleClaimRequest'.
+  Property 'amountMicro' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(150,30): error TS2339: Property 'destinationWallet' does not exist on type 'TokenRequestBase | SettleClaimRequest'.
+  Property 'destinationWallet' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(151,30): error TS2339: Property 'onchainTxHash' does not exist on type 'TokenRequestBase | SettleClaimRequest'.
+  Property 'onchainTxHash' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/client.ts(152,30): error TS2339: Property 'idempotencyKey' does not exist on type 'TokenRequestBase | SettleClaimRequest'.
+  Property 'idempotencyKey' does not exist on type 'TokenRequestBase'.
+lib/sdk/token/index.ts(2,1): error TS2308: Module './contract' has already exported a member named 'KylrixActivityType'. Consider explicitly re-exporting to resolve the ambiguity.

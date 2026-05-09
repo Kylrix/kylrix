@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { 
   AppBar, 
   Toolbar, 
@@ -58,6 +58,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   const { openAIModal } = useAI();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const router = useRouter();
+  const pathname = usePathname();
   const { openWallet } = useWalletOverlay();
 
   const [anchorElAccount, setAnchorElAccount] = useState<null | HTMLElement>(null);

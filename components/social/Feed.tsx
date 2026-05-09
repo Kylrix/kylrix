@@ -560,6 +560,72 @@ const PostComposer = React.memo(function PostComposer({
     );
 });
 
+const PostDetailSidebarContent = React.memo(function PostDetailSidebarContent({
+    momentId,
+    onOpenFull,
+}: {
+    momentId: string;
+    onOpenFull: () => void;
+}) {
+    const [moment, setMoment] = useState<any>(null);
+    const [replies, setReplies] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            try {
+                const [root, threadReplies] = await Promise.all([
+                    SocialService.getMomentById(momentId),
+                    SocialService.getReplies(momentId),
+                ]);
+                if (cancelled) return;
+                setMoment(root || null);
+                setReplies(Array.isArray(threadReplies) ? threadReplies : []);
+            } catch {
+                if (cancelled) return;
+                setMoment(null);
+                setReplies([]);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        void load();
+        return () => {
+            cancelled = true;
+        };
+    }, [momentId]);
+
+    return (
+        <Box sx={{ p: 2.5, display: 'grid', gap: 1.5 }}>
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Typography sx={{ color: 'white', fontWeight: 800 }}>Post Details</Typography>
+                <Button size="small" onClick={onOpenFull} sx={{ textTransform: 'none', color: '#A5B4FC' }}>
+                    Expand
+                </Button>
+            </Stack>
+            {loading ? (
+                <CircularProgress size={18} sx={{ color: '#6366F1' }} />
+            ) : moment ? (
+                <>
+                    <Paper sx={{ bgcolor: '#161412', border: '1px solid #34322F', borderRadius: '14px', p: 1.5 }}>
+                        <Typography sx={{ color: '#F5F3F0', whiteSpace: 'pre-wrap' }}>
+                            {String(moment.caption || '').trim() || 'No caption'}
+                        </Typography>
+                    </Paper>
+                    <Typography sx={{ color: '#9B9691', fontSize: '0.84rem' }}>
+                        {replies.length} repl{replies.length === 1 ? 'y' : 'ies'}
+                    </Typography>
+                </>
+            ) : (
+                <Typography sx={{ color: '#C7C2BC', fontSize: '0.9rem' }}>
+                    Could not load this post preview.
+                </Typography>
+            )}
+        </Box>
+    );
+});
+
 type MobileComposerDockHandle = {
     open: () => void;
     close: () => void;
@@ -635,72 +701,6 @@ function MobileComposerDock({
                 mode: 'compact',
                 label: editingMoment ? 'Edit moment' : 'Compose',
             });
-
-const PostDetailSidebarContent = React.memo(function PostDetailSidebarContent({
-    momentId,
-    onOpenFull,
-}: {
-    momentId: string;
-    onOpenFull: () => void;
-}) {
-    const [moment, setMoment] = useState<any>(null);
-    const [replies, setReplies] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        let cancelled = false;
-        const load = async () => {
-            try {
-                const [root, threadReplies] = await Promise.all([
-                    SocialService.getMomentById(momentId),
-                    SocialService.getReplies(momentId),
-                ]);
-                if (cancelled) return;
-                setMoment(root || null);
-                setReplies(Array.isArray(threadReplies) ? threadReplies : []);
-            } catch {
-                if (cancelled) return;
-                setMoment(null);
-                setReplies([]);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        };
-        void load();
-        return () => {
-            cancelled = true;
-        };
-    }, [momentId]);
-
-    return (
-        <Box sx={{ p: 2.5, display: 'grid', gap: 1.5 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <Typography sx={{ color: 'white', fontWeight: 800 }}>Post Details</Typography>
-                <Button size="small" onClick={onOpenFull} sx={{ textTransform: 'none', color: '#A5B4FC' }}>
-                    Expand
-                </Button>
-            </Stack>
-            {loading ? (
-                <CircularProgress size={18} sx={{ color: '#6366F1' }} />
-            ) : moment ? (
-                <>
-                    <Paper sx={{ bgcolor: '#161412', border: '1px solid #34322F', borderRadius: '14px', p: 1.5 }}>
-                        <Typography sx={{ color: '#F5F3F0', whiteSpace: 'pre-wrap' }}>
-                            {String(moment.caption || '').trim() || 'No caption'}
-                        </Typography>
-                    </Paper>
-                    <Typography sx={{ color: '#9B9691', fontSize: '0.84rem' }}>
-                        {replies.length} repl{replies.length === 1 ? 'y' : 'ies'}
-                    </Typography>
-                </>
-            ) : (
-                <Typography sx={{ color: '#C7C2BC', fontSize: '0.9rem' }}>
-                    Could not load this post preview.
-                </Typography>
-            )}
-        </Box>
-    );
-});
             return;
         }
 

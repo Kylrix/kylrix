@@ -93,7 +93,7 @@ export default function SudoModal({
     const handleRedirectToVaultSetup = useCallback(() => {
         const callbackUrl = encodeURIComponent(window.location.href);
         router.push(`/vault/masterpass?callbackUrl=${callbackUrl}`);
-    }, []);
+    }, [router]);
 
     const handlePasskeyVerify = useCallback(async () => {
         if (!user?.$id || !isOpen) return;
@@ -166,7 +166,7 @@ export default function SudoModal({
             setPasskeyLoading(false);
             setIsDetecting(true);
         }
-    }, [isOpen, user?.$id, intent, handleRedirectToVaultSetup]);
+    }, [isOpen, user?.$id, intent, handleRedirectToVaultSetup, isKylrixDomain, router]);
 
     useEffect(() => {
         if (isOpen && mode === "passkey" && hasPasskey && !passkeyLoading) {

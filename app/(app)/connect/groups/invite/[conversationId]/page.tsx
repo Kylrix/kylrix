@@ -59,7 +59,7 @@ export default function HangoutInvitePage() {
     const loginUrl = new URL('/accounts/login', window.location.origin);
     loginUrl.searchParams.set('source', inviteUrl);
     router.replace(loginUrl.toString());
-  }, [inviteUrl, isLoading, user]);
+  }, [inviteUrl, isLoading, user, router]);
 
   useEffect(() => {
     if (!conversationId || isLoading) return;

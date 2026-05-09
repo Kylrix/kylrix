@@ -43,6 +43,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const initAuthStarted = useRef(false);
   const router = useRouter();
   const pathname = usePathname();
+  const refreshUserRef = useRef<() => Promise<User | null>>(async () => null);
+  const attemptSilentAuthRef = useRef<() => Promise<void>>(async () => {});
 
   // 2. Background Revalidation (Mandatory account.get)
   const attemptSilentAuth = useCallback(async () => {
@@ -72,7 +74,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           event.data?.type === 'idm:auth-status' &&
           event.data.status === 'authenticated'
         ) {
-          refreshUser();
+          void refreshUserRef.current?.();
           cleanup();
           resolve();
         } else if (event.data?.type === 'idm:auth-status') {
@@ -94,6 +96,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
   }, []);
 
+  attemptSilentAuthRef.current = attemptSilentAuth;
+
   const refreshUser = useCallback(async (): Promise<User | null> => {
     try {
       // Use the pre-started global promise for maximum speed
@@ -109,8 +113,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       } else {
         // If local session check fails, try silent auth
-        await attemptSilentAuth();
-        
+        await attemptSilentAuthRef.current?.();
+
         // Re-check session after silent auth might have succeeded
         const retrySession = await getCurrentUser(true);
         if (retrySession) {
@@ -130,7 +134,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
-  }, [attemptSilentAuth]);
+  }, []);
+
+  refreshUserRef.current = refreshUser;
 
   useEffect(() => {
     if (initAuthStarted.current) return;
@@ -193,7 +199,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     idmWindowRef.current = windowRef;
     setIDMWindowOpen(true);
-  }, [isAuthenticating, pathname]);
+  }, [isAuthenticating, pathname, router]);
 
 
   const logout = useCallback(async () => {

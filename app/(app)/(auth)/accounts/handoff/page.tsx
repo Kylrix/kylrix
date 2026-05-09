@@ -74,7 +74,7 @@ function AppHandoffContent() {
       }
       throw _error;
     }
-  }, [getLoginMethod]);
+  }, [getLoginMethod, router]);
 
   useEffect(() => {
     let mounted = true;
@@ -153,7 +153,7 @@ function AppHandoffContent() {
     return () => {
       mounted = false;
     };
-  }, [finishHandoff, getLoginMethod, searchParams, setRedirectUri, setSource]);
+  }, [finishHandoff, getLoginMethod, searchParams, setRedirectUri, setSource, router]);
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#000', px: 3 }}>
