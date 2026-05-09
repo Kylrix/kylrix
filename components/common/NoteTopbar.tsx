@@ -1265,49 +1265,200 @@ export default function NoteTopbar({
           )}
 
           {activePanel === 'search' && (
-            <Stack spacing={1}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.75rem', letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 800 }}>
-                Search
-              </Typography>
-              <TextField
-                inputRef={searchInputRef}
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search notes, people, shared links"
-                size="small"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                    color: 'white',
-                    bgcolor: '#0A0908',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.08)' },
-                  },
-                }}
-              />
-              <Stack spacing={0.5}>
-                {(searchQuery.trim().length < 2 ? searchSurface.snippets.slice(0, 4) : []).map((item) => (
-                  <Button
-                    key={item.id}
-                    fullWidth
-                    onClick={() => {
-                      handleCloseAll();
-                      window.location.assign(item.url);
-                    }}
-                    sx={{
-                      justifyContent: 'flex-start',
-                      px: 1.25,
-                      py: 1,
-                      borderRadius: '14px',
+            <Stack spacing={1.25}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                  <Logo app={logoApp} size={18} variant="icon" />
+                </Box>
+                <TextField
+                  inputRef={searchInputRef}
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search notes, tags, shared links, people"
+                  variant="standard"
+                  fullWidth
+                  InputProps={{
+                    disableUnderline: true,
+                    sx: {
                       color: 'white',
-                      bgcolor: 'rgba(255,255,255,0.02)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      textTransform: 'none',
-                    }}
-                  >
-                    {item.title}
+                      fontWeight: 800,
+                      fontSize: '0.98rem',
+                      '& input::placeholder': { color: 'rgba(255,255,255,0.42)', opacity: 1 },
+                    },
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Typography sx={{ color: 'rgba(255,255,255,0.42)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mr: 0.5 }}>
+                          Search
+                        </Typography>
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchQuery ? (
+                      <InputAdornment position="end">
+                        <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                          <CloseIcon size={16} />
+                        </IconButton>
+                      </InputAdornment>
+                    ) : null,
+                  }}
+                  sx={{ flex: 1, minWidth: 240 }}
+                />
+              </Box>
+
+              {liveCallId ? (
+                <Box
+                  sx={{
+                    mt: 0.5,
+                    px: 1.5,
+                    py: 1.1,
+                    borderRadius: '16px',
+                    border: '1px solid rgba(99,102,241,0.28)',
+                    bgcolor: 'rgba(99,102,241,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 1,
+                  }}
+                >
+                  <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.84rem' }}>
+                    Live activity: Call in progress
+                  </Typography>
+                  <Button size="small" onClick={() => router.push(`/connect/call/${liveCallId}?view=dock`)} sx={{ textTransform: 'none', fontWeight: 800, color: '#A5B4FC' }}>
+                    Open
                   </Button>
-                ))}
-              </Stack>
+                </Box>
+              ) : null}
+
+              <Box sx={{ display: 'grid', gap: 0.75 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {searchSurface.quickActionLabel}
+                </Typography>
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  {searchSurface.quickActions.slice(0, 3).map((action) => (
+                    <Box
+                      key={action.id}
+                      component="button"
+                      onClick={() => window.location.assign(action.href)}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 1.5,
+                        py: 1.1,
+                        borderRadius: '18px',
+                        bgcolor: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        color: 'white',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
+                        <Logo app={action.kind as any} size={16} variant="icon" />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                          {action.title}
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              <Box sx={{ display: 'grid', gap: 0.75 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {searchSurface.searchAcrossLabel}
+                </Typography>
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  {searchSurface.searchTargets.slice(0, 4).map((action) => (
+                    <Box
+                      key={action.id}
+                      component="button"
+                      onClick={() => window.location.assign(action.href)}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 1.5,
+                        py: 1.1,
+                        borderRadius: '18px',
+                        bgcolor: action.kind === 'note' ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${action.kind === 'note' ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.05)'}`,
+                        color: 'white',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
+                        <Logo app={action.kind as any} size={16} variant="icon" />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                          {action.title}
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              {searchingPeople || peopleResults.length > 0 ? (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    {searchSurface.peopleLabel}
+                  </Typography>
+                  {searchingPeople ? (
+                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.84rem' }}>
+                      Searching people...
+                    </Typography>
+                  ) : (
+                    peopleResults.slice(0, 3).map((person) => (
+                      <Box
+                        key={person.$id || person.id}
+                        component="button"
+                        onClick={() => {
+                          setSearchQuery(person.displayName || person.username || person.name || '');
+                        }}
+                        sx={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.25,
+                          px: 1.5,
+                          py: 1.1,
+                          borderRadius: '18px',
+                          bgcolor: 'rgba(255,255,255,0.02)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          color: 'white',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <IdentityAvatar
+                          src={person.avatar || undefined}
+                          alt={person.displayName || person.username || person.name || 'person'}
+                          fallback={(person.displayName || person.username || person.name || 'U')[0]?.toUpperCase() || 'U'}
+                          size={32}
+                          borderRadius="12px"
+                        />
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                          <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                            {person.displayName || person.username || person.name || 'Person'}
+                          </Typography>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                            {person.username ? `@${String(person.username).replace(/^@/, '')}` : 'Direct chat target'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))
+                  )}
+                </Box>
+              ) : null}
             </Stack>
           )}
         </Paper>
