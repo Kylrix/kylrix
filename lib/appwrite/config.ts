@@ -129,6 +129,8 @@ export const APPWRITE_CONFIG = {
         EXTENSION_ASSETS: 'extension_assets',
         BACKUPS: 'backups',
         TEMP_UPLOADS: 'temp_uploads',
+        /** Ephemeral file payloads for Send by Kylrix (provision in Appwrite; TTL ~7d via cron/cleanup). */
+        SEND_EPHEMERAL: 'kylrix_send',
         MESSAGES: 'messages',
         TASK_ATTACHMENTS: 'notes_attachments', // Alias
         EVENT_COVERS: 'blog_media' // Alias

@@ -4,6 +4,7 @@ import { UsersService } from './users';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getCachedMomentPreview, seedMomentPreview } from '../moment-preview';
 import { getCachedMomentThread } from '../moment-thread-cache';
+import { getTablesDbRowCached } from '../ecosystem/tablesdb-row-cache';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const MOMENTS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
@@ -275,28 +276,52 @@ export const SocialService = {
             }
         }
 
-        // Resolve attachments
+        // Resolve attachments (TablesDB rows cached client-side — repeated enrichments share one getRow)
         await Promise.all(attachments.map(async (att) => {
             try {
                 if (att.type === 'note') {
-                    const note = await tablesDB.getRow(
-                        APPWRITE_CONFIG.DATABASES.NOTE,
-                        APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-                        att.id
+                    const note = await getTablesDbRowCached(
+                        {
+                            databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+                            tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+                            rowId: att.id,
+                        },
+                        () =>
+                            tablesDB.getRow(
+                                APPWRITE_CONFIG.DATABASES.NOTE,
+                                APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+                                att.id,
+                            ),
                     );
                     enriched.attachedNote = note;
                 } else if (att.type === 'event') {
-                    const event = await tablesDB.getRow(
-                        APPWRITE_CONFIG.DATABASES.KYLRIXFLOW,
-                        'events',
-                        att.id
+                    const event = await getTablesDbRowCached(
+                        {
+                            databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW,
+                            tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+                            rowId: att.id,
+                        },
+                        () =>
+                            tablesDB.getRow(
+                                APPWRITE_CONFIG.DATABASES.KYLRIXFLOW,
+                                APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+                                att.id,
+                            ),
                     );
                     enriched.attachedEvent = event;
                 } else if (att.type === 'call') {
-                    const call = await tablesDB.getRow(
-                        APPWRITE_CONFIG.DATABASES.CHAT,
-                        APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-                        att.id
+                    const call = await getTablesDbRowCached(
+                        {
+                            databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+                            tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+                            rowId: att.id,
+                        },
+                        () =>
+                            tablesDB.getRow(
+                                APPWRITE_CONFIG.DATABASES.CHAT,
+                                APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+                                att.id,
+                            ),
                     );
                     enriched.attachedCall = call;
                 } else if (att.type === 'image' || att.type === 'video') {

@@ -623,10 +623,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             if (user?.$id && ecosystemSecurity.status.isUnlocked) {
                 await UsersService.forceSyncProfileWithIdentity(user);
             }
-            const [response, conv] = await Promise.all([
-                ChatService.getMessages(conversationId, 50, 0, user?.$id),
-                ChatService.getConversationById(conversationId, user?.$id),
-            ]);
+            const conv = await ChatService.getConversationById(conversationId, user?.$id);
+            const response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
+                prefetchedConversation: conv,
+            });
 
             // Filter by clearedAt if exists in settings
             let displayMessages = response.rows;
@@ -1023,7 +1023,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const _handleDeleteMessage = async (messageId: string, _everyone: boolean) => {
         try {
             if (_everyone) {
-                await ChatService.deleteMessage(messageId);
+                await ChatService.deleteMessage(messageId, conversationId);
             } else {
                 // Individual 'delete for me' would require a schema change (deletedBy array)
                 // For now, we only support 'delete for everyone' if author.

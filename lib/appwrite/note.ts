@@ -21,6 +21,8 @@ import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { createNoteCreationService } from '@/lib/sdk';
 import { buildSourceNoteTags } from '@/lib/sdk/crosslinks';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { invalidateTablesDbRowCache } from '@/lib/ecosystem/tablesdb-row-cache';
+import { publishNexusInvalidate } from '@/lib/ecosystem/nexus-bridge';
 export const APPWRITE_ENDPOINT = APPWRITE_CONFIG.ENDPOINT;
 export const APPWRITE_PROJECT_ID = APPWRITE_CONFIG.PROJECT_ID;
 
@@ -164,6 +166,12 @@ export function invalidateNoteRowClientCache(noteId?: string | null) {
   if (!noteId) return;
   noteRowClientCache.delete(noteId);
   noteRowClientInflight.delete(noteId);
+  invalidateTablesDbRowCache({
+    databaseId: APPWRITE_DATABASE_ID,
+    tableId: APPWRITE_TABLE_ID_NOTES,
+    rowId: noteId,
+  });
+  publishNexusInvalidate(`note_${noteId}`);
 }
 
 async function loadNoteRowFromOrigin(noteId: string): Promise<Notes> {

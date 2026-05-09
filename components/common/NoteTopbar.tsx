@@ -96,6 +96,7 @@ export default function NoteTopbar({
   const logoApp = isWebsiteRoute || isSettingsRoute ? 'root' : activeApp;
   const showSearchControl = isAuthenticated && !isWebsiteRoute;
   const landingNavItems = [
+    { label: 'Send', href: '/send' },
     { label: 'Developers', href: '/developers' },
     { label: 'Docs', href: '/docs' },
     { label: 'Pricing', href: '/pricing' },

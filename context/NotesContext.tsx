@@ -70,6 +70,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const { fetchOptimized, setCachedData, invalidate, getCachedData } = useDataNexus();
   const sweepInFlightRef = useRef(false);
+  const notesInitialInvalidateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Plan-based pinning limits for UI
   const effectivePinnedIds = useMemo(() => {
@@ -81,6 +82,25 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const PINNED_CACHE_KEY = useMemo(() => user?.$id ? `pinned_ids_${user.$id}` : null, [user?.$id]);
   const INITIAL_NOTES_CACHE_KEY = useMemo(() => user?.$id ? `initial_notes_${user.$id}` : null, [user?.$id]);
+
+  const scheduleInvalidateInitialNotesPage = useCallback(() => {
+    if (!INITIAL_NOTES_CACHE_KEY) return;
+    if (notesInitialInvalidateTimerRef.current) {
+      clearTimeout(notesInitialInvalidateTimerRef.current);
+    }
+    notesInitialInvalidateTimerRef.current = setTimeout(() => {
+      notesInitialInvalidateTimerRef.current = null;
+      invalidate(INITIAL_NOTES_CACHE_KEY);
+    }, 750);
+  }, [INITIAL_NOTES_CACHE_KEY, invalidate]);
+
+  useEffect(() => {
+    return () => {
+      if (notesInitialInvalidateTimerRef.current) {
+        clearTimeout(notesInitialInvalidateTimerRef.current);
+      }
+    };
+  }, []);
 
   // Load from cache on mount
   useEffect(() => {
@@ -272,10 +292,11 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     });
     if (!existed) {
       setTotalNotes((prev) => prev + 1);
+      if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
     }
     // Update individual note cache
     setCachedData(`note_${normalized.$id}`, normalized);
-  }, [setCachedData]);
+  }, [setCachedData, INITIAL_NOTES_CACHE_KEY, invalidate]);
 
   const opportunisticallyDecryptNote = useCallback(async (note: Notes) => {
     if (!note?.$id) return;
@@ -310,7 +331,8 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     setPinnedIds((prev) => prev.filter(id => id !== noteId));
     // Invalidate caches
     invalidate(`note_${noteId}`);
-  }, [invalidate]);
+    if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
+  }, [invalidate, INITIAL_NOTES_CACHE_KEY]);
 
   // Realtime subscription
   useEffect(() => {
@@ -336,16 +358,19 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         });
         setTotalNotes(prev => prev + 1);
         setCachedData(`note_${payload.$id}`, payload);
+        if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
         void opportunisticallyDecryptNote(payload);
       } else if (isUpdate) {
         setNotes(prev => prev.map(n => n.$id === payload.$id ? payload : n));
         setCachedData(`note_${payload.$id}`, payload);
+        scheduleInvalidateInitialNotesPage();
         void opportunisticallyDecryptNote(payload);
       } else if (isDelete) {
         setNotes(prev => prev.filter(n => n.$id !== payload.$id));
         setTotalNotes(prev => Math.max(0, prev - 1));
         setPinnedIds(prev => prev.filter(id => id !== payload.$id));
         invalidate(`note_${payload.$id}`);
+        if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
       }
     });
     
@@ -356,7 +381,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         (sub as any).unsubscribe();
       }
     };
-  }, [isAuthenticated, user?.$id, setCachedData, invalidate, opportunisticallyDecryptNote]);
+  }, [isAuthenticated, user?.$id, setCachedData, invalidate, opportunisticallyDecryptNote, INITIAL_NOTES_CACHE_KEY, scheduleInvalidateInitialNotesPage]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

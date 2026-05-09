@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect, useRef } from 'react';
 import { ID, Query } from 'appwrite';
 import { tasks as taskApi, calendars as calendarApi, taskCollaborators, subscribeToTable, buildTaskPermissions } from '@/lib/kylrixflow';
 import { getCurrentUser } from '@/lib/appwrite/client';
@@ -595,8 +595,25 @@ interface TaskProviderProps {
 
 export function TaskProvider({ children }: TaskProviderProps) {
   const [state, dispatch] = useReducer(taskReducer, initialState);
-  const { fetchOptimized, invalidate } = useDataNexus();
+  const { fetchOptimized, invalidate, getCachedData, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
+  const flowWarmOwnerRef = useRef<string | null>(null);
+
+  const invalidateTasksNexus = useCallback(
+    (uid: string) => {
+      invalidate(`f_tasks_${uid}`);
+      invalidate(`f_flow_warm_${uid}`);
+    },
+    [invalidate],
+  );
+
+  const invalidateCalendarsNexus = useCallback(
+    (uid: string) => {
+      invalidate(`f_calendars_${uid}`);
+      invalidate(`f_flow_warm_${uid}`);
+    },
+    [invalidate],
+  );
 
   // Initial Data Fetch
   useEffect(() => {
@@ -618,25 +635,72 @@ export function TaskProvider({ children }: TaskProviderProps) {
           }
         }
         dispatch({ type: 'SET_USER', payload: userId });
+        flowWarmOwnerRef.current = userId;
+
+        const FLOW_WARM_TTL = 1000 * 60 * 30;
+        const tasksKey = `f_tasks_${userId}`;
+        const calsKey = `f_calendars_${userId}`;
+        const taskQueriesFor = (uid: string) => [
+          Query.equal('userId', uid),
+          Query.limit(1000),
+          Query.select(['$id', 'userId', 'title', 'description', 'status', 'priority', 'dueDate', 'tags', 'assigneeIds', 'parentId', 'eventId', '$createdAt', '$updatedAt']),
+        ];
+        const calQueriesFor = (uid: string) => [
+          Query.equal('userId', uid),
+          Query.limit(100),
+          Query.select(['$id', 'userId', 'name', 'color', 'isDefault', '$createdAt', '$updatedAt']),
+        ];
+
+        const hadBothFromCache =
+          userId !== 'guest' &&
+          getCachedData(tasksKey, FLOW_WARM_TTL) != null &&
+          getCachedData(calsKey, FLOW_WARM_TTL) != null;
 
         // Fetch tasks and calendars (Nexus Optimized)
         const [tasksList, calendarsList] = await Promise.all([
-          fetchOptimized(`f_tasks_${userId}`, () => taskApi.list([
-            Query.equal('userId', userId),
-            Query.limit(1000),
-            Query.select(['$id', 'userId', 'title', 'description', 'status', 'priority', 'dueDate', 'tags', 'assigneeIds', 'parentId', 'eventId', '$createdAt', '$updatedAt'])
-          ])),
-          fetchOptimized(`f_calendars_${userId}`, () => calendarApi.list([
-            Query.equal('userId', userId),
-            Query.limit(100),
-            Query.select(['$id', 'userId', 'name', 'color', 'isDefault', '$createdAt', '$updatedAt'])
-          ]))
+          fetchOptimized(tasksKey, () => taskApi.list(taskQueriesFor(userId))),
+          fetchOptimized(calsKey, () => calendarApi.list(calQueriesFor(userId))),
         ]);
 
         const tasks = tasksList.rows.map(mapAppwriteTaskToTask);
         const projects = calendarsList.rows.map(mapAppwriteCalendarToProject);
 
         dispatch({ type: 'SET_DATA', payload: { tasks, projects } });
+
+        if (hadBothFromCache && userId !== 'guest') {
+          const warmOwner = userId;
+          refreshInBackground(
+            `f_flow_warm_${warmOwner}`,
+            async () => {
+              const [t, c] = await Promise.all([
+                taskApi.list(taskQueriesFor(warmOwner)),
+                calendarApi.list(calQueriesFor(warmOwner)),
+              ]);
+              const tk = `f_tasks_${warmOwner}`;
+              const ck = `f_calendars_${warmOwner}`;
+              setCachedData(tk, t, FLOW_WARM_TTL);
+              setCachedData(ck, c, FLOW_WARM_TTL);
+              return true;
+            },
+            FLOW_WARM_TTL,
+            ({ error }) => {
+              if (error) return;
+              if (flowWarmOwnerRef.current !== warmOwner) return;
+              const tk = `f_tasks_${warmOwner}`;
+              const ck = `f_calendars_${warmOwner}`;
+              const tasksList = getCachedData<{ rows: AppwriteTask[] }>(tk, FLOW_WARM_TTL);
+              const calendarsList = getCachedData<{ rows: AppwriteCalendar[] }>(ck, FLOW_WARM_TTL);
+              if (!tasksList?.rows || !calendarsList?.rows) return;
+              dispatch({
+                type: 'SET_DATA',
+                payload: {
+                  tasks: tasksList.rows.map(mapAppwriteTaskToTask),
+                  projects: calendarsList.rows.map(mapAppwriteCalendarToProject),
+                },
+              });
+            },
+          );
+        }
       } catch (error: unknown) {
         console.error('Failed to fetch data', error);
         dispatch({ type: 'SET_ERROR', payload: 'Failed to load data' });
@@ -644,7 +708,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
     };
 
     fetchData();
-  }, [fetchOptimized, authUser?.$id, isAuthLoading]);
+  }, [fetchOptimized, getCachedData, setCachedData, refreshInBackground, authUser?.$id, isAuthLoading]);
 
   // Realtime Subscriptions
   useEffect(() => {
@@ -721,7 +785,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
         }, buildTaskPermissions(userId, task.assigneeIds || []));
 
         await syncTaskAccess(newTask.$id, userId, task.assigneeIds || [], task.title, []);
-        invalidate(`f_tasks_${userId}`);
+        invalidateTasksNexus(userId);
 
         dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(newTask) });
       } catch (error: unknown) {
@@ -729,7 +793,7 @@ export function TaskProvider({ children }: TaskProviderProps) {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to create task' });
       }
     },
-    [state.userId, invalidate]
+    [state.userId, invalidateTasksNexus]
   );
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
@@ -778,12 +842,12 @@ export function TaskProvider({ children }: TaskProviderProps) {
       const currentCollaborators = await taskCollaborators.list(id);
       await taskApi.update(id, apiUpdates, buildTaskPermissions(currentTask.creatorId, nextAssignees, currentCollaborators));
       await syncTaskAccess(id, currentTask.creatorId, nextAssignees || [], currentTask.title, currentTask.assigneeIds || []);
-      invalidate(`f_tasks_${state.userId || 'guest'}`);
+      invalidateTasksNexus(state.userId || 'guest');
     } catch (error: unknown) {
       console.error('Failed to update task', error);
       // Revert?
     }
-  }, [state.tasks, state.userId, invalidate]);
+  }, [state.tasks, state.userId, invalidateTasksNexus]);
 
   const deleteTask = useCallback(async (id: string) => {
     try {
@@ -807,12 +871,12 @@ export function TaskProvider({ children }: TaskProviderProps) {
       const currentCollaborators = await taskCollaborators.list(id);
       await Promise.all(currentCollaborators.map((collaborator) => taskCollaborators.delete(collaborator.id)));
       await taskApi.delete(id);
-      invalidate(`f_tasks_${state.userId || 'guest'}`);
+      invalidateTasksNexus(state.userId || 'guest');
       dispatch({ type: 'DELETE_TASK', payload: id });
     } catch (error: unknown) {
       console.error('Failed to delete task', error);
     }
-  }, [state.tasks, state.userId, invalidate]);
+  }, [state.tasks, state.userId, invalidateTasksNexus]);
 
   const completeTask = useCallback(async (id: string) => {
     try {
@@ -821,12 +885,12 @@ export function TaskProvider({ children }: TaskProviderProps) {
       
       const newStatus = task.status === 'done' ? 'todo' : 'done';
       await taskApi.update(id, { status: newStatus });
-      invalidate(`f_tasks_${state.userId || 'guest'}`);
+      invalidateTasksNexus(state.userId || 'guest');
       dispatch({ type: 'COMPLETE_TASK', payload: id });
     } catch (error: unknown) {
       console.error('Failed to complete task', error);
     }
-  }, [state.tasks, state.userId, invalidate]);
+  }, [state.tasks, state.userId, invalidateTasksNexus]);
 
   const selectTask = useCallback((id: string | null) => {
     dispatch({ type: 'SELECT_TASK', payload: id });
@@ -858,12 +922,12 @@ export function TaskProvider({ children }: TaskProviderProps) {
       }, buildTaskPermissions(creatorId, parentTask.assigneeIds || []));
 
       await syncTaskAccess(childTask.$id, creatorId, parentTask.assigneeIds || [], parentTask.title, []);
-      invalidate(`f_tasks_${state.userId || 'guest'}`);
+      invalidateTasksNexus(state.userId || 'guest');
       dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(childTask) });
     } catch (error: unknown) {
       console.error('Failed to create subtask', error);
     }
-  }, [state.tasks, state.userId, invalidate]);
+  }, [state.tasks, state.userId, invalidateTasksNexus]);
 
   const updateSubtask = useCallback(async (_taskId: string, subtaskId: string, updates: Partial<Subtask>) => {
     const payload: Partial<Task> = {};
@@ -977,13 +1041,13 @@ export function TaskProvider({ children }: TaskProviderProps) {
           isDefault: false,
           userId: userId,
         });
-        invalidate(`f_calendars_${userId}`);
+        invalidateCalendarsNexus(userId);
         dispatch({ type: 'ADD_PROJECT', payload: mapAppwriteCalendarToProject(newCalendar) });
       } catch (error: unknown) {
         console.error('Failed to create project', error);
       }
     },
-    [state.userId, invalidate]
+    [state.userId, invalidateCalendarsNexus]
   );
 
   const updateProject = useCallback(async (id: string, updates: Partial<Project>) => {
@@ -995,21 +1059,21 @@ export function TaskProvider({ children }: TaskProviderProps) {
       if (updates.color) apiUpdates.color = updates.color;
       
       await calendarApi.update(id, apiUpdates);
-      invalidate(`f_calendars_${state.userId || 'guest'}`);
+      invalidateCalendarsNexus(state.userId || 'guest');
     } catch (error: unknown) {
       console.error('Failed to update project', error);
     }
-  }, [state.userId, invalidate]);
+  }, [state.userId, invalidateCalendarsNexus]);
 
   const deleteProject = useCallback(async (id: string) => {
     try {
       await calendarApi.delete(id);
-      invalidate(`f_calendars_${state.userId || 'guest'}`);
+      invalidateCalendarsNexus(state.userId || 'guest');
       dispatch({ type: 'DELETE_PROJECT', payload: id });
     } catch (error: unknown) {
       console.error('Failed to delete project', error);
     }
-  }, [state.userId, invalidate]);
+  }, [state.userId, invalidateCalendarsNexus]);
 
   const selectProject = useCallback((id: string | null) => {
     dispatch({ type: 'SELECT_PROJECT', payload: id });
