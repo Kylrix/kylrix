@@ -158,7 +158,7 @@ function LoginContent() {
       }
       throw _e;
     }
-  }, [notifyOpenerAuthSuccess, resolveLoginMethod, searchParams]);
+  }, [notifyOpenerAuthSuccess, resolveLoginMethod, searchParams, router]);
 
   const checkExistingSession = useCallback(async () => {
     setIsCheckingSession(true);
@@ -198,7 +198,7 @@ function LoginContent() {
 
     const backUrl = getBackUrl();
     router.replace(backUrl || getPostAuthDefaultUrl());
-  }, [getBackUrl, getPostAuthDefaultUrl, isSuccess]);
+  }, [getBackUrl, getPostAuthDefaultUrl, isSuccess, router]);
 
   const handleOAuthLogin = async (provider: OAuthProvider) => {
     setLoading(true);

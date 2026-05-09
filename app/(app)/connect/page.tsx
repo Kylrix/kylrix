@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Container } from '@mui/material';
 import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { Feed } from '@/components/social/Feed';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-export default function Home() {
+function ConnectHomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -80,10 +80,24 @@ export default function Home() {
   }, [pathname, router, searchParams, shouldCompose]);
 
   return (
+    <Container maxWidth="md" sx={{ py: 2 }}>
+      <Feed view="personal" composeIntent={composeIntent} />
+    </Container>
+  );
+}
+
+export default function Home() {
+  return (
     <ConnectAppShell>
-      <Container maxWidth="md" sx={{ py: 2 }}>
-        <Feed view="personal" composeIntent={composeIntent} />
-      </Container>
+      <Suspense
+        fallback={
+          <Container maxWidth="md" sx={{ py: 2 }}>
+            <Feed view="personal" composeIntent={null} />
+          </Container>
+        }
+      >
+        <ConnectHomeContent />
+      </Suspense>
     </ConnectAppShell>
   );
 }

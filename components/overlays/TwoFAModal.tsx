@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFinalizeAuth } from '@/lib/finalizeAuth';
 import {
   Drawer,
@@ -14,7 +14,8 @@ import {
   alpha,
   useTheme,
   useMediaQuery,
-} from '@mui/material';import {
+} from '@mui/material';
+import {
   Smartphone as SmartphoneIcon,
   Mail as MailIcon,
   Phone as PhoneIcon,
@@ -50,13 +51,7 @@ export function TwoFAModal({ isOpen, onClose }: TwoFAModalProps) {
   const [loading, setLoading] = useState(false);
   const [showRecovery, setShowRecovery] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadFactors();
-    }
-  }, [isOpen]);
-
-  const loadFactors = async () => {
+  const loadFactors = useCallback(async () => {
     try {
       const mfaFactors = await listMfaFactors();
       setFactors(mfaFactors);
@@ -68,7 +63,11 @@ export function TwoFAModal({ isOpen, onClose }: TwoFAModalProps) {
     } catch {
       toast.error("Failed to load authentication factors");
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) void loadFactors();
+  }, [isOpen, loadFactors]);
 
   const handleCreateChallenge = async (
     factor: "totp" | "email" | "phone" | "recoverycode",

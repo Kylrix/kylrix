@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack -H localhost -p 3005",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint . --max-warnings 0"
   },
   "dependencies": {
     "@azure-rest/ai-inference": "^1.0.0-beta.6",

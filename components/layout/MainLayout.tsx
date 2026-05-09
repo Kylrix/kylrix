@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Box, useTheme, useMediaQuery } from '@mui/material';
@@ -21,15 +21,21 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-export default function MainLayout({ children }: MainLayoutProps) {
+function MainLayoutWithSearchParams({ children }: MainLayoutProps) {
+  const searchParams = useSearchParams();
+  const isEmbedded = useMemo(() => searchParams?.get('is_embedded') === 'true', [searchParams]);
+  return <MainLayoutBody isEmbedded={isEmbedded}>{children}</MainLayoutBody>;
+}
+
+function MainLayoutBody({
+  children,
+  isEmbedded,
+}: MainLayoutProps & { isEmbedded: boolean }) {
   const theme = useTheme();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { sidebarOpen } = useTask();
   const { secondarySidebar } = useLayout();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
-  const isEmbedded = useMemo(() => searchParams?.get('is_embedded') === 'true', [searchParams]);
 
   // Hide sidebar on event details pages
   const isEventPage = pathname?.startsWith('/events/') && pathname.split('/').length > 2;
@@ -112,5 +118,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* Global Dialogs */}
       <TaskDialog />
     </Box>
+  );
+}
+
+export default function MainLayout({ children }: MainLayoutProps) {
+  return (
+    <Suspense fallback={<MainLayoutBody isEmbedded={false}>{children}</MainLayoutBody>}>
+      <MainLayoutWithSearchParams>{children}</MainLayoutWithSearchParams>
+    </Suspense>
   );
 }

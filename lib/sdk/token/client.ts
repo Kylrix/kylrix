@@ -1,4 +1,5 @@
 import { runTokenOperationSecure } from '@/lib/actions/secure-ops';
+import type { KylrixActivityType } from './contract';
 
 export type KylrixTokenAction =
   | 'state'
@@ -11,13 +12,6 @@ export type KylrixTokenAction =
   | 'lock_claim'
   | 'settle_claim';
 
-export type KylrixActivityType =
-  | 'note_view'
-  | 'chat_message'
-  | 'call_participation'
-  | 'comment'
-  | 'moderation';
-
 export interface KylrixTokenClientOptions {
   endpoint?: string;
   headers?: Record<string, string>;
@@ -28,11 +22,7 @@ export interface KylrixTokenStateResponse {
   state: Record<string, unknown> | null;
 }
 
-type TokenRequestBase = {
-  action: KylrixTokenAction;
-};
-
-type MintActivityRequest = TokenRequestBase & {
+type MintActivityRequest = {
   action: 'mint_activity';
   userId: string;
   idempotencyKey: string;
@@ -44,7 +34,7 @@ type MintActivityRequest = TokenRequestBase & {
   metadata?: Record<string, unknown>;
 };
 
-type TransferRequest = TokenRequestBase & {
+type TransferRequest = {
   action: 'transfer';
   fromUserId: string;
   toUserId: string;
@@ -55,18 +45,18 @@ type TransferRequest = TokenRequestBase & {
   metadata?: Record<string, unknown>;
 };
 
-type LedgerRequest = TokenRequestBase & {
+type LedgerRequest = {
   action: 'ledger';
   userId?: string;
   limit?: number;
 };
 
-type BalanceRequest = TokenRequestBase & {
+type BalanceRequest = {
   action: 'balance';
   userId?: string;
 };
 
-type FineToRootRequest = TokenRequestBase & {
+type FineToRootRequest = {
   action: 'fine_to_root';
   userId: string;
   amountMicro: string;
@@ -77,7 +67,7 @@ type FineToRootRequest = TokenRequestBase & {
   metadata?: Record<string, unknown>;
 };
 
-type LockClaimRequest = TokenRequestBase & {
+type LockClaimRequest = {
   action: 'lock_claim';
   userId: string;
   amountMicro: string;
@@ -86,7 +76,7 @@ type LockClaimRequest = TokenRequestBase & {
   idempotencyKey: string;
 };
 
-type SettleClaimRequest = TokenRequestBase & {
+type SettleClaimRequest = {
   action: 'settle_claim';
   userId: string;
   amountMicro: string;
@@ -96,8 +86,12 @@ type SettleClaimRequest = TokenRequestBase & {
   idempotencyKey: string;
 };
 
+type StateRequest = { action: 'state' };
+type InitializeRequest = { action: 'initialize' };
+
 type TokenOperationRequest =
-  | TokenRequestBase
+  | StateRequest
+  | InitializeRequest
   | MintActivityRequest
   | TransferRequest
   | BalanceRequest
@@ -117,6 +111,9 @@ function validateRequest(request: TokenOperationRequest) {
   if (!request?.action) throw new Error('TOKEN_CLIENT_INVALID_ACTION');
 
   switch (request.action) {
+    case 'state':
+    case 'initialize':
+      break;
     case 'mint_activity':
       assertNonEmpty(request.userId, 'userId');
       assertNonEmpty(request.idempotencyKey, 'idempotencyKey');

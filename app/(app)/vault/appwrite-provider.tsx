@@ -44,6 +44,11 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const verbose = process.env.NODE_ENV === "development";
 
+  const fetchUserRef = useRef<
+    ((isRetry?: boolean, retryCount?: number) => Promise<Models.User<Models.Preferences> | null | undefined>) | undefined
+  >(undefined);
+  const attemptSilentAuthRef = useRef<() => Promise<void>>(async () => undefined);
+
   // Fetch current user and check master password status
   const fetchUser = useCallback(async (isRetry = false, retryCount = 0) => {
     if (typeof window === 'undefined') return;
@@ -83,7 +88,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
         }
       } else {
         if (!isRetry) {
-          await attemptSilentAuth();
+          await attemptSilentAuthRef.current?.();
           const retryAccount = getCurrentUserSnapshot() ?? await getCurrentUser(true);
           if (retryAccount) {
             setUser(retryAccount);
@@ -121,6 +126,8 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     }
   }, [verbose, pathname]);
 
+  fetchUserRef.current = fetchUser;
+
   const attemptSilentAuth = useCallback(async () => {
     if (typeof window === "undefined") return;
 
@@ -146,7 +153,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
           event.data.status === "authenticated"
         ) {
           logDebug("[auth] Silent auth discovered session");
-          fetchUser(false); // retry fetch using cache-first flow
+          void fetchUserRef.current?.(false); // retry fetch using cache-first flow
           cleanup();
           resolve();
         } else if (event.data?.type === "idm:auth-status") {
@@ -166,7 +173,9 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
       window.addEventListener("message", handleIframeMessage);
       document.body.appendChild(iframe);
     });
-  }, [fetchUser]);
+  }, []);
+
+  attemptSilentAuthRef.current = attemptSilentAuth;
 
   const openIDMWindow = useCallback(async () => {
     if (typeof window === "undefined" || isAuthenticating) return;

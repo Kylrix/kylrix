@@ -1,5 +1,3 @@
-
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { ID, Query, Permission, Role, OAuthProvider } from 'appwrite';
 import { account, databases, storage, functions, realtime, client, getCurrentUser, invalidateCurrentUserCache } from './client';
 import { AppwriteService } from './auth';
@@ -23,8 +21,6 @@ import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { createNoteCreationService } from '@/lib/sdk';
 import { buildSourceNoteTags } from '@/lib/sdk/crosslinks';
 import { hasPaidKylrixPlan } from '@/lib/utils';
-import { sharePublicNoteAsMomentSecure } from '@/lib/actions/secure-ops';
-
 export const APPWRITE_ENDPOINT = APPWRITE_CONFIG.ENDPOINT;
 export const APPWRITE_PROJECT_ID = APPWRITE_CONFIG.PROJECT_ID;
 
@@ -556,6 +552,7 @@ export async function createNote(data: Partial<Notes>) {
 }
 
 export async function createMomentFromNote(note: Pick<Notes, '$id'>) {
+  const { sharePublicNoteAsMomentSecure } = await import('@/lib/actions/secure-ops');
   return sharePublicNoteAsMomentSecure({ noteId: note.$id });
 }
 

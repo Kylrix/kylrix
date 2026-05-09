@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useState, useMemo } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -52,15 +52,25 @@ const SIMPLIFIED_LAYOUT_PATHS = [
   "/twofa/access",
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+function AppShellWithSearchParams({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
+  const isEmbedded = useMemo(() => searchParams?.get('is_embedded') === 'true', [searchParams]);
+  return <AppShellBody isEmbedded={isEmbedded}>{children}</AppShellBody>;
+}
+
+function AppShellBody({
+  children,
+  isEmbedded,
+}: {
+  children: React.ReactNode;
+  isEmbedded: boolean;
+}) {
+  const pathname = usePathname();
   const router = useRouter();
   const { user, loading, logout, refresh } = useAppwriteVault();
   const [showPasskeySetup, setShowPasskeySetup] = useState(false);
 
-  const isEmbedded = useMemo(() => searchParams?.get('is_embedded') === 'true', [searchParams]);
-  const isSimplifiedLayout = SIMPLIFIED_LAYOUT_PATHS.includes(pathname) || isEmbedded;
+  const isSimplifiedLayout = SIMPLIFIED_LAYOUT_PATHS.includes(pathname || '') || isEmbedded;
 
   useEffect(() => {
     if (user && !loading) {
@@ -411,5 +421,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </>
       )}
     </Box>
+  );
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<AppShellBody isEmbedded={false}>{children}</AppShellBody>}>
+      <AppShellWithSearchParams>{children}</AppShellWithSearchParams>
+    </Suspense>
   );
 }

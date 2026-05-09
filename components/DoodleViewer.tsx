@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { DoodleStroke } from '@/types/notes';
 import { Box, Typography, Button, Paper, alpha } from '@mui/material';
 import { Edit as EditIcon, Brush as BrushIcon } from '@mui/icons-material';
@@ -14,16 +14,7 @@ interface DoodleViewerProps {
 export default function DoodleViewer({ data, onEdit, title }: DoodleViewerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  useEffect(() => {
-    try {
-      const strokes: DoodleStroke[] = JSON.parse(data);
-      redrawCanvas(strokes);
-    } catch {
-      console.error('Failed to parse doodle data');
-    }
-  }, [data]);
-
-  const redrawCanvas = (strokes: DoodleStroke[]) => {
+  const redrawCanvas = useCallback((strokes: DoodleStroke[]) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -53,7 +44,16 @@ export default function DoodleViewer({ data, onEdit, title }: DoodleViewerProps)
 
       ctx.globalAlpha = 1;
     });
-  };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const strokes: DoodleStroke[] = JSON.parse(data);
+      redrawCanvas(strokes);
+    } catch {
+      console.error('Failed to parse doodle data');
+    }
+  }, [data, redrawCanvas]);
 
   return (
     <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>

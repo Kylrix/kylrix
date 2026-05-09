@@ -1,7 +1,8 @@
 import { ImageResponse } from 'next/og';
 import { validatePublicNoteAccess } from '@/lib/appwrite';
 
-export const runtime = 'edge';
+/** Node: importing `@/lib/appwrite` pulls server-only stacks; Edge cannot load `node:crypto`. */
+export const runtime = 'nodejs';
 
 export async function GET(
   request: Request,

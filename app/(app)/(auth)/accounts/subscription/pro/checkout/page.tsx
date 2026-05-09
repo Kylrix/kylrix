@@ -74,7 +74,7 @@ function CheckoutContent() {
     };
 
     startCheckout();
-  }, [user, authLoading, initializing, planId, countryCode, months, giftMessage, giftRecipientId, giftRecipientName, couponId]);
+  }, [user, authLoading, initializing, planId, countryCode, months, giftMessage, giftRecipientId, giftRecipientName, couponId, router]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -83,7 +83,7 @@ function CheckoutContent() {
         router.push(`/accounts/login?source=${encodeURIComponent(currentUrl)}`);
       }
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, router]);
 
   if (authLoading || !user) {
     return (

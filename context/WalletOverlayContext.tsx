@@ -1,6 +1,14 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  Suspense,
+} from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { WalletSidebar } from '@/components/overlays/WalletSidebar';
 
@@ -18,10 +26,31 @@ export interface TokenWalletIntent {
 
 const WalletOverlayContext = createContext<WalletOverlayContextType | undefined>(undefined);
 
-export function WalletOverlayProvider({ children }: { children: React.ReactNode }) {
+/** Isolate useSearchParams so the outer Provider never suspends away from consumers. */
+function OpenWalletFromQueryEffect({
+  pathname,
+  onOpenRequested,
+}: {
+  pathname: string;
+  onOpenRequested: () => void;
+}) {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get('openWallet') !== 'true') return;
+    onOpenRequested();
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('openWallet');
+    const nextQuery = params.toString();
+    router.replace(pathname + (nextQuery ? `?${nextQuery}` : ''));
+  }, [onOpenRequested, pathname, router, searchParams]);
+
+  return null;
+}
+
+export function WalletOverlayProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [isWalletOpen, setIsWalletOpen] = useState(false);
   const [tokenIntent, setTokenIntent] = useState<TokenWalletIntent | null>(null);
 
@@ -33,15 +62,6 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
   const closeWallet = useCallback(() => setIsWalletOpen(false), []);
   const consumeTokenIntent = useCallback(() => setTokenIntent(null), []);
 
-  useEffect(() => {
-    if (searchParams.get('openWallet') !== 'true') return;
-    setIsWalletOpen(true);
-    const params = new URLSearchParams(searchParams.toString());
-    params.delete('openWallet');
-    const nextQuery = params.toString();
-    router.replace(pathname + (nextQuery ? `?${nextQuery}` : ''));
-  }, [pathname, router, searchParams]);
-
   const value = useMemo<WalletOverlayContextType>(
     () => ({ isWalletOpen, openWallet, openWalletWithIntent, closeWallet }),
     [closeWallet, isWalletOpen, openWallet, openWalletWithIntent]
@@ -50,6 +70,9 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
   return (
     <WalletOverlayContext.Provider value={value}>
       {children}
+      <Suspense fallback={null}>
+        <OpenWalletFromQueryEffect pathname={pathname} onOpenRequested={openWallet} />
+      </Suspense>
       {isWalletOpen ? (
         <WalletSidebar
           isOpen={isWalletOpen}

@@ -274,8 +274,7 @@ const ThreadPostView = ({
     handle,
     timeLabel,
     caption,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    attachments,
+    attachments: _attachments,
     avatarSrc,
     avatarLabel,
     replyingTo,

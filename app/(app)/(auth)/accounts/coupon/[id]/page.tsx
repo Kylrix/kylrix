@@ -69,7 +69,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
     };
 
     run();
-  }, [couponId, isLoading, user]);
+  }, [couponId, isLoading, user, router]);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff', display: 'flex', alignItems: 'center', py: 8 }}>
