@@ -1058,7 +1058,7 @@ export default function NoteTopbar({
           elevation={0}
           sx={{
             position: 'fixed',
-            top: TOPBAR_LAYOUT.height,
+            top: 0,
             left: 0,
             bottom: 0,
             width: 'min(360px, 92vw)',
@@ -1068,6 +1068,7 @@ export default function NoteTopbar({
             zIndex: 1200,
             overflowY: 'auto',
             p: 2,
+            pt: `calc(${TOPBAR_LAYOUT.height}px + 12px)`,
           }}
         >
           {activePanel === 'ecosystem' && (
@@ -1294,7 +1295,7 @@ export default function NoteTopbar({
           <Box
             sx={{
               minHeight: TOPBAR_LAYOUT.height,
-                  display: activePanel ? 'none' : 'flex',
+              display: activePanel && !isDesktop ? 'none' : 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               gap: { xs: 1.25, md: 2 },
