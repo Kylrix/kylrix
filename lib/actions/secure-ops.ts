@@ -4,12 +4,13 @@ import { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
 import { ID, Permission, Query, Role } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createAdminClient } from '@/lib/appwrite-admin';
+import { createAdminClient, createAdminTablesDB } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite-server';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
 import { trackEngagementView, type TrackEngagementInput } from '@/lib/services/internal/engagement-views';
 import { deleteCallIfExpired } from '@/lib/services/internal/calls';
 import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/live-call-presence-reconcile';
+import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 
 async function getActor() {
   try {
@@ -50,6 +51,113 @@ function hasWriteAccess(note: any, actorId: string) {
   return Array.from(new Set(collaboratorIds)).includes(actorId);
 }
 
+/** Plain object safe to return from a Server Action (no BigInt / circular refs). */
+function serializeMomentRow(row: Record<string, unknown>) {
+  return {
+    $id: String(row?.$id || ''),
+    $createdAt: row?.$createdAt,
+    $updatedAt: row?.$updatedAt,
+    userId: String(row?.userId || ''),
+    caption: row?.caption ?? '',
+    type: row?.type ?? '',
+    momentKind: row?.momentKind ?? '',
+    sourceId: row?.sourceId ?? null,
+    searchTitle: row?.searchTitle ?? null,
+    fileId: row?.fileId ?? '',
+    createdAt: row?.createdAt ?? '',
+    expiresAt: row?.expiresAt ?? '',
+  };
+}
+
+function serializeTokenMintResult(raw: unknown): Record<string, unknown> {
+  const r = raw as Record<string, unknown> | null;
+  if (!r || typeof r !== 'object') return { accepted: false, reason: 'MINT_FAILED' };
+  if (r.accepted) {
+    return {
+      accepted: true,
+      ...(r.amount != null ? { amount: String(r.amount) } : {}),
+      ...(r.amountMicro != null ? { amountMicro: String(r.amountMicro) } : {}),
+      ...(r.symbol != null ? { symbol: String(r.symbol) } : {}),
+    };
+  }
+  return {
+    accepted: false,
+    reason: String(r.reason || 'MINT_FAILED'),
+  };
+}
+
+/**
+ * After the client creates a moment with a note attachment, verifies row + note (admin) and mints once.
+ * No end-user session on the server — trust boundary is admin reads + ledger idempotency.
+ */
+export async function mintNoteShareMomentSecure(input: { momentId: string }) {
+  const momentId = String(input?.momentId || '').trim();
+  if (!momentId) throw new Error('momentId is required');
+
+  const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
+  const momentsTable = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
+  const tables = createAdminTablesDB();
+  let moment: Record<string, unknown>;
+  try {
+    moment = (await tables.getRow(chatDb, momentsTable, momentId)) as Record<string, unknown>;
+  } catch {
+    return { tokenMint: { accepted: false, reason: 'MOMENT_NOT_FOUND' } };
+  }
+
+  const creatorId = String(moment?.userId || '').trim();
+  if (!creatorId) {
+    return { tokenMint: { accepted: false, reason: 'INVALID_MOMENT' } };
+  }
+
+  const noteId = getNoteAttachmentIdFromMomentFileId(moment?.fileId);
+  if (!noteId) {
+    return { tokenMint: { accepted: false, reason: 'NO_NOTE_ATTACHMENT' } };
+  }
+
+  let note: Record<string, unknown>;
+  try {
+    const { databases } = createAdminClient();
+    note = (await databases.getDocument(
+      APPWRITE_CONFIG.DATABASES.NOTE,
+      APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+      noteId,
+    )) as Record<string, unknown>;
+  } catch {
+    return { tokenMint: { accepted: false, reason: 'NOTE_NOT_FOUND' } };
+  }
+
+  if (!Boolean(note?.isPublic)) {
+    return { tokenMint: { accepted: false, reason: 'NOTE_NOT_PUBLIC' } };
+  }
+  if (!hasWriteAccess(note, creatorId)) {
+    return { tokenMint: { accepted: false, reason: 'FORBIDDEN' } };
+  }
+
+  let tokenMint: Record<string, unknown> = { accepted: false, reason: 'MINT_FAILED' };
+  try {
+    const rawMint = await InternalKylrixTokenService.mintForActivity({
+      userId: creatorId,
+      idempotencyKey: `mint:share_public_note_moment:${momentId}`,
+      activityType: 'share_public_note_moment',
+      uniqueActors: 1,
+      trustScore: 85,
+      sourceType: 'moment_share_note',
+      sourceId: momentId,
+      metadata: { noteId, momentId },
+    });
+    tokenMint = serializeTokenMintResult(rawMint);
+  } catch (error: unknown) {
+    tokenMint = { accepted: false, reason: String((error as { message?: string })?.message || 'MINT_FAILED') };
+  }
+
+  return { tokenMint };
+}
+
+/**
+ * Server-side note→moment with admin DB + token mint. Requires Appwrite session cookies on the
+ * server (often missing during browser Server Actions). Prefer `SocialService.createMoment` from
+ * the Connect client (see Feed compose) so the user's session attaches automatically.
+ */
 export async function sharePublicNoteAsMomentSecure(input: { noteId: string; text?: string }) {
   const actor = await getActor();
   if (!actor) throw new Error('Unauthorized');
@@ -71,31 +179,30 @@ export async function sharePublicNoteAsMomentSecure(input: { noteId: string; tex
   const noteTitle = String(note?.title || 'Untitled Note').trim();
   const metadata = { type: 'post', attachments: [{ type: 'note', id: noteId }] };
   const now = new Date().toISOString();
-  const moment = await databases.createDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    APPWRITE_CONFIG.TABLES.CHAT.MOMENTS,
-    ID.unique(),
-    {
-      userId: actor.$id,
-      caption: text,
-      type: 'image',
-      momentKind: 'post',
-      sourceId: null,
-      searchTitle: noteTitle,
-      fileId: JSON.stringify(metadata),
-      createdAt: now,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    },
-    [
-      Permission.read(Role.user(actor.$id)),
-      Permission.update(Role.user(actor.$id)),
-      Permission.delete(Role.user(actor.$id)),
-    ],
-  );
+  const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
+  const momentsTable = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
+  const tables = createAdminTablesDB();
+  const perms = [
+    `read("user:${actor.$id}")`,
+    `update("user:${actor.$id}")`,
+    `delete("user:${actor.$id}")`,
+  ];
+
+  const moment = await tables.createRow(chatDb, momentsTable, ID.unique(), {
+    userId: actor.$id,
+    caption: text,
+    type: 'image',
+    momentKind: 'post',
+    sourceId: null,
+    searchTitle: noteTitle,
+    fileId: JSON.stringify(metadata),
+    createdAt: now,
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+  }, perms);
 
   let tokenMint: Record<string, unknown> = { accepted: false, reason: 'MINT_FAILED' };
   try {
-    tokenMint = await InternalKylrixTokenService.mintForActivity({
+    const rawMint = await InternalKylrixTokenService.mintForActivity({
       userId: actor.$id,
       idempotencyKey: `mint:share_public_note_moment:${moment.$id}`,
       activityType: 'share_public_note_moment',
@@ -105,11 +212,15 @@ export async function sharePublicNoteAsMomentSecure(input: { noteId: string; tex
       sourceId: moment.$id,
       metadata: { noteId, momentId: moment.$id },
     });
-  } catch (error: any) {
-    tokenMint = { accepted: false, reason: String(error?.message || 'MINT_FAILED') };
+    tokenMint = serializeTokenMintResult(rawMint);
+  } catch (error: unknown) {
+    tokenMint = { accepted: false, reason: String((error as { message?: string })?.message || 'MINT_FAILED') };
   }
 
-  return { moment, tokenMint };
+  return {
+    moment: serializeMomentRow(moment as Record<string, unknown>),
+    tokenMint,
+  };
 }
 
 type TokenAction =

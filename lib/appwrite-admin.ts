@@ -1,4 +1,4 @@
-import { Client, Account, Databases, Messaging, Storage, Users } from 'node-appwrite';
+import { Client, Account, Databases, Messaging, Storage, Users, TablesDB } from 'node-appwrite';
 import { PROJECT_ID, ENDPOINT } from '../generated/appwrite/constants';
 
 /**
@@ -27,3 +27,19 @@ export function createAdminClient() {
       users: new Users(client),
     };
   }
+
+/** Server-side TablesDB (admin API key). Use for CHAT / shared tables from server actions. */
+export function createAdminTablesDB() {
+  const apiKey = process.env.APPWRITE_API;
+
+  if (!apiKey) {
+    console.error('[Admin TablesDB] APPWRITE_API environment variable is missing.');
+  }
+
+  const client = new Client()
+    .setEndpoint(ENDPOINT)
+    .setProject(PROJECT_ID)
+    .setKey(apiKey || '');
+
+  return new TablesDB(client);
+}
