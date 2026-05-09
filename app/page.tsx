@@ -11,8 +11,6 @@ import {
   Divider,
   Fab,
   Grid,
-  Menu,
-  MenuItem,
   Paper,
   Stack,
   Typography,
@@ -524,8 +522,8 @@ function LiveSurfaceCard({
 }
 
 export default function LandingPage() {
-  const [productsAnchor, setProductsAnchor] = useState<null | HTMLElement>(null);
-  const [developersAnchor, setDevelopersAnchor] = useState<null | HTMLElement>(null);
+  const [productsOpen, setProductsOpen] = useState(false);
+  const [developersOpen, setDevelopersOpen] = useState(false);
   const showcaseRef = useRef<HTMLDivElement | null>(null);
   const { scrollYProgress } = useScroll({
     target: showcaseRef,
@@ -556,12 +554,57 @@ export default function LandingPage() {
           </Button>
 
           <Stack direction="row" spacing={1}>
-            <Button
-              onClick={(event) => setProductsAnchor(event.currentTarget)}
-              sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)', fontWeight: 700, textTransform: 'none', px: 2 }}
-            >
-              Products
-            </Button>
+            <Box sx={{ position: 'relative' }}>
+              <Button
+                onClick={() => {
+                  setProductsOpen((prev) => !prev);
+                  setDevelopersOpen(false);
+                }}
+                sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)', fontWeight: 700, textTransform: 'none', px: 2 }}
+              >
+                Products
+              </Button>
+              {productsOpen && (
+                <Paper
+                  sx={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    left: 0,
+                    minWidth: 180,
+                    p: 0.75,
+                    bgcolor: '#161412',
+                    border: '1px solid #34322F',
+                    zIndex: 20,
+                  }}
+                >
+                  <Stack spacing={0.5}>
+                    {appOrder.map((id) => {
+                      const app = ECOSYSTEM_APPS.find((item) => item.id === id);
+                      if (!app) return null;
+                      return (
+                        <Button
+                          key={app.id}
+                          onClick={() => {
+                            setProductsOpen(false);
+                            openApp(app.subdomain);
+                          }}
+                          sx={{
+                            justifyContent: 'flex-start',
+                            color: '#F4F4F5',
+                            fontFamily: 'var(--font-satoshi)',
+                            textTransform: 'none',
+                            borderRadius: 1.5,
+                            '&:hover': { bgcolor: '#1C1A18' },
+                          }}
+                        >
+                          {app.label}
+                        </Button>
+                      );
+                    })}
+                  </Stack>
+                </Paper>
+              )}
+            </Box>
             <Button
               component={NextLink}
               href="/pricing"
@@ -569,12 +612,64 @@ export default function LandingPage() {
             >
               Pricing
             </Button>
-            <Button
-              onClick={(event) => setDevelopersAnchor(event.currentTarget)}
-              sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)', fontWeight: 700, textTransform: 'none', px: 2 }}
-            >
-              Developers
-            </Button>
+            <Box sx={{ position: 'relative' }}>
+              <Button
+                onClick={() => {
+                  setDevelopersOpen((prev) => !prev);
+                  setProductsOpen(false);
+                }}
+                sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)', fontWeight: 700, textTransform: 'none', px: 2 }}
+              >
+                Developers
+              </Button>
+              {developersOpen && (
+                <Paper
+                  sx={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    left: 0,
+                    minWidth: 180,
+                    p: 0.75,
+                    bgcolor: '#161412',
+                    border: '1px solid #34322F',
+                    zIndex: 20,
+                  }}
+                >
+                  <Stack spacing={0.5}>
+                    <Button
+                      component={NextLink}
+                      href="/developers"
+                      onClick={() => setDevelopersOpen(false)}
+                      sx={{
+                        justifyContent: 'flex-start',
+                        color: '#F4F4F5',
+                        fontFamily: 'var(--font-satoshi)',
+                        textTransform: 'none',
+                        borderRadius: 1.5,
+                        '&:hover': { bgcolor: '#1C1A18' },
+                      }}
+                    >
+                      Developers
+                    </Button>
+                    <Button
+                      component={NextLink}
+                      href="/docs"
+                      onClick={() => setDevelopersOpen(false)}
+                      sx={{
+                        justifyContent: 'flex-start',
+                        color: '#F4F4F5',
+                        fontFamily: 'var(--font-satoshi)',
+                        textTransform: 'none',
+                        borderRadius: 1.5,
+                        '&:hover': { bgcolor: '#1C1A18' },
+                      }}
+                    >
+                      Docs
+                    </Button>
+                  </Stack>
+                </Paper>
+              )}
+            </Box>
           </Stack>
 
           <Button
@@ -586,44 +681,6 @@ export default function LandingPage() {
             Install Skill
           </Button>
         </Box>
-
-        <Menu
-          anchorEl={productsAnchor}
-          open={Boolean(productsAnchor)}
-          onClose={() => setProductsAnchor(null)}
-          PaperProps={{ sx: { bgcolor: '#161412', border: '1px solid #34322F', mt: 0.5 } }}
-        >
-          {appOrder.map((id) => {
-            const app = ECOSYSTEM_APPS.find((item) => item.id === id);
-            if (!app) return null;
-            return (
-              <MenuItem
-                key={app.id}
-                onClick={() => {
-                  setProductsAnchor(null);
-                  openApp(app.subdomain);
-                }}
-                sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)' }}
-              >
-                {app.label}
-              </MenuItem>
-            );
-          })}
-        </Menu>
-
-        <Menu
-          anchorEl={developersAnchor}
-          open={Boolean(developersAnchor)}
-          onClose={() => setDevelopersAnchor(null)}
-          PaperProps={{ sx: { bgcolor: '#161412', border: '1px solid #34322F', mt: 0.5 } }}
-        >
-          <MenuItem component={NextLink} href="/developers" onClick={() => setDevelopersAnchor(null)} sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)' }}>
-            Developers
-          </MenuItem>
-          <MenuItem component={NextLink} href="/docs" onClick={() => setDevelopersAnchor(null)} sx={{ color: '#F4F4F5', fontFamily: 'var(--font-satoshi)' }}>
-            Docs
-          </MenuItem>
-        </Menu>
 
         <Stack spacing={5} alignItems="center" textAlign="center" sx={{ pt: { xs: 2, md: 4 }, pb: { xs: 9, md: 14 } }}>
           <Box
