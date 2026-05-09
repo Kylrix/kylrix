@@ -42,8 +42,10 @@ const Logo: React.FC<LogoProps> = ({
 
   const current = appColors[app] || appColors.root;
 
-  const leftColor = app === 'root' ? (isDarkMode ? '#FFFFFF' : '#000000') : '#6366F1';
-  const rightColor = current.accent;
+  const ecosystemPrimary = '#6366F1';
+  const isEcosystemBrand = app === 'root' || app === 'accounts' || app === 'kylrix';
+  const leftColor = isEcosystemBrand ? (isDarkMode ? '#FFFFFF' : '#000000') : ecosystemPrimary;
+  const rightColor = isEcosystemBrand ? ecosystemPrimary : current.accent;
   
   const cutoutColor = isDarkMode ? '#000000' : '#FFFFFF';
 

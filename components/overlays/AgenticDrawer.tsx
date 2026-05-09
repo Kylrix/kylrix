@@ -58,11 +58,13 @@ export function AgenticDrawer() {
         '& .MuiDrawer-paper': {
           height: '60vh',
           maxHeight: '60vh',
-          borderTopLeftRadius: '28px',
-          borderTopRightRadius: '28px',
+          borderTopLeftRadius: '24px',
+          borderTopRightRadius: '24px',
           bgcolor: '#161412',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          backgroundImage: `linear-gradient(180deg, ${alpha('#6366F1', 0.12)} 0%, rgba(22,20,18,1) 45%)`,
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          borderBottom: 0,
+          boxShadow: 'none',
+          backgroundImage: 'none',
           overflow: 'hidden',
         },
       }}
@@ -93,7 +95,7 @@ export function AgenticDrawer() {
           </IconButton>
         </Stack>
 
-        <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', mb: 1.75 }} />
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)', mb: 1.75 }} />
 
         {stage === 'live' && (
           <Stack spacing={1.5} sx={{ minHeight: 0, flex: 1 }}>

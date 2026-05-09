@@ -40,12 +40,14 @@ const Logo: React.FC<LogoProps> = ({
 
   const current = appColors[app] || appColors.kylrix;
 
-  // Root/Kylrix logo split must remain white-left and indigo-right.
-  // App logos keep app accent on left and ecosystem indigo on right.
-  const leftColor = (app === 'kylrix' || app === 'root')
-    ? (isDarkMode ? "#FFFFFF" : "#000000")
+  // Ecosystem brand (root / accounts / kylrix): white or black left, indigo right.
+  // Satellite apps: app accent on left, ecosystem indigo on right.
+  const ecosystemPrimary = '#6366F1';
+  const isEcosystemBrand = app === 'root' || app === 'accounts' || app === 'kylrix';
+  const leftColor = isEcosystemBrand
+    ? (isDarkMode ? '#FFFFFF' : '#000000')
     : current.secondary;
-  const rightColor = current.primary;
+  const rightColor = isEcosystemBrand ? ecosystemPrimary : current.primary;
   
   // Center cutout color (punches through to background)
   const cutoutColor = isDarkMode ? "#0A0908" : "#FFFFFF";
@@ -98,6 +100,7 @@ const Logo: React.FC<LogoProps> = ({
           />
         );
       case 'root': // Diamond
+      case 'accounts': // Diamond (same as KYLRIX mark)
       case 'kylrix': // Diamond
       default:
         return <polygon points="50,38 62,50 50,62 38,50" fill={cutoutColor} />;
