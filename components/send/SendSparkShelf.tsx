@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   alpha,
   Box,
@@ -78,9 +78,23 @@ interface Props {
 
 export function SendSparkShelf({ sparks, onSaveSparks, onClaim }: Props) {
   const [menu, setMenu] = useState<{ mouseX: number; mouseY: number; id: string } | null>(null);
+  const [nowTs, setNowTs] = useState(0);
 
-  const active = useMemo(() => sparks.filter((s) => new Date(s.expiresAt).getTime() > Date.now()), [sparks]);
-  const stale = useMemo(() => sparks.filter((s) => new Date(s.expiresAt).getTime() <= Date.now()), [sparks]);
+  useEffect(() => {
+    const tick = () => setNowTs(Date.now());
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const active = useMemo(() => {
+    if (!nowTs) return sparks;
+    return sparks.filter((s) => new Date(s.expiresAt).getTime() > nowTs);
+  }, [sparks, nowTs]);
+  const stale = useMemo(() => {
+    if (!nowTs) return [];
+    return sparks.filter((s) => new Date(s.expiresAt).getTime() <= nowTs);
+  }, [sparks, nowTs]);
 
   const ctxNote = useMemo(() => {
     if (!menu) return undefined;

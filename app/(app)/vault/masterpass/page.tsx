@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import {
@@ -23,6 +23,20 @@ import toast from 'react-hot-toast';
  * Handles first-time MasterPass setup and recovery from missing-keychain states.
  */
 export default function MasterPassPage() {
+  return (
+    <Suspense
+      fallback={
+        <Box sx={{ minHeight: 'calc(100vh - 88px)', bgcolor: '#0A0908', py: { xs: 4, md: 8 }, display: 'grid', placeItems: 'center' }}>
+          <CircularProgress size={28} />
+        </Box>
+      }
+    >
+      <MasterPassPageInner />
+    </Suspense>
+  );
+}
+
+function MasterPassPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading } = useAppwriteVault();

@@ -49,11 +49,11 @@ async function requireUser() {
 
 async function getOwnedAgentOrThrow(agentId: string, ownerId: string) {
   const { databases } = createAdminClient();
-  const agent = await databases.getDocument(
+  const agent = (await databases.getDocument(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
     agentId,
-  ) as AgentRecord | null;
+  )) as unknown as AgentRecord;
   if (!agent) throw new Error('Agent not found.');
   if (agent.ownerId !== ownerId) throw new Error('Forbidden');
   return agent;
