@@ -51,8 +51,11 @@ const BORDER_EDGE = '#34322F';
 const TEXT_MUTED = '#9B9691';
 const INDIGO = '#6366F1';
 const INDIGO_HOVER = '#575CF0';
+const EMERALD = '#10B981';
+const AMBER = '#F59E0B';
 
 const BORDER = `1px solid ${BORDER_EDGE}`;
+const SHELL_SHADOW = '0 -24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.04)';
 
 function formatUpdatedAgo(value?: string): string {
   if (!value) return 'updated just now';
@@ -83,6 +86,7 @@ export function AgenticDrawer() {
   const [saving, setSaving] = useState(false);
   const [updatingAgentId, setUpdatingAgentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const stageOrder: Array<typeof stage> = ['live', 'framework', 'create'];
 
   useEffect(() => {
     if (!isOpen) {
@@ -168,7 +172,7 @@ export function AgenticDrawer() {
 
   const parsedAgents = useMemo(() => {
     return agents.map((agent) => {
-      let config: { name?: string; goal?: string; framework?: string } = {};
+      let config: { name?: string; goal?: string; framework?: string; lastSummary?: string | null; lastError?: string | null } = {};
       try {
         config = JSON.parse(agent.config || '{}');
       } catch {
@@ -180,9 +184,20 @@ export function AgenticDrawer() {
         goal: config.goal || 'No goal defined yet.',
         framework: (config.framework as AgentFramework) || 'kylrix',
         status: agent.status === 'working' ? 'working' : 'idle',
+        lastSummary: config.lastSummary || null,
+        lastError: config.lastError || null,
       };
     });
   }, [agents]);
+
+  const runSummary = useMemo(() => {
+    const working = parsedAgents.filter((a) => a.status === 'working').length;
+    return {
+      total: parsedAgents.length,
+      working,
+      idle: Math.max(parsedAgents.length - working, 0),
+    };
+  }, [parsedAgents]);
 
   const sheetBodySx = {
     fontFamily: fontUi,
@@ -201,8 +216,8 @@ export function AgenticDrawer() {
                 top: '88px',
                 right: 0,
                 height: 'calc(100vh - 88px)',
-                width: 'min(420px, 92vw)',
-                maxWidth: 'min(420px, 92vw)',
+                width: 'min(460px, 94vw)',
+                maxWidth: 'min(460px, 94vw)',
                 borderTopLeftRadius: '24px',
                 borderTopRightRadius: 0,
                 borderBottomLeftRadius: 0,
@@ -213,15 +228,15 @@ export function AgenticDrawer() {
                 borderRight: 0,
               }
             : {
-                height: 'min(62dvh, 540px)',
-                maxHeight: 'min(62dvh, 540px)',
+                height: 'min(86dvh, 760px)',
+                maxHeight: 'min(86dvh, 760px)',
                 borderTopLeftRadius: '24px',
                 borderTopRightRadius: '24px',
                 border: BORDER,
                 borderBottom: 0,
               }),
           bgcolor: SURFACE_NAV,
-          boxShadow: 'none',
+          boxShadow: SHELL_SHADOW,
           backgroundImage: 'none',
           overflow: 'hidden',
           display: 'flex',
@@ -259,8 +274,9 @@ export function AgenticDrawer() {
                 borderRadius: '12px',
                 display: 'grid',
                 placeItems: 'center',
-                bgcolor: VOID,
-                border: BORDER,
+                bgcolor: alpha(INDIGO, 0.14),
+                border: `1px solid ${alpha(INDIGO, 0.35)}`,
+                boxShadow: `0 10px 24px ${alpha(INDIGO, 0.24)}`,
               }}
             >
               <Bot size={20} color="#E0E7FF" strokeWidth={2} />
@@ -289,6 +305,59 @@ export function AgenticDrawer() {
           >
             <X size={18} />
           </IconButton>
+        </Stack>
+
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 1.75,
+            p: 1.4,
+            borderRadius: '16px',
+            bgcolor: '#11100F',
+            border: '1px solid rgba(255,255,255,0.08)',
+            backgroundImage: `radial-gradient(circle at 8% 0%, ${alpha(INDIGO, 0.18)}, transparent 42%)`,
+          }}
+        >
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center" justifyContent="space-between">
+            <Stack direction="row" spacing={0.8} alignItems="center">
+              <Box sx={{ width: 8, height: 8, borderRadius: '999px', bgcolor: runSummary.working > 0 ? AMBER : EMERALD }} />
+              <Typography sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 800 }}>
+                {runSummary.total} agents
+              </Typography>
+            </Stack>
+            <Typography sx={{ color: alpha('#fff', 0.62), fontSize: '0.74rem', fontWeight: 700 }}>
+              {runSummary.working} working · {runSummary.idle} idle
+            </Typography>
+          </Stack>
+        </Paper>
+
+        <Stack direction="row" spacing={0.75} sx={{ mb: 1.6 }}>
+          {stageOrder.map((entry, index) => {
+            const active = stage === entry;
+            const label = entry === 'live' ? 'Live' : entry === 'framework' ? 'Runtime' : 'Create';
+            return (
+              <Button
+                key={entry}
+                size="small"
+                onClick={() => setStage(entry)}
+                sx={{
+                  flex: 1,
+                  minHeight: 36,
+                  borderRadius: '10px',
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  fontSize: '0.76rem',
+                  letterSpacing: '0.02em',
+                  color: active ? '#fff' : alpha('#fff', 0.6),
+                  bgcolor: active ? alpha(INDIGO, 0.88) : '#100F0E',
+                  border: `1px solid ${active ? alpha(INDIGO, 0.95) : 'rgba(255,255,255,0.08)'}`,
+                  '&:hover': { bgcolor: active ? INDIGO_HOVER : HOVER },
+                }}
+              >
+                {index + 1}. {label}
+              </Button>
+            );
+          })}
         </Stack>
 
         {stage === 'live' && (
@@ -320,7 +389,7 @@ export function AgenticDrawer() {
             <Stack
               spacing={1}
               sx={{
-                maxHeight: { xs: 300, md: 320 },
+                maxHeight: { xs: 440, md: 520 },
                 overflowY: 'auto',
                 pr: 0.25,
                 flex: 1,
@@ -331,7 +400,16 @@ export function AgenticDrawer() {
                   <CircularProgress size={24} />
                 </Box>
               ) : parsedAgents.length === 0 ? (
-                <Paper elevation={0} sx={{ p: 2, borderRadius: '14px', bgcolor: VOID, border: BORDER }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2.2,
+                    borderRadius: '16px',
+                    bgcolor: VOID,
+                    border: BORDER,
+                    backgroundImage: `radial-gradient(circle at 0% 0%, ${alpha(INDIGO, 0.14)}, transparent 56%)`,
+                  }}
+                >
                   <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>No agents yet</Typography>
                   <Typography sx={{ color: TEXT_MUTED, fontSize: '0.8rem', mt: 0.5 }}>
                     Spin up your first Kylrix agent to start automations.
@@ -339,7 +417,18 @@ export function AgenticDrawer() {
                 </Paper>
               ) : (
                 parsedAgents.map((agent) => (
-                  <Paper key={agent.$id} elevation={0} sx={{ p: 1.5, borderRadius: '14px', bgcolor: VOID, border: BORDER }}>
+                  <Paper
+                    key={agent.$id}
+                    elevation={0}
+                    sx={{
+                      p: 1.6,
+                      borderRadius: '16px',
+                      bgcolor: '#0F0E0D',
+                      border: `1px solid ${agent.status === 'working' ? alpha(AMBER, 0.44) : 'rgba(255,255,255,0.09)'}`,
+                      boxShadow: agent.status === 'working' ? `0 10px 26px ${alpha(AMBER, 0.14)}` : 'none',
+                      transition: 'all 180ms ease',
+                    }}
+                  >
                     <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
                       <Box sx={{ minWidth: 0 }}>
                         <Typography noWrap sx={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>
@@ -369,9 +458,18 @@ export function AgenticDrawer() {
                         {agent.status}
                       </Box>
                     </Stack>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.78rem', mt: 1.1, mb: 1.25, lineHeight: 1.5 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.78rem', mt: 1.1, mb: 1.05, lineHeight: 1.5 }}>
                       {agent.goal}
                     </Typography>
+                    {agent.lastError ? (
+                      <Typography sx={{ color: '#FCA5A5', fontSize: '0.75rem', mb: 1.05, lineHeight: 1.45 }}>
+                        Last run error: {agent.lastError}
+                      </Typography>
+                    ) : agent.lastSummary ? (
+                      <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', mb: 1.05, lineHeight: 1.45 }}>
+                        Last run: {agent.lastSummary}
+                      </Typography>
+                    ) : null}
                     <Stack direction="row" spacing={1}>
                       <Button
                         size="small"
@@ -379,7 +477,7 @@ export function AgenticDrawer() {
                         variant="outlined"
                         disabled={updatingAgentId === agent.$id || agent.status === 'idle'}
                         onClick={() => void setAgentStatus(agent, 'idle')}
-                        sx={{ textTransform: 'none', borderColor: BORDER_EDGE, color: '#F4F4F5', borderRadius: '10px' }}
+                        sx={{ textTransform: 'none', borderColor: BORDER_EDGE, color: '#F4F4F5', borderRadius: '10px', minHeight: 38 }}
                       >
                         Idle
                       </Button>
@@ -390,7 +488,7 @@ export function AgenticDrawer() {
                         startIcon={<Play size={14} />}
                         disabled={updatingAgentId === agent.$id || agent.status === 'working'}
                         onClick={() => void runAgentNow(agent)}
-                        sx={{ textTransform: 'none', borderRadius: '10px', bgcolor: INDIGO, '&:hover': { bgcolor: INDIGO_HOVER } }}
+                        sx={{ textTransform: 'none', borderRadius: '10px', bgcolor: INDIGO, minHeight: 38, '&:hover': { bgcolor: INDIGO_HOVER } }}
                       >
                         Run
                       </Button>
@@ -489,7 +587,7 @@ export function AgenticDrawer() {
               variant="contained"
               onClick={() => setStage('create')}
               disabled={framework !== 'kylrix'}
-              sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, bgcolor: INDIGO, '&:hover': { bgcolor: INDIGO_HOVER } }}
+              sx={{ borderRadius: '10px', minHeight: 40, textTransform: 'none', fontWeight: 700, bgcolor: INDIGO, '&:hover': { bgcolor: INDIGO_HOVER } }}
             >
               Use framework
             </Button>
@@ -509,12 +607,13 @@ export function AgenticDrawer() {
               elevation={0}
               sx={{
                 p: 1.75,
-                borderRadius: '14px',
-                bgcolor: VOID,
-                border: BORDER,
+                borderRadius: '16px',
+                bgcolor: '#100F0E',
+                border: '1px solid rgba(255,255,255,0.09)',
                 flex: 1,
                 minHeight: 0,
                 overflowY: 'auto',
+                backgroundImage: `radial-gradient(circle at 90% 0%, ${alpha(INDIGO, 0.14)}, transparent 52%)`,
               }}
             >
               <Stack spacing={1.25}>
@@ -526,7 +625,7 @@ export function AgenticDrawer() {
                   fullWidth
                   size="small"
                   sx={{
-                    '& .MuiOutlinedInput-root': { bgcolor: HOVER, borderRadius: '10px' },
+                    '& .MuiOutlinedInput-root': { bgcolor: HOVER, borderRadius: '12px' },
                     '& .MuiInputBase-input': { color: '#fff' },
                     '& .MuiInputLabel-root': { color: TEXT_MUTED },
                   }}
@@ -541,7 +640,7 @@ export function AgenticDrawer() {
                   minRows={3}
                   size="small"
                   sx={{
-                    '& .MuiOutlinedInput-root': { bgcolor: HOVER, borderRadius: '10px' },
+                    '& .MuiOutlinedInput-root': { bgcolor: HOVER, borderRadius: '12px' },
                     '& .MuiInputBase-input': { color: '#fff' },
                     '& .MuiInputLabel-root': { color: TEXT_MUTED },
                   }}
@@ -566,6 +665,9 @@ export function AgenticDrawer() {
                   <Plug size={14} />
                   Runtime: {framework === 'kylrix' ? 'Kylrix Internal' : framework}
                 </Box>
+                <Typography sx={{ color: alpha('#fff', 0.48), fontSize: '0.74rem' }}>
+                  Agents run with your internal account permissions and never expose external API surfaces.
+                </Typography>
               </Stack>
             </Paper>
 
