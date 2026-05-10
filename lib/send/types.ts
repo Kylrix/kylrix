@@ -1,4 +1,4 @@
-export type SendKind = 'note' | 'password' | 'task' | 'totp' | 'file';
+export type SendKind = 'note' | 'password' | 'totp' | 'task' | 'file';
 
 export interface SendExpiryPreset {
   id: string;
@@ -6,17 +6,37 @@ export interface SendExpiryPreset {
   ms: number;
 }
 
+/** Encrypted JSON inside ghost note `content` after decryption (password + optional bundled TOTP). */
+export interface SendPasswordPayload {
+  username?: string;
+  password: string;
+  /** Optional authenticator seed shipped with the password */
+  totpSecret?: string;
+}
+
+export interface SendTotpPayload {
+  issuer?: string;
+  account?: string;
+  secret: string;
+}
+
+export interface SendTaskPayload {
+  title: string;
+  detail?: string;
+  /** ISO datetime string */
+  dueAt?: string;
+}
+
 export interface SendDraftPayload {
   kind: SendKind;
   expiresAtMs: number;
-  /** Client-only preview until persistence ships */
   title?: string;
   body?: string;
-  password?: string;
   username?: string;
+  password?: string;
   taskTitle?: string;
   taskDetail?: string;
-  totpSecret?: string;
   totpIssuer?: string;
+  totpSecret?: string;
   fileName?: string;
 }

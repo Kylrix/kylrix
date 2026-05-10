@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/context/auth/AuthContext';
 import { AppwriteProvider } from '@/app/(app)/vault/appwrite-provider';
 import { DocsProvider } from '@/context/DocsContext';
@@ -31,6 +32,7 @@ import { TokenOpsProvider } from '@/context/TokenOpsContext';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
+    <>
     <AuthProvider>
       <AppwriteProvider>
         <ThemeProvider>
@@ -85,5 +87,12 @@ export function ClientProviders({ children }: { children: ReactNode }) {
         </ThemeProvider>
       </AppwriteProvider>
     </AuthProvider>
+    <Toaster
+      position="top-center"
+      toastOptions={{
+        style: { background: '#161412', color: '#f2f2f2', border: '1px solid rgba(255,255,255,0.08)' },
+      }}
+    />
+    </>
   );
 }

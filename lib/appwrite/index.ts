@@ -20,4 +20,5 @@ export const AppwriteService = {
   createKeychainEntry: SharedService.createKeychainEntry,
   deleteKeychainEntry: SharedService.deleteKeychainEntry,
   createGhostNote: SharedService.createGhostNote,
+  createSendGhostObject: SharedService.createSendGhostObject,
 } as any;

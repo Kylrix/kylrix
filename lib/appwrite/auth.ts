@@ -161,4 +161,46 @@ export class AppwriteService {
       [Permission.read(Role.any())]
     );
   }
+
+  /**
+   * Send by Kylrix: same storage as ghost notes (no userId, public read) but metadata includes
+   * `send_object` so clients render password / TOTP / task payloads instead of plain notes.
+   * Coexists with classic ghost notes (those omit `send_object`).
+   */
+  static async createSendGhostObject(data: {
+    title: string;
+    content: string;
+    format?: string;
+    ghostSecret: string;
+    expiresAt?: string;
+    isEncrypted?: boolean;
+    sendObject: { kind: string };
+  }): Promise<any> {
+    const expiresAt = data.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const metadata = JSON.stringify({
+      isGhost: true,
+      send_object: data.sendObject,
+      ghostSecret: data.ghostSecret,
+      expiresAt,
+      version: 'v2',
+      isEncrypted: data.isEncrypted ?? false,
+    });
+
+    return await databases.createDocument(
+      APPWRITE_CONFIG.DATABASES.NOTE,
+      APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+      ID.unique(),
+      {
+        title: data.title,
+        content: data.content,
+        format: data.format || 'markdown',
+        isPublic: true,
+        userId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        metadata,
+      },
+      [Permission.read(Role.any())]
+    );
+  }
 }

@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useCallback, useMemo, useState } from 'react';
-import NextLink from 'next/link';
+import Link from 'next/link';
 import {
   alpha,
   Box,
   Button,
   Chip,
+  CircularProgress,
   Container,
   IconButton,
   InputLabel,
@@ -31,10 +32,18 @@ import {
 } from 'lucide-react';
 
 import Logo from '@/components/Logo';
+import { AppwriteService } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { encryptGhostData } from '@/lib/encryption/ghost-crypto';
 import { useAuth } from '@/lib/auth';
-import { SEND_EXPIRY_PRESETS, SEND_MAX_TTL_MS, SEND_NOTE_ROW_KEYS, clampExpiryMs } from '@/lib/send/constants';
-import type { SendDraftPayload, SendKind } from '@/lib/send/types';
+import { SEND_EXPIRY_PRESETS, SEND_MAX_TTL_MS, clampExpiryMs } from '@/lib/send/constants';
+import type {
+  SendKind,
+  SendPasswordPayload,
+  SendTaskPayload,
+  SendTotpPayload,
+} from '@/lib/send/types';
+import toast from 'react-hot-toast';
 
 const SURFACE = '#161412';
 const RIM = '1px solid rgba(255, 255, 255, 0.06)';
@@ -72,11 +81,14 @@ export function SendComposer() {
   const [taskDetail, setTaskDetail] = useState('');
   const [totpIssuer, setTotpIssuer] = useState('');
   const [totpSecret, setTotpSecret] = useState('');
+  /** Optional TOTP seed bundled with password sends */
+  const [passwordTotpBundle, setPasswordTotpBundle] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   const expiryLabel = useMemo(() => formatRemaining(expiryMs), [expiryMs]);
 
@@ -91,45 +103,97 @@ export function SendComposer() {
       case 'totp':
         return totpSecret.trim().length > 0;
       case 'file':
-        return Boolean(fileName);
+        return false;
       default:
         return false;
     }
   }, [kind, noteBody, password, taskTitle, totpSecret, fileName]);
 
-  const handleCreateLink = useCallback(() => {
-    const expiresAtMs = Date.now() + clampExpiryMs(expiryMs);
-    const payload: SendDraftPayload = {
-      kind,
-      expiresAtMs,
-      title: noteTitle || undefined,
-      body: noteBody || undefined,
-      username: username || undefined,
-      password: password || undefined,
-      taskTitle: taskTitle || undefined,
-      taskDetail: taskDetail || undefined,
-      totpIssuer: totpIssuer || undefined,
-      totpSecret: totpSecret || undefined,
-      fileName: fileName || undefined,
-    };
-
-    try {
-      sessionStorage.setItem(
-        'kylrix_send_last_draft',
-        JSON.stringify({ ...payload, savedAt: Date.now(), markers: SEND_NOTE_ROW_KEYS }),
-      );
-    } catch {
-      // ignore quota / private mode
+  const handleCreateLink = useCallback(async () => {
+    if (kind === 'file') {
+      toast.error('File send is almost ready — bucket hookup next.');
+      return;
     }
 
-    const token =
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID().replace(/-/g, '').slice(0, 22)
-        : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    setIsCreating(true);
+    try {
+      const expiresAt = new Date(Date.now() + clampExpiryMs(expiryMs)).toISOString();
+      const ghostSecret = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-send`;
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    setCreatedUrl(`${origin}/send/r/${token}`);
-    setCopied(false);
+      let encTitle: string;
+      let encContent: string;
+      let noteKey: string;
+      let format: string;
+
+      if (kind === 'note') {
+        const titlePlain = noteTitle.trim() || 'Note';
+        const bodyPlain = noteBody.trim();
+        const t = await encryptGhostData(titlePlain);
+        const c = await encryptGhostData(bodyPlain, t.key);
+        encTitle = t.encrypted;
+        encContent = c.encrypted;
+        noteKey = t.key;
+        format = 'markdown';
+      } else if (kind === 'password') {
+        const bundle: SendPasswordPayload = {
+          username: username.trim() || undefined,
+          password: password.trim(),
+          totpSecret: passwordTotpBundle.trim() || undefined,
+        };
+        const label = username.trim() ? `Credential · ${username.trim()}` : 'Credential';
+        const t = await encryptGhostData(label);
+        const c = await encryptGhostData(JSON.stringify(bundle), t.key);
+        encTitle = t.encrypted;
+        encContent = c.encrypted;
+        noteKey = t.key;
+        format = 'json';
+      } else if (kind === 'task') {
+        const bundle: SendTaskPayload = {
+          title: taskTitle.trim(),
+          detail: taskDetail.trim() || undefined,
+        };
+        const t = await encryptGhostData(bundle.title);
+        const c = await encryptGhostData(JSON.stringify(bundle), t.key);
+        encTitle = t.encrypted;
+        encContent = c.encrypted;
+        noteKey = t.key;
+        format = 'json';
+      } else if (kind === 'totp') {
+        const bundle: SendTotpPayload = {
+          issuer: totpIssuer.trim() || undefined,
+          secret: totpSecret.trim(),
+        };
+        const t = await encryptGhostData(bundle.issuer || 'Authenticator');
+        const c = await encryptGhostData(JSON.stringify(bundle), t.key);
+        encTitle = t.encrypted;
+        encContent = c.encrypted;
+        noteKey = t.key;
+        format = 'json';
+      } else {
+        toast.error('Unsupported send type.');
+        return;
+      }
+
+      const note = await AppwriteService.createSendGhostObject({
+        title: encTitle,
+        content: encContent,
+        format,
+        ghostSecret,
+        expiresAt,
+        isEncrypted: true,
+        sendObject: { kind },
+      });
+
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      setCreatedUrl(`${origin}/send/r/${note.$id}/${noteKey}`);
+      setCopied(false);
+      toast.success('Secure link created');
+    } catch (e: unknown) {
+      console.error('[Send]', e);
+      toast.error(e instanceof Error ? e.message : 'Could not create send link');
+    } finally {
+      setIsCreating(false);
+    }
   }, [
     kind,
     expiryMs,
@@ -137,11 +201,11 @@ export function SendComposer() {
     noteBody,
     username,
     password,
+    passwordTotpBundle,
     taskTitle,
     taskDetail,
     totpIssuer,
     totpSecret,
-    fileName,
   ]);
 
   const handleCopy = useCallback(async () => {
@@ -194,7 +258,7 @@ export function SendComposer() {
       >
         <Container maxWidth="lg" sx={{ py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
           <Button
-            component={NextLink}
+            component={Link}
             href="/"
             startIcon={<ArrowLeft size={18} />}
             sx={{
@@ -304,10 +368,14 @@ export function SendComposer() {
               >
                 {KINDS.map(({ id, label, blurb, Icon }) => {
                   const selected = kind === id;
+                  const disabled = id === 'file';
                   return (
                     <Button
                       key={id}
-                      onClick={() => setKind(id)}
+                      onClick={() => {
+                        if (disabled) return;
+                        setKind(id);
+                      }}
                       sx={{
                         flexDirection: 'column',
                         alignItems: 'flex-start',
@@ -320,15 +388,22 @@ export function SendComposer() {
                         bgcolor: selected ? alpha(PRIMARY, 0.12) : alpha('#fff', 0.02),
                         color: '#fff',
                         minHeight: 108,
+                        opacity: disabled ? 0.5 : 1,
+                        cursor: disabled ? 'not-allowed' : 'pointer',
                         '&:hover': {
-                          bgcolor: selected ? alpha(PRIMARY, 0.18) : alpha('#fff', 0.06),
-                          borderColor: alpha('#fff', 0.12),
+                          bgcolor: disabled ? undefined : selected ? alpha(PRIMARY, 0.18) : alpha('#fff', 0.06),
+                          borderColor: disabled ? undefined : alpha('#fff', 0.12),
                         },
                       }}
                     >
                       <Icon size={22} color={selected ? PRIMARY : 'rgba(255,255,255,0.65)'} />
                       <Box>
-                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }}>{label}</Typography>
+                        <Stack direction="row" alignItems="center" gap={0.75}>
+                          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }}>{label}</Typography>
+                          {disabled && (
+                            <Chip label="Soon" size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha('#fff', 0.08) }} />
+                          )}
+                        </Stack>
                         <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.35 }}>
                           {blurb}
                         </Typography>
@@ -384,6 +459,14 @@ export function SendComposer() {
                     fullWidth
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    sx={fieldSx}
+                  />
+                  <TextField
+                    label="Authenticator secret (optional)"
+                    fullWidth
+                    placeholder="Base32 — shown as live code for the recipient"
+                    value={passwordTotpBundle}
+                    onChange={(e) => setPasswordTotpBundle(e.target.value)}
                     sx={fieldSx}
                   />
                 </Stack>
@@ -516,8 +599,8 @@ export function SendComposer() {
             <Button
               variant="contained"
               size="large"
-              disabled={!draftValid}
-              onClick={handleCreateLink}
+              disabled={!draftValid || isCreating || kind === 'file'}
+              onClick={() => void handleCreateLink()}
               sx={{
                 py: 1.75,
                 borderRadius: 2,
@@ -529,11 +612,14 @@ export function SendComposer() {
                 '&:hover': { bgcolor: '#5558E8' },
               }}
             >
-              Create secure link
+              {isCreating ? <CircularProgress size={26} color="inherit" /> : 'Create secure link'}
             </Button>
 
-            <Typography sx={{ textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', px: 2 }}>
-              {`Persistence hooks (ghost rows + ${SEND_NOTE_ROW_KEYS.kind} + ${APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL} bucket) ship next—this page is the production-ready interaction model.`}
+            <Typography sx={{ textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', px: 2, lineHeight: 1.6 }}>
+              Encrypted ghost rows in the note database — same privacy model as classic ghost notes, plus a{' '}
+              <Box component="span" sx={{ fontFamily: 'var(--font-mono)', color: alpha('#fff', 0.55) }}>send_object</Box> tag in metadata so
+              we render the right surface. Max {formatRemaining(SEND_MAX_TTL_MS)}. Optional file bucket:{' '}
+              <Box component="span" sx={{ fontFamily: 'var(--font-mono)', color: alpha('#fff', 0.55) }}>{APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL}</Box>.
             </Typography>
           </Stack>
         ) : (
@@ -552,7 +638,7 @@ export function SendComposer() {
               Link ready
             </Typography>
             <Typography sx={{ color: 'rgba(255,255,255,0.55)', mb: 3, lineHeight: 1.55 }}>
-              Share once. Recipients open instantly—no accounts. This URL is a client-side preview until the send pipeline is wired.
+              Share once. Recipients open instantly with this URL — no account required. The key stays in the link fragment only on your device until you copy it.
             </Typography>
 
             <Paper
@@ -578,12 +664,12 @@ export function SendComposer() {
             </Paper>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="center">
-              <Button variant="outlined" component={NextLink} href="/send" sx={{ textTransform: 'none', fontWeight: 700, borderColor: alpha('#fff', 0.2), color: '#fff' }}>
+              <Button variant="outlined" component={Link} href="/send" sx={{ textTransform: 'none', fontWeight: 700, borderColor: alpha('#fff', 0.2), color: '#fff' }}>
                 Send another
               </Button>
               <Button
                 variant="contained"
-                component={NextLink}
+                component={Link}
                 href={createdUrl || '#'}
                 sx={{ textTransform: 'none', fontWeight: 700, bgcolor: PRIMARY }}
               >
