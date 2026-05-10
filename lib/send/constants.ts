@@ -3,6 +3,9 @@ import type { SendExpiryPreset } from './types';
 /** Hard cap for Send links (matches product rule). */
 export const SEND_MAX_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+/** Matches `kylrix_send` bucket `maximumFileSize` in appwrite.config.json. */
+export const SEND_MAX_FILE_BYTES = 20 * 1024 * 1024;
+
 export const SEND_EXPIRY_PRESETS: SendExpiryPreset[] = [
   { id: '15m', label: '15 minutes', ms: 15 * 60 * 1000 },
   { id: '1h', label: '1 hour', ms: 60 * 60 * 1000 },

@@ -27,6 +27,15 @@ export interface SendTaskPayload {
   dueAt?: string;
 }
 
+/** Plaintext manifest stored in encrypted ghost `content` — ciphertext bytes live in Storage. */
+export interface SendFilePayload {
+  bucketId: string;
+  fileId: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+}
+
 export interface SendDraftPayload {
   kind: SendKind;
   expiresAtMs: number;

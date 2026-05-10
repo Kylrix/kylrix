@@ -19,13 +19,14 @@ import { authenticator } from 'otplib';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import { ArrowLeft, Check, Copy, Eye, EyeOff, KeyRound, ListTodo, Shield, Sparkles, FileText } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Eye, EyeOff, KeyRound, ListTodo, Shield, Sparkles, FileText, Upload } from 'lucide-react';
 
 import Logo from '@/components/Logo';
-import { decryptGhostData } from '@/lib/encryption/ghost-crypto';
+import { storage } from '@/lib/appwrite/client';
+import { decryptGhostBinaryFromBytes, decryptGhostData } from '@/lib/encryption/ghost-crypto';
 import { isSendObjectMeta, parseSendGhostMetadata } from '@/lib/send/metadata';
 import { sharedNotePublicUrl } from '@/lib/send/shared-note-api';
-import type { SendKind, SendPasswordPayload, SendTaskPayload, SendTotpPayload } from '@/lib/send/types';
+import type { SendFilePayload, SendKind, SendPasswordPayload, SendTaskPayload, SendTotpPayload } from '@/lib/send/types';
 
 const SURFACE = '#161412';
 const RIM = '1px solid rgba(255, 255, 255, 0.06)';
@@ -53,6 +54,9 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
   const [passwordPayload, setPasswordPayload] = useState<SendPasswordPayload | null>(null);
   const [totpPayload, setTotpPayload] = useState<SendTotpPayload | null>(null);
   const [taskPayload, setTaskPayload] = useState<SendTaskPayload | null>(null);
+  const [fileManifest, setFileManifest] = useState<SendFilePayload | null>(null);
+  const [fileBlobUrl, setFileBlobUrl] = useState<string | null>(null);
+  const [textPreview, setTextPreview] = useState<string | null>(null);
   const [totpLive, setTotpLive] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -72,10 +76,19 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
 
   useEffect(() => {
     let cancelled = false;
+    let revokeObjectUrl: string | null = null;
 
     const run = async () => {
       setLoading(true);
       setError(null);
+      setNoteMarkdown('');
+      setPasswordPayload(null);
+      setTotpPayload(null);
+      setTaskPayload(null);
+      setFileManifest(null);
+      setFileBlobUrl(null);
+      setTextPreview(null);
+
       try {
         const res = await fetch(sharedNotePublicUrl(noteId), { cache: 'no-store' });
         if (!res.ok) {
@@ -144,8 +157,42 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
             setTaskPayload(parsed);
             break;
           }
-          case 'file':
-            throw new Error('File sends are not available yet.');
+          case 'file': {
+            let manifest: SendFilePayload;
+            try {
+              manifest = JSON.parse(plainContent) as SendFilePayload;
+            } catch {
+              throw new Error('Invalid file manifest.');
+            }
+            if (!manifest.bucketId || !manifest.fileId) {
+              throw new Error('Incomplete file manifest.');
+            }
+
+            const downloadUrl = storage.getFileDownload(manifest.bucketId, manifest.fileId);
+            const fileRes = await fetch(downloadUrl);
+            if (!fileRes.ok) {
+              throw new Error('Could not download encrypted file.');
+            }
+            const encBuf = await fileRes.arrayBuffer();
+            const plainBuf = decryptGhostBinaryFromBytes(encBuf, dk);
+            const blob = new Blob([plainBuf], { type: manifest.mimeType || 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            revokeObjectUrl = url;
+
+            if (!cancelled) {
+              setFileManifest(manifest);
+              setFileBlobUrl(url);
+              const mime = manifest.mimeType || '';
+              if (mime.startsWith('text/') || mime === 'application/json') {
+                try {
+                  setTextPreview(new TextDecoder().decode(plainBuf));
+                } catch {
+                  setTextPreview(null);
+                }
+              }
+            }
+            break;
+          }
           default:
             throw new Error('Unknown send type.');
         }
@@ -159,6 +206,9 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
     void run();
     return () => {
       cancelled = true;
+      if (revokeObjectUrl) {
+        URL.revokeObjectURL(revokeObjectUrl);
+      }
     };
   }, [noteId, keyParam, hasKey, tickTotp]);
 
@@ -202,10 +252,14 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
         return <Shield size={18} />;
       case 'task':
         return <ListTodo size={18} />;
+      case 'file':
+        return <Upload size={18} />;
       default:
         return <Sparkles size={18} />;
     }
   }, [kind]);
+
+  const fileMime = fileManifest?.mimeType || '';
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: 'rgba(255,255,255,0.92)' }}>
@@ -298,7 +352,7 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 700, fontSize: '1.35rem', lineHeight: 1.2 }}>
-                    {titlePlain || 'Send'}
+                    {kind === 'file' ? fileManifest?.originalName || titlePlain || 'File' : titlePlain || 'Send'}
                   </Typography>
                   <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', textTransform: 'capitalize' }}>{kind}</Typography>
                 </Box>
@@ -386,6 +440,56 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
                   )}
                   {taskPayload.dueAt && (
                     <Chip label={new Date(taskPayload.dueAt).toLocaleString()} sx={{ alignSelf: 'flex-start', bgcolor: alpha('#fff', 0.08) }} />
+                  )}
+                </Stack>
+              )}
+
+              {kind === 'file' && fileManifest && fileBlobUrl && (
+                <Stack spacing={2}>
+                  <Typography sx={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
+                    {(fileManifest.size / 1024).toFixed(1)} KB · {fileMime || 'binary'}
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    component="a"
+                    href={fileBlobUrl}
+                    download={fileManifest.originalName}
+                    sx={{ textTransform: 'none', fontWeight: 700, bgcolor: PRIMARY }}
+                  >
+                    Download decrypted file
+                  </Button>
+                  {fileMime.startsWith('image/') && (
+                    <Box
+                      component="img"
+                      src={fileBlobUrl}
+                      alt={fileManifest.originalName}
+                      sx={{ maxWidth: '100%', borderRadius: 2, border: RIM }}
+                    />
+                  )}
+                  {fileMime === 'application/pdf' && (
+                    <Box
+                      component="iframe"
+                      src={fileBlobUrl}
+                      title={fileManifest.originalName}
+                      sx={{ width: '100%', height: 480, border: 'none', borderRadius: 2, bgcolor: alpha('#000', 0.35) }}
+                    />
+                  )}
+                  {textPreview !== null && (fileMime.startsWith('text/') || fileMime === 'application/json') && (
+                    <Paper
+                      sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: alpha('#000', 0.35),
+                        border: RIM,
+                        maxHeight: 360,
+                        overflow: 'auto',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.82rem',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {textPreview}
+                    </Paper>
                   )}
                 </Stack>
               )}
