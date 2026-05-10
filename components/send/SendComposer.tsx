@@ -305,7 +305,7 @@ export function SendComposer() {
         noteKey = t.key;
         encTitle = t.encrypted;
         const cipherBytes = encryptGhostBinaryToBytes(buf, noteKey);
-        const uploadBlob = new Blob([cipherBytes], { type: 'application/octet-stream' });
+        const uploadBlob = new Blob([cipherBytes.slice()], { type: 'application/octet-stream' });
         const uploadFile = new File([uploadBlob], 'send.enc', { type: 'application/octet-stream' });
         const uploaded = await storage.createFile(APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL, ID.unique(), uploadFile, [
           Permission.read(Role.any()),

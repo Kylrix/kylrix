@@ -354,7 +354,10 @@ function ConnectMomentAttachments({
                                     {attachedNote.title || 'Untitled Note'}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
-                                    Public Note • {new Date(attachedNote.updatedAt || attachedNote.$updatedAt || Date.now()).toLocaleDateString()}
+                                    Public Note •{' '}
+                                    {(attachedNote.updatedAt || attachedNote.$updatedAt
+                                        ? new Date(String(attachedNote.updatedAt || attachedNote.$updatedAt)).toLocaleDateString()
+                                        : '—')}
                                 </Typography>
                             </Box>
                         </Box>
@@ -422,7 +425,10 @@ function ConnectMomentAttachments({
                                     {attachedEvent.title || 'Untitled Event'}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
-                                    Kylrix Flow Event • {new Date(attachedEvent.startTime || attachedEvent.$createdAt || Date.now()).toLocaleDateString()}
+                                    Kylrix Flow Event •{' '}
+                                    {(attachedEvent.startTime || attachedEvent.$createdAt
+                                        ? new Date(String(attachedEvent.startTime || attachedEvent.$createdAt)).toLocaleDateString()
+                                        : '—')}
                                 </Typography>
                             </Box>
                         </Box>

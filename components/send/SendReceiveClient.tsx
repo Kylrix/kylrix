@@ -65,7 +65,12 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
 
   const tickTotp = useCallback((secret: string) => {
     try {
-      authenticator.options = { step: 30, digits: 6, algorithm: 'sha1' };
+      authenticator.options = {
+        ...authenticator.options,
+        step: 30,
+        digits: 6,
+        algorithm: 'sha1',
+      } as typeof authenticator.options;
       const normalized = secret.replace(/\s+/g, '').toUpperCase();
       const code = authenticator.generate(normalized);
       setTotpLive(code);
