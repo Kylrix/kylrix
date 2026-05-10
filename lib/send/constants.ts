@@ -3,7 +3,7 @@ import type { SendExpiryPreset } from './types';
 /** Hard cap for Send links (matches product rule). */
 export const SEND_MAX_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Matches `kylrix_send` bucket `maximumFileSize` in appwrite.config.json. */
+/** Plaintext upload cap in Send UI (20 MiB). Bucket allows ~30 MiB headroom for ciphertext / gzip spikes — see appwrite.config.json `kylrix_send`. */
 export const SEND_MAX_FILE_BYTES = 20 * 1024 * 1024;
 
 export const SEND_EXPIRY_PRESETS: SendExpiryPreset[] = [

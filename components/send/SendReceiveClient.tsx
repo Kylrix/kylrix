@@ -447,7 +447,10 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
               {kind === 'file' && fileManifest && fileBlobUrl && (
                 <Stack spacing={2}>
                   <Typography sx={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)' }}>
-                    {(fileManifest.size / 1024).toFixed(1)} KB · {fileMime || 'binary'}
+                    {fileManifest.size >= 1024 * 1024
+                      ? `${(fileManifest.size / (1024 * 1024)).toFixed(2)} MB`
+                      : `${(fileManifest.size / 1024).toFixed(1)} KB`}{' '}
+                    · {fileMime || 'binary'}
                   </Typography>
                   <Button
                     variant="contained"

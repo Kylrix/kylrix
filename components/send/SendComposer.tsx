@@ -87,6 +87,7 @@ export function SendComposer() {
   const [totpSecret, setTotpSecret] = useState('');
   /** Optional TOTP seed bundled with password sends */
   const [passwordTotpBundle, setPasswordTotpBundle] = useState('');
+  const [sendFile, setSendFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
@@ -107,18 +108,13 @@ export function SendComposer() {
       case 'totp':
         return totpSecret.trim().length > 0;
       case 'file':
-        return false;
+        return Boolean(sendFile && sendFile.size > 0 && sendFile.size <= SEND_MAX_FILE_BYTES);
       default:
         return false;
     }
-  }, [kind, noteBody, password, taskTitle, totpSecret, fileName]);
+  }, [kind, noteBody, password, taskTitle, totpSecret, sendFile]);
 
   const handleCreateLink = useCallback(async () => {
-    if (kind === 'file') {
-      toast.error('File send is almost ready — bucket hookup next.');
-      return;
-    }
-
     setIsCreating(true);
     try {
       const expiresAt = new Date(Date.now() + clampExpiryMs(expiryMs)).toISOString();
@@ -173,6 +169,37 @@ export function SendComposer() {
         encContent = c.encrypted;
         noteKey = t.key;
         format = 'json';
+      } else if (kind === 'file') {
+        const f = sendFile;
+        if (!f) {
+          toast.error('Choose a file first.');
+          return;
+        }
+        if (f.size > SEND_MAX_FILE_BYTES) {
+          toast.error('Max file size is 20 MB.');
+          return;
+        }
+        const buf = await f.arrayBuffer();
+        const titlePlain = f.name || 'File';
+        const t = await encryptGhostData(titlePlain);
+        noteKey = t.key;
+        encTitle = t.encrypted;
+        const cipherBytes = encryptGhostBinaryToBytes(buf, noteKey);
+        const uploadBlob = new Blob([cipherBytes], { type: 'application/octet-stream' });
+        const uploadFile = new File([uploadBlob], 'send.enc', { type: 'application/octet-stream' });
+        const uploaded = await storage.createFile(APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL, ID.unique(), uploadFile, [
+          Permission.read(Role.any()),
+        ]);
+        const manifest: SendFilePayload = {
+          bucketId: APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL,
+          fileId: uploaded.$id,
+          originalName: f.name,
+          mimeType: f.type || 'application/octet-stream',
+          size: f.size,
+        };
+        const c = await encryptGhostData(JSON.stringify(manifest), noteKey);
+        encContent = c.encrypted;
+        format = 'json';
       } else {
         toast.error('Unsupported send type.');
         return;
@@ -189,7 +216,7 @@ export function SendComposer() {
       });
 
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      setCreatedUrl(`${origin}/send/r/${note.$id}/${noteKey}`);
+      setCreatedUrl(`${origin}/send/${note.$id}/${noteKey}`);
       setCopied(false);
       toast.success('Secure link created');
     } catch (e: unknown) {
@@ -210,6 +237,7 @@ export function SendComposer() {
     taskDetail,
     totpIssuer,
     totpSecret,
+    sendFile,
   ]);
 
   const handleCopy = useCallback(async () => {
@@ -225,7 +253,19 @@ export function SendComposer() {
 
   const onFiles = useCallback((files: FileList | null) => {
     const f = files?.[0];
-    setFileName(f ? f.name : null);
+    if (!f) {
+      setSendFile(null);
+      setFileName(null);
+      return;
+    }
+    if (f.size > SEND_MAX_FILE_BYTES) {
+      toast.error('Max file size is 20 MB.');
+      setSendFile(null);
+      setFileName(null);
+      return;
+    }
+    setSendFile(f);
+    setFileName(f.name);
   }, []);
 
   return (
@@ -372,13 +412,15 @@ export function SendComposer() {
               >
                 {KINDS.map(({ id, label, blurb, Icon }) => {
                   const selected = kind === id;
-                  const disabled = id === 'file';
                   return (
                     <Button
                       key={id}
                       onClick={() => {
-                        if (disabled) return;
                         setKind(id);
+                        if (id !== 'file') {
+                          setSendFile(null);
+                          setFileName(null);
+                        }
                       }}
                       sx={{
                         flexDirection: 'column',
@@ -392,22 +434,15 @@ export function SendComposer() {
                         bgcolor: selected ? alpha(PRIMARY, 0.12) : alpha('#fff', 0.02),
                         color: '#fff',
                         minHeight: 108,
-                        opacity: disabled ? 0.5 : 1,
-                        cursor: disabled ? 'not-allowed' : 'pointer',
                         '&:hover': {
-                          bgcolor: disabled ? undefined : selected ? alpha(PRIMARY, 0.18) : alpha('#fff', 0.06),
-                          borderColor: disabled ? undefined : alpha('#fff', 0.12),
+                          bgcolor: selected ? alpha(PRIMARY, 0.18) : alpha('#fff', 0.06),
+                          borderColor: alpha('#fff', 0.12),
                         },
                       }}
                     >
                       <Icon size={22} color={selected ? PRIMARY : 'rgba(255,255,255,0.65)'} />
                       <Box>
-                        <Stack direction="row" alignItems="center" gap={0.75}>
-                          <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }}>{label}</Typography>
-                          {disabled && (
-                            <Chip label="Soon" size="small" sx={{ height: 20, fontSize: '0.65rem', bgcolor: alpha('#fff', 0.08) }} />
-                          )}
-                        </Stack>
+                        <Typography sx={{ fontWeight: 700, fontSize: '0.95rem' }}>{label}</Typography>
                         <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.35 }}>
                           {blurb}
                         </Typography>
@@ -512,7 +547,7 @@ export function SendComposer() {
               {kind === 'file' && (
                 <Box>
                   <InputLabel sx={{ color: 'rgba(255,255,255,0.55)', mb: 1.25, fontSize: '0.8rem' }}>
-                    Drop one file (UI preview · bucket wiring next)
+                    Drop one file (encrypted client-side before upload · max 20 MB)
                   </InputLabel>
                   <Paper
                     onDragEnter={(e) => {
@@ -545,8 +580,7 @@ export function SendComposer() {
                       <Upload size={28} color={PRIMARY} />
                       <Typography sx={{ fontWeight: 600 }}>Drop or tap to choose</Typography>
                       <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                        Stored in <Box component="span" sx={{ fontFamily: 'var(--font-mono)', color: alpha('#fff', 0.65) }}>{APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL}</Box>{' '}
-                        with automatic deletion within seven days (planned).
+                        Appwrite bucket <Box component="span" sx={{ fontFamily: 'var(--font-mono)', color: alpha('#fff', 0.65) }}>{APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL}</Box> holds ciphertext only; decrypt with the link key.
                       </Typography>
                       {fileName && (
                         <Chip label={fileName} sx={{ mt: 1, bgcolor: alpha('#fff', 0.08), color: '#fff' }} />
@@ -603,7 +637,7 @@ export function SendComposer() {
             <Button
               variant="contained"
               size="large"
-              disabled={!draftValid || isCreating || kind === 'file'}
+              disabled={!draftValid || isCreating}
               onClick={() => void handleCreateLink()}
               sx={{
                 py: 1.75,
@@ -622,7 +656,7 @@ export function SendComposer() {
             <Typography sx={{ textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', px: 2, lineHeight: 1.6 }}>
               Encrypted ghost rows in the note database — same privacy model as classic ghost notes, plus a{' '}
               <Box component="span" sx={{ fontFamily: 'var(--font-mono)', color: alpha('#fff', 0.55) }}>send_object</Box> tag in metadata so
-              we render the right surface. Max {formatRemaining(SEND_MAX_TTL_MS)}. Optional file bucket:{' '}
+              we render the right surface. Max {formatRemaining(SEND_MAX_TTL_MS)}. Files use ciphertext in{' '}
               <Box component="span" sx={{ fontFamily: 'var(--font-mono)', color: alpha('#fff', 0.55) }}>{APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL}</Box>.
             </Typography>
           </Stack>

@@ -6724,7 +6724,7 @@
             "fileSecurity": true,
             "name": "kylrix_send_ephemeral",
             "enabled": true,
-            "maximumFileSize": 20971520,
+            "maximumFileSize": 31457280,
             "allowedFileExtensions": [],
             "compression": "gzip",
             "encryption": true,
