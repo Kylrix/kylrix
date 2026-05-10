@@ -49,3 +49,14 @@ export interface SendDraftPayload {
   totpSecret?: string;
   fileName?: string;
 }
+
+/** Local-only stash entry for Send composer (includes burn secret). */
+export interface SendSparkRef {
+  id: string;
+  kind: SendKind;
+  title: string;
+  url: string;
+  createdAt: string;
+  expiresAt: string;
+  deletionSecret?: string;
+}

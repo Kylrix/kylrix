@@ -1523,22 +1523,39 @@ export default function NoteTopbar({
               }}
             >
               <Logo app={logoApp} size={32} />
-              <IconButton
-                size="small"
-                sx={{
-                  position: 'absolute',
-                  right: -6,
-                  bottom: -6,
-                  width: 18,
-                  height: 18,
-                  bgcolor: '#0A0908',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'rgba(255,255,255,0.55)',
-                  '&:hover': { bgcolor: '#161412', color: 'white' },
-                }}
-              >
-                <ChevronDown size={11} />
-              </IconButton>
+              {pathname?.startsWith('/send') ? (
+                <Box
+                  aria-hidden
+                  sx={{
+                    position: 'absolute',
+                    right: -4,
+                    bottom: -4,
+                    fontSize: '13px',
+                    lineHeight: 1,
+                    pointerEvents: 'none',
+                    filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.45))',
+                  }}
+                >
+                  🚀
+                </Box>
+              ) : (
+                <IconButton
+                  size="small"
+                  sx={{
+                    position: 'absolute',
+                    right: -6,
+                    bottom: -6,
+                    width: 18,
+                    height: 18,
+                    bgcolor: '#0A0908',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    color: 'rgba(255,255,255,0.55)',
+                    '&:hover': { bgcolor: '#161412', color: 'white' },
+                  }}
+                >
+                  <ChevronDown size={11} />
+                </IconButton>
+              )}
             </Box>
 
             {showSearchControl ? (
@@ -1669,6 +1686,20 @@ export default function NoteTopbar({
                   }}
                 >
                   Products
+                </Button>
+                <Button
+                  onClick={() => router.push('/send')}
+                  sx={{
+                    color: 'rgba(255,255,255,0.9)',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    px: 1.75,
+                    borderRadius: '12px',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
+                  }}
+                >
+                  Send
                 </Button>
                 <Button
                   onClick={() => router.push('/pricing')}
