@@ -49,6 +49,8 @@ import { ActivityService } from '@/lib/services/activity';
 import UserQuickProfileDrawer from '@/components/common/UserQuickProfileDrawer';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { cleanupStaleCallsSecure } from '@/lib/actions/secure-ops';
+import { AppwriteService } from '@/lib/appwrite';
+import toast from 'react-hot-toast';
 
 interface NoteTopbarProps {
   className?: string;
@@ -112,6 +114,7 @@ export default function NoteTopbar({
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [liveCallId, setLiveCallId] = useState<string | null>(null);
+  const [requiresMasterpassSetup, setRequiresMasterpassSetup] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<any | null>(null);
   const [personProfileOpen, setPersonProfileOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -152,6 +155,35 @@ export default function NoteTopbar({
       if (intervalId) window.clearInterval(intervalId);
     };
   }, [isAuthenticated, user?.$id]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !user?.$id || isWebsiteRoute) return;
+    let cancelled = false;
+    const checkMasterpassState = async () => {
+      try {
+        const entries = await AppwriteService.listKeychainEntries(user.$id);
+        const hasPasswordKey = Array.isArray(entries) && entries.some((entry: { type?: string }) => entry?.type === 'password');
+        if (cancelled) return;
+        setRequiresMasterpassSetup(!hasPasswordKey);
+      } catch {
+        if (!cancelled) setRequiresMasterpassSetup(true);
+      }
+    };
+    void checkMasterpassState();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, isWebsiteRoute, user?.$id]);
+
+  useEffect(() => {
+    if (!searchOpen || !requiresMasterpassSetup || !user?.$id) return;
+    const toastKey = `kylrix-masterpass-toast-${user.$id}`;
+    if (sessionStorage.getItem(toastKey) === '1') return;
+    sessionStorage.setItem(toastKey, '1');
+    toast.error('Encryption setup required. Configure MasterPass to avoid decryption issues.', {
+      duration: 7000,
+    });
+  }, [requiresMasterpassSetup, searchOpen, user?.$id]);
 
   const headerRef = useRef<HTMLDivElement | null>(null);
 
@@ -485,6 +517,34 @@ export default function NoteTopbar({
                 sx={{ textTransform: 'none', fontWeight: 800, color: '#A5B4FC' }}
               >
                 Open
+              </Button>
+            </Box>
+          ) : null}
+
+          {requiresMasterpassSetup ? (
+            <Box
+              sx={{
+                mt: 1.25,
+                px: 1.5,
+                py: 1.1,
+                borderRadius: '16px',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                bgcolor: 'rgba(245, 158, 11, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+              }}
+            >
+              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.82rem' }}>
+                MasterPass not configured. Encryption may fail.
+              </Typography>
+              <Button
+                size="small"
+                onClick={() => router.push('/vault/masterpass')}
+                sx={{ textTransform: 'none', fontWeight: 800, color: '#FCD34D' }}
+              >
+                Fix now
               </Button>
             </Box>
           ) : null}

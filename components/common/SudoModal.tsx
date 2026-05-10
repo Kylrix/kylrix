@@ -194,7 +194,7 @@ export default function SudoModal({
 
                 if (intent === "reset") {
                     const callbackUrl = encodeURIComponent(window.location.href);
-                    router.push(`/vault/masterpass/reset?callbackUrl=${callbackUrl}`);
+                    router.push(`/vault/reset?callbackUrl=${callbackUrl}`);
                     return;
                 }
 
@@ -580,7 +580,7 @@ export default function SudoModal({
                                 size="small"
                                 onClick={() => {
                                     const callbackUrl = encodeURIComponent(window.location.href);
-                                    router.push(`/vault/masterpass/reset?callbackUrl=${callbackUrl}`);
+                                    router.push(`/vault/reset?callbackUrl=${callbackUrl}`);
                                 }}
                                 sx={{
                                     color: 'error.main',
