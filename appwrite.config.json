@@ -6714,6 +6714,21 @@
             "compression": "none",
             "encryption": true,
             "antivirus": true
+        },
+        {
+            "$id": "kylrix_send",
+            "$permissions": [
+                "create(\"any\")",
+                "read(\"any\")"
+            ],
+            "fileSecurity": true,
+            "name": "kylrix_send_ephemeral",
+            "enabled": true,
+            "maximumFileSize": 20971520,
+            "allowedFileExtensions": [],
+            "compression": "gzip",
+            "encryption": true,
+            "antivirus": true
         }
     ]
 }

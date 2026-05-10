@@ -31,13 +31,17 @@ import {
   Upload,
 } from 'lucide-react';
 
+import { ID, Permission, Role } from 'appwrite';
+
 import Logo from '@/components/Logo';
 import { AppwriteService } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { encryptGhostData } from '@/lib/encryption/ghost-crypto';
+import { storage } from '@/lib/appwrite/client';
+import { encryptGhostBinaryToBytes, encryptGhostData } from '@/lib/encryption/ghost-crypto';
 import { useAuth } from '@/lib/auth';
-import { SEND_EXPIRY_PRESETS, SEND_MAX_TTL_MS, clampExpiryMs } from '@/lib/send/constants';
+import { SEND_EXPIRY_PRESETS, SEND_MAX_FILE_BYTES, SEND_MAX_TTL_MS, clampExpiryMs } from '@/lib/send/constants';
 import type {
+  SendFilePayload,
   SendKind,
   SendPasswordPayload,
   SendTaskPayload,
