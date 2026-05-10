@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   alpha,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Container,
   IconButton,
@@ -20,7 +20,6 @@ import {
 } from '@mui/material';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
-  ArrowLeft,
   Check,
   Copy,
   FileText,
@@ -33,24 +32,36 @@ import {
 
 import { ID, Permission, Role } from 'appwrite';
 
-import Logo from '@/components/Logo';
+import { EphemeralClaimDrawer, type EphemeralClaimTarget } from '@/components/ephemeral/EphemeralClaimDrawer';
+import { SendSparkShelf } from '@/components/send/SendSparkShelf';
 import { AppwriteService } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { storage } from '@/lib/appwrite/client';
 import { encryptGhostBinaryToBytes, encryptGhostData } from '@/lib/encryption/ghost-crypto';
-import { useAuth } from '@/lib/auth';
-import { SEND_EXPIRY_PRESETS, SEND_MAX_FILE_BYTES, SEND_MAX_TTL_MS, clampExpiryMs } from '@/lib/send/constants';
+import { sha256HexUtf8 } from '@/lib/crypto/sha256-hex';
+import { clearEphemeralClaimResume, peekEphemeralClaimResume } from '@/lib/ephemeral/claim-session';
+import {
+  SEND_EXPIRY_PRESETS,
+  SEND_MAX_FILE_BYTES,
+  SEND_MAX_TTL_MS,
+  SEND_SPARK_STORAGE_KEY,
+  SEND_SPARKS_MAX,
+  clampExpiryMs,
+} from '@/lib/send/constants';
 import type {
   SendFilePayload,
   SendKind,
   SendPasswordPayload,
+  SendSparkRef,
   SendTaskPayload,
   SendTotpPayload,
 } from '@/lib/send/types';
 import toast from 'react-hot-toast';
 
+const BG = '#0A0908';
 const SURFACE = '#161412';
-const RIM = '1px solid rgba(255, 255, 255, 0.06)';
+const SURFACE_HOVER = '#1C1A18';
+const RIM = '1px solid rgba(255, 255, 255, 0.05)';
 const PRIMARY = '#6366F1';
 
 const KINDS: { id: SendKind; label: string; blurb: string; Icon: typeof FileText }[] = [
@@ -73,7 +84,8 @@ function formatRemaining(ms: number): string {
 
 export function SendComposer() {
   const reduceMotion = useReducedMotion();
-  const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [kind, setKind] = useState<SendKind>('note');
   const [expiryMs, setExpiryMs] = useState(SEND_EXPIRY_PRESETS[2].ms);
@@ -94,6 +106,104 @@ export function SendComposer() {
   const [createdUrl, setCreatedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [sendSparks, setSendSparks] = useState<SendSparkRef[]>([]);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimTarget, setClaimTarget] = useState<EphemeralClaimTarget | null>(null);
+  const [sendSparksHydrated, setSendSparksHydrated] = useState(false);
+
+  const saveSendSparks = useCallback((next: SendSparkRef[]) => {
+    try {
+      localStorage.setItem(SEND_SPARK_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore quota */
+    }
+    setSendSparks(next);
+    window.dispatchEvent(new Event('storage'));
+  }, []);
+
+  useEffect(() => {
+    const loadSparks = () => {
+      try {
+        const raw = localStorage.getItem(SEND_SPARK_STORAGE_KEY);
+        if (!raw) {
+          setSendSparks([]);
+          return;
+        }
+        const parsed = JSON.parse(raw) as SendSparkRef[];
+        if (!Array.isArray(parsed)) return;
+        const cutoff = Date.now() - SEND_MAX_TTL_MS;
+        const valid = parsed.filter((s) => new Date(s.createdAt).getTime() > cutoff);
+        setSendSparks(valid);
+        if (valid.length !== parsed.length) {
+          localStorage.setItem(SEND_SPARK_STORAGE_KEY, JSON.stringify(valid));
+        }
+      } catch {
+        setSendSparks([]);
+      }
+    };
+    loadSparks();
+    setSendSparksHydrated(true);
+    window.addEventListener('storage', loadSparks);
+    return () => window.removeEventListener('storage', loadSparks);
+  }, []);
+
+  useEffect(() => {
+    if (searchParams.get('claimOpen') !== '1') return;
+    if (!sendSparksHydrated) return;
+
+    const id = peekEphemeralClaimResume('send');
+
+    const stripClaimQuery = () => {
+      router.replace('/send', { scroll: false });
+    };
+
+    if (!id) {
+      stripClaimQuery();
+      return;
+    }
+
+    const spark = sendSparks.find((s) => s.id === id);
+    if (!spark) {
+      clearEphemeralClaimResume();
+      stripClaimQuery();
+      return;
+    }
+
+    clearEphemeralClaimResume();
+    setClaimTarget({
+      noteId: spark.id,
+      claimSecret: spark.deletionSecret,
+      sendKind: spark.kind,
+      stashKind: 'send',
+      sendUrl: spark.url,
+    });
+    setClaimOpen(true);
+    stripClaimQuery();
+  }, [searchParams, sendSparks, router, sendSparksHydrated]);
+
+  const handleConsumedSendSpark = useCallback((noteId: string) => {
+    setSendSparks((prev) => {
+      const next = prev.filter((s) => s.id !== noteId);
+      try {
+        localStorage.setItem(SEND_SPARK_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      window.dispatchEvent(new Event('storage'));
+      return next;
+    });
+  }, []);
+
+  const handleClaimSendSpark = useCallback((spark: SendSparkRef) => {
+    setClaimTarget({
+      noteId: spark.id,
+      claimSecret: spark.deletionSecret,
+      sendKind: spark.kind,
+      stashKind: 'send',
+      sendUrl: spark.url,
+    });
+    setClaimOpen(true);
+  }, []);
 
   const expiryLabel = useMemo(() => formatRemaining(expiryMs), [expiryMs]);
 
@@ -119,6 +229,10 @@ export function SendComposer() {
     try {
       const expiresAt = new Date(Date.now() + clampExpiryMs(expiryMs)).toISOString();
       const ghostSecret = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-send`;
+      const deletionSecret = crypto.randomUUID();
+      const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
+      let sparkTitle = 'Send';
+      let sendObjectPayload: { kind: SendKind; bucketId?: string; fileId?: string } = { kind };
 
       let encTitle: string;
       let encContent: string;
@@ -126,7 +240,8 @@ export function SendComposer() {
       let format: string;
 
       if (kind === 'note') {
-        const titlePlain = noteTitle.trim() || 'Note';
+        sparkTitle = noteTitle.trim() || 'Note';
+        const titlePlain = sparkTitle;
         const bodyPlain = noteBody.trim();
         const t = await encryptGhostData(titlePlain);
         const c = await encryptGhostData(bodyPlain, t.key);
@@ -141,6 +256,7 @@ export function SendComposer() {
           totpSecret: passwordTotpBundle.trim() || undefined,
         };
         const label = username.trim() ? `Credential · ${username.trim()}` : 'Credential';
+        sparkTitle = label;
         const t = await encryptGhostData(label);
         const c = await encryptGhostData(JSON.stringify(bundle), t.key);
         encTitle = t.encrypted;
@@ -152,6 +268,7 @@ export function SendComposer() {
           title: taskTitle.trim(),
           detail: taskDetail.trim() || undefined,
         };
+        sparkTitle = bundle.title;
         const t = await encryptGhostData(bundle.title);
         const c = await encryptGhostData(JSON.stringify(bundle), t.key);
         encTitle = t.encrypted;
@@ -163,6 +280,7 @@ export function SendComposer() {
           issuer: totpIssuer.trim() || undefined,
           secret: totpSecret.trim(),
         };
+        sparkTitle = bundle.issuer || 'Authenticator';
         const t = await encryptGhostData(bundle.issuer || 'Authenticator');
         const c = await encryptGhostData(JSON.stringify(bundle), t.key);
         encTitle = t.encrypted;
@@ -179,8 +297,9 @@ export function SendComposer() {
           toast.error('Max file size is 20 MB.');
           return;
         }
+        sparkTitle = f.name || 'File';
         const buf = await f.arrayBuffer();
-        const titlePlain = f.name || 'File';
+        const titlePlain = sparkTitle;
         const t = await encryptGhostData(titlePlain);
         noteKey = t.key;
         encTitle = t.encrypted;
@@ -190,6 +309,11 @@ export function SendComposer() {
         const uploaded = await storage.createFile(APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL, ID.unique(), uploadFile, [
           Permission.read(Role.any()),
         ]);
+        sendObjectPayload = {
+          kind: 'file',
+          bucketId: APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL,
+          fileId: uploaded.$id,
+        };
         const manifest: SendFilePayload = {
           bucketId: APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL,
           fileId: uploaded.$id,
@@ -212,12 +336,35 @@ export function SendComposer() {
         ghostSecret,
         expiresAt,
         isEncrypted: true,
-        sendObject: { kind },
+        creatorDeletionProofHash,
+        sendObject: sendObjectPayload,
       });
 
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      setCreatedUrl(`${origin}/send/${note.$id}/${noteKey}`);
+      const url = `${origin}/send/${note.$id}/${noteKey}`;
+      setCreatedUrl(url);
       setCopied(false);
+
+      setSendSparks((prev) => {
+        const spark: SendSparkRef = {
+          id: note.$id,
+          kind,
+          title: sparkTitle,
+          url,
+          createdAt: new Date().toISOString(),
+          expiresAt,
+          deletionSecret,
+        };
+        const next = [spark, ...prev.filter((s) => s.id !== spark.id)].slice(0, SEND_SPARKS_MAX);
+        try {
+          localStorage.setItem(SEND_SPARK_STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          /* ignore */
+        }
+        window.dispatchEvent(new Event('storage'));
+        return next;
+      });
+
       toast.success('Secure link created');
     } catch (e: unknown) {
       console.error('[Send]', e);
@@ -273,7 +420,7 @@ export function SendComposer() {
       sx={{
         minHeight: '100vh',
         position: 'relative',
-        bgcolor: '#0A0908',
+        bgcolor: BG,
         color: 'rgba(255,255,255,0.92)',
         overflowX: 'hidden',
       }}
@@ -284,69 +431,10 @@ export function SendComposer() {
           position: 'fixed',
           inset: 0,
           background:
-            'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.28), transparent 55%), radial-gradient(ellipse 60% 40% at 100% 0%, rgba(236, 72, 153, 0.12), transparent 50%), radial-gradient(ellipse 50% 35% at 0% 100%, rgba(16, 185, 129, 0.1), transparent 45%)',
+            'radial-gradient(ellipse 78% 48% at 50% -18%, rgba(99, 102, 241, 0.22), transparent 56%), radial-gradient(ellipse 55% 38% at 100% 0%, rgba(236, 72, 153, 0.07), transparent 52%), radial-gradient(ellipse 48% 32% at 0% 100%, rgba(16, 185, 129, 0.06), transparent 46%)',
           zIndex: 0,
         }}
       />
-
-      <Box
-        component="header"
-        sx={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 2,
-          borderBottom: RIM,
-          background: alpha('#0A0908', 0.72),
-          backdropFilter: 'blur(16px)',
-        }}
-      >
-        <Container maxWidth="lg" sx={{ py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Button
-            component={Link}
-            href="/"
-            startIcon={<ArrowLeft size={18} />}
-            sx={{
-              color: 'rgba(255,255,255,0.65)',
-              textTransform: 'none',
-              fontWeight: 600,
-              '&:hover': { color: '#fff', bgcolor: alpha('#fff', 0.06) },
-            }}
-          >
-            Home
-          </Button>
-          <Box sx={{ flex: 1 }} />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-            <Logo variant="icon" size={28} />
-            <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 600, letterSpacing: '-0.02em' }}>
-              Send
-            </Typography>
-          </Box>
-          <Box sx={{ flex: 1 }} />
-          {user?.$id ? (
-            <Chip
-              label="Signed in"
-              size="small"
-              sx={{
-                bgcolor: alpha(PRIMARY, 0.15),
-                color: alpha('#fff', 0.9),
-                border: `1px solid ${alpha(PRIMARY, 0.35)}`,
-                fontWeight: 600,
-              }}
-            />
-          ) : (
-            <Chip
-              label="No account needed"
-              size="small"
-              sx={{
-                bgcolor: alpha('#fff', 0.06),
-                color: 'rgba(255,255,255,0.75)',
-                border: RIM,
-                fontWeight: 600,
-              }}
-            />
-          )}
-        </Container>
-      </Box>
 
       <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, py: { xs: 4, md: 7 }, pb: 10 }}>
         <motion.div
@@ -387,6 +475,22 @@ export function SendComposer() {
             </Typography>
           </Stack>
         </motion.div>
+
+        {sendSparks.length > 0 && (
+          <Paper
+            elevation={0}
+            sx={{
+              mb: 4,
+              p: { xs: 2, sm: 2.5 },
+              borderRadius: 3,
+              bgcolor: SURFACE,
+              border: RIM,
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+            }}
+          >
+            <SendSparkShelf sparks={sendSparks} onSaveSparks={saveSendSparks} onClaim={handleClaimSendSpark} />
+          </Paper>
+        )}
 
         {!createdUrl ? (
           <Stack spacing={3}>
@@ -435,8 +539,8 @@ export function SendComposer() {
                         color: '#fff',
                         minHeight: 108,
                         '&:hover': {
-                          bgcolor: selected ? alpha(PRIMARY, 0.18) : alpha('#fff', 0.06),
-                          borderColor: alpha('#fff', 0.12),
+                          bgcolor: selected ? alpha(PRIMARY, 0.18) : SURFACE_HOVER,
+                          borderColor: alpha('#fff', 0.1),
                         },
                       }}
                     >
@@ -569,7 +673,7 @@ export function SendComposer() {
                       borderRadius: 2,
                       p: 4,
                       textAlign: 'center',
-                      bgcolor: dragActive ? alpha(PRIMARY, 0.08) : alpha('#fff', 0.02),
+                      bgcolor: dragActive ? alpha(PRIMARY, 0.08) : alpha(SURFACE_HOVER, 0.35),
                       cursor: 'pointer',
                       transition: 'border-color 0.2s, background 0.2s',
                     }}
@@ -717,6 +821,16 @@ export function SendComposer() {
           </Paper>
         )}
       </Container>
+
+      <EphemeralClaimDrawer
+        open={claimOpen}
+        onClose={() => {
+          setClaimOpen(false);
+          setClaimTarget(null);
+        }}
+        target={claimTarget}
+        onConsumed={handleConsumedSendSpark}
+      />
     </Box>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
     Box, 
     TextField, 
@@ -44,10 +44,16 @@ import {
     MoreVertical, 
     X, 
     Eye as EyeIcon, 
-    RefreshCcw 
+    RefreshCcw,
+    Import,
 } from 'lucide-react';
 import { AppwriteService } from '@/lib/appwrite';
 import { encryptGhostData, decryptGhostData } from '@/lib/encryption/ghost-crypto';
+import { sha256HexUtf8 } from '@/lib/crypto/sha256-hex';
+import { burnEphemeralNoteWithProof } from '@/lib/ephemeral/burn-note';
+import { EphemeralClaimDrawer, type EphemeralClaimTarget } from '@/components/ephemeral/EphemeralClaimDrawer';
+import { clearEphemeralClaimResume, peekEphemeralClaimResume } from '@/lib/ephemeral/claim-session';
+import { sharedNotePublicUrl } from '@/lib/send/shared-note-api';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
@@ -66,6 +72,8 @@ interface GhostNoteRef {
     createdAt: string;
     expiresAt: string;
     decryptionKey?: string;
+    /** Present on notes created after burn-keys shipped — never stored server-side. */
+    deletionSecret?: string;
 }
 
 const LIFESPAN_OPTIONS = [
@@ -156,8 +164,8 @@ interface GhostSparkShelfProps {
     onContextMenu: (event: React.MouseEvent, noteId: string) => void;
     onCloseContextMenu: () => void;
     onViewNote: (note: GhostNoteRef) => void;
-    onDeleteNote: (noteId: string | null) => void;
-    onOpenIDMWindow: () => void;
+    onClaimNote: (note: GhostNoteRef) => void;
+    onDeleteNote: (noteId: string | null) => void | Promise<void>;
 }
 
 const GhostSparkShelf = React.memo(({
@@ -167,10 +175,15 @@ const GhostSparkShelf = React.memo(({
     onContextMenu,
     onCloseContextMenu,
     onViewNote,
+    onClaimNote,
     onDeleteNote,
-    onOpenIDMWindow
 }: GhostSparkShelfProps) => {
     const theme = useTheme();
+
+    const ctxNote = useMemo(() => {
+        if (!contextMenu) return undefined;
+        return [...activeSparks, ...staleSparks].find((n) => n.id === contextMenu.noteId);
+    }, [contextMenu, activeSparks, staleSparks]);
 
     return (
         <Stack spacing={3}>
@@ -289,7 +302,7 @@ const GhostSparkShelf = React.memo(({
                                         fullWidth
                                         size="small"
                                         variant="text"
-                                        onClick={() => onOpenIDMWindow()}
+                                        onClick={() => onClaimNote(note)}
                                         sx={{ fontSize: '0.7rem', fontWeight: 900, height: 'auto', py: 0.5 }}
                                     >
                                         CLAIM TO RESTORE
@@ -326,7 +339,30 @@ const GhostSparkShelf = React.memo(({
                 }}
             >
                 <MenuItem
-                    onClick={() => onDeleteNote(contextMenu?.noteId || null)}
+                    disabled={!ctxNote?.deletionSecret}
+                    onClick={() => {
+                        if (ctxNote) onClaimNote(ctxNote);
+                        onCloseContextMenu();
+                    }}
+                    sx={{
+                        px: 2,
+                        py: 1,
+                        gap: 1.5,
+                        color: theme.palette.secondary.main,
+                        '&:hover': { bgcolor: alpha(theme.palette.secondary.main, 0.08) },
+                        '&.Mui-disabled': { opacity: 0.35 },
+                    }}
+                >
+                    <ListItemIcon sx={{ minWidth: 'auto', color: 'inherit' }}>
+                        <Import size={16} />
+                    </ListItemIcon>
+                    <ListItemText
+                        primary="Claim to account"
+                        slotProps={{ primary: { sx: { fontSize: '0.8rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' } } }}
+                    />
+                </MenuItem>
+                <MenuItem
+                    onClick={() => void onDeleteNote(contextMenu?.noteId || null)}
                     sx={{
                         px: 2,
                         py: 1,
@@ -339,7 +375,7 @@ const GhostSparkShelf = React.memo(({
                         <Trash2 size={16} />
                     </ListItemIcon>
                     <ListItemText
-                        primary="Remove from Stash"
+                        primary={ctxNote?.deletionSecret ? 'Burn link (delete from servers)' : 'Remove from stash'}
                         slotProps={{ primary: { sx: { fontSize: '0.8rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' } } }}
                     />
                 </MenuItem>
@@ -355,7 +391,11 @@ const GhostSparkShelf = React.memo(({
                 <Button
                     fullWidth
                     size="small"
-                    onClick={() => onOpenIDMWindow()}
+                    disabled={activeSparks.length === 0 && staleSparks.length === 0}
+                    onClick={() => {
+                        const pick = activeSparks[0] ?? staleSparks[0];
+                        if (pick) onClaimNote(pick);
+                    }}
                     variant="contained"
                     color="secondary"
                     sx={{
@@ -375,6 +415,7 @@ interface GhostSparkDetailPanelProps {
     note: GhostNoteRef;
     onRecreate: (title: string, content: string) => void;
     onOpenPublicLink: (note: GhostNoteRef) => void;
+    onClaim: (note: GhostNoteRef) => void;
 }
 
 function parseSparkMeta(note: any): Record<string, any> {
@@ -385,7 +426,7 @@ function parseSparkMeta(note: any): Record<string, any> {
     }
 }
 
-const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink }: GhostSparkDetailPanelProps) => {
+const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink, onClaim }: GhostSparkDetailPanelProps) => {
     const theme = useTheme();
     const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
     const [loadedNote, setLoadedNote] = useState<any | null>(null);
@@ -401,7 +442,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink }: GhostSpar
             setLoadedNote(null);
 
             try {
-                const res = await fetch(`/api/shared/${note.id}`, { cache: 'no-store' });
+                const res = await fetch(sharedNotePublicUrl(note.id), { cache: 'no-store' });
                 if (!res.ok) {
                     const payload = await res.json().catch(() => ({}));
                     throw new Error(payload.error || 'Failed to load shared note.');
@@ -508,7 +549,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink }: GhostSpar
                 </Typography>
             </Stack>
 
-            <Stack direction="row" spacing={1.5}>
+            <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
                 <Button
                     size="small"
                     variant="outlined"
@@ -519,6 +560,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink }: GhostSpar
                     startIcon={<CopyIcon size={16} />}
                     sx={{
                         flex: 1,
+                        minWidth: '100px',
                         borderRadius: '12px',
                         fontWeight: 800,
                         borderColor: alpha(theme.palette.secondary.main, 0.4),
@@ -538,9 +580,25 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink }: GhostSpar
                     disabled={!canRecreate}
                     onClick={() => onRecreate(displayTitle, displayContent)}
                     startIcon={<RefreshCcw size={16} />}
-                    sx={{ flex: 1, borderRadius: '12px', fontWeight: 800 }}
+                    sx={{ flex: 1, minWidth: '100px', borderRadius: '12px', fontWeight: 800 }}
                 >
                     RECREATE
+                </Button>
+                <Button
+                    size="small"
+                    variant="contained"
+                    color="secondary"
+                    disabled={!note.deletionSecret}
+                    onClick={() => onClaim(note)}
+                    startIcon={<Import size={16} />}
+                    sx={{
+                        flex: '1 1 100%',
+                        borderRadius: '12px',
+                        fontWeight: 800,
+                        mt: { xs: 0.5, sm: 0 },
+                    }}
+                >
+                    CLAIM TO ACCOUNT
                 </Button>
             </Stack>
 
@@ -576,6 +634,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink }: GhostSpar
 
 export const GhostEditor = () => {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const theme = useTheme();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
@@ -591,6 +650,19 @@ export const GhostEditor = () => {
     // Lifespan Settings
     const [lifespanMs, setLifespanMs] = useState(7 * 24 * 60 * 60 * 1000); // Default 7 days
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [claimOpen, setClaimOpen] = useState(false);
+    const [claimTarget, setClaimTarget] = useState<EphemeralClaimTarget | null>(null);
+    const [ghostHistoryHydrated, setGhostHistoryHydrated] = useState(false);
+
+    const handleClaimGhostNote = useCallback((note: GhostNoteRef) => {
+        setClaimTarget({
+            noteId: note.id,
+            decryptionKey: note.decryptionKey,
+            claimSecret: note.deletionSecret,
+            stashKind: 'ghost',
+        });
+        setClaimOpen(true);
+    }, []);
 
     const handleViewNote = useCallback((note: GhostNoteRef) => {
         openSidebar(
@@ -605,10 +677,14 @@ export const GhostEditor = () => {
                 onOpenPublicLink={(currentNote) => {
                     window.open(`/shared/${currentNote.id}${currentNote.decryptionKey ? `/${currentNote.decryptionKey}` : ''}`, '_blank');
                 }}
+                onClaim={(currentNote) => {
+                    closeSidebar();
+                    handleClaimGhostNote(currentNote);
+                }}
             />,
             note.id
         );
-    }, [closeSidebar, openSidebar]);
+    }, [closeSidebar, openSidebar, handleClaimGhostNote]);
 
     const [contextMenu, setContextMenu] = useState<{
         mouseX: number;
@@ -688,7 +764,8 @@ export const GhostEditor = () => {
         };
 
         loadHistory();
-        
+        setGhostHistoryHydrated(true);
+
         // Listen for storage changes (Safari/Other tabs)
         window.addEventListener('storage', loadHistory);
 
@@ -714,6 +791,45 @@ export const GhostEditor = () => {
             console.error('Failed to save ghost history', e);
         }
     }, []);
+
+    const handleConsumedGhost = useCallback((noteId: string) => {
+        const updatedHistory = prevNotes.filter((note) => note.id !== noteId);
+        saveHistory(updatedHistory);
+        closeSidebar();
+    }, [prevNotes, saveHistory, closeSidebar]);
+
+    useEffect(() => {
+        if (searchParams.get('claimOpen') !== '1') return;
+        if (!ghostHistoryHydrated) return;
+
+        const id = peekEphemeralClaimResume('ghost');
+
+        const stripClaimQuery = () => {
+            router.replace('/note', { scroll: false });
+        };
+
+        if (!id) {
+            stripClaimQuery();
+            return;
+        }
+
+        const spark = prevNotes.find((n) => n.id === id);
+        if (!spark) {
+            clearEphemeralClaimResume();
+            stripClaimQuery();
+            return;
+        }
+
+        clearEphemeralClaimResume();
+        setClaimTarget({
+            noteId: spark.id,
+            decryptionKey: spark.decryptionKey,
+            claimSecret: spark.deletionSecret,
+            stashKind: 'ghost',
+        });
+        setClaimOpen(true);
+        stripClaimQuery();
+    }, [searchParams, prevNotes, router, ghostHistoryHydrated]);
 
     // Seamless auto-title logic
     useEffect(() => {
@@ -765,6 +881,8 @@ export const GhostEditor = () => {
             const secret = localStorage.getItem(GHOST_SECRET_KEY) || crypto.randomUUID();
             const finalTitle = title.trim();
             const expiresAt = new Date(Date.now() + lifespanMs).toISOString();
+            const deletionSecret = crypto.randomUUID();
+            const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
             
             // ENCRYPT GHOST NOTE
             const { encrypted: encTitle, key: noteKey } = await encryptGhostData(finalTitle);
@@ -775,7 +893,8 @@ export const GhostEditor = () => {
                 content: encContent,
                 ghostSecret: secret,
                 expiresAt: expiresAt,
-                isEncrypted: true
+                isEncrypted: true,
+                creatorDeletionProofHash,
             });
 
             if (note) {
@@ -796,7 +915,8 @@ export const GhostEditor = () => {
                     title: finalTitle, // Plain title for history
                     createdAt: new Date().toISOString(),
                     expiresAt: expiresAt,
-                    decryptionKey: noteKey
+                    decryptionKey: noteKey,
+                    deletionSecret,
                 };
                 const updatedHistory = [newRef, ...prevNotes].slice(0, 10);
                 saveHistory(updatedHistory);
@@ -841,9 +961,21 @@ export const GhostEditor = () => {
 
     const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
 
-    const handleDeleteNote = useCallback((noteId: string | null) => {
+    const handleDeleteNote = useCallback(async (noteId: string | null) => {
         if (!noteId) {
             return;
+        }
+
+        const target = prevNotes.find((note) => note.id === noteId);
+        if (target?.deletionSecret) {
+            try {
+                await burnEphemeralNoteWithProof(noteId, target.deletionSecret);
+                toast.success('Ghost link burned — it no longer resolves.');
+            } catch (e: unknown) {
+                toast.error(e instanceof Error ? e.message : 'Could not delete from servers.');
+                setContextMenu(null);
+                return;
+            }
         }
 
         const updatedHistory = prevNotes.filter((note) => note.id !== noteId);
@@ -856,12 +988,11 @@ export const GhostEditor = () => {
         saveHistory([]);
     }, [saveHistory]);
 
-    const handleOpenIDMWindow = useCallback(() => router.push('/accounts/login'), [router]);
-
     const activeSparks = useMemo(() => prevNotes.filter(n => new Date(n.expiresAt).getTime() > Date.now()), [prevNotes]);
     const staleSparks = useMemo(() => prevNotes.filter(n => new Date(n.expiresAt).getTime() <= Date.now()), [prevNotes]);
 
     return (
+        <>
         <Container maxWidth="lg" sx={{ py: 2, position: 'relative' }}>
             {/* Top CTA */}
             <Alert 
@@ -1186,8 +1317,8 @@ export const GhostEditor = () => {
                                 onContextMenu={handleContextMenu}
                                 onCloseContextMenu={handleCloseContextMenu}
                                 onViewNote={handleViewNote}
+                                onClaimNote={handleClaimGhostNote}
                                 onDeleteNote={handleDeleteNote}
-                                onOpenIDMWindow={handleOpenIDMWindow}
                             />
                         </Paper>
                     </Grid>
@@ -1259,5 +1390,15 @@ export const GhostEditor = () => {
                 </DialogContent>
             </Dialog>
         </Container>
+        <EphemeralClaimDrawer
+            open={claimOpen}
+            onClose={() => {
+                setClaimOpen(false);
+                setClaimTarget(null);
+            }}
+            target={claimTarget}
+            onConsumed={handleConsumedGhost}
+        />
+        </>
     );
 };

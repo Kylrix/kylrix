@@ -74,7 +74,8 @@ export const APPWRITE_CONFIG = {
             GUESTS: 'eventGuests',
             COLLABORATORS: 'Collaborators',
             FORMS: 'forms',
-            FORM_SUBMISSIONS: 'formSubmissions'
+            FORM_SUBMISSIONS: 'formSubmissions',
+            AGENTS: 'agents'
         },
         CONNECT: {
             USERS: 'users',

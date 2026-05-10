@@ -6,7 +6,10 @@ const SEND_KINDS = new Set<string>(['note', 'password', 'totp', 'task', 'file'])
 export interface SendGhostNoteMetadata {
   isGhost?: boolean;
   /** Send variant; absent on classic ghost landing notes. */
-  send_object?: { kind: SendKind };
+  /** schemaVersion/bumped shapes reserved for Note/Vault/Flow claim pipelines */
+  send_object?: { kind: SendKind; bucketId?: string; fileId?: string; schemaVersion?: number };
+  /** SHA-256 hex of creator-held deletion secret (optional on legacy rows). */
+  creatorDeletionProofHash?: string;
   ghostSecret?: string;
   expiresAt?: string;
   version?: string;

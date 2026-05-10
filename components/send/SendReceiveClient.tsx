@@ -29,7 +29,7 @@ import { sharedNotePublicUrl } from '@/lib/send/shared-note-api';
 import type { SendFilePayload, SendKind, SendPasswordPayload, SendTaskPayload, SendTotpPayload } from '@/lib/send/types';
 
 const SURFACE = '#161412';
-const RIM = '1px solid rgba(255, 255, 255, 0.06)';
+const RIM = '1px solid rgba(255, 255, 255, 0.05)';
 const PRIMARY = '#6366F1';
 
 const readOnlyFieldSx = {
@@ -164,11 +164,14 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
             } catch {
               throw new Error('Invalid file manifest.');
             }
-            if (!manifest.bucketId || !manifest.fileId) {
+            const bucketId = meta.send_object?.bucketId || manifest.bucketId;
+            const fileId = meta.send_object?.fileId || manifest.fileId;
+            if (!bucketId || !fileId) {
               throw new Error('Incomplete file manifest.');
             }
+            manifest = { ...manifest, bucketId, fileId };
 
-            const downloadUrl = storage.getFileDownload(manifest.bucketId, manifest.fileId);
+            const downloadUrl = storage.getFileDownload(bucketId, fileId);
             const fileRes = await fetch(downloadUrl);
             if (!fileRes.ok) {
               throw new Error('Could not download encrypted file.');

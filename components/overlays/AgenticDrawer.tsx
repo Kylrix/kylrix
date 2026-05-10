@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
+  CircularProgress,
   Drawer,
   IconButton,
   Paper,
@@ -13,21 +14,31 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Bot, CalendarClock, Mic, Play, Plug, X } from 'lucide-react';
+import { Bot, Play, Plug, Plus, X } from 'lucide-react';
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
-import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { createMyAgent, listMyAgents, runMyAgent, setMyAgentStatus } from '@/lib/actions/agentic';
 
 type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
 
-/** Short labels — keep copy density low in the sheet. */
-const frameworks: Array<{ id: AgentFramework; title: string }> = [
-  { id: 'kylrix', title: 'Kylrix Internal' },
-  { id: 'openclaw', title: 'OpenClaw (soon)' },
-  { id: 'hermes', title: 'Hermes (soon)' },
-];
+type AgentStatus = 'idle' | 'working';
 
-const connectorHints = ['From this note', 'New Flow goal', 'Vault lookup', 'Connect draft'];
+interface AgentRow {
+  $id: string;
+  ownerId: string;
+  parentId?: string | null;
+  publicKey?: string | null;
+  config?: string;
+  status?: string;
+  $updatedAt?: string;
+}
+
+const frameworks: Array<{ id: AgentFramework; title: string; comingSoon?: boolean }> = [
+  { id: 'kylrix', title: 'Kylrix Internal' },
+  { id: 'openclaw', title: 'OpenClaw', comingSoon: true },
+  { id: 'hermes', title: 'Hermes', comingSoon: true },
+];
 
 const fontUi = 'var(--font-satoshi)';
 const fontDisplay = 'var(--font-clash)';
@@ -43,35 +54,135 @@ const INDIGO_HOVER = '#575CF0';
 
 const BORDER = `1px solid ${BORDER_EDGE}`;
 
+function formatUpdatedAgo(value?: string): string {
+  if (!value) return 'updated just now';
+  const ts = new Date(value).getTime();
+  if (!Number.isFinite(ts)) return 'updated just now';
+  const deltaMs = Date.now() - ts;
+  if (deltaMs < 60_000) return 'updated just now';
+  const mins = Math.floor(deltaMs / 60_000);
+  if (mins < 60) return `updated ${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `updated ${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `updated ${days}d ago`;
+}
+
 export function AgenticDrawer() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { isOpen, closeAgenticDrawer } = useAgenticDrawer();
-  const { openProUpgrade } = useProUpgrade();
+  const { user } = useAuth();
 
-  const [stage, setStage] = useState<'live' | 'framework' | 'planner'>('live');
+  const [stage, setStage] = useState<'live' | 'framework' | 'create'>('live');
   const [framework, setFramework] = useState<AgentFramework>('kylrix');
-  const [chatInput, setChatInput] = useState('');
+  const [agentName, setAgentName] = useState('');
+  const [agentGoal, setAgentGoal] = useState('');
+  const [agents, setAgents] = useState<AgentRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [updatingAgentId, setUpdatingAgentId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
       setStage('live');
       setFramework('kylrix');
-      setChatInput('');
+      setAgentName('');
+      setAgentGoal('');
+      setError(null);
     }
   }, [isOpen]);
 
-  const suggestedInstructions = useMemo(() => {
-    if (!chatInput.trim()) return connectorHints;
-    return connectorHints.filter((entry) => entry.toLowerCase().includes(chatInput.toLowerCase())).slice(0, 4);
-  }, [chatInput]);
-
-  const openPlannerFromFramework = (id: AgentFramework) => {
-    setFramework(id);
-    if (id === 'kylrix') {
-      setStage('planner');
+  const fetchAgents = useCallback(async () => {
+    if (!user?.$id) {
+      setAgents([]);
+      return;
     }
-  };
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await listMyAgents();
+      setAgents(rows as unknown as AgentRow[]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load agents.');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.$id]);
+
+  useEffect(() => {
+    if (!isOpen || !user?.$id) return;
+    void fetchAgents();
+  }, [fetchAgents, isOpen, user?.$id]);
+
+  const createAgent = useCallback(async () => {
+    if (!user?.$id || !agentName.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await createMyAgent({
+        name: agentName.trim(),
+        goal: agentGoal.trim(),
+        framework,
+      });
+      setAgentName('');
+      setAgentGoal('');
+      setStage('live');
+      await fetchAgents();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not create agent.');
+    } finally {
+      setSaving(false);
+    }
+  }, [agentGoal, agentName, fetchAgents, framework, user?.$id]);
+
+  const setAgentStatus = useCallback(async (agent: AgentRow, status: AgentStatus) => {
+    setUpdatingAgentId(agent.$id);
+    setError(null);
+    try {
+      await setMyAgentStatus(agent.$id, status);
+      setAgents((prev) => prev.map((entry) => (entry.$id === agent.$id ? { ...entry, status } : entry)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update agent status.');
+    } finally {
+      setUpdatingAgentId(null);
+    }
+  }, []);
+
+  const runAgentNow = useCallback(async (agent: AgentRow) => {
+    setUpdatingAgentId(agent.$id);
+    setError(null);
+    try {
+      await setMyAgentStatus(agent.$id, 'working');
+      setAgents((prev) => prev.map((entry) => (entry.$id === agent.$id ? { ...entry, status: 'working' } : entry)));
+      await runMyAgent(agent.$id);
+      await fetchAgents();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not run agent.');
+      await fetchAgents();
+    } finally {
+      setUpdatingAgentId(null);
+    }
+  }, [fetchAgents]);
+
+  const parsedAgents = useMemo(() => {
+    return agents.map((agent) => {
+      let config: { name?: string; goal?: string; framework?: string } = {};
+      try {
+        config = JSON.parse(agent.config || '{}');
+      } catch {
+        config = {};
+      }
+      return {
+        ...agent,
+        name: config.name || `Agent ${agent.$id.slice(0, 6)}`,
+        goal: config.goal || 'No goal defined yet.',
+        framework: (config.framework as AgentFramework) || 'kylrix',
+        status: agent.status === 'working' ? 'working' : 'idle',
+      };
+    });
+  }, [agents]);
 
   const sheetBodySx = {
     fontFamily: fontUi,
@@ -184,151 +295,109 @@ export function AgenticDrawer() {
           <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ flexShrink: 0 }}>
               <Typography sx={{ fontFamily: fontUi, fontSize: '0.8125rem', color: TEXT_MUTED, fontWeight: 600 }}>
-                Kylrix · idle
+                {parsedAgents.length} agent{parsedAgents.length === 1 ? '' : 's'} · live
               </Typography>
-              <Box
-                component="span"
+              <Button
+                size="small"
+                onClick={() => setStage('create')}
+                startIcon={<Plus size={16} />}
                 sx={{
-                  px: 1.25,
-                  py: 0.35,
-                  borderRadius: '999px',
-                  bgcolor: '#14532D',
-                  color: '#DCFCE7',
-                  fontFamily: fontUi,
-                  fontSize: '0.7rem',
-                  fontWeight: 800,
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
+                  textTransform: 'none',
+                  borderRadius: '10px',
+                  color: '#F4F4F5',
+                  bgcolor: VOID,
+                  border: BORDER,
+                  fontWeight: 700,
+                  px: 1.2,
                 }}
               >
-                Active
-              </Box>
+                New agent
+              </Button>
             </Stack>
 
-            {isDesktop && (
-              <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-                <Button
-                  size="small"
-                  onClick={() => setStage('planner')}
-                  sx={{
-                    textTransform: 'none',
-                    borderRadius: '10px',
-                    color: '#F4F4F5',
-                    bgcolor: VOID,
-                    border: BORDER,
-                    fontWeight: 700,
-                    px: 1.2,
-                  }}
-                >
-                  Planner
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => openProUpgrade('Agent Scheduling')}
-                  sx={{
-                    textTransform: 'none',
-                    borderRadius: '10px',
-                    color: '#F4F4F5',
-                    bgcolor: VOID,
-                    border: BORDER,
-                    fontWeight: 700,
-                    px: 1.2,
-                  }}
-                >
-                  Schedule
-                </Button>
-                <Button
-                  size="small"
-                  onClick={() => setStage('framework')}
-                  sx={{
-                    textTransform: 'none',
-                    borderRadius: '10px',
-                    color: '#F4F4F5',
-                    bgcolor: VOID,
-                    border: BORDER,
-                    fontWeight: 700,
-                    px: 1.2,
-                  }}
-                >
-                  Runtime
-                </Button>
-              </Stack>
-            )}
+            {error ? <Typography sx={{ color: '#FCA5A5', fontSize: '0.8rem' }}>{error}</Typography> : null}
 
             <Stack
               spacing={1}
               sx={{
-                maxHeight: { xs: 210, md: 180 },
+                maxHeight: { xs: 300, md: 320 },
                 overflowY: 'auto',
                 pr: 0.25,
-                flexShrink: 0,
+                flex: 1,
               }}
             >
-              {suggestedInstructions.map((item) => (
-                <Button
-                  key={item}
-                  fullWidth
-                  disableElevation
-                  onClick={() => setChatInput(item)}
-                  sx={{
-                    justifyContent: 'flex-start',
-                    textTransform: 'none',
-                    fontFamily: fontUi,
-                    fontWeight: 600,
-                    fontSize: '0.875rem',
-                    color: '#F4F4F5',
-                    py: 1.25,
-                    px: 1.75,
-                    minHeight: 44,
-                    borderRadius: '12px',
-                    border: BORDER,
-                    bgcolor: VOID,
-                    '&:hover': { bgcolor: HOVER },
-                  }}
-                >
-                  {item}
-                </Button>
-              ))}
-            </Stack>
-
-            <Stack direction="row" spacing={1.25} alignItems="stretch">
-              <TextField
-                value={chatInput}
-                onChange={(event) => setChatInput(event.target.value)}
-                placeholder="Instruction…"
-                size="small"
-                fullWidth
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '12px',
-                    color: '#fff',
-                    fontFamily: fontUi,
-                    fontSize: '0.875rem',
-                    bgcolor: VOID,
-                    minHeight: 48,
-                    '& fieldset': { borderColor: BORDER_EDGE },
-                    '&:hover fieldset': { borderColor: '#4A4744' },
-                    '&.Mui-focused fieldset': { borderColor: INDIGO },
-                  },
-                  '& .MuiInputBase-input': { py: 1.35, px: 0.75 },
-                  '& .MuiInputBase-input::placeholder': { color: TEXT_MUTED, opacity: 1 },
-                }}
-              />
-              <IconButton
-                aria-label="Voice input"
-                sx={{
-                  alignSelf: 'stretch',
-                  width: 52,
-                  borderRadius: '12px',
-                  flexShrink: 0,
-                  bgcolor: INDIGO,
-                  color: '#FFFFFF',
-                  border: `1px solid ${INDIGO}`,
-                  '&:hover': { bgcolor: INDIGO_HOVER, borderColor: INDIGO_HOVER },
-                }}
-              >
-                <Mic size={20} strokeWidth={2.25} />
-              </IconButton>
+              {loading ? (
+                <Box sx={{ py: 4, display: 'grid', placeItems: 'center' }}>
+                  <CircularProgress size={24} />
+                </Box>
+              ) : parsedAgents.length === 0 ? (
+                <Paper elevation={0} sx={{ p: 2, borderRadius: '14px', bgcolor: VOID, border: BORDER }}>
+                  <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>No agents yet</Typography>
+                  <Typography sx={{ color: TEXT_MUTED, fontSize: '0.8rem', mt: 0.5 }}>
+                    Spin up your first Kylrix agent to start automations.
+                  </Typography>
+                </Paper>
+              ) : (
+                parsedAgents.map((agent) => (
+                  <Paper key={agent.$id} elevation={0} sx={{ p: 1.5, borderRadius: '14px', bgcolor: VOID, border: BORDER }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography noWrap sx={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>
+                          {agent.name}
+                        </Typography>
+                        <Typography noWrap sx={{ color: TEXT_MUTED, fontSize: '0.76rem' }}>
+                          {agent.framework === 'kylrix' ? 'Kylrix Internal' : agent.framework}
+                        </Typography>
+                        <Typography noWrap sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72rem', mt: 0.25 }}>
+                          {formatUpdatedAgo(agent.$updatedAt)}
+                        </Typography>
+                      </Box>
+                      <Box
+                        component="span"
+                        sx={{
+                          px: 1.1,
+                          py: 0.25,
+                          borderRadius: '999px',
+                          bgcolor: agent.status === 'working' ? '#1E3A8A' : '#14532D',
+                          color: agent.status === 'working' ? '#BFDBFE' : '#DCFCE7',
+                          fontSize: '0.66rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                        }}
+                      >
+                        {agent.status}
+                      </Box>
+                    </Stack>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.78rem', mt: 1.1, mb: 1.25, lineHeight: 1.5 }}>
+                      {agent.goal}
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        size="small"
+                        fullWidth
+                        variant="outlined"
+                        disabled={updatingAgentId === agent.$id || agent.status === 'idle'}
+                        onClick={() => void setAgentStatus(agent, 'idle')}
+                        sx={{ textTransform: 'none', borderColor: BORDER_EDGE, color: '#F4F4F5', borderRadius: '10px' }}
+                      >
+                        Idle
+                      </Button>
+                      <Button
+                        size="small"
+                        fullWidth
+                        variant="contained"
+                        startIcon={<Play size={14} />}
+                        disabled={updatingAgentId === agent.$id || agent.status === 'working'}
+                        onClick={() => void runAgentNow(agent)}
+                        sx={{ textTransform: 'none', borderRadius: '10px', bgcolor: INDIGO, '&:hover': { bgcolor: INDIGO_HOVER } }}
+                      >
+                        Run
+                      </Button>
+                    </Stack>
+                  </Paper>
+                ))
+              )}
             </Stack>
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
@@ -352,7 +421,8 @@ export function AgenticDrawer() {
                 fullWidth
                 variant="contained"
                 disableElevation
-                startIcon={<Play size={18} />}
+                startIcon={<Plus size={18} />}
+                onClick={() => setStage('create')}
                 sx={{
                   py: 1.15,
                   borderRadius: '12px',
@@ -364,7 +434,7 @@ export function AgenticDrawer() {
                   '&:hover': { bgcolor: INDIGO_HOVER },
                 }}
               >
-                Run
+                Spin up
               </Button>
             </Stack>
           </Box>
@@ -379,12 +449,12 @@ export function AgenticDrawer() {
             <Stack spacing={1.25} sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.25 }}>
               {frameworks.map((item) => {
                 const selected = item.id === framework;
-                const disabled = item.id !== 'kylrix';
+                const disabled = Boolean(item.comingSoon);
                 return (
                   <Paper
                     key={item.id}
                     elevation={0}
-                    onClick={() => !disabled && openPlannerFromFramework(item.id)}
+                    onClick={() => !disabled && setFramework(item.id)}
                     sx={{
                       p: 1.75,
                       borderRadius: '14px',
@@ -408,23 +478,31 @@ export function AgenticDrawer() {
                         letterSpacing: '-0.02em',
                       }}
                     >
-                      {item.title}
+                      {item.title}{item.comingSoon ? ' (coming soon)' : ''}
                     </Typography>
                   </Paper>
                 );
               })}
             </Stack>
 
+            <Button
+              variant="contained"
+              onClick={() => setStage('create')}
+              disabled={framework !== 'kylrix'}
+              sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 700, bgcolor: INDIGO, '&:hover': { bgcolor: INDIGO_HOVER } }}
+            >
+              Use framework
+            </Button>
             <Button variant="text" onClick={() => setStage('live')} sx={{ alignSelf: 'flex-start', color: TEXT_MUTED, textTransform: 'none', fontWeight: 700 }}>
               Back
             </Button>
           </Box>
         )}
 
-        {stage === 'planner' && (
+        {stage === 'create' && (
           <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1.75 }}>
             <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9375rem', fontFamily: fontDisplay, letterSpacing: '-0.02em' }}>
-              Connectors
+              Create agent
             </Typography>
 
             <Paper
@@ -439,29 +517,55 @@ export function AgenticDrawer() {
                 overflowY: 'auto',
               }}
             >
-              <Stack direction="row" useFlexGap flexWrap="wrap" gap={1}>
-                {['Note', 'Flow', 'Vault', 'Connect'].map((connector) => (
-                  <Box
-                    key={connector}
-                    sx={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 0.75,
-                      height: 36,
-                      px: 1.5,
-                      borderRadius: '999px',
-                      bgcolor: HOVER,
-                      border: BORDER,
-                      color: '#F4F4F5',
-                      fontFamily: fontUi,
-                      fontWeight: 700,
-                      fontSize: '0.8125rem',
-                    }}
-                  >
-                    <Plug size={14} />
-                    {connector}
-                  </Box>
-                ))}
+              <Stack spacing={1.25}>
+                <TextField
+                  value={agentName}
+                  onChange={(event) => setAgentName(event.target.value)}
+                  label="Agent name"
+                  placeholder="Ops Helper"
+                  fullWidth
+                  size="small"
+                  sx={{
+                    '& .MuiOutlinedInput-root': { bgcolor: HOVER, borderRadius: '10px' },
+                    '& .MuiInputBase-input': { color: '#fff' },
+                    '& .MuiInputLabel-root': { color: TEXT_MUTED },
+                  }}
+                />
+                <TextField
+                  value={agentGoal}
+                  onChange={(event) => setAgentGoal(event.target.value)}
+                  label="Goal"
+                  placeholder="Triage overdue tasks and report blockers"
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  size="small"
+                  sx={{
+                    '& .MuiOutlinedInput-root': { bgcolor: HOVER, borderRadius: '10px' },
+                    '& .MuiInputBase-input': { color: '#fff' },
+                    '& .MuiInputLabel-root': { color: TEXT_MUTED },
+                  }}
+                />
+                <Box
+                  sx={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.75,
+                    height: 36,
+                    px: 1.5,
+                    borderRadius: '999px',
+                    bgcolor: HOVER,
+                    border: BORDER,
+                    color: '#F4F4F5',
+                    fontFamily: fontUi,
+                    fontWeight: 700,
+                    fontSize: '0.8125rem',
+                    width: 'fit-content',
+                  }}
+                >
+                  <Plug size={14} />
+                  Runtime: {framework === 'kylrix' ? 'Kylrix Internal' : framework}
+                </Box>
               </Stack>
             </Paper>
 
@@ -469,8 +573,7 @@ export function AgenticDrawer() {
               <Button
                 fullWidth
                 variant="outlined"
-                startIcon={<CalendarClock size={18} />}
-                onClick={() => openProUpgrade('Agent Scheduling')}
+                onClick={() => setStage('framework')}
                 sx={{
                   py: 1.15,
                   borderRadius: '12px',
@@ -481,12 +584,14 @@ export function AgenticDrawer() {
                   '&:hover': { borderColor: '#4F4C49', bgcolor: VOID },
                 }}
               >
-                Schedule (Pro)
+                Runtime
               </Button>
               <Button
                 fullWidth
                 variant="contained"
                 disableElevation
+                onClick={() => void createAgent()}
+                disabled={saving || !agentName.trim() || !user?.$id}
                 sx={{
                   py: 1.15,
                   borderRadius: '12px',
@@ -498,11 +603,11 @@ export function AgenticDrawer() {
                   '&:hover': { bgcolor: INDIGO_HOVER },
                 }}
               >
-                Save
+                {saving ? <CircularProgress size={18} color="inherit" /> : 'Create'}
               </Button>
             </Stack>
 
-            <Button variant="text" onClick={() => setStage('framework')} sx={{ alignSelf: 'flex-start', color: TEXT_MUTED, textTransform: 'none', fontWeight: 700 }}>
+            <Button variant="text" onClick={() => setStage('live')} sx={{ alignSelf: 'flex-start', color: TEXT_MUTED, textTransform: 'none', fontWeight: 700 }}>
               Back
             </Button>
           </Box>

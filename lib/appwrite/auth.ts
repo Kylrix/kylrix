@@ -134,14 +134,24 @@ export class AppwriteService {
     );
   }
 
-  static async createGhostNote(data: { title: string; content: string; format?: string; ghostSecret: string; expiresAt?: string; isEncrypted?: boolean }): Promise<any> {
+  static async createGhostNote(data: {
+    title: string;
+    content: string;
+    format?: string;
+    ghostSecret: string;
+    expiresAt?: string;
+    isEncrypted?: boolean;
+    /** SHA-256 (hex) of a device-held deletion secret — enables server-side burn via admin SDK. */
+    creatorDeletionProofHash?: string;
+  }): Promise<any> {
     const expiresAt = data.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const metadata = JSON.stringify({
       isGhost: true,
       ghostSecret: data.ghostSecret,
       expiresAt: expiresAt,
       version: 'v2',
-      isEncrypted: data.isEncrypted || false
+      isEncrypted: data.isEncrypted || false,
+      ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {}),
     });
 
     return await databases.createDocument(
@@ -174,7 +184,8 @@ export class AppwriteService {
     ghostSecret: string;
     expiresAt?: string;
     isEncrypted?: boolean;
-    sendObject: { kind: string };
+    creatorDeletionProofHash?: string;
+    sendObject: { kind: string; bucketId?: string; fileId?: string };
   }): Promise<any> {
     const expiresAt = data.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const metadata = JSON.stringify({
@@ -184,6 +195,7 @@ export class AppwriteService {
       expiresAt,
       version: 'v2',
       isEncrypted: data.isEncrypted ?? false,
+      ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {}),
     });
 
     return await databases.createDocument(

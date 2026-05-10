@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   alpha,
   Backdrop,
@@ -36,8 +36,11 @@ import { useRouter } from 'next/navigation';
 
 import Logo, { KylrixApp } from '@/components/Logo';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
+import { useAuth } from '@/context/auth/AuthContext';
 
 const appOrder = ['note', 'vault', 'flow', 'connect'] as const;
+const LAST_ACTIVE_APP_KEY = 'kylrix_last_active_app';
+const DEFAULT_REDIRECT_APP = 'connect';
 
 const surfaceShadow =
   'inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0,0,0,0.8)';
@@ -522,6 +525,7 @@ function LiveSurfaceCard({
 
 export default function LandingPage() {
   const router = useRouter();
+  const { user, isLoading } = useAuth();
   const openApp = (subdomain: string) => router.push(getEcosystemUrl(subdomain));
   const showcaseRef = useRef<HTMLDivElement | null>(null);
   const { scrollYProgress } = useScroll({
@@ -529,6 +533,13 @@ export default function LandingPage() {
     offset: ['start end', 'end start'],
   });
   const showcaseGlowY = useTransform(scrollYProgress, [0, 1], [0, -90]);
+
+  useEffect(() => {
+    if (isLoading || !user) return;
+    const saved = typeof window !== 'undefined' ? localStorage.getItem(LAST_ACTIVE_APP_KEY) : null;
+    const app = saved && ECOSYSTEM_APPS.some((entry) => entry.id === saved) ? saved : DEFAULT_REDIRECT_APP;
+    router.replace(getEcosystemUrl(app));
+  }, [isLoading, user, router]);
 
   return (
     <Box component="main" sx={{ position: 'relative', overflow: 'clip', bgcolor: '#000', color: '#fff', pt: { xs: 2, md: 3 }, pb: { xs: 10, md: 14 } }}>
