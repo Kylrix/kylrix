@@ -10,6 +10,7 @@ import { ProUpgradeDrawer } from './overlays/ProUpgradeDrawer';
 import { AgenticDrawer } from './overlays/AgenticDrawer';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
 import NoteTopbar from '@/components/common/NoteTopbar';
+import { AccountHealthDrawers } from '@/components/onboarding/AccountHealthDrawers';
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -87,6 +88,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {shouldShowBottomBar && <UnifiedBottomBar />}
       <AgenticDrawer />
       <ProUpgradeDrawer />
+      {isAppRoute && !isSharedPage && !isVaultResetRoute ? <AccountHealthDrawers /> : null}
     </Box>
   );
 }

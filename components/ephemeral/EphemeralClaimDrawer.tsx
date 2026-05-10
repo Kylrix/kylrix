@@ -189,10 +189,10 @@ export function EphemeralClaimDrawer({ open, onClose, target, onConsumed }: Prop
           title: plainTitle || 'Imported note',
           content: plainContent,
           isPublic: true,
-          metadata: {
+          metadata: JSON.stringify({
             importedFrom: 'kylrix_ephemeral_claim',
             ephemeralNoteId: target.noteId,
-          },
+          }),
         });
       } else if (kind === 'task') {
         let payload: SendTaskPayload;
