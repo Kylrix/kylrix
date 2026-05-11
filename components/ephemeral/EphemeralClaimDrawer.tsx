@@ -32,6 +32,7 @@ import { MasterPassCrypto } from '@/lib/masterpass-crypto';
 import { parseSendGhostMetadata, isSendObjectMeta } from '@/lib/send/metadata';
 import { sharedNotePublicUrl } from '@/lib/send/shared-note-api';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const BG = '#161412';
 const RIM = '1px solid rgba(255, 255, 255, 0.05)';
@@ -309,6 +310,7 @@ export function EphemeralClaimDrawer({ open, onClose, target, onConsumed }: Prop
       anchor="bottom"
       open={open && Boolean(target)}
       onClose={handleClose}
+      slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       PaperProps={{
         sx: {
           bgcolor: BG,

@@ -1538,7 +1538,7 @@ export default function NoteTopbar({
         position="fixed"
         elevation={0}
         sx={{
-          zIndex: 1201,
+          zIndex: (theme) => theme.zIndex.modal + 1,
           bgcolor: '#161412',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
           borderRadius: '0 0 28px 28px',
