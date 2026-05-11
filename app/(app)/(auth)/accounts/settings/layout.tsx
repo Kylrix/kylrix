@@ -235,10 +235,10 @@ function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
           )}
 
           {navItems.map(({ id, label, icon: Icon }) => (
-            <Box
-              key={id}
-              component={Link}
-              href={`/settings/${id}`}
+              <Box
+                key={id}
+                component={Link}
+                href={`/accounts/settings/${id}`}
               sx={{
                 display: 'flex',
                 gap: 2,
@@ -380,7 +380,7 @@ function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
                   size="medium"
                   onClick={() => {
                     setIsExpanded(false);
-                    router.push(`/settings/${action.id}`);
+                    router.push(`/accounts/settings/${action.id}`);
                   }}
                   sx={{
                     bgcolor: 'rgba(15, 13, 12, 0.9)',
@@ -445,12 +445,12 @@ function SettingsLayoutContent({ children }: { children: React.ReactNode }) {
           boxShadow: '0 -12px 36px rgba(0, 0, 0, 0.34)',
         }} 
       >
-        <BottomNavigation
-          showLabels={false}
-          value={activeTab}
-          onChange={(_, newValue) => {
-            router.push(`/settings/${newValue}`);
-          }}
+          <BottomNavigation
+            showLabels={false}
+            value={activeTab}
+            onChange={(_, newValue) => {
+              router.push(`/accounts/settings/${newValue}`);
+            }}
           sx={{ 
             bgcolor: '#161412',
             backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 18%, #161412 100%)',

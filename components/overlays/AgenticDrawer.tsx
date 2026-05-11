@@ -19,7 +19,8 @@ import { Bot, Play, Plug, Plus, X } from 'lucide-react';
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
-import { createMyAgent, listMyAgents, runMyAgent, setMyAgentStatus } from '@/lib/actions/agentic';
+import { AgenticService } from '@/lib/services/agentic';
+import { runMyAgent } from '@/lib/actions/agentic';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
@@ -108,7 +109,7 @@ export function AgenticDrawer() {
     setLoading(true);
     setError(null);
     try {
-      const rows = await listMyAgents();
+      const rows = await AgenticService.listMyAgents(user.$id);
       setAgents(rows as unknown as AgentRow[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load agents.');
@@ -127,7 +128,8 @@ export function AgenticDrawer() {
     setSaving(true);
     setError(null);
     try {
-      await createMyAgent({
+      await AgenticService.createMyAgent({
+        userId: user.$id,
         name: agentName.trim(),
         goal: agentGoal.trim(),
         framework,
@@ -144,10 +146,11 @@ export function AgenticDrawer() {
   }, [agentGoal, agentName, fetchAgents, framework, user?.$id]);
 
   const setAgentStatus = useCallback(async (agent: AgentRow, status: AgentStatus) => {
+    if (!user?.$id) return;
     setUpdatingAgentId(agent.$id);
     setError(null);
     try {
-      await setMyAgentStatus(agent.$id, status);
+      await AgenticService.setMyAgentStatus(user.$id, agent.$id, status);
       setAgents((prev) => prev.map((entry) => (entry.$id === agent.$id ? { ...entry, status } : entry)));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not update agent status.');
@@ -157,10 +160,11 @@ export function AgenticDrawer() {
   }, []);
 
   const runAgentNow = useCallback(async (agent: AgentRow) => {
+    if (!user?.$id) return;
     setUpdatingAgentId(agent.$id);
     setError(null);
     try {
-      await setMyAgentStatus(agent.$id, 'working');
+      await AgenticService.setMyAgentStatus(user.$id, agent.$id, 'working');
       setAgents((prev) => prev.map((entry) => (entry.$id === agent.$id ? { ...entry, status: 'working' } : entry)));
       await runMyAgent(agent.$id);
       await fetchAgents();

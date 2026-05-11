@@ -2,11 +2,10 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ID, Query } from 'node-appwrite';
-import { headers } from 'next/headers';
 
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { resolveCurrentUser } from '@/lib/appwrite/client';
+import { createServerClient } from '@/lib/appwrite-server';
 
 type AgentStatus = 'idle' | 'working';
 
@@ -41,8 +40,8 @@ function parseAgentConfig(raw?: string): AgentConfig {
 }
 
 async function requireUser() {
-  const h = await headers();
-  const user = await resolveCurrentUser({ headers: h as unknown as { get(k: string): string | null } });
+  const { account } = await createServerClient();
+  const user = await account.get();
   if (!user?.$id) throw new Error('Unauthorized');
   return user;
 }
@@ -76,7 +75,7 @@ export async function createMyAgent(input: {
   framework?: 'kylrix' | 'openclaw' | 'hermes';
 }) {
   const user = await requireUser();
-  const framework = input.framework === 'kylrix' ? 'kylrix' : 'kylrix';
+  const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
   const { databases } = createAdminClient();
   await databases.createDocument(
     APPWRITE_CONFIG.DATABASES.FLOW,
