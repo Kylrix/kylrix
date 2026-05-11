@@ -8,46 +8,24 @@ import NoteTopbar from '@/components/common/NoteTopbar';
 const VaultTopbar = dynamic(() => import('@/components/common/VaultTopbar'), { ssr: false });
 
 /**
- * Persistent unified topbar that transforms based on current route.
- * Never unmounts when navigating between app sections.
- * Uses the standard app topbar across app routes.
+ * Persistent unified topbar — single mount for the whole session.
+ *
+ * App-context awareness: pathname-driven, but the *component identity* must stay stable
+ * for every non-vault route so React doesn't unmount the bar on app switches. NoteTopbar
+ * internally branches on pathname for skin (logo accent, search visibility, marketing nav
+ * items, etc.), so it's the universal element across website + note + connect + flow +
+ * accounts + settings. Vault uses its own auth context (useAppwriteVault) so it gets a
+ * dedicated VaultTopbar — that's the one remount point we accept.
  */
 function UnifiedTopbarInner() {
   const pathname = usePathname();
 
-  // Determine which app we're in based on pathname
-  const appContext = useMemo(() => {
-    if (pathname?.startsWith('/settings')) return 'settings';
-    if (pathname?.startsWith('/note')) return 'note';
-    if (pathname?.startsWith('/vault')) return 'vault';
-    if (pathname?.startsWith('/flow')) return 'flow';
-    if (pathname?.startsWith('/connect')) return 'connect';
-    if (pathname?.startsWith('/accounts')) return 'accounts';
-    return null;
-  }, [pathname]);
+  const isVaultRoute = useMemo(() => Boolean(pathname?.startsWith('/vault')), [pathname]);
 
-  // Render appropriate topbar based on context
-  // Each topbar only changes its rendered content, never unmounts
-  if (appContext === 'note') {
-    return <NoteTopbar />;
-  }
-  if (appContext === 'vault') {
+  if (isVaultRoute) {
     return <VaultTopbar />;
   }
-  if (appContext === 'connect') {
-    return <NoteTopbar />;
-  }
-  if (appContext === 'accounts') {
-    return <NoteTopbar />;
-  }
-  if (appContext === 'flow') {
-    return <NoteTopbar />;
-  }
-  if (appContext === 'settings') {
-    return <NoteTopbar />;
-  }
-
-  return null;
+  return <NoteTopbar />;
 }
 
 export const UnifiedTopbar = memo(UnifiedTopbarInner);

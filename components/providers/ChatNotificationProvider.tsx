@@ -2,18 +2,25 @@
 
 import React, { createContext, useContext, useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
+import dynamic from 'next/dynamic';
 import { realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useAuth } from '@/lib/auth';
 import { ChatService } from '@/lib/services/chat';
 import { UsersService } from '@/lib/services/users';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { Box, Typography, alpha, Avatar, Badge } from '@mui/material';
-import { MessageCircle, Lock } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { getCachedIdentityById, seedIdentityCache } from '@/lib/identity-cache';
 import { buildSafetyWarning, getVerificationState } from '@/lib/verification';
-import { useRouter } from 'next/navigation';
+
+/**
+ * framer-motion is heavy and is only needed when an island is being animated. Defer it
+ * to a lazy chunk that loads on first chat event rather than on every authenticated
+ * page paint.
+ */
+const ChatIslandPresence = dynamic(
+  () => import('@/components/providers/ChatIslandPresence'),
+  { ssr: false }
+);
 
 interface ChatNotification {
     id: string;
@@ -33,7 +40,6 @@ interface ChatNotificationContextType {
 const ChatNotificationContext = createContext<ChatNotificationContextType | undefined>(undefined);
 
 export function ChatNotificationProvider({ children }: { children: ReactNode }) {
-    const router = useRouter();
     const { user } = useAuth();
     const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set());
     const [lastMessage, setLastMessage] = useState<any | null>(null);
@@ -208,85 +214,25 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         [unreadConversations, lastMessage, scanComplete, markConversationRead]
     );
 
+    /**
+     * Only mount the framer-motion-backed island once a chat event has fired in this
+     * session. Idle authenticated routes pay zero motion bundle cost; the first
+     * notification incurs a one-time lazy chunk fetch before its entrance animation.
+     */
+    const [hasEverShownIsland, setHasEverShownIsland] = useState(false);
+    useEffect(() => {
+        if (activeNotification && !hasEverShownIsland) setHasEverShownIsland(true);
+    }, [activeNotification, hasEverShownIsland]);
+
     return (
         <ChatNotificationContext.Provider value={contextValue}>
             {children}
-            
-            {/* Dynamic Island Notification */}
-            <AnimatePresence>
-                {activeNotification && (
-                    <Box
-                        sx={{
-                            position: 'fixed',
-                            top: 20,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            zIndex: 9999,
-                            pointerEvents: 'none'
-                        }}
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, y: -100, scale: 0.8 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -100, scale: 0.8 }}
-                            transition={{ type: 'spring', damping: 18, stiffness: 150 }}
-                        >
-                            <Box
-                                sx={{
-                                    minWidth: 200,
-                                    maxWidth: 400,
-                                    bgcolor: 'rgba(10, 10, 10, 0.9)',
-                                    backdropFilter: 'blur(20px) saturate(180%)',
-                                    borderRadius: '30px',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                                    boxShadow: '0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(99, 102, 241, 0.2)',
-                                    p: 1,
-                                    px: 2,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 1.5,
-                                    pointerEvents: 'auto',
-                                    cursor: 'pointer'
-                                }}
-                                onClick={() => {
-                                    router.push(`/connect/chat/${activeNotification.id}`);
-                                    setActiveNotification(null);
-                                }}
-                            >
-                                <Badge
-                                    overlap="circular"
-                                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                                    badgeContent={
-                                        activeNotification.isEncrypted ? (
-                                            <Box sx={{ bgcolor: '#6366F1', borderRadius: '50%', p: 0.2, display: 'flex', border: '1px solid #000' }}>
-                                                <Lock size={8} color="white" />
-                                            </Box>
-                                        ) : null
-                                    }
-                                >
-                                    <Avatar 
-                                        src={activeNotification.avatar} 
-                                        sx={{ width: 32, height: 32, bgcolor: alpha('#6366F1', 0.2), color: '#6366F1', fontWeight: 800, fontSize: '0.8rem' }}
-                                    >
-                                        {activeNotification.senderName[0]}
-                                    </Avatar>
-                                </Badge>
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 900, color: '#6366F1', display: 'block', lineHeight: 1, mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                        {activeNotification.senderName}
-                                    </Typography>
-                                    <Typography variant="body2" noWrap sx={{ color: 'white', fontWeight: 600, fontSize: '0.85rem', opacity: 0.9 }}>
-                                        {activeNotification.content}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ bgcolor: alpha('#6366F1', 0.1), p: 0.8, borderRadius: '50%', display: 'flex' }}>
-                                    <MessageCircle size={16} color="#6366F1" />
-                                </Box>
-                            </Box>
-                        </motion.div>
-                    </Box>
-                )}
-            </AnimatePresence>
+            {hasEverShownIsland ? (
+                <ChatIslandPresence
+                    notification={activeNotification}
+                    onDismiss={() => setActiveNotification(null)}
+                />
+            ) : null}
         </ChatNotificationContext.Provider>
     );
 }

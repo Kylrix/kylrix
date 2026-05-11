@@ -8,7 +8,7 @@ import { DesktopSidebar } from './Navigation';
 import { useSidebar } from './ui/SidebarContext';
 import { useDynamicSidebar } from './ui/DynamicSidebarContext';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
-import NoteTopbar from '@/components/common/NoteTopbar';
+import { UnifiedTopbar } from '@/components/UnifiedTopbar';
 import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
@@ -103,13 +103,18 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
-      {/* /(app) routes get UnifiedTopbar from app/(app)/layout.tsx; website pages share the landing topbar */}
-      {isWebsiteRoute && (
+      {/**
+       * Single persistent topbar for the entire app + marketing surface. UnifiedTopbar
+       * already swaps its skin/content by pathname, so we mount it once here. App routes
+       * used to mount it via app/(app)/layout.tsx — that wrapper is now redundant and
+       * the topbar's React identity stays stable across website ↔ app navigation.
+       */}
+      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000 }}>
         <Suspense fallback={null}>
-          <NoteTopbar />
+          <UnifiedTopbar />
         </Suspense>
-      )}
-      
+      </Box>
+
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !hideDesktopSidebar && <DesktopSidebar />}
       
       <Box

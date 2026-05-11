@@ -99,3 +99,64 @@
 ---
 
 _Last updated from a repo survey in-workspace; reconcile file paths line counts if refactors move modules._
+
+---
+
+## Phase 9 — Persistent Chrome Unification (PCU): single mount, app-aware skin
+
+**Mission:** the topbar, bottom bar, sidebar, FABs and overlay drawers must mount **exactly once** for the whole session. App switches (note ↔ vault ↔ flow ↔ connect ↔ accounts) must only swap **content & skin** (logo, accent, nav items, action slots), never the React component identity, never the DOM nodes. Marketing routes must reuse the same chrome with the same identity, only changing skin.
+
+**Production invariant:** _no functionality regression_. Every change verified by `tsc`, lint of touched files, and a full `next build`. Any consumer of the affected component must keep its existing imports working through compatibility re-exports during the transition.
+
+### Map of current fragmentation (audit, do NOT delete yet)
+
+| Concern | Files involved | Status |
+|---|---|---|
+| **Topbar** | `components/common/NoteTopbar.tsx` (1842L, live), `components/common/VaultTopbar.tsx` (live), `components/UnifiedTopbar.tsx` (dispatcher, live), `components/Navbar.tsx` (live on `/pitch`,`/apps`,`/products`,`/sdk`,`/downloads`), `components/Topbar.tsx` (verify usage), `components/AppHeader.tsx`, `components/layout/AppBar.tsx`, `components/layout/AppHeader.tsx`, `components/layout/Header.tsx`, `components/layout/Navbar.tsx`, `components/layout/ConnectTopbar.tsx`, `components/layout/TopbarShell.tsx`, `accounts/components/Topbar.tsx`, `accounts/components/layout/AppHeader.tsx`, `accounts/components/layout/TopbarShell.tsx` | Fragmented |
+| **Topbar mount points** | `GlobalShell` (website routes), `app/(app)/layout.tsx` (app routes via `UnifiedTopbar`), page-local `<Navbar />` on marketing pages | Multiple |
+| **Bottom bar** | `components/UnifiedBottomBar.tsx` (live, in GlobalShell), `components/layout/BottomNav.tsx` (re-mounted by MainLayout & vault AppShell), MUI bottom nav also re-rendered inside `vault/AppShell.tsx` | Doubled on flow/connect dashboard, vault |
+| **Sidebar** | `Navigation.DesktopSidebar` (live, in GlobalShell), `DynamicSidebar` (live, in GlobalShell), `components/layout/Sidebar` (mounted by MainLayout), `components/layout/RightSidebar` (mounted by MainLayout), `vault/AppShell` inline sidebar | Doubled on flow/connect/vault |
+| **FAB** | `components/layout/GlobalFAB.tsx` (in MainLayout), `components/layout/VaultFAB.tsx`, `components/ui/QuickCreateFab.tsx`, `components/MobileFAB.tsx`, `components/chat/ChatQuickActionsFab.tsx` | Fragmented |
+| **Layout wrappers** | `MainLayout` (flow+connect dashboards), `vault/AppShell` (vault), `AppLayoutContent` (note), `accounts/layout.tsx` (accounts), `components/layout/ConnectAppShell.tsx` (no-op fragment!) | Inconsistent |
+| **EcosystemPortal** | `components/common/EcosystemPortal.tsx` (canonical), `components/EcosystemPortal.tsx`, `accounts/components/EcosystemPortal.tsx` | Duplicates |
+| **Duplicate identity/profile/passkey UI** | `components/MasterPassManager.tsx` vs `accounts/components/MasterPassManager.tsx`, `WalletManager`, `SessionsManager`, `PinManager`, `ProfileManager`, `ConnectedIdentities`, `IdentityBadge`, `ActivityLogs`, `PasskeySetup` vs `passkeySetup` | Forked pairs |
+
+### P9-Hoist — single mount point for chrome
+
+- [x] **P9-H1.** Hoist `UnifiedTopbar` out of `app/(app)/layout.tsx` and into `GlobalShell` so the topbar is mounted **once** for both website and app routes. Component identity must stay the same across pathname changes within the same auth-source family (`useAuth` vs `useAppwriteVault`).
+- [x] **P9-H2.** Slim `app/(app)/layout.tsx` to a pure pass-through (`{children}`) so it doesn't re-create a wrapping `<Box>` that participates in DOM diff churn.
+- [ ] **P9-H3.** Add `<PersistentChromeSlot zone="topbar"|"bottombar"|"sidebar"|"fab">` so each chrome region has one stable React node. App-context drives only the **inner skin** via memoized props, not the wrapper component type.
+- [ ] **P9-H4.** Make `UnifiedTopbar` reuse the **same JSX element type** across all non-vault apps (it already does via `NoteTopbar`). For vault, render `NoteTopbar` as the structural shell with a `<VaultIdentitySlot />` swap — so even vault→note doesn't remount the bar.
+
+### P9-Strip — neutralize duplicate chrome wrappers
+
+- [x] **P9-S1.** Convert `components/layout/MainLayout.tsx` into a thin pass-through that **does not** mount Sidebar/RightSidebar/GlobalFAB/TaskDialog (those live in `GlobalShell` / context-driven slots already). Keep `MainLayout` export so existing `flow/(dashboard)/layout.tsx` and `connect/(dashboard)/layout.tsx` imports keep working; behavior change is internal.
+- [x] **P9-S2.** `components/layout/ConnectAppShell.tsx` is a no-op fragment — keep the export as a thin pass-through, mark deprecated; remove only after all `import { ConnectAppShell }` sites are migrated.
+- [ ] **P9-S3.** Move vault-specific sidebar & bottom nav logic from `components/layout/AppShell.tsx` into the universal chrome configs (driven by app context). Then make `AppShell` a pass-through too; keep the named export for backwards compatibility.
+- [ ] **P9-S4.** Marketing pages (`/pitch`, `/apps`, `/products`, `/sdk`, `/downloads`): currently render their own `<Navbar />` while `GlobalShell` also renders `NoteTopbar`. Decide one source of truth: prefer the **universal topbar**; convert marketing pages to remove the local `<Navbar />` import (or scope GlobalShell to *not* render a topbar on these exact routes, whichever is less risky). Keep both renderable behind a feature flag during rollout.
+
+### P9-DRY — universal config-driven skin
+
+- [ ] **P9-D1.** Add `lib/chrome/app-context.ts` exporting:
+  - `resolveAppContext(pathname): { app: 'note'|'vault'|'flow'|'connect'|'accounts'|'settings'|'marketing'; accent: string; logoVariant; navItems: NavItem[]; topbarSkin: TopbarSkin; bottomNavItems: NavItem[]; }`
+  - Single source of truth for accent colors (currently duplicated in `UnifiedBottomBar`, `getAppColor`, `getAppTone`).
+- [ ] **P9-D2.** Refactor `UnifiedBottomBar` to read its tabs/colors from `resolveAppContext` instead of an inline `if/else` ladder; same for `UnifiedTopbar`.
+- [ ] **P9-D3.** Extract `<TopbarLogoSlot />` (intelligent: app-derived), `<TopbarSearchSlot />`, `<TopbarActionSlot />`, `<TopbarProfileSlot />` as memoized sub-components so the chrome only re-renders the slots that changed when navigating.
+- [ ] **P9-D4.** Replace `framer-motion` usage in topbars with **CSS keyframes / transitions** for the simple enter/exit cases (logo glow, drawer slide) — keeps chrome free of the 50KB motion bundle. Reserve `motion` for in-page surfaces only.
+
+### P9-Dead — purge proven-unreferenced chrome files (only after migration)
+
+- [ ] **P9-X1.** After P9-D2/D3 land, ripgrep-confirm zero references and delete: `components/Topbar.tsx`, `components/AppHeader.tsx`, `components/layout/AppHeader.tsx`, `components/layout/Header.tsx`, `components/layout/Navbar.tsx`, `components/layout/ConnectTopbar.tsx`, `components/layout/TopbarShell.tsx`, `components/layout/AppBar.tsx`, `components/AppHeader.tsx`, `components/ui/appShell.tsx`, `accounts/components/Topbar.tsx`, `accounts/components/layout/AppHeader.tsx`, `accounts/components/layout/TopbarShell.tsx`.
+- [ ] **P9-X2.** Same for FABs: `components/MobileFAB.tsx`, `components/layout/GlobalFAB.tsx`, `components/layout/VaultFAB.tsx`, `components/ui/QuickCreateFab.tsx`, `components/chat/ChatQuickActionsFab.tsx` — reduce to one `<UniversalFAB />` driven by app context.
+- [ ] **P9-X3.** EcosystemPortal duplicates: delete `components/EcosystemPortal.tsx` and `accounts/components/EcosystemPortal.tsx`; keep `components/common/EcosystemPortal.tsx`.
+- [ ] **P9-X4.** Duplicated identity/profile/passkey UI pairs — keep `accounts/components/*` as canonical (they're the most maintained set) and replace root duplicates with re-exports. Then delete originals.
+- [ ] **P9-X5.** Delete `app/(app)/(auth)/accounts/login/page.tsx.bak`.
+
+### P9-Verify
+
+- [ ] **P9-V1.** Manual smoke after each hoist/strip: (1) website root, (2) `/note/notes`, (3) `/vault/dashboard`, (4) `/flow`, (5) `/connect`, (6) `/accounts` — confirm exactly **one** topbar, **one** bottom bar (where applicable), **one** sidebar, **one** FAB.
+- [ ] **P9-V2.** Use the React DevTools profiler on a route hop (`/note/notes → /vault/dashboard → /connect/chats`) to assert the topbar component instance ID is **stable** (no unmount log) when same auth-source family.
+- [ ] **P9-V3.** `tsc --noEmit` + `pnpm run build` + lint of every touched file are non-negotiable gates between each step.
+
+---
+
