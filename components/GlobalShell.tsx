@@ -10,6 +10,8 @@ import { useDynamicSidebar } from './ui/DynamicSidebarContext';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
 import NoteTopbar from '@/components/common/NoteTopbar';
 import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 
 const DynamicSidebar = dynamic(
   () => import('./ui/DynamicSidebarPanel').then((m) => ({ default: m.DynamicSidebar })),
@@ -31,9 +33,20 @@ const AccountHealthDrawers = dynamic(
   { ssr: false }
 );
 
+function AgenticDrawerMount() {
+  const { isOpen } = useAgenticDrawer();
+  if (!isOpen) return null;
+  return <AgenticDrawer />;
+}
+
+function ProUpgradeDrawerMount() {
+  const { showProUpgrade } = useProUpgrade();
+  if (!showProUpgrade) return null;
+  return <ProUpgradeDrawer />;
+}
+
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isLanding = pathname === '/';
   const isAppRoute = Boolean(
     pathname?.startsWith('/note') ||
     pathname?.startsWith('/vault') ||
@@ -46,6 +59,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { isCollapsed } = useSidebar();
   const [hideDesktopSidebar, setHideDesktopSidebar] = React.useState(false);
   const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();
+  const [mountDynamicSidebar, setMountDynamicSidebar] = React.useState(false);
 
   React.useEffect(() => {
     const handler = (event: Event) => {
@@ -56,6 +70,17 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     window.addEventListener('kylrix-topbar-sidebar', handler as EventListener);
     return () => window.removeEventListener('kylrix-topbar-sidebar', handler as EventListener);
   }, []);
+
+  React.useEffect(() => {
+    if (isDynamicSidebarOpen) {
+      setMountDynamicSidebar(true);
+      return;
+    }
+    const unmountTimer = window.setTimeout(() => {
+      setMountDynamicSidebar(false);
+    }, 320);
+    return () => window.clearTimeout(unmountTimer);
+  }, [isDynamicSidebarOpen]);
   
   // If it's a shared note page, we might want a different shell
   const isSharedPage = pathname?.includes('/shared/');
@@ -104,10 +129,10 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         {children}
       </Box>
 
-      {isAppRoute && !isSharedPage && !isVaultResetRoute && <DynamicSidebar />}
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && mountDynamicSidebar && <DynamicSidebar />}
       {shouldShowBottomBar && <UnifiedBottomBar />}
-      <AgenticDrawer />
-      <ProUpgradeDrawer />
+      <AgenticDrawerMount />
+      <ProUpgradeDrawerMount />
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !DISABLE_GLOBAL_HEALTH_OVERHEAD ? (
         <AccountHealthDrawers />
       ) : null}
