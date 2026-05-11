@@ -1,6 +1,7 @@
 import { ID, Permission, Query, Role } from 'node-appwrite';
 import { createAdminClient, createAdminTablesDB } from '@/lib/appwrite-admin';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { APPWRITE_CONFIG, KYLRIX_AUTH_URI } from '@/lib/appwrite/config';
+import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import {
   createKylrixTokenContract,
   type KylrixActivitySignal,
@@ -280,6 +281,43 @@ async function appendEvent(input: {
   });
 }
 
+async function notifyTokenTransferReceived(input: {
+  fromUserId: string;
+  toUserId: string;
+  amountMicro: bigint;
+  sourceType: string;
+  sourceId: string;
+  idempotencyKey: string;
+}) {
+  const { users } = createAdminClient();
+  const sender = await users.get(input.fromUserId).catch(() => null);
+  const senderName = String(sender?.name || sender?.email || 'Someone').trim() || 'Someone';
+
+  await dispatchEmail({
+    eventType: 'token_transfer_received',
+    sourceApp: 'vault',
+    verificationMode: 'silent',
+    actorName: senderName,
+    actorId: input.fromUserId,
+    recipientIds: [input.toUserId],
+    resourceId: input.idempotencyKey,
+    resourceTitle: `${toToken(input.amountMicro)} $KYLRIX`,
+    resourceType: 'token.transfer',
+    templateKey: 'kylrix:token-transfer-received',
+    ctaUrl: KYLRIX_AUTH_URI,
+    ctaText: 'Open Kylrix',
+    metadata: {
+      fromUserId: input.fromUserId,
+      toUserId: input.toUserId,
+      amountMicro: toMicro(input.amountMicro),
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+    },
+  }).catch((error) => {
+    console.error('[KYLRIX Token] Failed to dispatch transfer email', error);
+  });
+}
+
 export const InternalKylrixTokenService = {
   async getState() {
     const state = await getStateRow();
@@ -450,6 +488,14 @@ export const InternalKylrixTokenService = {
     });
 
     await updateStateRow({ lastActivityAt: nowIso() });
+    await notifyTokenTransferReceived({
+      fromUserId: input.fromUserId,
+      toUserId: input.toUserId,
+      amountMicro: amount,
+      sourceType: input.sourceType,
+      sourceId: input.sourceId,
+      idempotencyKey: input.idempotencyKey,
+    });
     return { accepted: true, debit, credit, amountMicro: toMicro(amount), amount: toToken(amount), symbol: contract.policy.symbol };
   },
 

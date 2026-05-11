@@ -14,7 +14,8 @@ export type UnorganicEmailEventType =
   | 'event_registered'
   | 'password_shared'
   | 'message_streak'
-  | 'call_started';
+  | 'call_started'
+  | 'token_transfer_received';
 
 export type UnorganicEmailRecipientInput =
   | { userId: string; email?: never }
@@ -72,6 +73,7 @@ const SOURCE_PRIORITY: Record<UnorganicEmailSource, number> = {
 const EVENT_PRIORITY: Record<UnorganicEmailEventType, number> = {
   task_assigned: 50,
   call_started: 45,
+  token_transfer_received: 44,
   form_response_submitted: 42,
   password_shared: 38,
   note_collaborator_added: 32,
@@ -244,6 +246,14 @@ function resolveEventCopy(input: Required<Pick<UnorganicEmailDispatchInput, 'eve
         subject: `A secret was shared with you`,
         title: 'Vault share',
         body: `${actorName} shared a password or TOTP with you${resourceTitle ? `: ${resourceTitle}` : ''}.`.trim(),
+        ctaText,
+        ctaUrl,
+      };
+    case 'token_transfer_received':
+      return {
+        subject: `You received ${resourceTitle || 'a KYLRIX transfer'}`,
+        title: 'KYLRIX transfer received',
+        body: `${actorName} sent ${resourceTitle || 'KYLRIX tokens'} to your wallet.`.trim(),
         ctaText,
         ctaUrl,
       };
