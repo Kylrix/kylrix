@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { Close as CloseIcon, ArrowBack as BackIcon } from '@mui/icons-material';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 interface DynamicSidebarContextType {
   isOpen: boolean;
@@ -86,6 +87,7 @@ export function DynamicSidebar() {
       open={isOpen}
       onClose={closeSidebar}
       variant="temporary"
+      slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       PaperProps={{
         'data-dynamic-sidebar': 'true', // Add this to prevent layout listener from closing it
         sx: {

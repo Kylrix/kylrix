@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { Zap, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 export function ProUpgradeDrawer() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function ProUpgradeDrawer() {
       anchor={isMobile ? 'bottom' : 'right'}
       open={showProUpgrade}
       onClose={closeProUpgrade}
+      slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       sx={{
         '& .MuiDrawer-paper': {
           bgcolor: '#161412',

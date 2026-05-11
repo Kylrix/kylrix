@@ -36,6 +36,7 @@ import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { toast } from 'react-hot-toast';
 import { WalletService, type SupportedWalletChain, type WalletSummary } from '@/lib/services/wallets';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 import { KylrixTokenService } from '@/lib/services/token';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { useTokenOps } from '@/context/TokenOpsContext';
@@ -1332,6 +1333,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                 anchor="bottom"
                 open={isOpen}
                 onClose={onClose}
+                slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
                 PaperProps={{
                     sx: {
                         height: isExpanded ? '100%' : '75%',
@@ -1374,6 +1376,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             anchor="right"
             open={isOpen}
             onClose={onClose}
+            slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
             PaperProps={{
                 sx: {
                     width: 400,

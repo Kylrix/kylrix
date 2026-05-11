@@ -28,6 +28,7 @@ import { UsersService, buildUsernameHandleSuggestions, invalidateUsersProfileRow
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { account } from '@/lib/appwrite/client';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const SURFACE = '#161412';
 const SURFACE_HOVER = '#1C1A18';
@@ -337,6 +338,7 @@ export function AccountHealthDrawers() {
                 open={usernameDrawerOpen}
                 onClose={dismissUsername}
                 ModalProps={{ keepMounted: true }}
+                slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
                 PaperProps={{ sx: drawerPaperSx }}
             >
                 <Box sx={{ maxWidth: 720, width: '100%', mx: 'auto', p: { xs: 2, sm: 2.75 }, pt: 2.25 }}>
@@ -478,6 +480,7 @@ export function AccountHealthDrawers() {
                 open={masterpassDrawerOpen}
                 onClose={dismissMasterpass}
                 ModalProps={{ keepMounted: true }}
+                slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
                 PaperProps={{
                     sx: {
                         ...drawerPaperSx,

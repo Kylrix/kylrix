@@ -20,6 +20,7 @@ import { Bot, Play, Plug, Plus, X } from 'lucide-react';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { createMyAgent, listMyAgents, runMyAgent, setMyAgentStatus } from '@/lib/actions/agentic';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
 
@@ -210,6 +211,7 @@ export function AgenticDrawer() {
       anchor={isDesktop ? 'right' : 'bottom'}
       open={isOpen}
       onClose={closeAgenticDrawer}
+      slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       sx={{
         '& .MuiDrawer-paper': {
           ...(isDesktop
