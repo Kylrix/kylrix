@@ -1,17 +1,35 @@
 'use client';
 
 import React, { ReactNode, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Box } from '@mui/material';
 import { DesktopSidebar } from './Navigation';
 import { useSidebar } from './ui/SidebarContext';
-import { DynamicSidebar, useDynamicSidebar } from './ui/DynamicSidebar';
-import { ProUpgradeDrawer } from './overlays/ProUpgradeDrawer';
-import { AgenticDrawer } from './overlays/AgenticDrawer';
+import { useDynamicSidebar } from './ui/DynamicSidebarContext';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
 import NoteTopbar from '@/components/common/NoteTopbar';
-import { AccountHealthDrawers } from '@/components/onboarding/AccountHealthDrawers';
 import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
+
+const DynamicSidebar = dynamic(
+  () => import('./ui/DynamicSidebarPanel').then((m) => ({ default: m.DynamicSidebar })),
+  { ssr: false }
+);
+const ProUpgradeDrawer = dynamic(
+  () => import('./overlays/ProUpgradeDrawer').then((m) => ({ default: m.ProUpgradeDrawer })),
+  { ssr: false }
+);
+const AgenticDrawer = dynamic(
+  () => import('./overlays/AgenticDrawer').then((m) => ({ default: m.AgenticDrawer })),
+  { ssr: false }
+);
+const AccountHealthDrawers = dynamic(
+  () =>
+    import('@/components/onboarding/AccountHealthDrawers').then((m) => ({
+      default: m.AccountHealthDrawers,
+    })),
+  { ssr: false }
+);
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -75,7 +93,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           minWidth: 0,
           pt: '88px',
           pb: isWebsiteRoute ? 0 : { xs: 12, md: 4 },
-          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          // Avoid `transition: all` — it animates every property and can jank main-thread layout.
+          transition: 'margin 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
           ml: (isAppRoute && !isSharedPage) ? {
             md: hideDesktopSidebar ? 0 : (isCollapsed ? '80px' : '280px')
           } : 0,

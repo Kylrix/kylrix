@@ -1,16 +1,18 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import NoteTopbar from '@/components/common/NoteTopbar';
-import VaultTopbar from '@/components/common/VaultTopbar';
+
+const VaultTopbar = dynamic(() => import('@/components/common/VaultTopbar'), { ssr: false });
 
 /**
  * Persistent unified topbar that transforms based on current route.
  * Never unmounts when navigating between app sections.
  * Uses the standard app topbar across app routes.
  */
-export function UnifiedTopbar() {
+function UnifiedTopbarInner() {
   const pathname = usePathname();
 
   // Determine which app we're in based on pathname
@@ -47,3 +49,5 @@ export function UnifiedTopbar() {
 
   return null;
 }
+
+export const UnifiedTopbar = memo(UnifiedTopbarInner);

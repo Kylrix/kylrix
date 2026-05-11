@@ -148,9 +148,9 @@ export function AccountHealthDrawers() {
 
     useEffect(() => {
         if (!user?.$id) return;
-        let debounce: ReturnType<typeof setTimeout> | undefined;
+        let debounce: number | undefined;
         const bump = () => {
-            if (debounce) window.clearTimeout(debounce);
+            if (debounce !== undefined) window.clearTimeout(debounce);
             debounce = window.setTimeout(() => {
                 debounce = undefined;
                 void reloadProfile();
@@ -166,7 +166,7 @@ export function AccountHealthDrawers() {
         return () => {
             window.removeEventListener('focus', onFocus);
             document.removeEventListener('visibilitychange', onVis);
-            if (debounce) window.clearTimeout(debounce);
+            if (debounce !== undefined) window.clearTimeout(debounce);
         };
     }, [user?.$id, reloadProfile, refreshMasterpass]);
 

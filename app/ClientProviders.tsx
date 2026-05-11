@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
-import { Toaster } from 'react-hot-toast';
+import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/auth/AuthContext';
 import { AppwriteProvider } from '@/app/(app)/vault/appwrite-provider';
 import { DocsProvider } from '@/context/DocsContext';
@@ -29,6 +29,8 @@ import { ThemeProvider } from '@/lib/theme-context';
 import { CallLauncherProvider } from '@/context/CallLauncherContext';
 import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
+
+const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
@@ -87,12 +89,7 @@ export function ClientProviders({ children }: { children: ReactNode }) {
         </ThemeProvider>
       </AppwriteProvider>
     </AuthProvider>
-    <Toaster
-      position="top-center"
-      toastOptions={{
-        style: { background: '#161412', color: '#f2f2f2', border: '1px solid rgba(255,255,255,0.08)' },
-      }}
-    />
+    <ClientToaster />
     </>
   );
 }
