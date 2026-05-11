@@ -132,7 +132,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     };
   }, [isAuthenticated, user?.$id, calculateUnread]);
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = useCallback(async (id: string) => {
     const notification = notifications.find(n => n.$id === id);
     if (!notification) return;
 
@@ -148,7 +148,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     try {
       // Pessimistic UI update for immediate feedback
       setNotifications(prev => prev.map(n => n.$id === id ? { ...n, details: JSON.stringify(newMetadata) } : n));
-      
+
       await updateDocument(APPWRITE_TABLE_ID_ACTIVITYLOG, id, {
         details: JSON.stringify(newMetadata)
       });
@@ -156,9 +156,9 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       console.error('Failed to sync read state to cloud:', error);
       // Revert on failure if necessary, or just rely on next fetch
     }
-  };
+  }, [notifications]);
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     const unreadNotifications = notifications.filter(n => !parseMetadata(n.details).read);
     if (unreadNotifications.length === 0) return;
 
@@ -172,12 +172,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     // Sync to cloud in background
     Promise.all(unreadNotifications.map(n => markAsRead(n.$id)))
       .catch (_err => console.error('Bulk mark as read failed:', _err));
-  };
+  }, [notifications, markAsRead]);
 
-  const clearNotifications = () => {
+  const clearNotifications = useCallback(() => {
     setNotifications([]);
     setUnreadCount(0);
-  };
+  }, []);
 
   /**
    * Memoize so notification consumers (HUDs, dropdowns, badges) don't re-render
@@ -192,7 +192,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       markAllAsRead,
       clearNotifications,
     }),
-    [notifications, unreadCount, isLoading]
+    [notifications, unreadCount, isLoading, markAsRead, markAllAsRead, clearNotifications]
   );
 
   return (
