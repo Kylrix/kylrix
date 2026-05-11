@@ -51,3 +51,4 @@ function UnifiedTopbarInner() {
 }
 
 export const UnifiedTopbar = memo(UnifiedTopbarInner);
+UnifiedTopbar.displayName = 'UnifiedTopbar';
