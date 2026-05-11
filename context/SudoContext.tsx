@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { usePathname } from 'next/navigation';
@@ -90,8 +90,13 @@ export function SudoProvider({ children }: { children: ReactNode }) {
         }
     }, [pendingAction, sudoPromise]);
 
+    const contextValue = useMemo<SudoContextType>(
+        () => ({ requestSudo, promptSudo, isUnlocked }),
+        [requestSudo, promptSudo, isUnlocked]
+    );
+
     return (
-        <SudoContext.Provider value={{ requestSudo, promptSudo, isUnlocked }}>
+        <SudoContext.Provider value={contextValue}>
             {children}
             <SudoModal
                 isOpen={isSudoOpen}

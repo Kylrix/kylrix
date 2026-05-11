@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 
 interface ProUpgradeContextType {
   showProUpgrade: boolean;
@@ -15,18 +15,23 @@ export function ProUpgradeProvider({ children }: { children: ReactNode }) {
   const [showProUpgrade, setShowProUpgrade] = useState(false);
   const [feature, setFeature] = useState<string | null>(null);
 
-  const openProUpgrade = (featureName?: string) => {
+  const openProUpgrade = useCallback((featureName?: string) => {
     setFeature(featureName || null);
     setShowProUpgrade(true);
-  };
+  }, []);
 
-  const closeProUpgrade = () => {
+  const closeProUpgrade = useCallback(() => {
     setShowProUpgrade(false);
     setFeature(null);
-  };
+  }, []);
+
+  const contextValue = useMemo<ProUpgradeContextType>(
+    () => ({ showProUpgrade, openProUpgrade, closeProUpgrade, feature }),
+    [showProUpgrade, openProUpgrade, closeProUpgrade, feature]
+  );
 
   return (
-    <ProUpgradeContext.Provider value={{ showProUpgrade, openProUpgrade, closeProUpgrade, feature }}>
+    <ProUpgradeContext.Provider value={contextValue}>
       {children}
     </ProUpgradeContext.Provider>
   );

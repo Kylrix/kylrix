@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 
 type OverlayContent = ReactNode;
 
@@ -17,18 +17,23 @@ export const OverlayProvider = ({ children }: { children: ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState<OverlayContent>(null);
 
-  const openOverlay = (newContent: OverlayContent) => {
+  const openOverlay = useCallback((newContent: OverlayContent) => {
     setContent(newContent);
     setIsOpen(true);
-  };
+  }, []);
 
-  const closeOverlay = () => {
+  const closeOverlay = useCallback(() => {
     setIsOpen(false);
     setContent(null);
-  };
+  }, []);
+
+  const value = useMemo<OverlayContextType>(
+    () => ({ isOpen, content, openOverlay, closeOverlay }),
+    [isOpen, content, openOverlay, closeOverlay]
+  );
 
   return (
-    <OverlayContext.Provider value={{ isOpen, content, openOverlay, closeOverlay }}>
+    <OverlayContext.Provider value={value}>
       {children}
     </OverlayContext.Provider>
   );

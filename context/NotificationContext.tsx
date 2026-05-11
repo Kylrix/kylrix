@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { 
   realtime, 
   listActivityLogs, 
@@ -179,15 +179,24 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setUnreadCount(0);
   };
 
-  return (
-    <NotificationContext.Provider value={{ 
-      notifications, 
-      unreadCount, 
-      isLoading, 
-      markAsRead, 
+  /**
+   * Memoize so notification consumers (HUDs, dropdowns, badges) don't re-render
+   * whenever NotificationProvider re-renders for unrelated reasons.
+   */
+  const contextValue = useMemo<NotificationContextType>(
+    () => ({
+      notifications,
+      unreadCount,
+      isLoading,
+      markAsRead,
       markAllAsRead,
-      clearNotifications
-    }}>
+      clearNotifications,
+    }),
+    [notifications, unreadCount, isLoading]
+  );
+
+  return (
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

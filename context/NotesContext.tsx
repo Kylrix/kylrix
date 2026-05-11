@@ -434,24 +434,45 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     });
   }, [notes, effectivePinnedIds]);
 
+  /**
+   * Memoize the context value so consumers (note list, sidebar, search, etc.) don't
+   * re-render whenever NotesProvider re-renders for unrelated state changes.
+   */
+  const contextValue = useMemo<NotesContextType>(
+    () => ({
+      notes: sortedNotes,
+      totalNotes: totalNotes || 0,
+      isLoading,
+      error,
+      hasMore,
+      loadMore,
+      refetchNotes,
+      upsertNote,
+      removeNote,
+      pinnedIds: effectivePinnedIds,
+      pinNote,
+      unpinNote,
+      isPinned,
+    }),
+    [
+      sortedNotes,
+      totalNotes,
+      isLoading,
+      error,
+      hasMore,
+      loadMore,
+      refetchNotes,
+      upsertNote,
+      removeNote,
+      effectivePinnedIds,
+      pinNote,
+      unpinNote,
+      isPinned,
+    ]
+  );
+
   return (
-    <NotesContext.Provider
-      value={{
-        notes: sortedNotes,
-        totalNotes: totalNotes || 0,
-        isLoading,
-        error,
-        hasMore,
-        loadMore,
-        refetchNotes,
-        upsertNote,
-        removeNote,
-        pinnedIds: effectivePinnedIds,
-        pinNote,
-        unpinNote,
-        isPinned,
-      }}
-    >
+    <NotesContext.Provider value={contextValue}>
       {children}
     </NotesContext.Provider>
   );

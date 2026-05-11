@@ -1,7 +1,17 @@
 "use client";
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { CallActionModal } from "@/components/call/CallActionModal";
+import dynamic from "next/dynamic";
+
+/**
+ * CallActionModal pulls in a large MUI tree (drawer, lists, avatars, controls, icons).
+ * Lazy-load it so non-call surfaces never pay for it in the initial bundle, and only
+ * mount it once a launch is requested.
+ */
+const CallActionModal = dynamic(
+  () => import("@/components/call/CallActionModal").then((m) => ({ default: m.CallActionModal })),
+  { ssr: false }
+);
 
 export type CallScopeSource = "chat" | "group" | "note" | "task" | "moment" | "space" | "generic";
 
@@ -25,10 +35,12 @@ const CallLauncherContext = createContext<CallLauncherContextValue | undefined>(
 
 export function CallLauncherProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [hasEverOpened, setHasEverOpened] = useState(false);
   const [context, setContext] = useState<CallLaunchContext | undefined>(undefined);
 
   const openCallLauncher = useCallback((nextContext?: CallLaunchContext) => {
     setContext(nextContext);
+    setHasEverOpened(true);
     setOpen(true);
   }, []);
 
@@ -47,7 +59,9 @@ export function CallLauncherProvider({ children }: { children: React.ReactNode }
   return (
     <CallLauncherContext.Provider value={value}>
       {children}
-      <CallActionModal open={open} onClose={closeCallLauncher} launchContext={context} />
+      {hasEverOpened ? (
+        <CallActionModal open={open} onClose={closeCallLauncher} launchContext={context} />
+      ) : null}
     </CallLauncherContext.Provider>
   );
 }
