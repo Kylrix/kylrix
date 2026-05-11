@@ -16,6 +16,9 @@ export const AppwriteService = {
   // From Auth/Shared (these override vault methods if both exist)
   ensureGlobalProfile: SharedService.ensureGlobalProfile,
   getGlobalProfileStatus: SharedService.getGlobalProfileStatus,
+  getReferralStatus: SharedService.getReferralStatus,
+  applyReferral: SharedService.applyReferral,
+  searchGlobalProfiles: SharedService.searchGlobalProfiles,
   listKeychainEntries: SharedService.listKeychainEntries,
   createKeychainEntry: SharedService.createKeychainEntry,
   deleteKeychainEntry: SharedService.deleteKeychainEntry,

@@ -265,7 +265,8 @@ export default function SudoModal({
             onClose={() => { }} // Prevent closing by clicking outside
             anchor={isDesktop ? "right" : "bottom"}
             ModalProps={{ keepMounted: true }}
-            sx={{ zIndex: 2200 }}
+            // Keep the unlock chrome below the persistent topbar so the header stays clickable.
+            sx={{ zIndex: 1199 }}
             PaperProps={{
                 sx: {
                     borderTopLeftRadius: isDesktop ? '32px' : '32px',

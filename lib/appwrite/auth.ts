@@ -8,6 +8,32 @@ export const VAULT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
 export const VAULT_COLLECTION_ID_KEYCHAIN = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
 export const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
 
+type ProfileRow = {
+  $id: string;
+  userId?: string | null;
+  username?: string | null;
+  displayName?: string | null;
+  avatar?: string | null;
+  preferences?: string | null;
+};
+
+function parsePreferences(raw: unknown): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw as Record<string, any>;
+  if (typeof raw !== 'string') return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, any>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function buildReferralLink(username: string): string {
+  const path = `/accounts/login#refer=${encodeURIComponent(username)}`;
+  return typeof window !== 'undefined' ? new URL(path, window.location.origin).toString() : path;
+}
+
 export class AppwriteService {
   /**
    * Universal Identity Hook: Ensures the user is linked in the global directory.
@@ -132,6 +158,142 @@ export class AppwriteService {
       VAULT_COLLECTION_ID_KEYCHAIN,
       id
     );
+  }
+
+  static async searchGlobalProfiles(query: string, limit = 8): Promise<any[]> {
+    const text = query.trim();
+    if (!text) return [];
+
+    try {
+      const tableId = APPWRITE_CONFIG.TABLES.CONNECT.PROFILES;
+      const [byUsername, byDisplayName] = await Promise.all([
+        tablesDB.listRows<ProfileRow>({
+          databaseId: CONNECT_DATABASE_ID,
+          tableId,
+          queries: [Query.search('username', text), Query.limit(limit)],
+        }),
+        tablesDB.listRows<ProfileRow>({
+          databaseId: CONNECT_DATABASE_ID,
+          tableId,
+          queries: [Query.search('displayName', text), Query.limit(limit)],
+        }),
+      ]);
+
+      const merged = new Map<string, ProfileRow>();
+      for (const row of [...byUsername.rows, ...byDisplayName.rows]) {
+        const key = row.userId || row.$id;
+        if (key && !merged.has(key)) merged.set(key, row);
+      }
+      return Array.from(merged.values()).slice(0, limit);
+    } catch {
+      return [];
+    }
+  }
+
+  static async getReferralStatus(): Promise<any> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.$id) {
+      return {
+        success: false,
+        hasReferral: false,
+        referralLink: null,
+        referrer: null,
+        currentUsername: null,
+      };
+    }
+
+    const profileStatus = await this.getGlobalProfileStatus(currentUser.$id);
+    const profile = (profileStatus.exists ? profileStatus.profile : null) as ProfileRow | null;
+    const prefs = parsePreferences(profile?.preferences || currentUser?.prefs?.preferences || null);
+    const referralSource = prefs.referral || prefs.referrer || {};
+    const currentUsername = profile?.username || currentUser?.prefs?.username || currentUser?.username || null;
+    const referrerUsername =
+      referralSource.username ||
+      referralSource.referrerUsername ||
+      prefs.referrerUsername ||
+      prefs.referralUsername ||
+      null;
+    const referrerUserId =
+      referralSource.userId ||
+      referralSource.referrerUserId ||
+      prefs.referrerUserId ||
+      null;
+
+    let referrer: any = null;
+    if (referrerUsername) {
+      const matches = await this.searchGlobalProfiles(String(referrerUsername), 1);
+      referrer = matches[0] || {
+        username: String(referrerUsername),
+        userId: referrerUserId,
+        displayName: referralSource.displayName || null,
+        avatar: referralSource.avatar || null,
+      };
+    }
+
+    return {
+      success: true,
+      hasReferral: Boolean(referrerUsername || referrerUserId),
+      referralLink: currentUsername ? buildReferralLink(String(currentUsername).replace(/^@+/, '')) : null,
+      referrer,
+      currentUsername,
+    };
+  }
+
+  static async applyReferral(referrerUsername: string, referrerUserId?: string): Promise<any> {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.$id) return { success: false, error: 'Not signed in.' };
+
+    const profileStatus = await this.getGlobalProfileStatus(currentUser.$id);
+    const profile = (profileStatus.exists ? profileStatus.profile : null) as ProfileRow | null;
+    if (!profile?.$id) return { success: false, error: 'Profile not found.' };
+
+    const currentPrefs = parsePreferences(profile.preferences || currentUser?.prefs?.preferences || null);
+    if (currentPrefs.referral || currentPrefs.referrer) {
+      return await this.getReferralStatus();
+    }
+
+    const candidate = String(referrerUsername || '').trim().replace(/^@+/, '');
+    if (!candidate) return { success: false, error: 'Referral username is required.' };
+
+    const matches = await this.searchGlobalProfiles(candidate, 8);
+    const referrer =
+      matches.find((row) => row.userId === referrerUserId) ||
+      matches.find((row) => String(row.username || '').replace(/^@+/, '') === candidate) ||
+      matches[0] ||
+      null;
+
+    if (!referrer) {
+      return { success: false, error: `Could not find @${candidate}.` };
+    }
+
+    const nextPrefs = {
+      ...currentPrefs,
+      referral: {
+        username: String(referrer.username || candidate).replace(/^@+/, ''),
+        userId: referrer.userId || referrerUserId || null,
+        displayName: referrer.displayName || null,
+        avatar: referrer.avatar || null,
+        linkedAt: new Date().toISOString(),
+      },
+    };
+
+    await tablesDB.updateRow(CONNECT_DATABASE_ID, APPWRITE_CONFIG.TABLES.CONNECT.PROFILES, profile.$id, {
+      preferences: JSON.stringify(nextPrefs),
+    });
+
+    return {
+      success: true,
+      hasReferral: true,
+      referralLink: buildReferralLink(String(profile.username || currentUser?.prefs?.username || currentUser?.username || '').replace(/^@+/, '')),
+      referrer: {
+        userId: referrer.userId || referrerUserId || referrer.$id,
+        username: String(referrer.username || candidate).replace(/^@+/, ''),
+        displayName: referrer.displayName || null,
+        avatar: referrer.avatar || null,
+      },
+      referralEvent: nextPrefs.referral,
+      currentUsername: profile.username || currentUser?.prefs?.username || currentUser?.username || null,
+    };
   }
 
   static async createGhostNote(data: {
