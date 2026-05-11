@@ -89,7 +89,17 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const { promptSudo } = useSudo();
-  const tokenClient = useMemo(() => createKylrixTokenOperationsClient(), []);
+  /**
+   * Defer client creation until it's actually needed. A user opening the app on a non-token
+   * surface should not pay for SDK construction or its module-init side effects.
+   */
+  const tokenClientRef = React.useRef<ReturnType<typeof createKylrixTokenOperationsClient> | null>(null);
+  const getTokenClient = useCallback(() => {
+    if (!tokenClientRef.current) {
+      tokenClientRef.current = createKylrixTokenOperationsClient();
+    }
+    return tokenClientRef.current;
+  }, []);
 
   const [eventOpen, setEventOpen] = useState(false);
   const [eventPayload, setEventPayload] = useState<TokenEventPayload | null>(null);
@@ -145,13 +155,18 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
   }, [pendingTransfers]);
 
   useEffect(() => {
+    /**
+     * Idle pages have no pending transfers to settle. Skip the global 10s polling cost
+     * (re-parsing localStorage, scheduling timers) until there's actually work queued.
+     */
+    if (pendingTransfers.length === 0) return;
     const timer = window.setInterval(async () => {
       const due = loadPendingTransfers().filter((row) => row.dueAt <= nowMs());
       if (!due.length) return;
       let working = loadPendingTransfers();
       for (const item of due) {
         try {
-          const result = await tokenClient.transfer({
+          const result = await getTokenClient().transfer({
             fromUserId: item.fromUserId,
             toUserId: item.toUserId,
             amountMicro: item.amountMicro,
@@ -185,7 +200,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
       setPendingTransfers(working);
     }, 10000);
     return () => window.clearInterval(timer);
-  }, [notifyTokenEvent, tokenClient]);
+  }, [notifyTokenEvent, getTokenClient, pendingTransfers.length]);
 
   useEffect(() => {
     const handler = (event: Event) => {

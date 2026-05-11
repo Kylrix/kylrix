@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -203,8 +203,13 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         };
     }, [user?.$id, showDynamicIsland]);
 
+    const contextValue = useMemo<ChatNotificationContextType>(
+        () => ({ unreadConversations, lastMessage, scanComplete, markConversationRead }),
+        [unreadConversations, lastMessage, scanComplete, markConversationRead]
+    );
+
     return (
-        <ChatNotificationContext.Provider value={{ unreadConversations, lastMessage, scanComplete, markConversationRead }}>
+        <ChatNotificationContext.Provider value={contextValue}>
             {children}
             
             {/* Dynamic Island Notification */}

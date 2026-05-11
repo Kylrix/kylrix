@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 import { AnalysisMode } from '@/lib/ai/types';
 import { PrivacyFilter } from '@/lib/ai/sanitizer';
 import { generateAIContent } from '@/actions/ai';
@@ -127,23 +127,32 @@ export function AIProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const openAIModal = () => setIsAIModalOpen(true);
-  const closeAIModal = () => setIsAIModalOpen(false);
+  const openAIModal = useCallback(() => setIsAIModalOpen(true), []);
+  const closeAIModal = useCallback(() => setIsAIModalOpen(false), []);
+
+  /**
+   * Memoize so consumers (toolbars, FABs, command palettes) don't re-render
+   * each time AIProvider re-renders for unrelated reasons.
+   * `analyze` / `askAI` / `sendCommand` are stable closures over setIsLoading;
+   * they're referenced by identity, so this is safe to memoize.
+   */
+  const contextValue = useMemo<AIContextType>(
+    () => ({
+      analyze,
+      askAI,
+      sendCommand,
+      openAIModal,
+      closeAIModal,
+      openGlobalCreateModal,
+      registerCreateModal,
+      isAIModalOpen,
+      isLoading,
+    }),
+    [openAIModal, closeAIModal, openGlobalCreateModal, registerCreateModal, isAIModalOpen, isLoading]
+  );
 
   return (
-    <AIContext.Provider
-      value={{
-        analyze,
-        askAI,
-        sendCommand,
-        openAIModal,
-        closeAIModal,
-        openGlobalCreateModal,
-        registerCreateModal,
-        isAIModalOpen,
-        isLoading,
-      }}
-    >
+    <AIContext.Provider value={contextValue}>
       {children}
       {isAIModalOpen && <AIModal onClose={closeAIModal} />}
     </AIContext.Provider>

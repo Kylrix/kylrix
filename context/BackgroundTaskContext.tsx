@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useMemo, useState, useCallback, ReactNode } from 'react';
 import { Box, Typography, LinearProgress, Button, alpha, CircularProgress } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import WarningIcon from '@mui/icons-material/Warning';
@@ -122,8 +122,13 @@ export function BackgroundTaskProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const contextValue = useMemo<BackgroundTaskContextType>(
+    () => ({ startImport, isImporting }),
+    [startImport, isImporting]
+  );
+
   return (
-    <BackgroundTaskContext.Provider value={{ startImport, isImporting }}>
+    <BackgroundTaskContext.Provider value={contextValue}>
       {children}
       {showWidget && (
         <FloatingContainer

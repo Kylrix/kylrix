@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 export type DocLanguage = 'typescript' | 'go' | 'python' | 'dart';
 
@@ -21,13 +21,18 @@ export const DocsProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, []);
 
-  const handleSetLanguage = (lang: DocLanguage) => {
+  const handleSetLanguage = useCallback((lang: DocLanguage) => {
     setLanguage(lang);
     localStorage.setItem('kylrix-docs-lang', lang);
-  };
+  }, []);
+
+  const contextValue = useMemo<DocsContextType>(
+    () => ({ language, setLanguage: handleSetLanguage }),
+    [language, handleSetLanguage]
+  );
 
   return (
-    <DocsContext.Provider value={{ language, setLanguage: handleSetLanguage }}>
+    <DocsContext.Provider value={contextValue}>
       {children}
     </DocsContext.Provider>
   );

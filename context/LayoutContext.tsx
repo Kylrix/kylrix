@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 
 type ItemType = 'task' | 'event' | 'focus' | null;
 
@@ -28,42 +28,41 @@ export function LayoutProvider({ children }: { children: ReactNode }) {
     data: null,
   });
 
-  const openSecondarySidebar = (type: ItemType, itemId: string, data?: any) => {
+  const openSecondarySidebar = useCallback((type: ItemType, itemId: string, data?: any) => {
     setSecondarySidebar({
       isOpen: true,
       type,
       itemId,
       data,
     });
-  };
+  }, []);
 
-  const closeSecondarySidebar = () => {
+  const closeSecondarySidebar = useCallback(() => {
     setSecondarySidebar((prev) => ({
       ...prev,
       isOpen: false,
-      // We keep type/id briefly for animation purposes if needed, or clear them. 
-      // Clearing them usually prevents "flashing" wrong content on next open if generic.
-      // But keeping them allows fading out the old content. 
-      // Let's keep them for now, but isOpen controls visibility.
     }));
-  };
+  }, []);
 
-  const toggleSecondarySidebar = () => {
+  const toggleSecondarySidebar = useCallback(() => {
     setSecondarySidebar((prev) => ({
       ...prev,
       isOpen: !prev.isOpen,
     }));
-  };
+  }, []);
+
+  const value = useMemo<LayoutContextType>(
+    () => ({
+      secondarySidebar,
+      openSecondarySidebar,
+      closeSecondarySidebar,
+      toggleSecondarySidebar,
+    }),
+    [secondarySidebar, openSecondarySidebar, closeSecondarySidebar, toggleSecondarySidebar]
+  );
 
   return (
-    <LayoutContext.Provider
-      value={{
-        secondarySidebar,
-        openSecondarySidebar,
-        closeSecondarySidebar,
-        toggleSecondarySidebar,
-      }}
-    >
+    <LayoutContext.Provider value={value}>
       {children}
     </LayoutContext.Provider>
   );

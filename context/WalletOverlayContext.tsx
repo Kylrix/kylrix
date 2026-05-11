@@ -10,7 +10,18 @@ import React, {
   Suspense,
 } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { WalletSidebar } from '@/components/overlays/WalletSidebar';
+import dynamic from 'next/dynamic';
+
+/**
+ * Heavy crypto deps (ethers, @solana/web3.js, @mysten/sui, bitcoinjs-lib, bip32/39, …) are
+ * transitively imported from WalletSidebar. Loading it eagerly forces every route to ship
+ * that crypto graph in its initial JS bundle. Code-splitting it keeps the wallet code in its
+ * own chunk that only loads when a user actually opens the wallet overlay.
+ */
+const WalletSidebar = dynamic(
+  () => import('@/components/overlays/WalletSidebar').then((m) => ({ default: m.WalletSidebar })),
+  { ssr: false }
+);
 
 interface WalletOverlayContextType {
   isWalletOpen: boolean;

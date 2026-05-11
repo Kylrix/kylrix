@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Box } from '@mui/material';
 
 interface SidebarContextType {
@@ -36,8 +36,13 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     setIsCollapsed(collapsed);
   }, []);
 
+  const contextValue = useMemo<SidebarContextType>(
+    () => ({ isCollapsed, setIsCollapsed: setCollapsed }),
+    [isCollapsed, setCollapsed]
+  );
+
   return (
-    <SidebarContext.Provider value={{ isCollapsed, setIsCollapsed: setCollapsed }}>
+    <SidebarContext.Provider value={contextValue}>
       <Box sx={{ 
         visibility: isLoaded ? 'visible' : 'hidden', 
         opacity: isLoaded ? 1 : 0,

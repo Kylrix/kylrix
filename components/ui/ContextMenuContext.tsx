@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useState, ReactNode, useCallback, useEffect } from 'react';
 
 interface MenuState {
   x: number;
@@ -55,8 +55,13 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
     return () => window.removeEventListener('scroll', onScroll);
   }, [isOpen, closeMenu]);
 
+  const value = useMemo<ContextMenuContextType>(
+    () => ({ openMenu, closeMenu, isOpen, state }),
+    [openMenu, closeMenu, isOpen, state]
+  );
+
   return (
-    <ContextMenuContext.Provider value={{ openMenu, closeMenu, isOpen, state }}>
+    <ContextMenuContext.Provider value={value}>
       {children}
     </ContextMenuContext.Provider>
   );
