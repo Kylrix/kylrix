@@ -11,6 +11,7 @@ import { AgenticDrawer } from './overlays/AgenticDrawer';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
 import NoteTopbar from '@/components/common/NoteTopbar';
 import { AccountHealthDrawers } from '@/components/onboarding/AccountHealthDrawers';
+import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -88,7 +89,9 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {shouldShowBottomBar && <UnifiedBottomBar />}
       <AgenticDrawer />
       <ProUpgradeDrawer />
-      {isAppRoute && !isSharedPage && !isVaultResetRoute ? <AccountHealthDrawers /> : null}
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && !DISABLE_GLOBAL_HEALTH_OVERHEAD ? (
+        <AccountHealthDrawers />
+      ) : null}
     </Box>
   );
 }

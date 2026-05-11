@@ -104,9 +104,6 @@ export function DynamicSidebar() {
           flexDirection: 'column',
         }
       }}
-      ModalProps={{
-        keepMounted: true, // Better open performance on mobile.
-      }}
     >
       {/* Header */}
       <Box sx={{ 

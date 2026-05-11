@@ -18,15 +18,7 @@ export default function AppLayout({
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       {/* Persistent fixed topbar - mounts once, never unmounts */}
-      <Box
-        sx={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: (theme) => theme.zIndex.modal + 1,
-        }}
-      >
+      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000 }}>
         <Suspense fallback={null}>
           <UnifiedTopbar />
         </Suspense>

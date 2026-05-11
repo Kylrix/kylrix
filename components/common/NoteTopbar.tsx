@@ -51,6 +51,7 @@ import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { cleanupStaleCallsSecure } from '@/lib/actions/secure-ops';
 import { AppwriteService } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
+import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
 
 interface NoteTopbarProps {
   className?: string;
@@ -120,6 +121,8 @@ export default function NoteTopbar({
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const desktopPanelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
+    if (DISABLE_GLOBAL_HEALTH_OVERHEAD) return;
+
     let active = true;
     let intervalId: number | null = null;
 
@@ -157,6 +160,7 @@ export default function NoteTopbar({
   }, [isAuthenticated, user?.$id]);
 
   useEffect(() => {
+    if (DISABLE_GLOBAL_HEALTH_OVERHEAD) return;
     if (!isAuthenticated || !user?.$id || isWebsiteRoute) return;
     let cancelled = false;
     const checkMasterpassState = async () => {
@@ -176,6 +180,7 @@ export default function NoteTopbar({
   }, [isAuthenticated, isWebsiteRoute, user?.$id]);
 
   useEffect(() => {
+    if (DISABLE_GLOBAL_HEALTH_OVERHEAD) return;
     if (!searchOpen || !requiresMasterpassSetup || !user?.$id) return;
     const toastKey = `kylrix-masterpass-toast-${user.$id}`;
     if (sessionStorage.getItem(toastKey) === '1') return;
@@ -521,7 +526,7 @@ export default function NoteTopbar({
             </Box>
           ) : null}
 
-          {requiresMasterpassSetup ? (
+          {!DISABLE_GLOBAL_HEALTH_OVERHEAD && requiresMasterpassSetup ? (
             <Box
               sx={{
                 mt: 1.25,
@@ -1538,7 +1543,7 @@ export default function NoteTopbar({
         position="fixed"
         elevation={0}
         sx={{
-          zIndex: (theme) => theme.zIndex.modal + 1,
+          zIndex: 1201,
           bgcolor: '#161412',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
           borderRadius: '0 0 28px 28px',

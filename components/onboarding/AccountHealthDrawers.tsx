@@ -84,26 +84,32 @@ export function AccountHealthDrawers() {
 
     const suppress = routeSuppressesHealthUi(pathname ?? null);
 
+    const profileFetchGen = useRef(0);
+
     const reloadProfile = useCallback(async () => {
         if (!user?.$id) {
             setProfile(null);
             setProfileLoading(false);
             return;
         }
+        const gen = ++profileFetchGen.current;
         setProfileLoading(true);
         try {
             const p = await UsersService.getProfileById(user.$id);
+            if (gen !== profileFetchGen.current) return;
             setProfile(p);
         } catch {
+            if (gen !== profileFetchGen.current) return;
             setProfile(null);
         } finally {
-            setProfileLoading(false);
+            if (gen === profileFetchGen.current) setProfileLoading(false);
         }
     }, [user?.$id]);
 
+    /** Profile + keychain: mount + user change only (not every pathname — avoids request storms on slow tunnels). */
     useEffect(() => {
         void reloadProfile();
-    }, [reloadProfile, pathname]);
+    }, [reloadProfile]);
 
     const needsBasics = useMemo(() => profileBasicsIncomplete(profile), [profile]);
     const suggestionList = useMemo(
@@ -138,21 +144,31 @@ export function AccountHealthDrawers() {
 
     useEffect(() => {
         refreshMasterpass();
-    }, [refreshMasterpass, pathname]);
+    }, [refreshMasterpass]);
 
     useEffect(() => {
         if (!user?.$id) return;
-        const onRefresh = () => refreshMasterpass();
-        window.addEventListener('focus', onRefresh);
-        const onVis = () => {
-            if (document.visibilityState === 'visible') onRefresh();
+        let debounce: ReturnType<typeof setTimeout> | undefined;
+        const bump = () => {
+            if (debounce) window.clearTimeout(debounce);
+            debounce = window.setTimeout(() => {
+                debounce = undefined;
+                void reloadProfile();
+                refreshMasterpass();
+            }, 400);
         };
+        const onFocus = () => bump();
+        const onVis = () => {
+            if (document.visibilityState === 'visible') bump();
+        };
+        window.addEventListener('focus', onFocus);
         document.addEventListener('visibilitychange', onVis);
         return () => {
-            window.removeEventListener('focus', onRefresh);
+            window.removeEventListener('focus', onFocus);
             document.removeEventListener('visibilitychange', onVis);
+            if (debounce) window.clearTimeout(debounce);
         };
-    }, [user?.$id, refreshMasterpass]);
+    }, [user?.$id, reloadProfile, refreshMasterpass]);
 
     const usernameDrawerOpen =
         !!user &&
@@ -337,7 +353,6 @@ export function AccountHealthDrawers() {
                 anchor="bottom"
                 open={usernameDrawerOpen}
                 onClose={dismissUsername}
-                ModalProps={{ keepMounted: true }}
                 slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
                 PaperProps={{ sx: drawerPaperSx }}
             >
@@ -479,7 +494,6 @@ export function AccountHealthDrawers() {
                 anchor="bottom"
                 open={masterpassDrawerOpen}
                 onClose={dismissMasterpass}
-                ModalProps={{ keepMounted: true }}
                 slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
                 PaperProps={{
                     sx: {
