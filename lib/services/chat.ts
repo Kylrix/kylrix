@@ -1,6 +1,6 @@
 import { ID, Permission, Query, Role } from 'appwrite';
-import { createMessageAction, toggleReactionAction, repairConversationAction, joinRequestAction } from '@/actions/chat';
-import { permissionsAction } from '@/actions/permissions';
+import { createMessageAction, toggleReactionAction, repairConversationAction, joinRequestAction } from '@/lib/actions/chat';
+import { permissionsAction } from '@/lib/actions/permissions';
 import { account, storage, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getEcosystemUrl } from '../constants';
