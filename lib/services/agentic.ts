@@ -1,4 +1,4 @@
-import { ID, Permission, Query, Role } from 'appwrite';
+import { ID, Permission, Query, Role, type Models } from 'appwrite';
 
 import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -6,14 +6,12 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 export type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
 export type AgentStatus = 'idle' | 'working';
 
-export interface AgentRecord {
-  $id: string;
+export interface AgentRecord extends Models.Row {
   ownerId: string;
   parentId?: string | null;
   publicKey?: string | null;
   config?: string;
   status?: string;
-  $updatedAt?: string;
 }
 
 function agentPermissions(userId: string) {

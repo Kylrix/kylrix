@@ -157,7 +157,7 @@ export function AgenticDrawer() {
     } finally {
       setUpdatingAgentId(null);
     }
-  }, []);
+  }, [user?.$id]);
 
   const runAgentNow = useCallback(async (agent: AgentRow) => {
     if (!user?.$id) return;
@@ -174,7 +174,7 @@ export function AgenticDrawer() {
     } finally {
       setUpdatingAgentId(null);
     }
-  }, [fetchAgents]);
+  }, [fetchAgents, user?.$id]);
 
   const parsedAgents = useMemo(() => {
     return agents.map((agent) => {
