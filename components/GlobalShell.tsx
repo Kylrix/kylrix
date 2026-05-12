@@ -12,6 +12,8 @@ import { UnifiedTopbar } from '@/components/UnifiedTopbar';
 import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 const DynamicSidebar = dynamic(
   () => import('./ui/DynamicSidebarPanel').then((m) => ({ default: m.DynamicSidebar })),
@@ -60,6 +62,19 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const [hideDesktopSidebar, setHideDesktopSidebar] = React.useState(false);
   const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();
   const [mountDynamicSidebar, setMountDynamicSidebar] = React.useState(false);
+  const { closeSidebar } = useDynamicSidebar();
+  const { closeOverlay } = useOverlay();
+  const { closeWallet } = useWalletOverlay();
+  const { closeAgenticDrawer } = useAgenticDrawer();
+  const { closeProUpgrade } = useProUpgrade();
+
+  React.useEffect(() => {
+    closeSidebar();
+    closeOverlay();
+    closeWallet();
+    closeAgenticDrawer();
+    closeProUpgrade();
+  }, [pathname, closeAgenticDrawer, closeOverlay, closeProUpgrade, closeSidebar, closeWallet]);
 
   React.useEffect(() => {
     const handler = (event: Event) => {
