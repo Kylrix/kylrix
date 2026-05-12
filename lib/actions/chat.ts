@@ -5,7 +5,7 @@ import {
   toggleReactionInternal,
   repairConversationInternal,
   joinRequestInternal
-} from '@/lib/chat-server';
+} from '@/lib/services/internal/chat';
 
 export async function createMessageAction(payload: {
   conversationId: string;

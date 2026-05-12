@@ -1,31 +1,101 @@
 import { createAdminClient } from '@/lib/appwrite-admin';
+import { createServerClient } from '@/lib/appwrite-server';
 import {
-  createEpochRows,
   mutateRowPermissions,
   mutateStorageFilePermissions,
+  revokeStorageFilePermissions,
   normalizeKeyMappings,
   normalizeTargetUserIds,
+  createEpochRows,
   removeLockboxRows,
   resolveNextEpochNumber,
-  revokeStorageFilePermissions,
   upsertLockboxRows,
 } from '@/lib/api/permission-updater';
 
+const DEFAULT_GHOST_RESOURCE_TYPE = 'ghost_note';
+
+function getAction(body: any): string {
+  return String(body?.action || 'grant').trim();
+}
+
+function getPermissionLevel(body: any) {
+  return body?.permission || 'read';
+}
+
+function getResourceKeyMappings(body: any) {
+  const normalized = normalizeKeyMappings(body?.keyMappings);
+  if (normalized.length > 0) return normalized;
+
+  const resourceType = body?.resourceType || body?.mappingResourceType;
+  const resourceId = body?.resourceId || body?.mappingResourceId || body?.rowId;
+  const wrappedKeyMap = body?.wrappedKeyMap && typeof body.wrappedKeyMap === 'object' ? body.wrappedKeyMap : null;
+  const wrappedKey = body?.wrappedKey || body?.ghostSecret || null;
+  const targetUserIds = normalizeTargetUserIds(body?.targetUserIds || body?.recipientUserIds || body?.targetUserId);
+
+  if (!resourceType || !resourceId) return [];
+
+  if (wrappedKeyMap) {
+    return Object.entries(wrappedKeyMap)
+      .map(([grantee, key]) => ({
+        resourceType,
+        resourceId,
+        grantee: String(grantee),
+        wrappedKey: String(key),
+        metadata: body?.metadata || null,
+      }))
+      .filter((entry) => entry.grantee && entry.wrappedKey);
+  }
+
+  if (!wrappedKey || targetUserIds.length === 0) return [];
+
+  return targetUserIds.map((grantee: string) => ({
+    resourceType,
+    resourceId,
+    grantee,
+    wrappedKey,
+    metadata: body?.metadata || null,
+  }));
+}
+
+function getParticipantIds(body: any) {
+  return normalizeTargetUserIds(body?.participantUserIds || body?.participants || body?.remainingParticipantIds || body?.targetUserIds);
+}
+
 export async function applyPermissionMutation(actorId: string, body: any) {
-  const action = String(body?.action || 'grant').trim();
+  const action = getAction(body);
   const { databases, storage } = createAdminClient();
   const targetUserIds = normalizeTargetUserIds(body?.targetUserIds || body?.recipientUserIds || body?.targetUserId);
-  const keyMappings = normalizeKeyMappings(body?.keyMappings);
+  const keyMappings = getResourceKeyMappings(body);
+
+  if (action === 'pin_ghost_note') {
+    const noteIds = normalizeTargetUserIds((body?.noteIds || body?.resourceIds || body?.resourceId) as any);
+    const wrappedKey = (body?.wrappedKey || body?.ghostSecret) as string | undefined;
+    if (noteIds.length === 0) throw new Error('At least one noteId is required');
+    if (!wrappedKey) throw new Error('wrappedKey is required');
+
+    const ghostKeyMappings = noteIds.map((noteId) => ({
+      resourceId: noteId,
+      resourceType: (body?.resourceType as string) || DEFAULT_GHOST_RESOURCE_TYPE,
+      grantee: actorId,
+      wrappedKey: wrappedKey as string,
+      metadata: body?.metadata as any || null,
+    }));
+
+    return await upsertLockboxRows(databases, actorId, ghostKeyMappings);
+  }
 
   if (action === 'rotate_epoch') {
-    const resourceId = body?.resourceId || body?.rowId;
+    const resourceId = (body?.resourceId || body?.rowId) as string;
     if (!resourceId) throw new Error('resourceId is required');
-    const participantIds = normalizeTargetUserIds(body?.participantUserIds || body?.participants || body?.remainingParticipantIds || body?.targetUserIds);
+
+    const participantIds = getParticipantIds(body);
     if (participantIds.length === 0) throw new Error('participantUserIds are required');
-    const nextEpoch = Number.isFinite(Number(body?.epochNumber)) && Number(body?.epochNumber) > 0
+
+    const nextEpoch = Number.isFinite(Number(body?.epochNumber)) && Number(body.epochNumber) > 0
       ? Number(body.epochNumber)
       : await resolveNextEpochNumber(databases, resourceId);
-    return createEpochRows(databases, actorId, resourceId, nextEpoch, participantIds, body?.keyMappings);
+    
+    return await createEpochRows(databases, actorId, resourceId, nextEpoch, participantIds, body?.keyMappings as any);
   }
 
   if (action === 'grant' && keyMappings.length > 0) {
@@ -37,7 +107,7 @@ export async function applyPermissionMutation(actorId: string, body: any) {
       bucketId: body?.storageBucketId || body?.bucketId,
       fileId: body?.fileId,
       targetUserIds,
-      permission: body?.permission || 'read',
+      permission: getPermissionLevel(body),
     };
     if (action === 'revoke') {
       await revokeStorageFilePermissions(storage, actorId, storageInput);
@@ -47,15 +117,23 @@ export async function applyPermissionMutation(actorId: string, body: any) {
   }
 
   if (body?.databaseId && body?.tableId && body?.rowId) {
-    return mutateRowPermissions(databases, actorId, {
+    await mutateRowPermissions(databases, actorId, {
       databaseId: body.databaseId,
       tableId: body.tableId,
       rowId: body.rowId,
       targetUserIds,
-      permission: body?.permission || 'read',
+      permission: getPermissionLevel(body),
       action: action === 'revoke' ? 'revoke' : 'grant',
       ownerId: body?.ownerId,
     });
+  }
+
+  if (action === 'revoke') {
+    const resourceType = (body?.resourceType || body?.mappingResourceType) as string;
+    const resourceIdForRevoke = (body?.resourceId || body?.mappingResourceId || body?.rowId) as string;
+    if (resourceType && resourceIdForRevoke) {
+      await removeLockboxRows(databases, resourceType, resourceIdForRevoke, targetUserIds.length > 0 ? targetUserIds : undefined);
+    }
   }
 
   return { success: true };
@@ -81,4 +159,27 @@ export async function revokePermissionMutation(actorId: string, body: any, query
   if (resourceType && resourceId) {
     await removeLockboxRows(databases, resourceType, resourceId, targetUserIds.length > 0 ? targetUserIds : undefined);
   }
+}
+
+export async function permissionsInternal(
+  method: 'POST' | 'DELETE',
+  payload: Record<string, unknown>
+) {
+  const jwt = payload.jwt as string | undefined;
+  const { account } = await createServerClient(jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }) : undefined);
+  const user = await account.get().catch(() => null);
+
+  if (!user) throw new Error('Unauthorized');
+
+  if (method === 'DELETE' || payload.action === 'revoke') {
+    await revokePermissionMutation(user.$id, payload);
+    return { success: true, action: 'revoke' };
+  }
+
+  const result = await applyPermissionMutation(user.$id, payload);
+  return { 
+    success: true, 
+    action: getAction(payload),
+    ...(typeof result === 'object' ? result : {})
+  };
 }
