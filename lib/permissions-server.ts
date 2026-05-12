@@ -75,8 +75,8 @@ export async function permissionsInternal(
   const { databases, storage } = createAdminClient();
 
   if (action === 'pin_ghost_note') {
-    const noteIds = normalizeTargetUserIds(payload?.noteIds || payload?.resourceIds || payload?.resourceId);
-    const wrappedKey = payload?.wrappedKey || payload?.ghostSecret;
+    const noteIds = normalizeTargetUserIds((payload?.noteIds || payload?.resourceIds || payload?.resourceId) as any);
+    const wrappedKey = (payload?.wrappedKey || payload?.ghostSecret) as string | undefined;
     if (noteIds.length === 0) throw new Error('At least one noteId is required');
     if (!wrappedKey) throw new Error('wrappedKey is required');
 
@@ -113,7 +113,7 @@ export async function permissionsInternal(
   }
 
   const keyMappings = getResourceKeyMappings(payload, user.$id);
-  const targetUserIds = normalizeTargetUserIds(payload?.targetUserIds || payload?.recipientUserIds || payload?.targetUserId);
+  const targetUserIds = normalizeTargetUserIds((payload?.targetUserIds || payload?.recipientUserIds || payload?.targetUserId) as any);
   const storageBucketId = (payload?.storageBucketId || payload?.bucketId) as string;
   const fileId = payload?.fileId as string;
   const permission = getPermissionLevel(payload);
