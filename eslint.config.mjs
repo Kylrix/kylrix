@@ -11,6 +11,7 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "**/generated/**",
+      "functions/**",
     ],
   },
   ...nextConfigs,

@@ -1,0 +1,13 @@
+{
+  "name": "@kylrix/flow-event-sync",
+  "version": "1.0.0",
+  "description": "Surgical sync of Flow event guests and invitations",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  }
+}

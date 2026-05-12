@@ -1,0 +1,17 @@
+{
+    "name": "@kylrix/data-porter",
+    "version": "1.0.0",
+    "description": "Ecosystem-wide data import/export function. Handles bulk credential imports (Bitwarden, Kylrix Vault) and exports without client-side rate limits.",
+    "main": "src/main.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/main.js",
+        "build": "echo 'No build step required'"
+    },
+    "dependencies": {
+        "node-appwrite": "^14.1.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0"
+    }
+}

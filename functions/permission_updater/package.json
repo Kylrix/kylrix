@@ -1,0 +1,13 @@
+{
+  "name": "@kylrix/permission-updater",
+  "version": "1.0.0",
+  "description": "T4 Authority: Updates resource permissions and manages wrapped keys in key_mapping",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  }
+}

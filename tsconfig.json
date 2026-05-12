@@ -38,6 +38,8 @@
   "exclude": [
     "node_modules",
     "generated",
+    "functions",
+    "functions/**",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",

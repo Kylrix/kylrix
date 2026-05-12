@@ -1,0 +1,13 @@
+{
+  "name": "@kylrix/log-security-event",
+  "version": "1.0.0",
+  "description": "System-wide security auditing (Vault Decryption, Failed Logins)",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  }
+}

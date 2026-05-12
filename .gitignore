@@ -38,3 +38,8 @@ next-env.d.ts
 
 # local external analysis repos
 .repo/
+
+# migrated cloud/Appwrite functions
+functions/**/node_modules/
+functions/**/.env
+functions/**/.env.*

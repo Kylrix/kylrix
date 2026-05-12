@@ -1,0 +1,17 @@
+{
+  "name": "@kylrix/sync-user-profile",
+  "version": "1.0.0",
+  "description": "Syncs Appwrite Auth users to the Global Directory in chat.users",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}

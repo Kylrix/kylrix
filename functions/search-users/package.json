@@ -1,0 +1,13 @@
+{
+  "name": "@kylrix/search-users",
+  "version": "1.0.0",
+  "description": "Securely searches the Appwrite Auth user database for cross-app discovery",
+  "main": "src/main.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/main.js"
+  },
+  "dependencies": {
+    "node-appwrite": "^14.1.0"
+  }
+}
