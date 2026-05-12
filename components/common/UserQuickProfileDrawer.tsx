@@ -19,6 +19,8 @@ import { Copy, MessageCircle, Send, Wallet, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { KylrixApp } from '@/lib/sdk/design';
 import { getQuickProfileSecure } from '@/lib/actions/secure-ops';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
+import { account } from '@/lib/appwrite/client';
 
 type UserSeed = {
   userId: string;
@@ -78,6 +80,8 @@ export default function UserQuickProfileDrawer({
   const [loading, setLoading] = useState(false);
   const [payload, setPayload] = useState<ProfilePayload | null>(null);
 
+  const { openWalletWithIntent } = useWalletOverlay();
+
   const activeUserId = useMemo(() => String(user?.userId || '').trim(), [user?.userId]);
 
   useEffect(() => {
@@ -88,7 +92,8 @@ export default function UserQuickProfileDrawer({
       setPayload(null);
       setLoading(true);
       try {
-        const data = (await getQuickProfileSecure(activeUserId)) as ProfilePayload | null;
+        const { jwt } = await account.createJWT().catch(() => ({ jwt: undefined }));
+        const data = (await getQuickProfileSecure(activeUserId, jwt)) as ProfilePayload | null;
         if (!active) return;
         if (!data) {
           setPayload({ profile: null, wallets: [] });
@@ -144,15 +149,16 @@ export default function UserQuickProfileDrawer({
       return;
     }
     const target = wallets[0];
-    try {
-      await navigator.clipboard.writeText(target.address);
-      toast.success(`${target.chain.toUpperCase()} address copied.`);
-    } catch {
-      // no-op
-    }
     onClose();
-    router.push(`/vault/dashboard?tipTo=${encodeURIComponent(activeUserId)}&address=${encodeURIComponent(target.address)}`);
-  }, [wallets, activeUserId, onClose, router]);
+    openWalletWithIntent({
+        mode: 'send',
+        toUser: {
+            id: activeUserId,
+            username: username || 'User',
+            displayName: displayName || 'User',
+        },
+    });
+  }, [wallets, activeUserId, onClose, username, displayName, openWalletWithIntent]);
 
   const appActions = useMemo(() => {
     const actions = [

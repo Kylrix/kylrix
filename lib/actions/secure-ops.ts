@@ -12,9 +12,9 @@ import { deleteCallIfExpired } from '@/lib/services/internal/calls';
 import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/live-call-presence-reconcile';
 import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 
-async function getActor() {
+async function getActor(jwt?: string) {
   try {
-    const { account } = await createServerClient();
+    const { account } = await createServerClient(jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }) : undefined);
     return await account.get();
   } catch {
     return null;
@@ -235,7 +235,7 @@ type TokenAction =
   | 'settle_claim';
 
 export async function runTokenOperationSecure(body: any) {
-  const actor = await getActor();
+  const actor = await getActor(body?.jwt);
   if (!actor) throw new Error('Unauthorized');
   const action = String(body?.action || '').trim() as TokenAction;
   const admin = isEnvAdminUser(actor);
@@ -407,8 +407,8 @@ export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?
   return { deleted: expiredRows.documents.length, callIds: expiredRows.documents.map((row) => row.$id) };
 }
 
-export async function getQuickProfileSecure(userId: string) {
-  const requester = await getActor();
+export async function getQuickProfileSecure(userId: string, jwt?: string) {
+  const requester = await getActor(jwt);
   if (!requester?.$id) throw new Error('Unauthorized');
   const targetUserId = String(userId || '').trim();
   if (!targetUserId) throw new Error('userId is required');

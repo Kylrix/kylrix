@@ -220,13 +220,13 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const MUTED = '#9B9691';
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            if (ecosystemSecurity.status.isUnlocked !== isUnlocked) {
-                setIsUnlocked(ecosystemSecurity.status.isUnlocked);
+        const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
+            if (status.isUnlocked !== isUnlocked) {
+                setIsUnlocked(status.isUnlocked);
             }
-        }, 1000);
+        });
 
-        return () => clearInterval(interval);
+        return unsubscribe;
     }, [isUnlocked]);
 
     useEffect(() => {

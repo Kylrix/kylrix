@@ -84,14 +84,12 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
       <Suspense fallback={null}>
         <OpenWalletFromQueryEffect pathname={pathname} onOpenRequested={openWallet} />
       </Suspense>
-      {isWalletOpen ? (
-        <WalletSidebar
-          isOpen={isWalletOpen}
-          onClose={closeWallet}
-          tokenIntent={tokenIntent}
-          onConsumeTokenIntent={consumeTokenIntent}
-        />
-      ) : null}
+      <WalletSidebar
+        isOpen={isWalletOpen}
+        onClose={closeWallet}
+        tokenIntent={tokenIntent}
+        onConsumeTokenIntent={consumeTokenIntent}
+      />
     </WalletOverlayContext.Provider>
   );
 }

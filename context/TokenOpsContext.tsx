@@ -275,45 +275,42 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
       if (!Number.isFinite(amountNum) || amountNum <= 0) {
         throw new Error("Enter a valid amount.");
       }
-      if (amountNum >= MODERATION_THRESHOLD) {
-        notifyTokenEvent({
-          kind: "send",
-          status: "pending",
-          title: "Moderator Review Required",
-          message: `Large transfer (${amountNum} $KYLRIX) has been flagged for moderator intervention before settlement.`,
-          amount: amountNum.toString(),
-          symbol: "$KYLRIX",
-        });
-        closeSearch();
-        return;
-      }
-
+      
+      // Confirmation required before instant transfer
       const unlocked = await promptSudo("unlock", true);
       if (!unlocked) {
         throw new Error("MasterPass confirmation is required.");
       }
 
       const amountMicro = String(Math.floor(amountNum * 1_000_000));
-      const transfer: PendingTransfer = {
-        id: `${nowMs()}_${Math.random().toString(36).slice(2, 10)}`,
+      const idempotencyKey = `transfer:instant:${nowMs()}_${Math.random().toString(36).slice(2, 10)}`;
+
+      // Execute transfer instantly via Server Action
+      const result = await getTokenClient().transfer({
         fromUserId,
         toUserId: selectedUser.id,
         amountMicro,
-        dueAt: nowMs() + 5 * 60 * 1000,
-        source,
-      };
-      const next = [...pendingTransfers, transfer];
-      setPendingTransfers(next);
+        idempotencyKey,
+        sourceType: "token_transfer_instant",
+        sourceId: source,
+        metadata: { instant: true },
+      });
+
+      if (!result?.accepted) {
+        throw new Error(result?.reason || "Transfer rejected by ledger.");
+      }
 
       notifyTokenEvent({
         kind: "send",
-        status: "pending",
-        title: "Transfer In Recovery Window",
-        message:
-          "Transfer is queued for 5 minutes. You can recover (undo) before settlement. If already settled and recipient spends, recovery is no longer possible.",
+        status: "success",
+        title: "Token Sent Instantly",
+        message: `Successfully sent ${amountNum} $KYLRIX to @${selectedUser.username}.`,
         amount: amountNum.toString(),
         symbol: "$KYLRIX",
       });
+
+      // Email notifications are triggered server-side by the InternalKylrixTokenService
+      
       closeSearch();
     } catch (error: any) {
       notifyTokenEvent({
@@ -325,7 +322,7 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setBusy(false);
     }
-  }, [amount, closeSearch, fromUserId, notifyTokenEvent, pendingTransfers, promptSudo, searchMode, selectedUser, source]);
+  }, [amount, closeSearch, fromUserId, getTokenClient, notifyTokenEvent, promptSudo, searchMode, selectedUser, source]);
 
   const value = useMemo<TokenOpsContextType>(
     () => ({ notifyTokenEvent, openTokenUserSearch }),

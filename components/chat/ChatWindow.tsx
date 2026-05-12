@@ -2,7 +2,7 @@
 
 import type { Models } from 'appwrite';
 import { Query } from 'appwrite';
-import React, { useEffect, useState, useRef, useTransition } from 'react';
+import React, { useEffect, useState, useRef, useTransition, useMemo } from 'react';
 import { ChatService } from '@/lib/services/chat';
 import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/lib/auth';
@@ -1736,9 +1736,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
     return (
         <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100%',
+            height: '100dvh',
+            maxHeight: '100dvh',
             minHeight: 0,
             bgcolor: '#161412',
             position: 'relative',
@@ -1746,6 +1745,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             display: 'flex',
             flexDirection: 'column',
         }}>
+
             <MuralPattern />
             <AppBar position="static" color="transparent" elevation={0} sx={{ 
                 borderBottom: '1px solid rgba(255, 255, 255, 0.05)', 
@@ -2209,7 +2209,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             </Popover>
 
             {/* Input Area */}
-                    <Box sx={{ p: 2, pb: isMobile ? 4 : 2, bgcolor: 'transparent', position: 'relative', zIndex: 2 }}>
+            <Box sx={{ mt: 'auto', p: 2, pb: isMobile ? 4 : 2, bgcolor: 'transparent', position: 'relative', zIndex: 2 }}>
                 {replyingTo && (
                     <Box sx={{ 
                         mb: 1, 

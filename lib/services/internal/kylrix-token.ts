@@ -295,7 +295,7 @@ async function notifyTokenTransferReceived(input: {
 
   await dispatchEmail({
     eventType: 'token_transfer_received',
-    sourceApp: 'vault',
+    sourceApp: 'connect',
     verificationMode: 'silent',
     actorName: senderName,
     actorId: input.fromUserId,

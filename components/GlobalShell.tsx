@@ -37,13 +37,11 @@ const AccountHealthDrawers = dynamic(
 
 function AgenticDrawerMount() {
   const { isOpen } = useAgenticDrawer();
-  if (!isOpen) return null;
   return <AgenticDrawer />;
 }
 
 function ProUpgradeDrawerMount() {
   const { showProUpgrade } = useProUpgrade();
-  if (!showProUpgrade) return null;
   return <ProUpgradeDrawer />;
 }
 
@@ -101,9 +99,9 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const isSharedPage = pathname?.includes('/shared/');
   const isVaultResetRoute = pathname?.startsWith('/vault/reset');
   
-  /** Full-page note at /note/notes/[id] — bottom tabs clash with editor chrome; list/shared/tags still get the bar. */
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
   const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
+  const isConnectChatDetail = Boolean(pathname?.match(/^\/connect\/chat\/[^/]+$/));
 
   const shouldShowBottomBar = Boolean(
     isAppRoute &&
@@ -113,6 +111,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       pathname !== '/settings' &&
       !isNoteFullPageDetail &&
       !isConnectCallDetail &&
+      !isConnectChatDetail &&
       (!pathname?.startsWith('/vault') || pathname?.startsWith('/vault/dashboard'))
   );
 
@@ -153,9 +152,9 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {shouldShowBottomBar && <UnifiedBottomBar />}
       <AgenticDrawerMount />
       <ProUpgradeDrawerMount />
-      {isAppRoute && !isSharedPage && !isVaultResetRoute && !DISABLE_GLOBAL_HEALTH_OVERHEAD ? (
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && !DISABLE_GLOBAL_HEALTH_OVERHEAD && (
         <AccountHealthDrawers />
-      ) : null}
+      )}
     </Box>
   );
 }
