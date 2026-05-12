@@ -21,7 +21,6 @@ function ChatHandler() {
   const { user } = useAuth();
   const { requestSudo } = useSudo();
   const userId = searchParams.get('userId');
-  const [checkedSudoOnMount, setCheckedSudoOnMount] = useState(false);
 
   useEffect(() => {
     if (userId && user) {
@@ -104,49 +103,6 @@ function ChatHandler() {
       initChat();
     }
   }, [userId, user, router, requestSudo]);
-
-  // Page-mount Sudo enforcement: when navigating to /chats (no specific userId),
-  // ensure the vault state is enforced:
-  // - if unlocked => no modal
-  // - if locked and masterpass exists => show SudoModal for verification
-  // - if locked and no masterpass => show SudoModal with intent 'initialize' so it redirects to setup
-  useEffect(() => {
-    const runCheck = async () => {
-      if (!user?.$id || checkedSudoOnMount) return;
-
-      // If already unlocked, nothing to do
-      if (ecosystemSecurity.status.isUnlocked) {
-        void UsersService.ensureProfileForUser(user).catch((error) => {
-          console.warn('[Chats] Background profile bootstrap failed:', error);
-        });
-        setCheckedSudoOnMount(true);
-        return;
-      }
-
-      try {
-        const hasMaster = await KeychainService.hasMasterpass(user.$id);
-        requestSudo({
-          intent: hasMaster ? undefined : 'initialize',
-          onSuccess: () => {
-            void UsersService.ensureProfileForUser(user).catch((error) => {
-              console.warn('[Chats] Background profile bootstrap failed:', error);
-            });
-            setCheckedSudoOnMount(true);
-          },
-          onCancel: () => {
-            // If the user cancels verification/setup, send them to the home page
-            setCheckedSudoOnMount(true);
-            router.replace('/');
-          }
-        });
-      } catch (e) {
-        console.error('Failed to check masterpass on mount', e);
-        setCheckedSudoOnMount(true);
-      }
-    };
-
-    runCheck();
-  }, [user?.$id, user, checkedSudoOnMount, requestSudo, router]);
 
   return (
     null

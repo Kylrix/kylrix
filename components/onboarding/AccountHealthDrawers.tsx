@@ -51,6 +51,7 @@ function profileBasicsIncomplete(profile: unknown | null) {
 
 function routeSuppressesHealthUi(pathname: string | null) {
     if (!pathname) return true;
+    if (pathname.startsWith('/connect')) return true;
     if (pathname.includes('/settings')) return true;
     if (pathname.startsWith('/vault/masterpass')) return true;
     if (pathname.startsWith('/vault/reset')) return true;
