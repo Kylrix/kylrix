@@ -1,4 +1,6 @@
 import { ID, Permission, Query, Role } from 'appwrite';
+import { createMessageAction, toggleReactionAction, repairConversationAction, joinRequestAction } from '@/actions/chat';
+import { permissionsAction } from '@/actions/permissions';
 import { account, storage, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { getEcosystemUrl } from '../constants';
@@ -15,12 +17,6 @@ const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
 const EPOCHS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.EPOCHS;
 const KEY_MAPPING_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const KEY_MAPPING_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
-const ACCOUNTS_API_URL = `/accounts/api/permissions`;
-const ACCOUNTS_MESSAGE_API_URL = `/api/connect/messages`;
-const ACCOUNTS_MESSAGE_REACTIONS_API_URL = `/api/connect/message-reactions`;
-const ACCOUNTS_JOIN_REQUESTS_API_URL = `/api/connect/join-requests`;
-const ACCOUNTS_KEY_REPAIR_API_URL = `/api/connect/repair`;
-const GROUP_AVATAR_ROUTE = `/api/connect/group-avatar`;
 const conversationKeyCache = new Map<string, CryptoKey>();
 const conversationPreviewCache = new Map<string, {
     lastMessageId: string;
@@ -292,134 +288,63 @@ const buildInviteMeta = (current: any, patch: Record<string, unknown>) => {
     return JSON.stringify(next);
 };
 
-async function getPermissionUpdateAuth(auth?: { jwt?: string; cookie?: string }) {
-    let jwt = auth?.jwt || null;
-    if (!jwt && !auth?.cookie) {
-        const session = await account.createJWT().catch(() => null);
-        jwt = session?.jwt || null;
-    }
-
-    if (!jwt && !auth?.cookie) {
-        throw new Error('Unable to authenticate permission update request');
-    }
-
-    return {
-        ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
-        ...(auth?.cookie ? { Cookie: auth.cookie } : {}),
-    };
-}
-
 async function callPermissionsApi(
     method: 'POST' | 'DELETE',
     payload: Record<string, unknown>,
-    auth?: { jwt?: string; cookie?: string }
+    _auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_API_URL, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Permission update failed');
-    }
-
-    return response.json().catch(() => ({}));
+    return await permissionsAction(method, payload);
 }
 
 async function callMessageCreateApi(
     payload: Record<string, unknown>,
-    auth?: { jwt?: string; cookie?: string }
+    _auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_MESSAGE_API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: JSON.stringify(payload),
+    return await createMessageAction({
+        conversationId: payload.conversationId as string,
+        senderId: payload.senderId as string,
+        content: payload.content as string,
+        type: payload.type as string,
+        attachments: payload.attachments as string[],
+        replyTo: payload.replyTo as string,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Message creation failed');
-    }
-
-    return response.json().catch(() => ({}));
 }
 
 async function callMessageReactionApi(
     method: 'POST' | 'DELETE',
     payload: Record<string, unknown>,
-    auth?: { jwt?: string; cookie?: string }
+    _auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_MESSAGE_REACTIONS_API_URL, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: JSON.stringify(payload),
+    return await toggleReactionAction({
+        conversationId: payload.conversationId as string,
+        messageId: payload.messageId as string,
+        emoji: payload.emoji as string,
+        action: method,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Reaction update failed');
-    }
-
-    return response.json().catch(() => ({}));
 }
 
 async function callConversationRepairApi(
     payload: Record<string, unknown>,
-    auth?: { jwt?: string; cookie?: string }
+    _auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_KEY_REPAIR_API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: JSON.stringify(payload),
+    return await repairConversationAction({
+        userId: payload.userId as string,
+        conversationId: payload.conversationId as string,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Conversation repair failed');
-    }
-
-    return response.json().catch(() => ({}));
 }
 
 async function callJoinRequestApi(
     method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     payload?: Record<string, unknown>,
-    auth?: { jwt?: string; cookie?: string }
+    _auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_JOIN_REQUESTS_API_URL, {
+    return await joinRequestAction({
         method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: payload ? JSON.stringify(payload) : undefined,
+        resourceType: payload?.resourceType as string || 'chat.conversation',
+        resourceId: payload?.resourceId as string,
+        requesterId: payload?.requesterId as string,
+        action: payload?.action as 'accept' | 'reject',
     });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Join request update failed');
-    }
-
-    return response.json().catch(() => ({}));
 }
 
 async function fetchKeyMapping(resourceType: string, resourceId: string, grantee: string) {

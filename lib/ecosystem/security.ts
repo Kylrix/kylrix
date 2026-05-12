@@ -257,6 +257,20 @@ export class EcosystemSecurity {
       const pubKey = await crypto.subtle.importKey('raw', pubKeyBytes, { name: 'X25519' }, true, []);
 
       this.identityKeyPair = { publicKey: pubKey, privateKey: privKey };
+
+      // Best-effort profile public key sync
+      void (async () => {
+        try {
+          const { UsersService } = await import('../services/users');
+          const profile = await UsersService.getProfileById(userId);
+          if (profile && !profile.publicKey) {
+            await UsersService.updateProfile(userId, { publicKey: doc.publicKey });
+          }
+        } catch (err) {
+          console.warn('[Security] Failed to sync profile public key:', err);
+        }
+      })();
+
       this.emitStatusChange();
       return doc.publicKey;
     }
@@ -276,6 +290,19 @@ export class EcosystemSecurity {
       publicKey: pubBase64,
       passkeyBlob: encryptedPriv
     });
+
+    // Sync profile for new identity
+    void (async () => {
+      try {
+        const { UsersService } = await import('../services/users');
+        const profile = await UsersService.getProfileById(userId);
+        if (profile) {
+          await UsersService.updateProfile(userId, { publicKey: pubBase64 });
+        }
+      } catch (err) {
+        console.warn('[Security] Failed to sync profile public key for new identity:', err);
+      }
+    })();
 
     this.identityKeyPair = pair;
     this.emitStatusChange();

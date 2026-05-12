@@ -123,6 +123,12 @@ export default function Home() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    if (!isUnlocked) {
+      requestSudo({ onSuccess: () => setIsUnlocked(true) });
+    }
+  }, [isUnlocked, requestSudo]);
+
   return (
         <ConnectAppShell>
         <Suspense fallback={null}>
