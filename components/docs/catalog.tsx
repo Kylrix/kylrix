@@ -16,10 +16,12 @@ import {
   FolderGit2,
   Search,
   ShieldCheck,
+  Workflow,
+  Wrench,
   Sparkles,
 } from 'lucide-react';
 import NextLink from 'next/link';
-import { CodeBlock, LanguageSwitcher } from '@/components/ui/DocsUI';
+import { CodeBlock } from '@/components/ui/DocsUI';
 
 export type DocsCategoryId = 'getting-started' | 'codebases' | 'security' | 'reference';
 
@@ -94,7 +96,7 @@ const categories: DocsCategory[] = [
   { id: 'getting-started', title: 'Getting Started', summary: 'Onboarding, architecture, and the first integration steps.', accent: '#6366F1', icon: Sparkles },
   { id: 'codebases', title: 'Codebases', summary: 'Living documentation for Note, Vault, Flow, and Connect.', accent: '#EC4899', icon: FolderGit2 },
   { id: 'security', title: 'Security & Trust', summary: 'Identity, encryption tiers, session model, and guardrails.', accent: '#10B981', icon: ShieldCheck },
-  { id: 'reference', title: 'Reference', summary: 'SDKs, commands, APIs, and reusable implementation details.', accent: '#F59E0B', icon: FileCode2 },
+  { id: 'reference', title: 'Reference', summary: 'Product suites, integrations, and contribution workflows.', accent: '#F59E0B', icon: FileCode2 },
 ];
 
 const articles: DocsArticle[] = [
@@ -135,25 +137,24 @@ const articles: DocsArticle[] = [
   {
     slug: 'quick-start',
     title: 'Quick Start',
-    summary: 'Install the SDK, create a client, and connect to the ecosystem.',
+    summary: 'Understand the suites, clone the repo, and start from the product docs.',
     category: 'getting-started',
     featured: true,
-    keywords: ['install', 'setup', 'sdk', 'quick start', 'client'],
+    keywords: ['install', 'setup', 'quick start', 'repo', 'suites'],
     render: () => (
-      <ArticleFrame eyebrow="GETTING STARTED" title="Quick Start" summary="Use the language switcher to see the same setup flow across TypeScript, Go, Python, and Dart.">
+      <ArticleFrame eyebrow="GETTING STARTED" title="Quick Start" summary="Start with product understanding first, then move into local development and contribution flows.">
         <Stack spacing={3}>
-          <LanguageSwitcher />
           <CodeBlock
             languages={{
-              typescript: 'pnpm add @kylrix/sdk',
-              go: 'go get github.com/kylrix/sdks-go',
-              python: 'pip install kylrix-sdk',
-              dart: 'dart pub add kylrix_sdk',
+              typescript: 'pnpm install\npnpm dev',
+              go: 'Read /docs/architecture before introducing new services or handlers.',
+              python: 'For scripts, align with existing data and auth boundaries in /lib and /functions.',
+              dart: 'Use /docs/connect and /docs/vault as behavior references when changing UX flows.',
             }}
           />
           <Callout
             title="Next step"
-            text="After install, move to the architecture doc so the app boundaries and session rules make sense before you start wiring features."
+            text="After quick start, read architecture, then jump into the suite-specific docs (Note, Vault, Flow, Connect)."
           />
         </Stack>
       </ArticleFrame>
@@ -381,26 +382,71 @@ const articles: DocsArticle[] = [
     ),
   },
   {
-    slug: 'typescript-sdk',
-    title: 'TypeScript SDK',
-    summary: 'Reference for the web-first SDK and the docs authoring patterns it should follow.',
+    slug: 'integrations',
+    title: 'Integrations',
+    summary: 'How external systems should connect without violating ecosystem boundaries.',
     category: 'reference',
-    keywords: ['sdk', 'typescript', 'client', 'reference', 'installation'],
+    featured: true,
+    keywords: ['integrations', 'webhooks', 'automation', 'accounts', 'boundaries'],
     render: () => (
-      <ArticleFrame eyebrow="REFERENCE" title="TypeScript SDK" summary="SDK reference pages should show installation, client setup, and the smallest useful code path first.">
+      <ArticleFrame eyebrow="REFERENCE" title="Integrations" summary="Integrations should preserve source-of-truth ownership: read from the owning suite, write through the owning boundary.">
         <Stack spacing={3}>
-          <CodeBlock
-            languages={{
-              typescript: "import { Kylrix } from '@kylrix/sdk';\n\nconst sdk = new Kylrix({ endpoint: 'https://cloud.appwrite.io/v1', project: 'your-project-id' });",
-              go: 'sdk := kylrix.NewClient(kylrix.Config{ Endpoint: "https://cloud.appwrite.io/v1", Project: "your-project-id" })',
-              python: 'sdk = Kylrix(endpoint="https://cloud.appwrite.io/v1", project="your-project-id")',
-              dart: "final sdk = Kylrix(endpoint: 'https://cloud.appwrite.io/v1', project: 'your-project-id');",
-            }}
-          />
-          <Callout
-            title="Docs rule"
-            text="Keep one compact install/setup block near the top, then split into focused sections for auth, data, and ecosystem-specific helpers."
-          />
+          <Grid container spacing={2}>
+            {[
+              { title: 'Suite ownership', body: 'Use Note, Vault, Flow, and Connect docs to determine where each object is authoritative.' },
+              { title: 'Auth boundary', body: 'Route privileged operations through trusted account/session flows, never ad-hoc credentials.' },
+              { title: 'Operational safety', body: 'Document retry, idempotency, and failure behavior before shipping integrations.' },
+            ].map((item) => (
+              <Grid size={{ xs: 12, md: 4 }} key={item.title}>
+                <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
+                    {item.title}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.68)', lineHeight: 1.8 }}>
+                    {item.body}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+          <Callout title="Integration checklist" text="Define owner suite, auth model, failure semantics, and observability before implementation." accent="#F59E0B" />
+        </Stack>
+      </ArticleFrame>
+    ),
+  },
+  {
+    slug: 'contributing',
+    title: 'Contributing',
+    summary: 'Guide for engineers contributing to the Kylrix codebase and shared runtime.',
+    category: 'reference',
+    keywords: ['contributing', 'codebase', 'pull requests', 'architecture', 'standards'],
+    render: () => (
+      <ArticleFrame eyebrow="REFERENCE" title="Contributing" summary="Contribution docs should help engineers ship safely across suites without breaking shared infrastructure.">
+        <Stack spacing={3}>
+          <Grid container spacing={2}>
+            {[
+              { title: 'Understand the suite first', body: 'Start from the relevant docs page (Note, Vault, Flow, Connect) before touching code.' },
+              { title: 'Preserve trusted bridges', body: 'Reuse known working paths and references instead of rewriting foundations.' },
+              { title: 'Cross-surface consistency', body: 'When changing shared behavior, verify route, drawer, and topbar consistency across suites.' },
+            ].map((item) => (
+              <Grid size={{ xs: 12, md: 4 }} key={item.title}>
+                <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                    <Box sx={{ color: '#F59E0B', display: 'flex' }}>
+                      {item.title === 'Understand the suite first' ? <Workflow size={16} /> : <Wrench size={16} />}
+                    </Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 800 }}>
+                      {item.title}
+                    </Typography>
+                  </Stack>
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.68)', lineHeight: 1.8 }}>
+                    {item.body}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+          <Callout title="Pull request quality" text="Keep changes surgical, update directly related docs, and avoid unrelated refactors in the same PR." accent="#F59E0B" />
         </Stack>
       </ArticleFrame>
     ),
@@ -411,7 +457,7 @@ export const DOCS_CATEGORIES = categories;
 export const DOCS_ARTICLES = articles;
 const DOCS_ARTICLE_ALIASES: Record<string, string> = {
   identity: 'security',
-  'sdks/typescript': 'typescript-sdk',
+  developers: 'contributing',
 };
 
 export const DOCS_FEATURED = articles.filter((article) => article.featured);

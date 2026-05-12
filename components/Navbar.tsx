@@ -131,7 +131,7 @@ export default function Navbar() {
   ], []);
 
   const navItems = useMemo(() => [
-    { label: 'Developers', href: '/developers' },
+    { label: 'Developers', href: '/docs/contributing' },
     { label: 'Docs', href: '/docs' },
     { label: 'Pricing', href: '/pricing' },
   ], []);

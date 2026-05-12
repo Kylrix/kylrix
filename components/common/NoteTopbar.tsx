@@ -100,7 +100,7 @@ export default function NoteTopbar({
   const showSearchControl = isAuthenticated && !isWebsiteRoute;
   const landingNavItems = [
     { label: 'Send', href: '/send' },
-    { label: 'Developers', href: '/developers' },
+    { label: 'Developers', href: '/docs/contributing' },
     { label: 'Docs', href: '/docs' },
     { label: 'Pricing', href: '/pricing' },
   ] as const;
@@ -1087,7 +1087,7 @@ export default function NoteTopbar({
           <Box sx={{ px: { xs: 2, md: 4 }, py: 1.5 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               {[
-                { label: 'Developers', href: '/developers' },
+                { label: 'Developers', href: '/docs/contributing' },
                 { label: 'Docs', href: '/docs' },
               ].map((item) => (
                 <Button
@@ -1203,7 +1203,7 @@ export default function NoteTopbar({
                 Developers
               </Typography>
               {[
-                { label: 'Developers', href: '/developers' },
+                { label: 'Developers', href: '/docs/contributing' },
                 { label: 'Docs', href: '/docs' },
               ].map((item) => (
                 <Button
