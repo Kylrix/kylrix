@@ -206,8 +206,6 @@ export const UsersService = {
                 displayName: data.displayName || username,
                 publicKey: data.publicKey || null,
                 avatar: data.avatar ?? null,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
                 bio: data.bio || ''
             },
             [

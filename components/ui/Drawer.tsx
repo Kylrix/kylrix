@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Drawer as MuiDrawer, IconButton, useTheme, useMediaQuery, Box } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 export function Drawer({
   open,
@@ -22,6 +23,7 @@ export function Drawer({
       open={open}
       onClose={onClose}
       ModalProps={{ keepMounted: true }}
+      slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 600px)',

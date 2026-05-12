@@ -76,7 +76,7 @@ async function updateNoteAccessForUser(
   action: PermissionUpdateAction = 'grant'
 ) {
   const jwt = await account.createJWT();
-  const response = await fetch(`/api/permissions`, {
+  const response = await fetch(`/accounts/api/permissions`, {
     method: action === 'grant' ? 'POST' : 'DELETE',
     headers: {
       'Content-Type': 'application/json',

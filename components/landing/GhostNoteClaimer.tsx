@@ -39,7 +39,7 @@ export const GhostNoteClaimer = () => {
                         ? await ecosystemSecurity.encrypt(secret)
                         : secret;
 
-                    const response = await fetch('/api/permissions', {
+                    const response = await fetch('/accounts/api/permissions', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
