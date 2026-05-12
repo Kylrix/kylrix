@@ -62,6 +62,7 @@ import {
     Copy,
     AtSign,
     Coins,
+    Zap,
 } from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
@@ -1002,23 +1003,40 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         };
     }, [conversationId, user?.$id]);
 
-    const handleClearChat = async (mode: 'me' | 'everyone') => {
-        if (!user || !confirm(`Are you sure you want to wipe this chat ${mode === 'me' ? 'for yourself' : 'for everyone'}?`)) return;
+    const [clearOptionsOpen, setClearOptionsOpen] = useState(false);
+
+    const handleClearChat = async (mode: 'me' | 'everyone' | 'nuclear') => {
+        if (!conversationId) return;
+        setClearOptionsOpen(false);
+        setAnchorEl(null);
+
+        const confirmed = window.confirm(
+            mode === 'me' 
+                ? "Are you sure you want to clear this chat for yourself?" 
+                : mode === 'everyone'
+                    ? "This will delete all messages for everyone. This cannot be undone. Continue?"
+                    : "NUCLEAR OPTION: This will delete all messages, members, keys, and the conversation ITSELF. Continue?"
+        );
+        if (!confirmed) return;
 
         setLoading(true);
         try {
-            if (isSelf) {
-                await ChatService.nuclearWipe(conversationId);
-            } else {
-                if (mode === 'everyone') {
-                    await ChatService.wipeMyFootprint(conversationId, user.$id);
-                }
+            if (mode === 'me') {
                 await ChatService.clearChatForMe(conversationId, user.$id);
+                toast.success("Chat cleared for you");
+            } else if (mode === 'everyone') {
+                const res = await ChatService.wipeMyFootprint(conversationId, user.$id);
+                toast.success(`Wiped ${res.count} messages for everyone`);
+            } else if (mode === 'nuclear') {
+                await ChatService.nuclearWipe(conversationId);
+                toast.success("Conversation fully purged");
+                router.push('/connect/chats');
+                return;
             }
             await loadMessages();
-            setAnchorEl(null);
-        } catch (e: unknown) {
-            console.error('Wipe failed:', e);
+        } catch (error) {
+            console.error('Clear chat failed:', error);
+            toast.error("Failed to clear chat");
         } finally {
             setLoading(false);
         }
@@ -1874,22 +1892,80 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
                 <Divider sx={{ my: 1, opacity: 0.1 }} />
 
-                <MenuItem onClick={() => handleClearChat('me')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                    <Trash2 size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Clear Chat (For Me)
+                <MenuItem onClick={() => setClearOptionsOpen(true)} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
+                    <Trash2 size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Clear All Chat
                 </MenuItem>
 
-                {!isSelf && (
-                    <MenuItem onClick={() => handleClearChat('everyone')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
-                        <Shield size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Wipe My Footprint
-                    </MenuItem>
-                )}
-
-                {isSelf && (
-                    <MenuItem onClick={() => handleClearChat('everyone')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
-                        <Trash2 size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Nuclear Wipe
-                    </MenuItem>
-                )}
+                <MenuItem onClick={() => handleClearChat('nuclear')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
+                    <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.9 }} /> Nuclear Wipe
+                </MenuItem>
             </Menu>
+
+            {/* Clear Options Drawer */}
+            <Drawer
+                anchor="bottom"
+                open={clearOptionsOpen}
+                onClose={() => setClearOptionsOpen(false)}
+                PaperProps={{
+                    sx: {
+                        bgcolor: '#161412',
+                        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: '24px 24px 0 0',
+                        p: 3,
+                        pb: isMobile ? 6 : 4,
+                        zIndex: 2000,
+                    }
+                }}
+            >
+                <Box sx={{ maxWidth: 500, mx: 'auto', width: '100%' }}>
+                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 900, mb: 1 }}>Clear Chat</Typography>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', mb: 3 }}>
+                        Choose how you want to clear the messages in this conversation.
+                    </Typography>
+                    
+                    <Stack gap={1.5}>
+                        <Button
+                            fullWidth
+                            variant="outlined"
+                            onClick={() => handleClearChat('me')}
+                            sx={{ 
+                                py: 1.5, 
+                                borderRadius: '14px', 
+                                color: 'white', 
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                textTransform: 'none',
+                                fontWeight: 700,
+                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.2)' }
+                            }}
+                        >
+                            For Me (Soft Delete)
+                        </Button>
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            onClick={() => handleClearChat('everyone')}
+                            sx={{ 
+                                py: 1.5, 
+                                borderRadius: '14px', 
+                                bgcolor: '#ff4d4d', 
+                                color: 'white', 
+                                textTransform: 'none',
+                                fontWeight: 800,
+                                '&:hover': { bgcolor: '#ff3333' }
+                            }}
+                        >
+                            For Everyone (Hard Delete Messages)
+                        </Button>
+                        <Button
+                            fullWidth
+                            onClick={() => setClearOptionsOpen(false)}
+                            sx={{ color: 'rgba(255,255,255,0.4)', textTransform: 'none', fontWeight: 600, mt: 1 }}
+                        >
+                            Cancel
+                        </Button>
+                    </Stack>
+                </Box>
+            </Drawer>
 
             {/* Messages Area */}
             <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, pb: 'calc(16px + env(safe-area-inset-bottom))', position: 'relative', zIndex: 2 }}>
