@@ -383,53 +383,73 @@ export function TokenOpsProvider({ children }: { children: React.ReactNode }) {
             <X size={16} />
           </IconButton>
         </Stack>
-        <TextField
-          fullWidth
-          placeholder="Search @username"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          size="small"
-          sx={{ mb: 2 }}
-        />
-        <Paper sx={{ bgcolor: "#1C1A18", border: "1px solid #34322F", borderRadius: "14px", mb: 2 }}>
-          <List dense>
-            {results.map((item) => (
-              <ListItemButton key={item.id} onClick={() => setSelectedUser(item)}>
-                <ListItemText
-                  primary={item.displayName}
-                  secondary={`@${item.username}`}
-                  primaryTypographyProps={{ color: "white", fontWeight: 700 }}
-                  secondaryTypographyProps={{ color: "#9B9691" }}
-                />
-              </ListItemButton>
-            ))}
-            {!results.length ? (
-              <Box sx={{ p: 2 }}>
-                <Typography sx={{ color: "#9B9691", fontSize: "0.85rem" }}>Search users to continue.</Typography>
-              </Box>
-            ) : null}
-          </List>
-        </Paper>
-        {selectedUser ? (
-          <Typography sx={{ color: "#D6D1CB", mb: 1.5 }}>
-            Selected: <strong>@{selectedUser.username}</strong>
-          </Typography>
-        ) : null}
+
+        {!selectedUser ? (
+          <>
+            <TextField
+              fullWidth
+              autoFocus
+              placeholder="Search @username"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              size="small"
+              sx={{ mb: 2 }}
+            />
+            <Paper sx={{ bgcolor: "#1C1A18", border: "1px solid #34322F", borderRadius: "14px", mb: 2 }}>
+              <List dense>
+                {results.map((item) => (
+                  <ListItemButton key={item.id} onClick={() => setSelectedUser(item)}>
+                    <ListItemText
+                      primary={item.displayName}
+                      secondary={`@${item.username}`}
+                      primaryTypographyProps={{ color: "white", fontWeight: 700 }}
+                      secondaryTypographyProps={{ color: "#9B9691" }}
+                    />
+                  </ListItemButton>
+                ))}
+                {!results.length && query.length >= 2 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Typography sx={{ color: "#9B9691", fontSize: "0.85rem" }}>No users found.</Typography>
+                  </Box>
+                ) : null}
+                {!results.length && query.length < 2 ? (
+                  <Box sx={{ p: 2 }}>
+                    <Typography sx={{ color: "#9B9691", fontSize: "0.85rem" }}>Search users to continue.</Typography>
+                  </Box>
+                ) : null}
+              </List>
+            </Paper>
+          </>
+        ) : (
+          <Paper sx={{ p: 2, mb: 3, borderRadius: '16px', bgcolor: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+             <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Box>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', mb: 0.5 }}>Recipient</Typography>
+                  <Typography sx={{ color: 'white', fontWeight: 800 }}>{selectedUser.displayName}</Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>@{selectedUser.username}</Typography>
+                </Box>
+                <Button size="small" onClick={() => setSelectedUser(null)} sx={{ color: '#6366F1', textTransform: 'none', fontWeight: 800 }}>Change</Button>
+             </Stack>
+          </Paper>
+        )}
+
         <TextField
           fullWidth
           label="Amount ($KYLRIX)"
+          placeholder="0.00"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           size="small"
-          sx={{ mb: 2 }}
+          autoFocus={!!selectedUser}
+          sx={{ mb: 3 }}
         />
         <Button
-          disabled={!selectedUser || busy || !amount}
+          disabled={!selectedUser || busy || !amount || Number(amount) <= 0}
           onClick={submit}
           variant="contained"
-          sx={{ bgcolor: "#6366F1", color: "black", fontWeight: 800, borderRadius: "12px" }}
+          sx={{ bgcolor: "#6366F1", color: "black", fontWeight: 900, borderRadius: "14px", py: 1.5, textTransform: 'none' }}
         >
-          {busy ? "Processing..." : searchMode === "send" ? "Queue Transfer (5m Recovery)" : "Create Request"}
+          {busy ? "Processing..." : searchMode === "send" ? "Confirm & Queue Transfer" : "Create Request"}
         </Button>
       </Drawer>
     </TokenOpsContext.Provider>
