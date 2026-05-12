@@ -17,6 +17,7 @@ const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
 const EPOCHS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.EPOCHS;
 const KEY_MAPPING_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const KEY_MAPPING_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
+const GROUP_AVATAR_ROUTE = `/api/connect/group-avatar`;
 const conversationKeyCache = new Map<string, CryptoKey>();
 const conversationPreviewCache = new Map<string, {
     lastMessageId: string;
@@ -319,7 +320,7 @@ async function callMessageCreateApi(
         type: payload.type as string,
         attachments: payload.attachments as string[],
         replyTo: payload.replyTo as string,
-        jwt,
+        jwt: jwt as any,
     });
 }
 
@@ -334,7 +335,7 @@ async function callMessageReactionApi(
         messageId: payload.messageId as string,
         emoji: payload.emoji as string,
         action: method,
-        jwt,
+        jwt: jwt as any,
     });
 }
 
@@ -346,7 +347,7 @@ async function callConversationRepairApi(
     return await repairConversationAction({
         userId: payload.userId as string,
         conversationId: payload.conversationId as string,
-        jwt,
+        jwt: jwt as any,
     });
 }
 
@@ -362,7 +363,7 @@ async function callJoinRequestApi(
         resourceId: payload?.resourceId as string,
         requesterId: payload?.requesterId as string,
         action: payload?.action as 'accept' | 'reject',
-        jwt,
+        jwt: jwt as any,
     });
 }
 
