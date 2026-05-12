@@ -13,13 +13,16 @@ const AgenticDrawerContext = createContext<AgenticDrawerContextValue | undefined
 export function AgenticDrawerProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const openAgenticDrawer = useCallback(() => setIsOpen(true), []);
+  const closeAgenticDrawer = useCallback(() => setIsOpen(false), []);
+
   const value = useMemo<AgenticDrawerContextValue>(
     () => ({
       isOpen,
-      openAgenticDrawer: () => setIsOpen(true),
-      closeAgenticDrawer: () => setIsOpen(false),
+      openAgenticDrawer,
+      closeAgenticDrawer,
     }),
-    [isOpen],
+    [isOpen, openAgenticDrawer, closeAgenticDrawer],
   );
 
   return <AgenticDrawerContext.Provider value={value}>{children}</AgenticDrawerContext.Provider>;
@@ -30,13 +33,6 @@ export function useAgenticDrawer() {
   if (!context) {
     return {
       isOpen: false,
-      openAgenticDrawer: () => {},
-      closeAgenticDrawer: () => {},
-    };
-  }
-  return context;
-}
- isOpen: false,
       openAgenticDrawer: () => {},
       closeAgenticDrawer: () => {},
     };
