@@ -61,6 +61,7 @@ import {
     Reply,
     Copy,
     AtSign,
+    Coins,
 } from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
@@ -81,6 +82,7 @@ import { IdentityAvatar, IdentityName } from '../common/IdentityBadge';
 import { buildNoteAttachmentMetadata } from '@/lib/sdk';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { showUpgradeIsland } from '@/lib/upgrade-island';
+import { useWalletOverlay } from '@/context/WalletOverlayContext';
 
 type ChatMessage = Models.Row & Record<string, any>;
 type ChatReaction = Models.Row & {
@@ -445,6 +447,25 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const initialLoadRef = useRef<string | null>(null);
     const [, startTransition] = useTransition();
     const isProPlan = hasPaidKylrixPlan(user);
+    const { openWalletWithIntent } = useWalletOverlay();
+
+    const partnerId = useMemo(() => {
+        if (!conversation || conversation.type !== 'direct' || !user?.$id) return null;
+        return conversation.participants.find((p: string) => p !== user.$id) || null;
+    }, [conversation, user?.$id]);
+
+    const handleTip = () => {
+        if (!partnerId) return;
+        setAnchorEl(null);
+        openWalletWithIntent({
+            mode: 'send',
+            toUser: {
+                id: partnerId,
+                username: conversation?.name?.replace(/^@/, '') || 'User',
+                displayName: conversation?.name || 'User',
+            },
+        });
+    };
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1722,6 +1743,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             bgcolor: '#161412',
             position: 'relative',
             overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
         }}>
             <MuralPattern />
             <AppBar position="static" color="transparent" elevation={0} sx={{ 
