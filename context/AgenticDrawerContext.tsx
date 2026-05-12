@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 interface AgenticDrawerContextValue {
   isOpen: boolean;
@@ -30,6 +30,13 @@ export function useAgenticDrawer() {
   if (!context) {
     return {
       isOpen: false,
+      openAgenticDrawer: () => {},
+      closeAgenticDrawer: () => {},
+    };
+  }
+  return context;
+}
+ isOpen: false,
       openAgenticDrawer: () => {},
       closeAgenticDrawer: () => {},
     };

@@ -74,7 +74,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     closeWallet();
     closeAgenticDrawer();
     closeProUpgrade();
-  }, [pathname, closeAgenticDrawer, closeOverlay, closeProUpgrade, closeSidebar, closeWallet]);
+  }, [pathname]);
 
   React.useEffect(() => {
     const handler = (event: Event) => {

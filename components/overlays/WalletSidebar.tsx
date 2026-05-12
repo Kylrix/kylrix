@@ -497,7 +497,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     variant="contained"
                     sx={{ bgcolor: ACCENT, color: 'black', borderRadius: '12px', fontWeight: 800, textTransform: 'none' }}
                 >
-                    Select Recipient & Confirm MasterPass
+                    {kylrixIntentRecipient ? 'Continue to Confirmation' : 'Select Recipient & Confirm MasterPass'}
                 </Button>
             </Stack>
             <Stack gap={1.5}>
