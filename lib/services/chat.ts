@@ -1309,26 +1309,10 @@ export const ChatService = {
     },
 
     /**
-     * Entirely deletes all messages in a conversation (Reserved for Saved Messages/Self-Chat)
+     * Entirely deletes all messages, members, keys, and the conversation itself.
+     * This is a "factory reset" for the conversation.
      */
     async nuclearWipe(conversationId: string) {
-        const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
-            Query.equal('conversationId', conversationId),
-            Query.limit(1000)
-        ]);
-
-        const batches = [];
-        for (let i = 0; i < res.rows.length; i += 10) {
-            const batch = res.rows.slice(i, i + 10).map(msg => tablesDB.deleteRow(DB_ID, MSG_TABLE, msg.$id));
-            batches.push(Promise.all(batch));
-        }
-        await Promise.all(batches);
-        clearMessagesFetchInflight(conversationId);
-        bustConversationsListCache();
-        return { success: true };
-    },
-
-    async deleteConversationFully(conversationId: string) {
         bustConversationRowCache(conversationId);
         const conversation = await this.getConversationById(conversationId).catch(() => null);
 
@@ -1342,30 +1326,50 @@ export const ChatService = {
             await Promise.all(batches);
         };
 
-        await this.nuclearWipe(conversationId);
+        // 1. Delete all messages
+        const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
+            Query.equal('conversationId', conversationId),
+            Query.limit(1000)
+        ]);
+        const msgBatches = [];
+        for (let i = 0; i < res.rows.length; i += 10) {
+            const batch = res.rows.slice(i, i + 10).map(msg => tablesDB.deleteRow(DB_ID, MSG_TABLE, msg.$id));
+            msgBatches.push(Promise.all(batch));
+        }
+        await Promise.all(msgBatches);
         clearMessagesFetchInflight(conversationId);
 
+        // 2. Delete all members
         await deleteAllRows(DB_ID, CONV_MEMBERS_TABLE, [
             Query.equal('conversationId', conversationId),
             Query.limit(1000)
         ]);
 
+        // 3. Delete all epochs
         await deleteAllRows(DB_ID, EPOCHS_TABLE, [
             Query.equal('resourceId', conversationId),
             Query.limit(1000)
         ]);
 
+        // 4. Delete all key mappings
         await deleteAllRows(KEY_MAPPING_DB, KEY_MAPPING_TABLE, [
             Query.equal('resourceId', conversationId),
             Query.limit(1000)
         ]);
 
+        // 5. Finally, delete the conversation record
         await tablesDB.deleteRow(DB_ID, CONV_TABLE, conversationId);
+        
         conversationKeyCache.delete(conversationId);
+        ecosystemSecurity.clearConversationKey(conversationId);
         bustConversationRowCache(conversationId);
         bustConversationsListCache();
 
         return { success: true, conversation };
+    },
+
+    async deleteConversationFully(conversationId: string) {
+        return this.nuclearWipe(conversationId);
     },
 
     async updateConversation(conversationId: string, data: Partial<{
