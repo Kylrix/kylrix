@@ -5,6 +5,7 @@ import { ThemeProvider as MuiThemeProvider, createTheme, alpha } from '@mui/mate
 import CssBaseline from '@mui/material/CssBaseline';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useEcosystemNode } from '@/hooks/useEcosystemNode';
+import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 const SURFACE_BACKGROUND = '#000000';
 const SURFACE = '#161514';
@@ -166,6 +167,9 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
             },
           },
           MuiDrawer: {
+            defaultProps: {
+              slotProps: TOPBAR_DRAWER_BACKDROP_SLOT,
+            },
             styleOverrides: {
               paper: {
                 backgroundColor: SURFACE_BACKGROUND,

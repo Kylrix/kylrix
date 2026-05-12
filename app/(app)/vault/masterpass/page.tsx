@@ -109,6 +109,9 @@ function MasterPassPageInner() {
         return;
       }
       await setMasterpassFlag(user.$id, user.email);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('kylrix:masterpass-updated'));
+      }
       toast.success('Master password configured.');
       router.replace(callbackUrl);
     } catch {

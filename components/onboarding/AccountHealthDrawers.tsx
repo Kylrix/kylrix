@@ -147,6 +147,17 @@ export function AccountHealthDrawers() {
     }, [refreshMasterpass]);
 
     useEffect(() => {
+        const onMasterpassUpdated = () => {
+            refreshMasterpass();
+        };
+
+        window.addEventListener('kylrix:masterpass-updated', onMasterpassUpdated as EventListener);
+        return () => {
+            window.removeEventListener('kylrix:masterpass-updated', onMasterpassUpdated as EventListener);
+        };
+    }, [refreshMasterpass]);
+
+    useEffect(() => {
         if (!user?.$id) return;
         let debounce: number | undefined;
         const bump = () => {
