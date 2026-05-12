@@ -1,6 +1,6 @@
 'use server';
 
-import { permissionsInternal } from '@/lib/permissions-server';
+import { permissionsInternal } from '@/lib/services/internal/permissions';
 
 export async function permissionsAction(
   method: 'POST' | 'DELETE',

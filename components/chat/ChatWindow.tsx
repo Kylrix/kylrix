@@ -1008,6 +1008,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
     const handleClearChat = async (mode: 'me' | 'everyone' | 'nuclear') => {
         if (!conversationId) return;
+        const currentUserId = user?.$id;
+        if (!currentUserId) return;
         setClearOptionsOpen(false);
         setAnchorEl(null);
 
@@ -1023,10 +1025,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         setLoading(true);
         try {
             if (mode === 'me') {
-                await ChatService.clearChatForMe(conversationId, user.$id);
+                await ChatService.clearChatForMe(conversationId, currentUserId);
                 toast.success("Chat cleared for you");
             } else if (mode === 'everyone') {
-                const res = await ChatService.wipeMyFootprint(conversationId, user.$id);
+                const res = await ChatService.wipeMyFootprint(conversationId, currentUserId);
                 toast.success(`Wiped ${res.count} messages for everyone`);
             } else if (mode === 'nuclear') {
                 await ChatService.nuclearWipe(conversationId);
