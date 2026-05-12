@@ -1,4 +1,4 @@
-import { ID, Query, Permission, Role } from 'appwrite';
+import { ID, Query, Permission, Role, type Models } from 'appwrite';
 import { account, databases, tablesDB, getCurrentUser } from './client';
 import { APPWRITE_CONFIG } from './config';
 
@@ -8,8 +8,7 @@ export const VAULT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
 export const VAULT_COLLECTION_ID_KEYCHAIN = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
 export const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
 
-type ProfileRow = {
-  $id: string;
+type ProfileRow = Models.Row & {
   userId?: string | null;
   username?: string | null;
   displayName?: string | null;
