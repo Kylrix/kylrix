@@ -65,7 +65,8 @@ export async function permissionsInternal(
   method: 'POST' | 'DELETE',
   payload: Record<string, unknown>
 ) {
-  const { account } = await createServerClient();
+  const jwt = payload.jwt as string | undefined;
+  const { account } = await createServerClient(jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }) : undefined);
   const user = await account.get().catch(() => null);
 
   if (!user) throw new Error('Unauthorized');

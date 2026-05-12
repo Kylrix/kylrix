@@ -288,18 +288,30 @@ const buildInviteMeta = (current: any, patch: Record<string, unknown>) => {
     return JSON.stringify(next);
 };
 
+async function getAuth(auth?: { jwt?: string; cookie?: string }) {
+    if (auth?.jwt) return auth.jwt;
+    try {
+        const session = await account.createJWT().catch(() => null);
+        return session?.jwt || null;
+    } catch {
+        return null;
+    }
+}
+
 async function callPermissionsApi(
     method: 'POST' | 'DELETE',
     payload: Record<string, unknown>,
-    _auth?: { jwt?: string; cookie?: string }
+    auth?: { jwt?: string; cookie?: string }
 ) {
-    return await permissionsAction(method, payload);
+    const jwt = await getAuth(auth);
+    return await permissionsAction(method, { ...payload, jwt });
 }
 
 async function callMessageCreateApi(
     payload: Record<string, unknown>,
-    _auth?: { jwt?: string; cookie?: string }
+    auth?: { jwt?: string; cookie?: string }
 ) {
+    const jwt = await getAuth(auth);
     return await createMessageAction({
         conversationId: payload.conversationId as string,
         senderId: payload.senderId as string,
@@ -307,43 +319,50 @@ async function callMessageCreateApi(
         type: payload.type as string,
         attachments: payload.attachments as string[],
         replyTo: payload.replyTo as string,
+        jwt,
     });
 }
 
 async function callMessageReactionApi(
     method: 'POST' | 'DELETE',
     payload: Record<string, unknown>,
-    _auth?: { jwt?: string; cookie?: string }
+    auth?: { jwt?: string; cookie?: string }
 ) {
+    const jwt = await getAuth(auth);
     return await toggleReactionAction({
         conversationId: payload.conversationId as string,
         messageId: payload.messageId as string,
         emoji: payload.emoji as string,
         action: method,
+        jwt,
     });
 }
 
 async function callConversationRepairApi(
     payload: Record<string, unknown>,
-    _auth?: { jwt?: string; cookie?: string }
+    auth?: { jwt?: string; cookie?: string }
 ) {
+    const jwt = await getAuth(auth);
     return await repairConversationAction({
         userId: payload.userId as string,
         conversationId: payload.conversationId as string,
+        jwt,
     });
 }
 
 async function callJoinRequestApi(
     method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     payload?: Record<string, unknown>,
-    _auth?: { jwt?: string; cookie?: string }
+    auth?: { jwt?: string; cookie?: string }
 ) {
+    const jwt = await getAuth(auth);
     return await joinRequestAction({
         method,
         resourceType: payload?.resourceType as string || 'chat.conversation',
         resourceId: payload?.resourceId as string,
         requesterId: payload?.requesterId as string,
         action: payload?.action as 'accept' | 'reject',
+        jwt,
     });
 }
 

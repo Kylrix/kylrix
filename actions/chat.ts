@@ -14,6 +14,7 @@ export async function createMessageAction(payload: {
   type: string;
   attachments?: string[];
   replyTo?: string;
+  jwt?: string;
 }) {
   return await createMessageInternal(payload);
 }
@@ -23,6 +24,7 @@ export async function toggleReactionAction(payload: {
   messageId: string;
   emoji: string;
   action: 'POST' | 'DELETE';
+  jwt?: string;
 }) {
   return await toggleReactionInternal(payload);
 }
@@ -30,6 +32,7 @@ export async function toggleReactionAction(payload: {
 export async function repairConversationAction(payload: {
   userId?: string;
   conversationId?: string;
+  jwt?: string;
 }) {
   return await repairConversationInternal(payload);
 }
@@ -40,6 +43,7 @@ export async function joinRequestAction(payload: {
   resourceId: string,
   requesterId?: string,
   action?: 'accept' | 'reject',
+  jwt?: string;
 }) {
   return await joinRequestInternal(payload);
 }

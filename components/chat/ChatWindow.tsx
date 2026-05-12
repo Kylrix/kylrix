@@ -1839,6 +1839,12 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     }
                 }}
             >
+                {conversation?.type === 'direct' && !isSelf && (
+                    <MenuItem onClick={handleTip} sx={{ gap: 1.5, py: 1.2, fontWeight: 700, fontSize: '0.85rem', color: '#F59E0B' }}>
+                        <Coins size={18} strokeWidth={2} style={{ opacity: 0.9 }} /> Tip {conversation?.name || 'User'}
+                    </MenuItem>
+                )}
+
                 <MenuItem onClick={handleExport} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
                     <FileIcon size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Export Chat (.json)
                 </MenuItem>

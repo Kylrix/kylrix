@@ -68,8 +68,9 @@ export async function createMessageInternal(payload: {
   type: string;
   attachments?: string[];
   replyTo?: string;
+  jwt?: string;
 }) {
-  const { account } = await createServerClient();
+  const { account } = await createServerClient(payload.jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${payload.jwt}` } }) : undefined);
   const user = await account.get().catch(() => null);
 
   if (!user) throw new Error('Unauthorized');
@@ -117,8 +118,9 @@ export async function toggleReactionInternal(payload: {
   messageId: string;
   emoji: string;
   action: 'POST' | 'DELETE';
+  jwt?: string;
 }) {
-  const { account } = await createServerClient();
+  const { account } = await createServerClient(payload.jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${payload.jwt}` } }) : undefined);
   const user = await account.get().catch(() => null);
 
   if (!user) throw new Error('Unauthorized');
@@ -185,8 +187,9 @@ export async function toggleReactionInternal(payload: {
 export async function repairConversationInternal(payload: {
   userId?: string;
   conversationId?: string;
+  jwt?: string;
 }) {
-  const { account } = await createServerClient();
+  const { account } = await createServerClient(payload.jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${payload.jwt}` } }) : undefined);
   const user = await account.get().catch(() => null);
 
   if (!user) throw new Error('Unauthorized');
@@ -365,8 +368,9 @@ export async function joinRequestInternal(payload: {
   resourceId: string,
   requesterId?: string,
   action?: 'accept' | 'reject',
+  jwt?: string;
 }) {
-  const { account } = await createServerClient();
+  const { account } = await createServerClient(payload.jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${payload.jwt}` } }) : undefined);
   const user = await account.get().catch(() => null);
 
   const { databases } = createAdminClient();
