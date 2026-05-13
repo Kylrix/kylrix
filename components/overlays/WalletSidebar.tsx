@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useSudo } from '@/context/SudoContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { toast } from 'react-hot-toast';
 import { WalletService, type SupportedWalletChain, type WalletSummary } from '@/lib/services/wallets';
@@ -61,15 +62,6 @@ const KTS_STORAGE_KEY = 'kylrix_wallet_kts_mode_v1';
 function kylrixTicker(symbol?: string | null) {
     const s = String(symbol || '$KYLRIX').trim();
     return s.startsWith('$') ? s.slice(1) : s;
-}
-
-/** Reads KYLRIX ledger via browser TablesDB session — not Server Actions (`runTokenOperationSecure` lacks cookies → Unauthorized). */
-async function fetchKylrixLedgerBalance(userId: string) {
-    const balance = await KylrixTokenService.getUserBalance(userId);
-    return {
-        amount: String(balance?.amount ?? '0'),
-        symbol: String(balance?.symbol ?? '$KYLRIX'),
-    };
 }
 
 const LEDGER_MICRO = 1_000_000n;
@@ -190,6 +182,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user } = useAuth();
+    const { tokenBalance, wallets, refreshBalances } = useSubscription();
     
     const { requestSudo } = useSudo();
     
@@ -197,12 +190,10 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
     const [isExpanded, setIsExpanded] = useState(false);
     const [loading, setLoading] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
-    const [wallets, setWallets] = useState<WalletSummary[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [loadingLabel, setLoadingLabel] = useState('Preparing your secure wallet...');
     const [pendingChain, setPendingChain] = useState<SupportedWalletChain | null>(null);
     const [unlockPromptedForSession, setUnlockPromptedForSession] = useState(false);
-    const [kylrixBalance, setKylrixBalance] = useState<{ amount: string; symbol: string } | null>(null);
     const { openTokenUserSearch } = useTokenOps();
     const [showKylrixDetail, setShowKylrixDetail] = useState(false);
     const [showReceive, setShowReceive] = useState(false);
@@ -239,36 +230,6 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         }
     }, []);
 
-    useEffect(() => {
-        if (!isOpen || !user?.$id) return undefined;
-        const onEarn = () => {
-            void (async () => {
-                try {
-                    setKylrixBalance(await fetchKylrixLedgerBalance(user.$id!));
-                } catch (_e: unknown) {
-                    /* noop */
-                }
-            })();
-        };
-        window.addEventListener('kylrix:token-event', onEarn);
-        return () => window.removeEventListener('kylrix:token-event', onEarn);
-    }, [isOpen, user?.$id]);
-
-    useEffect(() => {
-        if (!isOpen || !user?.$id || !isUnlocked || hasMasterpass !== true) return undefined;
-        const id = window.setInterval(() => {
-            void (async () => {
-                try {
-                    const next = await fetchKylrixLedgerBalance(user.$id!);
-                    setKylrixBalance(next);
-                } catch (_e: unknown) {
-                    /* noop */
-                }
-            })();
-        }, 28000);
-        return () => clearInterval(id);
-    }, [isOpen, user?.$id, isUnlocked, hasMasterpass]);
-
     const refreshWallets = useCallback(async () => {
         if (!user?.$id || !isOpen) return;
 
@@ -278,11 +239,15 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         setHasMasterpass(masterpassPresent);
 
         if (!masterpassPresent) {
-            setWallets([]);
             return;
         }
 
         if (!ecosystemSecurity.status.isUnlocked) {
+            return;
+        }
+
+        if (wallets.length > 0 && wallets.some(w => w.chain === 'sol')) {
+            // Already have wallets, just ensure they are fresh
             return;
         }
 
@@ -297,20 +262,14 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
             if (!readyWallets.some((wallet) => wallet.chain === 'sol')) {
                 readyWallets = await WalletService.addNetwork(user.$id, 'sol');
             }
-            setWallets(readyWallets);
-            try {
-                setKylrixBalance(await fetchKylrixLedgerBalance(user.$id));
-            } catch (ledgerErr: unknown) {
-                console.warn('[WalletSidebar] KYL ledger snapshot failed', ledgerErr);
-                setKylrixBalance({ amount: '0', symbol: '$KYLRIX' });
-            }
+            void refreshBalances(true);
         } catch (walletError) {
             console.error('[WalletSidebar] Failed to load wallets', walletError);
             setError(walletError instanceof Error ? walletError.message : 'Failed to load wallet');
         } finally {
             setLoading(false);
         }
-    }, [isOpen, user?.$id]);
+    }, [isOpen, user?.$id, wallets, refreshBalances]);
 
     const loadLedgerHistory = useCallback(async () => {
         if (!user?.$id) return;
@@ -410,8 +369,8 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
         setError(null);
 
         try {
-            const updatedWallets = await WalletService.addNetwork(user.$id, chain);
-            setWallets(updatedWallets);
+            await WalletService.addNetwork(user.$id, chain);
+            void refreshBalances(true);
             toast.success(`${WalletService.networkDefinitions[chain].label} added`);
         } catch (networkError) {
             console.error('[WalletSidebar] Failed to add network', networkError);
@@ -469,13 +428,13 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                     Back
                 </Button>
                 <Typography variant="caption" sx={{ color: ACCENT, fontFamily: 'var(--font-satoshi)', fontWeight: 800 }}>
-                    {kylrixTicker(kylrixBalance?.symbol)}
+                    {kylrixTicker(tokenBalance?.symbol)}
                 </Typography>
             </Stack>
             <Paper sx={{ p: 2.5, borderRadius: '20px', bgcolor: HIGHLIGHT, border: `1px solid ${EDGE}`, mb: 2 }}>
                 <Typography sx={{ color: MUTED, fontSize: '0.8rem', fontFamily: 'var(--font-satoshi)' }}>Balance</Typography>
                 <Typography sx={{ color: ACCENT, fontWeight: 900, fontSize: '1.3rem', fontFamily: 'var(--font-mono)' }}>
-                    {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
+                    {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}
                 </Typography>
             </Paper>
             <Stack gap={1.5} sx={{ mb: 2 }}>
@@ -631,13 +590,13 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                       >
                                           {deltaStr}{' '}
                                           <Box component="span" sx={{ color: MUTED, fontWeight: 600, fontSize: '0.72rem' }}>
-                                              {kylrixTicker(kylrixBalance?.symbol)}
+                                              {kylrixTicker(tokenBalance?.symbol)}
                                           </Box>
                                       </Typography>
                                   </Stack>
                                   {after ? (
                                       <Typography sx={{ color: MUTED, fontSize: '0.7rem', mt: 0.85 }}>
-                                          After · {after} {kylrixTicker(kylrixBalance?.symbol)}
+                                          After · {after} {kylrixTicker(tokenBalance?.symbol)}
                                       </Typography>
                                   ) : null}
                               </Paper>
@@ -919,14 +878,14 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         <Typography variant="h3" sx={{ fontWeight: 900, mt: 0.5, fontFamily: 'var(--font-clash)', color: 'white', letterSpacing: '-0.02em' }}>
                             {ktsMode ? (
                                 <>
-                                    {kylrixBalance?.amount || '0'}{' '}
-                                    <Box component="span" sx={{ color: ACCENT }}>{kylrixTicker(kylrixBalance?.symbol)}</Box>
+                                    {tokenBalance?.amount || '0'}{' '}
+                                    <Box component="span" sx={{ color: ACCENT }}>{kylrixTicker(tokenBalance?.symbol)}</Box>
                                 </>
                             ) : (
                                 <>
                                     $0.00
                                     <Box component="div" sx={{ mt: 1, fontSize: '1rem', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.55)' }}>
-                                        {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}{' '}
+                                        {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}{' '}
                                         <Box component="span" sx={{ fontSize: '0.72rem', fontFamily: 'var(--font-satoshi)', color: MUTED }}>ledger</Box>
                                     </Box>
                                 </>
@@ -935,7 +894,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                         <Typography variant="caption" sx={{ color: MUTED, fontWeight: 700, fontFamily: 'var(--font-satoshi)', display: 'block', mt: 0.75 }}>
                             {ktsMode
                                 ? 'Kylrix Token System — on-chain wallets hidden'
-                                : `Fiat estimate excludes KYLRIX · ${orderedWallets.length} active chains`}
+                                : `Fiat estimate excludes KYLRIX · ${wallets.length} active chains`}
                         </Typography>
                         <FormControlLabel
                             sx={{ mt: 1.5, justifyContent: 'center', m: 0, display: 'flex', gap: 1 }}
@@ -1006,7 +965,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                 </Stack>
                                 <Stack alignItems="flex-end" gap={0.5}>
                                     <Typography variant="h6" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
-                                        {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
+                                        {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}
                                     </Typography>
                                     {user?.$id ? (
                                         <Stack direction="row" gap={0.5}>
@@ -1160,7 +1119,7 @@ export const WalletSidebar = ({ isOpen, onClose, tokenIntent = null, onConsumeTo
                                     </Stack>
                                     <Stack alignItems="flex-end">
                                         <Typography variant="body2" sx={{ fontWeight: 900, color: ACCENT, fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
-                                            {kylrixBalance?.amount || '0'} {kylrixTicker(kylrixBalance?.symbol)}
+                                            {tokenBalance?.amount || '0'} {kylrixTicker(tokenBalance?.symbol)}
                                         </Typography>
                                         {user?.$id ? (
                                             <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>
