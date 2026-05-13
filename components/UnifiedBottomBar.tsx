@@ -164,7 +164,7 @@ export function UnifiedBottomBar() {
         <BottomNavigationAction
           key="totp"
           value="totp"
-          icon={<ShieldIcon size={24} strokeWidth={1.5} className="lucide" />}
+          icon={<TotpIcon size={24} strokeWidth={1.5} className="lucide" />}
         />
 ,
         <BottomNavigationAction

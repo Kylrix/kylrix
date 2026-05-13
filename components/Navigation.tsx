@@ -25,7 +25,7 @@ import {
   Tag,
   Settings,
   Puzzle,
-  Shield,
+  Clock,
   KeyRound,
   ChevronLeft,
   ChevronRight
@@ -135,7 +135,7 @@ export const DesktopSidebar: React.FC = () => {
     ? [
         { icon: KeyRound, label: 'Credentials', path: '/vault/dashboard' },
         { icon: Link2, label: 'Sharing', path: '/vault/sharing' },
-        { icon: Shield, label: 'TOTP', path: '/vault/totp' },
+        { icon: Clock, label: 'TOTP', path: '/vault/totp' },
         { icon: Settings, label: 'Settings', path: '/vault/settings' },
       ]
     : [

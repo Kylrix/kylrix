@@ -1,74 +1,61 @@
-# Kylrix Ecosystem
+# Kylrix 🏴
 
-Welcome to the **Kylrix Mono-App**, the unified Next.js engine powering the Kylrix ecosystem. This codebase consolidates the core services of Connect, Vault, Flow, and Note into a single, high-performance, and secure platform.
+**The only E2EE workspace where productivity tools and autonomous agents coexist.**
 
-## 🪐 Philosophy: Deep Earth & Zero-Knowledge
+For too long, agentic work has been a friction-filled mess of fragmented installs, API keys, and local environments that break the moment you close your laptop. While the market for AI agents explodes, the reality is stuck in pilot mode because where people work is not where their agents live.
 
-Kylrix is built on two foundational pillars:
-1.  **Muted V3 "Deep Earth" UI**: A professional, focused aesthetic utilizing an opaque, dark palette (`#0A0908` canvas) with hairline borders and zero translucency.
-2.  **Zero-Knowledge Security**: A two-tier encryption model where sensitive data (Tier 2) is encrypted client-side using a Master Encryption Key (MEK) derived from your MasterPass or Passkey. Kylrix never sees your plaintext secrets.
+**Kylrix follows the blueprint of the future: Cloud Agents.**
 
----
-
-## 🏗️ Core Architecture
-
--   **Frontend**: [Next.js 16 (Turbopack)](https://nextjs.org/) + [Material UI](https://mui.com/) + [Framer Motion](https://www.framer.com/motion/)
--   **Backend**: [Appwrite](https://appwrite.io/) (Databases, Auth, Storage, Messaging, Realtime)
--   **State & Security**: [Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API) for E2E encryption (X25519, AES-GCM)
--   **Intelligence**: Integrated AI agent workspace with Google Generative AI
-
-### **The "Zero-API" Mandate**
-Kylrix strictly avoids traditional RESTful API routes (`/api/*`) for core product logic. Instead, we utilize:
--   **Direct Client SDKs**: For low-latency, permission-gated reads and real-time synchronization.
--   **Secure Server Actions**: For administrative mutations and permission-heavy operations, utilizing JWT-based authentication to ensure session stability.
+One sovereign platform. You collaborate with people, assign tasks to agents, and work gets done while you sleep. No 'secret phrases', no data silos—just pure, high-performance productivity.
 
 ---
 
-## 📱 Modules
+## 🚀 Why Kylrix?
 
-### **💬 Connect**
-- **E2E Encrypted Chat**: Secure p2p and group messaging with T4 epoch rotation.
-- **Integrated Tipping**: Instant $KYLRIX transfers directly from chat detail.
-- **Public Identities**: Discoverable user profiles with verified identity badges.
+Kylrix is the first truly sovereign, crypto-native workspace built for the new wave of **Sovereign Engineers** and **DAOs**. We eliminate the latency between thinking and doing by unifying your agentic infrastructure with your daily tools.
 
-### **🛡️ Vault**
-- **Zero-Knowledge Storage**: Securely manage passwords, TOTPs, and sensitive notes.
-- **Secure Sharing**: MasterPass-backed credential sharing with fine-grained ACLs.
-- **Identity Sync**: Automated profile updates upon security context changes.
-
-### **⚡ Flow**
-- **Task Management**: Collaborative task tracking with AI-assisted goal setting.
-- **Dynamic Forms**: Powerful form engine with support for anonymous and authenticated submissions.
-- **Engagement Analytics**: Real-time tracking of workspace productivity.
-
-### **📝 Note**
-- **Collaborative Editor**: Real-time markdown editing with revision history.
-- **Ephemeral Notes**: Self-destructing notes for temporary data.
-- **Seamless Export**: Port your data across the ecosystem in standard formats.
+*   **⚡ Integrated Agentic Infra:** Your tools and agents live in the same environment. No more jumping between wrappers.
+*   **🔒 Root of Trust:** Solana wallets serve as the foundation for encryption, collaboration, and identity.
+*   **🛡️ Sovereign E2EE:** A high-performance alternative to Notion and Discord where you own your data. Zero lock-in, zero surveillance.
+*   **💸 Agent Economy:** Powered by Solana, agents can handle transactions and get paid for the work they complete autonomously.
 
 ---
 
-## 🛠️ Development
+## 🏗️ The Ecosystem
 
-### **Prerequisites**
-- [Node.js 20+](https://nodejs.org/)
-- [pnpm 9+](https://pnpm.io/)
-- [Appwrite CLI](https://appwrite.io/docs/command-line)
+Kylrix is designed to be a cohesive, end-to-end encrypted environment for teams who require absolute privacy and decentralized control over their capital and workflows.
 
-### **Setup**
-1.  Clone the repository.
-2.  Install dependencies: `pnpm install`
-3.  Configure environment: Copy `env.sample` to `.env` and fill in your Appwrite credentials.
-4.  Generate types: `pnpm aw:gen` (requires Appwrite login).
-5.  Start dev server: `pnpm dev`
-
-### **Engineering Standards**
-- **No Tailwind**: Use Material UI components or Vanilla CSS modules.
-- **Strict Types**: Ensure all data models extend `Models.Row` for compatibility with our `tablesDB` wrapper.
-- **HMR Stability**: Logic-heavy code must reside in `lib/*-server.ts` utilities, with `actions/*.ts` kept as lean wrappers.
+*   **Kylrix Note:** Secure, markdown-based knowledge management.
+*   **Kylrix Vault:** Hardened storage for secrets and digital assets.
+*   **Kylrix Flow:** Task orchestration designed for both humans and AI agents.
+*   **Kylrix Connect:** P2P-driven communication layer.
 
 ---
 
-## 📜 License
+## 🛠️ Technical Philosophy
 
-Kylrix is licensed under the **AGPL-3.0**. Built with ❤️ for the privacy-first web.
+We prioritize performance and digital autonomy. Kylrix is built with a lean, efficient stack to ensure your workspace remains fast and your agents remain responsive.
+
+*   **Languages:** Zig, Go, TypeScript, and Dart.
+*   **Encryption:** Client-side E2EE using Solana-based key management.
+*   **Chain:** Solana for high-velocity agentic payments and trust.
+
+---
+
+## 🎨 Design: Muted Bold
+
+Kylrix follows a high-contrast, minimalist aesthetic designed for deep focus.
+*   **Background:** #000000 (Pitch Black)
+*   **Components:** Deep Ash / Graphite
+*   **Accents:** High-vibrancy highlights
+
+---
+
+## 🤝 Get Involved
+
+Kylrix is built for those who value privacy as much as efficiency. Whether you are a sovereign architect or an agentic developer, the future of productivity is here.
+
+*   **Repository:** [github.com/Kylrix/kylrix](https://github.com/Kylrix/kylrix)
+*   **Connect:** Join the conversation on [Threads](https://www.threads.net/@nathfavour)
+
+**Build freely. Stay sovereign. Work while you sleep.** 🌙
