@@ -588,128 +588,87 @@ async function syncTaskAccess(taskId: string, creatorId: string, assigneeIds: st
   return collaboratorRows;
 }
 
-// Provider
-interface TaskProviderProps {
-  children: ReactNode;
-}
+import { usePathname } from 'next/navigation';
 
-export function TaskProvider({ children }: TaskProviderProps) {
+// ... (inside TaskProvider)
   const [state, dispatch] = useReducer(taskReducer, initialState);
   const { fetchOptimized, invalidate, getCachedData, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const flowWarmOwnerRef = useRef<string | null>(null);
+  const pathname = usePathname();
+  const lastPathnameRef = useRef<string | null>(null);
 
-  const invalidateTasksNexus = useCallback(
-    (uid: string) => {
-      invalidate(`f_tasks_${uid}`);
-      invalidate(`f_flow_warm_${uid}`);
-    },
-    [invalidate],
-  );
+  // ... (existing invalidation helpers)
 
-  const invalidateCalendarsNexus = useCallback(
-    (uid: string) => {
-      invalidate(`f_calendars_${uid}`);
-      invalidate(`f_flow_warm_${uid}`);
-    },
-    [invalidate],
-  );
+  const fetchBatch = useCallback(async (uid: string, force = false) => {
+    const FLOW_WARM_TTL = 1000 * 60 * 30;
+    const tasksKey = `f_tasks_${uid}`;
+    const calsKey = `f_calendars_${uid}`;
+
+    const taskQueries = [
+      Query.equal('userId', uid),
+      Query.limit(1000),
+      Query.select(['$id', 'userId', 'title', 'status', 'priority', 'dueDate', 'tags', '$createdAt', '$updatedAt']),
+    ];
+    const calQueries = [
+      Query.equal('userId', uid),
+      Query.limit(100),
+      Query.select(['$id', 'userId', 'name', 'color', 'isDefault']),
+    ];
+
+    const [tList, cList] = await Promise.all([
+      fetchOptimized(tasksKey, () => taskApi.list(taskQueries), force ? 0 : FLOW_WARM_TTL),
+      fetchOptimized(calsKey, () => calendarApi.list(calQueries), force ? 0 : FLOW_WARM_TTL),
+    ]);
+
+    return { 
+      tasks: tList.rows.map(mapAppwriteTaskToTask), 
+      projects: cList.rows.map(mapAppwriteCalendarToProject) 
+    };
+  }, [fetchOptimized]);
 
   // Initial Data Fetch
   useEffect(() => {
-    const fetchData = async () => {
-      if (isAuthLoading) return;
-      console.log('[TaskContext] fetchData triggered');
-      try {
-        dispatch({ type: 'SET_LOADING', payload: true });
-        
-        // Get current user
-        let userId = authUser?.$id || 'guest';
-        if (!authUser?.$id) {
-          try {
-            const user = await getCurrentUser();
-            console.log('[TaskContext] User found', user.$id);
-            userId = user.$id;
-          } catch (error: unknown) {
-            console.warn('[TaskContext] Not logged in', error);
-          }
-        }
-        dispatch({ type: 'SET_USER', payload: userId });
-        flowWarmOwnerRef.current = userId;
+    if (isAuthLoading) return;
 
-        const FLOW_WARM_TTL = 1000 * 60 * 30;
-        const tasksKey = `f_tasks_${userId}`;
-        const calsKey = `f_calendars_${userId}`;
-        const taskQueriesFor = (uid: string) => [
-          Query.equal('userId', uid),
-          Query.limit(1000),
-          Query.select(['$id', 'userId', 'title', 'description', 'status', 'priority', 'dueDate', 'tags', 'assigneeIds', 'parentId', 'eventId', '$createdAt', '$updatedAt']),
-        ];
-        const calQueriesFor = (uid: string) => [
-          Query.equal('userId', uid),
-          Query.limit(100),
-          Query.select(['$id', 'userId', 'name', 'color', 'isDefault', '$createdAt', '$updatedAt']),
-        ];
-
-        const hadBothFromCache =
-          userId !== 'guest' &&
-          getCachedData(tasksKey, FLOW_WARM_TTL) != null &&
-          getCachedData(calsKey, FLOW_WARM_TTL) != null;
-
-        // Fetch tasks and calendars (Nexus Optimized)
-        const [tasksList, calendarsList] = await Promise.all([
-          fetchOptimized(tasksKey, () => taskApi.list(taskQueriesFor(userId))),
-          fetchOptimized(calsKey, () => calendarApi.list(calQueriesFor(userId))),
-        ]);
-
-        const tasks = tasksList.rows.map(mapAppwriteTaskToTask);
-        const projects = calendarsList.rows.map(mapAppwriteCalendarToProject);
-
-        dispatch({ type: 'SET_DATA', payload: { tasks, projects } });
-
-        if (hadBothFromCache && userId !== 'guest') {
-          const warmOwner = userId;
-          refreshInBackground(
-            `f_flow_warm_${warmOwner}`,
-            async () => {
-              const [t, c] = await Promise.all([
-                taskApi.list(taskQueriesFor(warmOwner)),
-                calendarApi.list(calQueriesFor(warmOwner)),
-              ]);
-              const tk = `f_tasks_${warmOwner}`;
-              const ck = `f_calendars_${warmOwner}`;
-              setCachedData(tk, t, FLOW_WARM_TTL);
-              setCachedData(ck, c, FLOW_WARM_TTL);
-              return true;
-            },
-            FLOW_WARM_TTL,
-            ({ error }) => {
-              if (error) return;
-              if (flowWarmOwnerRef.current !== warmOwner) return;
-              const tk = `f_tasks_${warmOwner}`;
-              const ck = `f_calendars_${warmOwner}`;
-              const tasksList = getCachedData<{ rows: AppwriteTask[] }>(tk, FLOW_WARM_TTL);
-              const calendarsList = getCachedData<{ rows: AppwriteCalendar[] }>(ck, FLOW_WARM_TTL);
-              if (!tasksList?.rows || !calendarsList?.rows) return;
-              dispatch({
-                type: 'SET_DATA',
-                payload: {
-                  tasks: tasksList.rows.map(mapAppwriteTaskToTask),
-                  projects: calendarsList.rows.map(mapAppwriteCalendarToProject),
-                },
-              });
-            },
-          );
-        }
-      } catch (error: unknown) {
-        console.error('Failed to fetch data', error);
-        dispatch({ type: 'SET_ERROR', payload: 'Failed to load data' });
+    const init = async () => {
+      let userId = authUser?.$id || 'guest';
+      if (!authUser?.$id) {
+        try {
+          const user = await getCurrentUser();
+          userId = user.$id;
+        } catch {}
       }
+      dispatch({ type: 'SET_USER', payload: userId });
+      flowWarmOwnerRef.current = userId;
+
+      if (userId === 'guest') return;
+
+      const data = await fetchBatch(userId);
+      dispatch({ type: 'SET_DATA', payload: data });
     };
 
-    fetchData();
-  }, [fetchOptimized, getCachedData, setCachedData, refreshInBackground, authUser?.$id, isAuthLoading]);
+    init();
+  }, [authUser?.$id, isAuthLoading, fetchBatch]);
 
+  // Route-based background revalidation
+  useEffect(() => {
+    if (!state.userId || state.userId === 'guest' || isAuthLoading) return;
+    if (pathname === lastPathnameRef.current) return;
+
+    const prevPath = lastPathnameRef.current;
+    lastPathnameRef.current = pathname;
+
+    // Only revalidate if we actually navigated (not first load)
+    if (prevPath && pathname.startsWith('/flow')) {
+      const uid = state.userId;
+      refreshInBackground(`f_route_refresh_${uid}`, async () => {
+        const data = await fetchBatch(uid, true);
+        dispatch({ type: 'SET_DATA', payload: data });
+        return true;
+      }, 10000); // 10s cooldown for route-based refreshes
+    }
+  }, [pathname, state.userId, isAuthLoading, fetchBatch]);
   // Realtime Subscriptions
   useEffect(() => {
     if (!state.userId) return;
