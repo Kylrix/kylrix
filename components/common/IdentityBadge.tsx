@@ -29,8 +29,11 @@ export function computeIdentityFlags(signals: IdentitySignals) {
   return { verified, pro };
 }
 
+import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
+
 export function IdentityAvatar({
   src,
+  fileId,
   alt,
   fallback,
   verified,
@@ -40,6 +43,7 @@ export function IdentityAvatar({
   borderRadius = '50%',
 }: {
   src?: string | null;
+  fileId?: string | null;
   alt?: string;
   fallback?: string;
   verified?: boolean;
@@ -48,6 +52,8 @@ export function IdentityAvatar({
   verifiedSize?: number;
   borderRadius?: string | number;
 }) {
+  const previewUrl = useCachedProfilePreview(fileId || src, size, size);
+
   return (
     <Box
       sx={{
@@ -70,17 +76,17 @@ export function IdentityAvatar({
     >
       <Box
         component="img"
-        src={src || undefined}
+        src={previewUrl || undefined}
         alt={alt || ''}
         sx={{
           width: '100%',
           height: '100%',
           borderRadius: `calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`,
           objectFit: 'cover',
-          display: src ? 'block' : 'none',
+          display: previewUrl ? 'block' : 'none',
         }}
       />
-      {!src && (
+      {!previewUrl && (
         <Box
           sx={{
             width: '100%',

@@ -29,7 +29,7 @@ import {
   Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
-import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePreview';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getUserProfilePicId } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthContext';

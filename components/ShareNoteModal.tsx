@@ -45,7 +45,7 @@ import {
   getCurrentPublicNoteShareUrl
 } from '@/lib/appwrite';
 import { useSudo } from '@/context/SudoContext';
-import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePreview';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 
 interface ShareNoteModalProps {
   isOpen: boolean;

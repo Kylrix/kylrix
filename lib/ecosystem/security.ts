@@ -19,8 +19,12 @@ export class EcosystemSecurity {
   private conversationKeys: Map<string, CryptoKey> = new Map();
   private decryptionCache: Map<string, string> = new Map();
   private isUnlocked = false;
+  private hasMasterpassState: boolean | null = null;
+  private hasPasskeyState: boolean | null = null;
+  private hasRecoveryCodesState: boolean | null = null;
+  private snapshotInflight: Promise<any> | null = null;
   private nodeId = 'unknown';
-  private statusListeners: Set<(status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean }) => void> = new Set();
+  private statusListeners: Set<(status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean; hasMasterpass: boolean | null; hasPasskey: boolean | null; hasRecoveryCodes: boolean | null }) => void> = new Set();
   // SECURITY: Tab-specific secret (RAM-only) to protect against XSS
   private tabSessionSecret: Uint8Array | null = null;
 
@@ -66,7 +70,7 @@ export class EcosystemSecurity {
     });
   }
 
-  onStatusChange(listener: (status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean }) => void) {
+  onStatusChange(listener: (status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean; hasMasterpass: boolean | null; hasPasskey: boolean | null; hasRecoveryCodes: boolean | null }) => void) {
     this.statusListeners.add(listener);
     listener(this.status);
 
@@ -576,8 +580,46 @@ export class EcosystemSecurity {
     return {
       isUnlocked: this.isUnlocked,
       hasKey: !!this.masterKey,
-      hasIdentity: !!this.identityKeyPair
+      hasIdentity: !!this.identityKeyPair,
+      hasMasterpass: this.hasMasterpassState,
+      hasPasskey: this.hasPasskeyState,
+      hasRecoveryCodes: this.hasRecoveryCodesState
     };
+  }
+
+  async fetchSecuritySnapshot(userId: string, force = false) {
+    if (!userId || typeof window === 'undefined') return this.status;
+    
+    if (!force && this.hasMasterpassState !== null && this.hasPasskeyState !== null) {
+      return this.status;
+    }
+
+    if (this.snapshotInflight) return this.snapshotInflight;
+
+    this.snapshotInflight = (async () => {
+      try {
+        const { VaultService } = await import('@/lib/appwrite/vault');
+        const [hasMp, hasPk, userDoc] = await Promise.all([
+          VaultService.hasMasterpass(userId),
+          VaultService.hasPasskey(userId),
+          VaultService.getUserDoc(userId)
+        ]);
+
+        this.hasMasterpassState = hasMp;
+        this.hasPasskeyState = hasPk;
+        this.hasRecoveryCodesState = !!(userDoc?.backupCodes && userDoc.backupCodes.length > 0);
+        
+        this.emitStatusChange();
+        return this.status;
+      } catch (e) {
+        console.error('[Security] Failed to fetch security snapshot:', e);
+        return this.status;
+      } finally {
+        this.snapshotInflight = null;
+      }
+    })();
+
+    return this.snapshotInflight;
   }
 
   getMasterKey(): CryptoKey | null {

@@ -1,4 +1,4 @@
-import { account } from './appwrite';
+import { getCurrentUser } from './appwrite';
 
 /**
  * Checks if a valid Appwrite session exists.
@@ -9,7 +9,7 @@ import { account } from './appwrite';
  */
 export async function checkSession() {
   try {
-    const user = await account.get();
+    const user = await getCurrentUser();
     return user;
   } catch (error: any) {
     // Session doesn't exist or is invalid
@@ -27,8 +27,8 @@ export async function checkSession() {
  */
 export async function hasSession(): Promise<boolean> {
   try {
-    await account.get();
-    return true;
+    const user = await getCurrentUser();
+    return !!user;
   } catch (error: any) {
     if (error?.code === 'user_unauthorized' || error?.code === 'user_session_not_found') {
       return false;

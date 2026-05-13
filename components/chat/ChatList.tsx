@@ -41,37 +41,16 @@ import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import ConversationActionsSheet from './ConversationActionsSheet';
 
 const GlobalSearchAvatar = ({ u }: { u: any }) => {
-    const [fetchedAvatarUrl, setFetchedAvatarUrl] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!u.avatar || String(u.avatar).startsWith('http')) return;
-
-        let active = true;
-        fetchProfilePreview(u.avatar, 64, 64)
-            .then(url => {
-                if (active) setFetchedAvatarUrl(url as unknown as string);
-            })
-            .catch(() => {});
-
-        return () => {
-            active = false;
-        }
-    }, [u.avatar]);
-    const avatarUrl = u.avatar && String(u.avatar).startsWith('http') ? u.avatar : fetchedAvatarUrl;
-
+    const userId = u.userId || u.$id;
+    const profilePicId = u.avatar || u.profilePicId || null;
+    
     return (
-        <Avatar
-            src={avatarUrl || undefined}
-            sx={{
-                bgcolor: '#F59E0B',
-                color: '#FFFFFF',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                width: 44,
-                height: 44
-            }}
-        >
-            {!avatarUrl && (u.displayName || u.username || '?').charAt(0).toUpperCase()}
-        </Avatar>
+        <IdentityAvatar
+            fileId={profilePicId}
+            alt={u.displayName || u.username || 'user'}
+            fallback={(u.displayName || u.username || '?').charAt(0).toUpperCase()}
+            size={44}
+        />
     );
 };
 
@@ -804,19 +783,13 @@ export const ChatList = () => {
                                                 cursor: 'pointer',
                                             }}
                                         >
-                                            <Avatar
-                                                src={conv.avatarUrl}
-                                                sx={{
-                                                    bgcolor: conv.avatarUrl ? 'transparent' : '#F59E0B',
-                                                    color: '#FFFFFF',
-                                                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                                                    boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 16px rgba(245, 158, 11, 0.08)',
-                                                    width: 44,
-                                                    height: 44
-                                                }}
-                                            >
-                                                {conv.isSelf ? <BookmarkIcon sx={{ fontSize: 20 }} /> : (conv.type === 'group' ? <GroupIcon sx={{ fontSize: 22 }} /> : (conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || <PersonIcon sx={{ fontSize: 22, color: '#F59E0B' }} />))}
-                                            </Avatar>
+                                            <IdentityAvatar
+                                                fileId={conv.avatarUrl || conv.avatar || null}
+                                                alt={conv.name}
+                                                fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U'}
+                                                size={44}
+                                                pro={conv.isSelf}
+                                            />
                                         </Box>
                                     <ListItemText
                                         primary={conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Group Chat')}

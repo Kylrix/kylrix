@@ -12,7 +12,7 @@ import { getEcosystemUrl } from '@/constants/ecosystem';
 import { Menu, MenuItem, ListItemIcon } from '@mui/material';
 import NoteReactions from './NoteReactions';
 import { TargetType } from '@/types/appwrite';
-import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePreview';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getCachedCommentIdentity, getCachedCommentIdentities, upsertCommentIdentity, upsertCommentIdentities } from '@/lib/commentIdentityCache';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 

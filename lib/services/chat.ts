@@ -862,6 +862,18 @@ export const ChatService = {
 
         const result = await pending;
         conversationsListCache.set(userId, { payload: result, at: Date.now() });
+
+        // Background: warm up identity cache for all participants
+        void (async () => {
+            const allParticipants = new Set<string>();
+            result.rows.forEach(c => c.participants?.forEach((p: string) => allParticipants.add(p)));
+            const ids = Array.from(allParticipants);
+            if (ids.length > 0) {
+                const { UsersService } = await import('./users');
+                await Promise.all(ids.map(id => UsersService.getProfileById(id)));
+            }
+        })();
+
         return {
             total: result.total,
             rows: result.rows.map((r: any) => cloneConversationBase(r)),
@@ -1200,6 +1212,12 @@ export const ChatService = {
 
             // Decrypt messages in parallel
             res.rows = await Promise.all(res.rows.map(async (msg: any) => {
+                // Background: warm up identity cache for senders
+                void (async () => {
+                    const { UsersService } = await import('./users');
+                    void UsersService.getProfileById(msg.senderId);
+                })();
+
                 const isEncrypted = ecosystemSecurity.status.isUnlocked && (
                     (msg.type === 'text' && msg.content && msg.content.length > 40) ||
                     (msg.metadata && msg.metadata.length > 40)

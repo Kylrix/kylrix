@@ -6,6 +6,8 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { usePathname } from 'next/navigation';
 import type { KylrixApp } from '@/lib/sdk/design';
 
+import { useAuth } from '@/context/auth/AuthContext';
+
 interface SudoOptions {
     onSuccess: () => void;
     onCancel?: () => void;
@@ -17,13 +19,30 @@ interface SudoContextType {
     requestSudo: (options: SudoOptions) => void;
     promptSudo: (intent?: "unlock" | "initialize" | "reset", forcePrompt?: boolean) => Promise<boolean>;
     isUnlocked: boolean;
+    hasMasterpass: boolean | null;
+    hasPasskey: boolean | null;
 }
 
 const SudoContext = createContext<SudoContextType | undefined>(undefined);
 
 export function SudoProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
     const pathname = usePathname();
     const [isSudoOpen, setIsSudoOpen] = useState(false);
+    const [securityStatus, setSecurityStatus] = useState(ecosystemSecurity.status);
+
+    useEffect(() => {
+        return ecosystemSecurity.onStatusChange((status) => {
+            setSecurityStatus(status);
+        });
+    }, []);
+
+    useEffect(() => {
+        if (user?.$id) {
+            ecosystemSecurity.fetchSecuritySnapshot(user.$id);
+        }
+    }, [user?.$id]);
+
     const sudoApp: KylrixApp = (() => {
         if (pathname?.startsWith('/vault')) return 'vault';
         if (pathname?.startsWith('/flow')) return 'flow';
@@ -36,20 +55,20 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     const [pendingAction, setPendingAction] = useState<SudoOptions | null>(null);
     const [sudoPromise, setSudoPromise] = useState<{ resolve: (v: boolean) => void } | null>(null);
 
-    const isUnlocked = ecosystemSecurity.status.isUnlocked;
+    const { isUnlocked, hasMasterpass, hasPasskey } = securityStatus;
 
     const requestSudo = useCallback((options: SudoOptions) => {
-        if (ecosystemSecurity.status.isUnlocked && !options.forcePrompt) {
+        if (isUnlocked && !options.forcePrompt) {
             options.onSuccess();
             return;
         }
 
         setPendingAction(options);
         setIsSudoOpen(true);
-    }, []);
+    }, [isUnlocked]);
 
     const promptSudo = useCallback((intent: "unlock" | "initialize" | "reset" = "unlock", forcePrompt = false) => {
-        if (ecosystemSecurity.status.isUnlocked && !forcePrompt) return Promise.resolve(true);
+        if (isUnlocked && !forcePrompt) return Promise.resolve(true);
 
         return new Promise<boolean>((resolve) => {
             setSudoPromise({ resolve });
@@ -61,7 +80,7 @@ export function SudoProvider({ children }: { children: ReactNode }) {
             });
             setIsSudoOpen(true);
         });
-    }, []);
+    }, [isUnlocked]);
 
     const handleSuccess = useCallback(() => {
         setIsSudoOpen(false);
@@ -76,7 +95,11 @@ export function SudoProvider({ children }: { children: ReactNode }) {
             sudoPromise.resolve(true);
             setSudoPromise(null);
         }
-    }, [pendingAction, sudoPromise]);
+        // Force refresh snapshot after successful sudo action
+        if (user?.$id) {
+            ecosystemSecurity.fetchSecuritySnapshot(user.$id, true);
+        }
+    }, [pendingAction, sudoPromise, user?.$id]);
 
     const handleCancel = useCallback(() => {
         setIsSudoOpen(false);
@@ -91,8 +114,8 @@ export function SudoProvider({ children }: { children: ReactNode }) {
     }, [pendingAction, sudoPromise]);
 
     const contextValue = useMemo<SudoContextType>(
-        () => ({ requestSudo, promptSudo, isUnlocked }),
-        [requestSudo, promptSudo, isUnlocked]
+        () => ({ requestSudo, promptSudo, isUnlocked, hasMasterpass, hasPasskey }),
+        [requestSudo, promptSudo, isUnlocked, hasMasterpass, hasPasskey]
     );
 
     return (
