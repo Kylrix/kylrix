@@ -39,11 +39,12 @@ export { client };
 export const APPWRITE_BUCKET_BACKUPS_ID = APPWRITE_CONFIG.BUCKETS.BACKUPS;
 export const APPWRITE_BUCKET_PROFILE_PICTURES_ID = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
 
-let currentUserCache: { user: any | null; expiresAt: number } | null = null;
+let currentUserCache: { user: any | null; expiresAt: number; lastForcedAt?: number } | null = null;
 let currentUserInFlight: Promise<any | null> | null = null;
 const currentUserListeners = new Set<(user: any | null) => void>();
-const CURRENT_USER_CACHE_TTL = 5000;
-const CURRENT_USER_CACHE_KEY = 'kylrix_flow_current_user_v1';
+const CURRENT_USER_CACHE_TTL = 30000; // 30 seconds for passive reads
+const CURRENT_USER_FORCE_TTL = 2000;  // 2 seconds to dedupe identical forced refreshes
+const CURRENT_USER_CACHE_KEY = 'kylrix_flow_current_user_v2';
 
 function canUseStorage() {
     return typeof window !== 'undefined';
@@ -54,7 +55,7 @@ function readCurrentUserSnapshot() {
     try {
         const raw = localStorage.getItem(CURRENT_USER_CACHE_KEY);
         if (!raw) return null;
-        const parsed = JSON.parse(raw) as { user: any; expiresAt: number };
+        const parsed = JSON.parse(raw) as { user: any; expiresAt: number; lastForcedAt?: number };
         if (!parsed?.user || parsed.expiresAt <= Date.now()) {
             localStorage.removeItem(CURRENT_USER_CACHE_KEY);
             return null;
@@ -65,7 +66,7 @@ function readCurrentUserSnapshot() {
     }
 }
 
-function writeCurrentUserSnapshot(user: any | null) {
+function writeCurrentUserSnapshot(user: any | null, lastForcedAt?: number) {
     if (!canUseStorage()) return;
     try {
         if (!user) {
@@ -75,6 +76,7 @@ function writeCurrentUserSnapshot(user: any | null) {
         localStorage.setItem(CURRENT_USER_CACHE_KEY, JSON.stringify({
             user,
             expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
+            lastForcedAt: lastForcedAt || (currentUserCache?.lastForcedAt)
         }));
     } catch {
         // Best effort only.
@@ -252,25 +254,42 @@ export function clearKylrixPulse() {
 export async function getCurrentUser(force = false): Promise<any | null> {
     hydrateCurrentUserCache();
 
-    if (!force && currentUserCache && currentUserCache.expiresAt > Date.now()) {
+    const now = Date.now();
+
+    // If we have a valid cache and NOT forcing, return it
+    if (!force && currentUserCache && currentUserCache.expiresAt > now) {
         return currentUserCache.user;
     }
 
-    if (!force && currentUserInFlight) {
+    // If forcing, check if we just did a forced refresh very recently (dedupe)
+    if (force && currentUserCache?.lastForcedAt && (now - currentUserCache.lastForcedAt < CURRENT_USER_FORCE_TTL)) {
+        return currentUserCache.user;
+    }
+
+    // If already in flight, wait for it (deduplication)
+    if (currentUserInFlight) {
         return currentUserInFlight;
     }
 
     currentUserInFlight = account.get()
         .then((user) => {
-            currentUserCache = { user, expiresAt: Date.now() + CURRENT_USER_CACHE_TTL };
-            writeCurrentUserSnapshot(user);
+            const forcedAt = force ? Date.now() : (currentUserCache?.lastForcedAt);
+            currentUserCache = { 
+                user, 
+                expiresAt: Date.now() + CURRENT_USER_CACHE_TTL,
+                lastForcedAt: forcedAt
+            };
+            writeCurrentUserSnapshot(user, forcedAt);
             emitCurrentUserChange(user);
             return user;
         })
         .catch((error) => {
-            currentUserCache = null;
-            writeCurrentUserSnapshot(null);
-            emitCurrentUserChange(null);
+            // Only clear cache on hard unauthorized errors
+            if (error?.code === 401 || error?.code === 'user_unauthorized' || error?.code === 'user_session_not_found') {
+                currentUserCache = null;
+                writeCurrentUserSnapshot(null);
+                emitCurrentUserChange(null);
+            }
             return null;
         })
         .finally(() => {

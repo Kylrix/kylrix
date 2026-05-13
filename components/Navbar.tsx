@@ -34,7 +34,7 @@ import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useColorMode } from '@/context/ThemeContext';
 import { getUserProfilePicId } from '@/lib/utils';
-import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profilePreview';
+import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { InputBase, Paper, Tooltip } from '@mui/material';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 

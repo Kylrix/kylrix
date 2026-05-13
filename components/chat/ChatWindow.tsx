@@ -1793,19 +1793,13 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         onClick={(e) => setAnchorEl(e.currentTarget)}
                         sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                     >
-                        <Avatar 
-                            src={conversation?.avatarUrl}
-                            sx={{
-                                width: 36,
-                                height: 36,
-                                bgcolor: conversation?.avatarUrl ? (isSelf ? alpha('#6366F1', 0.1) : alpha('#F59E0B', 0.1)) : '#F59E0B',
-                                color: conversation?.avatarUrl ? (isSelf ? '#6366F1' : '#F59E0B') : '#FFFFFF',
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                boxShadow: '0 1px 0 rgba(0,0,0,0.4)'
-                            }}
-                        >
-                            {isSelf ? <Bookmark size={18} color="#6366F1" strokeWidth={1.5} /> : (conversation?.type === 'group' ? <Users size={20} strokeWidth={1.5} /> : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || <User size={20} color="#F59E0B" strokeWidth={1.5} />))}
-                        </Avatar>
+                        <IdentityAvatar 
+                            fileId={conversation?.avatarUrl || conversation?.avatar || null}
+                            alt={conversation?.name}
+                            fallback={isSelf ? 'B' : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U')}
+                            size={36}
+                            pro={isSelf}
+                        />
                         <Box>
                             {conversation?.type === 'direct' && !isSelf ? (
                                 <IdentityName
@@ -2044,8 +2038,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             const senderName = isOutgoing
                                 ? 'You'
                                 : senderProfile?.displayName || senderProfile?.username || (conversation?.type === 'direct' ? conversation?.name || 'Partner' : `@${String(msg.senderId || '').slice(0, 7)}`);
-                            const senderAvatarSrc = senderProfiles[msg.senderId]?.avatarUrl
-                                || (senderProfile?.avatar?.startsWith?.('http') ? senderProfile.avatar : null);
 
                             return (
                                 <Box
@@ -2065,7 +2057,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                         sx={{ width: '100%', maxWidth: '80%' }}
                                     >
                                         <IdentityAvatar
-                                            src={senderAvatarSrc || undefined}
+                                            fileId={senderProfile?.avatar || null}
                                             alt={senderName}
                                             fallback={senderName.slice(0, 1).toUpperCase()}
                                             size={30}

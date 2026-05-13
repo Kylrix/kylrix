@@ -523,6 +523,10 @@ export class VaultService {
       );
       console.log("[AppwriteService] Credential Created Successfully:", doc.$id);
       this.clearCredentialCache(data.userId);
+      // Invalidate ecosystem security snapshot
+      const { ecosystemSecurity } = await import("../ecosystem/security");
+      ecosystemSecurity.fetchSecuritySnapshot(data.userId, true);
+
       return (await this.decryptDocumentFields(
         doc,
         "credentials",
@@ -858,6 +862,10 @@ export class VaultService {
         Permission.delete(Role.user(data.userId)),
       ]
     );
+    // Invalidate ecosystem security snapshot
+    const { ecosystemSecurity } = await import("../ecosystem/security");
+    ecosystemSecurity.fetchSecuritySnapshot(data.userId, true);
+    
     return doc as unknown as Keychain;
   }
 

@@ -1,20 +1,24 @@
 # Read Optimization TODO
 
-- [ ] **Auth/session collapse**  
+- [x] **Auth/session collapse**  
   Files: `context/AuthContext.tsx`, `context/auth/AuthContext.tsx`, `lib/appwrite/auth.ts`, `lib/check-session.ts`, `lib/finalizeAuth.ts`  
   Action: collapse repeated `getCurrentUser`/session verification into one cached snapshot with a single background refresh per route.
+  *Status*: Completed. Improved `getCurrentUser` with 30s TTL, 2s forced dedupe, and shared in-flight promises. Updated `checkSession` and `AuthContext` to use optimized fetcher with per-route revalidation.
 
-- [ ] **Profile hydration cache**  
+- [x] **Profile hydration cache**  
   Files: `lib/services/users.ts`, `lib/profile-preview.ts`, `lib/profilePreview.ts`, `components/UserSearch.tsx`, `components/TopBarSearch.tsx`, `components/common/NoteTopbar.tsx`, `components/common/VaultTopbar.tsx`, `components/ReferralManager.tsx`, `components/ConnectedIdentities.tsx`, `components/ProfileManager.tsx`  
   Action: batch `getProfileById`, memoize avatar previews, and reuse a single identity cache across widgets.
+  *Status*: Completed. Implemented profile batcher in `UsersService`. Consolidated avatar logic in `lib/profile-preview.ts`. Updated `IdentityAvatar` to auto-hydrate. Simplified search components.
 
-- [ ] **Vault/masterpass reads**  
+- [x] **Vault/masterpass reads**  
   Files: `lib/appwrite/vault.ts`, `lib/appwrite/keychain.ts`, `lib/ecosystem/security.ts`, `lib/masterpass-crypto.ts`, `lib/passkey.ts`, `components/common/SudoModal.tsx`, `components/overlays/SudoModal.tsx`, `components/common/PasskeySetup.tsx`, `components/overlays/PasskeySetup.tsx`, `components/MasterPassManager.tsx`  
   Action: stop repeated keychain presence checks and expose one unlock state snapshot for the whole route.
+  *Status*: Completed. Consolidated security state into `EcosystemSecurity` snapshot. Exposed via `SudoContext`. Updated components to use cached flags.
 
-- [ ] **Connect/chat coalescing**  
+- [x] **Connect/chat coalescing**  
   Files: `lib/services/chat.ts`, `components/chat/ChatWindow.tsx`, `components/chat/ChatList.tsx`, `components/chat/ConversationActionsSheet.tsx`, `components/providers/ChatNotificationProvider.tsx`, `app/(app)/connect/chats/page.tsx`, `app/(app)/connect/chat/[id]/page.tsx`, `app/(app)/(auth)/accounts/api/connect/*`  
   Action: keep conversation base/member/message caches warm, reuse prefetched rows, and batch participant/profile hydration.
+  *Status*: Completed. Added background participant/sender pre-seeding in `ChatService`. Simplified UI components to use `IdentityAvatar` and shared caches.
 
 - [ ] **Note/social/feed reuse**  
   Files: `lib/appwrite/note.ts`, `context/NotesContext.tsx`, `lib/services/social.ts`, `lib/moment-preview.ts`, `lib/moment-thread-cache.ts`, `lib/ecosystem/tablesdb-row-cache.ts`, `components/ui/NoteCard.tsx`, `components/ui/NoteDetailSidebar.tsx`, `components/landing/GhostEditor.tsx`, `components/landing/GhostNoteClaimer.tsx`, `app/(app)/note/*`  

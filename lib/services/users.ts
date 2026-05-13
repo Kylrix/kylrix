@@ -10,100 +10,66 @@ const TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
 const PROFILE_ROW_TTL_MS = 15 * 60 * 1000;
 const profileRowCache = new Map<string, { row: any; at: number }>();
-const profileRowInflight = new Map<string, Promise<any | null>>();
-
-function normalizeUsernameSuggestion(input: string | null | undefined): string | null {
-    if (!input) return null;
-    const cleaned = input
-        .toString()
-        .trim()
-        .replace(/^@+/, '')
-        .toLowerCase()
-        .replace(/[^a-z0-9_]/g, '');
-    return cleaned || null;
-}
-
-function deriveUsernameCandidates(user: { $id: string; email?: string; name?: string }): string[] {
-    const nameParts = user.name ? user.name.trim().split(/\s+/).filter(Boolean) : [];
-    const firstName = nameParts[0] || '';
-    const surname = nameParts[1] || '';
-    const emailPrefix = user.email ? user.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') : '';
-    const raw = [
-        normalizeUsernameSuggestion(firstName),
-        normalizeUsernameSuggestion(surname),
-        normalizeUsernameSuggestion(emailPrefix),
-        normalizeUsernameSuggestion(`u${user.$id.slice(0, 12)}`),
-    ].filter(Boolean) as string[];
-    return Array.from(new Set(raw));
-}
-
-function fallbackUsernameFromUser(userId: string, email?: string | null): string {
-    const ep = email ? normalizeUsernameSuggestion(email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '')) : null;
-    if (ep && ep.length >= 3) return ep;
-    const fb = normalizeUsernameSuggestion(`u${userId.slice(0, 12)}`);
-    return fb && fb.length >= 3 ? fb : `u${userId.slice(0, 12)}`;
-}
-
-/** Normalized @handle ideas for onboarding (deduped). Mirrors legacy Discoverability username rules. */
-export function buildUsernameHandleSuggestions(user: {
-    $id: string;
-    email?: string | null;
-    name?: string | null;
-}): string[] {
-    const candidates = deriveUsernameCandidates({
-        $id: user.$id,
-        email: user.email ?? undefined,
-        name: user.name ?? undefined,
-    });
-    const out: string[] = [];
-    for (const c of candidates) {
-        const n = normalizeUsernameSuggestion(c);
-        if (n && n.length >= 3) out.push(n);
-    }
-    const fb = normalizeUsernameSuggestion(fallbackUsernameFromUser(user.$id, user.email ?? null));
-    if (fb && fb.length >= 3) out.push(fb);
-    return Array.from(new Set(out)).slice(0, 6);
-}
+const batchState = {
+    queue: new Set<string>(),
+    timer: null as any,
+    promises: new Map<string, Array<{ resolve: (v: any) => void; reject: (e: any) => void }>>(),
+};
 
 function rememberProfileRow(row: any | null, lookupKey: string) {
-  const at = Date.now();
-  profileRowCache.set(lookupKey, { row, at });
-  if (row?.$id) profileRowCache.set(row.$id, { row, at });
-  const uid = row?.userId;
-  if (uid && uid !== lookupKey && uid !== row?.$id) {
-    profileRowCache.set(uid, { row, at });
-  }
+    if (!row) return;
+    const at = Date.now();
+    profileRowCache.set(lookupKey, { row, at });
+    if (row.$id) profileRowCache.set(row.$id, { row, at });
+    if (row.userId) profileRowCache.set(row.userId, { row, at });
+    seedIdentityCache(row);
 }
 
 export function invalidateUsersProfileRowCache(userId?: string | null) {
   if (!userId) return;
   profileRowCache.delete(userId);
-  profileRowInflight.delete(userId);
 }
 
-async function fetchProfileRowRaw(userId: string): Promise<any | null> {
-  try {
-    return await tablesDB.getRow({
-      databaseId: DATABASE_ID,
-      tableId: TABLE_ID,
-      rowId: userId,
-    });
-  } catch (_e: any) {
+async function processProfileBatch() {
+    const ids = Array.from(batchState.queue);
+    batchState.queue.clear();
+    const currentPromises = new Map(batchState.promises);
+    batchState.promises.clear();
+    batchState.timer = null;
+
+    if (ids.length === 0) return;
+
     try {
-      const { Query } = await import('appwrite');
-      const res = await (tablesDB as any).listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLE_ID,
-        queries: [
-          Query.or([Query.equal('userId', userId), Query.equal('$id', userId)]),
-          Query.limit(1),
-        ],
-      });
-      return res.rows[0] || null;
-    } catch (_inner) {
-      return null;
+        const { Query } = await import('appwrite');
+        const res = await (tablesDB as any).listRows({
+            databaseId: DATABASE_ID,
+            tableId: TABLE_ID,
+            queries: [
+                Query.equal('userId', ids),
+                Query.limit(ids.length),
+            ],
+        });
+
+        const found = new Map<string, any>();
+        res.rows.forEach((row: any) => {
+            found.set(row.userId, row);
+            found.set(row.$id, row);
+            rememberProfileRow(row, row.userId);
+        });
+
+        ids.forEach(id => {
+            const handlers = currentPromises.get(id);
+            if (handlers) {
+                const result = found.get(id) || null;
+                handlers.forEach(h => h.resolve(result));
+            }
+        });
+    } catch (e) {
+        ids.forEach(id => {
+            const handlers = currentPromises.get(id);
+            if (handlers) handlers.forEach(h => h.reject(e));
+        });
     }
-  }
 }
 
 async function syncProfileEvent(payload: {
@@ -133,30 +99,29 @@ async function syncProfileEvent(payload: {
 }
 
 export const UsersService = {
-    async getProfileById(userId: string) {
+    async getProfileById(userId: string): Promise<any | null> {
+        if (!userId) return null;
+
+        // 1. Memory Cache
         const hit = profileRowCache.get(userId);
         if (hit && Date.now() - hit.at < PROFILE_ROW_TTL_MS) {
             return hit.row ? { ...hit.row } : null;
         }
 
-        const pending = profileRowInflight.get(userId);
-        if (pending) {
-            const row = await pending;
-            return row ? { ...row } : null;
-        }
+        // 2. Batched Network Request
+        return new Promise((resolve, reject) => {
+            const existing = batchState.promises.get(userId);
+            if (existing) {
+                existing.push({ resolve, reject });
+            } else {
+                batchState.promises.set(userId, [{ resolve, reject }]);
+                batchState.queue.add(userId);
+            }
 
-        const request = fetchProfileRowRaw(userId)
-            .then((row) => {
-                rememberProfileRow(row, userId);
-                return row;
-            })
-            .finally(() => {
-                profileRowInflight.delete(userId);
-            });
-
-        profileRowInflight.set(userId, request);
-        const row = await request;
-        return row ? { ...row } : null;
+            if (!batchState.timer) {
+                batchState.timer = setTimeout(processProfileBatch, 50);
+            }
+        });
     },
 
     async updateProfile(userId: string, data: any) {

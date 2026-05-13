@@ -53,7 +53,6 @@ export default function UserSearch({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [previews, setPreviews] = useState<Record<string, string | null>>({});
 
   const debouncedSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
@@ -84,23 +83,6 @@ export default function UserSearch({
     return () => clearTimeout(timer);
   }, [query, debouncedSearch]);
 
-  useEffect(() => {
-    let mounted = true;
-    const loadPreviews = async () => {
-      for (const user of results) {
-        const fileId = user.profilePicId || user.avatar || null;
-        if (!fileId || previews[user.id] !== undefined) continue;
-        
-        const url = await fetchProfilePreview(fileId);
-        if (mounted) {
-          setPreviews(prev => ({ ...prev, [user.id]: url }));
-        }
-      }
-    };
-    if (results.length > 0) loadPreviews();
-    return () => { mounted = false; };
-  }, [results, previews]);
-
   const handleSelect = (user: User) => {
     onSelect(user);
     setQuery('');
@@ -123,7 +105,7 @@ export default function UserSearch({
               key={user.id}
               avatar={
                 <IdentityAvatar 
-                  src={previews[user.id] || undefined}
+                  fileId={user.profilePicId || user.avatar || null}
                   alt={user.title}
                   fallback={user.title.charAt(0).toUpperCase()}
                   verified={computeIdentityFlags({
@@ -251,7 +233,7 @@ export default function UserSearch({
                 >
                   <ListItemAvatar sx={{ minWidth: 0 }}>
                     <IdentityAvatar
-                      src={previews[user.id] || undefined}
+                      fileId={user.profilePicId || user.avatar || null}
                       alt={user.title}
                       fallback={user.title.charAt(0).toUpperCase()}
                       verified={computeIdentityFlags({

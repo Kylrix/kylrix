@@ -115,8 +115,8 @@ export default function NoteTopbar({
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [liveCallId, setLiveCallId] = useState<string | null>(null);
-  const [requiresMasterpassSetup, setRequiresMasterpassSetup] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<any | null>(null);
+  const { hasMasterpass } = useSudo();
+  const requiresMasterpassSetup = hasMasterpass === false;
   const [personProfileOpen, setPersonProfileOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const desktopPanelRef = useRef<HTMLDivElement | null>(null);
@@ -193,6 +193,7 @@ export default function NoteTopbar({
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
+  const profileAvatarUrl = useCachedProfilePreview(profilePicId, 64, 64);
   const tone = getAppTone(activeApp);
   const accent = getAppColor(activeApp);
   const profileName = user?.name || user?.email || 'Note user';
@@ -206,44 +207,6 @@ export default function NoteTopbar({
     }),
     [profileAvatarUrl, profileName, profilePicId, profileUsername, user],
   );
-
-  const previewManager = useMemo(
-    () =>
-      createProfilePreviewManager(async (fileId, width, height) => {
-        const preview = await getProfilePicturePreview(fileId, width, height);
-        return typeof preview === 'string' ? preview : null;
-      }),
-    [],
-  );
-
-  useEffect(() => {
-    let mounted = true;
-
-    const resolveProfilePreview = async () => {
-      if (!profilePicId) {
-        if (mounted) setProfileAvatarUrl(null);
-        return;
-      }
-
-      const cached = previewManager.getCachedProfilePreview(profilePicId);
-      if (cached !== undefined) {
-        if (mounted) setProfileAvatarUrl(cached ?? null);
-        return;
-      }
-
-      try {
-        const url = await previewManager.fetchProfilePreview(profilePicId, 64, 64);
-        if (mounted) setProfileAvatarUrl(url);
-      } catch {
-        if (mounted) setProfileAvatarUrl(null);
-      }
-    };
-
-    void resolveProfilePreview();
-    return () => {
-      mounted = false;
-    };
-  }, [previewManager, profilePicId]);
 
   useEffect(() => {
     if (!searchOpen) {
@@ -289,27 +252,7 @@ export default function NoteTopbar({
               }))
               .filter((candidate: any) => candidate.userId !== user?.$id)
           : [];
-        const resolved = await Promise.all(
-          rows.slice(0, 5).map(async (candidate: any) => {
-            const rawAvatar = candidate.avatar || null;
-            if (!rawAvatar || isRenderableImageSrc(rawAvatar)) {
-              return candidate;
-            }
-
-            const cachedPreview = previewManager.getCachedProfilePreview(rawAvatar);
-            if (cachedPreview !== undefined) {
-              return { ...candidate, avatar: cachedPreview };
-            }
-
-            try {
-              const preview = await previewManager.fetchProfilePreview(rawAvatar, 40, 40);
-              return { ...candidate, avatar: preview };
-            } catch {
-              return { ...candidate, avatar: null };
-            }
-          }),
-        );
-        if (active) setPeopleResults(resolved);
+        if (active) setPeopleResults(rows);
       } catch (error) {
         if (active) {
           console.warn('[NoteTopbar] People search failed:', error);
@@ -324,7 +267,7 @@ export default function NoteTopbar({
       active = false;
       window.clearTimeout(timer);
     };
-  }, [previewManager, searchOpen, searchQuery, user?.$id]);
+  }, [searchOpen, searchQuery, user?.$id]);
 
   const handleCloseAll = useCallback(() => {
     setSearchOpen(false);
@@ -696,7 +639,7 @@ export default function NoteTopbar({
                         }}
                       >
                         <IdentityAvatar
-                          src={person.avatar || undefined}
+                          fileId={person.avatar || null}
                           alt={person.displayName || person.username || person.name || 'person'}
                           fallback={(person.displayName || person.username || person.name || 'U')[0]?.toUpperCase() || 'U'}
                           size={32}
@@ -1509,7 +1452,7 @@ export default function NoteTopbar({
                         }}
                       >
                         <IdentityAvatar
-                          src={person.avatar || undefined}
+                          fileId={person.avatar || null}
                           alt={person.displayName || person.username || person.name || 'person'}
                           fallback={(person.displayName || person.username || person.name || 'U')[0]?.toUpperCase() || 'U'}
                           size={32}

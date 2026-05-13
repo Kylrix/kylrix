@@ -99,8 +99,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   attemptSilentAuthRef.current = attemptSilentAuth;
 
-  const refreshUser = useCallback(async (): Promise<User | null> => {
+  const lastPathnameRef = useRef<string | null>(null);
+
+  const refreshUser = useCallback(async (forceRefresh = false): Promise<User | null> => {
     try {
+      // 1. Get from cache first (very fast)
       const session = await getCurrentUser(false);
       if (session) {
         setUser(session as any);
@@ -112,17 +115,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           window.history.replaceState({}, '', url.toString());
         }
 
-        const seq = ++sessionVerifySeq.current;
-        void getCurrentUser(true).then((verified) => {
-          if (seq !== sessionVerifySeq.current) return;
-          if (!verified) {
-            setUser(null);
-            clearKylrixPulse();
-            return;
-          }
-          setUser(verified as any);
-          setKylrixPulse(verified);
-        });
+        // 2. Background revalidation only if forced OR if pathname changed
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+        const shouldVerify = forceRefresh || (currentPath !== lastPathnameRef.current);
+        
+        if (shouldVerify) {
+          lastPathnameRef.current = currentPath;
+          const seq = ++sessionVerifySeq.current;
+          void getCurrentUser(true).then((verified) => {
+            if (seq !== sessionVerifySeq.current) return;
+            if (!verified) {
+              setUser(null);
+              clearKylrixPulse();
+              return;
+            }
+            setUser(verified as any);
+            setKylrixPulse(verified);
+          });
+        }
 
         return session as any;
       }
