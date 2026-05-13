@@ -2,6 +2,7 @@ import { ID, Permission, Query, Role, type Models } from 'appwrite';
 
 import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { getNamedListCache } from './list-cache';
 
 export type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
 export type AgentStatus = 'idle' | 'working';
@@ -14,6 +15,8 @@ export interface AgentRecord extends Models.Row {
   status?: string;
 }
 
+const agentsCache = getNamedListCache<AgentRecord[]>('agents', 45000);
+
 function agentPermissions(userId: string) {
   return [
     Permission.read(Role.user(userId)),
@@ -23,14 +26,16 @@ function agentPermissions(userId: string) {
 }
 
 export const AgenticService = {
-  async listMyAgents(userId: string): Promise<AgentRecord[]> {
-    const res = await tablesDB.listRows<AgentRecord>({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-      queries: [Query.equal('ownerId', userId), Query.orderDesc('$updatedAt'), Query.limit(100)],
-    });
+  async listMyAgents(userId: string, force = false): Promise<AgentRecord[]> {
+    return agentsCache.fetch(async () => {
+      const res = await tablesDB.listRows<AgentRecord>({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
+        queries: [Query.equal('ownerId', userId), Query.orderDesc('$updatedAt'), Query.limit(100)],
+      });
 
-    return res.rows ?? [];
+      return res.rows ?? [];
+    }, force);
   },
 
   async createMyAgent(input: {
@@ -40,7 +45,7 @@ export const AgenticService = {
     framework?: AgentFramework;
   }) {
     const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
-    return await tablesDB.createRow(
+    const res = await tablesDB.createRow(
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
       ID.unique(),
@@ -57,6 +62,8 @@ export const AgenticService = {
       },
       agentPermissions(input.userId),
     );
+    agentsCache.invalidate();
+    return res;
   },
 
   async setMyAgentStatus(userId: string, agentId: string, status: AgentStatus) {
@@ -69,11 +76,13 @@ export const AgenticService = {
       throw new Error('Forbidden');
     }
 
-    return await tablesDB.updateRow(
+    const res = await tablesDB.updateRow(
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
       agentId,
       { status },
     );
+    agentsCache.invalidate();
+    return res;
   },
 };
