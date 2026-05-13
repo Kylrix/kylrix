@@ -2,9 +2,13 @@ import { ID, Permission, Query, Role } from 'appwrite';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { createCallMetadata, parseCallMetadata, type KylrixCallScope } from '@/lib/sdk/calls';
+import { getNamedListCache } from './list-cache';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
+
+const historyCache = getNamedListCache<any[]>('call_history', 60000);
+const activeCallsCache = getNamedListCache<any[]>('active_calls', 10000); // 10s for active calls
 
 export const CallService = {
     async getCallLink(id: string) {
@@ -173,45 +177,49 @@ export const CallService = {
         }
     },
 
-    async getCallHistory(userId: string) {
-        try {
-            const res = await tablesDB.listRows({
-                databaseId: DB_ID,
-                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
-                queries: [
-                    Query.or([
-                        Query.equal('userId', userId),
-                        Query.equal('callerId', userId),
-                        Query.equal('receiverId', userId),
-                    ]),
-                    Query.limit(50)
-                ],
-            });
-            return res.rows || [];
-        } catch (_e) {
-            return [];
-        }
+    async getCallHistory(userId: string, force = false) {
+        return historyCache.fetch(async () => {
+            try {
+                const res = await tablesDB.listRows({
+                    databaseId: DB_ID,
+                    tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                    queries: [
+                        Query.or([
+                            Query.equal('userId', userId),
+                            Query.equal('callerId', userId),
+                            Query.equal('receiverId', userId),
+                        ]),
+                        Query.limit(50)
+                    ],
+                });
+                return res.rows || [];
+            } catch (_e) {
+                return [];
+            }
+        }, force);
     },
 
-    async getActiveCalls(userId: string) {
-        try {
-            const res = await tablesDB.listRows({
-                databaseId: DB_ID,
-                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
-                queries: [
-                    Query.or([
-                        Query.equal('userId', userId),
-                        Query.equal('callerId', userId),
-                        Query.equal('receiverId', userId),
-                    ]),
-                    Query.equal('status', 'active'),
-                    Query.limit(50)
-                ],
-            });
-            return res.rows || [];
-        } catch (_e) {
-            return [];
-        }
+    async getActiveCalls(userId: string, force = false) {
+        return activeCallsCache.fetch(async () => {
+            try {
+                const res = await tablesDB.listRows({
+                    databaseId: DB_ID,
+                    tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                    queries: [
+                        Query.or([
+                            Query.equal('userId', userId),
+                            Query.equal('callerId', userId),
+                            Query.equal('receiverId', userId),
+                        ]),
+                        Query.equal('status', 'active'),
+                        Query.limit(50)
+                    ],
+                });
+                return res.rows || [];
+            } catch (_e) {
+                return [];
+            }
+        }, force);
     },
 
     async deleteCallLog(callId: string) {
@@ -221,6 +229,8 @@ export const CallService = {
                 tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
                 rowId: callId,
             });
+            historyCache.invalidate();
+            activeCallsCache.invalidate();
         } catch (_e) {
             return;
         }
@@ -237,6 +247,8 @@ export const CallService = {
                     endedAt: new Date().toISOString(),
                 },
             });
+            activeCallsCache.invalidate();
+            historyCache.invalidate();
         } catch (_e) {
             return;
         }

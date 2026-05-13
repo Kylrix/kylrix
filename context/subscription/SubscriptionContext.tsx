@@ -103,31 +103,18 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
-  const refreshEntitlement = useCallback(async () => {
-    if (authLoading) return;
+  const refreshEntitlement = useCallback(async (force = false) => {
+    if (authLoading || !user?.$id) return;
     setTierLoading(true);
     try {
-      if (!user || (user as { isPulse?: boolean }).isPulse) {
+      if ((user as { isPulse?: boolean }).isPulse) {
         setCurrentTier('FREE');
         return;
       }
-      try {
-        const jwt = await account.createJWT().then((r: { jwt?: string }) => r?.jwt || '').catch(() => '');
-        const result = await verifyProEntitlementAction(jwt || undefined);
-        if (result.authenticated) {
-          setCurrentTier(result.uiTier);
-          return;
-        }
-      } catch {
-        /* fall through — prefs normalization */
-      }
-
-      try {
-        const prefs = await account.getPrefs().catch(() => null);
-        setCurrentTier(normalizeBillingPrefsTier(prefs as Record<string, unknown> | null));
-      } catch {
-        setCurrentTier('FREE');
-      }
+      const ent = await BillingCacheService.getEntitlement(user.$id, force);
+      setCurrentTier(ent.uiTier);
+    } catch (err) {
+      console.warn('[SubscriptionContext] Failed to refresh entitlement:', err);
     } finally {
       setTierLoading(false);
     }
@@ -150,33 +137,52 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [user?.$id, authLoading]);
 
+  const hydrateSubscriptionState = useCallback(async (force = false) => {
+    if (authLoading || !user?.$id) return;
+    setTierLoading(true);
+    setBalanceLoading(true);
+    try {
+      if ((user as { isPulse?: boolean }).isPulse) {
+        setCurrentTier('FREE');
+        setTokenBalance(null);
+        setWallets([]);
+        return;
+      }
+      const [bal, w, ent] = await BillingCacheService.hydrate(user.$id, force);
+      setTokenBalance(bal);
+      setWallets(w);
+      setCurrentTier(ent.uiTier);
+    } catch (err) {
+      console.warn('[SubscriptionContext] Failed to hydrate subscription state:', err);
+    } finally {
+      setTierLoading(false);
+      setBalanceLoading(false);
+    }
+  }, [user, authLoading]);
+
   useEffect(() => {
     void applyRegionPrefs();
   }, [applyRegionPrefs]);
 
   useEffect(() => {
-    void refreshEntitlement();
-  }, [refreshEntitlement]);
-
-  useEffect(() => {
-    void refreshBalances();
-  }, [refreshBalances]);
+    void hydrateSubscriptionState();
+  }, [hydrateSubscriptionState]);
 
   useEffect(() => {
     if (!user?.$id) return;
     const interval = setInterval(() => {
-      void refreshBalances(false); // Passive refresh
-    }, 45000); // 45s refresh loop for tokens/wallets
+      void hydrateSubscriptionState(false); // Passive refresh
+    }, 45000); // 45s refresh loop for tokens/wallets/entitlement
     return () => clearInterval(interval);
-  }, [user?.$id, refreshBalances]);
+  }, [user?.$id, hydrateSubscriptionState]);
 
   useEffect(() => {
     const handler = () => {
-      void refreshBalances(true); // Force refresh on ledger events
+      void hydrateSubscriptionState(true); // Force refresh on ledger events
     };
     window.addEventListener('kylrix:token-event', handler);
     return () => window.removeEventListener('kylrix:token-event', handler);
-  }, [refreshBalances]);
+  }, [hydrateSubscriptionState]);
 
   const value: SubscriptionState = useMemo(
     () => ({

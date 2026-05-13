@@ -1,6 +1,7 @@
 import { ID, Query } from 'appwrite';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
+import { getNamedListCache } from './list-cache';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const CONTACTS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CONTACTS || 'contacts';
@@ -17,11 +18,15 @@ export interface Contact {
     tags: string[];
 }
 
+const contactsCache = getNamedListCache<any>('contacts', 60000); // 1m cache
+
 export const ContactsService = {
-    async getContacts(userId: string) {
-        return await tablesDB.listRows(DB_ID, CONTACTS_TABLE, [
-            Query.equal('userId', userId)
-        ]);
+    async getContacts(userId: string, force = false) {
+        return contactsCache.fetch(async () => {
+            return await tablesDB.listRows(DB_ID, CONTACTS_TABLE, [
+                Query.equal('userId', userId)
+            ]);
+        }, force);
     },
 
     async addContact(userId: string, contactUserId: string, data: Partial<Contact> = {}) {
@@ -35,7 +40,7 @@ export const ContactsService = {
             return existing.rows[0];
         }
 
-        return await tablesDB.createRow(DB_ID, CONTACTS_TABLE, ID.unique(), {
+        const res = await tablesDB.createRow(DB_ID, CONTACTS_TABLE, ID.unique(), {
             userId,
             contactUserId,
             relationship: 'friend',
@@ -44,14 +49,20 @@ export const ContactsService = {
             tags: [],
             ...data
         });
+        contactsCache.invalidate();
+        return res;
     },
 
     async updateContact(contactId: string, data: Partial<Contact>) {
-        return await tablesDB.updateRow(DB_ID, CONTACTS_TABLE, contactId, data);
+        const res = await tablesDB.updateRow(DB_ID, CONTACTS_TABLE, contactId, data);
+        contactsCache.invalidate();
+        return res;
     },
 
     async deleteContact(contactId: string) {
-        return await tablesDB.deleteRow(DB_ID, CONTACTS_TABLE, contactId);
+        const res = await tablesDB.deleteRow(DB_ID, CONTACTS_TABLE, contactId);
+        contactsCache.invalidate();
+        return res;
     },
 
     async blockUser(userId: string, contactUserId: string) {

@@ -1,21 +1,35 @@
 import { KylrixTokenService } from './token';
 import { WalletService, type WalletSummary } from './wallets';
+import { verifyProEntitlementAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { account } from '../appwrite';
+import { normalizeBillingPrefsTier, type BillingUiTier } from '../subscription/tier-resolution';
 
 interface BalanceData {
     amount: string;
     symbol: string;
 }
 
+interface EntitlementData {
+    uiTier: BillingUiTier;
+    active: boolean;
+    expiresAt: string | null;
+}
+
 let balanceCache: { data: BalanceData; expiresAt: number } | null = null;
 let walletsCache: { data: WalletSummary[]; expiresAt: number } | null = null;
+let entitlementCache: { data: EntitlementData; expiresAt: number } | null = null;
+
 let balanceInFlight: Promise<BalanceData> | null = null;
 let walletsInFlight: Promise<WalletSummary[]> | null = null;
+let entitlementInFlight: Promise<EntitlementData> | null = null;
+let hydrationInFlight: Promise<any> | null = null;
 
 const TTL = 30000; // 30s for passive reads
 const DEBOUNCE_MS = 2000; // 2s minimum between forced refreshes
 
 let lastBalanceFetch = 0;
 let lastWalletsFetch = 0;
+let lastEntitlementFetch = 0;
 
 export const BillingCacheService = {
     async getBalance(userId: string, force = false): Promise<BalanceData> {
@@ -69,8 +83,76 @@ export const BillingCacheService = {
         return walletsInFlight;
     },
 
+    async getEntitlement(userId: string, force = false): Promise<EntitlementData> {
+        const now = Date.now();
+        if (!force && entitlementCache && entitlementCache.expiresAt > now) {
+            return entitlementCache.data;
+        }
+
+        if (force && now - lastEntitlementFetch < DEBOUNCE_MS && entitlementCache) {
+            return entitlementCache.data;
+        }
+
+        if (entitlementInFlight) return entitlementInFlight;
+
+        entitlementInFlight = (async () => {
+            try {
+                const jwt = await account.createJWT().then((r: { jwt?: string }) => r?.jwt || '').catch(() => '');
+                const result = await verifyProEntitlementAction(jwt || undefined);
+                if (result.authenticated) {
+                    const data = {
+                        uiTier: result.uiTier as BillingUiTier,
+                        active: result.active,
+                        expiresAt: result.expiresAt,
+                    };
+                    entitlementCache = { data, expiresAt: Date.now() + TTL };
+                    lastEntitlementFetch = Date.now();
+                    return data;
+                }
+            } catch {
+                /* fall through */
+            }
+
+            try {
+                const prefs = await account.getPrefs().catch(() => null);
+                const data = {
+                    uiTier: normalizeBillingPrefsTier(prefs as Record<string, unknown> | null),
+                    active: false,
+                    expiresAt: null,
+                };
+                entitlementCache = { data, expiresAt: Date.now() + TTL };
+                lastEntitlementFetch = Date.now();
+                return data;
+            } catch {
+                const data = { uiTier: 'FREE' as BillingUiTier, active: false, expiresAt: null };
+                entitlementCache = { data, expiresAt: Date.now() + TTL };
+                lastEntitlementFetch = Date.now();
+                return data;
+            }
+        })().finally(() => {
+            entitlementInFlight = null;
+        });
+
+        return entitlementInFlight;
+    },
+
+    async hydrate(userId: string, force = false) {
+        if (hydrationInFlight) return hydrationInFlight;
+
+        hydrationInFlight = Promise.all([
+            this.getBalance(userId, force),
+            this.getWallets(userId, force),
+            this.getEntitlement(userId, force)
+        ]).finally(() => {
+            hydrationInFlight = null;
+        });
+
+        return hydrationInFlight;
+    },
+
     invalidate() {
         balanceCache = null;
         walletsCache = null;
+        entitlementCache = null;
     }
 };
