@@ -34,6 +34,7 @@ import {
 
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useSudo } from '@/context/SudoContext';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { getUserProfilePicId } from '@/lib/utils';
@@ -41,6 +42,7 @@ import { getEcosystemUrl } from '@/constants/ecosystem';
 import { TOPBAR_LAYOUT, getAppTone, type KylrixApp } from '@/lib/sdk/design';
 import { createEcosystemPanelItems, createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtBottom, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
+import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
@@ -113,11 +115,11 @@ export default function NoteTopbar({
   const [searchingPeople, setSearchingPeople] = useState(false);
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [liveCallId, setLiveCallId] = useState<string | null>(null);
   const { hasMasterpass } = useSudo();
-  const requiresMasterpassSetup = hasMasterpass === false;
+  const [requiresMasterpassSetup, setRequiresMasterpassSetup] = useState<boolean>(false);
   const [personProfileOpen, setPersonProfileOpen] = useState(false);
+  const [selectedPerson, setSelectedPerson] = useState<any>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const desktopPanelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
