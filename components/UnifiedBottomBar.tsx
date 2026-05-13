@@ -14,6 +14,7 @@ import {
   Tag as TagsIcon,
   Settings as SettingsIcon,
   Lock as VaultIcon,
+  Shield as ShieldIcon,
   CheckSquare as FlowIcon,
   FileText as FormIcon,
   Zap as EventsIcon,
@@ -163,8 +164,9 @@ export function UnifiedBottomBar() {
         <BottomNavigationAction
           key="totp"
           value="totp"
-          icon={<TagsIcon size={24} strokeWidth={1.5} className="lucide" />}
-        />,
+          icon={<ShieldIcon size={24} strokeWidth={1.5} className="lucide" />}
+        />
+,
         <BottomNavigationAction
           key="settings"
           value="settings"
