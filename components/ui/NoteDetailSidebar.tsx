@@ -150,6 +150,9 @@ export function NoteDetailSidebar({
   const isT4EncryptedPublicNote = !!isPublic && isT4Encrypted;
   const isLegacyPublicNote = !!isPublic && !isT4EncryptedPublicNote;
   
+import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
+
+// ... (inside NoteDetailSidebar)
   // Fetch linked tasks from Kylrix Flow
   useEffect(() => {
     const fetchLinkedTasks = async () => {
@@ -161,8 +164,13 @@ export function NoteDetailSidebar({
 
       setIsLoadingTasks(true);
       try {
-        const res = await listFlowTasks([Query.equal('$id', taskIds)]);
-        setLinkedTasks(res.documents);
+        const resolved = await Promise.all(taskIds.map(id => 
+          getTablesDbRowCached(
+            { databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'tasks', rowId: id },
+            () => listFlowTasks([Query.equal('$id', id)]).then(res => res.documents[0] || null)
+          )
+        ));
+        setLinkedTasks(resolved.filter(Boolean));
       } catch (err: any) {
         console.error('Failed to fetch linked tasks:', err);
       } finally {
@@ -171,7 +179,6 @@ export function NoteDetailSidebar({
     };
 
     fetchLinkedTasks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveNote.$id, (liveNote as any).linkedTaskIds, (liveNote as any).linkedTaskId]);
 
   // Fetch linked events from Kylrix Flow
@@ -185,8 +192,13 @@ export function NoteDetailSidebar({
 
       setIsLoadingEvents(true);
       try {
-        const res = await listFlowEvents([Query.equal('$id', eventIds)]);
-        setLinkedEvents(res.documents);
+        const resolved = await Promise.all(eventIds.map(id => 
+          getTablesDbRowCached(
+            { databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events', rowId: id },
+            () => listFlowEvents([Query.equal('$id', id)]).then(res => res.documents[0] || null)
+          )
+        ));
+        setLinkedEvents(resolved.filter(Boolean));
       } catch (err: any) {
         console.error('Failed to fetch linked events:', err);
       } finally {
@@ -195,7 +207,6 @@ export function NoteDetailSidebar({
     };
 
     fetchLinkedEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveNote.$id, (liveNote as any).linkedEventIds, (liveNote as any).linkedEventId]);
 
   // Fetch linked secrets from Kylrix Vault
@@ -209,8 +220,13 @@ export function NoteDetailSidebar({
 
       setIsLoadingSecrets(true);
       try {
-        const res = await listKeepCredentials([Query.equal('$id', secretIds)]);
-        setLinkedSecrets(res.documents);
+        const resolved = await Promise.all(secretIds.map(id => 
+          getTablesDbRowCached(
+            { databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: 'credentials', rowId: id },
+            () => listKeepCredentials([Query.equal('$id', id)]).then(res => res.documents[0] || null)
+          )
+        ));
+        setLinkedSecrets(resolved.filter(Boolean));
       } catch (err: any) {
         console.error('Failed to fetch linked secrets:', err);
       } finally {
@@ -219,7 +235,6 @@ export function NoteDetailSidebar({
     };
 
     fetchLinkedSecrets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveNote.$id, (liveNote as any).linkedCredentialIds, (liveNote as any).linkedCredentialId]);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const titleContainerRef = useRef<HTMLDivElement>(null);

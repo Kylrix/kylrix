@@ -20,13 +20,15 @@
   Action: keep conversation base/member/message caches warm, reuse prefetched rows, and batch participant/profile hydration.
   *Status*: Completed. Added background participant/sender pre-seeding in `ChatService`. Simplified UI components to use `IdentityAvatar` and shared caches.
 
-- [ ] **Note/social/feed reuse**  
+- [x] **Note/social/feed reuse**  
   Files: `lib/appwrite/note.ts`, `context/NotesContext.tsx`, `lib/services/social.ts`, `lib/moment-preview.ts`, `lib/moment-thread-cache.ts`, `lib/ecosystem/tablesdb-row-cache.ts`, `components/ui/NoteCard.tsx`, `components/ui/NoteDetailSidebar.tsx`, `components/landing/GhostEditor.tsx`, `components/landing/GhostNoteClaimer.tsx`, `app/(app)/note/*`  
   Action: avoid duplicate note row reads when moving from feed to detail and keep attachment/thread caches hot.
+  *Status*: Completed. Leveraged `getTablesDbRowCached` for linked data in `NoteDetailSidebar`. Verified existing cache-seeding in `NotesContext` and `SocialService`.
 
-- [ ] **Flow/task list snapshots**  
+- [x] **Flow/task list snapshots**  
   Files: `lib/services/forms.ts`, `context/TaskContext.tsx`, `lib/kylrixflow.ts`, `lib/services/internal/engagement-views.ts`, `app/(app)/flow/*`  
   Action: use indexed reads only, coalesce refreshes, and snapshot task/event summaries per route.
+  *Status*: Completed. Optimized `TaskContext` with `Query.select` and implemented route-based background revalidation. Coalesced initial and navigation-triggered refreshes.
 
 - [ ] **Wallet/billing state**  
   Files: `lib/services/wallets.ts`, `lib/services/token.ts`, `lib/services/internal/kylrix-token.ts`, `lib/billing/*`, `context/subscription/*`, `lib/subscription/*`, `app/(app)/(auth)/accounts/subscription/*`, `components/WalletManager.tsx`, `components/SendReceiveClient.tsx`  
