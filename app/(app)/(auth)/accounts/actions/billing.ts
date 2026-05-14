@@ -353,7 +353,6 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   };
 }
 
-/** Server-only Pro entitlement check — never infer Pro from the success URL alone. */
 export async function verifyProEntitlementAction(jwt?: string | null) {
   const user = await getAuthenticatedUserForBillingAction({ jwt: jwt ?? undefined });
   if (!user) {
@@ -373,4 +372,78 @@ export async function verifyProEntitlementAction(jwt?: string | null) {
     source: ent.source,
     uiTier: ent.uiTier,
   };
+}
+
+/**
+ * Consolidated hydration for the current session.
+ * Achievement: returns profile, billing, token, and presence in one server trip.
+ */
+export async function hydrateSessionAction(jwt?: string | null) {
+  const user = await getAuthenticatedUserForBillingAction({ jwt: jwt ?? undefined });
+  if (!user) {
+    return {
+      authenticated: false as const,
+      profile: null,
+      billing: null,
+      presence: null,
+    };
+  }
+
+  const { databases } = createAdminClient();
+  const userId = user.$id;
+
+  try {
+    const [profileRes, entitlement, tokenBal, walletsRes, activityRes] = await Promise.all([
+      databases.listDocuments(CHAT_DB_ID, PROFILES_TABLE_ID, [
+        Query.equal('userId', userId),
+        Query.limit(1),
+      ]),
+      getVerifiedProEntitlementForUser(userId),
+      // Use internal service logic for direct server access
+      (async () => {
+          const { InternalKylrixTokenService } = await import('@/lib/services/internal/kylrix-token');
+          return InternalKylrixTokenService.getUserBalance(userId);
+      })(),
+      databases.listDocuments(APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS, [
+        Query.equal('ownerId', `user:${userId}`),
+        Query.equal('type', 'main'),
+        Query.limit(10),
+      ]),
+      databases.listDocuments(CHAT_DB_ID, ACCOUNT_EVENTS_TABLE_ID, [
+        Query.equal('userId', userId),
+        Query.orderDesc('$updatedAt'),
+        Query.limit(1),
+      ])
+    ]);
+
+    return {
+      authenticated: true as const,
+      profile: profileRes.documents[0] || null,
+      billing: {
+        tier: entitlement.uiTier,
+        active: entitlement.active,
+        expiresAt: entitlement.expiresAt,
+        source: entitlement.source,
+        balance: {
+          amount: tokenBal.amount,
+          symbol: tokenBal.symbol,
+        },
+        wallets: walletsRes.documents.map((w) => ({
+          id: w.$id,
+          chain: w.chain,
+          address: w.address,
+          type: w.type,
+        })),
+      },
+      presence: activityRes.documents[0] || null,
+    };
+  } catch (error) {
+    console.error('[hydrateSessionAction] Error:', error);
+    return {
+      authenticated: true as const,
+      profile: null,
+      billing: null,
+      presence: null,
+    };
+  }
 }
