@@ -483,13 +483,17 @@ export default function VaultTopbar({
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
               {!user && (
                 <Tooltip title={loading ? 'Checking account...' : 'Connect'}>
-                  <Button
-                    onClick={() => {
-                      if (loading) return;
-                      const source = typeof window !== 'undefined' ? window.location.href : '/vault';
-                      router.push(`/accounts/login?source=${encodeURIComponent(source)}`);
-                    }}
-                    disabled={loading}
+                  import { useLoginDrawer } from '@/context/LoginDrawerContext';
+                  ...
+                  const { open: openLoginDrawer } = useLoginDrawer();
+                  ...
+                                    <Button
+                                      onClick={() => {
+                                        if (isLoading) return;
+                                        openLoginDrawer();
+                                      }}
+                                      disabled={isLoading}
+
                     sx={{
                       color: '#fff',
                       bgcolor: '#6366F1',

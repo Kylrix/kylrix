@@ -1757,8 +1757,7 @@ export default function NoteTopbar({
                   <Button
                     onClick={() => {
                       if (isLoading) return;
-                      const source = typeof window !== 'undefined' ? window.location.href : '/connect';
-                      router.push(`/accounts/login?source=${encodeURIComponent(source)}`);
+                      openLoginDrawer();
                     }}
                     disabled={isLoading}
                     sx={{
