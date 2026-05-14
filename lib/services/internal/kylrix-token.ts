@@ -199,7 +199,23 @@ async function getRecentUserMintActivityCount(userId: string, windowHours = 24) 
   return rows?.length ?? 0;
 }
 
+async function getUserThermalScore(userId: string): Promise<number> {
+  const recent = await listUserEventsDescending(userId, 5);
+  if (!recent || recent.length === 0) return 0;
+  
+  let thermal = 0;
+  const now = Date.now();
+  for (const evt of recent) {
+    const ageMs = now - new Date(evt.createdAt).getTime();
+    const ageSecs = Math.max(1, ageMs / 1000);
+    // Exponential decay: half-life = ~3600 seconds (1 hour)
+    thermal += Math.exp(-ageSecs / 3600);
+  }
+  return thermal; // 0 = cold, 5 = very hot
+}
+
 async function getTotalUserCount() {
+// ... existing getTotalUserCount code ...
   const { users } = createAdminClient();
   try {
     const response = await users.list([Query.limit(1)]);
@@ -370,10 +386,12 @@ export const InternalKylrixTokenService = {
     const state = await requireOrInitializeStateRow();
     const recentVolume = await getRecentSystemVolume(contract.policy.spikeWindowMinutes);
     const userDailyMinted = await getUserDailyMinted(input.userId);
-    const [recentActivityCount, userBaseCount] = await Promise.all([
+    const [recentActivityCount, userBaseCount, thermalScore] = await Promise.all([
       getRecentUserMintActivityCount(input.userId, 24),
       getTotalUserCount(),
+      getUserThermalScore(input.userId),
     ]);
+    
     const signal: KylrixActivitySignal = {
       activityType: input.activityType,
       uniqueActors: input.uniqueActors,
@@ -382,6 +400,7 @@ export const InternalKylrixTokenService = {
       accountAgeDays: 0,
       recentActivityCount,
       userBaseCount,
+      thermalScore,
     };
 
     const decision = contract.decideMintForActivity(

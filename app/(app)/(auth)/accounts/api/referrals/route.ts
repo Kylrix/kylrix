@@ -204,6 +204,23 @@ export async function POST(req: NextRequest) {
           refereeUserId: user.$id,
         }),
       });
+
+      try {
+        const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+        await runTokenOperationSecure({
+          action: 'mint_activity',
+          userId: referrerProfile.userId || referrerProfile.$id,
+          idempotencyKey: `mint:referral_signup:${user.$id}`,
+          activityType: 'referral_signup',
+          uniqueActors: 1,
+          trustScore: 90,
+          sourceType: 'referral_signup',
+          sourceId: user.$id,
+          metadata: { refereeUserId: user.$id },
+        });
+      } catch (err) {
+        console.warn('[Referrals API] Failed to mint referral reward:', err);
+      }
     }
 
     return NextResponse.json(

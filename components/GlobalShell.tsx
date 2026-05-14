@@ -14,6 +14,7 @@ import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
+import { useAuth } from '@/context/auth/AuthContext';
 
 const DynamicSidebar = dynamic(
   () => import('./ui/DynamicSidebarPanel').then((m) => ({ default: m.DynamicSidebar })),
@@ -47,6 +48,40 @@ function ProUpgradeDrawerMount() {
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  React.useEffect(() => {
+    async function ensureDailyLoginMint() {
+      if (!user?.$id) return;
+      
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const todayKey = today.toISOString();
+      
+      const lastLogin = localStorage.getItem('kylrix_last_login_mint');
+      if (lastLogin === todayKey) return; // Already minted today
+      
+      try {
+        const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+        await runTokenOperationSecure({
+          action: 'mint_activity',
+          userId: user.$id,
+          idempotencyKey: `mint:daily_login:${todayKey}:${user.$id}`,
+          activityType: 'daily_login',
+          uniqueActors: 1,
+          trustScore: 70,
+          sourceType: 'daily_login',
+          sourceId: todayKey,
+        });
+        
+        localStorage.setItem('kylrix_last_login_mint', todayKey);
+      } catch (err) {
+        console.warn('[Token] Daily login mint failed:', err);
+      }
+    }
+    
+    void ensureDailyLoginMint();
+  }, [user?.$id]);
   const isAppRoute = Boolean(
     pathname?.startsWith('/note') ||
     pathname?.startsWith('/vault') ||

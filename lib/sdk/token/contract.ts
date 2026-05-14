@@ -47,6 +47,7 @@ export interface KylrixActivitySignal {
   accountAgeDays: number;
   userBaseCount?: number;
   recentActivityCount?: number;
+  thermalScore?: number;  // NEW: 0 to 5
 }
 
 export interface KylrixEmissionSnapshot {
@@ -178,11 +179,17 @@ export function createKylrixTokenContract(policy: KylrixTokenPolicy = DEFAULT_KY
       return { allowed: false, reason: 'NO_UNIQUE_ACTIVITY', amountMicro: 0n, tightenBps: 0 };
     }
 
-    const uniqueActorBoostBps = Math.min(5000, signal.uniqueActors * 70);
+    const uniqueActorBoostBps = Math.min(8000, signal.uniqueActors * 120); // Slightly increase base boost
     const userBase = Math.max(1, signal.userBaseCount || 1);
-    const networkScaleBps = userBase <= 500 ? 2500 : userBase <= 2_000 ? 1400 : userBase <= 10_000 ? 500 : -1200;
+    const networkScaleBps = 
+      userBase <= 100 ? 4000 :      // Early: +40% bonus (attract first users)
+      userBase <= 500 ? 2500 :      // Growth: +25% bonus
+      userBase <= 5000 ? 1000 :     // Established: +10% bonus
+      userBase <= 50000 ? -500 :    // Scale: -5% reduction
+      -2000;                        // Mature: -20% reduction
+
     const boosted = applyBps(base, Math.max(2000, 10_000 + uniqueActorBoostBps + networkScaleBps));
-    const tightenBps = computeTightenBps(signal);
+    const tightenBps = computeTightenBps(signal, signal.thermalScore || 0);
     let amount = applyBps(boosted, tightenBps);
 
     if (amount <= 0n) {

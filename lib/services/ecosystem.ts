@@ -39,6 +39,25 @@ export const EcosystemService = {
             }
         );
         notesCache.invalidate();
+
+        // T3-4: Note Create Mint
+        try {
+            const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+            await runTokenOperationSecure({
+                action: 'mint_activity',
+                userId,
+                idempotencyKey: `mint:note_create:${res.$id}`,
+                activityType: 'note_create',
+                uniqueActors: 1,
+                trustScore: 75,
+                sourceType: 'note_create',
+                sourceId: res.$id,
+                metadata: { noteTitle: title },
+            });
+        } catch (err) {
+            console.warn('[EcosystemService] Failed to trigger note_create mint:', err);
+        }
+
         return res;
     },
 
