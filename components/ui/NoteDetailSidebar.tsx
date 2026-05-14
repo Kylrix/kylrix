@@ -49,6 +49,7 @@ import { useNotes } from '@/context/NotesContext';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
 import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
 import { updateNote, listFlowTasks, listFlowEvents, listKeepCredentials, Query, toggleNoteVisibility, rotatePublicNoteLink, getShareableUrl, getCurrentPublicNoteShareUrl, getCurrentPublicNoteDecryptionKey, getNotePublicState, decryptPublicEncryptedNote, createTaskFromNote } from '@/lib/appwrite';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { formatFileSize } from '@/lib/utils';
 import {
   PlaylistAddCheck as TaskIcon,
@@ -165,7 +166,7 @@ export function NoteDetailSidebar({
 
       setIsLoadingTasks(true);
       try {
-        const resolved = await Promise.all(linkedTaskIds.map(id => 
+        const resolved = await Promise.all(linkedTaskIds.map((id: string) => 
           getTablesDbRowCached(
             { databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'tasks', rowId: id },
             () => listFlowTasks([Query.equal('$id', id)]).then(res => res.documents[0] || null)
@@ -192,7 +193,7 @@ export function NoteDetailSidebar({
 
       setIsLoadingEvents(true);
       try {
-        const resolved = await Promise.all(linkedEventIds.map(id => 
+        const resolved = await Promise.all(linkedEventIds.map((id: string) => 
           getTablesDbRowCached(
             { databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events', rowId: id },
             () => listFlowEvents([Query.equal('$id', id)]).then(res => res.documents[0] || null)
@@ -219,7 +220,7 @@ export function NoteDetailSidebar({
 
       setIsLoadingSecrets(true);
       try {
-        const resolved = await Promise.all(linkedCredentialIds.map(id => 
+        const resolved = await Promise.all(linkedCredentialIds.map((id: string) => 
           getTablesDbRowCached(
             { databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: 'credentials', rowId: id },
             () => listKeepCredentials([Query.equal('$id', id)]).then(res => res.documents[0] || null)

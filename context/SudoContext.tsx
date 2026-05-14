@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode, useEffect } from 'react';
 import SudoModal from '@/components/overlays/SudoModal';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { usePathname } from 'next/navigation';
