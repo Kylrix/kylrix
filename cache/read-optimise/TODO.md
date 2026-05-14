@@ -41,7 +41,7 @@
   *Status*: Completed. Implemented `SimpleListCache` utility for standardized single-flighting. Applied to `ActivityService` (presence/logs), `ContactsService`, `AgenticService`, `EcosystemService`, and `CallService`.
 
 - [x] **Server bridge consolidation**  
-  Files: `lib/appwrite-server.ts`, `lib/appwrite-admin.ts`, `lib/server/api.ts`, `app/api/*`, `app/(app)/(auth)/accounts/api/*`, `app/api/me/hydrate/route.ts`  
+  Files: `lib/appwrite-server.ts`, `lib/appwrite-admin.ts`, `lib/server/api.ts`, `app/api/*`, `app/(app)/(auth)/accounts/api/*`, `app/(app)/(auth)/accounts/actions/billing.ts`  
   Action: fan out less, return shaped payloads, and hydrate multiple UI widgets from one server response.
-  *Status*: Completed. Created `/api/me/hydrate` consolidated endpoint returning user, profile, billing, and presence state in one response. Integrated into `BillingCacheService.hydrateFromServer` for client-side use.
+  *Status*: Completed. Implemented `hydrateSessionAction` Server Action returning user, profile, billing, and presence state in one response. Integrated into `BillingCacheService.hydrateFromServer` for client-side use. Explicitly avoided new API routes per project mandate.
 

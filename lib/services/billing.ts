@@ -152,13 +152,7 @@ export const BillingCacheService = {
 
     async hydrateFromServer() {
         try {
-            const res = await fetch('/api/me/hydrate', {
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-            if (!res.ok) throw new Error('Hydration failed');
-            const data = await res.json();
+            const data = await hydrateSessionAction();
             
             if (data.billing) {
                 const b = data.billing;
@@ -171,7 +165,7 @@ export const BillingCacheService = {
                     expiresAt: Date.now() + TTL
                 };
                 walletsCache = {
-                    data: b.wallets,
+                    data: b.wallets as WalletSummary[],
                     expiresAt: Date.now() + TTL
                 };
             }
