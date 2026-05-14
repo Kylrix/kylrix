@@ -394,7 +394,7 @@ export async function hydrateSessionAction(jwt?: string | null) {
 
   try {
     const [profileRes, entitlement, tokenBal, walletsRes, activityRes] = await Promise.all([
-      databases.listDocuments(CHAT_DB_ID, PROFILES_TABLE_ID, [
+      databases.listDocuments(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
         Query.equal('userId', userId),
         Query.limit(1),
       ]),
@@ -409,7 +409,7 @@ export async function hydrateSessionAction(jwt?: string | null) {
         Query.equal('type', 'main'),
         Query.limit(10),
       ]),
-      databases.listDocuments(CHAT_DB_ID, ACCOUNT_EVENTS_TABLE_ID, [
+      databases.listDocuments(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, [
         Query.equal('userId', userId),
         Query.orderDesc('$updatedAt'),
         Query.limit(1),
