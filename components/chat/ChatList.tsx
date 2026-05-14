@@ -47,7 +47,7 @@ const GlobalSearchAvatar = ({ u }: { u: any }) => {
     
     return (
         <IdentityAvatar
-            fileId={profilePicId}
+            src={profilePicId}
             alt={u.displayName || u.username || 'user'}
             fallback={(u.displayName || u.username || '?').charAt(0).toUpperCase()}
             size={44}
@@ -785,7 +785,7 @@ export const ChatList = () => {
                                             }}
                                         >
                                             <IdentityAvatar
-                                                fileId={conv.avatarUrl || conv.avatar || null}
+                                                src={conv.avatarUrl || conv.avatar || null}
                                                 alt={conv.name}
                                                 fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U'}
                                                 size={44}

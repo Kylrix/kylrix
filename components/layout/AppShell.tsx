@@ -10,7 +10,8 @@ import {
   Home, 
   Share2, 
   Upload, 
-  Lock 
+  Lock,
+  Shield
 } from 'lucide-react';
 import { 
   Button, 

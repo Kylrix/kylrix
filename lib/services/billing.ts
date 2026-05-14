@@ -1,6 +1,6 @@
 import { KylrixTokenService } from './token';
 import { WalletService, type WalletSummary } from './wallets';
-import { verifyProEntitlementAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { verifyProEntitlementAction, hydrateSessionAction } from '@/app/(app)/(auth)/accounts/actions/billing';
 import { account } from '../appwrite';
 import { normalizeBillingPrefsTier, type BillingUiTier } from '../subscription/tier-resolution';
 
