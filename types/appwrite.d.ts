@@ -656,6 +656,15 @@ export type KylrixTokenLedger = Models.Row & {
     updatedAt: string | null;
 }
 
+export type KylrixSignals = Models.Row & {
+    userId: string;
+    dailyMintedMicro: string | null;
+    lastMintAt: string | null;
+    thermalScore: number | null;
+    riskLevel: string;
+    updatedAt: string;
+}
+
 export type EngagementViews = Models.Row & {
     rowType: string;
     eventId: string;

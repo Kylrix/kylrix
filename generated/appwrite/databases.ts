@@ -67,6 +67,7 @@ tableIdMap["chat"]["Message Reactions"] = "messageReactions";
 tableIdMap["chat"]["Join Requests"] = "joinRequests";
 tableIdMap["chat"]["Unorganic Emails"] = "unorganic_emails";
 tableIdMap["chat"]["kylrix_token_ledger"] = "kylrix_token_ledger";
+tableIdMap["chat"]["kylrix_signals"] = "kylrix_signals";
 tableIdMap["chat"]["engagement_views"] = "engagement_views";
 tableIdMap["chat"]["engagement_view_rollups"] = "engagement_view_rollups";
 tableIdMap["whisperrflow"] = Object.create(null);

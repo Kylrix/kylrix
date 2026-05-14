@@ -10,10 +10,18 @@ export type KylrixTokenEventType =
 
 export type KylrixActivityType =
   | 'note_view'
+  | 'note_create'
   | 'share_public_note_moment'
   | 'chat_message'
-  | 'call_participation'
-  | 'comment'
+  | 'call_initiate'
+  | 'call_participate'
+  | 'comment_add'
+  | 'group_chat_create'
+  | 'first_reply_to_stranger'
+  | 'referral_signup'
+  | 'referral_engagement_30d'
+  | 'content_featured'
+  | 'daily_login'
   | 'moderation';
 
 export interface KylrixTokenPolicy {
@@ -71,12 +79,20 @@ export const DEFAULT_KYLRIX_TOKEN_POLICY: KylrixTokenPolicy = {
 };
 
 const ACTIVITY_BASE_REWARD_MICRO: Record<KylrixActivityType, bigint> = {
-  note_view: 25_000n, // 0.025
-  share_public_note_moment: 650_000n, // 0.65
-  chat_message: 15_000n, // 0.015
-  call_participation: 70_000n, // 0.07
-  comment: 20_000n, // 0.02
-  moderation: 120_000n, // 0.12
+  daily_login: 50_000n,          // 0.05
+  note_view: 25_000n,            // 0.025
+  note_create: 80_000n,          // 0.08
+  share_public_note_moment: 650_000n,  // 0.65
+  chat_message: 40_000n,         // 0.04
+  call_initiate: 200_000n,       // 0.2
+  call_participate: 150_000n,    // 0.15
+  comment_add: 35_000n,          // 0.035
+  group_chat_create: 120_000n,   // 0.12
+  first_reply_to_stranger: 100_000n,   // 0.1
+  referral_signup: 1_500_000n,   // 1.5
+  referral_engagement_30d: 500_000n,   // 0.5
+  content_featured: 300_000n,    // 0.3
+  moderation: 120_000n,          // 0.12
 };
 
 const clampBps = (bps: number) => {
@@ -88,6 +104,21 @@ const applyBps = (value: bigint, bps: number) => (value * BigInt(clampBps(bps)))
 
 export function createKylrixTokenContract(policy: KylrixTokenPolicy = DEFAULT_KYLRIX_TOKEN_POLICY) {
   const normalizeMicro = (value: bigint) => (value < 0n ? 0n : value);
+
+  const computeThermalScore = (recentEvents: any[]): number => {
+    // recentEvents = last 5 mints for the user
+    if (!recentEvents || recentEvents.length === 0) return 0;
+    
+    let thermal = 0;
+    const now = Date.now();
+    for (const evt of recentEvents) {
+      const ageMs = now - new Date(evt.createdAt).getTime();
+      const ageSecs = Math.max(1, ageMs / 1000);
+      // Exponential decay: e^(-t/3600) means 37% remaining after 1h
+      thermal += Math.exp(-ageSecs / 3600);
+    }
+    return thermal; // 0 = cold, 5 = very hot
+  };
 
   const circulatingMicro = (snapshot: KylrixEmissionSnapshot) =>
     normalizeMicro(snapshot.mintedMicro - snapshot.burnedMicro);
@@ -115,12 +146,22 @@ export function createKylrixTokenContract(policy: KylrixTokenPolicy = DEFAULT_KY
     return budget - used;
   };
 
-  const computeTightenBps = (signal: KylrixActivitySignal) => {
+  const computeTightenBps = (signal: KylrixActivitySignal, thermal: number) => {
     const spikePenalty = Math.min(policy.spikeTightenBps, Math.max(0, signal.recentSpikeFactorBps));
     const lowTrustPenalty = signal.trustScore < policy.reputationFloor ? 1500 : 0;
     const repeatPenalty = Math.min(5500, Math.max(0, (signal.recentActivityCount || 0) * 900));
+    const thermalPenalty = Math.min(7000, Math.floor(thermal * 1500)); // New: -70% max if hot
     const ageBoost = signal.accountAgeDays >= 60 ? 800 : signal.accountAgeDays >= 14 ? 300 : 0;
-    const tighten = clampBps(10_000 - spikePenalty - lowTrustPenalty - repeatPenalty + ageBoost);
+    
+    // Activity-specific penalties for low-friction activities (prevent spam)
+    const activityPenalty = (
+      signal.activityType === 'chat_message' ? 800 :
+      signal.activityType === 'note_view' ? 600 :
+      signal.activityType === 'daily_login' ? 200 :
+      0
+    );
+    
+    const tighten = clampBps(10_000 - spikePenalty - lowTrustPenalty - repeatPenalty - thermalPenalty - activityPenalty + ageBoost);
     return tighten;
   };
 

@@ -1,5 +1,3 @@
-// Appwrite codegen: tolerate strict indexing in TablesDB helpers until CLI output matches TS.
-// @ts-nocheck
 import { type Models } from 'appwrite';
 
 export enum NotesStatus {
@@ -1189,6 +1187,24 @@ export type KylrixTokenLedger = Models.Row & {
     "updatedAt"?: string | null;
 }
 
+export type KylrixSignalsCreate = {
+    "userId": string;
+    "dailyMintedMicro"?: string | null;
+    "lastMintAt"?: string | null;
+    "thermalScore"?: number | null;
+    "riskLevel"?: string;
+    "updatedAt": string;
+}
+
+export type KylrixSignals = Models.Row & {
+    "userId": string;
+    "dailyMintedMicro"?: string | null;
+    "lastMintAt"?: string | null;
+    "thermalScore"?: number | null;
+    "riskLevel"?: string;
+    "updatedAt": string;
+}
+
 export type EngagementViewsCreate = {
     "rowType": string;
     "eventId": string;
@@ -2362,6 +2378,27 @@ export type DatabaseTableMap = {
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<KylrixTokenLedger>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; notEqual: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; lessThan: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; lessThanEqual: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; greaterThan: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; greaterThanEqual: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; contains: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: ExtractQueryValue<KylrixTokenLedger[K]>) => string; search: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<KylrixTokenLedger>>(field: K) => string; isNotNull: <K extends QueryableKeys<KylrixTokenLedger>>(field: K) => string; startsWith: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, value: string) => string; between: <K extends QueryableKeys<KylrixTokenLedger>>(field: K, start: ExtractQueryValue<KylrixTokenLedger[K]>, end: ExtractQueryValue<KylrixTokenLedger[K]>) => string; select: <K extends keyof KylrixTokenLedger>(fields: K[]) => string; orderAsc: <K extends keyof KylrixTokenLedger>(field: K) => string; orderDesc: <K extends keyof KylrixTokenLedger>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: KylrixTokenLedger[] }>;
+    };
+    "kylrix_signals": {
+      create: (data: {
+        "userId": string;
+        "dailyMintedMicro"?: string | null;
+        "lastMintAt"?: string | null;
+        "thermalScore"?: number | null;
+        "riskLevel"?: string;
+        "updatedAt": string;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<KylrixSignals>;
+      get: (id: string) => Promise<KylrixSignals>;
+      update: (id: string, data: Partial<{
+        "userId": string;
+        "dailyMintedMicro"?: string | null;
+        "lastMintAt"?: string | null;
+        "thermalScore"?: number | null;
+        "riskLevel"?: string;
+        "updatedAt": string;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<KylrixSignals>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<KylrixSignals>>(field: K, value: ExtractQueryValue<KylrixSignals[K]>) => string; notEqual: <K extends QueryableKeys<KylrixSignals>>(field: K, value: ExtractQueryValue<KylrixSignals[K]>) => string; lessThan: <K extends QueryableKeys<KylrixSignals>>(field: K, value: ExtractQueryValue<KylrixSignals[K]>) => string; lessThanEqual: <K extends QueryableKeys<KylrixSignals>>(field: K, value: ExtractQueryValue<KylrixSignals[K]>) => string; greaterThan: <K extends QueryableKeys<KylrixSignals>>(field: K, value: ExtractQueryValue<KylrixSignals[K]>) => string; greaterThanEqual: <K extends QueryableKeys<KylrixSignals>>(field: K, value: ExtractQueryValue<KylrixSignals[K]>) => string; contains: <K extends QueryableKeys<KylrixSignals>>(field: K, value: ExtractQueryValue<KylrixSignals[K]>) => string; search: <K extends QueryableKeys<KylrixSignals>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<KylrixSignals>>(field: K) => string; isNotNull: <K extends QueryableKeys<KylrixSignals>>(field: K) => string; startsWith: <K extends QueryableKeys<KylrixSignals>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<KylrixSignals>>(field: K, value: string) => string; between: <K extends QueryableKeys<KylrixSignals>>(field: K, start: ExtractQueryValue<KylrixSignals[K]>, end: ExtractQueryValue<KylrixSignals[K]>) => string; select: <K extends keyof KylrixSignals>(fields: K[]) => string; orderAsc: <K extends keyof KylrixSignals>(field: K) => string; orderDesc: <K extends keyof KylrixSignals>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: KylrixSignals[] }>;
     };
     "engagement_views": {
       create: (data: {
