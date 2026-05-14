@@ -32,6 +32,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import LockIcon from '@mui/icons-material/LockOutlined';
 import ArrowLeftIcon from '@mui/icons-material/ArrowBack';
 import { fetchProfilePreview } from '@/lib/profile-preview';
+import { IdentityAvatar } from '../IdentityBadge';
 import { seedIdentityCache, getCachedIdentityById  } from '@/lib/identity-cache';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';

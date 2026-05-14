@@ -99,7 +99,7 @@ export function SudoProvider({ children }: { children: ReactNode }) {
         if (user?.$id) {
             ecosystemSecurity.fetchSecuritySnapshot(user.$id, true);
         }
-    }, [pendingAction, sudoPromise, user?.$id]);
+    }, [pendingAction, sudoPromise, user]);
 
     const handleCancel = useCallback(() => {
         setIsSudoOpen(false);

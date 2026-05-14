@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { ID, Query } from 'appwrite';
 import { tasks as taskApi, calendars as calendarApi, taskCollaborators, subscribeToTable, buildTaskPermissions } from '@/lib/kylrixflow';
 import { getCurrentUser } from '@/lib/appwrite/client';
@@ -588,17 +589,17 @@ async function syncTaskAccess(taskId: string, creatorId: string, assigneeIds: st
   return collaboratorRows;
 }
 
-import { usePathname } from 'next/navigation';
-
-// ... (inside TaskProvider)
+export function TaskProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(taskReducer, initialState);
   const { fetchOptimized, invalidate, getCachedData, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const flowWarmOwnerRef = useRef<string | null>(null);
+
+  const invalidateTasksNexus = useCallback((uid: string) => invalidate(`f_tasks_${uid}`), [invalidate]);
+  const invalidateCalendarsNexus = useCallback((uid: string) => invalidate(`f_calendars_${uid}`), [invalidate]);
+
   const pathname = usePathname();
   const lastPathnameRef = useRef<string | null>(null);
-
-  // ... (existing invalidation helpers)
 
   const fetchBatch = useCallback(async (uid: string, force = false) => {
     const FLOW_WARM_TTL = 1000 * 60 * 30;
@@ -668,7 +669,7 @@ import { usePathname } from 'next/navigation';
         return true;
       }, 10000); // 10s cooldown for route-based refreshes
     }
-  }, [pathname, state.userId, isAuthLoading, fetchBatch]);
+  }, [pathname, state.userId, isAuthLoading, fetchBatch, refreshInBackground]);
   // Realtime Subscriptions
   useEffect(() => {
     if (!state.userId) return;

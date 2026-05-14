@@ -47,6 +47,7 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useNotes } from '@/context/NotesContext';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
+import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
 import { updateNote, listFlowTasks, listFlowEvents, listKeepCredentials, Query, toggleNoteVisibility, rotatePublicNoteLink, getShareableUrl, getCurrentPublicNoteShareUrl, getCurrentPublicNoteDecryptionKey, getNotePublicState, decryptPublicEncryptedNote, createTaskFromNote } from '@/lib/appwrite';
 import { formatFileSize } from '@/lib/utils';
 import {
@@ -150,21 +151,21 @@ export function NoteDetailSidebar({
   const isT4EncryptedPublicNote = !!isPublic && isT4Encrypted;
   const isLegacyPublicNote = !!isPublic && !isT4EncryptedPublicNote;
   
-import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
+  const linkedTaskIds = useMemo(() => (liveNote as any).linkedTaskIds || ((liveNote as any).linkedTaskId ? [(liveNote as any).linkedTaskId] : []), [liveNote]);
+  const linkedEventIds = useMemo(() => (liveNote as any).linkedEventIds || ((liveNote as any).linkedEventId ? [(liveNote as any).linkedEventId] : []), [liveNote]);
+  const linkedCredentialIds = useMemo(() => (liveNote as any).linkedCredentialIds || ((liveNote as any).linkedCredentialId ? [(liveNote as any).linkedCredentialId] : []), [liveNote]);
 
-// ... (inside NoteDetailSidebar)
   // Fetch linked tasks from Kylrix Flow
   useEffect(() => {
     const fetchLinkedTasks = async () => {
-      const taskIds = (liveNote as any).linkedTaskIds || ((liveNote as any).linkedTaskId ? [(liveNote as any).linkedTaskId] : []);
-      if (!taskIds || taskIds.length === 0) {
+      if (!linkedTaskIds || linkedTaskIds.length === 0) {
         setLinkedTasks([]);
         return;
       }
 
       setIsLoadingTasks(true);
       try {
-        const resolved = await Promise.all(taskIds.map(id => 
+        const resolved = await Promise.all(linkedTaskIds.map(id => 
           getTablesDbRowCached(
             { databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'tasks', rowId: id },
             () => listFlowTasks([Query.equal('$id', id)]).then(res => res.documents[0] || null)
@@ -179,20 +180,19 @@ import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
     };
 
     fetchLinkedTasks();
-  }, [liveNote.$id, (liveNote as any).linkedTaskIds, (liveNote as any).linkedTaskId]);
+  }, [linkedTaskIds]);
 
   // Fetch linked events from Kylrix Flow
   useEffect(() => {
     const fetchLinkedEvents = async () => {
-      const eventIds = (liveNote as any).linkedEventIds || ((liveNote as any).linkedEventId ? [(liveNote as any).linkedEventId] : []);
-      if (!eventIds || eventIds.length === 0) {
+      if (!linkedEventIds || linkedEventIds.length === 0) {
         setLinkedEvents([]);
         return;
       }
 
       setIsLoadingEvents(true);
       try {
-        const resolved = await Promise.all(eventIds.map(id => 
+        const resolved = await Promise.all(linkedEventIds.map(id => 
           getTablesDbRowCached(
             { databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events', rowId: id },
             () => listFlowEvents([Query.equal('$id', id)]).then(res => res.documents[0] || null)
@@ -207,20 +207,19 @@ import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
     };
 
     fetchLinkedEvents();
-  }, [liveNote.$id, (liveNote as any).linkedEventIds, (liveNote as any).linkedEventId]);
+  }, [linkedEventIds]);
 
   // Fetch linked secrets from Kylrix Vault
   useEffect(() => {
     const fetchLinkedSecrets = async () => {
-      const secretIds = (liveNote as any).linkedCredentialIds || ((liveNote as any).linkedCredentialId ? [(liveNote as any).linkedCredentialId] : []);
-      if (!secretIds || secretIds.length === 0) {
+      if (!linkedCredentialIds || linkedCredentialIds.length === 0) {
         setLinkedSecrets([]);
         return;
       }
 
       setIsLoadingSecrets(true);
       try {
-        const resolved = await Promise.all(secretIds.map(id => 
+        const resolved = await Promise.all(linkedCredentialIds.map(id => 
           getTablesDbRowCached(
             { databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: 'credentials', rowId: id },
             () => listKeepCredentials([Query.equal('$id', id)]).then(res => res.documents[0] || null)
@@ -235,7 +234,7 @@ import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
     };
 
     fetchLinkedSecrets();
-  }, [liveNote.$id, (liveNote as any).linkedCredentialIds, (liveNote as any).linkedCredentialId]);
+  }, [linkedCredentialIds]);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);

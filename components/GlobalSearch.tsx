@@ -40,7 +40,7 @@ function SearchResultAvatar({ result }: { result: SearchResult }) {
     let mounted = true;
     const load = async () => {
       try {
-        const { fetchProfilePreview } = await import('@/lib/profilePreview');
+        const { fetchProfilePreview } = await import('@/lib/profile-preview');
         const previewUrl = await fetchProfilePreview(result.profilePicId, 48, 48);
         if (mounted) setUrl(previewUrl);
       } catch (err: any) {

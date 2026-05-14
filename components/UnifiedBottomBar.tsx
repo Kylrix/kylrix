@@ -14,7 +14,7 @@ import {
   Tag as TagsIcon,
   Settings as SettingsIcon,
   Lock as VaultIcon,
-  Shield as ShieldIcon,
+  Shield as TotpIcon,
   CheckSquare as FlowIcon,
   FileText as FormIcon,
   Zap as EventsIcon,
