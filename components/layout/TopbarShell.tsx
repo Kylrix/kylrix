@@ -3,11 +3,13 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useLoginDrawer } from '@/context/LoginDrawerContext';
 import Topbar from '../Topbar';
 
 export default function TopbarShell() {
   const router = useRouter();
   const { user, isLoading, logout } = useAuth();
+  const { open: openLoginDrawer } = useLoginDrawer();
 
   return (
     <Topbar
@@ -28,8 +30,7 @@ export default function TopbarShell() {
       }}
       authLoading={isLoading}
       onConnect={() => {
-        const source = typeof window !== 'undefined' ? window.location.href : '/accounts';
-        router.push(`/accounts/login?source=${encodeURIComponent(source)}`);
+        openLoginDrawer();
       }}
     />
   );

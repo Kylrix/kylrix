@@ -26,6 +26,7 @@ import { alpha } from '@mui/material/styles';
 import { useState, useEffect } from 'react';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { useAI } from '@/context/AIContext';
+import { useLoginDrawer } from '@/context/LoginDrawerContext';
 import { usePathname, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import EcosystemPortal from '../common/EcosystemPortal';
@@ -43,6 +44,7 @@ const PasswordGenerator = dynamic(() => import("@/components/ui/PasswordGenerato
 export function Navbar() {
   const router = useRouter();
   const { user, logout } = useAppwriteVault();
+  const { open: openLoginDrawer } = useLoginDrawer();
   const { openAIModal } = useAI();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isEcosystemPortalOpen, setIsEcosystemPortalOpen] = useState(false);
@@ -232,9 +234,7 @@ export function Navbar() {
             <Button
               variant="contained"
               size="small"
-              onClick={() => {
-                router.push(`/accounts/login?source=${encodeURIComponent(window.location.origin)}`);
-              }}
+              onClick={() => openLoginDrawer()}
               sx={{ 
                 bgcolor: '#6366F1',
                 color: '#000',
