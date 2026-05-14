@@ -66,21 +66,23 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       if (lastLogin === todayKey) return; // Already minted today
       
       try {
-        const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
-        await runTokenOperationSecure({
-          action: 'mint_activity',
-          userId: user.$id,
-          idempotencyKey: `mint:daily_login:${todayKey}:${user.$id}`,
-          activityType: 'daily_login',
-          uniqueActors: 1,
-          trustScore: 70,
-          sourceType: 'daily_login',
-          sourceId: todayKey,
+        const { TaskDelegator } = await import('@/lib/services/internal/task-delegator');
+        TaskDelegator.defer(async () => {
+          const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+          await runTokenOperationSecure({
+            action: 'mint_activity',
+            userId: user.$id,
+            idempotencyKey: `mint:daily_login:${todayKey}:${user.$id}`,
+            activityType: 'daily_login',
+            uniqueActors: 1,
+            trustScore: 70,
+            sourceType: 'daily_login',
+            sourceId: todayKey,
+          });
+          localStorage.setItem('kylrix_last_login_mint', todayKey);
         });
-        
-        localStorage.setItem('kylrix_last_login_mint', todayKey);
       } catch (err) {
-        console.warn('[Token] Daily login mint failed:', err);
+        console.warn('[Token] Daily login mint deferred task failed:', err);
       }
     }
     

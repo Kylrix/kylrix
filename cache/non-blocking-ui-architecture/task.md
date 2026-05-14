@@ -1,18 +1,21 @@
-Task: Architect a non-blocking UI/task framework for the app.
+# Non-Blocking UI Framework Plan
 
-Problem:
-- The UI has blocking hotspots, especially in the topbar and several subapps like note, flow, connect, and vault.
-- Some components and background-style work appear to run on the main interaction path and freeze or hang pages.
+## 1. Objective
+Establish a non-blocking execution environment for secondary application tasks, ensuring the main UI thread remains responsive for user interactions.
 
-Goal:
-- Define a superior non-blocking architecture that keeps current and future background tasks isolated, reliable, and safe to plug into.
-- Preserve the codebase shape while reducing UI freezes and click starvation.
+## 2. Identified Hotspots
+- **App Startup/GlobalShell:** Authentication checks, user profile hydration, presence reconciliation, and daily token minting logic.
+- **Note/Sidebar Interaction:** Expensive note hydration, credential linking (Flow/Vault), and event-log reconciliation.
+- **Topbars/Navigation:** Frequent network polling (session status, ecosystem signals) and complex menu animations triggered by state changes.
 
-Scope:
-- Audit the codebase for current task, process, and topbar interaction patterns.
-- Identify where work should move off the critical UI path into safer background execution.
-- Produce a framework-level task plan for delegation, scheduling, and lifecycle handling.
+## 3. The Pattern: `TaskExecutor`
+Create a central execution bridge that delegates tasks away from the main thread using:
+- **`requestIdleCallback` (for low-priority UI tasks):** Defer non-critical hydration (e.g., fetching historical activity or auxiliary profile data).
+- **Web Workers (for heavy computation):** Move parsing, encryption/decryption, and complex state reconciliation to a background thread.
+- **Delegated Promises (for network sequencing):** Ensure initial page load sequence doesn't chain blocking dependencies (e.g., Auth -> Profile -> Billing).
 
-Notes:
-- This is a cache task only; do not change implementation files here.
-- Prefer approaches that fit the existing Next.js/Node.js stack and do not introduce new attack surface.
+## 4. Migration Plan
+1. **Delegation Layer:** Create `lib/services/internal/task-delegator.ts`.
+2. **Hook Migration:** Refactor key `useEffect` hooks in `GlobalShell.tsx` and `TaskContext.tsx` to use the `TaskExecutor`.
+3. **Sequence Optimization:** Separate critical path UI updates from auxiliary background tasks (e.g., analytics, remote logging, non-visible widget data fetching).
+4. **Safety Enforcement:** Use `React.startTransition` for UI-intensive state changes that cannot be fully offloaded.
