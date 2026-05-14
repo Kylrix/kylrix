@@ -347,6 +347,63 @@ const isViewerTokenValid = (token: string) => {
   return signViewerToken(payload) === parts[2];
 };
 
+async function checkActivityRateLimit(userId: string, activityType: string): Promise<boolean> {
+  const key = `activity_limit:${userId}:${activityType}`;
+  // NOTE: Simple in-memory rate limiting.
+  const tracker = (global as any).activityRateLimits || ((global as any).activityRateLimits = {});
+  
+  const now = Date.now();
+  if (!tracker[key] || tracker[key].resetAt < now) {
+    tracker[key] = { count: 0, resetAt: now + 3600_000 }; // 1h window
+  }
+  
+  const maxPerHour: Record<string, number> = {
+    'chat_message': 100,
+    'note_create': 10,
+    'call_participate': 5,
+    'comment_add': 50,
+    'daily_login': 2,
+    'referral_signup': 100,
+  };
+  
+  const limit = maxPerHour[activityType] || 50;
+  if (tracker[key].count >= limit) return false;
+  
+  tracker[key].count++;
+  return true;
+}
+
+async function validateReferralMint(referrerId: string, newUserId: string): Promise<{ valid: boolean; reason?: string }> {
+  // Check: Referrer monthly limit
+  const lastMonth = new Date(Date.now() - 30 * 86400_000).toISOString();
+  const { databases } = createAdminClient();
+  const { documents: recent } = await databases.listDocuments(
+    APPWRITE_CONFIG.DATABASES.CHAT, 
+    APPWRITE_CONFIG.TABLES.CHAT.KYLRIX_TOKEN_LEDGER, 
+    [
+      Query.equal('userId', referrerId),
+      Query.equal('eventType', 'mint_activity'),
+      Query.equal('sourceType', 'referral_signup'),
+      Query.greaterThanEqual('createdAt', lastMonth),
+      Query.limit(101),
+    ]
+  );
+  
+  if (recent.length >= 100) return { valid: false, reason: 'REFERRER_MONTHLY_LIMIT_REACHED' };
+  
+  // Check: New user account age > 10 min
+  const { users } = createAdminClient();
+  const newUser = await users.get(newUserId).catch(() => null);
+  if (!newUser) return { valid: false, reason: 'NEW_USER_NOT_FOUND' };
+  
+  const accountAgeSecs = (Date.now() - new Date(newUser.$createdAt).getTime()) / 1000;
+  if (accountAgeSecs < 600) return { valid: false, reason: 'NEW_ACCOUNT_TOO_YOUNG' };
+  
+  return { valid: true };
+}
+
+import { KylrixActivityType, KylrixActivitySignal } from '@/lib/sdk/token/contract';
+
 export async function trackEngagementViewSecure(input: Omit<TrackEngagementInput, 'viewerKind' | 'viewerUserId' | 'viewerTokenHash'> & { ip?: string | null; userAgent?: string | null }) {
   const actor = await getActor();
   const store = await cookies();
