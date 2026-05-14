@@ -37,6 +37,8 @@ import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import { useLoginDrawer } from '@/context/LoginDrawerContext';
+import { useAuth } from '@/context/auth/AuthContext';
 
 interface VaultTopbarProps {
   className?: string;
@@ -52,6 +54,7 @@ export default function VaultTopbar({
 }: VaultTopbarProps) {
   const { user, loading, logout } = useAppwriteVault();
   const { openAgenticDrawer } = useAgenticDrawer();
+  const { open: openLoginDrawer } = useLoginDrawer();
   const router = useRouter();
   const { requestSudo } = useSudo();
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -483,16 +486,12 @@ export default function VaultTopbar({
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
               {!user && (
                 <Tooltip title={loading ? 'Checking account...' : 'Connect'}>
-                  import { useLoginDrawer } from '@/context/LoginDrawerContext';
-                  ...
-                  const { open: openLoginDrawer } = useLoginDrawer();
-                  ...
                                     <Button
                                       onClick={() => {
-                                        if (isLoading) return;
+                                        if (loading) return;
                                         openLoginDrawer();
                                       }}
-                                      disabled={isLoading}
+                                      disabled={loading}
 
                     sx={{
                       color: '#fff',
