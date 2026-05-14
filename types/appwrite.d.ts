@@ -665,6 +665,24 @@ export type KylrixSignals = Models.Row & {
     updatedAt: string;
 }
 
+export type AccountLedger = Models.Row & {
+    userId: string;
+    attentionBalance: number | null;
+    successTaxRate: number | null;
+    reputationScore: number | null;
+    lastPeakVelocity: number | null;
+    thermalCacheScore: number | null;
+    thermalCacheAt: number | null;
+    updatedAt: string | null;
+}
+
+export type SystemPulse = Models.Row & {
+    metricKey: string;
+    metricValue: number;
+    sampleCount: number;
+    updatedAt: number;
+}
+
 export type EngagementViews = Models.Row & {
     rowType: string;
     eventId: string;
