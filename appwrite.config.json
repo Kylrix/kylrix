@@ -5817,6 +5817,180 @@
             ]
         },
         {
+            "$id": "account_ledger",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "account_ledger",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "attentionBalance",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "successTaxRate",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "reputationScore",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "lastPeakVelocity",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "thermalCacheScore",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "thermalCacheAt",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_ledger_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_ledger_updated",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "updatedAt"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "uniq_ledger_user",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "system_pulse",
+            "$permissions": [
+                "read(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "system_pulse",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "metricKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metricValue",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "sampleCount",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_pulse_key",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "metricKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "uniq_pulse_key",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "metricKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "engagement_views",
             "$permissions": [
                 "create(\"users\")"
