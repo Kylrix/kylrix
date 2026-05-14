@@ -107,7 +107,7 @@ export const DiscoverabilitySettings = () => {
         }
         (async () => {
             try {
-                const { fetchProfilePreview } = await import('@/lib/profilePreview');
+                const { fetchProfilePreview } = await import('@/lib/profile-preview');
                 const url = await fetchProfilePreview(id, 96, 96);
                 if (!cancelled) setPreviewUrl(url);
             } catch {

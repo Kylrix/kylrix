@@ -16,6 +16,59 @@ const batchState = {
     promises: new Map<string, Array<{ resolve: (v: any) => void; reject: (e: any) => void }>>(),
 };
 
+function normalizeUsernameSuggestion(input: string | null | undefined): string | null {
+    if (!input) return null;
+    const cleaned = input
+        .toString()
+        .trim()
+        .replace(/^@+/, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '');
+    return cleaned || null;
+}
+
+function deriveUsernameCandidates(user: { $id: string; email?: string; name?: string }): string[] {
+    const nameParts = user.name ? user.name.trim().split(/\s+/).filter(Boolean) : [];
+    const firstName = nameParts[0] || '';
+    const surname = nameParts[1] || '';
+    const emailPrefix = user.email ? user.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') : '';
+    const raw = [
+        normalizeUsernameSuggestion(firstName),
+        normalizeUsernameSuggestion(surname),
+        normalizeUsernameSuggestion(emailPrefix),
+        normalizeUsernameSuggestion(`u${user.$id.slice(0, 12)}`),
+    ].filter(Boolean) as string[];
+    return Array.from(new Set(raw));
+}
+
+function fallbackUsernameFromUser(userId: string, email?: string | null): string {
+    const ep = email ? normalizeUsernameSuggestion(email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '')) : null;
+    if (ep && ep.length >= 3) return ep;
+    const fb = normalizeUsernameSuggestion(`u${userId.slice(0, 12)}`);
+    return fb && fb.length >= 3 ? fb : `u${userId.slice(0, 12)}`;
+}
+
+/** Normalized @handle ideas for onboarding (deduped). Mirrors legacy Discoverability username rules. */
+export function buildUsernameHandleSuggestions(user: {
+    $id: string;
+    email?: string | null;
+    name?: string | null;
+}): string[] {
+    const candidates = deriveUsernameCandidates({
+        $id: user.$id,
+        email: user.email ?? undefined,
+        name: user.name ?? undefined,
+    });
+    const out: string[] = [];
+    for (const c of candidates) {
+        const n = normalizeUsernameSuggestion(c);
+        if (n && n.length >= 3) out.push(n);
+    }
+    const fb = normalizeUsernameSuggestion(fallbackUsernameFromUser(user.$id, user.email ?? null));
+    if (fb && fb.length >= 3) out.push(fb);
+    return Array.from(new Set(out)).slice(0, 6);
+}
+
 function rememberProfileRow(row: any | null, lookupKey: string) {
     if (!row) return;
     const at = Date.now();
