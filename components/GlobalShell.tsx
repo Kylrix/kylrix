@@ -20,6 +20,10 @@ const DynamicSidebar = dynamic(
   () => import('./ui/DynamicSidebarPanel').then((m) => ({ default: m.DynamicSidebar })),
   { ssr: false }
 );
+const ProUpgradeDrawer = dynamic(
+  () => import('./overlays/ProUpgradeDrawer').then((m) => ({ default: m.ProUpgradeDrawer })),
+  { ssr: false }
+);
 const LoginDrawer = dynamic(
   () => import('./overlays/LoginDrawer').then((m) => ({ default: m.LoginDrawer })),
   { ssr: false }
