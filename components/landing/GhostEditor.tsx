@@ -1020,7 +1020,7 @@ export const GhostEditor = () => {
                     <Button 
                         size="small" 
                         variant="text"
-                        onClick={() => router.push('/accounts/login')}
+                        onClick={() => openLoginDrawer()}
                         sx={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}
                     >
                         Create Permanent Vault →
@@ -1265,7 +1265,7 @@ export const GhostEditor = () => {
                         </Typography>
                         <Button 
                             variant="outlined"
-                            onClick={() => router.push('/accounts/login')}
+                            onClick={() => openLoginDrawer()}
                             sx={{ 
                                 borderRadius: '100px', 
                                 px: 6,
