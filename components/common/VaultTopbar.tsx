@@ -89,28 +89,32 @@ export default function VaultTopbar({
     let mounted = true;
 
     const resolveProfilePreview = async () => {
-      if (!profilePicId) {
-        if (mounted) setProfileAvatarUrl(null);
-        return;
-      }
+      const { TaskDelegator } = await import('@/lib/services/internal/task-delegator');
+      TaskDelegator.defer(async () => {
+          if (!profilePicId) {
+            if (mounted) setProfileAvatarUrl(null);
+            return;
+          }
 
-      const cached = previewManager.getCachedProfilePreview(profilePicId);
-      if (cached !== undefined) {
-        if (mounted) setProfileAvatarUrl(cached ?? null);
-        return;
-      }
+          const cached = previewManager.getCachedProfilePreview(profilePicId);
+          if (cached !== undefined) {
+            if (mounted) setProfileAvatarUrl(cached ?? null);
+            return;
+          }
 
-      try {
-        const url = await previewManager.fetchProfilePreview(profilePicId, 64, 64);
-        if (mounted) setProfileAvatarUrl(url);
-      } catch {
-        if (mounted) setProfileAvatarUrl(null);
-      }
+          try {
+            const preview = await previewManager.fetchProfilePreview(profilePicId, 64, 64);
+            if (mounted) setProfileAvatarUrl(preview as string || null);
+          } catch (err) {
+            if (mounted) setProfileAvatarUrl(null);
+          }
+      });
     };
 
-    void resolveProfilePreview();
-    return () => {
-      mounted = false;
+    resolveProfilePreview();
+    return () => { mounted = false; };
+  }, [profilePicId, previewManager]);
+
     };
   }, [previewManager, profilePicId]);
 

@@ -134,19 +134,22 @@ export default function NoteTopbar({
         return;
       }
       try {
-        await cleanupStaleCallsSecure({ userId: user.$id }).catch(() => undefined);
-        const presence = await ActivityService.getUserPresence(user.$id);
-        const raw = String(presence?.customStatus || '');
-        if (!raw) {
-          if (active) setLiveCallId(null);
-          return;
-        }
-        const parsed = JSON.parse(raw) as { t?: string; id?: string; s?: string };
-        if (parsed?.t === 'call' && parsed?.id && parsed?.s !== 'ended') {
-          if (active) setLiveCallId(parsed.id);
-        } else if (active) {
-          setLiveCallId(null);
-        }
+        const { TaskDelegator } = await import('@/lib/services/internal/task-delegator');
+        TaskDelegator.defer(async () => {
+          await cleanupStaleCallsSecure({ userId: user.$id }).catch(() => undefined);
+          const presence = await ActivityService.getUserPresence(user.$id);
+          const raw = String(presence?.customStatus || '');
+          if (!raw) {
+            if (active) setLiveCallId(null);
+            return;
+          }
+          const parsed = JSON.parse(raw) as { t?: string; id?: string; s?: string };
+          if (parsed?.t === 'call' && parsed?.id && parsed?.s !== 'ended') {
+            if (active) setLiveCallId(parsed.id);
+          } else if (active) {
+            setLiveCallId(null);
+          }
+        });
       } catch {
         if (active) setLiveCallId(null);
       }
