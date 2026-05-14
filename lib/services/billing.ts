@@ -150,6 +150,38 @@ export const BillingCacheService = {
         return hydrationInFlight;
     },
 
+    async hydrateFromServer() {
+        try {
+            const res = await fetch('/api/me/hydrate', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            if (!res.ok) throw new Error('Hydration failed');
+            const data = await res.json();
+            
+            if (data.billing) {
+                const b = data.billing;
+                balanceCache = {
+                    data: { amount: b.balance.amount, symbol: b.balance.symbol },
+                    expiresAt: Date.now() + TTL
+                };
+                entitlementCache = {
+                    data: { uiTier: b.tier, active: b.active, expiresAt: b.expiresAt },
+                    expiresAt: Date.now() + TTL
+                };
+                walletsCache = {
+                    data: b.wallets,
+                    expiresAt: Date.now() + TTL
+                };
+            }
+            return data;
+        } catch (err) {
+            console.warn('[BillingCacheService] Server hydration failed, falling back to client SDK:', err);
+            return null;
+        }
+    },
+
     invalidate() {
         balanceCache = null;
         walletsCache = null;
