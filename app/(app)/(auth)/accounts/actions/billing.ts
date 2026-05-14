@@ -435,7 +435,7 @@ export async function hydrateSessionAction(jwt?: string | null) {
           type: w.type,
           label: w.chain,
           symbol: w.chain.toUpperCase(),
-          family: w.chain === 'sol' ? 'solana' : 'evm',
+          family: (w.chain === 'sol' ? 'solana' : 'evm') as 'evm' | 'solana' | 'bitcoin' | 'sui',
           publicProfile: true,
         })),
       },
