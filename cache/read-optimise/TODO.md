@@ -30,15 +30,18 @@
   Action: use indexed reads only, coalesce refreshes, and snapshot task/event summaries per route.
   *Status*: Completed. Optimized `TaskContext` with `Query.select` and implemented route-based background revalidation. Coalesced initial and navigation-triggered refreshes.
 
-- [ ] **Wallet/billing state**  
-  Files: `lib/services/wallets.ts`, `lib/services/token.ts`, `lib/services/internal/kylrix-token.ts`, `lib/billing/*`, `context/subscription/*`, `lib/subscription/*`, `app/(app)/(auth)/accounts/subscription/*`, `components/WalletManager.tsx`, `components/SendReceiveClient.tsx`  
+- [x] **Wallet/billing state**  
+  Files: `lib/services/wallets.ts`, `lib/services/token.ts`, `lib/services/internal/kylrix-token.ts`, `lib/billing/*`, `context/subscription/*`, `lib/subscription/*`, `app/(app)/(auth)/accounts/subscription/*`, `components/WalletManager.tsx`, `components/send/SendReceiveClient.tsx`, `lib/services/billing.ts`, `context/subscription/SubscriptionContext.tsx`  
   Action: read balances and entitlement once per route and fan the result out to all consumers.
+  *Status*: Completed. Enhanced `BillingCacheService` with single-flight entitlement and balance hydration. Refactored `SubscriptionProvider` to use consolidated hydration (including server-side boost).
 
-- [ ] **Search/activity/agentic pressure**  
-  Files: `lib/services/contacts.ts`, `lib/services/activity.ts`, `lib/services/agentic.ts`, `lib/services/ecosystem.ts`, `lib/services/storage.ts`, `lib/services/call.ts`, `lib/services/internal/*`, `app/(app)/(auth)/accounts/api/account-events/route.ts`, `app/(app)/(auth)/accounts/api/pro/notify/route.ts`, `app/(app)/(auth)/accounts/api/reports/route.ts`  
+- [x] **Search/activity/agentic pressure**  
+  Files: `lib/services/contacts.ts`, `lib/services/activity.ts`, `lib/services/agentic.ts`, `lib/services/ecosystem.ts`, `lib/services/storage.ts`, `lib/services/call.ts`, `lib/services/internal/*`, `app/(app)/(auth)/accounts/api/account-events/route.ts`, `app/(app)/(auth)/accounts/api/pro/notify/route.ts`, `app/(app)/(auth)/accounts/api/reports/route.ts`, `lib/services/list-cache.ts`  
   Action: add single-flight list fetches and stop polling the same Appwrite tables from multiple surfaces.
+  *Status*: Completed. Implemented `SimpleListCache` utility for standardized single-flighting. Applied to `ActivityService` (presence/logs), `ContactsService`, `AgenticService`, `EcosystemService`, and `CallService`.
 
-- [ ] **Server bridge consolidation**  
-  Files: `lib/appwrite-server.ts`, `lib/appwrite-admin.ts`, `lib/server/api.ts`, `app/api/*`, `app/(app)/(auth)/accounts/api/*`  
+- [x] **Server bridge consolidation**  
+  Files: `lib/appwrite-server.ts`, `lib/appwrite-admin.ts`, `lib/server/api.ts`, `app/api/*`, `app/(app)/(auth)/accounts/api/*`, `app/api/me/hydrate/route.ts`  
   Action: fan out less, return shaped payloads, and hydrate multiple UI widgets from one server response.
+  *Status*: Completed. Created `/api/me/hydrate` consolidated endpoint returning user, profile, billing, and presence state in one response. Integrated into `BillingCacheService.hydrateFromServer` for client-side use.
 
