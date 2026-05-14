@@ -348,7 +348,21 @@ export const SocialService = {
     },
 
     async getFeed(userId?: string, targetUserId?: string) {
-        // Fetch public moments or moments from followed users
+        // Use FeedRanker if no specific target user, else fallback to standard chronological
+        if (!targetUserId) {
+            const rankedIds = await FeedRanker.rankMomentsForUser(userId || 'anon', 50);
+            if (rankedIds.length > 0) {
+                 const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
+                    Query.equal('$id', rankedIds),
+                    Query.limit(50)
+                ]);
+                // Re-sort to maintain rank
+                const rankedRows = moments.rows.sort((a, b) => rankedIds.indexOf(a.$id) - rankedIds.indexOf(b.$id));
+                return { ...moments, rows: rankedRows };
+            }
+        }
+
+        // Standard feed logic...
         const queries = [
             Query.select(MOMENT_LIST_SELECT),
             Query.orderDesc('$createdAt'),
