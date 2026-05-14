@@ -1138,6 +1138,25 @@ export const ChatService = {
             }
         }
 
+        // T3-1: Chat Message Mint
+        if (type === 'text') {
+            try {
+                const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+                await runTokenOperationSecure({
+                    action: 'mint_activity',
+                    userId: senderId,
+                    idempotencyKey: `mint:message_send:${message.$id}`,
+                    activityType: 'chat_message',
+                    uniqueActors: 1, // Logic for unique actors in conversation TBD
+                    trustScore: 75,
+                    sourceType: 'message_send',
+                    sourceId: message.$id,
+                });
+            } catch (err) {
+                console.warn('[ChatService] Failed to trigger chat_message mint:', err);
+            }
+        }
+
         setConversationPreviewCache(conversationId, {
             lastMessageId: message.$id,
             lastMessageText: type === 'text' || type === 'attachment' ? content : `[${type}]`,

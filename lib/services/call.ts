@@ -238,6 +238,15 @@ export const CallService = {
 
     async endCall(callId: string) {
         try {
+            const call = await tablesDB.getRow({
+                databaseId: DB_ID,
+                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                rowId: callId,
+            });
+            const participants = await this.getActiveParticipants(callId);
+            const durationMs = new Date().getTime() - new Date(call.createdAt).getTime();
+            const durationSecs = durationMs / 1000;
+
             await tablesDB.updateRow({
                 databaseId: DB_ID,
                 tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
@@ -249,6 +258,28 @@ export const CallService = {
             });
             activeCallsCache.invalidate();
             historyCache.invalidate();
+
+            if (durationSecs >= 300) {
+                const uniqueParticipants = Array.from(new Set(participants.map(p => p.userId || p.senderId)));
+                try {
+                    const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+                    for (const userId of uniqueParticipants) {
+                        await runTokenOperationSecure({
+                            action: 'mint_activity',
+                            userId,
+                            idempotencyKey: `mint:call_participate:${callId}:${userId}`,
+                            activityType: 'call_participate',
+                            uniqueActors: Math.max(1, uniqueParticipants.length - 1),
+                            trustScore: 80,
+                            sourceType: 'call_participate',
+                            sourceId: callId,
+                            metadata: { durationSecs, participantCount: uniqueParticipants.length },
+                        });
+                    }
+                } catch (err) {
+                    console.warn('[CallService] Failed to trigger call_participate mint:', err);
+                }
+            }
         } catch (_e) {
             return;
         }

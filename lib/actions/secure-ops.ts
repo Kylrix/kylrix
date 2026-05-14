@@ -249,10 +249,21 @@ export async function runTokenOperationSecure(body: any) {
   }
   if (action === 'mint_activity') {
     if (!admin) throw new Error('Forbidden');
+    const userId = String(body?.userId || '').trim();
+    const activityType = String(body?.activityType || '');
+    
+    const allowed = await checkActivityRateLimit(userId, activityType);
+    if (!allowed) return { accepted: false, reason: 'RATE_LIMIT_EXCEEDED' };
+    
+    if (activityType === 'referral_signup') {
+        const validation = await validateReferralMint(userId, String(body?.sourceId || ''));
+        if (!validation.valid) return { accepted: false, reason: validation.reason };
+    }
+    
     return InternalKylrixTokenService.mintForActivity({
-      userId: String(body?.userId || '').trim(),
+      userId,
       idempotencyKey: String(body?.idempotencyKey || '').trim(),
-      activityType: body?.activityType,
+      activityType: activityType as KylrixActivityType,
       uniqueActors: Number(body?.uniqueActors || 0),
       trustScore: Number(body?.trustScore || 0),
       sourceType: String(body?.sourceType || 'activity'),
