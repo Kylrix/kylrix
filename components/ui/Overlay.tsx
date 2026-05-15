@@ -52,7 +52,7 @@ const Overlay: React.FC = () => {
       anchor={isMobile ? 'bottom' : 'right'}
       open={isOpen}
       onClose={closeOverlay}
-      ModalProps={{ keepMounted: false, disableScrollLock: true }}
+      ModalProps={{ keepMounted: false, disableScrollLock: false }}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 720px)',

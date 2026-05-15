@@ -21,7 +21,7 @@ export function DynamicSidebar() {
       onClose={closeSidebar}
       variant="temporary"
       slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-      ModalProps={{ keepMounted: false, disableScrollLock: true }}
+      ModalProps={{ keepMounted: false, disableScrollLock: false }}
       PaperProps={{
         'data-dynamic-sidebar': 'true',
         sx: {
