@@ -3,6 +3,7 @@ import { JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import ThemeRegistry from '@/theme/ThemeProvider';
 import { DataNexusProvider } from '@/context/DataNexusContext';
+import { LayoutProvider } from '@/context/LayoutContext';
 import { ClientProviders } from './ClientProviders';
 
 const mono = JetBrains_Mono({
@@ -46,11 +47,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={mono.className}>
         <ThemeRegistry>
           <DataNexusProvider>
-            <ClientProviders>
-              <GlobalShell>
-                {children}
-              </GlobalShell>
-            </ClientProviders>
+            <LayoutProvider>
+              <ClientProviders>
+                <GlobalShell>
+                  {children}
+                </GlobalShell>
+              </ClientProviders>
+            </LayoutProvider>
           </DataNexusProvider>
         </ThemeRegistry>
       </body>
