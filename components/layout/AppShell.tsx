@@ -281,8 +281,8 @@ function AppShellBody({
           </Box>
         </Box>
 
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowX: 'hidden', ml: { lg: '280px' } }}>
-          <Box component="main" sx={{ flex: 1, px: { xs: 2, sm: 4, md: 8 }, py: 6, pb: { xs: 12, lg: 6 }, overflowX: 'hidden', maxWidth: '100%' }}>
+        <Box component="main" sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflowX: 'hidden', ml: { lg: '280px' }, zIndex: 1 }}>
+          <Box sx={{ flex: 1, px: { xs: 2, sm: 4, md: 8 }, py: 6, pb: { xs: 12, lg: 6 }, overflowX: 'hidden', maxWidth: '100%' }}>
             {children}
           </Box>
         </Box>

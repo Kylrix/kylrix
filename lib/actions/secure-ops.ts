@@ -15,18 +15,22 @@ import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 async function getActor(jwt?: string) {
   try {
     const cookieStore = await cookies();
-    const serverClient = await createServerClient(jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }) : undefined);
-    
-    // Fallback: if no JWT provided, attempt to use current request's cookies
-    if (!jwt) {
-      const session = cookieStore.get('session') || cookieStore.get('session_legacy');
-      if (session) {
-        serverClient.client.setSession(session.value);
-      }
+    // Prioritize JWT if provided for specific server-to-server or cross-context calls
+    if (jwt) {
+        const { account } = await createServerClient(new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }));
+        return await account.get();
     }
     
-    return await serverClient.account.get();
-  } catch {
+    // Default to the current request's session cookie
+    const { client, account } = await createServerClient();
+    const session = cookieStore.get('session') || cookieStore.get('session_legacy');
+    if (session) {
+        client.setSession(session.value);
+    }
+    
+    return await account.get();
+  } catch (err) {
+    console.error('[secure-ops] Auth error:', err);
     return null;
   }
 }

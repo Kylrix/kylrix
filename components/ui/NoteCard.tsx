@@ -55,6 +55,11 @@ interface NoteCardProps {
 }
 
 const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete, onNoteSelect }) => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  
+  if (!mounted) return <Box sx={{ height: 200 }} />; // Skeleton placeholder
+
   const NAV_SURFACE = '#161412';
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
