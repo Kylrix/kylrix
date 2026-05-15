@@ -164,17 +164,21 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       <Overlay />
-      {/* <LoginDrawer /> */}
-      {/* <NoteDrawer /> */}
+      <LoginDrawer />
+      <NoteDrawer />
       {/**
        * Single persistent topbar for the entire app + marketing surface. UnifiedTopbar
        * already swaps its skin/content by pathname, so we mount it once here. App routes
        * used to mount it via app/(app)/layout.tsx — that wrapper is now redundant and
        * the topbar's React identity stays stable across website ↔ app navigation.
        */}
-      <Suspense fallback={null}>
-        <UnifiedTopbar />
-      </Suspense>
+      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, pointerEvents: 'none' }}>
+        <Box sx={{ pointerEvents: 'auto' }}>
+          <Suspense fallback={null}>
+            <UnifiedTopbar />
+          </Suspense>
+        </Box>
+      </Box>
 
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !hideDesktopSidebar && <DesktopSidebar />}
       
