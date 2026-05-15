@@ -29,6 +29,10 @@ const LoginDrawer = dynamic(
   () => import('./overlays/LoginDrawer').then((m) => ({ default: m.LoginDrawer })),
   { ssr: false }
 );
+const NoteDrawer = dynamic(
+  () => import('./overlays/NoteDrawer').then((m) => ({ default: m.NoteDrawer })),
+  { ssr: false }
+);
 const AgenticDrawer = dynamic(
   () => import('./overlays/AgenticDrawer').then((m) => ({ default: m.AgenticDrawer })),
   { ssr: false }
@@ -157,11 +161,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       (!pathname?.startsWith('/vault') || pathname?.startsWith('/vault/dashboard'))
   );
 
-const NoteDrawer = dynamic(
-  () => import('./overlays/NoteDrawer').then((m) => ({ default: m.NoteDrawer })),
-  { ssr: false }
-);
-...
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       <Overlay />

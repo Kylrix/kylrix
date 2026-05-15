@@ -3,9 +3,8 @@
 import React from 'react';
 import { Box, Fab } from '@mui/material';
 import { Add as PlusIcon } from '@mui/icons-material';
-import { useOverlay } from '@/components/ui/OverlayContext';
+import { useNoteDrawer } from '@/context/NoteDrawerContext';
 import { useNotes } from '@/context/NotesContext';
-import CreateNoteForm from '@/app/(app)/note/(app)/notes/CreateNoteForm';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 
 interface MobileFABProps {
@@ -13,18 +12,11 @@ interface MobileFABProps {
 }
 
 export const MobileFAB: React.FC<MobileFABProps> = ({ className: _className = '' }) => {
-  const { openOverlay, closeOverlay: _closeOverlay } = useOverlay();
+  const { open: openNoteDrawer } = useNoteDrawer();
   const { upsertNote } = useNotes();
 
   const handleCreateNoteClick = () => {
-    openOverlay(
-      <CreateNoteForm
-        onNoteCreated={(newNote) => {
-          upsertNote(newNote);
-          console.log('Note created:', newNote);
-        }}
-      />
-    );
+    openNoteDrawer();
   };
 
   return (
