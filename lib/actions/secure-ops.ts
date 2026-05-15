@@ -22,9 +22,13 @@ async function getActor(jwt?: string) {
     }
     
     const { account } = await createServerClient();
-    return await account.get();
+    const actor = await account.get();
+    if (!actor) {
+        console.error('[secure-ops] Auth: No actor returned');
+    }
+    return actor;
   } catch (err) {
-    console.error('[secure-ops] Auth error:', err);
+    console.error('[secure-ops] Auth error details:', err);
     return null;
   }
 }
