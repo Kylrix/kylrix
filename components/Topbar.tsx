@@ -105,19 +105,22 @@ export default function Topbar({
         return;
       }
       try {
-        await reconcileStaleLiveCallPresenceFromClient();
-        const presence = await ActivityService.getUserPresence(userId);
-        const raw = String(presence?.customStatus || '');
-        if (!raw) {
-          if (active) setLiveCallId(null);
-          return;
-        }
-        const parsed = JSON.parse(raw) as { t?: string; id?: string; s?: string };
-        if (parsed?.t === 'call' && parsed?.id && parsed?.s !== 'ended') {
-          if (active) setLiveCallId(parsed.id);
-        } else if (active) {
-          setLiveCallId(null);
-        }
+        const { TaskDelegator } = await import('@/lib/services/internal/task-delegator');
+        TaskDelegator.defer(async () => {
+          await reconcileStaleLiveCallPresenceFromClient();
+          const presence = await ActivityService.getUserPresence(userId);
+          const raw = String(presence?.customStatus || '');
+          if (!raw) {
+            if (active) setLiveCallId(null);
+            return;
+          }
+          const parsed = JSON.parse(raw) as { t?: string; id?: string; s?: string };
+          if (parsed?.t === 'call' && parsed?.id && parsed?.s !== 'ended') {
+            if (active) setLiveCallId(parsed.id);
+          } else if (active) {
+            setLiveCallId(null);
+          }
+        });
       } catch {
         if (active) setLiveCallId(null);
       }
@@ -181,23 +184,26 @@ export default function Topbar({
     let mounted = true;
 
     const resolveProfilePreview = async () => {
-      if (!profilePicId) {
-        if (mounted) setProfileAvatarUrl(null);
-        return;
-      }
+      const { TaskDelegator } = await import('@/lib/services/internal/task-delegator');
+      TaskDelegator.defer(async () => {
+        if (!profilePicId) {
+          if (mounted) setProfileAvatarUrl(null);
+          return;
+        }
 
-      const cached = previewManager.getCachedProfilePreview(profilePicId);
-      if (cached !== undefined) {
-        if (mounted) setProfileAvatarUrl(cached ?? null);
-        return;
-      }
+        const cached = previewManager.getCachedProfilePreview(profilePicId);
+        if (cached !== undefined) {
+          if (mounted) setProfileAvatarUrl(cached ?? null);
+          return;
+        }
 
-      try {
-        const url = await previewManager.fetchProfilePreview(profilePicId, 64, 64);
-        if (mounted) setProfileAvatarUrl(url);
-      } catch {
-        if (mounted) setProfileAvatarUrl(null);
-      }
+        try {
+          const url = await previewManager.fetchProfilePreview(profilePicId, 64, 64);
+          if (mounted) setProfileAvatarUrl(url);
+        } catch {
+          if (mounted) setProfileAvatarUrl(null);
+        }
+      });
     };
 
     void resolveProfilePreview();

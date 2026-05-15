@@ -115,9 +115,6 @@ export default function VaultTopbar({
     return () => { mounted = false; };
   }, [profilePicId, previewManager]);
 
-    };
-  }, [previewManager, profilePicId]);
-
   const handleCloseAll = useCallback(() => {
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
