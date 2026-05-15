@@ -5,6 +5,7 @@ import { Box, Fab } from '@mui/material';
 import { Add as PlusIcon } from '@mui/icons-material';
 import { useNoteDrawer } from '@/context/NoteDrawerContext';
 import { useNotes } from '@/context/NotesContext';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 
 interface MobileFABProps {
@@ -14,6 +15,9 @@ interface MobileFABProps {
 export const MobileFAB: React.FC<MobileFABProps> = ({ className: _className = '' }) => {
   const { open: openNoteDrawer } = useNoteDrawer();
   const { upsertNote } = useNotes();
+  const { isDrawerOpen } = useDrawerState();
+
+  if (isDrawerOpen) return null;
 
   const handleCreateNoteClick = () => {
     openNoteDrawer();

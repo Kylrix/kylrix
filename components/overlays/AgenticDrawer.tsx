@@ -79,6 +79,7 @@ export function AgenticDrawer() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { isOpen, closeAgenticDrawer } = useAgenticDrawer();
   const { user } = useAuth();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const [stage, setStage] = useState<'live' | 'framework' | 'create'>('live');
   const [framework, setFramework] = useState<AgentFramework>('kylrix');
@@ -236,8 +237,8 @@ export function AgenticDrawer() {
                 borderRight: 0,
               }
             : {
-                height: 'min(86dvh, 760px)',
-                maxHeight: 'min(86dvh, 760px)',
+                height: isExpanded ? '92dvh' : '60dvh',
+                transition: 'height 0.3s ease-in-out',
                 borderTopLeftRadius: '24px',
                 borderTopRightRadius: '24px',
                 border: BORDER,
@@ -253,12 +254,12 @@ export function AgenticDrawer() {
       }}
     >
       {!isDesktop && (
-        <>
-          <Box sx={{ pt: 'max(8px, env(safe-area-inset-top))' }} />
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
-            <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
-          </Box>
-        </>
+        <Box 
+            sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
+            onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
+        </Box>
       )}
 
       <Box
