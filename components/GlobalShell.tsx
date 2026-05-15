@@ -162,7 +162,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden', position: 'relative' }}>
       <Overlay />
       <LoginDrawer />
       <NoteDrawer />
@@ -173,7 +173,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
        * the topbar's React identity stays stable across website ↔ app navigation.
        */}
       <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, pointerEvents: 'none' }}>
-        <Box sx={{ pointerEvents: 'auto' }}>
+        <Box sx={{ pointerEvents: 'auto', zIndex: 1001, position: 'relative' }}>
           <Suspense fallback={null}>
             <UnifiedTopbar />
           </Suspense>
