@@ -41,6 +41,7 @@ import toast from 'react-hot-toast';
 import { unlockWithPasskey } from '@/lib/passkey';
 import { PasskeySetup } from './PasskeySetup';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 interface MasterPassModalProps {
   isOpen: boolean;
@@ -52,6 +53,11 @@ const BG_COLOR = "#0A0908";
 const SURFACE_COLOR = "#161412";
 
 export function MasterPassModal({ isOpen, onClose }: MasterPassModalProps) {
+  const { setIsDrawerOpen } = useDrawerState();
+
+  useEffect(() => {
+    setIsDrawerOpen(isOpen);
+  }, [isOpen, setIsDrawerOpen]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [masterPassword, setMasterPassword] = useState("");

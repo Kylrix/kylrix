@@ -32,7 +32,7 @@ export function LoginDrawer() {
       PaperProps={{ sx: DRAWER_SX }}
       ModalProps={{
         keepMounted: false,
-        disableScrollLock: true,
+        disableScrollLock: false,
         disablePortal: false,
         hideBackdrop: false,
       }}

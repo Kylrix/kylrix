@@ -12,3 +12,4 @@
 - **No Tailwind**: Use Material UI (MUI) and Vanilla CSS.
 - **Opaque Surfaces**: No gradients or translucent backgrounds on product chrome.
 - **PNPM Only**: Always use `pnpm` for package management.
+- **Surgical Execution**: For 'surgical fixes', prioritize direct, high-precision code modifications. Skip build/lint/test cycles unless explicitly instructed to validate. Aim for maximum velocity in resolving identified issues.

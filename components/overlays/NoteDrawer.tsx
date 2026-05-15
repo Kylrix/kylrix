@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
 import { useNoteDrawer } from '@/context/NoteDrawerContext';
 import { useNotes } from '@/context/NotesContext';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import CreateNoteForm from '@/app/(app)/note/(app)/notes/CreateNoteForm';
 
 const DRAWER_SX = {
@@ -43,7 +44,7 @@ export function NoteDrawer() {
       }}
       ModalProps={{
           keepMounted: false,
-          disableScrollLock: true,
+          disableScrollLock: false,
       }}
     >
       <Box 
