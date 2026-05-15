@@ -67,7 +67,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const { showSuccess, showError, showInfo } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
-  const [isPaywallDialogOpen, setIsPaywallDialogOpen] = useState(false);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const isPublic = getNotePublicState(note);
 
@@ -367,7 +366,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         noteTitle={note.title || 'Untitled note'} 
       />
       <PaywallDrawer
-        open={isPaywallDialogOpen}
         onClose={() => setIsPaywallDialogOpen(false)}
         note={note}
         onUpdate={handlePaywallUpdate}
@@ -605,3 +603,4 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 NoteCard.displayName = 'NoteCard';
 
 export default NoteCard;
+  const [isPaywallDialogOpen, setIsPaywallDialogOpen] = useState(false);
