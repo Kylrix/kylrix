@@ -53,13 +53,10 @@ export function AIProvider({ children }: { children: ReactNode }) {
     }
   }, [createModalHandler]);
 
-  const analyze = async (mode: AnalysisMode, rawData: unknown) => {
+  const analyze = useCallback(async (mode: AnalysisMode, rawData: unknown) => {
     setIsLoading(true);
     try {
-      // 1. Sanitize Data on Client Side (Zero Knowledge Enforcement)
       const sanitizedPayload = PrivacyFilter.sanitize(mode, rawData);
-
-      // 2. Call Server Action (Stateless Proxy)
       const response = await generateAIContent({
         mode,
         data: sanitizedPayload,
@@ -69,7 +66,6 @@ export function AIProvider({ children }: { children: ReactNode }) {
         throw new Error(response.error);
       }
 
-      // 3. Parse JSON response if expected
       try {
         return JSON.parse(response.data || "{}");
       } catch {
@@ -81,9 +77,9 @@ export function AIProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const askAI = async (prompt: string) => {
+  const askAI = useCallback(async (prompt: string) => {
     setIsLoading(true);
     try {
       const response = await generateAIContent({
@@ -102,9 +98,9 @@ export function AIProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const sendCommand = async (prompt: string) => {
+  const sendCommand = useCallback(async (prompt: string) => {
     setIsLoading(true);
     try {
       const response = await generateAIContent({
@@ -125,7 +121,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, []);
 
   const openAIModal = useCallback(() => setIsAIModalOpen(true), []);
   const closeAIModal = useCallback(() => setIsAIModalOpen(false), []);

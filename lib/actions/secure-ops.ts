@@ -14,8 +14,18 @@ import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 
 async function getActor(jwt?: string) {
   try {
-    const { account } = await createServerClient(jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }) : undefined);
-    return await account.get();
+    const cookieStore = await cookies();
+    const serverClient = await createServerClient(jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }) : undefined);
+    
+    // Fallback: if no JWT provided, attempt to use current request's cookies
+    if (!jwt) {
+      const session = cookieStore.get('session') || cookieStore.get('session_legacy');
+      if (session) {
+        serverClient.client.setSession(session.value);
+      }
+    }
+    
+    return await serverClient.account.get();
   } catch {
     return null;
   }

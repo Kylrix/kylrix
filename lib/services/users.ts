@@ -400,6 +400,19 @@ export const UsersService = {
         await storage.updateFile(bucketId, fileId, undefined, permissions);
 
         return await this.updateProfile(userId, { avatar: fileId });
+    },
+
+    async lookupUserByEmail(email: string) {
+        const { Query } = await import('appwrite');
+        const res = await (tablesDB as any).listRows({
+            databaseId: DATABASE_ID,
+            tableId: TABLE_ID,
+            queries: [
+                Query.equal('email', email),
+                Query.limit(1),
+            ],
+        });
+        return res.rows[0] || null;
     }
 
 };
