@@ -34,47 +34,32 @@ interface NoteCardProps {
   onShare?: () => void;
 }
 
+import { ShareNoteDrawer } from './overlays/ShareNoteDrawer';
+...
 export default function NoteCard({
-  id,
-  title,
-  updatedAt,
-  isEncrypted,
-  sharedWith,
-  onDelete,
+...
   onShare
 }: NoteCardProps) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleDelete = async () => {
-    if (onDelete) {
-      setIsDeleting(true);
-      try {
-        await onDelete();
-      } finally {
-        setIsDeleting(false);
-        handleMenuClose();
-      }
-    }
-  };
-
+  const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
+...
   const handleShare = () => {
-    if (onShare) {
-      onShare();
-      handleMenuClose();
-    }
+    setIsShareDrawerOpen(true);
+    handleMenuClose();
   };
 
   return (
-    <Card 
+    <>
+      <ShareNoteDrawer 
+        isOpen={isShareDrawerOpen} 
+        onClose={() => setIsShareDrawerOpen(false)} 
+        noteId={id} 
+        noteTitle={title}
+      />
+      <Card 
+        elevation={0}
+...
       elevation={0} 
       sx={{ 
         height: '100%', 
