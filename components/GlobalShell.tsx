@@ -26,16 +26,12 @@ const ProUpgradeDrawer = dynamic(
   () => import('./overlays/ProUpgradeDrawer').then((m) => ({ default: m.ProUpgradeDrawer })),
   { ssr: false }
 );
-const LoginDrawer = dynamic(
-  () => import('./overlays/LoginDrawer').then((m) => ({ default: m.LoginDrawer })),
-  { ssr: false }
-);
-const NoteDrawer = dynamic(
-  () => import('./overlays/NoteDrawer').then((m) => ({ default: m.NoteDrawer })),
-  { ssr: false }
-);
 const AgenticDrawer = dynamic(
   () => import('./overlays/AgenticDrawer').then((m) => ({ default: m.AgenticDrawer })),
+  { ssr: false }
+);
+const UnifiedBottomDrawer = dynamic(
+  () => import('./overlays/UnifiedBottomDrawer').then((m) => ({ default: m.UnifiedBottomDrawer })),
   { ssr: false }
 );
 const AccountHealthDrawers = dynamic(
@@ -168,8 +164,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       <Overlay />
-      <LoginDrawer />
-      <NoteDrawer />
+      <UnifiedBottomDrawer />
       {/**
        * Single persistent topbar for the entire app + marketing surface. UnifiedTopbar
        * already swaps its skin/content by pathname, so we mount it once here. App routes
