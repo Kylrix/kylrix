@@ -440,7 +440,10 @@ export async function trackEngagementViewSecure(input: Omit<TrackEngagementInput
 
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {
   const requester = await getActor();
-  if (!requester) throw new Error('Unauthorized');
+  if (!requester) {
+    console.warn('[secure-ops] cleanupStaleCallsSecure: Requester unauthenticated, skipping cleanup.');
+    return { success: false, reason: 'Unauthorized' };
+  }
   const admin = isEnvAdminUser(requester);
   const targetUserId = String(input?.userId || requester.$id || '').trim();
   const callId = String(input?.callId || '').trim() || null;

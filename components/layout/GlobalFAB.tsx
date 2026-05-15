@@ -29,8 +29,8 @@ export default function GlobalFAB() {
   // Hide FAB on specific pages or conditions
   const isSettingsPage = pathname === '/settings';
   const isNotePage = pathname.startsWith('/note/');
-  const isFormActive = pathname.startsWith('/flow/forms/') && pathname.split('/').length > 3;
-  const isEventActive = pathname.startsWith('/flow/events/') && pathname.split('/').length > 3;
+  const isFormActive = pathname.startsWith('/flow/forms/');
+  const isEventActive = pathname.startsWith('/flow/events/');
   
   const shouldHide = isSettingsPage || isFormActive || isEventActive;
 

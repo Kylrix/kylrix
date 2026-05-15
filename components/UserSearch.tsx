@@ -235,7 +235,7 @@ export default function UserSearch({
                     <IdentityAvatar
                       fileId={user.profilePicId || user.avatar || null}
                       alt={user.title}
-                      fallback={(user.title ?? 'U').charAt(0).toUpperCase()}
+                      fallback={(user.displayName || user.username || user.title || 'U').charAt(0).toUpperCase()}
                       verified={computeIdentityFlags({
                         createdAt: (user as any).$createdAt || (user as any).createdAt || null,
                         lastUsernameEdit: (user as any).last_username_edit || null,
@@ -258,9 +258,9 @@ export default function UserSearch({
                     />
                   </ListItemAvatar>
                   <ListItemText
-                    primary={user.title}
+                    primary={user.displayName || user.username || user.title}
                     primaryTypographyProps={{ variant: 'body2', fontWeight: 700, color: '#F2F2F2' }}
-                    secondary={user.subtitle}
+                    secondary={user.username ? `@${user.username}` : user.subtitle}
                     secondaryTypographyProps={{ variant: 'caption', color: 'rgba(255, 255, 255, 0.4)' }}
                   />
                 </ListItem>
