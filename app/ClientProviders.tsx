@@ -17,7 +17,7 @@ import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
 import { SudoProvider } from '@/context/SudoContext';
 import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
-import { NoteDrawerProvider } from '@/context/NoteDrawerContext';
+import { NoteDrawerProvider } from '../context/NoteDrawerContext';
 import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
 import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
 import { AIProvider } from '@/context/AIContext';
