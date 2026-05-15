@@ -234,25 +234,25 @@ export function UnifiedBottomBar() {
       modals.forEach((modal) => {
         if (modal.getAttribute('aria-hidden') === 'true') return;
         if (modal.classList.contains('MuiModal-hidden')) return;
-        if (modal.querySelector('.MuiDrawer-paperAnchorBottom')) open = true;
+        if (modal.querySelector('.MuiDrawer-paperAnchorBottom, .MuiDialog-paper')) open = true;
       });
       setHasBottomDrawerOpen(open);
     };
 
     evaluateDrawerState();
 
-    // Disabling observer temporarily to isolate click-blocking
-    // const observer = new MutationObserver(() => {
-    //   evaluateDrawerState();
-    // });
-    // observer.observe(document.body, {
-    //   childList: true,
-    //   subtree: true,
-    //   attributes: true,
-    //   attributeFilter: ['class', 'aria-hidden', 'style'],
-    // });
-    // return () => observer.disconnect();
-    return () => {};
+    const observer = new MutationObserver(() => {
+      evaluateDrawerState();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'aria-hidden'],
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
