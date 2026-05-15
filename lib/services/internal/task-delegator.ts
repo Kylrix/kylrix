@@ -1,8 +1,12 @@
 type Task = () => Promise<void> | void;
 
 export class TaskDelegator {
-  private static idleCallback = typeof window !== 'undefined' ? window.requestIdleCallback : (cb: any) => setTimeout(cb, 1);
-  private static cancelIdleCallback = typeof window !== 'undefined' ? window.cancelIdleCallback : (id: any) => clearTimeout(id);
+  private static idleCallback = typeof window !== 'undefined' 
+      ? window.requestIdleCallback.bind(window) 
+      : (cb: any) => setTimeout(cb, 1);
+  private static cancelIdleCallback = typeof window !== 'undefined' 
+      ? window.cancelIdleCallback.bind(window) 
+      : (id: any) => clearTimeout(id);
 
   /** Schedule task for browser idle time. Perfect for secondary UI hydration. */
   static defer(task: Task) {
