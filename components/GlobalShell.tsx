@@ -157,10 +157,16 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       (!pathname?.startsWith('/vault') || pathname?.startsWith('/vault/dashboard'))
   );
 
+const NoteDrawer = dynamic(
+  () => import('./overlays/NoteDrawer').then((m) => ({ default: m.NoteDrawer })),
+  { ssr: false }
+);
+...
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       <Overlay />
       <LoginDrawer />
+      <NoteDrawer />
       {/**
        * Single persistent topbar for the entire app + marketing surface. UnifiedTopbar
        * already swaps its skin/content by pathname, so we mount it once here. App routes
