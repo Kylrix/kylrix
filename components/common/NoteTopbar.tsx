@@ -1497,8 +1497,9 @@ export default function NoteTopbar({
           borderRadius: '0 0 28px 28px',
           boxShadow: '0 16px 42px rgba(0,0,0,0.42)',
           backgroundImage: 'none',
-          overflow: 'hidden',
+          overflow: 'visible',
           height: activePanel ? 'auto' : '88px',
+          pointerEvents: 'auto',
         }}
       >
         <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, width: '100%' }}>
