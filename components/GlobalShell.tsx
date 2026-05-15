@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Box } from '@mui/material';
 import { DesktopSidebar } from './Navigation';
+import RightSidebar from './layout/RightSidebar';
 import { useSidebar } from './ui/SidebarContext';
 import { useDynamicSidebar } from './ui/DynamicSidebarContext';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
@@ -181,6 +182,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       </Box>
 
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !hideDesktopSidebar && <DesktopSidebar />}
+      <RightSidebar />
       
       <Box
         component="main"
