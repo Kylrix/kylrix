@@ -55,10 +55,7 @@ interface NoteCardProps {
 }
 
 const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete, onNoteSelect }) => {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  
-  if (!mounted) return <Box sx={{ height: 200 }} />; // Skeleton placeholder
+  const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
 
   const NAV_SURFACE = '#161412';
   const { openMenu } = useContextMenu();
@@ -70,9 +67,9 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError, showInfo } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isShareModalOpen, setIsShareModalOpen] = React.useState(false);
-  const [isPaywallDialogOpen, setIsPaywallDialogOpen] = React.useState(false);
-  const [isAIProcessing, setIsAIProcessing] = React.useState(false);
+  const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
+  const [isPaywallDialogOpen, setIsPaywallDialogOpen] = useState(false);
+  const [isAIProcessing, setIsAIProcessing] = useState(false);
   const isPublic = getNotePublicState(note);
 
   const isPro = hasPaidKylrixPlan(user);
