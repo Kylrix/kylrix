@@ -9,8 +9,7 @@ export async function createServerClient() {
   client.setProject(APPWRITE_CONFIG.PROJECT_ID);
 
   const cookieStore = await cookies();
-  const sessionName = `a_session_${APPWRITE_CONFIG.PROJECT_ID.toLowerCase()}`;
-  const sessionCookie = cookieStore.get(sessionName) || cookieStore.get(`${sessionName}_legacy`);
+  const sessionCookie = cookieStore.get('a_session_' + APPWRITE_CONFIG.PROJECT_ID.toLowerCase());
 
   if (sessionCookie?.value) {
     client.setSession(sessionCookie.value);
