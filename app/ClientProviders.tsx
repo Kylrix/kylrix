@@ -17,6 +17,7 @@ import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
 import { SudoProvider } from '@/context/SudoContext';
 import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
+import { NoteDrawerProvider } from '@/context/NoteDrawerContext';
 import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
 import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
 import { AIProvider } from '@/context/AIContext';
@@ -48,38 +49,40 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                     <SourceProvider>
                       <SudoProvider>
                         <UnifiedDrawerProvider>
-                          <SidebarProvider>
-                            <DynamicSidebarProvider>
-                              <DrawerStateProvider>
-                                <ProUpgradeProvider>
-                                  <AgenticDrawerProvider>
-                                    <AIProvider>
-                                      <OverlayProvider>
-                                        <ContextMenuProvider>
-                                          <GlobalContextMenu />
-                                          <ToastProvider>
-                                            <PotatoProvider>
-                                              <AppChromeProvider>
-                                                <TokenOpsProvider>
-                                                  <WalletOverlayProvider>
-                                                    <ChatNotificationProvider>
-                                                      <CallLauncherProvider>
-                                                        {children}
-                                                      </CallLauncherProvider>
-                                                    </ChatNotificationProvider>
-                                                  </WalletOverlayProvider>
-                                                </TokenOpsProvider>
-                                              </AppChromeProvider>
-                                            </PotatoProvider>
-                                          </ToastProvider>
-                                        </ContextMenuProvider>
-                                      </OverlayProvider>
-                                    </AIProvider>
-                                  </AgenticDrawerProvider>
-                                </ProUpgradeProvider>
-                              </DrawerStateProvider>
-                            </DynamicSidebarProvider>
-                          </SidebarProvider>
+                          <NoteDrawerProvider>
+                            <SidebarProvider>
+                              <DynamicSidebarProvider>
+                                <DrawerStateProvider>
+                                  <ProUpgradeProvider>
+                                    <AgenticDrawerProvider>
+                                      <AIProvider>
+                                        <OverlayProvider>
+                                          <ContextMenuProvider>
+                                            <GlobalContextMenu />
+                                            <ToastProvider>
+                                              <PotatoProvider>
+                                                <AppChromeProvider>
+                                                  <TokenOpsProvider>
+                                                    <WalletOverlayProvider>
+                                                      <ChatNotificationProvider>
+                                                        <CallLauncherProvider>
+                                                          {children}
+                                                        </CallLauncherProvider>
+                                                      </ChatNotificationProvider>
+                                                    </WalletOverlayProvider>
+                                                  </TokenOpsProvider>
+                                                </AppChromeProvider>
+                                              </PotatoProvider>
+                                            </ToastProvider>
+                                          </ContextMenuProvider>
+                                        </OverlayProvider>
+                                      </AIProvider>
+                                    </AgenticDrawerProvider>
+                                  </ProUpgradeProvider>
+                                </DrawerStateProvider>
+                              </DynamicSidebarProvider>
+                            </SidebarProvider>
+                          </NoteDrawerProvider>
                         </UnifiedDrawerProvider>
                       </SudoProvider>
                     </SourceProvider>
