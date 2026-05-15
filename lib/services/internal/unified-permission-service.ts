@@ -1,6 +1,7 @@
 import { permissionsInternal } from './permissions';
 import { dispatchEmail } from './emailDispatch';
 import { createAdminClient } from '@/lib/appwrite-admin';
+import { Databases } from 'node-appwrite';
 
 export type PermissionLevel = 'view' | 'edit' | 'admin';
 
@@ -16,7 +17,8 @@ export interface PermissionChangeInput {
 }
 
 export async function grantPermissionSecure(input: PermissionChangeInput) {
-  const { databases } = createAdminClient();
+  const { client } = createAdminClient();
+  const databases = new Databases(client);
   const appwritePerm = input.permission === 'admin' ? 'delete' : input.permission === 'edit' ? 'update' : 'read';
 
   // 1. Grant via existing secure internal permissions service

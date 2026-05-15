@@ -45,6 +45,7 @@ export function NoteDrawer() {
       ModalProps={{
           keepMounted: false,
           disableScrollLock: false,
+          disablePortal: true,
       }}
     >
       <Box 

@@ -1,11 +1,11 @@
-import { createAdminClient } from '@/lib/appwrite-admin';
-import { createServerClient } from '@/lib/appwrite-server';
+// This file is now client-safe by removing the server-only client import.
+// Permissions logic that requires Admin access should be moved to 'lib/services/internal/permissions-server.ts'
+
 import {
   mutateRowPermissions,
   mutateStorageFilePermissions,
   revokeStorageFilePermissions,
   normalizeKeyMappings,
-  normalizeTargetUserIds,
   createEpochRows,
   removeLockboxRows,
   resolveNextEpochNumber,

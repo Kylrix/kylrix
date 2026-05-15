@@ -5,7 +5,6 @@ import { ID, Query } from 'node-appwrite';
 
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createServerClient } from '@/lib/appwrite-server';
 
 type AgentStatus = 'idle' | 'working';
 

@@ -1,6 +1,5 @@
 import { ID, Permission, Role, Query, TablesDB } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite-admin';
-import { createServerClient } from '@/lib/appwrite-server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createHash } from 'node:crypto';
 

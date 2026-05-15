@@ -33,7 +33,7 @@ export function LoginDrawer() {
       ModalProps={{
         keepMounted: false,
         disableScrollLock: false,
-        disablePortal: false,
+        disablePortal: true,
         hideBackdrop: false,
       }}
     >

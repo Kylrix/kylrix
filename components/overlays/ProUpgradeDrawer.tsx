@@ -29,7 +29,7 @@ export function ProUpgradeDrawer() {
       anchor={isMobile ? 'bottom' : 'right'}
       open={showProUpgrade}
       onClose={closeProUpgrade}
-      ModalProps={{ keepMounted: false, disableScrollLock: false }}
+      ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
       slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       sx={{
         '& .MuiDrawer-paper': {

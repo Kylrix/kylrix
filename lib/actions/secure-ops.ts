@@ -5,7 +5,7 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { ID, Permission, Query, Role } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createAdminClient, createAdminTablesDB } from '@/lib/appwrite-admin';
-import { createServerClient } from '@/lib/appwrite-server';
+import { createServerClient } from '@/lib/appwrite-server-only';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
 import { trackEngagementView, type TrackEngagementInput } from '@/lib/services/internal/engagement-views';
 import { deleteCallIfExpired } from '@/lib/services/internal/calls';
@@ -14,20 +14,14 @@ import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 
 async function getActor(jwt?: string) {
   try {
-    const cookieStore = await cookies();
-    // Prioritize JWT if provided for specific server-to-server or cross-context calls
     if (jwt) {
-        const { account } = await createServerClient(new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }));
-        return await account.get();
+        const { client } = createAdminClient();
+        client.setJWT(jwt);
+        const { Account } = require('node-appwrite');
+        return await new Account(client).get();
     }
     
-    // Default to the current request's session cookie
-    const { client, account } = await createServerClient();
-    const session = cookieStore.get('session') || cookieStore.get('session_legacy');
-    if (session) {
-        client.setSession(session.value);
-    }
-    
+    const { account } = await createServerClient();
     return await account.get();
   } catch (err) {
     console.error('[secure-ops] Auth error:', err);
