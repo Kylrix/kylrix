@@ -248,7 +248,7 @@ export default function SudoModal({
             open={isOpen}
             onClose={cancelHandler}
             anchor={isDesktop ? "right" : "bottom"}
-            ModalProps={{ keepMounted: true, sx: { zIndex: 1299 } }}
+            ModalProps={{ keepMounted: false, sx: { zIndex: 1299 } }}
             PaperProps={{
                 sx: {
                     borderTopLeftRadius: isDesktop ? '32px' : '32px',
