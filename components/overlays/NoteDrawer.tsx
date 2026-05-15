@@ -1,6 +1,4 @@
-'use client';
-
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import { X } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
@@ -10,8 +8,8 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import CreateNoteForm from '@/app/(app)/note/(app)/notes/CreateNoteForm';
 
 const DRAWER_SX = {
-  borderTopLeftRadius: '26px',
-  borderTopRightRadius: '26px',
+  borderTopLeftRadius: '24px',
+  borderTopRightRadius: '24px',
   bgcolor: '#161412',
   borderTop: '1px solid #34322F',
   backgroundImage: 'none',
@@ -26,6 +24,11 @@ export function NoteDrawer() {
   const { setIsDrawerOpen } = useDrawerState();
   const [isExpanded, setIsExpanded] = React.useState(false);
 
+  const handleClose = useCallback(() => {
+    setIsDrawerOpen(false);
+    close();
+  }, [close, setIsDrawerOpen]);
+
   React.useEffect(() => {
     setIsDrawerOpen(isOpen);
   }, [isOpen, setIsDrawerOpen]);
@@ -34,12 +37,13 @@ export function NoteDrawer() {
     <Drawer 
       anchor="bottom" 
       open={isOpen} 
-      onClose={close}
+      onClose={handleClose}
       PaperProps={{ 
           sx: { 
             ...DRAWER_SX,
             height: isExpanded ? '92dvh' : '60dvh',
-            transition: 'height 0.3s ease-in-out'
+            transition: 'height 0.3s ease-in-out',
+            pointerEvents: 'auto'
           }
       }}
       ModalProps={{
@@ -53,19 +57,21 @@ export function NoteDrawer() {
             display: 'flex', 
             justifyContent: 'center', 
             py: 1.5, 
-            cursor: 'pointer' 
+            cursor: 'pointer',
+            borderBottom: '1px solid #34322F',
+            pointerEvents: 'auto'
         }}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
       </Box>
 
-      <Box sx={{ p: 2.75, flex: 1, overflowY: 'auto' }}>
+      <Box sx={{ p: 3, flex: 1, overflowY: 'auto', pointerEvents: 'auto' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff' }}>
+          <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
             {isExpanded ? 'Full Screen Note' : 'New Note'}
           </Typography>
-          <IconButton onClick={close} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+          <IconButton onClick={handleClose} sx={{ color: '#9B9691' }}>
             <X size={20} />
           </IconButton>
         </Box>

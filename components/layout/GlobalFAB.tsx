@@ -17,15 +17,18 @@ import {
   Zap as EventIcon,
 } from 'lucide-react';
 import { useTask } from '@/context/TaskContext';
+import { useNoteDrawer } from '@/context/NoteDrawerContext';
 
 export default function GlobalFAB() {
   const pathname = usePathname();
   const router = useRouter();
   const { setTaskDialogOpen } = useTask();
+  const { open: openNoteDrawer } = useNoteDrawer();
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Hide FAB on specific pages or conditions
   const isSettingsPage = pathname === '/settings';
+  const isNotePage = pathname.startsWith('/note/');
   const isFormActive = pathname.startsWith('/flow/forms/') && pathname.split('/').length > 3;
   const isEventActive = pathname.startsWith('/flow/events/') && pathname.split('/').length > 3;
   
@@ -33,7 +36,17 @@ export default function GlobalFAB() {
 
   if (shouldHide) return null;
 
-  const actions = [
+  const actions = isNotePage ? [
+      { 
+        icon: <PlusIcon size={22} strokeWidth={2} />, 
+        name: 'NOTE', 
+        onClick: () => {
+          openNoteDrawer();
+          setIsExpanded(false);
+        },
+        color: '#6366F1',
+      }
+  ] : [
     { 
       icon: <TaskIcon size={22} strokeWidth={2} />, 
       name: 'TASK', 
