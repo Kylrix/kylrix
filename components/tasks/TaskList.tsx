@@ -133,7 +133,7 @@ export default function TaskList() {
   };
 
   return (
-    <Box sx={{ animation: 'fadeIn 0.4s ease-out', minHeight: '100vh', bgcolor: '#000000', p: { xs: 2, md: 4 } }}>
+    <Box sx={{ animation: 'fadeIn 0.4s ease-out', minHeight: '100vh', bgcolor: '#000000', p: { xs: 2, md: 4 }, pointerEvents: 'auto' }}>
       {/* Header */}
       <Box
         sx={{

@@ -186,6 +186,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         component="main"
         sx={{
           minWidth: 0,
+          pointerEvents: 'auto',
           pt: '88px',
           pb: isWebsiteRoute ? 0 : { xs: 12, md: 4 },
           // Avoid `transition: all` — it animates every property and can jank main-thread layout.
