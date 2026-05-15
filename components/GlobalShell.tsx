@@ -46,6 +46,9 @@ const AccountHealthDrawers = dynamic(
   { ssr: false }
 );
 
+const GlobalFAB = dynamic(() => import('./layout/GlobalFAB').then(m => ({ default: m.GlobalFAB })), { ssr: false });
+const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
+
 function AgenticDrawerMount() {
   const { isOpen } = useAgenticDrawer();
   return <AgenticDrawer />;
@@ -204,6 +207,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {shouldShowBottomBar && <UnifiedBottomBar />}
       <AgenticDrawerMount />
       <ProUpgradeDrawerMount />
+      <GlobalFAB />
+      <TaskDialog />
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !DISABLE_GLOBAL_HEALTH_OVERHEAD && (
         <AccountHealthDrawers />
       )}
