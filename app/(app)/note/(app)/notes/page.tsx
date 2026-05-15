@@ -257,22 +257,22 @@ export default function NotesPage() {
   }, [allNotes]);
 
   const pinnedNotes = useMemo(() => {
-    if (hasSearchResults || currentPage !== 1) return [];
-    return paginatedNotes.filter(n => isPinned(n.$id));
-  }, [paginatedNotes, isPinned, hasSearchResults, currentPage]);
+    if (hasSearchResults) return [];
+    return allNotes.filter(n => isPinned(n.$id));
+  }, [allNotes, isPinned, hasSearchResults]);
 
   const regularNotes = useMemo(() => {
     if (hasSearchResults) return paginatedNotes;
     // On first page, we separate pinned ones. On subsequent pages, we show all (though pinned are only on first page anyway)
     return currentPage === 1 ? paginatedNotes.filter(n => !isPinned(n.$id)) : paginatedNotes;
   }, [paginatedNotes, isPinned, hasSearchResults, currentPage]);
+return (
+  <NotesErrorBoundary>
+    <Box sx={{ flex: 1, minHeight: '100vh', pointerEvents: 'auto' }}>
+      {/* Mobile Header - Hidden on Desktop */}
+      <Box
+        component="header"
 
-  return (
-    <NotesErrorBoundary>
-      <Box sx={{ flex: 1, minHeight: '100vh', pointerEvents: 'auto' }}>
-        {/* Mobile Header - Hidden on Desktop */}
-        <Box
-          component="header"
           sx={{
             mb: 4,
             display: { xs: 'flex', md: 'none' },
