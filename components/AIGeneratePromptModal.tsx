@@ -90,7 +90,7 @@ export function AIGeneratePromptModal({ onClose, onGenerate, isGenerating = fals
       anchor={isMobile ? 'bottom' : 'right'}
       open={true}
       onClose={onClose}
-      ModalProps={{ keepMounted: true }}
+      ModalProps={{ keepMounted: false }}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 650px)',

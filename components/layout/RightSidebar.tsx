@@ -35,7 +35,7 @@ export default function RightSidebar() {
       onClose={closeSecondarySidebar}
       variant="temporary"
       ModalProps={{
-        keepMounted: true, // Better mobile performance
+        keepMounted: false, // Prevents persistent invisible backdrop bugs on mobile
       }}
       PaperProps={{
         sx: {

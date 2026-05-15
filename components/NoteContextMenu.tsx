@@ -122,7 +122,7 @@ const PaywallDrawer: React.FC<PaywallDrawerProps> = ({
       anchor={isMobile ? 'bottom' : 'right'}
       open={open}
       onClose={handleClose}
-      ModalProps={{ keepMounted: true }}
+      ModalProps={{ keepMounted: false }}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 720px)',

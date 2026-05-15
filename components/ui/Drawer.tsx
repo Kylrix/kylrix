@@ -22,7 +22,7 @@ export function Drawer({
       anchor={isMobile ? 'bottom' : 'right'}
       open={open}
       onClose={onClose}
-      ModalProps={{ keepMounted: true }}
+      ModalProps={{ keepMounted: false }}
       slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       PaperProps={{
         sx: {
