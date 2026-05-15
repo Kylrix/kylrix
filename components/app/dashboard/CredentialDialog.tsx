@@ -223,7 +223,7 @@ export default function CredentialDialog({
       anchor={isMobile ? 'bottom' : 'right'}
       open={open}
       onClose={onClose}
-      ModalProps={{ keepMounted: true }}
+      ModalProps={{ keepMounted: false }}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 600px)',

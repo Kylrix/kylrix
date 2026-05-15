@@ -172,11 +172,9 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
        * used to mount it via app/(app)/layout.tsx — that wrapper is now redundant and
        * the topbar's React identity stays stable across website ↔ app navigation.
        */}
-      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000 }}>
-        <Suspense fallback={null}>
-          <UnifiedTopbar />
-        </Suspense>
-      </Box>
+      <Suspense fallback={null}>
+        <UnifiedTopbar />
+      </Suspense>
 
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !hideDesktopSidebar && <DesktopSidebar />}
       

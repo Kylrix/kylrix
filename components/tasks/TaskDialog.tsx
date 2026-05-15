@@ -133,7 +133,7 @@ export default function TaskDialog() {
         anchor={isMobile ? 'bottom' : 'right'}
         open={taskDialogOpen}
         onClose={handleClose}
-        ModalProps={{ keepMounted: true }}
+        ModalProps={{ keepMounted: false }}
         PaperProps={{
           sx: {
             width: isMobile ? '100%' : 'min(100vw, 640px)',

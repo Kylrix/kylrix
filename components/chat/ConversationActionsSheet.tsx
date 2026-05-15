@@ -640,7 +640,7 @@ export default function ConversationActionsSheet({
         open={open}
         onClose={onClose}
         ModalProps={{
-          keepMounted: true,
+          keepMounted: false,
         }}
         PaperProps={{
           sx: {

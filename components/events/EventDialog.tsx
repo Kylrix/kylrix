@@ -104,7 +104,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
         anchor={isMobile ? 'bottom' : 'right'}
         open={open}
         onClose={handleClose}
-        ModalProps={{ keepMounted: true }}
+        ModalProps={{ keepMounted: false }}
         PaperProps={{
           sx: {
             width: isMobile ? '100%' : 'min(100vw, 600px)',

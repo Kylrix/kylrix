@@ -215,6 +215,7 @@ export function AgenticDrawer() {
       anchor={isDesktop ? 'right' : 'bottom'}
       open={isOpen}
       onClose={closeAgenticDrawer}
+      ModalProps={{ keepMounted: false, disableScrollLock: true }}
       slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       sx={{
         '& .MuiDrawer-paper': {
