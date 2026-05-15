@@ -241,18 +241,18 @@ export function UnifiedBottomBar() {
 
     evaluateDrawerState();
 
-    const observer = new MutationObserver(() => {
-      evaluateDrawerState();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'aria-hidden', 'style'],
-    });
-
-    return () => observer.disconnect();
+    // Disabling observer temporarily to isolate click-blocking
+    // const observer = new MutationObserver(() => {
+    //   evaluateDrawerState();
+    // });
+    // observer.observe(document.body, {
+    //   childList: true,
+    //   subtree: true,
+    //   attributes: true,
+    //   attributeFilter: ['class', 'aria-hidden', 'style'],
+    // });
+    // return () => observer.disconnect();
+    return () => {};
   }, []);
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
