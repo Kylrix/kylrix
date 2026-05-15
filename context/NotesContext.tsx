@@ -15,6 +15,7 @@ import {
 } from '@/lib/appwrite';
 import type { Notes } from '@/types/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useDataNexus } from './DataNexusContext';
 
@@ -300,6 +301,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const opportunisticallyDecryptNote = useCallback(async (note: Notes) => {
     if (!note?.$id) return;
+    if (!ecosystemSecurity.status.isUnlocked) return; // Guard against vault-locked state
 
     const meta = (() => {
       try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
