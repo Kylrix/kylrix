@@ -370,7 +370,7 @@ export default function TaskDialog() {
                 <Box
                   component="li"
                   {...props}
-                  key={props.id}
+                  key={option.id}
                   sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1.5 }}
                 >
                   <Box sx={{ width: 4, height: 16, borderRadius: 1, bgcolor: option.color }} />
