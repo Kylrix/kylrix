@@ -31,8 +31,10 @@ export function LoginDrawer() {
       onClose={close}
       PaperProps={{ sx: DRAWER_SX }}
       ModalProps={{
-          keepMounted: false,
-          disableScrollLock: true,
+        keepMounted: false,
+        disableScrollLock: true,
+        disablePortal: false,
+        hideBackdrop: false,
       }}
     >
       <Box sx={{ p: 2.75 }}>

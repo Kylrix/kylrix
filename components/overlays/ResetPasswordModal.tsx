@@ -80,7 +80,7 @@ export function ResetPasswordModal({ isOpen, onClose }: ResetPasswordModalProps)
       anchor={isMobile ? 'bottom' : 'right'}
       open={isOpen} 
       onClose={onClose}
-      ModalProps={{ keepMounted: true }}
+      ModalProps={{ keepMounted: false }}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 500px)',

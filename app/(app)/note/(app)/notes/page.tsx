@@ -29,6 +29,7 @@ import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 
 import { NotesErrorBoundary } from '@/components/ui/ErrorBoundary';
+import MobileFAB from '@/components/MobileFAB';
 
 export default function NotesPage() {
   const { 
@@ -271,6 +272,7 @@ export default function NotesPage() {
     <NotesErrorBoundary>
       <Box sx={{ flex: 1, minHeight: '100vh' }}>
         {/* Mobile Header - Hidden on Desktop */}
+        <MobileFAB />
         <Box
           component="header"
           sx={{

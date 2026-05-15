@@ -13,6 +13,7 @@ import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import Overlay from '@/components/ui/Overlay';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useAuth } from '@/context/auth/AuthContext';
 
@@ -158,6 +159,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
+      <Overlay />
       <LoginDrawer />
       {/**
        * Single persistent topbar for the entire app + marketing surface. UnifiedTopbar
