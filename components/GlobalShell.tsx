@@ -46,7 +46,7 @@ const AccountHealthDrawers = dynamic(
   { ssr: false }
 );
 
-const GlobalFAB = dynamic(() => import('./layout/GlobalFAB').then(m => ({ default: m.GlobalFAB })), { ssr: false });
+const GlobalFAB = dynamic(() => import('./layout/GlobalFAB'), { ssr: false });
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
 
 function AgenticDrawerMount() {
