@@ -77,6 +77,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           await runTokenOperationSecure({
             action: 'mint_activity',
             userId: user.$id,
+            jwt: document.cookie.split('; ').find(row => row.startsWith('session='))?.split('=')[1],
             idempotencyKey: `mint:daily_login:${todayKey}:${user.$id}`,
             activityType: 'daily_login',
             uniqueActors: 1,
