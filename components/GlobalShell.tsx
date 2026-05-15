@@ -164,8 +164,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       <Overlay />
-      <LoginDrawer />
-      <NoteDrawer />
+      {/* <LoginDrawer /> */}
+      {/* <NoteDrawer /> */}
       {/**
        * Single persistent topbar for the entire app + marketing surface. UnifiedTopbar
        * already swaps its skin/content by pathname, so we mount it once here. App routes
