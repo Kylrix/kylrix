@@ -50,7 +50,7 @@ import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { ActivityService } from '@/lib/services/activity';
 import UserQuickProfileDrawer from '@/components/common/UserQuickProfileDrawer';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
-import { cleanupStaleCallsSecure } from '@/lib/actions/secure-ops';
+// Removed cleanupStaleCallsSecure import
 import { AppwriteService } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
 import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
@@ -136,7 +136,6 @@ export default function NoteTopbar({
       try {
         const { TaskDelegator } = await import('@/lib/services/internal/task-delegator');
         TaskDelegator.defer(async () => {
-          await cleanupStaleCallsSecure({ userId: user.$id }).catch(() => undefined);
           const presence = await ActivityService.getUserPresence(user.$id);
           const raw = String(presence?.customStatus || '');
           if (!raw) {
