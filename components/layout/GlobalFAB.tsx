@@ -24,7 +24,7 @@ import { useNoteDrawer } from '@/context/NoteDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import Logo from '@/components/common/Logo';
 
-export function GlobalFAB() {
+export default function GlobalFAB() {
   const pathname = usePathname();
   const router = useRouter();
   const { user } = useAuth();
@@ -89,8 +89,8 @@ export function GlobalFAB() {
   const fabConfig = useMemo(() => {
     if (isLandingPage) return { icon: <PlusIcon size={32} strokeWidth={2} />, color: '#F59E0B' };
     if (isNotePage) return { icon: <PlusIcon size={32} strokeWidth={2} />, color: '#6366F1' };
-    if (isFlowPage) return { icon: <Zap size={32} strokeWidth={2} />, color: '#A855F7' };
-    if (isConnectPage) return { icon: <MessageSquare size={32} strokeWidth={2} />, color: '#F59E0B' };
+    if (isFlowPage) return { icon: <EventIcon size={32} strokeWidth={2} />, color: '#A855F7' };
+    if (isConnectPage) return { icon: <ChatIcon size={32} strokeWidth={2} />, color: '#F59E0B' };
     return { icon: <PlusIcon size={32} strokeWidth={2} />, color: '#A855F7' };
   }, [isLandingPage, isNotePage, isFlowPage, isConnectPage]);
 
