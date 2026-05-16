@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { AnalysisMode } from '@/lib/ai/types';
 import { PrivacyFilter } from '@/lib/ai/sanitizer';
 import { generateAIContent } from '@/lib/actions/ai';
@@ -17,7 +17,6 @@ interface AIContextType {
   openAIModal: () => void;
   closeAIModal: () => void;
   
-  // Global Action Handlers
   openGlobalCreateModal: (prefill?: { name?: string; url?: string; username?: string }) => void;
   registerCreateModal: (handler: (prefill?: { name?: string; url?: string; username?: string }) => void) => void;
   
@@ -40,7 +39,6 @@ export function AIProvider({ children }: { children: ReactNode }) {
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [createModalHandler, setCreateModalHandler] = useState<((prefill?: { name?: string; url?: string; username?: string }) => void) | null>(null);
 
-  // Allow components to register themselves as the "Create Modal" handler
   const registerCreateModal = useCallback((handler: (prefill?: { name?: string; url?: string; username?: string }) => void) => {
     setCreateModalHandler(() => handler);
   }, []);
@@ -126,26 +124,17 @@ export function AIProvider({ children }: { children: ReactNode }) {
   const openAIModal = useCallback(() => setIsAIModalOpen(true), []);
   const closeAIModal = useCallback(() => setIsAIModalOpen(false), []);
 
-  /**
-   * Memoize so consumers (toolbars, FABs, command palettes) don't re-render
-   * each time AIProvider re-renders for unrelated reasons.
-   * `analyze` / `askAI` / `sendCommand` are stable closures over setIsLoading;
-   * they're referenced by identity, so this is safe to memoize.
-   */
-  const contextValue = useMemo<AIContextType>(
-    () => ({
-      analyze,
-      askAI,
-      sendCommand,
-      openAIModal,
-      closeAIModal,
-      openGlobalCreateModal,
-      registerCreateModal,
-      isAIModalOpen,
-      isLoading,
-    }),
-    [openAIModal, closeAIModal, openGlobalCreateModal, registerCreateModal, isAIModalOpen, isLoading]
-  );
+  const contextValue = useMemo(() => ({
+    analyze,
+    askAI,
+    sendCommand,
+    openAIModal,
+    closeAIModal,
+    openGlobalCreateModal,
+    registerCreateModal,
+    isAIModalOpen,
+    isLoading,
+  }), [analyze, askAI, sendCommand, openAIModal, closeAIModal, openGlobalCreateModal, registerCreateModal, isAIModalOpen, isLoading]);
 
   return (
     <AIContext.Provider value={contextValue}>
@@ -154,4 +143,3 @@ export function AIProvider({ children }: { children: ReactNode }) {
     </AIContext.Provider>
   );
 }
-

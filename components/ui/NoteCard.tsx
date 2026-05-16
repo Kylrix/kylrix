@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  Typography, 
-  Box, 
-  IconButton, 
-  Chip, 
-  alpha,
-} from '@mui/material';
+import { Card, CardContent, CardHeader, Typography, Box, IconButton, Chip, alpha } from '@mui/material';
 import { useContextMenu } from './ContextMenuContext';
 import { useDynamicSidebar } from './DynamicSidebar';
 import { NoteDetailSidebar } from './NoteDetailSidebar';
@@ -30,12 +21,14 @@ import {
   Refresh as RefreshIcon,
   LocalOffer as LocalOfferIcon,
   MoreHoriz as MoreHorizIcon,
+  PlaylistAdd as TodoIcon,
+  Summarize as SummarizeIcon,
+  Spellcheck as GrammarIcon,
 } from '@mui/icons-material';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { ShareNoteDrawer } from '../overlays/ShareNoteDrawer';
 import { DeleteNoteDrawer } from '../overlays/DeleteNoteDrawer';
 
-import PaywallDrawer from '../NoteContextMenu';
 import { updateNote, createNote, toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl, getNotePublicState } from '@/lib/appwrite';
 import { useToast } from './Toast';
 import { useSudo } from '@/context/SudoContext';
@@ -43,11 +36,6 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { generateAIAction } from '@/lib/ai-actions';
-import {
-  PlaylistAdd as TodoIcon,
-  Summarize as SummarizeIcon,
-  Spellcheck as GrammarIcon,
-} from '@mui/icons-material';
 
 interface NoteCardProps {
   note: Notes;
@@ -57,23 +45,27 @@ interface NoteCardProps {
 }
 
 const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete, onNoteSelect }) => {
-
-  const NAV_SURFACE = '#161412';
-  const { openMenu } = useContextMenu();
-  const { openSidebar } = useDynamicSidebar();
-  const { isPinned, pinNote, unpinNote, upsertNote } = useNotes();
-  const { user } = useAuth();
-  
-  const { promptSudo } = useSudo();
-  const { openProUpgrade } = useProUpgrade();
-  const { showSuccess, showError, showInfo } = useToast();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [mounted, setMounted] = useState(false);
   const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
   const [isDeleteDrawerOpen, setIsDeleteDrawerOpen] = useState(false);
   const [isPaywallDialogOpen, setIsPaywallDialogOpen] = useState(false);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
-  const isPublic = getNotePublicState(note);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  const { openMenu } = useContextMenu();
+  const { openSidebar } = useDynamicSidebar();
+  const { isPinned, pinNote, unpinNote, upsertNote } = useNotes();
+  const { user } = useAuth();
+  const { promptSudo } = useSudo();
+  const { openProUpgrade } = useProUpgrade();
+  const { showSuccess, showError, showInfo } = useToast();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  const NAV_SURFACE = '#161412';
+  const isPublic = getNotePublicState(note);
   const isPro = hasPaidKylrixPlan(user);
   const noteMeta = (() => {
     try {
@@ -83,12 +75,12 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     }
   })();
   const isEncryptedNote = !!noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T4' && !noteMeta?.clientDecrypted;
+  const pinned = isPinned(note.$id);
 
   const handleAIAction = async (action: 'summarize' | 'grammar' | 'expand') => {
     if (isAIProcessing) return;
     setIsAIProcessing(true);
     showInfo(`AI is ${action === 'grammar' ? 'fixing' : action + 'ing'} your note...`);
-    
     try {
       const result = await generateAIAction(note, action);
       const updated = await updateNote(note.$id, {
@@ -108,7 +100,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     if (isAIProcessing) return;
     setIsAIProcessing(true);
     showInfo('Converting note to task in Kylrix Flow...');
-
     try {
       await createTaskFromNote(note);
       showSuccess('Linked task created in Kylrix Flow');
@@ -118,8 +109,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       setIsAIProcessing(false);
     }
   };
-
-  const pinned = isPinned(note.$id);
 
   const handlePinToggle = async (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -285,80 +274,26 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     }
   };
 
-  const handlePaywallUpdate = (updatedNote: any) => {
-    // Update the note in the local context without triggering profile fetches
-    upsertNote(updatedNote as Notes);
-  };
-
   const contextMenuItems = [
-    {
-      label: pinned ? 'Unpin' : 'Pin',
-      icon: pinned ? <PinIcon sx={{ fontSize: 18 }} /> : <PinOutlinedIcon sx={{ fontSize: 18 }} />,
-      onClick: () => { handlePinToggle(); }
-    },
-    ...(isPublic ? [{
-      label: 'Copy Share Link',
-      icon: <LinkIcon sx={{ fontSize: 18 }} />,
-      onClick: () => { handleCopyShareLink(); }
-    }, {
-      label: 'Change Public Link',
-      icon: <RefreshIcon sx={{ fontSize: 18 }} />,
-      onClick: () => { handleRotatePublicLink(); }
-    }] : []),
-    {
-      label: isPublic ? 'Make Private' : 'Make Public',
-      icon: isPublic ? <PrivateIcon sx={{ fontSize: 18 }} /> : <PublicIcon sx={{ fontSize: 18 }} />,
-      onClick: () => { handleTogglePublic(); }
-    },
-    {
-      label: 'Duplicate',
-      icon: <DuplicateIcon sx={{ fontSize: 18 }} />,
-      onClick: () => { handleDuplicate(); }
-    },
-    {
-      label: 'Add Paywall',
-      icon: <LocalOfferIcon sx={{ fontSize: 18, color: '#EC4899' }} />,
-      onClick: () => { setIsPaywallDialogOpen(true); }
-    },
+    { label: pinned ? 'Unpin' : 'Pin', icon: pinned ? <PinIcon sx={{ fontSize: 18 }} /> : <PinOutlinedIcon sx={{ fontSize: 18 }} />, onClick: () => { handlePinToggle(); } },
+    ...(isPublic ? [{ label: 'Copy Share Link', icon: <LinkIcon sx={{ fontSize: 18 }} />, onClick: () => { handleCopyShareLink(); } }, { label: 'Change Public Link', icon: <RefreshIcon sx={{ fontSize: 18 }} />, onClick: () => { handleRotatePublicLink(); } }] : []),
+    { label: isPublic ? 'Make Private' : 'Make Public', icon: isPublic ? <PrivateIcon sx={{ fontSize: 18 }} /> : <PublicIcon sx={{ fontSize: 18 }} />, onClick: () => { handleTogglePublic(); } },
+    { label: 'Duplicate', icon: <DuplicateIcon sx={{ fontSize: 18 }} />, onClick: () => { handleDuplicate(); } },
+    { label: 'Add Paywall', icon: <LocalOfferIcon sx={{ fontSize: 18, color: '#EC4899' }} />, onClick: () => { setIsPaywallDialogOpen(true); } },
     ...(isPro ? [
-      {
-        label: 'AI Summarize',
-        icon: <SummarizeIcon sx={{ fontSize: 18, color: 'primary.main' }} />,
-        onClick: () => { handleAIAction('summarize'); }
-      },
-      {
-        label: 'AI Fix Grammar',
-        icon: <GrammarIcon sx={{ fontSize: 18, color: 'primary.main' }} />,
-        onClick: () => { handleAIAction('grammar'); }
-      },
-      {
-        label: 'Convert To Todo',
-        icon: <TodoIcon sx={{ fontSize: 18, color: 'primary.main' }} />,
-        onClick: () => { handleCreateTodo(); }
-      }
+      { label: 'AI Summarize', icon: <SummarizeIcon sx={{ fontSize: 18, color: 'primary.main' }} />, onClick: () => { handleAIAction('summarize'); } },
+      { label: 'AI Fix Grammar', icon: <GrammarIcon sx={{ fontSize: 18, color: 'primary.main' }} />, onClick: () => { handleAIAction('grammar'); } },
+      { label: 'Convert To Todo', icon: <TodoIcon sx={{ fontSize: 18, color: 'primary.main' }} />, onClick: () => { handleCreateTodo(); } }
     ] : []),
-    {
-      label: 'Share with...',
-      icon: <ShareIcon sx={{ fontSize: 18 }} />,
-      onClick: () => setIsShareModalOpen(true)
-    },
-    {
-      label: 'Delete',
-      icon: <TrashIcon sx={{ fontSize: 18 }} />,
-      onClick: handleDelete,
-      variant: 'destructive' as const
-    }
+    { label: 'Share with...', icon: <ShareIcon sx={{ fontSize: 18 }} />, onClick: () => setIsShareDrawerOpen(true) },
+    { label: 'Delete', icon: <TrashIcon sx={{ fontSize: 18 }} />, onClick: () => setIsDeleteDrawerOpen(true), variant: 'destructive' as const }
   ];
 
   const openCardActionsMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    openMenu({
-      x: rect.left,
-      y: rect.bottom + 4,
-      items: contextMenuItems,
-    });
+    openMenu({ x: rect.left, y: rect.bottom + 4, items: contextMenuItems });
   };
 
   return (
@@ -375,237 +310,235 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         noteId={note.$id} 
         noteTitle={note.title || 'Untitled note'} 
       />
-      <PaywallDrawer
-        open={isPaywallDialogOpen}
-        onClose={() => setIsPaywallDialogOpen(false)}
-        note={note}
-        onUpdate={handlePaywallUpdate}
-      />
-      <Card
-        {...sidebarIgnoreProps}
-        onClick={handleClick}
-        onContextMenu={handleRightClick}
-        sx={{
-          height: { xs: 160, sm: 180, md: 200, lg: 220 },
-          display: 'flex',
-          flexDirection: 'column',
-          cursor: 'pointer',
-          position: 'relative',
-          overflow: 'hidden',
-          bgcolor: NAV_SURFACE,
-          backgroundImage: 'none',
-          border: '1px solid',
-          borderColor: '#34322F',
-          borderRadius: '28px',
-          boxShadow: 'none',
-          transform: 'none',
-          transition: 'border-color 0.2s ease',
-          '&:hover': {
-            transform: 'none',
-            borderColor: (theme) => alpha(theme.palette.secondary.main, 0.5),
-            bgcolor: NAV_SURFACE,
-            boxShadow: 'none',
-          }
-        }}
-      >
-        <CardHeader
-          sx={{ pb: 0.5, p: 2.5 }}
-          title={
-            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+      {!mounted ? (
+        <Box sx={{ height: 200 }} />
+      ) : (
+        <Card
+            {...sidebarIgnoreProps}
+            onClick={handleClick}
+            onContextMenu={handleRightClick}
+            sx={{
+              height: { xs: 160, sm: 180, md: 200, lg: 220 },
+              display: 'flex',
+              flexDirection: 'column',
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+              bgcolor: NAV_SURFACE,
+              backgroundImage: 'none',
+              border: '1px solid',
+              borderColor: '#34322F',
+              borderRadius: '28px',
+              boxShadow: 'none',
+              transform: 'none',
+              transition: 'border-color 0.2s ease',
+              '&:hover': {
+                transform: 'none',
+                borderColor: (theme) => alpha(theme.palette.secondary.main, 0.5),
+                bgcolor: NAV_SURFACE,
+                boxShadow: 'none',
+              }
+            }}
+          >
+            <CardHeader
+              sx={{ pb: 0.5, p: 2.5 }}
+              title={
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
                   <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontSize: { xs: '0.875rem', sm: '1rem' }, 
-                  fontWeight: 900,
-                  fontFamily: 'var(--font-clash-display)',
-                  color: 'secondary.main', // App Secondary
-                  letterSpacing: '-0.02em',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  flex: 1,
-                  lineHeight: 1.2
-                }}
-              >
-            {isEncryptedNote ? '🔒 Encrypted note' : note.title}
-              </Typography>
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                {isPublic && (
-                  <IconButton
-                    size="small"
-                    onClick={handleCopyShareLink}
-                    sx={{
-                      p: 0.5,
-                      color: 'text.secondary',
-                      opacity: 0.6,
-                      borderRadius: '8px',
-                      '&:hover': {
-                        color: 'primary.main',
-                        bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
-                        opacity: 1
-                      }
+                    variant="h4" 
+                    sx={{ 
+                      fontSize: { xs: '0.875rem', sm: '1rem' }, 
+                      fontWeight: 900,
+                      fontFamily: 'var(--font-clash-display)',
+                      color: 'secondary.main',
+                      letterSpacing: '-0.02em',
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      flex: 1,
+                      lineHeight: 1.2
                     }}
                   >
-                    <LinkIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                )}
-                <IconButton
-                  size="small"
-                  onClick={handlePinToggle}
-                  sx={{ 
-                    p: 0.5,
-                    color: pinned ? 'primary.main' : 'text.secondary',
-                    opacity: pinned ? 1 : 0.4,
-                    borderRadius: '8px',
-                    '&:hover': {
-                      color: 'primary.main',
-                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
-                      opacity: 1
-                    }
-                  }}
-                >
-                  {pinned ? <PinIcon sx={{ fontSize: 16 }} /> : <PinOutlinedIcon sx={{ fontSize: 16 }} />}
-                </IconButton>
-                <IconButton
-                  size="small"
-                  aria-label="Note actions"
-                  onClick={openCardActionsMenu}
-                  sx={{
-                    p: 0.5,
-                    color: 'text.secondary',
-                    opacity: 0.55,
-                    borderRadius: '8px',
-                    '&:hover': {
-                      color: 'primary.main',
-                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
-                      opacity: 1,
-                    },
-                  }}
-                >
-                  <MoreHorizIcon sx={{ fontSize: 18 }} />
-                </IconButton>
+                {isEncryptedNote ? '🔒 Encrypted note' : note.title}
+                  </Typography>
 
-                {note.attachments && note.attachments.length > 0 && (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 0.3, 
-                    px: 1, 
-                    py: 0.4, 
-                    borderRadius: '8px', 
-                    bgcolor: 'rgba(99, 102, 241, 0.05)',
-                    color: 'primary.main',
-                    fontSize: '10px',
-                    fontWeight: 800,
-                    border: '1px solid rgba(99, 102, 241, 0.1)',
-                    fontFamily: 'var(--font-jetbrains-mono)'
-                  }}>
-                    <AttachFileIcon sx={{ fontSize: 10 }} />
-                    {note.attachments.length}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    {isPublic && (
+                      <IconButton
+                        size="small"
+                        onClick={handleCopyShareLink}
+                        sx={{
+                          p: 0.5,
+                          color: 'text.secondary',
+                          opacity: 0.6,
+                          borderRadius: '8px',
+                          '&:hover': {
+                            color: 'primary.main',
+                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
+                            opacity: 1
+                          }
+                        }}
+                      >
+                        <LinkIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
+                    <IconButton
+                      size="small"
+                      onClick={handlePinToggle}
+                      sx={{ 
+                        p: 0.5,
+                        color: pinned ? 'primary.main' : 'text.secondary',
+                        opacity: pinned ? 1 : 0.4,
+                        borderRadius: '8px',
+                        '&:hover': {
+                          color: 'primary.main',
+                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
+                          opacity: 1
+                        }
+                      }}
+                    >
+                      {pinned ? <PinIcon sx={{ fontSize: 16 }} /> : <PinOutlinedIcon sx={{ fontSize: 16 }} />}
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      aria-label="Note actions"
+                      onClick={openCardActionsMenu}
+                      sx={{
+                        p: 0.5,
+                        color: 'text.secondary',
+                        opacity: 0.55,
+                        borderRadius: '8px',
+                        '&:hover': {
+                          color: 'primary.main',
+                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
+                          opacity: 1,
+                        },
+                      }}
+                    >
+                      <MoreHorizIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+
+                    {note.attachments && note.attachments.length > 0 && (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 0.3, 
+                        px: 1, 
+                        py: 0.4, 
+                        borderRadius: '8px', 
+                        bgcolor: 'rgba(99, 102, 241, 0.05)',
+                        color: 'primary.main',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        border: '1px solid rgba(99, 102, 241, 0.1)',
+                        fontFamily: 'var(--font-jetbrains-mono)'
+                      }}>
+                        <AttachFileIcon sx={{ fontSize: 10 }} />
+                        {note.attachments.length}
+                      </Box>
+                    )}
                   </Box>
-                )}
-              </Box>
-            </Box>
-          }
-        />
+                </Box>
+              }
+            />
 
-        <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0, position: 'relative', p: 2.5, pt: 0 }}>
-          {note.format === 'doodle' ? (
-            <Box sx={{ 
-              flex: 1, 
-              borderRadius: '16px', 
-              border: '1.5px solid',
-              borderColor: 'divider',
-              overflow: 'hidden', 
-              bgcolor: (theme) => alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.3 : 0.6),
-              position: 'relative'
-            }}>
-              <canvas
-                ref={canvasRef}
-                width={300}
-                height={200}
-                style={{ width: '100%', height: '100%', display: 'block' }}
-              />
-            </Box>
-          ) : (
-            isEncryptedNote ? (
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'text.secondary',
-                  fontFamily: 'var(--font-satoshi)',
-                  fontSize: '0.85rem',
-                  lineHeight: 1.6,
-                  fontStyle: 'italic',
-                  opacity: 0.75,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  '@media (min-width: 600px)': {
-                    WebkitLineClamp: 4,
-                  },
-                  '@media (min-width: 900px)': {
-                    WebkitLineClamp: 5,
-                  },
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  whiteSpace: 'pre-wrap'
-                }}
-              >
-                🔒 Encrypted note
-              </Typography>
-            ) : (
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: 'text.secondary',
-                  fontFamily: 'var(--font-satoshi)',
-                  fontSize: '0.85rem',
-                  lineHeight: 1.6,
-                  fontWeight: 500,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 3,
-                  '@media (min-width: 600px)': {
-                    WebkitLineClamp: 4,
-                  },
-                  '@media (min-width: 900px)': {
-                    WebkitLineClamp: 5,
-                  },
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                  whiteSpace: 'pre-wrap'
-                }}
-              >
-                {note.content}
-              </Typography>
-            )
-          )}
-          
-          <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.8, overflow: 'hidden' }}>
-            {note.tags && note.tags.slice(0, 2).map((tag: string, index: number) => (
-              <Chip
-                key={index}
-                label={tag}
-                size="small"
-                sx={{ 
-                  height: 22, 
-                  fontSize: '10px', 
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-jetbrains-mono)',
-                  textTransform: 'uppercase',
-                  bgcolor: (theme) => alpha(theme.palette.text.primary, 0.03),
-                  color: 'text.secondary',
+            <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0, position: 'relative', p: 2.5, pt: 0 }}>
+              {note.format === 'doodle' ? (
+                <Box sx={{ 
+                  flex: 1, 
+                  borderRadius: '16px', 
                   border: '1.5px solid',
                   borderColor: 'divider',
-                  borderRadius: '8px',
-                  '& .MuiChip-label': { px: 1 }
-                }}
-              />
-            ))}
-          </Box>
-        </CardContent>
-      </Card>
+                  overflow: 'hidden', 
+                  bgcolor: (theme) => alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.3 : 0.6),
+                  position: 'relative'
+                }}>
+                  <canvas
+                    ref={canvasRef}
+                    width={300}
+                    height={200}
+                    style={{ width: '100%', height: '100%', display: 'block' }}
+                  />
+                </Box>
+              ) : (
+                isEncryptedNote ? (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      fontFamily: 'var(--font-satoshi)',
+                      fontSize: '0.85rem',
+                      lineHeight: 1.6,
+                      fontStyle: 'italic',
+                      opacity: 0.75,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      '@media (min-width: 600px)': {
+                        WebkitLineClamp: 4,
+                      },
+                      '@media (min-width: 900px)': {
+                        WebkitLineClamp: 5,
+                      },
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      whiteSpace: 'pre-wrap'
+                    }}
+                  >
+                    🔒 Encrypted note
+                  </Typography>
+                ) : (
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: 'text.secondary',
+                      fontFamily: 'var(--font-satoshi)',
+                      fontSize: '0.85rem',
+                      lineHeight: 1.6,
+                      fontWeight: 500,
+                      display: '-webkit-box',
+                      WebkitLineClamp: 3,
+                      '@media (min-width: 600px)': {
+                        WebkitLineClamp: 4,
+                      },
+                      '@media (min-width: 900px)': {
+                        WebkitLineClamp: 5,
+                      },
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      whiteSpace: 'pre-wrap'
+                    }}
+                  >
+                    {note.content}
+                  </Typography>
+                )
+              )}
+              
+              <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.8, overflow: 'hidden' }}>
+                {note.tags && note.tags.slice(0, 2).map((tag: string, index: number) => (
+                  <Chip
+                    key={index}
+                    label={tag}
+                    size="small"
+                    sx={{ 
+                      height: 22, 
+                      fontSize: '10px', 
+                      fontWeight: 800,
+                      fontFamily: 'var(--font-jetbrains-mono)',
+                      textTransform: 'uppercase',
+                      bgcolor: (theme) => alpha(theme.palette.text.primary, 0.03),
+                      color: 'text.secondary',
+                      border: '1.5px solid',
+                      borderColor: 'divider',
+                      borderRadius: '8px',
+                      '& .MuiChip-label': { px: 1 }
+                    }}
+                  />
+                ))}
+              </Box>
+            </CardContent>
+          </Card>
+      )}
     </>
   );
 });
