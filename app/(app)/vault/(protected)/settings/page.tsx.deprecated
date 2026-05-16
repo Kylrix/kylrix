@@ -41,10 +41,64 @@ import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySe
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { AppwriteService } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
+import { RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Button, 
+  TextField, 
+  Stack, 
+  Switch, 
+  FormControlLabel, 
+  Divider,
+  CircularProgress,
+  alpha,
+  useTheme,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  InputAdornment
+} from '@mui/material';
 
 export default function SettingsPage() {
+  const [minting, setMinting] = useState(false);
   const muiTheme = useTheme();
   const { user } = useAppwriteVault();
+...
+  const handleManualMint = async () => {
+    setMinting(true);
+    try {
+      const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const todayKey = today.toISOString();
+      
+      await runTokenOperationSecure({
+        action: 'mint_activity',
+        userId: user?.$id,
+        idempotencyKey: `mint:daily_login:${todayKey}:${user?.$id}`,
+        activityType: 'daily_login',
+        uniqueActors: 1,
+        trustScore: 70,
+        sourceType: 'daily_login',
+        sourceId: todayKey,
+      });
+      toast.success('Tokens minted successfully!');
+    } catch (e: any) {
+      toast.error(e.message || 'Minting failed');
+    } finally {
+      setMinting(false);
+    }
+  };
+...
   const [isUnlocked, setIsUnlocked] = useState(masterPassCrypto.isVaultUnlocked());
   const [passkeySetupOpen, setPasskeySetupOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -169,6 +223,20 @@ export default function SettingsPage() {
       <Typography variant="body1" sx={{ color: 'text.secondary', mb: 5, fontWeight: 500 }}>
         Manage your security preferences and application behavior.
       </Typography>
+
+      <Box sx={{ mb: 4, bgcolor: '#161412', borderRadius: '24px', p: 3, border: '1px solid #34322F' }}>
+          <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>Daily Token Mint</Typography>
+          <Typography sx={{ color: '#9B9691', mb: 2, fontSize: '0.9rem' }}>Manually trigger your daily token minting reward.</Typography>
+          <Button 
+              variant="contained" 
+              startIcon={minting ? <CircularProgress size={18} /> : <RefreshCw size={18}/>} 
+              onClick={handleManualMint} 
+              disabled={minting}
+              sx={{ borderRadius: '12px', fontWeight: 700, px: 3, py: 1.2 }}
+          >
+              {minting ? 'Minting...' : 'Mint Daily Tokens'}
+          </Button>
+      </Box>
 
       <Stack spacing={5}>
         <DiscoverabilitySettings />
