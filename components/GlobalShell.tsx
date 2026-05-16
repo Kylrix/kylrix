@@ -42,7 +42,7 @@ const AccountHealthDrawers = dynamic(
   { ssr: false }
 );
 
-const GlobalFAB = dynamic(() => import('./layout/GlobalFAB'), { ssr: false });
+const GlobalFAB = dynamic(() => import('./layout/GlobalFAB').then(m => m.GlobalFAB), { ssr: false });
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
 
 function ProUpgradeDrawerMount() {
