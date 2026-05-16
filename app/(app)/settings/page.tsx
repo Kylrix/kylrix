@@ -50,10 +50,37 @@ export default function SettingsPage() {
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [passkeySetupOpen, setPasskeySetupOpen] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
-
+    const [minting, setMinting] = useState(false);
+  
     // Passkey state
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
     const [_loadingPasskeys, setLoadingPasskeys] = useState(true);
+
+    const handleManualMint = async () => {
+        setMinting(true);
+        try {
+          const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+          const today = new Date();
+          today.setUTCHours(0, 0, 0, 0);
+          const todayKey = today.toISOString();
+          
+          await runTokenOperationSecure({
+            action: 'mint_activity',
+            userId: user?.$id,
+            idempotencyKey: `mint:daily_login:${todayKey}:${user?.$id}`,
+            activityType: 'daily_login',
+            uniqueActors: 1,
+            trustScore: 70,
+            sourceType: 'daily_login',
+            sourceId: todayKey,
+          });
+          toast.success('Tokens minted successfully!');
+        } catch (e: any) {
+          toast.error(e.message || 'Minting failed');
+        } finally {
+          setMinting(false);
+        }
+    };
 
     const loadPasskeys = React.useCallback(async () => {
         if (!user?.$id) return;
