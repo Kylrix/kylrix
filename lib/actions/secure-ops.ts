@@ -248,16 +248,14 @@ export async function runTokenOperationSecure(body: any) {
   if (action === 'mint_activity') {
     const userId = String(body?.userId || '').trim();
     const activityType = String(body?.activityType || '');
-    
-    // Aligned with the 'share_public_note_moment' pattern (trustScore: 85)
     return InternalKylrixTokenService.mintForActivity({
       userId,
-      idempotencyKey: String(body?.idempotencyKey || '').trim(),
+      idempotencyKey: String(body?.idempotencyKey || "").trim(),
       activityType: activityType as KylrixActivityType,
-      uniqueActors: 1, 
-      trustScore: 85,
-      sourceType: String(body?.sourceType || 'activity'),
-      sourceId: String(body?.sourceId || ''),
+      uniqueActors: Number(body?.uniqueActors || 1),
+      trustScore: Number(body?.trustScore || 70),
+      sourceType: String(body?.sourceType || "activity"),
+      sourceId: String(body?.sourceId || ""),
       metadata: body?.metadata || undefined,
     });
   }
