@@ -34,6 +34,8 @@ import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 interface ConnectTopbarProps {
   className?: string;
@@ -50,6 +52,8 @@ export default function ConnectTopbar({
   const { user, logout } = useAuth();
   const { openWallet } = useWalletOverlay();
   const { openAgenticDrawer } = useAgenticDrawer();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -69,6 +73,10 @@ export default function ConnectTopbar({
   const tone = getAppTone(activeApp);
   const profileName = user?.name || user?.email || 'User';
   const profileUsername = (user as any)?.username || (user as any)?.prefs?.username || null;
+  
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
+
   const profileSeed = useMemo(
     () => ({
       username: profileUsername ? String(profileUsername).replace(/^@+/, '').toLowerCase() : null,
@@ -484,51 +492,55 @@ export default function ConnectTopbar({
             <Box sx={{ flex: 1 }} />
 
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
-              {user && (
-                <Tooltip title="Agentic Workspace">
-                  <IconButton
-                    onClick={openAgenticDrawer}
+              {isClient && (
+                <>
+                  {user && (
+                    <Tooltip title="Agentic Workspace">
+                      <IconButton
+                        onClick={() => isPro ? openAgenticDrawer() : openProUpgrade('Agentic Workspace')}
+                        sx={{
+                          color: getAppColor(activeApp),
+                          bgcolor: alpha(getAppColor(activeApp), 0.03),
+                          border: '1px solid',
+                          borderColor: alpha(getAppColor(activeApp), 0.1),
+                          borderRadius: '12px',
+                          width: 42,
+                          height: 42,
+                          '&:hover': { bgcolor: alpha(getAppColor(activeApp), 0.08) },
+                        }}
+                      >
+                        <Bot size={18} strokeWidth={1.5} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+
+                  <ButtonBase
+                    onClick={openProfileMenu}
                     sx={{
-                      color: getAppColor(activeApp),
-                      bgcolor: alpha(getAppColor(activeApp), 0.03),
-                      border: '1px solid',
-                      borderColor: alpha(getAppColor(activeApp), 0.1),
-                      borderRadius: '12px',
-                      width: 42,
-                      height: 42,
-                      '&:hover': { bgcolor: alpha(getAppColor(activeApp), 0.08) },
+                      p: 0,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      '&:hover': { transform: 'scale(1.05)' },
+                      transition: 'transform 0.2s',
                     }}
                   >
-                    <Bot size={18} strokeWidth={1.5} />
-                  </IconButton>
-                </Tooltip>
+                    <Avatar
+                      src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
+                      sx={{
+                        width: 38,
+                        height: 38,
+                        bgcolor: profileAvatarUrl ? 'rgba(255,255,255,0.04)' : tone.secondary,
+                        color: '#fff',
+                        fontWeight: 900,
+                        borderRadius: '12px',
+                      }}
+                    >
+                      {user ? profileName.slice(0, 1).toUpperCase() : 'C'}
+                    </Avatar>
+                  </ButtonBase>
+                </>
               )}
-
-              <ButtonBase
-                onClick={openProfileMenu}
-                sx={{
-                  p: 0,
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  '&:hover': { transform: 'scale(1.05)' },
-                  transition: 'transform 0.2s',
-                }}
-              >
-                <Avatar
-                  src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
-                  sx={{
-                    width: 38,
-                    height: 38,
-                    bgcolor: profileAvatarUrl ? 'rgba(255,255,255,0.04)' : tone.secondary,
-                    color: '#fff',
-                    fontWeight: 900,
-                    borderRadius: '12px',
-                  }}
-                >
-                  {user ? profileName.slice(0, 1).toUpperCase() : 'C'}
-                </Avatar>
-              </ButtonBase>
             </Stack>
           </Box>
         </Box>

@@ -25,35 +25,13 @@ const DRAWER_SX = {
 
 export function UnifiedBottomDrawer() {
   const { activeContent, close } = useUnifiedDrawer();
-  const { setIsDrawerOpen } = useDrawerState();
-  const isOpen = activeContent !== 'navbar';
 
-  React.useEffect(() => {
-    setIsDrawerOpen(isOpen);
-  }, [isOpen, setIsDrawerOpen]);
-
-  const renderContent = () => {
-    switch (activeContent) {
-      case 'login': return <LoginDrawer />;
-      case 'agentic': return <AgenticDrawer />;
-      case 'note': return <NoteDrawer />;
-      default: return null;
-    }
-  };
-
-  return (
-    <Drawer 
-      anchor="bottom" 
-      open={isOpen} 
-      onClose={close}
-      PaperProps={{ sx: DRAWER_SX }}
-      ModalProps={{
-          keepMounted: false,
-          disableScrollLock: false,
-          disablePortal: true,
-      }}
-    >
-        {renderContent()}
-    </Drawer>
-  );
+  // The child components (LoginDrawer, AgenticDrawer, NoteDrawer) already contain their own <Drawer> 
+  // wrappers with specific dimensions/styles. We just render the active one here.
+  switch (activeContent) {
+    case 'login': return <LoginDrawer />;
+    case 'agentic': return <AgenticDrawer />;
+    case 'note': return <NoteDrawer />;
+    default: return null;
+  }
 }

@@ -1876,25 +1876,6 @@ export function PostViewClient() {
                     </Box>
                 )}
 
-                {user && isMobile && !replyDrawerOpen && (
-                    <Fab
-                        color="primary"
-                        aria-label="comment"
-                        onClick={() => setReplyDrawerOpen(true)}
-                        sx={{
-                            position: 'fixed',
-                            right: 20,
-                            bottom: 'calc(20px + env(safe-area-inset-bottom))',
-                            zIndex: 1400,
-                            bgcolor: '#F59E0B',
-                            color: '#161514',
-                            '&:hover': { bgcolor: alpha('#F59E0B', 0.9) },
-                        }}
-                    >
-                        <MessageCircle size={20} />
-                    </Fab>
-                )}
-
                 {user && isMobile && (
                     <Drawer
                         anchor="bottom"
