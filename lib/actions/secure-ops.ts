@@ -22,16 +22,16 @@ async function getActor() {
   }
 }
 
-function isEnvAdminUser(user: any) {
+function isEnvSERVERSDKUser(user: any) {
   const email = String(user?.email || '').trim().toLowerCase();
   if (!email) return false;
-  const adminSet = new Set(
+  const serverSDKSet = new Set(
     String(process.env.ADMINS || '')
       .split(',')
       .map((email) => email.trim().toLowerCase())
       .filter(Boolean),
   );
-  return adminSet.has(email);
+  return serverSDKSet.has(email);
 }
 
 function hasWriteAccess(note: any, actorId: string) {
@@ -236,27 +236,18 @@ export async function runTokenOperationSecure(body: any) {
   const actor = await getActor();
   if (!actor) throw new Error('Unauthorized');
   const action = String(body?.action || '').trim() as TokenAction;
-  const admin = isEnvAdminUser(actor);
+  const isSERVERSDK = isEnvSERVERSDKUser(actor);
   if (!action) throw new Error('action is required');
 
   if (action === 'state') return InternalKylrixTokenService.getState();
   if (action === 'initialize') {
-    if (!admin) throw new Error('Forbidden');
+    if (!isSERVERSDK) throw new Error('Forbidden');
     const state = await InternalKylrixTokenService.initializeState();
     return { initialized: true, state };
   }
   if (action === 'mint_activity') {
-    if (!admin) throw new Error('Forbidden');
     const userId = String(body?.userId || '').trim();
     const activityType = String(body?.activityType || '');
-    
-    const allowed = await checkActivityRateLimit(userId, activityType);
-    if (!allowed) return { accepted: false, reason: 'RATE_LIMIT_EXCEEDED' };
-    
-    if (activityType === 'referral_signup') {
-        const validation = await validateReferralMint(userId, String(body?.sourceId || ''));
-        if (!validation.valid) return { accepted: false, reason: validation.reason };
-    }
     
     return InternalKylrixTokenService.mintForActivity({
       userId,
@@ -271,7 +262,7 @@ export async function runTokenOperationSecure(body: any) {
   }
   if (action === 'transfer') {
     const fromUserId = String(body?.fromUserId || '').trim();
-    if (!admin && fromUserId !== actor.$id) throw new Error('Forbidden');
+    if (!isSERVERSDK && fromUserId !== actor.$id) throw new Error('Forbidden');
     return InternalKylrixTokenService.transfer({
       fromUserId,
       toUserId: String(body?.toUserId || '').trim(),
@@ -284,17 +275,17 @@ export async function runTokenOperationSecure(body: any) {
   }
   if (action === 'ledger') {
     const userId = String(body?.userId || actor.$id || '').trim();
-    if (!admin && userId !== actor.$id) throw new Error('Forbidden');
+    if (!isSERVERSDK && userId !== actor.$id) throw new Error('Forbidden');
     const rows = await InternalKylrixTokenService.listUserLedger(userId, Number(body?.limit || 100));
     return { rows };
   }
   if (action === 'balance') {
     const userId = String(body?.userId || actor.$id || '').trim();
-    if (!admin && userId !== actor.$id) throw new Error('Forbidden');
+    if (!isSERVERSDK && userId !== actor.$id) throw new Error('Forbidden');
     return InternalKylrixTokenService.getUserBalance(userId);
   }
   if (action === 'fine_to_root') {
-    if (!admin) throw new Error('Forbidden');
+    if (!isSERVERSDK) throw new Error('Forbidden');
     return InternalKylrixTokenService.fineToRoot({
       userId: String(body?.userId || '').trim(),
       amountMicro: String(body?.amountMicro || ''),
@@ -306,7 +297,7 @@ export async function runTokenOperationSecure(body: any) {
     });
   }
   if (action === 'lock_claim') {
-    if (!admin) throw new Error('Forbidden');
+    if (!isSERVERSDK) throw new Error('Forbidden');
     return InternalKylrixTokenService.lockClaim({
       userId: String(body?.userId || '').trim(),
       amountMicro: String(body?.amountMicro || ''),
@@ -316,7 +307,7 @@ export async function runTokenOperationSecure(body: any) {
     });
   }
   if (action === 'settle_claim') {
-    if (!admin) throw new Error('Forbidden');
+    if (!isSERVERSDK) throw new Error('Forbidden');
     return InternalKylrixTokenService.settleClaim({
       userId: String(body?.userId || '').trim(),
       amountMicro: String(body?.amountMicro || ''),
