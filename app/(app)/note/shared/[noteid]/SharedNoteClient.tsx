@@ -51,7 +51,6 @@ import {
 import NextLink from 'next/link';
 import CommentsSection from '@/app/(app)/note/(app)/notes/Comments';
 import NoteReactions from '@/app/(app)/note/(app)/notes/NoteReactions';
-import NoteTopbar from '@/components/common/NoteTopbar';
 
 import Logo from '@/components/common/Logo';
 import { getEcosystemUrl } from '@/constants/ecosystem';
@@ -1030,7 +1029,6 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   if (isAuthenticated) {
     return (
       <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: 'white' }}>
-        <NoteTopbar mode="shared" onRefresh={handleManualRefresh} isRefreshing={isRefreshing} />
         <Container maxWidth="md" sx={{ py: 8, pt: 12 }}>
           <Box sx={{ mb: 2 }}>
             <Button

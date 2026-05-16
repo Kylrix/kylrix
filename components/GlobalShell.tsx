@@ -9,7 +9,7 @@ import RightSidebar from './layout/RightSidebar';
 import { useSidebar } from './ui/SidebarContext';
 import { useDynamicSidebar } from './ui/DynamicSidebarContext';
 import { UnifiedBottomBar } from './UnifiedBottomBar';
-import { UnifiedTopbar } from '@/components/UnifiedTopbar';
+import ConnectTopbar from '@/components/layout/ConnectTopbar';
 import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
@@ -174,7 +174,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
        */}
       <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000 }}>
         <Suspense fallback={null}>
-          <UnifiedTopbar />
+          <ConnectTopbar />
         </Suspense>
       </Box>
 
