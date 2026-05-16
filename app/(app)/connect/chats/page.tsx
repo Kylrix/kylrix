@@ -192,7 +192,6 @@ export default function Home() {
             }}
           />
         )}
-        <ChatQuickActionsFab hidden={!isUnlocked} />
       </Box>
     </ConnectAppShell>
   );
