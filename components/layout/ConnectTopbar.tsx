@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   alpha,
   AppBar,
@@ -27,7 +27,7 @@ import { useAuth } from '@/lib/auth';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { getUserProfilePicId } from '@/lib/utils';
 import { getEcosystemUrl } from '@/lib/constants';
-import { TOPBAR_LAYOUT, getAppTone } from '@/lib/sdk/design';
+import { TOPBAR_LAYOUT, getAppTone, type KylrixApp } from '@/lib/sdk/design';
 import { createEcosystemPanelItems, createTopbarPanelMotion, isTopbarScrollAtBottom, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
@@ -51,6 +51,14 @@ export default function ConnectTopbar({
   const { openWallet } = useWalletOverlay();
   const { openAgenticDrawer } = useAgenticDrawer();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const activeApp = useMemo<KylrixApp>(() => {
+    if (pathname?.startsWith('/note')) return 'note';
+    if (pathname?.startsWith('/flow')) return 'flow';
+    if (pathname?.startsWith('/vault')) return 'vault';
+    return 'connect';
+  }, [pathname]);
 
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -58,8 +66,8 @@ export default function ConnectTopbar({
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
-  const tone = getAppTone('connect');
-  const profileName = user?.name || user?.email || 'Connect user';
+  const tone = getAppTone(activeApp);
+  const profileName = user?.name || user?.email || 'User';
   const profileUsername = (user as any)?.username || (user as any)?.prefs?.username || null;
   const profileSeed = useMemo(
     () => ({
@@ -416,7 +424,8 @@ export default function ConnectTopbar({
           borderRadius: '0 0 28px 28px',
           boxShadow: '0 16px 42px rgba(0,0,0,0.42)',
           backgroundImage: 'none',
-          overflow: 'hidden',
+          overflow: 'visible',
+          pointerEvents: 'auto',
           height: activePanel ? 'auto' : '88px',
         }}
       >
@@ -453,7 +462,7 @@ export default function ConnectTopbar({
                 position: 'relative',
               }}
             >
-              <Logo app="connect" size={32} />
+              <Logo app={activeApp} size={32} />
               <IconButton
                 size="small"
                 sx={{
@@ -480,14 +489,14 @@ export default function ConnectTopbar({
                   <IconButton
                     onClick={openAgenticDrawer}
                     sx={{
-                      color: getAppColor('connect'),
-                      bgcolor: alpha(getAppColor('connect'), 0.03),
+                      color: getAppColor(activeApp),
+                      bgcolor: alpha(getAppColor(activeApp), 0.03),
                       border: '1px solid',
-                      borderColor: alpha(getAppColor('connect'), 0.1),
+                      borderColor: alpha(getAppColor(activeApp), 0.1),
                       borderRadius: '12px',
                       width: 42,
                       height: 42,
-                      '&:hover': { bgcolor: alpha(getAppColor('connect'), 0.08) },
+                      '&:hover': { bgcolor: alpha(getAppColor(activeApp), 0.08) },
                     }}
                   >
                     <Bot size={18} strokeWidth={1.5} />
