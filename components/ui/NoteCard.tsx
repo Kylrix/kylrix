@@ -33,6 +33,8 @@ import {
 } from '@mui/icons-material';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { ShareNoteDrawer } from '../overlays/ShareNoteDrawer';
+import { DeleteNoteDrawer } from '../overlays/DeleteNoteDrawer';
+
 import PaywallDrawer from '../NoteContextMenu';
 import { updateNote, createNote, toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl, getNotePublicState } from '@/lib/appwrite';
 import { useToast } from './Toast';
@@ -67,6 +69,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const { showSuccess, showError, showInfo } = useToast();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
+  const [isDeleteDrawerOpen, setIsDeleteDrawerOpen] = useState(false);
   const [isPaywallDialogOpen, setIsPaywallDialogOpen] = useState(false);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const isPublic = getNotePublicState(note);
@@ -360,6 +363,12 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   return (
     <>
+      <DeleteNoteDrawer
+        isOpen={isDeleteDrawerOpen}
+        onClose={() => setIsDeleteDrawerOpen(false)}
+        onConfirm={async () => onDelete?.(note.$id)}
+        noteTitle={note.title || 'Untitled note'}
+      />
       <ShareNoteDrawer 
         isOpen={isShareDrawerOpen} 
         onClose={() => setIsShareDrawerOpen(false)} 
