@@ -74,7 +74,7 @@ export default function SettingsPage() {
           if (response?.accepted) {
             toast.success('Tokens minted successfully!');
           } else {
-            toast.error(response?.reason || 'Minting failed');
+            toast.error(response?.reason === 'IDEMPOTENCY_CONFLICT' ? 'You have already minted your tokens for today.' : (response?.reason || 'Minting failed'));
           }
         } catch (e: any) {
           toast.error(e.message || 'Minting failed');

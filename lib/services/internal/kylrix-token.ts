@@ -267,7 +267,7 @@ async function appendEvent(input: {
   metadata?: Record<string, unknown> | null;
 }) {
   const existing = await ensureNoDuplicateIdempotency(input.idempotencyKey);
-  if (existing) return existing;
+  if (existing) throw new Error('IDEMPOTENCY_CONFLICT');
 
   const createdAt = nowIso();
   return ledgerTables().createRow({

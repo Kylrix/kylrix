@@ -322,11 +322,10 @@ export async function mintDailyLoginSecure(input: { userId: string, dateKey: str
       if (!user) {
           return { accepted: false, reason: 'INVALID_USER' };
       }
-      
-      const allowed = await checkActivityRateLimit(user.$id, 'daily_login');
-      if (!allowed) return { accepted: false, reason: 'RATE_LIMIT_EXCEEDED' };
 
       // 2. Perform the mint operation using Server SDK.
+      // We rely on the Ledger's strict IDEMPOTENCY_CONFLICT check to prevent duplicate daily mints,
+      // rather than the generic in-memory rate limiter.
       const rawMint = await InternalKylrixTokenService.mintForActivity({
           userId: user.$id,
           idempotencyKey: `mint:daily_login:${input.dateKey}:${user.$id}`,
