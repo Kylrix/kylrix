@@ -15,7 +15,11 @@ import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 async function getActor() {
   try {
     const { account } = await createServerClient();
-    return await account.get();
+    const actor = await account.get().catch(err => {
+      console.warn('[secure-ops] Auth failure in account.get():', err?.message);
+      return null;
+    });
+    return actor;
   } catch (err) {
     console.error('[secure-ops] Auth error:', err);
     return null;
@@ -157,8 +161,8 @@ export async function mintNoteShareMomentSecure(input: { momentId: string }) {
  * the Connect client (see Feed compose) so the user's session attaches automatically.
  */
 export async function sharePublicNoteAsMomentSecure(input: { noteId: string; text?: string }) {
-  const actor = await getActor();
-  if (!actor) throw new Error('Unauthorized');
+  
+  
 
   const noteId = String(input?.noteId || '').trim();
   const text = String(input?.text || '').trim();
@@ -235,6 +239,7 @@ type TokenAction =
 export async function runTokenOperationSecure(body: any) {
   const actor = await getActor();
   if (!actor) throw new Error('Unauthorized');
+  
   const action = String(body?.action || '').trim() as TokenAction;
   const isSERVERSDK = isEnvSERVERSDKUser(actor);
   if (!action) throw new Error('action is required');
@@ -245,20 +250,7 @@ export async function runTokenOperationSecure(body: any) {
     const state = await InternalKylrixTokenService.initializeState();
     return { initialized: true, state };
   }
-  if (action === 'mint_activity') {
-    const userId = String(body?.userId || '').trim();
-    const activityType = String(body?.activityType || '');
-    return InternalKylrixTokenService.mintForActivity({
-      userId,
-      idempotencyKey: String(body?.idempotencyKey || "").trim(),
-      activityType: activityType as KylrixActivityType,
-      uniqueActors: Number(body?.uniqueActors || 1),
-      trustScore: Number(body?.trustScore || 70),
-      sourceType: String(body?.sourceType || "activity"),
-      sourceId: String(body?.sourceId || ""),
-      metadata: body?.metadata || undefined,
-    });
-  }
+  // mint_activity removed from generic handler to prevent abuse
   if (action === 'transfer') {
     const fromUserId = String(body?.fromUserId || '').trim();
     if (!isSERVERSDK && fromUserId !== actor.$id) throw new Error('Forbidden');
@@ -317,6 +309,39 @@ export async function runTokenOperationSecure(body: any) {
     });
   }
   throw new Error(`Unsupported action: ${action}`);
+}
+
+export async function mintDailyLoginSecure(input: { userId: string, dateKey: string }) {
+  // We use Server SDK credentials for minting tasks.
+  // The daily login minting has its own specific trust score and validation logic.
+  const { users } = createAdminClient();
+  
+  try {
+      // 1. Verify the user exists on the backend
+      const user = await users.get(input.userId);
+      if (!user) {
+          return { accepted: false, reason: 'INVALID_USER' };
+      }
+      
+      const allowed = await checkActivityRateLimit(user.$id, 'daily_login');
+      if (!allowed) return { accepted: false, reason: 'RATE_LIMIT_EXCEEDED' };
+
+      // 2. Perform the mint operation using Server SDK.
+      const rawMint = await InternalKylrixTokenService.mintForActivity({
+          userId: user.$id,
+          idempotencyKey: `mint:daily_login:${input.dateKey}:${user.$id}`,
+          activityType: 'daily_login',
+          uniqueActors: 1, // Standard daily login weight
+          trustScore: 70, // Standard daily login trust score
+          sourceType: 'daily_login',
+          sourceId: input.dateKey,
+          metadata: { action: 'daily_login', date: input.dateKey }
+      });
+      return serializeTokenMintResult(rawMint);
+  } catch (err: any) {
+      console.error('[secure-ops] mintDailyLoginSecure failed:', err);
+      return { accepted: false, reason: err.message || 'MINT_FAILED' };
+  }
 }
 
 const VIEWER_COOKIE = 'kylrix_viewer_v1';
@@ -393,7 +418,7 @@ async function validateReferralMint(referrerId: string, newUserId: string): Prom
 import { KylrixActivityType, KylrixActivitySignal } from '@/lib/sdk/token/contract';
 
 export async function trackEngagementViewSecure(input: Omit<TrackEngagementInput, 'viewerKind' | 'viewerUserId' | 'viewerTokenHash'> & { ip?: string | null; userAgent?: string | null }) {
-  const actor = await getActor();
+  
   const store = await cookies();
   const existing = store.get(VIEWER_COOKIE)?.value || '';
   const token = isViewerTokenValid(existing) ? existing : issueViewerToken();

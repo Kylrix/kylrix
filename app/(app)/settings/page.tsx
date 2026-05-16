@@ -59,22 +59,23 @@ export default function SettingsPage() {
     const handleManualMint = async () => {
         setMinting(true);
         try {
-          const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
+          const { mintDailyLoginSecure } = await import('@/lib/actions/secure-ops');
           const today = new Date();
           today.setUTCHours(0, 0, 0, 0);
           const todayKey = today.toISOString();
           
-          await runTokenOperationSecure({
-            action: 'mint_activity',
-            userId: user?.$id,
-            idempotencyKey: `mint:daily_login:${todayKey}:${user?.$id}`,
-            activityType: 'daily_login',
-            uniqueActors: 1,
-            trustScore: 70,
-            sourceType: 'daily_login',
-            sourceId: todayKey,
+          if (!user?.$id) throw new Error("User session not found");
+
+          const response = await mintDailyLoginSecure({
+            userId: user.$id,
+            dateKey: todayKey,
           });
-          toast.success('Tokens minted successfully!');
+          
+          if (response?.accepted) {
+            toast.success('Tokens minted successfully!');
+          } else {
+            toast.error(response?.reason || 'Minting failed');
+          }
         } catch (e: any) {
           toast.error(e.message || 'Minting failed');
         } finally {
