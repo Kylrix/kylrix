@@ -12,40 +12,26 @@ import { deleteCallIfExpired } from '@/lib/services/internal/calls';
 import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/live-call-presence-reconcile';
 import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 
-async function getActor(jwt?: string) {
+async function getActor() {
   try {
-    if (jwt) {
-        const { client } = createAdminClient();
-        client.setJWT(jwt);
-        const { Account } = require('node-appwrite');
-        return await new Account(client).get();
-    }
-    
     const { account } = await createServerClient();
-    const actor = await account.get();
-    if (!actor) {
-        console.error('[secure-ops] Auth: No actor returned');
-    }
-    return actor;
+    return await account.get();
   } catch (err) {
-    console.error('[secure-ops] Auth error details:', err);
+    console.error('[secure-ops] Auth error:', err);
     return null;
   }
-}
-
-function getAdminEmailSet() {
-  return new Set(
-    String(process.env.ADMINS || '')
-      .split(',')
-      .map((email) => email.trim().toLowerCase())
-      .filter(Boolean),
-  );
 }
 
 function isEnvAdminUser(user: any) {
   const email = String(user?.email || '').trim().toLowerCase();
   if (!email) return false;
-  return getAdminEmailSet().has(email);
+  const adminSet = new Set(
+    String(process.env.ADMINS || '')
+      .split(',')
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return adminSet.has(email);
 }
 
 function hasWriteAccess(note: any, actorId: string) {
@@ -247,7 +233,7 @@ type TokenAction =
   | 'settle_claim';
 
 export async function runTokenOperationSecure(body: any) {
-  const actor = await getActor(body?.jwt);
+  const actor = await getActor();
   if (!actor) throw new Error('Unauthorized');
   const action = String(body?.action || '').trim() as TokenAction;
   const admin = isEnvAdminUser(actor);

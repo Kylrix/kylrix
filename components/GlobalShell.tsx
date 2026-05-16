@@ -92,7 +92,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       }
     }
     
-    void ensureDailyLoginMint();
+    // void ensureDailyLoginMint();
   }, [user?.$id]);
   const isAppRoute = Boolean(
     pathname?.startsWith('/note') ||

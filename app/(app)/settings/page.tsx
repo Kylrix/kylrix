@@ -11,13 +11,19 @@ import {
     Switch, 
     FormControlLabel, 
     Divider,
+    CircularProgress,
+    alpha,
+    useTheme,
     IconButton,
     List,
     ListItem,
     ListItemIcon,
     ListItemText,
-    useTheme,
-    alpha
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    InputAdornment
 } from '@mui/material';
 import { 
     ArrowLeft,
@@ -25,7 +31,8 @@ import {
     Shield, 
     Fingerprint, 
     Smartphone,
-    Trash2
+    Trash2,
+    RefreshCw
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -165,6 +172,19 @@ export default function SettingsPage() {
 
                 <Stack spacing={4}>
                     <DiscoverabilitySettings />
+                    <Box sx={{ bgcolor: '#161412', borderRadius: '28px', p: 3, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                        <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>Daily Token Mint</Typography>
+                        <Typography sx={{ color: '#9B9691', mb: 2, fontSize: '0.9rem' }}>Manually trigger your daily token minting reward.</Typography>
+                        <Button 
+                            variant="contained" 
+                            startIcon={minting ? <CircularProgress size={18} /> : <RefreshCw size={18}/>} 
+                            onClick={handleManualMint} 
+                            disabled={minting}
+                            sx={{ borderRadius: '12px', fontWeight: 700, px: 3, py: 1.2, bgcolor: '#6366F1' }}
+                        >
+                            {minting ? 'Minting...' : 'Mint Daily Tokens'}
+                        </Button>
+                    </Box>
                     
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
