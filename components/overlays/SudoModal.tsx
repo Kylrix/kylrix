@@ -31,6 +31,7 @@ import { PasskeySetup } from "./PasskeySetup";
 import toast from "react-hot-toast";
 import { getAppTone, type KylrixApp } from "@/lib/sdk/design";
 import { masterPassCrypto } from "@/lib/masterpass-crypto";
+import { useDrawerState } from "@/components/ui/DrawerStateContext";
 
 interface SudoModalProps {
     isOpen?: boolean;
@@ -52,7 +53,13 @@ export default function SudoModal({
     app = "note",
 }: SudoModalProps) {
     const router = useRouter();
+    const { setIsDrawerOpen } = useDrawerState();
     const isOpen = _isOpen ?? open ?? false;
+
+    useEffect(() => {
+        setIsDrawerOpen(isOpen);
+    }, [isOpen, setIsDrawerOpen]);
+
     const cancelHandler = onCancel ?? onClose ?? (() => {});
     const theme = useTheme();
     const isDesktop = useMediaQuery(theme.breakpoints.up("md"));

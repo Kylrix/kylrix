@@ -25,6 +25,7 @@ import {
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 /**
  * Persistent unified app-specific bottom bar.
@@ -36,7 +37,7 @@ export function UnifiedBottomBar() {
   const router = useRouter();
   const { activeContent } = useUnifiedDrawer();
   const { mode } = useAppChrome();
-  const [hasBottomDrawerOpen, setHasBottomDrawerOpen] = useState(false);
+  const { isDrawerOpen } = useDrawerState();
 
   // Determine which app we're in
   const appContext = useMemo(() => {
@@ -230,28 +231,6 @@ export function UnifiedBottomBar() {
     return null;
   };
 
-  useEffect(() => {
-    const evaluateDrawerState = () => {
-      if (typeof document === 'undefined') return;
-      /** Only count *visible* bottom-anchor MUI drawers. keepMounted + loose aria-hidden caused false positives and hid this bar on /note/notes. */
-      const modals = document.querySelectorAll('.MuiModal-root');
-      let open = false;
-      modals.forEach((modal) => {
-        if (modal.getAttribute('aria-hidden') === 'true') return;
-        if (modal.classList.contains('MuiModal-hidden')) return;
-        if (modal.querySelector('.MuiDrawer-paperAnchorBottom, .MuiDialog-paper')) open = true;
-      });
-      setHasBottomDrawerOpen(open);
-    };
-
-    evaluateDrawerState();
-
-    // The MutationObserver was polling the entire DOM subtree for modal changes, 
-    // which caused significant main-thread jank and random interaction freezes.
-    // We now rely on explicit context (DrawerStateContext) for visibility reconciliation.
-    return () => {};
-  }, []);
-
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
   const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
 
@@ -260,7 +239,7 @@ export function UnifiedBottomBar() {
   if (pathname?.startsWith('/accounts')) return null;
 
   // Hide bottom bar on settings page, when a real bottom sheet is open, or on full-page note editor
-  if (pathname === '/settings' || activeContent !== 'navbar' || mode === 'compact' || hasBottomDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
+  if (pathname === '/settings' || activeContent !== 'navbar' || mode === 'compact' || isDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
 
   return (
     <Box
