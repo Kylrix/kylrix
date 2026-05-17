@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Notes } from '@/types/appwrite';
 import NoteCard from '@/components/ui/NoteCard';
-import { getSharedNotes, listPublicNotesByUser, getCurrentUser } from '@/lib/appwrite';
+import { getSharedNotes, listAccessiblePublicNotes, getCurrentUser } from '@/lib/appwrite';
 import { useNotes } from '@/context/NotesContext';
 import {
   Box,
@@ -30,7 +30,7 @@ interface SharedNote extends Notes {
 }
 
 export default function SharedNotesPage() {
-  const [sharedNotes, setSharedNotes] = useState<SharedNote[]>([]);
+  const [privateNotes, setPrivateNotes] = useState<SharedNote[]>([]);
   const [publicNotes, setPublicNotes] = useState<Notes[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -42,19 +42,18 @@ export default function SharedNotesPage() {
       try {
         setLoading(true);
         
-        const [sharedResult, user] = await Promise.all([
+        const [sharedResult, publicResult, user] = await Promise.all([
           getSharedNotes(),
+          listAccessiblePublicNotes(),
           getCurrentUser()
         ]);
 
-        setSharedNotes(sharedResult.documents as SharedNote[]);
+        // Filter sharedResult to strictly private notes for the first tab
+        // (already filtered by userId != me in the service)
+        const privateOnly = (sharedResult.documents as SharedNote[]).filter(n => !n.isPublic);
+        setPrivateNotes(privateOnly);
 
-        if (user && user.$id) {
-          const publicResult = await listPublicNotesByUser(user.$id);
-          setPublicNotes(publicResult.documents as unknown as Notes[]);
-        } else {
-          setPublicNotes([]);
-        }
+        setPublicNotes(publicResult.documents as unknown as Notes[]);
       } catch (error: any) {
         console.error('Error fetching shared notes:', error);
       } finally {
@@ -65,15 +64,15 @@ export default function SharedNotesPage() {
     fetchNotes();
   }, []);
 
-  const sortedSharedNotes = useMemo(() => {
-    return [...sharedNotes].sort((a, b) => {
+  const sortedPrivateNotes = useMemo(() => {
+    return [...privateNotes].sort((a, b) => {
       const aPinned = isPinned(a.$id);
       const bPinned = isPinned(b.$id);
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  }, [sharedNotes, isPinned]);
+  }, [privateNotes, isPinned]);
 
   const sortedPublicNotes = useMemo(() => {
     return [...publicNotes].sort((a, b) => {
@@ -85,7 +84,7 @@ export default function SharedNotesPage() {
     });
   }, [publicNotes, isPinned]);
 
-  const currentNotes = activeTab === 0 ? sortedSharedNotes : sortedPublicNotes;
+  const currentNotes = activeTab === 0 ? sortedPrivateNotes : sortedPublicNotes;
 
   return (
     <Box sx={{ 
@@ -162,7 +161,7 @@ export default function SharedNotesPage() {
               }
             }}
           >
-            <Tab icon={<UserIcon sx={{ fontSize: 20 }} />} iconPosition="start" label={`Private (${sharedNotes.length})`} />
+            <Tab icon={<UserIcon sx={{ fontSize: 20 }} />} iconPosition="start" label={`Private (${privateNotes.length})`} />
             <Tab icon={<GlobeAltIcon sx={{ fontSize: 20 }} />} iconPosition="start" label={`Public (${publicNotes.length})`} />
           </Tabs>
         </Box>
@@ -177,7 +176,7 @@ export default function SharedNotesPage() {
             <Box sx={{ 
               width: 96, 
               height: 96, 
-              bgcolor: 'rgba(255,255,255,0.03)', 
+              bgcolor: 'rgba(255, 255, 255, 0.03)', 
               borderRadius: 6, 
               display: 'flex', 
               alignItems: 'center', 
@@ -211,7 +210,7 @@ export default function SharedNotesPage() {
                       Shared by {(note as SharedNote).sharedBy?.name || (note as SharedNote).sharedBy?.email}
                     </Typography>
                   )}
-                  {activeTab === 0 && ['write', 'admin'].includes(String((note as SharedNote).sharedPermission || '')) && (
+                  {['write', 'admin'].includes(String((note as any).sharedPermission || '')) && (
                     <Chip
                       size="small"
                       label="Editable"
