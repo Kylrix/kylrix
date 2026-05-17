@@ -339,12 +339,33 @@ export class EcosystemSecurity {
   }
 
   async decryptWithKey(encryptedData: string, key: CryptoKey): Promise<string> {
-    const combined = new Uint8Array(atob(encryptedData).split("").map((char) => char.charCodeAt(0)));
+    if (!encryptedData || typeof encryptedData !== 'string') {
+      throw new Error("Invalid input: encryptedData must be a non-empty string");
+    }
+
+    let combined: Uint8Array;
+    try {
+      combined = new Uint8Array(atob(encryptedData).split("").map((char) => char.charCodeAt(0)));
+    } catch (e) {
+      console.error("[Security] atob failed for data:", encryptedData.substring(0, 20) + "...");
+      throw new Error("Failed to decode base64 data");
+    }
+
+    if (combined.length <= EcosystemSecurity.IV_SIZE) {
+      console.error("[Security] Data too short. Total length:", combined.length, "IV size:", EcosystemSecurity.IV_SIZE);
+      throw new Error("Invalid encrypted data: no ciphertext present after IV");
+    }
+
     const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
     const encrypted = combined.slice(EcosystemSecurity.IV_SIZE);
 
-    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, encrypted);
-    return new TextDecoder().decode(decrypted);
+    try {
+      const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, encrypted);
+      return new TextDecoder().decode(decrypted);
+    } catch (err) {
+      console.error("[Security] crypto.subtle.decrypt failed. Key algorithm:", key.algorithm.name, "Data length:", encrypted.length);
+      throw err;
+    }
   }
 
   getConversationKey(conversationId: string): CryptoKey | null {
