@@ -153,8 +153,8 @@ export async function mintNoteShareMomentSecure(input: { momentId: string }) {
   return { tokenMint };
 }
 
-export async function mintDailyLoginSecure(input: { userId: string; dateKey: string }) {
-  const actor = await getActor();
+export async function mintDailyLoginSecure(input: { userId: string; dateKey: string; jwt?: string }) {
+  const actor = await getActor(input.jwt);
   if (!actor) throw new Error('Unauthorized');
   
   const userId = String(input?.userId || '').trim();

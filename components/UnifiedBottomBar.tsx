@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useAppChrome } from '@/components/providers/AppChromeProvider';
 
 /**
  * Persistent unified app-specific bottom bar.
@@ -34,6 +35,7 @@ export function UnifiedBottomBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { activeContent } = useUnifiedDrawer();
+  const { mode } = useAppChrome();
   const [hasBottomDrawerOpen, setHasBottomDrawerOpen] = useState(false);
 
   // Determine which app we're in
@@ -258,7 +260,7 @@ export function UnifiedBottomBar() {
   if (pathname?.startsWith('/accounts')) return null;
 
   // Hide bottom bar on settings page, when a real bottom sheet is open, or on full-page note editor
-  if (pathname === '/settings' || activeContent !== 'navbar' || hasBottomDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
+  if (pathname === '/settings' || activeContent !== 'navbar' || mode === 'compact' || hasBottomDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
 
   return (
     <Box
