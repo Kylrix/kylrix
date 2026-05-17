@@ -16,11 +16,11 @@ import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 
 /** 
  * Standard actor discovery for Server Actions. 
- * Reads session cookies to establish identity.
+ * Reads session cookies or explicit JWT to establish identity.
  */
-async function getActor() {
+async function getActor(jwt?: string) {
   try {
-    const { account } = await createServerClient();
+    const { account } = await createServerClient(jwt);
     const actor = await account.get().catch(err => {
       console.warn('[secure-ops] Auth failure in account.get():', err?.message);
       return null;
@@ -45,7 +45,8 @@ function isEnvSERVERSDKUser(user: any) {
 }
 
 function isEnvAdminUser(user: any) {
-    return isEnvSERVERSDKUser(user);
+  // Currently sharing same definition as SERVERSDK but kept separate for architectural growth
+  return isEnvSERVERSDKUser(user);
 }
 
 function hasWriteAccess(note: any, actorId: string) {
@@ -150,6 +151,29 @@ export async function mintNoteShareMomentSecure(input: { momentId: string }) {
   }
 
   return { tokenMint };
+}
+
+export async function mintDailyLoginSecure(input: { userId: string; dateKey: string }) {
+  const actor = await getActor();
+  if (!actor) throw new Error('Unauthorized');
+  
+  const userId = String(input?.userId || '').trim();
+  const dateKey = String(input?.dateKey || '').trim();
+  if (!userId || !dateKey) throw new Error('userId and dateKey are required');
+
+  if (userId !== actor.$id && !isEnvAdminUser(actor)) {
+    throw new Error('Forbidden');
+  }
+
+  return InternalKylrixTokenService.mintForActivity({
+    userId,
+    idempotencyKey: `mint:daily_login:${dateKey}:${userId}`,
+    activityType: 'daily_login',
+    uniqueActors: 1,
+    trustScore: 70,
+    sourceType: 'daily_login',
+    sourceId: dateKey,
+  });
 }
 
 export async function sharePublicNoteAsMomentSecure(input: { noteId: string; text?: string }) {
@@ -403,7 +427,7 @@ export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?
 }
 
 export async function getQuickProfileSecure(userId: string, jwt?: string) {
-  const requester = await getActor();
+  const requester = await getActor(jwt);
   if (!requester?.$id) throw new Error('Unauthorized');
   const targetUserId = String(userId || '').trim();
   if (!targetUserId) throw new Error('userId is required');
@@ -486,11 +510,15 @@ export interface PermissionChangeInput {
   targetEmail?: string;
   permission: PermissionLevel;
   actorName: string;
+  jwt?: string; // Optional JWT for backup auth
 }
 
 export async function grantPermissionSecure(input: PermissionChangeInput) {
-  const requester = await getActor();
-  if (!requester) throw new Error('Unauthorized');
+  const requester = await getActor(input.jwt);
+  if (!requester) {
+      console.error('[secure-ops] grantPermissionSecure: Actor null');
+      throw new Error('Unauthorized');
+  }
 
   const { client, users } = createAdminClient();
   const databases = new Databases(client);
@@ -514,8 +542,8 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     targetUserId: input.targetUserId,
     resourceId: input.resourceId,
     resourceType: input.resourceType === 'note' ? 'ghost_note' : 'task',
-    databaseId: 'chat',
-    tableId: input.resourceType === 'note' ? 'notes' : 'tasks',
+    databaseId: input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS,
     rowId: input.resourceId,
   }, requester.$id);
 
