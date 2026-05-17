@@ -48,6 +48,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
+import { useSudo } from '@/context/SudoContext';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
 import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
 import { updateNote, listFlowTasks, listFlowEvents, listKeepCredentials, Query, toggleNoteVisibility, rotatePublicNoteLink, getShareableUrl, getCurrentPublicNoteShareUrl, getCurrentPublicNoteDecryptionKey, getNotePublicState, decryptPublicEncryptedNote, createTaskFromNote } from '@/lib/appwrite';
@@ -111,6 +112,7 @@ export function NoteDetailSidebar({
 
   const theme = useTheme();
   const { open: openUnified } = useUnifiedDrawer();
+  const { promptSudo } = useSudo();
   const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
   const liveNote = useMemo(
     () => allNotes.find((candidate) => candidate.$id === note.$id) || note,
@@ -733,8 +735,12 @@ export function NoteDetailSidebar({
 
   const confirmRotateLink = async () => {
     setPendingHubAction(null);
-    const rotated = await handleRotatePublicLink();
-    if (rotated) setShowActionHub(false);
+    promptSudo({
+      onSuccess: async () => {
+          const rotated = await handleRotatePublicLink();
+          if (rotated) setShowActionHub(false);
+      }
+    });
   };
 
   // Pre-fetch cross-app suggestions when note changes (Non-blocking)
