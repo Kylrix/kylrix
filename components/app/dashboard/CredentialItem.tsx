@@ -66,18 +66,18 @@ export default function CredentialItem({
         p: 2,
         mb: 1.5,
         borderRadius: '20px',
-        bgcolor: 'rgba(255, 255, 255, 0.02)',
+        bgcolor: '#161412',
         border: '1px solid',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
+        borderColor: 'rgba(255, 255, 255, 0.04)',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         display: 'flex',
         alignItems: 'center',
         '&:hover': {
-          bgcolor: 'rgba(255, 255, 255, 0.04)',
+          bgcolor: '#1C1A18',
           borderColor: 'rgba(16, 185, 129, 0.4)',
           transform: 'translateY(-2px)',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)'
         }
       }}
     >

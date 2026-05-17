@@ -327,16 +327,16 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
               bgcolor: NAV_SURFACE,
               backgroundImage: 'none',
               border: '1px solid',
-              borderColor: '#34322F',
+              borderColor: 'rgba(255, 255, 255, 0.04)',
               borderRadius: '28px',
               boxShadow: 'none',
               transform: 'none',
-              transition: 'border-color 0.2s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:hover': {
-                transform: 'none',
+                transform: isMobile ? 'none' : 'translateY(-2px)',
                 borderColor: (theme) => alpha(theme.palette.secondary.main, 0.5),
-                bgcolor: NAV_SURFACE,
-                boxShadow: 'none',
+                bgcolor: '#1C1A18',
+                boxShadow: '0 12px 24px rgba(0, 0, 0, 0.5)',
               }
             }}
           >

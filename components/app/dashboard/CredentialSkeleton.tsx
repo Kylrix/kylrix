@@ -8,8 +8,8 @@ export default function CredentialSkeleton() {
         p: 2,
         mb: 1.5,
         borderRadius: '20px',
-        bgcolor: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        bgcolor: '#161412',
+        border: '1px solid rgba(255, 255, 255, 0.04)',
         display: 'flex',
         alignItems: 'center'
       }}
