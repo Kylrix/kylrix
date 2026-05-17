@@ -258,6 +258,7 @@ export function UnifiedBottomBar() {
         sx={{
           width: '100%',
           bgcolor: '#161412',
+          backgroundImage: 'none', // Remove MUI default overlay
           border: '1px solid rgba(255, 255, 255, 0.05)',
           borderBottom: 0,
           borderRadius: '24px 24px 0 0',
