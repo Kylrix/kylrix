@@ -12,7 +12,7 @@ const ShareNoteDrawer = dynamic(() => import('./ShareNoteDrawer').then(mod => mo
 const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then(mod => mod.DeleteNoteDrawer), { ssr: false });
 
 export function UnifiedBottomDrawer() {
-  const { activeContent, drawerData } = useUnifiedDrawer();
+  const { activeContent, drawerData, close } = useUnifiedDrawer();
 
   // The child components already contain their own <Drawer> 
   // wrappers. We just render the active one here.
@@ -23,14 +23,14 @@ export function UnifiedBottomDrawer() {
     case 'share-note': 
         return <ShareNoteDrawer 
             isOpen={true} 
-            onClose={() => {}} // Handled by context close
+            onClose={close} 
             noteId={drawerData?.noteId} 
             noteTitle={drawerData?.noteTitle} 
         />;
     case 'delete-note':
         return <DeleteNoteDrawer 
             isOpen={true} 
-            onClose={() => {}} // Handled by context close
+            onClose={close} 
             onConfirm={drawerData?.onConfirm} 
             noteTitle={drawerData?.noteTitle} 
         />;
