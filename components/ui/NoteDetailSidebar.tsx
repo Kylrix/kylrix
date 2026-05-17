@@ -149,6 +149,7 @@ export function NoteDetailSidebar({
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [showActionHub, setShowActionHub] = useState(false);
   const [showRotateConfirm, setShowRotateConfirm] = useState(false);
+  const [pendingHubAction, setPendingHubAction] = useState<null | 'rotate'>(null);
   const [isRotating, setIsRotating] = useState(false);
   const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
   const [crossSuggestions, setCrossSuggestions] = useState<Array<{ id: string; label: string; description: string }>>([]);
@@ -290,23 +291,43 @@ export function NoteDetailSidebar({
   const hasPromptedEncryptedOpenRef = useRef(false);
 
   const { showSuccess, showError } = useToast();
+  // Memoized decryption to ensure low-power, non-blocking rendering
+  const decryptedNote = useMemo(() => {
+    const meta = noteMeta;
+    if (meta?.isEncrypted && meta.encryptionVersion === 'T4' && !meta.clientDecrypted && ecosystemSecurity.status.isUnlocked) {
+      return null;
+    }
+    return liveNote;
+  }, [liveNote, noteMeta, ecosystemSecurity.status.isUnlocked]);
+
   // Automatically heal T4 encrypted state if vault is unlocked
   useEffect(() => {
-    if (isEncryptedNote && ecosystemSecurity.status.isUnlocked) {
+    if (!decryptedNote && isEncryptedNote && ecosystemSecurity.status.isUnlocked) {
       const healDecryption = async () => {
         try {
-          const decrypted = await decryptPublicEncryptedNote(liveNote.$id);
-          if (decrypted) {
-            onUpdate(decrypted);
-            showSuccess("Note decrypted", "Content is now visible.");
-          }
+          const masterKey = ecosystemSecurity.getMasterKey();
+          if (!masterKey) return;
+
+          const meta = noteMeta;
+          const decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || liveNote.title || '', masterKey);
+          const decryptedContent = await ecosystemSecurity.decryptWithKey(liveNote.content || '', masterKey);
+          
+          const decrypted = {
+            ...liveNote,
+            title: decryptedTitle,
+            content: decryptedContent,
+            metadata: JSON.stringify({ ...meta, clientDecrypted: true })
+          };
+
+          onUpdate(decrypted as any);
+          showSuccess("Note decrypted", "Content is now visible.");
         } catch (err) {
           console.error("[NoteSidebar] Auto-decryption failed:", err);
         }
       };
       void healDecryption();
     }
-  }, [isEncryptedNote, ecosystemSecurity.status.isUnlocked, liveNote.$id, onUpdate, showSuccess]);
+  }, [decryptedNote, isEncryptedNote, ecosystemSecurity.status.isUnlocked, liveNote, noteMeta, onUpdate, showSuccess]);
   const { openProUpgrade } = useProUpgrade();
   const router = useRouter();
   const { closeSidebar } = useDynamicSidebar();
