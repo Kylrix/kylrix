@@ -2781,7 +2781,14 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
     }
 
     const key = await importUrlSafeAesKey(keyBase64);
-    const decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || note.title || '', key);
+    let decryptedTitle = note.title || '';
+    if (meta.encryptedTitle) {
+      decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle, key);
+    } else if (note.title === '🔒 Encrypted Note' || note.title?.includes('🔒')) {
+      // Title is placeholder and real title is missing from meta.
+      decryptedTitle = 'Untitled Note';
+    }
+
     const decryptedContent = await ecosystemSecurity.decryptWithKey(note.content || '', key);
     cachePublicNoteDecryptionKey(note.$id, keyBase64);
 
