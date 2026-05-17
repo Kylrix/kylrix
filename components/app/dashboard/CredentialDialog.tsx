@@ -30,6 +30,7 @@ import { createCredential, updateCredential } from '@/lib/appwrite';
 import type { Credentials, CredentialsCreate } from '@/lib/appwrite/types';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { generateRandomPassword } from '@/utils/password';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 const VAULT_PRIMARY = "#10B981"; // Emerald
 const SURFACE_COLOR = "#161412";
@@ -53,6 +54,12 @@ export default function CredentialDialog({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAppwriteVault();
+  const { setIsDrawerOpen } = useDrawerState();
+
+  useEffect(() => {
+    setIsDrawerOpen(open);
+  }, [open, setIsDrawerOpen]);
+
   const [showPassword, setShowPassword] = useState(false);
   const [customFields, setCustomFields] = useState<
     Array<{ id: string; label: string; value: string }>
