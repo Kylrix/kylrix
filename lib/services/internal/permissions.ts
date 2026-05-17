@@ -164,22 +164,36 @@ export async function revokePermissionMutation(actorId: string, body: any, query
   }
 }
 
+function normalizeTargetUserIds(value: unknown): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v || '').trim()).filter(Boolean);
+  }
+  return [String(value).trim()].filter(Boolean);
+}
+
 export async function permissionsInternal(
   method: 'POST' | 'DELETE',
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  actorId?: string
 ) {
-  const jwt = payload.jwt as string | undefined;
-  const { account } = await createServerClient(jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }) : undefined);
-  const user = await account.get().catch(() => null);
+  let effectiveActorId = actorId;
 
-  if (!user) throw new Error('Unauthorized');
+  if (!effectiveActorId) {
+    const jwt = payload.jwt as string | undefined;
+    const { account } = await createServerClient(jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${jwt}` } }) : undefined);
+    const user = await account.get().catch(() => null);
+
+    if (!user) throw new Error('Unauthorized');
+    effectiveActorId = user.$id;
+  }
 
   if (method === 'DELETE' || payload.action === 'revoke') {
-    await revokePermissionMutation(user.$id, payload);
+    await revokePermissionMutation(effectiveActorId, payload);
     return { success: true, action: 'revoke' };
   }
 
-  const result = await applyPermissionMutation(user.$id, payload);
+  const result = await applyPermissionMutation(effectiveActorId, payload);
   return { 
     success: true, 
     action: getAction(payload),

@@ -580,6 +580,9 @@ export interface PermissionChangeInput {
 }
 
 export async function grantPermissionSecure(input: PermissionChangeInput) {
+  const requester = await getActor();
+  if (!requester) throw new Error('Unauthorized');
+
   const { client, users } = createAdminClient();
   const databases = new Databases(client);
   const appwritePerm = input.permission === 'admin' ? 'delete' : input.permission === 'edit' ? 'update' : 'read';
@@ -595,7 +598,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     }
   }
 
-  // 1. Grant via existing secure internal permissions service
+  // 1. Grant via existing secure internal permissions service (Privileged Pass)
   await permissionsInternal('POST', {
     action: 'grant',
     permission: appwritePerm,
@@ -605,7 +608,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     databaseId: 'chat',
     tableId: input.resourceType === 'note' ? 'notes' : 'tasks',
     rowId: input.resourceId,
-  });
+  }, requester.$id);
 
   // 2. Automated Email
   if (resolvedEmail) {
