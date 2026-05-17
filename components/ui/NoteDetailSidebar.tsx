@@ -685,36 +685,30 @@ export function NoteDetailSidebar({
     showSuccess('Share link copied to clipboard');
   };
 
-  const handleRotatePublicLink = async (): Promise<boolean> => {
-    const handleRotate = async (): Promise<boolean> => {
-      try {
-        const updated = await rotatePublicNoteLink(liveNote.$id);
-        if (updated) {
-          setIsPublic(!!updated.isPublic);
-          setLastT4Key(updated.decryptionKey || null);
-          onUpdate(updated);
-          if (updated.decryptionKey) {
-            const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
-            navigator.clipboard.writeText(shareUrl);
-            showSuccess('Public link rotated', 'New public link copied to clipboard.');
-          } else {
-            showSuccess('Public link rotated');
+  const rotateNoteLink = async () => {
+    promptSudo({
+      onSuccess: async () => {
+        try {
+          const updated = await rotatePublicNoteLink(liveNote.$id);
+          if (updated) {
+            setIsPublic(!!updated.isPublic);
+            setLastT4Key(updated.decryptionKey || null);
+            onUpdate(updated);
+            if (updated.decryptionKey) {
+              const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
+              navigator.clipboard.writeText(shareUrl);
+              showSuccess('Public link rotated', 'New public link copied to clipboard.');
+            } else {
+              showSuccess('Public link rotated');
+            }
+            setShowActionHub(false);
           }
-          return true;
-        }
-      } catch (err: any) {
-        if (err.message === 'VAULT_LOCKED') {
-          showError('Vault Locked', 'You must unlock your vault to rotate the public link.');
-          const unlocked = await promptSudo();
-          if (unlocked) return handleRotate();
-        } else {
-          showError('Rotate Failed', err.message || 'Failed to rotate public link.');
+        } catch (error: any) {
+          console.error('Failed to rotate link:', error);
+          showError('Rotate Failed', error.message || 'Failed to rotate public link.');
         }
       }
-      return false;
-    };
-
-    return handleRotate();
+    });
   };
 
   const handleCancel = () => {
@@ -1931,7 +1925,7 @@ export function NoteDetailSidebar({
                 <Button
                   variant="contained"
                   color="warning"
-                  onClick={confirmRotateLink}
+                  onClick={rotateNoteLink}
                   sx={{ borderRadius: '999px', textTransform: 'none', fontWeight: 800 }}
                 >
                   Confirm rotate
