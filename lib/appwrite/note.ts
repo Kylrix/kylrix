@@ -2770,26 +2770,50 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
       return note;
     }
 
-    if (!(note.isPublic || isNotePublic(note)) || !meta.isEncrypted || meta.encryptionVersion !== 'T4') {
+    // T4 notes always require a symmetric key from key_mapping
+    if (!meta.isEncrypted || meta.encryptionVersion !== 'T4') {
       return note;
     }
 
     let keyBase64 = forceKeyRefresh ? null : getCachedPublicNoteDecryptionKey(note.$id);
+    
     if (!keyBase64) {
+      // 1. Try public route
       keyBase64 = await getCurrentPublicNoteDecryptionKey(note.$id);
-      if (!keyBase64) return null;
+      
+      // 2. If not public, try owner route (requires unlocked vault)
+      if (!keyBase64 && ecosystemSecurity.status.isUnlocked) {
+        const currentUser = await getCurrentUser();
+        if (currentUser && (note.userId === currentUser.$id || (note as any).owner_id === currentUser.$id)) {
+           const ownerKey = await loadT4NoteKey(note.$id, currentUser.$id);
+           keyBase64 = await exportUrlSafeCryptoKey(ownerKey);
+        }
+      }
     }
+
+    if (!keyBase64) return null;
 
     const key = await importUrlSafeAesKey(keyBase64);
     let decryptedTitle = note.title || '';
-    if (meta.encryptedTitle) {
-      decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle, key);
-    } else if (note.title === '🔒 Encrypted Note' || note.title?.includes('🔒')) {
-      // Title is placeholder and real title is missing from meta.
-      decryptedTitle = 'Untitled Note';
+    
+    try {
+      if (meta.encryptedTitle) {
+        decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle, key);
+      } else if (note.title === '🔒 Encrypted Note' || note.title?.includes('🔒')) {
+        decryptedTitle = 'Untitled Note';
+      }
+    } catch (err) {
+      console.warn('[NoteService] Title decryption failed, using fallback:', err);
+      decryptedTitle = note.title || 'Untitled Note';
     }
 
-    const decryptedContent = await ecosystemSecurity.decryptWithKey(note.content || '', key);
+    let decryptedContent = '';
+    try {
+        decryptedContent = await ecosystemSecurity.decryptWithKey(note.content || '', key);
+    } catch (err) {
+        console.error('[NoteService] Content decryption failed:', err);
+        throw err; // Re-throw to be caught by the outer catch
+    }
     cachePublicNoteDecryptionKey(note.$id, keyBase64);
 
     return {

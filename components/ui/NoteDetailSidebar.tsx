@@ -154,22 +154,11 @@ export function NoteDetailSidebar({
   const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
   const [crossSuggestions, setCrossSuggestions] = useState<any[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
 
   const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
-  const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted;
+  const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted;
   const isT4EncryptedPublicNote = !!isPublic && isT4Encrypted;
-
-  // Debugging
-  useEffect(() => {
-    console.log('[NoteSidebar] Note State:', {
-        id: liveNote.$id,
-        isEncryptedNote,
-        vaultUnlocked,
-        title: liveNote.title,
-        hasContent: !!liveNote.content,
-        meta: noteMeta
-    });
-  }, [liveNote, isEncryptedNote, vaultUnlocked, noteMeta]);
 
   // Sync local state with liveNote (crucial for auto-decryption healing)
   useEffect(() => {
@@ -189,6 +178,14 @@ export function NoteDetailSidebar({
         try {
           const decrypted = await decryptPublicEncryptedNote(liveNote);
           if (decrypted) {
+            setTitle(decrypted.title || '');
+            setContent(decrypted.content || '');
+            setTags(decrypted.tags?.join(', ') || '');
+            setFormat(decrypted.format as 'text' | 'doodle' || 'text');
+            setIsLocallyDecrypted(true);
+            setIsEditingContent(false);
+            setIsEditingTitle(false);
+            
             onUpdate(decrypted);
             showSuccess('Note decrypted', 'Content is now visible.');
           }
@@ -204,6 +201,16 @@ export function NoteDetailSidebar({
   useEffect(() => {
     setIsDrawerOpen(showRotateConfirm);
   }, [showRotateConfirm, setIsDrawerOpen]);
+
+  // Automatically prompt for vault unlock if opening an encrypted note
+  useEffect(() => {
+    if (isEncryptedNote && !vaultUnlocked) {
+      const timer = setTimeout(() => {
+        promptSudo();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isEncryptedNote, vaultUnlocked, promptSudo]);
 
   // Linked Content Effects
   const linkedTaskIds = useMemo(() => liveNote.linkedTaskIds || (liveNote.linkedTaskId ? [liveNote.linkedTaskId] : []), [liveNote]);
@@ -324,6 +331,24 @@ export function NoteDetailSidebar({
     }
   };
 
+  const handleTogglePublic = async () => {
+    try {
+      const updated = await toggleNoteVisibility(liveNote.$id);
+      if (updated) {
+        onUpdate(updated);
+        showSuccess(updated.isPublic ? 'Note is now Public' : 'Note is now Private');
+      }
+    } catch (err: any) {
+      if (err.message === 'VAULT_LOCKED') {
+        showError('Vault Locked', 'Unlock vault to change visibility.');
+        const unlocked = await promptSudo();
+        if (unlocked) handleTogglePublic();
+      } else {
+        showError('Failed to update visibility');
+      }
+    }
+  };
+
   const rotateNoteLink = () => setShowRotateConfirm(true);
 
   const handleConfirmedRotate = async () => {
@@ -426,6 +451,15 @@ export function NoteDetailSidebar({
   const displayFormat = isEncryptedNote ? 'text' : format;
   const displayTags = tags.split(',').map(t => t.trim()).filter(Boolean);
 
+  const currentAttachments = useMemo(() => {
+      if (liveNote.attachments && Array.isArray(liveNote.attachments)) {
+          try {
+              return liveNote.attachments.map((a: any) => typeof a === 'string' ? JSON.parse(a) : a);
+          } catch { return []; }
+      }
+      return [];
+  }, [liveNote.attachments]);
+
   return (
     <Box sx={{ p: { xs: 2, md: 2.5 }, display: 'flex', flexDirection: 'column', gap: 3.5, height: '100%', overflowY: 'auto', bgcolor: '#0A0908' }}>
       {/* Header */}
@@ -485,6 +519,29 @@ export function NoteDetailSidebar({
         </Box>
       </Box>
 
+      {/* Attachments Section */}
+      <Box sx={{ px: 1 }}>
+        <Typography variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 900, textTransform: 'uppercase', display: 'block', mb: 1.5, letterSpacing: '0.1em' }}>Attachments</Typography>
+        {currentAttachments.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                {currentAttachments.map((file: any) => (
+                    <Box key={file.id} sx={{ p: 1.75, borderRadius: '18px', bgcolor: alpha('#fff', 0.03), border: `1px solid ${alpha('#fff', 0.06)}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                            <PaperClipIcon sx={{ color: theme.palette.text.secondary, fontSize: 18 }} />
+                            <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 800 }}>{file.name}</Typography>
+                                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>{formatFileSize(file.size)}</Typography>
+                            </Box>
+                        </Box>
+                        <IconButton size="small" onClick={() => window.open(`/api/notes/${liveNote.$id}/attachments/${file.id}`, '_blank')} sx={{ color: theme.palette.primary.main }}><OpenIcon fontSize="small" /></IconButton>
+                    </Box>
+                ))}
+            </Box>
+        ) : (
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic' }}>No attachments</Typography>
+        )}
+      </Box>
+
       {/* Linked Ecosystem Content */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, px: 1 }}>
         {[
@@ -541,7 +598,7 @@ export function NoteDetailSidebar({
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>Updated {formatNoteUpdatedDate(liveNote)}</Typography>
       </Box>
 
-      {/* Modals & Drawers */}
+      {/* Action Hub Drawer */}
       <Drawer anchor="top" open={showActionHub} onClose={() => setShowActionHub(false)} PaperProps={{ sx: { borderBottomLeftRadius: '32px', borderBottomRightRadius: '32px', bgcolor: '#161412', border: '1px solid #1C1A18', backgroundImage: 'none', p: 3.5 } }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -554,18 +611,12 @@ export function NoteDetailSidebar({
           </Box>
           <Box>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 900, textTransform: 'uppercase', mb: 2, display: 'block' }}>Suggestions</Typography>
-            {isLoadingSuggestions ? <CircularProgress size={16} /> : crossSuggestions.length > 0 ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {crossSuggestions.map(s => (
-                        <Box key={s.id} sx={{ p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: '12px', mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Box><Typography variant="body2" sx={{ fontWeight: 800 }}>{s.label}</Typography><Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>{s.description}</Typography></Box>
-                            <Button size="small" onClick={() => window.open(`https://kylrix.space/integrations?action=${s.id}`, '_blank')}>USE</Button>
-                        </Box>
-                    ))}
-                </Box>
-            ) : (
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>No suggestions available</Typography>
-            )}
+            {isLoadingSuggestions ? <CircularProgress size={16} /> : crossSuggestions.map(s => (
+              <Box key={s.id} sx={{ p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: '12px', mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box><Typography variant="body2" sx={{ fontWeight: 800 }}>{s.label}</Typography><Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>{s.description}</Typography></Box>
+                <Button size="small" onClick={() => window.open(`https://kylrix.space/integrations?action=${s.id}`, '_blank')}>USE</Button>
+              </Box>
+            ))}
           </Box>
         </Box>
       </Drawer>
