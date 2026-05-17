@@ -48,6 +48,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
+import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
 import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
 import { updateNote, listFlowTasks, listFlowEvents, listKeepCredentials, Query, toggleNoteVisibility, rotatePublicNoteLink, getShareableUrl, getCurrentPublicNoteShareUrl, getCurrentPublicNoteDecryptionKey, getNotePublicState, decryptPublicEncryptedNote, createTaskFromNote } from '@/lib/appwrite';
@@ -147,7 +148,8 @@ export function NoteDetailSidebar({
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [showActionHub, setShowActionHub] = useState(false);
-  const [pendingHubAction, setPendingHubAction] = useState<null | 'rotate'>(null);
+  const [showRotateConfirm, setShowRotateConfirm] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
   const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
   const [crossSuggestions, setCrossSuggestions] = useState<Array<{ id: string; label: string; description: string }>>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
@@ -704,8 +706,36 @@ export function NoteDetailSidebar({
   };
 
   const rotateNoteLink = () => {
-    setPendingHubAction('rotate');
-    setShowActionHub(true);
+    setShowRotateConfirm(true);
+  };
+
+  const handleConfirmedRotate = async () => {
+    setIsRotating(true);
+    promptSudo({
+      onSuccess: async () => {
+        try {
+          const updated = await rotatePublicNoteLink(liveNote.$id);
+          if (updated) {
+            setIsPublic(!!updated.isPublic);
+            setLastT4Key(updated.decryptionKey || null);
+            onUpdate(updated);
+            if (updated.decryptionKey) {
+              const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
+              navigator.clipboard.writeText(shareUrl);
+              showSuccess('Public link rotated', 'New public link copied to clipboard.');
+            } else {
+              showSuccess('Public link rotated');
+            }
+            setShowRotateConfirm(false);
+          }
+        } catch (error: any) {
+          console.error('Failed to rotate link:', error);
+          showError('Rotate Failed', error.message || 'Failed to rotate public link.');
+        } finally {
+          setIsRotating(false);
+        }
+      }
+    });
   };
 
   const handleCancel = () => {
@@ -1967,4 +1997,15 @@ export function NoteDetailSidebar({
 
     </Box>
   );
+      {/* Rotate Confirmation Drawer */}
+      <ConfirmationDialog
+        open={showRotateConfirm}
+        title="Rotate public link?"
+        message="Are you sure you want to rotate this note's public link? The previous link will become permanently invalid."
+        confirmLabel={isRotating ? "Rotating..." : "Rotate Link"}
+        isDestructive={true}
+        isLoading={isRotating}
+        onClose={() => setShowRotateConfirm(false)}
+        onConfirm={handleConfirmedRotate}
+      />
 }

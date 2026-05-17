@@ -29,6 +29,7 @@ import Logo from '../common/Logo';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { useFinalizeAuth } from '@/lib/finalizeAuth';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import {
   setMasterpassFlag,
   AppwriteService,
@@ -51,6 +52,12 @@ const SURFACE_COLOR = "#161412";
 export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { setIsDrawerOpen } = useDrawerState();
+
+  useEffect(() => {
+    setIsDrawerOpen(isOpen);
+  }, [isOpen, setIsDrawerOpen]);
+
   const [masterPassword, setMasterPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
