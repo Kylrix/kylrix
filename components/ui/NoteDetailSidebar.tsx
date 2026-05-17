@@ -737,28 +737,41 @@ export function NoteDetailSidebar({
     if (rotated) setShowActionHub(false);
   };
 
-  const loadCrossSuggestions = useCallback(async () => {
-    if (!liveNote.$id) return;
-    setIsLoadingSuggestions(true);
-    try {
-      const response = await fetch(
-        `/api/cross/suggest?sourceApp=note&sourceType=note&sourceId=${encodeURIComponent(liveNote.$id)}`
-      );
-      const data = await response.json().catch(() => null);
-      setCrossSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
-    } catch (error: unknown) {
-      console.error('Failed to load cross-app suggestions:', error);
-      setCrossSuggestions([]);
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  }, [liveNote.$id]);
-
+  // Pre-fetch cross-app suggestions when note changes (Non-blocking)
   useEffect(() => {
-    if (showActionHub) {
-      void loadCrossSuggestions();
-    }
-  }, [showActionHub, loadCrossSuggestions]);
+    let active = true;
+    const fetchCrossAppSuggestions = async () => {
+      if (!liveNote.$id) return;
+      
+      // Defer slightly to avoid blocking the UI
+      await new Promise(resolve => setTimeout(resolve, 600));
+      if (!active) return;
+
+      setIsLoadingSuggestions(true);
+      try {
+        const url = `/note/api/cross/suggest?sourceApp=note&sourceType=note&sourceId=${encodeURIComponent(liveNote.$id)}`;
+        console.log('[Sidebar] Fetching suggestions:', url);
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            console.error('[Sidebar] API error:', response.status, response.statusText);
+        }
+        
+        const data = await response.json().catch(() => null);
+        console.log('[Sidebar] Suggestions received:', data);
+        
+        if (active) setCrossSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
+      } catch (error: unknown) {
+        console.error('Failed to load cross-app suggestions:', error);
+        if (active) setCrossSuggestions([]);
+      } finally {
+        if (active) setIsLoadingSuggestions(false);
+      }
+    };
+
+    fetchCrossAppSuggestions();
+    return () => { active = false; };
+  }, [liveNote.$id]);
 
   const handleCreateTaskFromNote = useCallback(async () => {
     setIsCreatingTaskFromNote(true);
