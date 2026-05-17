@@ -6,23 +6,23 @@ import { X } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
 import { useAuth } from '@/context/auth/AuthContext';
 import OAuthButtons from '@/components/OAuthButtons';
-import { useLoginDrawer } from '@/context/LoginDrawerContext'; // New context needed
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 const DRAWER_SX = {
-  borderTopLeftRadius: '26px',
-  borderTopRightRadius: '26px',
+  borderTopLeftRadius: '24px',
+  borderTopRightRadius: '24px',
   bgcolor: '#161412',
   borderTop: '1px solid #34322F',
   backgroundImage: 'none',
-  pb: 'calc(1rem + env(safe-area-inset-bottom))',
   maxWidth: 480,
   width: '100%',
   mx: 'auto'
 };
 
 export function LoginDrawer() {
-  const { isOpen, close } = useLoginDrawer();
+  const { activeContent, close } = useUnifiedDrawer();
   const { isLoading } = useAuth();
+  const isOpen = activeContent === 'login';
 
   return (
     <Drawer 
@@ -37,10 +37,12 @@ export function LoginDrawer() {
         hideBackdrop: false,
       }}
     >
-      <Box sx={{ p: 2.75 }}>
+      <Box sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff' }}>Continue to Kylrix</Typography>
-          <IconButton onClick={close} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+          <Typography sx={{ fontWeight: 900, fontSize: '1.2rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
+            Continue to Kylrix
+          </Typography>
+          <IconButton onClick={close} sx={{ color: '#9B9691' }}>
             <X size={20} />
           </IconButton>
         </Box>

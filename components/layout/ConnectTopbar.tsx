@@ -15,6 +15,7 @@ import {
   Stack,
   Tooltip,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import {
   Bot,
@@ -35,6 +36,7 @@ import { getAppColor } from '@/lib/ecosystem-app-colors';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 
 interface ConnectTopbarProps {
@@ -49,9 +51,10 @@ function isRenderableImageSrc(value?: string | null) {
 export default function ConnectTopbar({
   className,
 }: ConnectTopbarProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticating } = useAuth();
   const { openWallet } = useWalletOverlay();
   const { openAgenticDrawer } = useAgenticDrawer();
+  const { open: openUnified } = useUnifiedDrawer();
   const { openProUpgrade } = useProUpgrade();
   const isPro = hasPaidKylrixPlan(user);
   const router = useRouter();
@@ -494,6 +497,26 @@ export default function ConnectTopbar({
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
               {isClient && (
                 <>
+                  {!user && (
+                    <Button
+                      onClick={() => openUnified('login')}
+                      disabled={isAuthenticating}
+                      sx={{
+                        color: '#fff',
+                        bgcolor: '#6366F1',
+                        borderRadius: '12px',
+                        minWidth: 98,
+                        height: 40,
+                        px: 2,
+                        textTransform: 'none',
+                        fontWeight: 800,
+                        boxShadow: '0 16px 36px rgba(99, 102, 241, 0.25)',
+                        '&:hover': { bgcolor: '#5254E8' }
+                      }}
+                    >
+                      {isAuthenticating ? <CircularProgress size={16} color="inherit" /> : 'Connect'}
+                    </Button>
+                  )}
                   {user && (
                     <Tooltip title="Agentic Workspace">
                       <IconButton
