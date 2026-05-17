@@ -1847,21 +1847,15 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
     const currentUser = await getCurrentUser();
     if (!currentUser) return { documents: [], total: 0 };
 
-    // Check cache first (5-minute TTL)
-    const cacheKey = getCacheKey('getSharedNotes', currentUser.$id);
-    const cached = getCached<{ documents: Notes[], total: number }>(cacheKey);
-    if (cached) return cached;
-
     // A shared note is one that we have read access to (automatically filtered by Appwrite)
     // but the owner (userId) is NOT the current user.
-    // We also exclude ghost notes (userId is null) and public notes to strictly show "Private" shared notes.
     const notesRes = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_NOTES,
       [
         Query.notEqual('userId', currentUser.$id),
         Query.isNotNull('userId'),
-        Query.equal('isPublic', false)
+        Query.orderDesc('$createdAt')
       ]
     );
 
@@ -1878,7 +1872,7 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
       else if (isNoteEditableByAnyone(note)) myPerm = 'write';
 
       note.sharedPermission = myPerm;
-      note.sharedAt = note.$updatedAt || note.$createdAt; // Rough estimate since we don't track invite times anymore
+      note.sharedAt = note.$updatedAt || note.$createdAt;
       
       if (!(note as any).attachments || !Array.isArray((note as any).attachments)) {
         note.attachments = [];
@@ -1887,15 +1881,32 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
       sharedNotes.push(note as Notes);
     }
 
-    const result = {
+    return {
       documents: sharedNotes,
       total: sharedNotes.length
     };
-    
-    setCached(cacheKey, result);
-    return result;
   } catch (error: any) {
     console.error('getSharedNotes error:', error);
+    return { documents: [], total: 0 };
+  }
+}
+
+export async function listAccessiblePublicNotes() {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) return { documents: [], total: 0 };
+
+    // All public notes the user can see (owned by them OR shared/publicly available)
+    return await databases.listDocuments(
+        APPWRITE_DATABASE_ID,
+        APPWRITE_TABLE_ID_NOTES,
+        [
+          Query.equal('isPublic', true),
+          Query.orderDesc('$createdAt')
+        ]
+      );
+  } catch (error: any) {
+    console.error('listAccessiblePublicNotes error:', error);
     return { documents: [], total: 0 };
   }
 }
