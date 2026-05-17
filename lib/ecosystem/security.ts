@@ -339,6 +339,11 @@ export class EcosystemSecurity {
   }
 
   async decryptWithKey(encryptedData: string, key: CryptoKey): Promise<string> {
+    const decrypted = await this.decryptBinaryWithKey(encryptedData, key);
+    return new TextDecoder().decode(decrypted);
+  }
+
+  async decryptBinaryWithKey(encryptedData: string, key: CryptoKey): Promise<Uint8Array> {
     if (!encryptedData || typeof encryptedData !== 'string') {
       throw new Error("Invalid input: encryptedData must be a non-empty string");
     }
@@ -351,21 +356,28 @@ export class EcosystemSecurity {
       throw new Error("Failed to decode base64 data");
     }
 
-    if (combined.length <= EcosystemSecurity.IV_SIZE) {
-      console.error("[Security] Data too short. Total length:", combined.length, "IV size:", EcosystemSecurity.IV_SIZE);
-      throw new Error("Invalid encrypted data: no ciphertext present after IV");
-    }
+    const attemptDecrypt = async (ivSize: number) => {
+        if (combined.length <= ivSize) return null;
+        const iv = combined.slice(0, ivSize);
+        const ciphertext = combined.slice(ivSize);
+        try {
+            const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ciphertext);
+            return new Uint8Array(decrypted);
+        } catch (err) {
+            return null;
+        }
+    };
 
-    const iv = combined.slice(0, EcosystemSecurity.IV_SIZE);
-    const encrypted = combined.slice(EcosystemSecurity.IV_SIZE);
+    // 1. Try Kylrix default (16 bytes)
+    const result16 = await attemptDecrypt(EcosystemSecurity.IV_SIZE);
+    if (result16 !== null) return result16;
 
-    try {
-      const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, encrypted);
-      return new TextDecoder().decode(decrypted);
-    } catch (err) {
-      console.error("[Security] crypto.subtle.decrypt failed. Key algorithm:", key.algorithm.name, "Data length:", encrypted.length);
-      throw err;
-    }
+    // 2. Try AES-GCM standard (12 bytes)
+    const result12 = await attemptDecrypt(12);
+    if (result12 !== null) return result12;
+
+    console.error("[Security] Decryption failed for both 16-byte and 12-byte IVs. Key algorithm:", key.algorithm.name, "Total length:", combined.length);
+    throw new Error("Decryption failed: possible key mismatch or data corruption");
   }
 
   getConversationKey(conversationId: string): CryptoKey | null {

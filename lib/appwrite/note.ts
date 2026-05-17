@@ -2746,10 +2746,6 @@ async function getT4NoteKeyMapping(noteId: string, ownerId: string) {
 }
 
 async function loadT4NoteKey(noteId: string, ownerId: string): Promise<CryptoKey> {
-  const ownerPublicKey = await ecosystemSecurity.ensureE2EIdentity(ownerId);
-  if (!ownerPublicKey) {
-    throw new Error('Failed to load owner public key');
-  }
   const keyMappingRes = await getT4NoteKeyMapping(noteId, ownerId);
 
   const mapping = keyMappingRes.documents[0] as any;
@@ -2757,6 +2753,28 @@ async function loadT4NoteKey(noteId: string, ownerId: string): Promise<CryptoKey
     throw new Error('Missing encryption key mapping for this note');
   }
 
+  // 1. Try Owner Flow: Direct MEK unwrap (fast, reliable)
+  const mek = ecosystemSecurity.getMasterKey();
+  if (mek) {
+    try {
+      const rawKey = await ecosystemSecurity.decryptBinaryWithKey(mapping.wrappedKey, mek);
+      return await crypto.subtle.importKey(
+        'raw',
+        rawKey,
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+      );
+    } catch (e) {
+      // Fallback to ECDH
+    }
+  }
+
+  // 2. Try Shared Flow: ECDH unwrap
+  const ownerPublicKey = await ecosystemSecurity.ensureE2EIdentity(ownerId);
+  if (!ownerPublicKey) {
+    throw new Error('Failed to load owner public key');
+  }
   return await ecosystemSecurity.unwrapKeyWithECDH(mapping.wrappedKey, ownerPublicKey);
 }
 
@@ -2875,7 +2893,20 @@ async function preparePublicNoteUpdate(
   } else {
     symmetricKey = await ecosystemSecurity.generateRandomMEK();
     decryptionKey = await exportUrlSafeCryptoKey(symmetricKey);
-    const wrappedKey = await ecosystemSecurity.wrapKeyWithECDH(symmetricKey, ownerPublicKey);
+    
+    // Wrap for owner using MEK (high-fidelity flow)
+    const mek = ecosystemSecurity.getMasterKey();
+    let wrappedKey: string;
+    if (mek) {
+        const rawSymmetric = await crypto.subtle.exportKey('raw', symmetricKey);
+        // Use binary-safe btoa hack for non-string key data
+        const rawString = String.fromCharCode(...new Uint8Array(rawSymmetric));
+        wrappedKey = await ecosystemSecurity.encryptWithKey(rawString, mek);
+    } else {
+        // Fallback to ECDH
+        wrappedKey = await ecosystemSecurity.wrapKeyWithECDH(symmetricKey, ownerPublicKey);
+    }
+
     const mappingData = {
       resourceId: note.$id,
       resourceType: 'note',
