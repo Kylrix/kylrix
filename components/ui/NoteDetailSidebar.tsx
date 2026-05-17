@@ -48,7 +48,6 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
-import { useSudo } from '@/context/SudoContext';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
 import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
 import { updateNote, listFlowTasks, listFlowEvents, listKeepCredentials, Query, toggleNoteVisibility, rotatePublicNoteLink, getShareableUrl, getCurrentPublicNoteShareUrl, getCurrentPublicNoteDecryptionKey, getNotePublicState, decryptPublicEncryptedNote, createTaskFromNote } from '@/lib/appwrite';
@@ -288,7 +287,6 @@ export function NoteDetailSidebar({
   const hasPromptedEncryptedOpenRef = useRef(false);
 
   const { showSuccess, showError } = useToast();
-  const { promptSudo } = useSudo();
   const { openProUpgrade } = useProUpgrade();
   const router = useRouter();
   const { closeSidebar } = useDynamicSidebar();
