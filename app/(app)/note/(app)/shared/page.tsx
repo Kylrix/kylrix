@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Notes } from '@/types/appwrite';
 import NoteCard from '@/components/ui/NoteCard';
-import { getSharedNotes, listAccessiblePublicNotes, getCurrentUser } from '@/lib/appwrite';
+import { getSharedNotes, listPublicNotesByUser, getCurrentUser } from '@/lib/appwrite';
 import { useNotes } from '@/context/NotesContext';
 import {
   Box,
@@ -34,46 +34,45 @@ export default function SharedNotesPage() {
   const [publicNotes, setPublicNotes] = useState<Notes[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
-  import { getSharedNotes, listPublicNotesByUser, getCurrentUser } from '@/lib/appwrite';
-  ...
-    // Fetch shared and public notes once on mount
-    useEffect(() => {
-      const fetchNotes = async () => {
-        try {
-          setLoading(true);
+  const { isPinned } = useNotes();
 
-          const [sharedResult, user] = await Promise.all([
-            getSharedNotes(),
-            getCurrentUser()
-          ]);
+  // Fetch shared and public notes once on mount
+  useEffect(() => {
+    const fetchNotes = async () => {
+      try {
+        setLoading(true);
+        
+        const [sharedResult, user] = await Promise.all([
+          getSharedNotes(),
+          getCurrentUser()
+        ]);
 
-          if (user && user.$id) {
-            const myPublicResult = await listPublicNotesByUser(user.$id);
-            const myPublicNotes = myPublicResult.documents as unknown as Notes[];
+        if (user && user.$id) {
+          const myPublicResult = await listPublicNotesByUser(user.$id);
+          const myPublicNotes = myPublicResult.documents as unknown as Notes[];
+          
+          // Partition shared notes into private and public
+          const sharedDocs = sharedResult.documents as SharedNote[];
+          const sharedPrivate = sharedDocs.filter(n => !n.isPublic);
+          const sharedPublic = sharedDocs.filter(n => n.isPublic);
 
-            // Partition shared notes into private and public
-            const sharedDocs = sharedResult.documents as SharedNote[];
-            const sharedPrivate = sharedDocs.filter(n => !n.isPublic);
-            const sharedPublic = sharedDocs.filter(n => n.isPublic);
-
-            setPrivateNotes(sharedPrivate);
-
-            // Public tab = (My Public Notes) + (Notes shared with me that are public)
-            setPublicNotes([...myPublicNotes, ...sharedPublic]);
-          } else {
-            setPrivateNotes([]);
-            setPublicNotes([]);
-          }
-        } catch (error: any) {
-          console.error('Error fetching shared notes:', error);
-        } finally {
-          setLoading(false);
+          setPrivateNotes(sharedPrivate);
+          
+          // Public tab = (My Public Notes) + (Notes shared with me that are public)
+          setPublicNotes([...myPublicNotes, ...sharedPublic]);
+        } else {
+          setPrivateNotes([]);
+          setPublicNotes([]);
         }
-      };
+      } catch (error: any) {
+        console.error('Error fetching shared notes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      fetchNotes();
-    }, []);
-
+    fetchNotes();
+  }, []);
 
   const sortedPrivateNotes = useMemo(() => {
     return [...privateNotes].sort((a, b) => {

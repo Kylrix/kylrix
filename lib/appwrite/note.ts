@@ -1847,15 +1847,16 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
     const currentUser = await getCurrentUser();
     if (!currentUser) return { documents: [], total: 0 };
 
-    // A shared note is one that we have read access to (automatically filtered by Appwrite)
-    // but the owner (userId) is NOT the current user.
+    // 1. Fetch all documents where I am NOT the owner but have access.
+    // Appwrite automatically filters to documents I have READ access to.
     const notesRes = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_NOTES,
       [
         Query.notEqual('userId', currentUser.$id),
         Query.isNotNull('userId'),
-        Query.orderDesc('$createdAt')
+        Query.orderDesc('$createdAt'),
+        Query.limit(500)
       ]
     );
 
@@ -1864,12 +1865,19 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
     for (const doc of notesRes.documents as any[]) {
       const note = doc as any;
       
+      // 2. STRICT VALIDATION: 
+      // Only include if the user is EXPLICITLY named in the permissions.
+      // This excludes "public" notes where access is granted via Role.any().
+      const perms = note.$permissions || [];
+      const userRole = `user:${currentUser.$id}`;
+      const isExplicitCollaborator = perms.some((p: string) => p.includes(userRole));
+
+      if (!isExplicitCollaborator) continue;
+
       // Determine permission level for the current user
       let myPerm = 'read';
-      const perms = note.$permissions || [];
-      if (perms.includes(`delete("user:${currentUser.$id}")`)) myPerm = 'admin';
-      else if (perms.includes(`update("user:${currentUser.$id}")`)) myPerm = 'write';
-      else if (isNoteEditableByAnyone(note)) myPerm = 'write';
+      if (perms.includes(`delete("${userRole}")`)) myPerm = 'admin';
+      else if (perms.includes(`update("${userRole}")`)) myPerm = 'write';
 
       note.sharedPermission = myPerm;
       note.sharedAt = note.$updatedAt || note.$createdAt;
