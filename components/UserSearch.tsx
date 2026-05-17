@@ -115,7 +115,7 @@ export default function UserSearch({
                 <IdentityAvatar 
                   fileId={user.profilePicId || user.avatar || null}
                   alt={user.title}
-                  fallback={user.title.charAt(0).toUpperCase()}
+                  fallback={(user.title || user.subtitle || 'U').charAt(0).toUpperCase()}
                   verified={computeIdentityFlags({
                     createdAt: (user as any).$createdAt || (user as any).createdAt || null,
                     lastUsernameEdit: (user as any).last_username_edit || null,
