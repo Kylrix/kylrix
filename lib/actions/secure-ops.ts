@@ -170,15 +170,19 @@ export async function mintDailyLoginSecure(input: { userId: string; dateKey: str
     throw new Error('Forbidden');
   }
 
-  return InternalKylrixTokenService.mintForActivity({
-    userId,
-    idempotencyKey: `mint:daily_login:${dateKey}:${userId}`,
-    activityType: 'daily_login',
-    uniqueActors: 1,
-    trustScore: 70,
-    sourceType: 'daily_login',
-    sourceId: dateKey,
-  });
+  try {
+    return await InternalKylrixTokenService.mintForActivity({
+        userId,
+        idempotencyKey: `mint:daily_login:${dateKey}:${userId}`,
+        activityType: 'daily_login',
+        uniqueActors: 1,
+        trustScore: 70,
+        sourceType: 'daily_login',
+        sourceId: dateKey,
+    });
+  } catch (err: any) {
+    return { accepted: false, reason: err?.message || 'MINT_FAILED' };
+  }
 }
 
 export async function sharePublicNoteAsMomentSecure(input: { noteId: string; text?: string }) {
