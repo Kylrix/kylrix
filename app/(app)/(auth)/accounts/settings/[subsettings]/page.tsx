@@ -14,6 +14,7 @@ import ProfileManager from '@/components/ProfileManager';
 import ReferralManager from '@/components/ReferralManager';
 import SudoModal from '@/components/overlays/SudoModal';
 import { TwoFactorDrawer } from '@/components/overlays/TwoFactorDrawer';
+import { AccountsBottomChrome } from '../../components/layout/AccountsBottomChrome';
 import {
   Box,
   Typography,
@@ -787,6 +788,8 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
           onEnabled={refreshTwoFactorStatus}
         />
       )}
+
+      <AccountsBottomChrome />
     </Box>
   );
 }
