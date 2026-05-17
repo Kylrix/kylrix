@@ -504,7 +504,7 @@ export async function getQuickProfileSecure(userId: string, jwt?: string) {
   };
 }
 
-export type PermissionLevel = 'view' | 'edit' | 'admin';
+export type PermissionLevel = 'viewer' | 'editor' | 'admin';
 
 export interface PermissionChangeInput {
   userId: string;
@@ -527,7 +527,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
   }
 
   const { client, users } = createAdminClient();
-  const appwritePerm = input.permission === 'admin' ? 'admin' : input.permission === 'edit' ? 'write' : 'read';
+  const appwritePerm = input.permission === 'admin' ? 'admin' : input.permission === 'editor' ? 'write' : 'read';
 
   const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW;
   const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
