@@ -135,7 +135,23 @@ export function NoteDetailSidebar({
   const [format, setFormat] = useState<'text' | 'doodle'>(liveNote.format as 'text' | 'doodle' || 'text');
   const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
   const [isPublic, setIsPublic] = useState(getNotePublicState(liveNote));
-  const [lastT4Key, setLastT4Key] = useState<string | null>(null);
+  // Automatically heal T4 encrypted state if vault is unlocked
+  useEffect(() => {
+    if (isEncryptedNote && ecosystemSecurity.status.isUnlocked) {
+      const healDecryption = async () => {
+        try {
+          const decrypted = await decryptPublicEncryptedNote(liveNote.$id);
+          if (decrypted) {
+            onUpdate(decrypted);
+            showSuccess('Note decrypted', 'Content is now visible.');
+          }
+        } catch (err) {
+          console.error('[NoteSidebar] Auto-decryption failed:', err);
+        }
+      };
+      void healDecryption();
+    }
+  }, [isEncryptedNote, ecosystemSecurity.status.isUnlocked, liveNote.$id, onUpdate, showSuccess]);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [attachmentErrors, setAttachmentErrors] = useState<string[]>([]);
   const [currentAttachments, setCurrentAttachments] = useState<any[]>([]);
@@ -685,30 +701,9 @@ export function NoteDetailSidebar({
     showSuccess('Share link copied to clipboard');
   };
 
-  const rotateNoteLink = async () => {
-    promptSudo({
-      onSuccess: async () => {
-        try {
-          const updated = await rotatePublicNoteLink(liveNote.$id);
-          if (updated) {
-            setIsPublic(!!updated.isPublic);
-            setLastT4Key(updated.decryptionKey || null);
-            onUpdate(updated);
-            if (updated.decryptionKey) {
-              const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
-              navigator.clipboard.writeText(shareUrl);
-              showSuccess('Public link rotated', 'New public link copied to clipboard.');
-            } else {
-              showSuccess('Public link rotated');
-            }
-            setShowActionHub(false);
-          }
-        } catch (error: any) {
-          console.error('Failed to rotate link:', error);
-          showError('Rotate Failed', error.message || 'Failed to rotate public link.');
-        }
-      }
-    });
+  const rotateNoteLink = () => {
+    setPendingHubAction('rotate');
+    setShowActionHub(true);
   };
 
   const handleCancel = () => {
@@ -911,7 +906,7 @@ export function NoteDetailSidebar({
           {isT4EncryptedPublicNote && (
             <Tooltip title="Change public link">
               <IconButton
-                onClick={handleRotatePublicLink}
+                onClick={rotateNoteLink}
                 sx={{
                   color: theme.palette.text.secondary,
                   '&:hover': { color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.1) }
@@ -1925,7 +1920,32 @@ export function NoteDetailSidebar({
                 <Button
                   variant="contained"
                   color="warning"
-                  onClick={rotateNoteLink}
+                  onClick={async () => {
+                      promptSudo({
+                          onSuccess: async () => {
+                            try {
+                                const updated = await rotatePublicNoteLink(liveNote.$id);
+                                if (updated) {
+                                    setIsPublic(!!updated.isPublic);
+                                    setLastT4Key(updated.decryptionKey || null);
+                                    onUpdate(updated);
+                                    if (updated.decryptionKey) {
+                                    const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
+                                    navigator.clipboard.writeText(shareUrl);
+                                    showSuccess('Public link rotated', 'New public link copied to clipboard.');
+                                    } else {
+                                    showSuccess('Public link rotated');
+                                    }
+                                    setShowActionHub(false);
+                                    setPendingHubAction(null);
+                                }
+                            } catch (error: any) {
+                                console.error('Failed to rotate link:', error);
+                                showError('Rotate Failed', error.message || 'Failed to rotate public link.');
+                            }
+                          }
+                      });
+                  }}
                   sx={{ borderRadius: '999px', textTransform: 'none', fontWeight: 800 }}
                 >
                   Confirm rotate
