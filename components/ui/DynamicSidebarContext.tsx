@@ -7,6 +7,7 @@ import React, {
   useContext,
   useMemo,
   useState,
+  useRef
 } from 'react';
 
 export interface DynamicSidebarContextType {
@@ -27,9 +28,14 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem('kylrixnote_dynamic_sidebar_key');
   });
 
+  // Use refs to keep callbacks stable and prevent massive list re-renders
+  const stateRef = useRef({ isOpen, activeContentKey });
+  stateRef.current = { isOpen, activeContentKey };
+
   const openSidebar = useCallback(
     (newContent: ReactNode, key: string | null = null) => {
-      if (isOpen && key && activeContentKey === key) {
+      const state = stateRef.current;
+      if (state.isOpen && key && state.activeContentKey === key) {
         return;
       }
       setContent(newContent);
@@ -39,13 +45,14 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('kylrixnote_dynamic_sidebar_key', key);
       }
     },
-    [activeContentKey, isOpen]
+    [] // Stable identity
   );
 
   const closeSidebar = useCallback(() => {
     setIsOpen(false);
     setActiveContentKey(null);
     localStorage.removeItem('kylrixnote_dynamic_sidebar_key');
+    // Delay clearing content for exit animation
     setTimeout(() => {
       setContent(null);
     }, 300);

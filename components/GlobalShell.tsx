@@ -24,12 +24,13 @@ const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer
 const ProUpgradeDrawer = dynamic(() => import('./overlays/ProUpgradeDrawer').then(m => m.ProUpgradeDrawer), { ssr: false });
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
 const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
+const DynamicSidebar = dynamic(() => import('./ui/DynamicSidebarPanel').then(m => m.DynamicSidebar), { ssr: false });
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
   
-  // 1. Route Analysis (Hoisted to top)
+  // 1. Route Analysis
   const isAppRoute = useMemo(() => Boolean(
     pathname?.startsWith('/note') ||
     pathname?.startsWith('/vault') ||
@@ -49,7 +50,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { taskDialogOpen } = useTask();
   const { isOpen: isOverlayOpen, closeOverlay } = useOverlay();
   const { isOpen: isDynamicSidebarOpen, closeSidebar } = useDynamicSidebar();
-  const { isCollapsed } = useSidebarContext();
   const { closeWallet } = useWalletOverlay();
 
   // 3. Automated Logic
@@ -69,14 +69,12 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
   // 4. Stacking Determinism
   const TOPBAR_Z = 1200;
-  const DRAWER_Z = 1300;
-  const FAB_Z = 1400;
 
   return (
     <Box 
         sx={{ 
             minHeight: '100vh', 
-            bgcolor: '#0A0908', // Solid brand dark
+            bgcolor: '#0A0908', 
             color: '#fff',
             position: 'relative',
             overflowX: 'hidden'
@@ -89,13 +87,13 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           minWidth: 0,
           position: 'relative',
           zIndex: 1,
-          pt: '88px', // Exact Topbar height
+          pt: '88px',
           pb: isLandingPage ? 0 : { xs: 12, md: 4 },
           px: { xs: 0, sm: 2, md: 4 },
           maxWidth: 1600,
           mx: 'auto',
           minHeight: '100vh',
-          pointerEvents: 'auto', // Guarantee clicks hit content
+          pointerEvents: 'auto',
         }}
       >
         {children}
@@ -117,8 +115,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {unifiedDrawerActive !== 'navbar' && <UnifiedBottomDrawer />}
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}
-      
-      {/* Global Toast/Notif layer could go here */}
+      {isDynamicSidebarOpen && <DynamicSidebar />}
     </Box>
   );
 }
