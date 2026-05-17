@@ -21,7 +21,6 @@ import {
   Zap,
   Cpu
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 
 const DownloadCard = ({ platform }: any) => (
     <Paper 
@@ -89,8 +88,6 @@ export default function DownloadsPage() {
 
   return (
     <Box component="main" sx={{ pt: 12, bgcolor: '#000', color: '#fff' }}>
-      <Navbar />
-      
       <Container maxWidth="xl">
         <Stack spacing={10} sx={{ pt: { xs: 15, md: 25 }, pb: 20 }}>
           <Box textAlign="center">

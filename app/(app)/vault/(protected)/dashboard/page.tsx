@@ -19,7 +19,6 @@ import CredentialSkeleton from '@/components/app/dashboard/CredentialSkeleton';
 import PaginationControls from '@/components/app/dashboard/PaginationControls';
 import SearchBar from '@/components/app/dashboard/SearchBar';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
-import VaultGuard from '@/components/layout/VaultGuard';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import SudoModal from '@/components/overlays/SudoModal';
 import { useAI } from '@/context/AIContext';
@@ -399,7 +398,7 @@ function DashboardPageContent() {
   const totalPages = Math.ceil(effectiveTotal / pageSize) || 1;
 
   return (
-    <VaultGuard>
+    <>
       <Box sx={{ 
         display: 'flex', 
         flexDirection: 'column', 
@@ -703,7 +702,7 @@ function DashboardPageContent() {
           onCancel={() => { }}
         />
       </Box>
-    </VaultGuard>
+    </>
   );
 }
 

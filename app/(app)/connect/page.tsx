@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Container } from '@mui/material';
-import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { Feed } from '@/components/social/Feed';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
@@ -80,7 +79,7 @@ function ConnectHomeContent() {
   }, [pathname, router, searchParams, shouldCompose]);
 
   return (
-    <Container maxWidth="md" sx={{ py: 2 }}>
+    <Container maxWidth="md" sx={{ py: 2, pointerEvents: 'auto' }}>
       <Feed view="personal" composeIntent={composeIntent} />
     </Container>
   );
@@ -88,7 +87,6 @@ function ConnectHomeContent() {
 
 export default function Home() {
   return (
-    <ConnectAppShell>
       <Suspense
         fallback={
           <Container maxWidth="md" sx={{ py: 2 }}>
@@ -98,6 +96,5 @@ export default function Home() {
       >
         <ConnectHomeContent />
       </Suspense>
-    </ConnectAppShell>
   );
 }

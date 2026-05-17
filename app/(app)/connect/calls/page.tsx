@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, Suspense  } from 'react';
-import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
 import { Box, Typography, Container, CircularProgress, Paper, TextField, Button } from '@mui/material';
@@ -32,58 +31,56 @@ export default function CallsPage() {
     };
 
     return (
-        <ConnectAppShell>
-            <Container maxWidth="md" sx={{ py: 3, position: 'relative', minHeight: '100vh' }}>
-                <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="h5" fontWeight="bold">Call History</Typography>
-                    
-                    <Paper sx={{ 
-                        p: 1, 
-                        pl: 2,
-                        bgcolor: 'rgba(255,255,255,0.02)', 
-                        border: '1px solid rgba(255,255,255,0.05)', 
-                        borderRadius: '16px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        width: { xs: '100%', md: '400px' }
-                    }}>
-                        <Hash size={18} style={{ opacity: 0.3 }} />
-                        <TextField 
-                            variant="standard"
-                            placeholder="Join with ID or Link..."
-                            value={joinInput}
-                            onChange={(e) => setJoinId(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-                            InputProps={{ 
-                                disableUnderline: true,
-                                sx: { fontSize: '0.9rem', fontWeight: 700, color: 'white' }
-                            }}
-                            sx={{ flex: 1 }}
-                        />
-                        <Button 
-                            variant="contained" 
-                            size="small"
-                            onClick={handleJoin}
-                            sx={{ 
-                                bgcolor: '#6366F1', 
-                                borderRadius: '10px', 
-                                minWidth: '40px', 
-                                height: '36px',
-                                p: 0
-                            }}
-                        >
-                            <ArrowRight size={18} />
-                        </Button>
-                    </Paper>
-                </Box>
+        <Container maxWidth="md" sx={{ py: 3, position: 'relative', minHeight: '100vh', pointerEvents: 'auto' }}>
+            <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'center', justifyContent: 'space-between' }}>
+                <Typography variant="h5" fontWeight="bold">Call History</Typography>
                 
-                <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
-                    <CallHistory onNewCall={() => setModalOpen(true)} />
-                </Suspense>
+                <Paper sx={{ 
+                    p: 1, 
+                    pl: 2,
+                    bgcolor: 'rgba(255, 255, 255, 0.02)', 
+                    border: '1px solid rgba(255, 255, 255, 0.05)', 
+                    borderRadius: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    width: { xs: '100%', md: '400px' }
+                }}>
+                    <Hash size={18} style={{ opacity: 0.3 }} />
+                    <TextField 
+                        variant="standard"
+                        placeholder="Join with ID or Link..."
+                        value={joinInput}
+                        onChange={(e) => setJoinId(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+                        InputProps={{ 
+                            disableUnderline: true,
+                            sx: { fontSize: '0.9rem', fontWeight: 700, color: 'white' }
+                        }}
+                        sx={{ flex: 1 }}
+                    />
+                    <Button 
+                        variant="contained" 
+                        size="small"
+                        onClick={handleJoin}
+                        sx={{ 
+                            bgcolor: '#6366F1', 
+                            borderRadius: '10px', 
+                            minWidth: '40px', 
+                            height: '36px',
+                            p: 0
+                        }}
+                    >
+                        <ArrowRight size={18} />
+                    </Button>
+                </Paper>
+            </Box>
+            
+            <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
+                <CallHistory onNewCall={() => setModalOpen(true)} />
+            </Suspense>
 
-                <CallActionModal open={modalOpen} onClose={() => setModalOpen(false)} />
-            </Container>
-        </ConnectAppShell>
+            <CallActionModal open={modalOpen} onClose={() => setModalOpen(false)} />
+        </Container>
     );
 }

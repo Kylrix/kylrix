@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
 import { getEcosystemUrl } from '@/lib/constants';
@@ -1445,30 +1444,26 @@ export function PostViewClient() {
     };
 
     if (loading && !moment) return (
-        <ConnectAppShell>
-            <Box sx={{ maxWidth: 'sm', mx: 'auto', py: 4, px: 2 }}>
-                <Stack spacing={2}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
-                        <Box sx={{ flex: 1 }}>
-                            <Skeleton width="30%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                            <Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                        </Box>
+        <Box sx={{ maxWidth: 'sm', mx: 'auto', py: 4, px: 2, pointerEvents: 'auto' }}>
+            <Stack spacing={2}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    <Box sx={{ flex: 1 }}>
+                        <Skeleton width="30%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
                     </Box>
-                    <Skeleton variant="rounded" height={240} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
-                    <Skeleton variant="rounded" height={120} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
-                </Stack>
-            </Box>
-        </ConnectAppShell>
+                </Box>
+                <Skeleton variant="rounded" height={240} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                <Skeleton variant="rounded" height={120} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+            </Stack>
+        </Box>
     );
 
     if (!moment) return (
-        <ConnectAppShell>
-            <Box sx={{ textAlign: 'center', py: 10 }}>
-                <Typography variant="h5" color="text.secondary">Moment not found</Typography>
-                <Button sx={{ mt: 2 }} onClick={() => router.back()}>Go Back</Button>
-            </Box>
-        </ConnectAppShell>
+        <Box sx={{ textAlign: 'center', py: 10, pointerEvents: 'auto' }}>
+            <Typography variant="h5" color="text.secondary">Moment not found</Typography>
+            <Button sx={{ mt: 2 }} onClick={() => router.back()}>Go Back</Button>
+        </Box>
     );
 
     const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
@@ -1487,24 +1482,24 @@ export function PostViewClient() {
     };
 
     return (
-        <ConnectAppShell>
-            <Box
-                onWheelCapture={onWheelCapture}
-                onTouchStartCapture={onTouchStartCapture}
-                onTouchMoveCapture={onTouchMoveCapture}
-                onTouchEndCapture={onTouchEndCapture}
-                onTouchCancelCapture={onTouchEndCapture}
-                sx={{
-                    width: '100%',
-                    maxWidth: 600,
-                    mx: 'auto',
-                    pt: { xs: 1.5, sm: 2.5 },
-                    pb: { xs: 3, sm: 4 },
-                    px: 0,
-                    borderLeft: '1px solid rgba(255,255,255,0.08)',
-                    borderRight: '1px solid rgba(255,255,255,0.08)',
-                }}
-            >
+        <Box
+            onWheelCapture={onWheelCapture}
+            onTouchStartCapture={onTouchStartCapture}
+            onTouchMoveCapture={onTouchMoveCapture}
+            onTouchEndCapture={onTouchEndCapture}
+            onTouchCancelCapture={onTouchEndCapture}
+            sx={{
+                width: '100%',
+                maxWidth: 600,
+                mx: 'auto',
+                pt: { xs: 1.5, sm: 2.5 },
+                pb: { xs: 3, sm: 4 },
+                px: 0,
+                borderLeft: '1px solid rgba(255,255,255,0.08)',
+                borderRight: '1px solid rgba(255,255,255,0.08)',
+                pointerEvents: 'auto',
+            }}
+        >
                 <Box sx={{ px: 2, mb: 1.5 }}>
                     <Button
                         onClick={handleBackToFeed}
@@ -2026,6 +2021,5 @@ export function PostViewClient() {
                     onSelect={(actor) => { setActorsDrawerOpen(false); router.push(`/@${actor.username || actor.$id}`); }}
                 />
             </Box>
-        </ConnectAppShell>
-    );
+        );
 }

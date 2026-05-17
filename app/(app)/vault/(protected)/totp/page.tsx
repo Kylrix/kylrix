@@ -27,7 +27,6 @@ import { useAppwriteVault } from '@/context/appwrite-context';
 import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';
 import { authenticator } from 'otplib';
 import toast from 'react-hot-toast';
-import VaultGuard from '@/components/layout/VaultGuard';
 import NewTotpDialog from '@/components/app/totp/new';
 import { useSudo } from '@/context/SudoContext';
 
@@ -301,7 +300,6 @@ function TOTPPageContent() {
   };
 
   return (
-    <VaultGuard>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Box>
@@ -460,7 +458,6 @@ function TOTPPageContent() {
           </DialogActions>
         </Dialog>
       </Box>
-    </VaultGuard>
   );
 }
 

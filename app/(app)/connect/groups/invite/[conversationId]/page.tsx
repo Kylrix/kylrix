@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import { Users, ShieldCheck, ArrowRight } from 'lucide-react';
 
-import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/lib/auth';
 
@@ -145,94 +144,92 @@ export default function HangoutInvitePage() {
   };
 
   return (
-    <ConnectAppShell>
-      <Container maxWidth="sm" sx={{ py: 4 }}>
-        <Paper
-          sx={{
-            p: 3,
-            borderRadius: 4,
-            bgcolor: '#161412',
-            border: '1px solid rgba(255,255,255,0.08)',
-            backgroundImage: 'none',
-          }}
-        >
-          <Stack spacing={2.5} alignItems="center" textAlign="center">
-            <Avatar
-              src={preview?.avatarUrl || undefined}
-              imgProps={{ referrerPolicy: 'no-referrer' }}
-              sx={{
-                width: 72,
-                height: 72,
-                bgcolor: alpha('#F59E0B', 0.12),
-                color: '#F59E0B',
-                border: '1px solid rgba(255,255,255,0.08)',
-                '& img': { objectFit: 'cover' },
-              }}
-            >
-              <Users size={30} />
-            </Avatar>
+    <Container maxWidth="sm" sx={{ py: 4, pointerEvents: 'auto' }}>
+      <Paper
+        sx={{
+          p: 3,
+          borderRadius: 4,
+          bgcolor: '#161412',
+          border: '1px solid rgba(255,255,255,0.08)',
+          backgroundImage: 'none',
+        }}
+      >
+        <Stack spacing={2.5} alignItems="center" textAlign="center">
+          <Avatar
+            src={preview?.avatarUrl || undefined}
+            imgProps={{ referrerPolicy: 'no-referrer' }}
+            sx={{
+              width: 72,
+              height: 72,
+              bgcolor: alpha('#F59E0B', 0.12),
+              color: '#F59E0B',
+              border: '1px solid rgba(255,255,255,0.08)',
+              '& img': { objectFit: 'cover' },
+            }}
+          >
+            <Users size={30} />
+          </Avatar>
 
-            <Box>
-              <Typography sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', fontSize: '1.4rem' }}>
-                {preview?.name || 'Hangout invite'}
-              </Typography>
-              <Typography variant="body2" sx={{ opacity: 0.68, mt: 0.75 }}>
-                {preview?.description || 'Request access to this private hangout.'}
+          <Box>
+            <Typography sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', fontSize: '1.4rem' }}>
+              {preview?.name || 'Hangout invite'}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.68, mt: 0.75 }}>
+              {preview?.description || 'Request access to this private hangout.'}
+            </Typography>
+          </Box>
+
+          {preview ? (
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" justifyContent="center">
+              <ChipLike>{preview.participantCount} members</ChipLike>
+              <ChipLike>Invite enabled</ChipLike>
+            </Stack>
+          ) : null}
+
+          {requestState === 'error' ? (
+            <Box sx={{ width: '100%' }}>
+              <Typography sx={{ fontWeight: 800, color: '#F87171' }}>
+                {error || 'Hangout does not exist'}
               </Typography>
             </Box>
+          ) : null}
 
-            {preview ? (
-              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" justifyContent="center">
-                <ChipLike>{preview.participantCount} members</ChipLike>
-                <ChipLike>Invite enabled</ChipLike>
-              </Stack>
-            ) : null}
-
-            {requestState === 'error' ? (
-              <Box sx={{ width: '100%' }}>
-                <Typography sx={{ fontWeight: 800, color: '#F87171' }}>
-                  {error || 'Hangout does not exist'}
-                </Typography>
-              </Box>
-            ) : null}
-
-            <Stack spacing={1.25} sx={{ width: '100%' }}>
-              {requestState === 'joined' ? (
-                <Typography variant="body2" sx={{ opacity: 0.72, fontWeight: 700 }}>
-                  Already in hangout
-                </Typography>
-              ) : null}
-
-              {requestState === 'joined' ? (
-                <Button fullWidth variant="contained" endIcon={<ArrowRight size={16} />} onClick={() => router.push(`/connect/chat/${conversationId}`)}>
-                  Go to chat
-                </Button>
-              ) : requestState === 'pending' ? (
-                <Button fullWidth variant="outlined" disabled>
-                  Request pending
-                </Button>
-              ) : (
-                <Button
-                  fullWidth
-                  variant="contained"
-                  startIcon={<ShieldCheck size={16} />}
-                  onClick={() => void handleRequestJoin()}
-                  disabled={requestState === 'loading' || !preview}
-                >
-                  {preview ? 'Request access' : 'Loading...'}
-                </Button>
-              )}
-            </Stack>
-
-            {inviteUrl ? (
-              <Typography variant="caption" sx={{ opacity: 0.45, wordBreak: 'break-all' }}>
-                {inviteUrl}
+          <Stack spacing={1.25} sx={{ width: '100%' }}>
+            {requestState === 'joined' ? (
+              <Typography variant="body2" sx={{ opacity: 0.72, fontWeight: 700 }}>
+                Already in hangout
               </Typography>
             ) : null}
+
+            {requestState === 'joined' ? (
+              <Button fullWidth variant="contained" endIcon={<ArrowRight size={16} />} onClick={() => router.push(`/connect/chat/${conversationId}`)}>
+                Go to chat
+              </Button>
+            ) : requestState === 'pending' ? (
+              <Button fullWidth variant="outlined" disabled>
+                Request pending
+              </Button>
+            ) : (
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<ShieldCheck size={16} />}
+                onClick={() => void handleRequestJoin()}
+                disabled={requestState === 'loading' || !preview}
+              >
+                {preview ? 'Request access' : 'Loading...'}
+              </Button>
+            )}
           </Stack>
-        </Paper>
-      </Container>
-    </ConnectAppShell>
+
+          {inviteUrl ? (
+            <Typography variant="caption" sx={{ opacity: 0.45, wordBreak: 'break-all' }}>
+              {inviteUrl}
+            </Typography>
+          ) : null}
+        </Stack>
+      </Paper>
+    </Container>
   );
 }
 
