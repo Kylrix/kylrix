@@ -8,6 +8,7 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { grantPermissionSecure, PermissionLevel } from '@/lib/actions/secure-ops';
 import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/context/auth/AuthContext';
+import { account } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
 
 const DRAWER_SX = {
@@ -42,6 +43,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle }: {
     let successCount = 0;
     
     try {
+        const { jwt } = await account.createJWT();
         for (const targetUser of selectedUsers) {
             await grantPermissionSecure({
                 userId: user.$id,
@@ -50,7 +52,8 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle }: {
                 resourceTitle: noteTitle,
                 targetUserId: targetUser.id,
                 permission,
-                actorName: user.name || 'A Kylrix User'
+                actorName: user.name || 'A Kylrix User',
+                jwt: jwt
             });
             successCount++;
         }

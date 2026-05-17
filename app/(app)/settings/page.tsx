@@ -56,20 +56,25 @@ export default function SettingsPage() {
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
     const [_loadingPasskeys, setLoadingPasskeys] = useState(true);
 
-    const handleManualMint = async () => {
+    const handleMint = async () => {
         setMinting(true);
         try {
-          const { mintDailyLoginSecure } = await import('@/lib/actions/secure-ops');
-          const today = new Date();
-          today.setUTCHours(0, 0, 0, 0);
-          const todayKey = today.toISOString();
-          
-          if (!user?.$id) throw new Error("User session not found");
+            const { mintDailyLoginSecure } = await import('@/lib/actions/secure-ops');
+            const { account } = await import('@/lib/appwrite');
+            const { jwt } = await account.createJWT();
 
-          const response = await mintDailyLoginSecure({
-            userId: user.$id,
-            dateKey: todayKey,
-          });
+            const today = new Date();
+            today.setUTCHours(0, 0, 0, 0);
+            const dateKey = today.toISOString();
+
+            if (!user?.$id) throw new Error("User session not found");
+
+            const response = await mintDailyLoginSecure({
+                userId: user.$id,
+                dateKey: dateKey,
+                jwt: jwt
+            });
+
           
           if (response?.accepted) {
             toast.success('Tokens minted successfully!');

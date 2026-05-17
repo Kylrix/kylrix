@@ -22,10 +22,12 @@ interface AuthContextType {
   refreshUser: () => Promise<User | null>;
   openIDMWindow: (target?: string) => void;
   idmWindowOpen: boolean;
-  loginWithEmailOTP: (email: string) => Promise<void>;
+  loginWithEmailOTP: (email: string) => Promise<string>;
   verifyEmailOTP: (email: string, userId: string, secret: string) => Promise<void>;
   verifyMFA: (challengeId: string, otp: string) => Promise<void>;
-}
+  getJWT: () => Promise<string | null>;
+  }
+
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -255,6 +257,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await refreshUser();
   }, [refreshUser]);
 
+  const getJWT = useCallback(async () => {
+    try {
+      const { jwt } = await account.createJWT();
+      return jwt;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const value = useMemo(() => ({
     user,
     isLoading,
@@ -267,7 +278,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loginWithEmailOTP,
     verifyEmailOTP,
     verifyMFA,
-  }), [user, isLoading, isAuthenticating, logout, refreshUser, openIDMWindow, idmWindowOpen, loginWithEmailOTP, verifyEmailOTP, verifyMFA]);
+    getJWT,
+  }), [user, isLoading, isAuthenticating, logout, refreshUser, openIDMWindow, idmWindowOpen, loginWithEmailOTP, verifyEmailOTP, verifyMFA, getJWT]);
 
   return (
     <AuthContext.Provider value={value}>
