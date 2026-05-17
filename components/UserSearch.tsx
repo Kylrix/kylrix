@@ -63,7 +63,15 @@ export default function UserSearch({
     setIsSearching(true);
     try {
       const users = await UsersService.searchUsers(searchQuery);
-      const filtered = users.filter((u: any) => 
+      const normalized = users.map((u: any) => ({
+        id: u.userId || u.$id,
+        title: u.displayName || u.username || 'Kylrix User',
+        subtitle: u.username ? `@${u.username}` : u.email || '',
+        avatar: u.avatar || null,
+        profilePicId: u.avatar || null,
+        ...u // Preserve original for identity flags
+      }));
+      const filtered = normalized.filter((u: any) => 
         !selectedUsers.some(s => s.id === u.id) && 
         !excludeIds.includes(u.id)
       );
@@ -107,7 +115,7 @@ export default function UserSearch({
                 <IdentityAvatar 
                   fileId={user.profilePicId || user.avatar || null}
                   alt={user.title}
-                  fallback={(user.title ?? 'U').charAt(0).toUpperCase()}
+                  fallback={user.title.charAt(0).toUpperCase()}
                   verified={computeIdentityFlags({
                     createdAt: (user as any).$createdAt || (user as any).createdAt || null,
                     lastUsernameEdit: (user as any).last_username_edit || null,
