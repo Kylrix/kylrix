@@ -116,10 +116,6 @@ export function NoteDetailSidebar({
   const { promptSudo } = useSudo();
   const { setIsDrawerOpen } = useDrawerState();
 
-  useEffect(() => {
-    setIsDrawerOpen(showRotateConfirm);
-  }, [showRotateConfirm, setIsDrawerOpen]);
-
   const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
   const liveNote = useMemo(
     () => allNotes.find((candidate) => candidate.$id === note.$id) || note,
@@ -143,23 +139,17 @@ export function NoteDetailSidebar({
   const [format, setFormat] = useState<'text' | 'doodle'>(liveNote.format as 'text' | 'doodle' || 'text');
   const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
   const [isPublic, setIsPublic] = useState(getNotePublicState(liveNote));
-  // Automatically heal T4 encrypted state if vault is unlocked
+
+  // Sync local state with liveNote (crucial for auto-decryption healing)
   useEffect(() => {
-    if (isEncryptedNote && ecosystemSecurity.status.isUnlocked) {
-      const healDecryption = async () => {
-        try {
-          const decrypted = await decryptPublicEncryptedNote(liveNote.$id);
-          if (decrypted) {
-            onUpdate(decrypted);
-            showSuccess('Note decrypted', 'Content is now visible.');
-          }
-        } catch (err) {
-          console.error('[NoteSidebar] Auto-decryption failed:', err);
-        }
-      };
-      void healDecryption();
+    if (!isEditing) {
+      setTitle(liveNote.title || '');
+      setContent(liveNote.content || '');
+      setTags(liveNote.tags?.join(', ') || '');
+      setFormat(liveNote.format as 'text' | 'doodle' || 'text');
     }
-  }, [isEncryptedNote, ecosystemSecurity.status.isUnlocked, liveNote.$id, onUpdate, showSuccess]);
+  }, [liveNote, isEditing]);
+
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [attachmentErrors, setAttachmentErrors] = useState<string[]>([]);
   const [currentAttachments, setCurrentAttachments] = useState<any[]>([]);
@@ -174,6 +164,10 @@ export function NoteDetailSidebar({
   const [showActionHub, setShowActionHub] = useState(false);
   const [showRotateConfirm, setShowRotateConfirm] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
+
+  useEffect(() => {
+    setIsDrawerOpen(showRotateConfirm);
+  }, [showRotateConfirm, setIsDrawerOpen]);
   const [pendingHubAction, setPendingHubAction] = useState<null | 'rotate'>(null);
   const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
   const [crossSuggestions, setCrossSuggestions] = useState<Array<{ id: string; label: string; description: string }>>([]);
@@ -317,6 +311,24 @@ export function NoteDetailSidebar({
   const router = useRouter();
   const { closeSidebar } = useDynamicSidebar();
   const { openCallLauncher } = useCallLauncher();
+
+  // Automatically heal T4 encrypted state if vault is unlocked
+  useEffect(() => {
+    if (isEncryptedNote && ecosystemSecurity.status.isUnlocked) {
+      const healDecryption = async () => {
+        try {
+          const decrypted = await decryptPublicEncryptedNote(liveNote);
+          if (decrypted) {
+            onUpdate(decrypted);
+            showSuccess("Note decrypted", "Content is now visible.");
+          }
+        } catch (err) {
+          console.error("[NoteSidebar] Auto-decryption failed:", err);
+        }
+      };
+      void healDecryption();
+    }
+  }, [isEncryptedNote, ecosystemSecurity.status.isUnlocked, liveNote, onUpdate, showSuccess]);
 
   const pinned = isPinned(liveNote.$id);
 
@@ -1942,68 +1954,20 @@ export function NoteDetailSidebar({
             )}
           </Box>
 
-          {pendingHubAction === 'rotate' && (
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: '20px',
-                bgcolor: alpha(theme.palette.warning.main, 0.08),
-                border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1.5,
-              }}
-            >
-              <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 700 }}>
-                Rotate the public link? Anyone with the old link will lose access.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  variant="contained"
-                  color="warning"
-                  onClick={async () => {
-                      promptSudo({
-                          onSuccess: async () => {
-                            try {
-                                const updated = await rotatePublicNoteLink(liveNote.$id);
-                                if (updated) {
-                                    setIsPublic(!!updated.isPublic);
-                                    setLastT4Key(updated.decryptionKey || null);
-                                    onUpdate(updated);
-                                    if (updated.decryptionKey) {
-                                    const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
-                                    navigator.clipboard.writeText(shareUrl);
-                                    showSuccess('Public link rotated', 'New public link copied to clipboard.');
-                                    } else {
-                                    showSuccess('Public link rotated');
-                                    }
-                                    setShowActionHub(false);
-                                    setPendingHubAction(null);
-                                }
-                            } catch (error: any) {
-                                console.error('Failed to rotate link:', error);
-                                showError('Rotate Failed', error.message || 'Failed to rotate public link.');
-                            }
-                          }
-                      });
-                  }}
-                  sx={{ borderRadius: '999px', textTransform: 'none', fontWeight: 800 }}
-                >
-                  Confirm rotate
-                </Button>
-                <Button
-                  variant="text"
-                  onClick={() => setPendingHubAction(null)}
-                  sx={{ borderRadius: '999px', textTransform: 'none', fontWeight: 800, color: theme.palette.text.secondary }}
-                >
-                  Cancel
-                </Button>
-              </Box>
-            </Box>
-          )}
         </Box>
       </Drawer>
 
+      {/* Rotate Confirmation Drawer */}
+      <ConfirmationDialog
+        open={showRotateConfirm}
+        title="Rotate public link?"
+        message="Are you sure you want to rotate this note's public link? The previous link will become permanently invalid."
+        confirmLabel={isRotating ? "Rotating..." : "Rotate Link"}
+        isDestructive={true}
+        isLoading={isRotating}
+        onClose={() => setShowRotateConfirm(false)}
+        onConfirm={handleConfirmedRotate}
+      />
     </Box>
   );
 }
