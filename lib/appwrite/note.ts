@@ -1891,26 +1891,6 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
   }
 }
 
-export async function listAccessiblePublicNotes() {
-  try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser) return { documents: [], total: 0 };
-
-    // All public notes the user can see (owned by them OR shared/publicly available)
-    return await databases.listDocuments(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_TABLE_ID_NOTES,
-        [
-          Query.equal('isPublic', true),
-          Query.orderDesc('$createdAt')
-        ]
-      );
-  } catch (error: any) {
-    console.error('listAccessiblePublicNotes error:', error);
-    return { documents: [], total: 0 };
-  }
-}
-
 export async function getNoteWithSharing(noteId: string): Promise<(Notes & { isSharedWithUser?: boolean, sharePermission?: string, sharedBy?: any }) | null> {
   try {
     const currentUser = await getCurrentUser();
