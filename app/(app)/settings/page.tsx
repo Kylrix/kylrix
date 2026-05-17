@@ -23,7 +23,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    InputAdornment
+    InputAdornment,
+    ButtonBase
 } from '@mui/material';
 import { 
     ArrowLeft,
@@ -32,7 +33,9 @@ import {
     Fingerprint, 
     Smartphone,
     Trash2,
-    RefreshCw
+    RefreshCw,
+    User,
+    ChevronRight
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -207,6 +210,46 @@ export default function SettingsPage() {
                 </Box>
 
                 <Stack spacing={4}>
+                    <ButtonBase 
+                        onClick={() => router.push('/accounts')}
+                        sx={{ 
+                            width: '100%', 
+                            textAlign: 'left', 
+                            borderRadius: '28px',
+                            display: 'block' 
+                        }}
+                    >
+                        <Box sx={{ 
+                            bgcolor: '#161412', 
+                            borderRadius: '28px', 
+                            p: 3, 
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                bgcolor: '#1C1A18',
+                                borderColor: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
+                                    <User size={24} />
+                                </Box>
+                                <Box>
+                                    <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
+                                        Go to account settings
+                                    </Typography>
+                                    <Typography sx={{ color: '#9B9691', fontSize: '0.85rem' }}>
+                                        Manage your unified identity, WebAuthn passkeys, and connected apps.
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
+                        </Box>
+                    </ButtonBase>
+
                     <DiscoverabilitySettings />
                     <Box sx={{ bgcolor: '#161412', borderRadius: '28px', p: 3, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
                         <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>Daily Token Mint</Typography>
