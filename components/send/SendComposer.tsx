@@ -33,6 +33,7 @@ import {
 
 import { ID, Permission, Role } from 'appwrite';
 
+import { useAuth } from '@/context/auth/AuthContext';
 import { EphemeralClaimDrawer, type EphemeralClaimTarget } from '@/components/ephemeral/EphemeralClaimDrawer';
 import { SendSparkShelf } from '@/components/send/SendSparkShelf';
 import { AppwriteService } from '@/lib/appwrite';
@@ -43,7 +44,8 @@ import { sha256HexUtf8 } from '@/lib/crypto/sha256-hex';
 import { clearEphemeralClaimResume, peekEphemeralClaimResume } from '@/lib/ephemeral/claim-session';
 import {
   SEND_EXPIRY_PRESETS,
-  SEND_MAX_FILE_BYTES,
+  SEND_MAX_FILE_BYTES_FREE,
+  SEND_MAX_FILE_BYTES_PRO,
   SEND_MAX_TTL_MS,
   SEND_SPARK_STORAGE_KEY,
   SEND_SPARKS_MAX,
@@ -57,6 +59,7 @@ import type {
   SendTaskPayload,
   SendTotpPayload,
 } from '@/lib/send/types';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 const BG = '#0A0908';
@@ -87,6 +90,11 @@ export function SendComposer() {
   const reduceMotion = useReducedMotion();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
+
+  const isPro = useMemo(() => user ? hasPaidKylrixPlan(user) : false, [user]);
+  const activeMaxBytes = isPro ? SEND_MAX_FILE_BYTES_PRO : SEND_MAX_FILE_BYTES_FREE;
+  const activeMaxLabel = isPro ? '100 MB' : '20 MB';
 
   const [kind, setKind] = useState<SendKind>('note');
   const [expiryMs, setExpiryMs] = useState(SEND_EXPIRY_PRESETS[2].ms);
@@ -219,11 +227,11 @@ export function SendComposer() {
       case 'totp':
         return totpSecret.trim().length > 0;
       case 'file':
-        return Boolean(sendFile && sendFile.size > 0 && sendFile.size <= SEND_MAX_FILE_BYTES);
+        return Boolean(sendFile && sendFile.size > 0 && sendFile.size <= activeMaxBytes);
       default:
         return false;
     }
-  }, [kind, noteBody, password, taskTitle, totpSecret, sendFile]);
+  }, [kind, noteBody, password, taskTitle, totpSecret, sendFile, activeMaxBytes]);
 
   const handleCreateLink = useCallback(async () => {
     setIsCreating(true);
@@ -294,8 +302,8 @@ export function SendComposer() {
           toast.error('Choose a file first.');
           return;
         }
-        if (f.size > SEND_MAX_FILE_BYTES) {
-          toast.error('Max file size is 20 MB.');
+        if (f.size > activeMaxBytes) {
+          toast.error(`Max file size is ${activeMaxLabel}.`);
           return;
         }
         sparkTitle = f.name || 'File';
@@ -386,6 +394,8 @@ export function SendComposer() {
     totpIssuer,
     totpSecret,
     sendFile,
+    activeMaxBytes,
+    activeMaxLabel,
   ]);
 
   const handleCopy = useCallback(async () => {
@@ -406,15 +416,15 @@ export function SendComposer() {
       setFileName(null);
       return;
     }
-    if (f.size > SEND_MAX_FILE_BYTES) {
-      toast.error('Max file size is 20 MB.');
+    if (f.size > activeMaxBytes) {
+      toast.error(`Max file size is ${activeMaxLabel}.`);
       setSendFile(null);
       setFileName(null);
       return;
     }
     setSendFile(f);
     setFileName(f.name);
-  }, []);
+  }, [activeMaxBytes, activeMaxLabel]);
 
   return (
     <Box
@@ -652,7 +662,7 @@ export function SendComposer() {
               {kind === 'file' && (
                 <Box>
                   <InputLabel sx={{ color: 'rgba(255,255,255,0.55)', mb: 1.25, fontSize: '0.8rem' }}>
-                    Drop one file (encrypted client-side before upload · max 20 MB)
+                    Drop one file (encrypted client-side before upload · max {activeMaxLabel})
                   </InputLabel>
                   <Paper
                     onDragEnter={(e) => {
