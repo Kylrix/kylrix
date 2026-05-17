@@ -35,7 +35,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle }: {
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
   const [isLoadingExisting, setIsLoadingExisting] = useState(false);
-  const [permission, setPermission] = useState<PermissionLevel>('view');
+  const [permission, setPermission] = useState<PermissionLevel>('viewer');
   const [loading, setLoading] = useState(false);
   
   // Edit specific collaborator state
@@ -198,8 +198,8 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle }: {
                                 '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.05)' }
                             }}
                         >
-                            <MenuItem value="view">Viewer</MenuItem>
-                            <MenuItem value="edit">Editor</MenuItem>
+                            <MenuItem value="viewer">Viewer</MenuItem>
+                            <MenuItem value="editor">Editor</MenuItem>
                             <MenuItem value="admin">Admin</MenuItem>
                         </Select>
                     </FormControl>
@@ -322,8 +322,8 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle }: {
                         '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.05)' }
                     }}
                 >
-                    <MenuItem value="view">Viewer</MenuItem>
-                    <MenuItem value="edit">Editor</MenuItem>
+                    <MenuItem value="viewer">Viewer</MenuItem>
+                    <MenuItem value="editor">Editor</MenuItem>
                     <MenuItem value="admin">Admin</MenuItem>
                 </Select>
             </FormControl>

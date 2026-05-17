@@ -35,7 +35,7 @@ export function CollaboratorManager({ isOpen, onClose, resourceId, resourceType,
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
   const [assigneeProfiles, setAssigneeProfiles] = useState<any[]>([]);
   const [isLoadingExisting, setIsLoadingExisting] = useState(false);
-  const [permission, setPermission] = useState<PermissionLevel>('view');
+  const [permission, setPermission] = useState<PermissionLevel>('viewer');
   const [loading, setLoading] = useState(false);
 
   const isFlow = resourceType === 'task';
@@ -150,7 +150,7 @@ export function CollaboratorManager({ isOpen, onClose, resourceId, resourceType,
                                                 textTransform: 'uppercase'
                                             }}
                                         >
-                                            {profile.permissionLevel || 'Viewer'}
+                                            {profile.permissionLevel || 'viewer'}
                                         </Typography>
                                     </Box>
                                     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>
@@ -185,8 +185,8 @@ export function CollaboratorManager({ isOpen, onClose, resourceId, resourceType,
                         '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255, 255, 255, 0.05)' }
                     }}
                 >
-                    <MenuItem value="view">Viewer</MenuItem>
-                    <MenuItem value="edit">Editor</MenuItem>
+                    <MenuItem value="viewer">Viewer</MenuItem>
+                    <MenuItem value="editor">Editor</MenuItem>
                     <MenuItem value="admin">Admin</MenuItem>
                 </Select>
             </FormControl>
