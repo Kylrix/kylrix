@@ -1,4 +1,4 @@
-import { CalendarView } from '@/components/calendar';
+import CalendarView from '@/components/calendar/CalendarView';
 import { Suspense } from 'react';
 import { Box, CircularProgress } from '@mui/material';
 

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { 
     Box, 
     Typography, 
@@ -99,141 +98,139 @@ export default function SettingsPage() {
 
 
     return (
-        <ConnectAppShell>
-            <Box sx={{ maxWidth: 800, mx: 'auto', py: 4, px: 2 }}>
-                <Typography variant="h4" sx={{ fontWeight: 900, mb: 4, fontFamily: 'var(--font-space-grotesk)' }}>
-                    Settings
-                </Typography>
+        <Box sx={{ maxWidth: 800, mx: 'auto', py: 4, px: 2, pointerEvents: 'auto' }}>
+            <Typography variant="h4" sx={{ fontWeight: 900, mb: 4, fontFamily: 'var(--font-space-grotesk)' }}>
+                Settings
+            </Typography>
 
-                <Stack spacing={4}>
-                    <DiscoverabilitySettings />
+            <Stack spacing={4}>
+                <DiscoverabilitySettings />
+                
+                <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Shield size={20} color="var(--color-primary)" /> Security & Privacy
+                    </Typography>
                     
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Shield size={20} color="var(--color-primary)" /> Security & Privacy
-                        </Typography>
-                        
-                        <Paper sx={{ 
-                            p: 3, 
-                            borderRadius: '24px', 
-                            bgcolor: 'rgba(255, 255, 255, 0.02)', 
-                            border: '1px solid rgba(255, 255, 255, 0.05)' 
-                        }}>
-                            <Stack spacing={3}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Paper sx={{ 
+                        p: 3, 
+                        borderRadius: '24px', 
+                        bgcolor: 'rgba(255, 255, 255, 0.02)', 
+                        border: '1px solid rgba(255, 255, 255, 0.05)' 
+                    }}>
+                        <Stack spacing={3}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Vault Status</Typography>
+                                    <Typography variant="body2" sx={{ opacity: 0.6 }}>Current encryption state of your session</Typography>
+                                </Box>
+                                <Button 
+                                    variant={isUnlocked ? "outlined" : "contained"}
+                                    onClick={() => isUnlocked ? ecosystemSecurity.lock() : setUnlockModalOpen(true)}
+                                    color={isUnlocked ? "inherit" : "primary"}
+                                    startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
+                                    sx={{ borderRadius: '12px' }}
+                                >
+                                    {isUnlocked ? "Lock Vault" : (hasMasterpass === false ? "Setup" : "Unlock Vault")}
+                                </Button>
+                            </Box>
+
+                            <Divider sx={{ opacity: 0.05 }} />
+
+                            {/* Passkey Section */}
+                            <Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                                     <Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Vault Status</Typography>
-                                        <Typography variant="body2" sx={{ opacity: 0.6 }}>Current encryption state of your session</Typography>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Passkeys</Typography>
+                                        <Typography variant="body2" sx={{ opacity: 0.6 }}>
+                                            Use biometrics to unlock your secure session.
+                                        </Typography>
                                     </Box>
                                     <Button 
-                                        variant={isUnlocked ? "outlined" : "contained"}
-                                        onClick={() => isUnlocked ? ecosystemSecurity.lock() : setUnlockModalOpen(true)}
-                                        color={isUnlocked ? "inherit" : "primary"}
-                                        startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
-                                        sx={{ borderRadius: '12px' }}
+                                        variant="contained" 
+                                        size="small" 
+                                        startIcon={<Fingerprint size={16} />}
+                                        onClick={() => setPasskeySetupOpen(true)}
+                                        disabled={hasMasterpass === false}
+                                        sx={{ borderRadius: '10px' }}
                                     >
-                                        {isUnlocked ? "Lock Vault" : (hasMasterpass === false ? "Setup" : "Unlock Vault")}
+                                        Add Passkey
                                     </Button>
                                 </Box>
 
-                                <Divider sx={{ opacity: 0.05 }} />
-
-                                {/* Passkey Section */}
-                                <Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                        <Box>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Passkeys</Typography>
-                                            <Typography variant="body2" sx={{ opacity: 0.6 }}>
-                                                Use biometrics to unlock your secure session.
-                                            </Typography>
+                                <List sx={{ bgcolor: 'rgba(255, 255, 255, 0.02)', borderRadius: '16px', p: 0, overflow: 'hidden' }}>
+                                    {passkeyEntries.length === 0 ? (
+                                        <Box sx={{ p: 2, textAlign: 'center', opacity: 0.5 }}>
+                                            <Typography variant="body2">No passkeys registered.</Typography>
                                         </Box>
-                                        <Button 
-                                            variant="contained" 
-                                            size="small" 
-                                            startIcon={<Fingerprint size={16} />}
-                                            onClick={() => setPasskeySetupOpen(true)}
-                                            disabled={hasMasterpass === false}
-                                            sx={{ borderRadius: '10px' }}
-                                        >
-                                            Add Passkey
-                                        </Button>
+                                    ) : (
+                                        passkeyEntries.map((pk, idx) => (
+                                            <React.Fragment key={pk.$id}>
+                                                <ListItem 
+                                                    secondaryAction={
+                                                        <IconButton edge="end" color="error" onClick={() => handleRemovePasskey(pk.$id)}>
+                                                            <Trash2 size={18} />
+                                                        </IconButton>
+                                                    }
+                                                >
+                                                    <ListItemIcon>
+                                                        <Fingerprint size={20} color="var(--color-primary)" />
+                                                    </ListItemIcon>
+                                                    <ListItemText 
+                                                        primary={pk.params?.name || `Passkey ${idx + 1}`}
+                                                        secondary="Active"
+                                                        primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
+                                                        secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                                    />
+                                                </ListItem>
+                                                {idx < passkeyEntries.length - 1 && <Divider sx={{ opacity: 0.05 }} />}
+                                            </React.Fragment>
+                                        ))
+                                    )}
+                                </List>
+                            </Box>
+
+                            <Divider sx={{ opacity: 0.05 }} />
+            </Stack>
+                    </Paper>
+                </Box>
+
+                {/* App Settings */}
+                <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Smartphone size={20} color="var(--color-electric)" /> App Preferences
+                    </Typography>
+                    <Paper sx={{ 
+                        p: 3, 
+                        borderRadius: '24px', 
+                        bgcolor: 'rgba(255, 255, 255, 0.02)', 
+                        border: '1px solid rgba(255, 255, 255, 0.05)' 
+                    }}>
+                        <Stack spacing={2}>
+                            <FormControlLabel
+                                control={<Switch defaultChecked color="primary" />}
+                                label={
+                                    <Box>
+                                        <Typography variant="body1" sx={{ fontWeight: 600 }}>Push Notifications</Typography>
+                                        <Typography variant="caption" sx={{ opacity: 0.6 }}>Get notified of new messages</Typography>
                                     </Box>
-
-                                    <List sx={{ bgcolor: 'rgba(255, 255, 255, 0.02)', borderRadius: '16px', p: 0, overflow: 'hidden' }}>
-                                        {passkeyEntries.length === 0 ? (
-                                            <Box sx={{ p: 2, textAlign: 'center', opacity: 0.5 }}>
-                                                <Typography variant="body2">No passkeys registered.</Typography>
-                                            </Box>
-                                        ) : (
-                                            passkeyEntries.map((pk, idx) => (
-                                                <React.Fragment key={pk.$id}>
-                                                    <ListItem 
-                                                        secondaryAction={
-                                                            <IconButton edge="end" color="error" onClick={() => handleRemovePasskey(pk.$id)}>
-                                                                <Trash2 size={18} />
-                                                            </IconButton>
-                                                        }
-                                                    >
-                                                        <ListItemIcon>
-                                                            <Fingerprint size={20} color="var(--color-primary)" />
-                                                        </ListItemIcon>
-                                                        <ListItemText 
-                                                            primary={pk.params?.name || `Passkey ${idx + 1}`}
-                                                            secondary="Active"
-                                                            primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
-                                                            secondaryTypographyProps={{ fontSize: '0.75rem' }}
-                                                        />
-                                                    </ListItem>
-                                                    {idx < passkeyEntries.length - 1 && <Divider sx={{ opacity: 0.05 }} />}
-                                                </React.Fragment>
-                                            ))
-                                        )}
-                                    </List>
-                                </Box>
-
-                                <Divider sx={{ opacity: 0.05 }} />
-                </Stack>
-                        </Paper>
-                    </Box>
-
-                    {/* App Settings */}
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 700, mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Smartphone size={20} color="var(--color-electric)" /> App Preferences
-                        </Typography>
-                        <Paper sx={{ 
-                            p: 3, 
-                            borderRadius: '24px', 
-                            bgcolor: 'rgba(255, 255, 255, 0.02)', 
-                            border: '1px solid rgba(255, 255, 255, 0.05)' 
-                        }}>
-                            <Stack spacing={2}>
-                                <FormControlLabel
-                                    control={<Switch defaultChecked color="primary" />}
-                                    label={
-                                        <Box>
-                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>Push Notifications</Typography>
-                                            <Typography variant="caption" sx={{ opacity: 0.6 }}>Get notified of new messages</Typography>
-                                        </Box>
-                                    }
-                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                />
-                                <Divider sx={{ opacity: 0.05 }} />
-                                <FormControlLabel
-                                    control={<Switch defaultChecked color="primary" />}
-                                    label={
-                                        <Box>
-                                            <Typography variant="body1" sx={{ fontWeight: 600 }}>Active Status</Typography>
-                                            <Typography variant="caption" sx={{ opacity: 0.6 }}>Show when you are online</Typography>
-                                        </Box>
-                                    }
-                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                />
-                            </Stack>
-                        </Paper>
-                    </Box>
-                </Stack>
-            </Box>
+                                }
+                                sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                            />
+                            <Divider sx={{ opacity: 0.05 }} />
+                            <FormControlLabel
+                                control={<Switch defaultChecked color="primary" />}
+                                label={
+                                    <Box>
+                                        <Typography variant="body1" sx={{ fontWeight: 600 }}>Active Status</Typography>
+                                        <Typography variant="caption" sx={{ opacity: 0.6 }}>Show when you are online</Typography>
+                                    </Box>
+                                }
+                                sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                            />
+                        </Stack>
+                    </Paper>
+                </Box>
+            </Stack>
 
             <PasskeySetup 
                 open={passkeySetupOpen}
@@ -254,6 +251,6 @@ export default function SettingsPage() {
                 }}
                 onCancel={() => setUnlockModalOpen(false)}
             />
-        </ConnectAppShell>
+        </Box>
     );
 }

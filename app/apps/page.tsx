@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   alpha,
   BottomNavigation,
@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import Navbar from '@/components/Navbar';
 import Logo, { KylrixApp } from '@/components/Logo';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
 
@@ -65,10 +64,6 @@ export default function AppsPage() {
 
   return (
     <Box component="main" sx={{ pt: { xs: 10, md: 12 }, pb: { xs: 12, md: 14 } }}>
-      <Suspense fallback={null}>
-        <Navbar />
-      </Suspense>
-
       <Container maxWidth="xl">
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 3 }} sx={{ display: { xs: 'none', md: 'block' } }}>

@@ -1,16 +1,16 @@
 'use client';
 
-import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { useParams } from 'next/navigation';
+import { Box } from '@mui/material';
 
 export default function ChatPage() {
     const params = useParams();
     const conversationId = params.id as string;
 
     return (
-        <ConnectAppShell>
+        <Box sx={{ pointerEvents: 'auto', height: '100%' }}>
             <ChatWindow conversationId={conversationId} />
-        </ConnectAppShell>
+        </Box>
     );
 }

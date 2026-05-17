@@ -1,14 +1,12 @@
 'use client';
 
-import { ConnectAppShell } from '@/components/layout/ConnectAppShell';
 import { UserSearch } from '@/components/search/UserSearch';
 import { ChatList } from '@/components/chat/ChatList';
-import ChatQuickActionsFab from '@/components/chat/ChatQuickActionsFab';
 import { Box, Button, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
-import { useAuth } from '@/lib/auth';
+import { useAuth } from '@/context/auth/AuthContext';
 import { UsersService } from '@/lib/services/users';
 import toast from 'react-hot-toast';
 import { useSudo } from '@/context/SudoContext';
@@ -27,8 +25,6 @@ function ChatHandler() {
       const initChat = async () => {
         try {
           await UsersService.ensureProfileForUser(user);
-
-          // Fetch target profile to check for publicKey
           const targetProfile = await UsersService.getProfileById(userId);
           if (!targetProfile) {
             toast.error("User profile not found.");
@@ -43,12 +39,6 @@ function ChatHandler() {
           }
 
           const actualTargetUserId = targetProfile.userId || userId;
-          if (!actualTargetUserId) {
-            toast.error("User ID missing from profile.");
-            router.replace('/chats');
-            return;
-          }
-
           const existing = await ChatService.getConversations(user.$id);
           const found = existing.rows.find(
             (c: any) => c.type === 'direct' && c.participants.includes(actualTargetUserId)
@@ -59,10 +49,6 @@ function ChatHandler() {
             return;
           }
 
-          // Ensure Sudo is unlocked before creating (needed for E2E keys)
-          // Additionally: if the vault is locked and there is no masterpass yet,
-          // requestSudo should open in 'initialize' intent so the modal redirects
-          // to the vault setup flow.
           if (ecosystemSecurity.status.isUnlocked) {
             try {
               await ecosystemSecurity.ensureE2EIdentity(user.$id);
@@ -89,9 +75,7 @@ function ChatHandler() {
                   router.replace('/chats');
                 }
               },
-              onCancel: () => {
-                router.replace('/chats');
-              }
+              onCancel: () => router.replace('/chats')
             });
           }
         } catch (e) {
@@ -104,9 +88,7 @@ function ChatHandler() {
     }
   }, [userId, user, router, requestSudo]);
 
-  return (
-    null
-  );
+  return null;
 }
 
 export default function Home() {
@@ -119,7 +101,6 @@ export default function Home() {
     const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
       setIsUnlocked(status.isUnlocked);
     });
-
     return unsubscribe;
   }, []);
 
@@ -130,29 +111,18 @@ export default function Home() {
   }, [isUnlocked, requestSudo]);
 
   return (
-        <ConnectAppShell>
+    <Box sx={{ position: 'relative', height: '100%', pointerEvents: 'auto' }}>
         <Suspense fallback={null}>
           <ChatHandler />
         </Suspense>
-        <Box sx={{ position: 'relative', height: '100%' }}>
+        
         {isUnlocked ? (
-          <Box
-            sx={{
-              display: 'flex',
-              height: '100%',
-            }}
-          >
-            {isMobile && (
-                <Box sx={{
-                    width: '100%',
-                    borderRight: 0,
-                    display: 'flex',
-                    flexDirection: 'column'
-                }}>
+          <Box sx={{ display: 'flex', height: '100%' }}>
+            {isMobile ? (
+                <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                     <ChatList />
                 </Box>
-            )}
-            {!isMobile && (
+            ) : (
                 <Box sx={{ flex: 1, p: 3 }}>
                   <Typography variant="h5" fontWeight="bold" mb={3}>Find People</Typography>
                   <UserSearch />
@@ -160,39 +130,18 @@ export default function Home() {
             )}
           </Box>
         ) : (
-          <Box
-            sx={{
-              minHeight: '70vh',
-              display: 'grid',
-              placeItems: 'center',
-              px: 3,
-            }}
-          >
+          <Box sx={{ minHeight: '70vh', display: 'grid', placeItems: 'center', px: 3 }}>
             <Stack spacing={2} alignItems="center" sx={{ maxWidth: 420, textAlign: 'center' }}>
               <Typography variant="h4" fontWeight={900}>Vault Locked</Typography>
               <Typography sx={{ opacity: 0.7 }}>
                 Unlock the Vault before chats, identities, or self-chat can initialize.
               </Typography>
-              <Button variant="contained" onClick={() => requestSudo({ onSuccess: () => undefined })}>
+              <Button variant="contained" onClick={() => requestSudo({ onSuccess: () => setIsUnlocked(true) })}>
                 Unlock Vault
               </Button>
             </Stack>
           </Box>
         )}
-        {!isUnlocked && (
-          <Box
-            aria-hidden
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 1,
-              pointerEvents: 'none',
-              bgcolor: 'rgba(10, 9, 8, 0.28)',
-              backdropFilter: 'blur(14px)',
-            }}
-          />
-        )}
-      </Box>
-    </ConnectAppShell>
+    </Box>
   );
 }

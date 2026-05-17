@@ -20,7 +20,6 @@ import {
   StickyNote,
   ShieldCheck,
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 
 const ProductHero = ({ app, reversed = false }: any) => (
   <Box sx={{ py: { xs: 15, md: 25 }, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
@@ -134,8 +133,6 @@ export default function ProductsPage() {
 
   return (
     <Box component="main" sx={{ pt: 12, bgcolor: '#000', color: '#fff' }}>
-      <Navbar />
-      
       <Container maxWidth="xl">
         <Stack spacing={8} alignItems="center" textAlign="center" sx={{ pt: { xs: 15, md: 25 }, pb: { xs: 15, md: 20 } }}>
           <Box>

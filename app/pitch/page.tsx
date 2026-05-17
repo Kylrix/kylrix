@@ -31,7 +31,6 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
-import Navbar from '@/components/Navbar';
 import Logo from '@/components/Logo';
 import type { KylrixApp } from '@/components/Logo';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/ecosystem';
@@ -602,8 +601,6 @@ export default function PitchPage() {
 
   return (
     <Box component="main" sx={{ pt: { xs: 10, md: 12 }, pb: { xs: 10, md: 12 }, bgcolor: '#000', color: '#fff' }}>
-      <Navbar />
-
       <Container maxWidth="xl">
         <Stack spacing={3}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>

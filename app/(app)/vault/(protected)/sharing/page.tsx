@@ -20,7 +20,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import PersonIcon from '@mui/icons-material/Person';
 import KeyIcon from '@mui/icons-material/VpnKey';
-import VaultGuard from '@/components/layout/VaultGuard';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { EcosystemSecurity } from '@/lib/ecosystem/security';
@@ -182,7 +181,6 @@ export default function SharingPage() {
   };
 
   return (
-    <VaultGuard>
       <Box sx={{ width: "100%", p: { xs: 2, md: 4 } }}>
         <Stack spacing={3}>
           <Box>
@@ -460,6 +458,5 @@ export default function SharingPage() {
           </Paper>
         </Stack>
       </Box>
-    </VaultGuard>
   );
 }

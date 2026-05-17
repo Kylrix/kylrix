@@ -39,7 +39,6 @@ import type { Folders, Credentials, TotpSecrets } from '@/lib/appwrite/types';
 import { generateRandomPassword } from '@/utils/password';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import toast from 'react-hot-toast';
-import VaultGuard from '@/components/layout/VaultGuard';
 
 export default function NewCredentialPage() {
   const router = useRouter();
@@ -217,16 +216,14 @@ export default function NewCredentialPage() {
 
   if (!user) {
     return (
-      <VaultGuard>
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-          <CircularProgress sx={{ color: '#6366F1' }} />
-        </Box>
-      </VaultGuard>
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 10, pointerEvents: 'auto' }}>
+        <CircularProgress sx={{ color: '#6366F1' }} />
+      </Box>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: '800px', mx: 'auto', p: { xs: 2, md: 4 } }}>
+    <Box sx={{ maxWidth: '800px', mx: 'auto', p: { xs: 2, md: 4 }, pointerEvents: 'auto' }}>
       <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
         <IconButton 
           onClick={() => router.back()}
