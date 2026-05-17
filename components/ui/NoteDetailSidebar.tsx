@@ -45,6 +45,7 @@ import { useRouter } from 'next/navigation';
 import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
@@ -109,6 +110,7 @@ export function NoteDetailSidebar({
 }: NoteDetailSidebarProps) {
 
   const theme = useTheme();
+  const { open: openUnified } = useUnifiedDrawer();
   const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
   const liveNote = useMemo(
     () => allNotes.find((candidate) => candidate.$id === note.$id) || note,
@@ -1563,15 +1565,25 @@ export function NoteDetailSidebar({
         ) : collaboratorProfiles.length > 0 ? (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {collaboratorProfiles.map((profile) => (
-              <Box key={profile.$id || profile.userId} sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                p: 1.5,
-                borderRadius: '16px',
-                bgcolor: alpha(theme.palette.text.primary, 0.03),
-                border: `1px solid ${theme.palette.divider}`,
-              }}>
+              <Box 
+                key={profile.$id || profile.userId} 
+                onClick={() => openUnified('share-note', { noteId: liveNote.$id, noteTitle: liveNote.title, initialCollaborator: profile })}
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    p: 1.5,
+                    borderRadius: '16px',
+                    bgcolor: alpha(theme.palette.text.primary, 0.03),
+                    border: `1px solid ${theme.palette.divider}`,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                        bgcolor: alpha(theme.palette.text.primary, 0.06),
+                        borderColor: alpha(theme.palette.text.primary, 0.2)
+                    }
+                }}
+              >
                 <IdentityAvatar
                   fileId={profile.avatar || profile.profilePicId || null}
                   alt={profile.displayName || profile.username}

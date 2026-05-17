@@ -5,6 +5,7 @@ import { Box, Typography, IconButton, Button, Stack, Select, MenuItem, FormContr
 import { X, ArrowLeft, Trash2, ShieldCheck } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { grantPermissionSecure, getResourceCollaboratorsSecure, revokePermissionSecure, PermissionLevel } from '@/lib/actions/secure-ops';
 import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -29,6 +30,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle }: {
     noteTitle: string;
 }) {
   const { setIsDrawerOpen } = useDrawerState();
+  const { drawerData } = useUnifiedDrawer();
   const { user } = useAuth();
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
@@ -65,12 +67,18 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle }: {
     setIsDrawerOpen(isOpen);
     if (isOpen && noteId) {
         fetchExistingCollaborators();
+
+        // Handle direct entry into Edit Mode from external triggers (e.g. Note Detail)
+        if (drawerData?.initialCollaborator) {
+            setEditingCollaborator(drawerData.initialCollaborator);
+            setPermission(drawerData.initialCollaborator.permissionLevel || 'view');
+        }
     }
     if (!isOpen) {
         setEditingCollaborator(null);
         setSelectedUsers([]);
     }
-  }, [isOpen, noteId, setIsDrawerOpen, fetchExistingCollaborators]);
+  }, [isOpen, noteId, setIsDrawerOpen, fetchExistingCollaborators, drawerData?.initialCollaborator]);
 
   const handleGrant = async () => {
     if (selectedUsers.length === 0 || !user?.$id) return;
