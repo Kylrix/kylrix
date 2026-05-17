@@ -129,15 +129,15 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
           mb: 1.5,
           cursor: 'pointer',
           borderRadius: 3,
-          backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+          backgroundColor: isHovered ? '#1C1A18' : '#161412',
           border: '1px solid',
-          borderColor: isHovered ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+          borderColor: isHovered ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.04)',
           opacity: task.status === 'done' ? 0.6 : 1,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           position: 'relative',
           '&:hover': {
             transform: isMobile ? 'none' : 'translateY(-2px)',
-            boxShadow: '0 12px 24px rgba(0, 0, 0, 0.4)',
+            boxShadow: '0 12px 24px rgba(0, 0, 0, 0.5)',
           },
           '&::before': {
             content: '""',
