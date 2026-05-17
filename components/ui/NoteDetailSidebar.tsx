@@ -156,23 +156,6 @@ export function NoteDetailSidebar({
   const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted;
   const isT4EncryptedPublicNote = !!isPublic && isT4Encrypted;
   const isLegacyPublicNote = !!isPublic && !isT4EncryptedPublicNote;
-  // Automatically heal T4 encrypted state if vault is unlocked
-  useEffect(() => {
-    if (isEncryptedNote && ecosystemSecurity.status.isUnlocked) {
-      const healDecryption = async () => {
-        try {
-          const decrypted = await decryptPublicEncryptedNote(liveNote.$id);
-          if (decrypted) {
-            onUpdate(decrypted);
-            showSuccess("Note decrypted", "Content is now visible.");
-          }
-        } catch (err) {
-          console.error("[NoteSidebar] Auto-decryption failed:", err);
-        }
-      };
-      void healDecryption();
-    }
-  }, [isEncryptedNote, ecosystemSecurity.status.isUnlocked, liveNote.$id, onUpdate, showSuccess]);
 
   
   const linkedTaskIds = useMemo(() => (liveNote as any).linkedTaskIds || ((liveNote as any).linkedTaskId ? [(liveNote as any).linkedTaskId] : []), [liveNote]);
@@ -304,6 +287,23 @@ export function NoteDetailSidebar({
   const hasPromptedEncryptedOpenRef = useRef(false);
 
   const { showSuccess, showError } = useToast();
+  // Automatically heal T4 encrypted state if vault is unlocked
+  useEffect(() => {
+    if (isEncryptedNote && ecosystemSecurity.status.isUnlocked) {
+      const healDecryption = async () => {
+        try {
+          const decrypted = await decryptPublicEncryptedNote(liveNote.$id);
+          if (decrypted) {
+            onUpdate(decrypted);
+            showSuccess("Note decrypted", "Content is now visible.");
+          }
+        } catch (err) {
+          console.error("[NoteSidebar] Auto-decryption failed:", err);
+        }
+      };
+      void healDecryption();
+    }
+  }, [isEncryptedNote, ecosystemSecurity.status.isUnlocked, liveNote.$id, onUpdate, showSuccess]);
   const { openProUpgrade } = useProUpgrade();
   const router = useRouter();
   const { closeSidebar } = useDynamicSidebar();
