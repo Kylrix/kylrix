@@ -25,9 +25,14 @@ async function getActor(jwt?: string) {
       console.warn('[secure-ops] Auth failure in account.get():', err?.message);
       return null;
     });
+    if (actor) {
+        console.log('[secure-ops] Actor established:', actor.$id, actor.email);
+    } else {
+        console.warn('[secure-ops] Actor discovery returned null');
+    }
     return actor;
   } catch (err) {
-    console.error('[secure-ops] Auth error:', err);
+    console.error('[secure-ops] getActor exception:', err);
     return null;
   }
 }
@@ -521,8 +526,10 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
   }
 
   const { client, users } = createAdminClient();
-  const databases = new Databases(client);
   const appwritePerm = input.permission === 'admin' ? 'delete' : input.permission === 'edit' ? 'update' : 'read';
+
+  const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW;
+  const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
   // Securely resolve the target email if not explicitly provided
   let resolvedEmail = input.targetEmail;
@@ -542,8 +549,8 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     targetUserId: input.targetUserId,
     resourceId: input.resourceId,
     resourceType: input.resourceType === 'note' ? 'ghost_note' : 'task',
-    databaseId: input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW,
-    tableId: input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+    databaseId: dbId,
+    tableId: tableId,
     rowId: input.resourceId,
   }, requester.$id);
 
@@ -567,4 +574,74 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
   }
 
   return { success: true };
+}
+
+/**
+ * Parses user IDs and their highest permission level from Appwrite strings.
+ */
+function extractCollaboratorsFromPermissions(permissions: string[]): Array<{ userId: string, level: string }> {
+    const userMap = new Map<string, Set<string>>();
+    const userRegex = /^(read|update|delete)\("user:([^"]+)"\)$/;
+    
+    for (const perm of permissions) {
+        const match = perm.match(userRegex);
+        if (match) {
+            const [, type, userId] = match;
+            if (!userMap.has(userId)) userMap.set(userId, new Set());
+            userMap.get(userId)!.add(type);
+        }
+    }
+    
+    return Array.from(userMap.entries()).map(([userId, types]) => {
+        let level = 'viewer';
+        if (types.has('delete')) level = 'admin';
+        else if (types.has('update')) level = 'editor';
+        return { userId, level };
+    });
+}
+
+export async function getResourceCollaboratorsSecure(input: {
+    resourceId: string;
+    resourceType: 'note' | 'task';
+    jwt?: string;
+}) {
+    const requester = await getActor(input.jwt);
+    if (!requester) throw new Error('Unauthorized');
+
+    const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW;
+    const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
+
+    const { databases } = createAdminClient();
+    const doc = await databases.getDocument(dbId, tableId, input.resourceId);
+    
+    // 1. Extract IDs and Levels from real permissions
+    const rawPermissions = doc.$permissions || [];
+    const collabMeta = extractCollaboratorsFromPermissions(rawPermissions);
+    
+    // 2. Filter out self and owner
+    const ownerId = String((doc as any).userId || '').trim();
+    const filteredCollabs = collabMeta.filter(c => c.userId !== ownerId && c.userId !== requester.$id);
+
+    if (filteredCollabs.length === 0) return { collaborators: [] };
+
+    // 3. Hydrate profiles
+    const { UsersService } = await import('@/lib/services/users');
+    const collaborators = await Promise.all(
+        filteredCollabs.map(async (collab) => {
+            const p = await UsersService.getProfileById(collab.userId);
+            if (!p) return null;
+            return {
+                $id: p.$id,
+                userId: p.userId || p.$id,
+                username: p.username,
+                displayName: p.displayName,
+                avatar: p.avatar || p.profilePicId || null,
+                tier: p.tier,
+                verified: p.tier === 'admin' || p.verified,
+                permissionLevel: collab.level
+            };
+        })
+    );
+
+    return { collaborators: collaborators.filter(Boolean) };
 }

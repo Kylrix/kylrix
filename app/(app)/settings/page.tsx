@@ -56,7 +56,7 @@ export default function SettingsPage() {
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
     const [_loadingPasskeys, setLoadingPasskeys] = useState(true);
 
-    const handleMint = async () => {
+    const handleManualMint = async () => {
         setMinting(true);
         try {
             const { mintDailyLoginSecure } = await import('@/lib/actions/secure-ops');

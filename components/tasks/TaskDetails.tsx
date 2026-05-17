@@ -46,6 +46,9 @@ import { useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import { notes as noteApi } from '@/lib/kylrixflow';
 import UserSearch from '@/components/UserSearch';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
+import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
+import { account } from '@/lib/appwrite';
 import { UsersService } from '@/lib/services/users';
 import type { CollaboratorPermission, TaskCollaborator } from '@/types';
 
@@ -118,7 +121,8 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
   const [editDescription, setEditDescription] = useState('');
   const [statusAnchor, setStatusAnchor] = useState<null | HTMLElement>(null);
   const [priorityAnchor, setPriorityAnchor] = useState<null | HTMLElement>(null);
-  const [taskParticipantProfiles, setTaskParticipantProfiles] = useState<Record<string, { title: string; subtitle: string; profilePicId?: string | null }>>({});
+  const [taskParticipantProfiles, setTaskParticipantProfiles] = useState<any[]>([]);
+  const [isLoadingAssignees, setIsLoadingAssignees] = useState(false);
   const [taskCollaboratorRows, setTaskCollaboratorRows] = useState<TaskCollaborator[]>([]);
   const [pendingCollaborators, setPendingCollaborators] = useState<any[]>([]);
   const [pendingCollaboratorPermission, setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
@@ -264,58 +268,37 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
     };
   }, [task]);
 
+  // Fetch hydrated assignee profiles (Non-blocking background fetch)
   React.useEffect(() => {
     let active = true;
+    const fetchAssigneeProfiles = async () => {
+      if (!taskId) return;
+      
+      // Defer slightly for smooth sidebar mount
+      await new Promise(resolve => setTimeout(resolve, 400));
+      if (!active) return;
 
-    const loadCollaborators = async () => {
-      setPendingCollaborators([]);
-      if (!task) {
-        setTaskCollaboratorRows([]);
-        setTaskParticipantProfiles({});
-        return;
-      }
-
+      setIsLoadingAssignees(true);
       try {
-        const rows = await listTaskCollaborators(task.id);
-        const profiles = await Promise.all(
-          Array.from(new Set([
-            ...task.assigneeIds,
-            ...rows.map((row) => row.userId),
-          ])).map(async (userId) => {
-            const profile = await UsersService.getProfileById(userId);
-            return profile ? [userId, profile] as const : null;
-          })
-        );
-
+        const { jwt } = await account.createJWT();
         if (!active) return;
-
-        const nextProfiles: Record<string, { title: string; subtitle: string; profilePicId?: string | null }> = {};
-        for (const entry of profiles) {
-          if (!entry) continue;
-          const [userId, profile] = entry;
-          nextProfiles[userId] = {
-            title: profile.title || profile.name || userId,
-            subtitle: profile.subtitle || profile.email || userId,
-            profilePicId: profile.profilePicId || profile.avatar || null,
-          };
-        }
-
-        setTaskCollaboratorRows(rows);
-        setTaskParticipantProfiles(nextProfiles);
-      } catch (error) {
-        console.error('Failed to load task collaborators', error);
-        if (active) {
-          setTaskCollaboratorRows([]);
-          setTaskParticipantProfiles({});
-        }
+        
+        const { collaborators } = await getResourceCollaboratorsSecure({
+            resourceId: taskId,
+            resourceType: 'task',
+            jwt
+        });
+        if (active) setTaskParticipantProfiles(collaborators);
+      } catch (err) {
+        console.error('Failed to fetch assignee profiles:', err);
+      } finally {
+        if (active) setIsLoadingAssignees(false);
       }
     };
 
-    loadCollaborators();
-    return () => {
-      active = false;
-    };
-  }, [task, listTaskCollaborators]);
+    fetchAssigneeProfiles();
+    return () => { active = false; };
+  }, [taskId]);
 
   if (!task) {
     return (

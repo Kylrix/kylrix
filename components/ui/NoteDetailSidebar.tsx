@@ -45,6 +45,7 @@ import { useRouter } from 'next/navigation';
 import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
 import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
@@ -141,6 +142,8 @@ export function NoteDetailSidebar({
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
   const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [isLoadingSecrets, setIsLoadingSecrets] = useState(false);
+  const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
+  const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [showActionHub, setShowActionHub] = useState(false);
   const [pendingHubAction, setPendingHubAction] = useState<null | 'rotate'>(null);
   const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
@@ -236,6 +239,41 @@ export function NoteDetailSidebar({
 
     fetchLinkedSecrets();
   }, [linkedCredentialIds]);
+
+  // Fetch hydrated collaborator profiles (Non-blocking background fetch)
+  useEffect(() => {
+    let active = true;
+    const fetchCollaboratorProfiles = async () => {
+      if (!liveNote.$id) return;
+      
+      // Defer slightly to allow sidebar mount animation to complete smoothly
+      await new Promise(resolve => setTimeout(resolve, 400));
+      if (!active) return;
+
+      setIsLoadingCollaborators(true);
+      try {
+        const { getResourceCollaboratorsSecure } = await import('@/lib/actions/secure-ops');
+        const { account } = await import('@/lib/appwrite');
+        const { jwt } = await account.createJWT();
+        
+        if (!active) return;
+        const { collaborators } = await getResourceCollaboratorsSecure({
+            resourceId: liveNote.$id,
+            resourceType: 'note',
+            jwt: jwt
+        });
+        if (active) setCollaboratorProfiles(collaborators);
+      } catch (err) {
+        console.error('Failed to fetch collaborator profiles:', err);
+      } finally {
+        if (active) setIsLoadingCollaborators(false);
+      }
+    };
+
+    fetchCollaboratorProfiles();
+    return () => { active = false; };
+  }, [liveNote.$id]);
+
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
   const titleContainerRef = useRef<HTMLDivElement>(null);
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -1501,6 +1539,77 @@ export function NoteDetailSidebar({
           </Box>
         ) : (
           <Typography variant="body2" sx={{ fontStyle: 'italic', color: theme.palette.text.secondary, fontFamily: 'var(--font-satoshi)' }}>No linked secrets</Typography>
+        )}
+      </Box>
+
+      {/* Collaborators */}
+      <Box>
+        <Typography
+          variant="caption"
+          sx={{
+            display: 'block',
+            mb: 2,
+            color: theme.palette.primary.main,
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            fontFamily: 'var(--font-clash)'
+          }}
+        >
+          Collaborators
+        </Typography>
+        {isLoadingCollaborators ? (
+          <CircularProgress size={20} sx={{ color: theme.palette.primary.main, ml: 1 }} />
+        ) : collaboratorProfiles.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {collaboratorProfiles.map((profile) => (
+              <Box key={profile.$id || profile.userId} sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                p: 1.5,
+                borderRadius: '16px',
+                bgcolor: alpha(theme.palette.text.primary, 0.03),
+                border: `1px solid ${theme.palette.divider}`,
+              }}>
+                <IdentityAvatar
+                  fileId={profile.avatar || profile.profilePicId || null}
+                  alt={profile.displayName || profile.username}
+                  fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
+                  size={32}
+                  verified={profile.tier === 'admin' || profile.verified}
+                />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: theme.palette.text.primary, noWrap: true }}>
+                        {profile.displayName || profile.username}
+                    </Typography>
+                    <Typography 
+                        variant="caption" 
+                        sx={{ 
+                            px: 1, 
+                            py: 0.25, 
+                            borderRadius: '6px', 
+                            bgcolor: alpha(theme.palette.primary.main, 0.08),
+                            color: theme.palette.primary.main,
+                            fontWeight: 800,
+                            fontSize: '9px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em'
+                        }}
+                    >
+                        {profile.permissionLevel || 'Viewer'}
+                    </Typography>
+                  </Box>
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block' }}>
+                    @{profile.username}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        ) : (
+          <Typography variant="body2" sx={{ fontStyle: 'italic', color: theme.palette.text.secondary, fontFamily: 'var(--font-satoshi)' }}>No collaborators</Typography>
         )}
       </Box>
 

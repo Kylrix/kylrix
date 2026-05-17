@@ -4,13 +4,18 @@ import { APPWRITE_CONFIG } from './appwrite/config';
 
 /**
  * Creates a server-side Appwrite client that respects the user's session.
- * Standardizes on the public endpoint to match browser session domain.
+ * 
+ * Hardened for Kylrix:
+ * - Uses canonical Cloud endpoint for stable SDK-to-SDK validation.
+ * - Supports exhaustive cookie discovery.
+ * - Prioritizes explicit JWT for cross-environment reliability.
  */
 export async function createServerClient(jwt?: string) {
   const client = new Client();
   
-  // MUST match the endpoint used by the client SDK to ensure session cookies are valid
-  client.setEndpoint(APPWRITE_CONFIG.ENDPOINT);
+  // Canonical Cloud endpoint is more reliable for server-side session/JWT validation
+  // than custom CNAMEs in certain network environments.
+  client.setEndpoint('https://fra.cloud.appwrite.io/v1');
   client.setProject(APPWRITE_CONFIG.PROJECT_ID);
 
   if (jwt && jwt.length > 32) {
@@ -22,17 +27,18 @@ export async function createServerClient(jwt?: string) {
     const cookieStore = await cookies();
     const projectId = APPWRITE_CONFIG.PROJECT_ID;
     
-    // Exhaustive search for the project-specific session cookie
+    // Check all possible Appwrite session cookie keys
     const sessionCookie = 
-        cookieStore.get(`a_session_${projectId}`) || 
-        cookieStore.get(`a_session_${projectId.toLowerCase()}`) ||
+        cookieStore.get(`a_session_${projectId.toLowerCase()}`) || 
+        cookieStore.get(`a_session_${projectId}`) ||
+        cookieStore.get('a_session') ||
         cookieStore.get('session');
 
     if (sessionCookie?.value) {
         client.setSession(sessionCookie.value);
     }
   } catch (err) {
-    console.warn('[createServerClient] Cookie discovery skipped:', err);
+    // Non-request context (e.g. build time or background task)
   }
 
   return {
