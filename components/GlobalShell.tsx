@@ -19,6 +19,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebarContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext';
+import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
@@ -27,6 +28,7 @@ const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr:
 const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
 const DynamicSidebar = dynamic(() => import('./ui/DynamicSidebarPanel').then(m => m.DynamicSidebar), { ssr: false });
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
+const AgenticDrawer = dynamic(() => import('./overlays/AgenticDrawer').then(m => m.AgenticDrawer), { ssr: false });
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -55,6 +57,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { isOpen: isDynamicSidebarOpen, closeSidebar } = useDynamicSidebar();
   const { isCollapsed } = useSidebarContext();
   const { closeWallet } = useWalletOverlay();
+  const { isOpen: isAgenticDrawerOpen, closeAgenticDrawer } = useAgenticDrawer();
 
   // 3. Automated Logic
   useEffect(() => {
@@ -70,7 +73,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     closeWallet();
     closeProUpgrade();
     closeSecondarySidebar();
-  }, [pathname, closeSidebar, closeOverlay, closeWallet, closeProUpgrade, closeSecondarySidebar]);
+    closeAgenticDrawer();
+  }, [pathname, closeSidebar, closeOverlay, closeWallet, closeProUpgrade, closeSecondarySidebar, closeAgenticDrawer]);
 
   // 4. Stacking Determinism
   const TOPBAR_Z = 1200;
@@ -122,6 +126,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {taskDialogOpen && <TaskDialog />}
       {isDynamicSidebarOpen && <DynamicSidebar />}
       {secondarySidebar.isOpen && <RightSidebar />}
+      {isAgenticDrawerOpen && <AgenticDrawer />}
     </Box>
   );
 }
