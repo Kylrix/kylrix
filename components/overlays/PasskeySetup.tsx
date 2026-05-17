@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -25,6 +25,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Fingerprint } from 'lucide-react';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 interface PasskeySetupProps {
   open: boolean;
@@ -39,10 +40,10 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   for (let i = 0; i < bytes.byteLength; i++) {
     binary += String.fromCharCode(bytes[i]);
-  }
   return window.btoa(binary);
-}
+  }
 
+...
 export function PasskeySetup({
   open,
   onClose,
@@ -52,7 +53,14 @@ export function PasskeySetup({
 }: PasskeySetupProps) {
   const router = useRouter();
   const muiTheme = useTheme();
+  const { setIsDrawerOpen } = useDrawerState();
+
+  useEffect(() => {
+    setIsDrawerOpen(open);
+  }, [open, setIsDrawerOpen]);
+
   const [step, setStep] = useState(trustUnlocked && ecosystemSecurity.status.isUnlocked ? 2 : 1);
+
   const [loading, setLoading] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
   const [passkeyName, setPasskeyName] = useState("");
