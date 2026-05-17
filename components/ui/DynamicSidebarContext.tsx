@@ -7,7 +7,8 @@ import React, {
   useContext,
   useMemo,
   useState,
-  useRef
+  useRef,
+  useEffect
 } from 'react';
 
 export interface DynamicSidebarContextType {
@@ -30,7 +31,10 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
 
   // Use refs to keep callbacks stable and prevent massive list re-renders
   const stateRef = useRef({ isOpen, activeContentKey });
-  stateRef.current = { isOpen, activeContentKey };
+  
+  useEffect(() => {
+    stateRef.current = { isOpen, activeContentKey };
+  }, [isOpen, activeContentKey]);
 
   const openSidebar = useCallback(
     (newContent: ReactNode, key: string | null = null) => {

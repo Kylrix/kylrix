@@ -22,6 +22,8 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { AgenticService } from '@/lib/services/agentic';
 import { runMyAgent } from '@/lib/actions/agentic';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 type AgentFramework = 'kylrix' | 'openclaw' | 'hermes';
 
@@ -79,6 +81,8 @@ export function AgenticDrawer() {
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { isOpen, closeAgenticDrawer } = useAgenticDrawer();
   const { user } = useAuth();
+  const { openProUpgrade } = useProUpgrade();
+  const isPro = hasPaidKylrixPlan(user);
   const [isExpanded, setIsExpanded] = useState(false);
 
   const [stage, setStage] = useState<'live' | 'framework' | 'create'>('live');
@@ -126,6 +130,12 @@ export function AgenticDrawer() {
 
   const createAgent = useCallback(async () => {
     if (!user?.$id || !agentName.trim()) return;
+    
+    if (!isPro) {
+      openProUpgrade('Create AI Agent');
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
@@ -144,7 +154,7 @@ export function AgenticDrawer() {
     } finally {
       setSaving(false);
     }
-  }, [agentGoal, agentName, fetchAgents, framework, user?.$id]);
+  }, [agentGoal, agentName, fetchAgents, framework, isPro, openProUpgrade, user?.$id]);
 
   const setAgentStatus = useCallback(async (agent: AgentRow, status: AgentStatus) => {
     if (!user?.$id) return;
@@ -162,6 +172,12 @@ export function AgenticDrawer() {
 
   const runAgentNow = useCallback(async (agent: AgentRow) => {
     if (!user?.$id) return;
+
+    if (!isPro) {
+      openProUpgrade('Run AI Agent');
+      return;
+    }
+
     setUpdatingAgentId(agent.$id);
     setError(null);
     try {
@@ -175,7 +191,7 @@ export function AgenticDrawer() {
     } finally {
       setUpdatingAgentId(null);
     }
-  }, [fetchAgents, user?.$id]);
+  }, [fetchAgents, isPro, openProUpgrade, user?.$id]);
 
   const parsedAgents = useMemo(() => {
     return agents.map((agent) => {

@@ -520,7 +520,7 @@ export default function ConnectTopbar({
                   {user && (
                     <Tooltip title="Agentic Workspace">
                       <IconButton
-                        onClick={() => isPro ? openAgenticDrawer() : openProUpgrade('Agentic Workspace')}
+                        onClick={() => openAgenticDrawer()}
                         sx={{
                           color: getAppColor(activeApp),
                           bgcolor: alpha(getAppColor(activeApp), 0.03),
