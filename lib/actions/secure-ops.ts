@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
-import { ID, Permission, Query, Role } from 'node-appwrite';
+import { ID, Permission, Query, Role, Databases } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createAdminClient, createAdminTablesDB } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite-server-only';
@@ -13,8 +13,11 @@ import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/l
 import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
-import { Databases } from 'node-appwrite';
 
+/** 
+ * Standard actor discovery for Server Actions. 
+ * Reads session cookies to establish identity.
+ */
 async function getActor() {
   try {
     const { account } = await createServerClient();
@@ -41,6 +44,10 @@ function isEnvSERVERSDKUser(user: any) {
   return serverSDKSet.has(email);
 }
 
+function isEnvAdminUser(user: any) {
+    return isEnvSERVERSDKUser(user);
+}
+
 function hasWriteAccess(note: any, actorId: string) {
   const ownerId = String(note?.userId || '').trim();
   if (ownerId && ownerId === actorId) return true;
@@ -56,7 +63,6 @@ function hasWriteAccess(note: any, actorId: string) {
   return Array.from(new Set(collaboratorIds)).includes(actorId);
 }
 
-/** Plain object safe to return from a Server Action (no BigInt / circular refs). */
 function serializeMomentRow(row: Record<string, unknown>) {
   return {
     $id: String(row?.$id || ''),
@@ -91,10 +97,6 @@ function serializeTokenMintResult(raw: unknown): Record<string, unknown> {
   };
 }
 
-/**
- * After the client creates a moment with a note attachment, verifies row + note (admin) and mints once.
- * No end-user session on the server — trust boundary is admin reads + ledger idempotency.
- */
 export async function mintNoteShareMomentSecure(input: { momentId: string }) {
   const momentId = String(input?.momentId || '').trim();
   if (!momentId) throw new Error('momentId is required');
@@ -110,14 +112,10 @@ export async function mintNoteShareMomentSecure(input: { momentId: string }) {
   }
 
   const creatorId = String(moment?.userId || '').trim();
-  if (!creatorId) {
-    return { tokenMint: { accepted: false, reason: 'INVALID_MOMENT' } };
-  }
+  if (!creatorId) return { tokenMint: { accepted: false, reason: 'INVALID_MOMENT' } };
 
   const noteId = getNoteAttachmentIdFromMomentFileId(moment?.fileId);
-  if (!noteId) {
-    return { tokenMint: { accepted: false, reason: 'NO_NOTE_ATTACHMENT' } };
-  }
+  if (!noteId) return { tokenMint: { accepted: false, reason: 'NO_NOTE_ATTACHMENT' } };
 
   let note: Record<string, unknown>;
   try {
@@ -131,12 +129,8 @@ export async function mintNoteShareMomentSecure(input: { momentId: string }) {
     return { tokenMint: { accepted: false, reason: 'NOTE_NOT_FOUND' } };
   }
 
-  if (!Boolean(note?.isPublic)) {
-    return { tokenMint: { accepted: false, reason: 'NOTE_NOT_PUBLIC' } };
-  }
-  if (!hasWriteAccess(note, creatorId)) {
-    return { tokenMint: { accepted: false, reason: 'FORBIDDEN' } };
-  }
+  if (!Boolean(note?.isPublic)) return { tokenMint: { accepted: false, reason: 'NOTE_NOT_PUBLIC' } };
+  if (!hasWriteAccess(note, creatorId)) return { tokenMint: { accepted: false, reason: 'FORBIDDEN' } };
 
   let tokenMint: Record<string, unknown> = { accepted: false, reason: 'MINT_FAILED' };
   try {
@@ -158,14 +152,9 @@ export async function mintNoteShareMomentSecure(input: { momentId: string }) {
   return { tokenMint };
 }
 
-/**
- * Server-side note→moment with admin DB + token mint. Requires Appwrite session cookies on the
- * server (often missing during browser Server Actions). Prefer `SocialService.createMoment` from
- * the Connect client (see Feed compose) so the user's session attaches automatically.
- */
 export async function sharePublicNoteAsMomentSecure(input: { noteId: string; text?: string }) {
-  
-  
+  const actor = await getActor();
+  if (!actor) throw new Error('Unauthorized');
 
   const noteId = String(input?.noteId || '').trim();
   const text = String(input?.text || '').trim();
@@ -253,7 +242,6 @@ export async function runTokenOperationSecure(body: any) {
     const state = await InternalKylrixTokenService.initializeState();
     return { initialized: true, state };
   }
-  // mint_activity removed from generic handler to prevent abuse
   if (action === 'transfer') {
     const fromUserId = String(body?.fromUserId || '').trim();
     if (!isSERVERSDK && fromUserId !== actor.$id) throw new Error('Forbidden');
@@ -291,62 +279,42 @@ export async function runTokenOperationSecure(body: any) {
     });
   }
   if (action === 'lock_claim') {
-    if (!isSERVERSDK) throw new Error('Forbidden');
-    return InternalKylrixTokenService.lockClaim({
-      userId: String(body?.userId || '').trim(),
-      amountMicro: String(body?.amountMicro || ''),
-      destinationWallet: String(body?.destinationWallet || '').trim(),
-      chain: String(body?.chain || 'sol').trim(),
-      idempotencyKey: String(body?.idempotencyKey || '').trim(),
-    });
+      return InternalKylrixTokenService.lockClaim({
+          userId: actor.$id,
+          amountMicro: String(body?.amountMicro || ''),
+          destinationWallet: String(body?.destinationWallet || ''),
+          chain: String(body?.chain || 'solana'),
+          idempotencyKey: String(body?.idempotencyKey || ''),
+      });
   }
   if (action === 'settle_claim') {
-    if (!isSERVERSDK) throw new Error('Forbidden');
-    return InternalKylrixTokenService.settleClaim({
-      userId: String(body?.userId || '').trim(),
-      amountMicro: String(body?.amountMicro || ''),
-      destinationWallet: String(body?.destinationWallet || '').trim(),
-      chain: String(body?.chain || 'sol').trim(),
-      onchainTxHash: String(body?.onchainTxHash || '').trim(),
-      idempotencyKey: String(body?.idempotencyKey || '').trim(),
-    });
-  }
-  throw new Error(`Unsupported action: ${action}`);
-}
-
-export async function mintDailyLoginSecure(input: { userId: string, dateKey: string }) {
-  // We use Server SDK credentials for minting tasks.
-  // The daily login minting has its own specific trust score and validation logic.
-  const { users } = createAdminClient();
-  
-  try {
-      // 1. Verify the user exists on the backend
-      const user = await users.get(input.userId);
-      if (!user) {
-          return { accepted: false, reason: 'INVALID_USER' };
-      }
-
-      // 2. Perform the mint operation using Server SDK.
-      // We rely on the Ledger's strict IDEMPOTENCY_CONFLICT check to prevent duplicate daily mints,
-      // rather than the generic in-memory rate limiter.
-      const rawMint = await InternalKylrixTokenService.mintForActivity({
-          userId: user.$id,
-          idempotencyKey: `mint:daily_login:${input.dateKey}:${user.$id}`,
-          activityType: 'daily_login',
-          uniqueActors: 1, // Standard daily login weight
-          trustScore: 70, // Standard daily login trust score
-          sourceType: 'daily_login',
-          sourceId: input.dateKey,
-          metadata: { action: 'daily_login', date: input.dateKey }
+      if (!isSERVERSDK) throw new Error('Forbidden');
+      return InternalKylrixTokenService.settleClaim({
+          userId: String(body?.userId || ''),
+          amountMicro: String(body?.amountMicro || ''),
+          destinationWallet: String(body?.destinationWallet || ''),
+          chain: String(body?.chain || 'solana'),
+          onchainTxHash: String(body?.onchainTxHash || ''),
+          idempotencyKey: String(body?.idempotencyKey || ''),
       });
-      return serializeTokenMintResult(rawMint);
-  } catch (err: any) {
-      console.error('[secure-ops] mintDailyLoginSecure failed:', err);
-      return { accepted: false, reason: err.message || 'MINT_FAILED' };
   }
+  if (action === 'mint_activity' && isSERVERSDK) {
+      return InternalKylrixTokenService.mintForActivity({
+          userId: String(body?.userId || ''),
+          idempotencyKey: String(body?.idempotencyKey || ''),
+          activityType: body?.activityType as any,
+          uniqueActors: Number(body?.uniqueActors || 1),
+          trustScore: Number(body?.trustScore || 70),
+          sourceType: String(body?.sourceType || ''),
+          sourceId: String(body?.sourceId || ''),
+          metadata: body?.metadata,
+      });
+  }
+
+  throw new Error('Unknown token action');
 }
 
-const VIEWER_COOKIE = 'kylrix_viewer_v1';
+const VIEWER_COOKIE = 'kylrix_viewer_id';
 const viewerSecret = () => String(process.env.VIEWER_TOKEN_SECRET || process.env.APPWRITE_API || 'kylrix-viewer-secret');
 const signViewerToken = (payload: string) => createHmac('sha256', viewerSecret()).update(payload).digest('base64url');
 const issueViewerToken = () => {
@@ -362,65 +330,8 @@ const isViewerTokenValid = (token: string) => {
   return signViewerToken(payload) === parts[2];
 };
 
-async function checkActivityRateLimit(userId: string, activityType: string): Promise<boolean> {
-  const key = `activity_limit:${userId}:${activityType}`;
-  // NOTE: Simple in-memory rate limiting.
-  const tracker = (global as any).activityRateLimits || ((global as any).activityRateLimits = {});
-  
-  const now = Date.now();
-  if (!tracker[key] || tracker[key].resetAt < now) {
-    tracker[key] = { count: 0, resetAt: now + 3600_000 }; // 1h window
-  }
-  
-  const maxPerHour: Record<string, number> = {
-    'chat_message': 100,
-    'note_create': 10,
-    'call_participate': 5,
-    'comment_add': 50,
-    'daily_login': 2,
-    'referral_signup': 100,
-  };
-  
-  const limit = maxPerHour[activityType] || 50;
-  if (tracker[key].count >= limit) return false;
-  
-  tracker[key].count++;
-  return true;
-}
-
-async function validateReferralMint(referrerId: string, newUserId: string): Promise<{ valid: boolean; reason?: string }> {
-  // Check: Referrer monthly limit
-  const lastMonth = new Date(Date.now() - 30 * 86400_000).toISOString();
-  const { databases } = createAdminClient();
-  const { documents: recent } = await databases.listDocuments(
-    APPWRITE_CONFIG.DATABASES.CHAT, 
-    APPWRITE_CONFIG.TABLES.CHAT.KYLRIX_TOKEN_LEDGER, 
-    [
-      Query.equal('userId', referrerId),
-      Query.equal('eventType', 'mint_activity'),
-      Query.equal('sourceType', 'referral_signup'),
-      Query.greaterThanEqual('createdAt', lastMonth),
-      Query.limit(101),
-    ]
-  );
-  
-  if (recent.length >= 100) return { valid: false, reason: 'REFERRER_MONTHLY_LIMIT_REACHED' };
-  
-  // Check: New user account age > 10 min
-  const { users } = createAdminClient();
-  const newUser = await users.get(newUserId).catch(() => null);
-  if (!newUser) return { valid: false, reason: 'NEW_USER_NOT_FOUND' };
-  
-  const accountAgeSecs = (Date.now() - new Date(newUser.$createdAt).getTime()) / 1000;
-  if (accountAgeSecs < 600) return { valid: false, reason: 'NEW_ACCOUNT_TOO_YOUNG' };
-  
-  return { valid: true };
-}
-
-import { KylrixActivityType, KylrixActivitySignal } from '@/lib/sdk/token/contract';
-
 export async function trackEngagementViewSecure(input: Omit<TrackEngagementInput, 'viewerKind' | 'viewerUserId' | 'viewerTokenHash'> & { ip?: string | null; userAgent?: string | null }) {
-  
+  const actor = await getActor();
   const store = await cookies();
   const existing = store.get(VIEWER_COOKIE)?.value || '';
   const token = isViewerTokenValid(existing) ? existing : issueViewerToken();
@@ -443,10 +354,8 @@ export async function trackEngagementViewSecure(input: Omit<TrackEngagementInput
 
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {
   const requester = await getActor();
-  if (!requester) {
-    console.warn('[secure-ops] cleanupStaleCallsSecure: Requester unauthenticated, skipping cleanup.');
-    return { success: false, reason: 'Unauthorized' };
-  }
+  if (!requester) return { success: false, reason: 'Unauthorized' };
+
   const admin = isEnvAdminUser(requester);
   const targetUserId = String(input?.userId || requester.$id || '').trim();
   const callId = String(input?.callId || '').trim() || null;
@@ -494,7 +403,7 @@ export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?
 }
 
 export async function getQuickProfileSecure(userId: string, jwt?: string) {
-  const requester = await getActor(jwt);
+  const requester = await getActor();
   if (!requester?.$id) throw new Error('Unauthorized');
   const targetUserId = String(userId || '').trim();
   if (!targetUserId) throw new Error('userId is required');
