@@ -329,14 +329,23 @@ export async function mutateRowPermissions(
     throw new Error('At least one targetUserId is required');
   }
 
-  let nextPermissions = buildOwnerPermissions(ownerId);
+  // Fetch current state to ensure we merge instead of overwrite
+  const currentDoc = await databases.getDocument(input.databaseId, input.tableId, input.rowId);
+  const currentPermissions = Array.isArray(currentDoc?.$permissions) ? currentDoc.$permissions : [];
+  
+  // Start with current permissions, then add or remove based on action
+  let nextPermissions = [...currentPermissions];
 
   if (action === 'grant') {
     for (const userId of targetUserIds) {
       nextPermissions.push(...buildRecipientPermissions(userId, permission));
     }
   } else {
-    nextPermissions = buildOwnerPermissions(ownerId);
+    // Revoke: filter out all permissions for these specific users
+    const removalRoles = targetUserIds.map(id => Role.user(id).toString());
+    nextPermissions = nextPermissions.filter(perm => {
+        return !removalRoles.some(role => perm.includes(role));
+    });
   }
 
   const dedupedPermissions = Array.from(new Set(nextPermissions));

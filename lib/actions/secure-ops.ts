@@ -515,7 +515,8 @@ export interface PermissionChangeInput {
   targetEmail?: string;
   permission: PermissionLevel;
   actorName: string;
-  jwt?: string; // Optional JWT for backup auth
+  jwt?: string;
+  skipEmail?: boolean;
 }
 
 export async function grantPermissionSecure(input: PermissionChangeInput) {
@@ -526,21 +527,10 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
   }
 
   const { client, users } = createAdminClient();
-  const appwritePerm = input.permission === 'admin' ? 'delete' : input.permission === 'edit' ? 'update' : 'read';
+  const appwritePerm = input.permission === 'admin' ? 'admin' : input.permission === 'edit' ? 'write' : 'read';
 
   const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW;
   const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
-
-  // Securely resolve the target email if not explicitly provided
-  let resolvedEmail = input.targetEmail;
-  if (!resolvedEmail) {
-    try {
-      const targetUser = await users.get(input.targetUserId);
-      resolvedEmail = targetUser.email;
-    } catch (err) {
-      console.warn('Failed to resolve target email for notification:', err);
-    }
-  }
 
   // 1. Grant via existing secure internal permissions service (Privileged Pass)
   await permissionsInternal('POST', {
@@ -554,26 +544,63 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     rowId: input.resourceId,
   }, requester.$id);
 
-  // 2. Automated Email
-  if (resolvedEmail) {
-    await dispatchEmail({
-      eventType: 'resource_shared',
-      sourceApp: 'kylrix',
-      actorName: input.actorName,
-      recipientEmails: [resolvedEmail],
-      resourceId: input.resourceId,
-      resourceTitle: input.resourceTitle,
-      resourceType: input.resourceType,
-      rightsLabel: input.permission,
-      templateKey: 'RESOURCE_SHARED_NOTIFY',
-      metadata: {
-        permissionType: input.permission,
-        iconUrl: 'https://kylrix.space/logo.svg'
+  // 2. Automated Email (Optional)
+  if (!input.skipEmail) {
+    let resolvedEmail = input.targetEmail;
+    if (!resolvedEmail) {
+      try {
+        const targetUser = await users.get(input.targetUserId);
+        resolvedEmail = targetUser.email;
+      } catch (err) {
+        console.warn('Failed to resolve target email for notification:', err);
       }
-    });
+    }
+
+    if (resolvedEmail) {
+      await dispatchEmail({
+        eventType: 'resource_shared',
+        sourceApp: 'kylrix',
+        actorName: input.actorName,
+        recipientEmails: [resolvedEmail],
+        resourceId: input.resourceId,
+        resourceTitle: input.resourceTitle,
+        resourceType: input.resourceType,
+        rightsLabel: input.permission,
+        templateKey: 'RESOURCE_SHARED_NOTIFY',
+        metadata: {
+          permissionType: input.permission,
+          iconUrl: 'https://kylrix.space/logo.svg'
+        }
+      });
+    }
   }
 
   return { success: true };
+}
+
+export async function revokePermissionSecure(input: {
+    resourceId: string;
+    resourceType: 'note' | 'task';
+    targetUserId: string;
+    jwt?: string;
+}) {
+    const requester = await getActor(input.jwt);
+    if (!requester) throw new Error('Unauthorized');
+
+    const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW;
+    const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
+
+    await permissionsInternal('POST', {
+        action: 'revoke',
+        targetUserId: input.targetUserId,
+        resourceId: input.resourceId,
+        resourceType: input.resourceType === 'note' ? 'ghost_note' : 'task',
+        databaseId: dbId,
+        tableId: tableId,
+        rowId: input.resourceId,
+    }, requester.$id);
+
+    return { success: true };
 }
 
 /**

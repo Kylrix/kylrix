@@ -661,117 +661,60 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
 
           <Box sx={{ mt: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 1.5, fontSize: '0.65rem', opacity: 0.5 }}>Assignees</Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {task.assigneeIds.length > 0 ? task.assigneeIds.map((userId) => {
-                const profile = taskParticipantProfiles[userId];
-                return (
-                  <Chip
-                    key={userId}
-                    label={profile?.title || userId}
-                    size="small"
-                    sx={{
-                      bgcolor: alpha('#6366F1', 0.08),
-                      border: `1px solid ${alpha('#6366F1', 0.18)}`,
-                      color: '#D9DBFF',
-                      fontWeight: 700,
-                      borderRadius: '8px',
-                    }}
-                  />
-                );
-              }) : (
-                <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.7 }}>
+            {isLoadingAssignees ? (
+                <CircularProgress size={16} sx={{ color: '#A855F7' }} />
+            ) : taskParticipantProfiles.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {taskParticipantProfiles.map((profile) => (
+                        <Box key={profile.userId} sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            p: 1.5,
+                            borderRadius: '16px',
+                            bgcolor: alpha('#fff', 0.03),
+                            border: '1px solid rgba(255,255,255,0.06)',
+                        }}>
+                            <IdentityAvatar
+                                fileId={profile.avatar || null}
+                                alt={profile.displayName || profile.username}
+                                fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
+                                size={32}
+                                verified={profile.verified}
+                            />
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'white', noWrap: true }}>
+                                        {profile.displayName || profile.username}
+                                    </Typography>
+                                    <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                            px: 1, 
+                                            py: 0.25, 
+                                            borderRadius: '6px', 
+                                            bgcolor: alpha('#A855F7', 0.1),
+                                            color: '#A855F7',
+                                            fontWeight: 800,
+                                            fontSize: '9px',
+                                            textTransform: 'uppercase'
+                                        }}
+                                    >
+                                        {profile.permissionLevel || 'Viewer'}
+                                    </Typography>
+                                </Box>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>
+                                    @{profile.username}
+                                </Typography>
+                            </Box>
+                        </Box>
+                    ))}
+                </Box>
+            ) : (
+                <Typography variant="body2" sx={{ color: 'text.secondary', opacity: 0.7, fontStyle: 'italic' }}>
                   No assignees yet.
                 </Typography>
-              )}
-            </Box>
-          </Box>
-
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1.5, fontSize: '0.65rem', opacity: 0.5 }}>Collaborators</Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '220px 1fr' }, gap: 1.5, alignItems: 'end', mb: 2 }}>
-              <FormControl size="small" fullWidth>
-                <InputLabel>Permission</InputLabel>
-                <Select
-                  value={pendingCollaboratorPermission}
-                  label="Permission"
-                  onChange={(e) => setPendingCollaboratorPermission(e.target.value as CollaboratorPermission)}
-                >
-                  <MenuItem value="read">Read</MenuItem>
-                  <MenuItem value="write">Read + Update</MenuItem>
-                  <MenuItem value="admin">Admin</MenuItem>
-                </Select>
-              </FormControl>
-              <Button
-                variant="outlined"
-                onClick={handleAddCollaborators}
-                disabled={pendingCollaborators.length === 0}
-                sx={{ justifySelf: { xs: 'stretch', md: 'end' } }}
-              >
-                Add collaborator(s)
-              </Button>
-            </Box>
-
-            <UserSearch
-              label="Search collaborators"
-              selectedUsers={pendingCollaborators}
-              onSelect={(user) => setPendingCollaborators((prev) => [...prev, user])}
-              onRemove={(userId) => setPendingCollaborators((prev) => prev.filter((user) => user.id !== userId))}
-              excludeIds={[
-                task.creatorId,
-                ...task.assigneeIds,
-                ...taskCollaboratorRows.map((row) => row.userId),
-              ]}
-            />
-
-            <Box sx={{ mt: 2, display: 'grid', gap: 1.25 }}>
-              {taskCollaboratorRows.filter((row) => !task.assigneeIds.includes(row.userId)).map((row) => {
-                const profile = taskParticipantProfiles[row.userId];
-                return (
-                  <Box
-                    key={row.id}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 2,
-                      p: 1.5,
-                      borderRadius: 2,
-                      bgcolor: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
-                      <Avatar sx={{ width: 30, height: 30, bgcolor: 'rgba(99, 102, 241, 0.18)', color: '#D9DBFF', fontSize: '0.8rem', fontWeight: 800 }}>
-                        {(profile?.title || row.userId).charAt(0).toUpperCase()}
-                      </Avatar>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {profile?.title || row.userId}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {profile?.subtitle || row.userId}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <FormControl size="small" sx={{ minWidth: 160 }}>
-                        <Select
-                          value={row.permission}
-                          onChange={(e) => handleCollaboratorPermissionChange(row.id, e.target.value as CollaboratorPermission)}
-                        >
-                          <MenuItem value="read">Read</MenuItem>
-                          <MenuItem value="write">Read + Update</MenuItem>
-                          <MenuItem value="admin">Admin</MenuItem>
-                        </Select>
-                      </FormControl>
-                      <IconButton size="small" onClick={() => handleRemoveCollaborator(row.id)} sx={{ color: 'text.secondary' }}>
-                        <DeleteIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Box>
-                  </Box>
-                );
-              })}
-            </Box>
+            )}
           </Box>
         </Box>
 
