@@ -662,11 +662,20 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
           <Box sx={{ mt: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 1.5, fontSize: '0.65rem', opacity: 0.5 }}>Assignees</Typography>
             {isLoadingAssignees ? (
-                <CircularProgress size={16} sx={{ color: '#A855F7' }} />
-            ) : taskParticipantProfiles.length > 0 ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {taskParticipantProfiles.map((profile) => (
-                        <Box key={profile.userId} sx={{
+            <CircularProgress size={16} sx={{ color: '#A855F7', ml: 1 }} />
+        ) : taskParticipantProfiles.length > 0 ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {taskParticipantProfiles.map((profile) => (
+                    <Box 
+                        key={profile.userId} 
+                        onClick={() => openUnified('note', { // Using 'note' as the key for CollaboratorManager in UnifiedBottomDrawer
+                            resourceId: taskId,
+                            resourceType: 'task',
+                            resourceTitle: task.title,
+                            actorName: user?.name || 'A Kylrix User',
+                            initialCollaborator: profile
+                        })}
+                        sx={{
                             display: 'flex',
                             alignItems: 'center',
                             gap: 1.5,
@@ -674,8 +683,15 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
                             borderRadius: '16px',
                             bgcolor: alpha('#fff', 0.03),
                             border: '1px solid rgba(255,255,255,0.06)',
-                        }}>
-                            <IdentityAvatar
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                bgcolor: alpha('#fff', 0.06),
+                                borderColor: alpha('#A855F7', 0.3)
+                            }
+                        }}
+                    >
+                        <IdentityAvatar
                                 fileId={profile.avatar || null}
                                 alt={profile.displayName || profile.username}
                                 fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
