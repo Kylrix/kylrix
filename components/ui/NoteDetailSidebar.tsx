@@ -151,6 +151,7 @@ export function NoteDetailSidebar({
   const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
   const [crossSuggestions, setCrossSuggestions] = useState<Array<{ id: string; label: string; description: string }>>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [lastT4Key, setLastT4Key] = useState<string | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
   const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted;
