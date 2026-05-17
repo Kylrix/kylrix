@@ -47,12 +47,12 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                 <BackgroundTaskProvider>
                   <NotificationProvider>
                     <SourceProvider>
-                      <SudoProvider>
-                        <UnifiedDrawerProvider>
-                          <NoteDrawerProvider>
-                            <SidebarProvider>
-                              <DynamicSidebarProvider>
-                                <DrawerStateProvider>
+                      <DrawerStateProvider>
+                        <SudoProvider>
+                          <UnifiedDrawerProvider>
+                            <NoteDrawerProvider>
+                              <SidebarProvider>
+                                <DynamicSidebarProvider>
                                   <ProUpgradeProvider>
                                     <AgenticDrawerProvider>
                                       <AIProvider>
@@ -79,12 +79,12 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                       </AIProvider>
                                     </AgenticDrawerProvider>
                                   </ProUpgradeProvider>
-                                </DrawerStateProvider>
-                              </DynamicSidebarProvider>
-                            </SidebarProvider>
-                          </NoteDrawerProvider>
-                        </UnifiedDrawerProvider>
-                      </SudoProvider>
+                                </DynamicSidebarProvider>
+                              </SidebarProvider>
+                            </NoteDrawerProvider>
+                          </UnifiedDrawerProvider>
+                        </SudoProvider>
+                      </DrawerStateProvider>
                     </SourceProvider>
                   </NotificationProvider>
                 </BackgroundTaskProvider>
