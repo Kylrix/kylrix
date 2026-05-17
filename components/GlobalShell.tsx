@@ -14,6 +14,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useTask } from '@/context/TaskContext';
+import { useLayout } from '@/context/LayoutContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebarContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
@@ -25,6 +26,7 @@ const ProUpgradeDrawer = dynamic(() => import('./overlays/ProUpgradeDrawer').the
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
 const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
 const DynamicSidebar = dynamic(() => import('./ui/DynamicSidebarPanel').then(m => m.DynamicSidebar), { ssr: false });
+const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -48,8 +50,10 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { activeContent: unifiedDrawerActive, open: openUnified } = useUnifiedDrawer();
   const { showProUpgrade, closeProUpgrade } = useProUpgrade();
   const { taskDialogOpen } = useTask();
+  const { secondarySidebar, closeSecondarySidebar } = useLayout();
   const { isOpen: isOverlayOpen, closeOverlay } = useOverlay();
   const { isOpen: isDynamicSidebarOpen, closeSidebar } = useDynamicSidebar();
+  const { isCollapsed } = useSidebarContext();
   const { closeWallet } = useWalletOverlay();
 
   // 3. Automated Logic
@@ -65,7 +69,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     closeOverlay();
     closeWallet();
     closeProUpgrade();
-  }, [pathname, closeSidebar, closeOverlay, closeWallet, closeProUpgrade]);
+    closeSecondarySidebar();
+  }, [pathname, closeSidebar, closeOverlay, closeWallet, closeProUpgrade, closeSecondarySidebar]);
 
   // 4. Stacking Determinism
   const TOPBAR_Z = 1200;
@@ -87,7 +92,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           minWidth: 0,
           position: 'relative',
           zIndex: 1,
-          pt: '88px',
+          pt: '88px', // Exact Topbar height
           pb: isLandingPage ? 0 : { xs: 12, md: 4 },
           px: { xs: 0, sm: 2, md: 4 },
           maxWidth: 1600,
@@ -116,6 +121,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}
       {isDynamicSidebarOpen && <DynamicSidebar />}
+      {secondarySidebar.isOpen && <RightSidebar />}
     </Box>
   );
 }
