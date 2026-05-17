@@ -64,7 +64,9 @@ export default function ConnectTopbar({
     if (pathname?.startsWith('/note')) return 'note';
     if (pathname?.startsWith('/flow')) return 'flow';
     if (pathname?.startsWith('/vault')) return 'vault';
-    return 'connect';
+    if (pathname?.startsWith('/connect')) return 'connect';
+    if (pathname?.startsWith('/accounts')) return 'accounts';
+    return 'kylrix';
   }, [pathname]);
 
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
