@@ -29,7 +29,7 @@ const BRAND_INDIGO = '#6366F1';
 /**
  * Specialized bottom chrome for Accounts app.
  * 4 main items in bottom bar, 3 secondary items in a premium FAB SpeedDial.
- * Utilizes the global FAB styling and high-fidelity icons.
+ * Utilizes high-fidelity icons, staggered skew arrangement, and content blur.
  */
 export function AccountsBottomChrome() {
   const pathname = usePathname();
@@ -61,135 +61,175 @@ export function AccountsBottomChrome() {
   };
 
   return (
-    <Box
-      component="footer"
-      sx={{
-        position: 'fixed',
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 1300,
-        display: { xs: 'block', md: 'none' }, // Only on mobile
-      }}
-    >
-      {/* Premium FAB SpeedDial for secondary items */}
-      <SpeedDial
-        ariaLabel="Account sub-settings"
+    <>
+      {/* Content Blur Backdrop */}
+      <Box
+        aria-hidden
         sx={{
-          position: 'absolute',
-          bottom: 88, 
-          right: 20,
-          '& .MuiFab-primary': {
-            width: 64,
-            height: 64,
-            borderRadius: '20px',
-            bgcolor: speedDialOpen ? '#1F1D1B' : BRAND_INDIGO,
-            color: speedDialOpen ? '#fff' : '#000',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: speedDialOpen ? 'none' : `0 18px 40px ${alpha('#000', 0.55)}`,
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              bgcolor: speedDialOpen ? '#1F1D1B' : '#5254E8',
-              transform: 'translateY(-2px)',
-            },
-          },
-          '& .MuiSpeedDialAction-fab': {
-            bgcolor: '#161412',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            color: 'rgba(255, 255, 255, 0.7)',
-            width: 52,
-            height: 52,
-            '&:hover': {
-              bgcolor: alpha(BRAND_INDIGO, 0.12),
-              color: BRAND_INDIGO,
-              borderColor: alpha(BRAND_INDIGO, 0.5),
-              transform: 'translateY(-4px)',
-            },
-          },
-          '& .MuiSpeedDialAction-staticTooltipLabel': {
-            bgcolor: 'rgba(22, 20, 18, 0.92)',
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: '0.75rem',
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            padding: '8px 14px',
-            borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            backdropFilter: 'blur(10px)',
-          }
+          position: 'fixed',
+          inset: 0,
+          zIndex: 1299,
+          pointerEvents: 'none',
+          opacity: speedDialOpen ? 1 : 0,
+          transition: 'opacity 220ms ease',
+          backdropFilter: speedDialOpen ? 'blur(14px) saturate(170%)' : 'blur(0px)',
+          bgcolor: speedDialOpen ? 'rgba(10, 9, 8, 0.22)' : 'transparent',
         }}
-        icon={<SpeedDialIcon icon={<Plus size={26} strokeWidth={2.5} />} openIcon={<X size={26} strokeWidth={2.5} />} />}
-        onClose={() => setSpeedDialOpen(false)}
-        onOpen={() => setSpeedDialOpen(true)}
-        open={speedDialOpen}
-      >
-        {secondaryItems.map((action) => (
-          <SpeedDialAction
-            key={action.value}
-            icon={<action.icon size={22} strokeWidth={2} />}
-            tooltipTitle={action.label}
-            tooltipOpen
-            onClick={() => {
-              setSpeedDialOpen(false);
-              router.push(action.path);
-            }}
-            sx={{
-                '& .MuiSpeedDialAction-fab': {
-                    color: currentSubsetting === action.value ? BRAND_INDIGO : 'inherit',
-                    borderColor: currentSubsetting === action.value ? BRAND_INDIGO : 'rgba(255, 255, 255, 0.08)',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
-                }
-            }}
-          />
-        ))}
-      </SpeedDial>
+      />
 
-      <Paper
-        elevation={0}
+      <Box
+        component="footer"
         sx={{
-          width: '100%',
-          bgcolor: '#161412',
-          border: '1px solid rgba(255, 255, 255, 0.05)',
-          borderBottom: 0,
-          borderRadius: '24px 24px 0 0',
-          px: 1,
-          pt: 0.5,
-          pb: 'max(0.5rem, env(safe-area-inset-bottom))',
-          boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.4)',
+          position: 'fixed',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1300,
+          display: { xs: 'block', md: 'none' }, // Only on mobile
         }}
       >
-        <BottomNavigation
-          value={currentSubsetting}
-          onChange={handleNavChange}
-          showLabels={false}
+        {/* Premium FAB SpeedDial for secondary items */}
+        <SpeedDial
+          ariaLabel="Account sub-settings"
           sx={{
-            backgroundColor: 'transparent',
-            height: 72,
-            '& .MuiBottomNavigationAction-root': {
-              minWidth: 'auto',
-              padding: '0',
-              color: 'rgba(255, 255, 255, 0.4)',
+            position: 'absolute',
+            bottom: 88, 
+            right: 20,
+            '& .MuiFab-primary': {
+              width: 64,
+              height: 64,
+              borderRadius: '20px',
+              bgcolor: speedDialOpen ? '#1F1D1B' : BRAND_INDIGO,
+              color: speedDialOpen ? '#fff' : '#000',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: speedDialOpen ? 'none' : `0 18px 40px ${alpha('#000', 0.55)}`,
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&.Mui-selected': {
-                color: BRAND_INDIGO,
-                '& .lucide': {
-                  transform: 'scale(1.2) translateY(-2px)',
-                  filter: `drop-shadow(0 0 10px ${BRAND_INDIGO}90)`,
-                }
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                background: 'linear-gradient(180deg, rgba(255,255,255,0.2), rgba(255,255,255,0.02))',
+                opacity: 0.8,
+                pointerEvents: 'none',
+              },
+              '&:hover': {
+                bgcolor: speedDialOpen ? '#1F1D1B' : '#5254E8',
+                transform: 'translateY(-2px)',
               },
             },
+            '& .MuiSpeedDialAction-fab': {
+              bgcolor: 'rgba(10, 10, 10, 0.72)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: 'rgba(255, 255, 255, 0.78)',
+              width: 52,
+              height: 52,
+              transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+              backdropFilter: 'blur(16px) saturate(180%)',
+              clipPath: 'polygon(18% 0, 100% 0, 82% 100%, 0 100%)',
+              borderRadius: '14px',
+              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.38)',
+              transform: 'skewX(-12deg)',
+              '& .MuiSvgIcon-root, svg': {
+                transform: 'skewX(12deg)',
+              },
+              '&:hover': {
+                bgcolor: alpha(BRAND_INDIGO, 0.14),
+                color: BRAND_INDIGO,
+                borderColor: BRAND_INDIGO,
+                transform: 'skewX(-12deg) translateY(-4px)',
+              },
+            },
+            '& .MuiSpeedDialAction-fab + .MuiSpeedDialAction-fab': {
+              mt: 1,
+            },
+            '& .MuiSpeedDialAction-staticTooltipLabel': {
+              bgcolor: 'rgba(10, 10, 10, 0.88)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              color: '#fff',
+              fontFamily: 'var(--font-satoshi)',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              fontSize: '0.75rem',
+              padding: '6px 12px',
+              borderRadius: '10px',
+              backdropFilter: 'blur(14px) saturate(180%)',
+              transform: 'translateY(-1px)',
+            }
           }}
+          icon={<SpeedDialIcon icon={<Plus size={26} strokeWidth={2.5} />} openIcon={<X size={26} strokeWidth={2.5} />} />}
+          onClose={() => setSpeedDialOpen(false)}
+          onOpen={() => setSpeedDialOpen(true)}
+          open={speedDialOpen}
+          direction="up"
         >
-          {mainItems.map((item) => (
-            <BottomNavigationAction
-              key={item.value}
-              value={item.value}
-              icon={<item.icon size={24} strokeWidth={2} className="lucide" />}
+          {secondaryItems.map((action) => (
+            <SpeedDialAction
+              key={action.value}
+              icon={<action.icon size={22} strokeWidth={2} />}
+              tooltipTitle={action.label}
+              tooltipOpen
+              onClick={() => {
+                setSpeedDialOpen(false);
+                router.push(action.path);
+              }}
+              sx={{
+                  '& .MuiSpeedDialAction-fab': {
+                      color: currentSubsetting === action.value ? BRAND_INDIGO : 'inherit',
+                      borderColor: currentSubsetting === action.value ? BRAND_INDIGO : 'rgba(255, 255, 255, 0.12)',
+                  }
+              }}
             />
           ))}
-        </BottomNavigation>
-      </Paper>
-    </Box>
+        </SpeedDial>
+
+        <Paper
+          elevation={0}
+          sx={{
+            width: '100%',
+            bgcolor: '#161412',
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            borderBottom: 0,
+            borderRadius: '24px 24px 0 0',
+            px: 1,
+            pt: 0.5,
+            pb: 'max(0.5rem, env(safe-area-inset-bottom))',
+            boxShadow: '0 -10px 40px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          <BottomNavigation
+            value={currentSubsetting}
+            onChange={handleNavChange}
+            showLabels={false}
+            sx={{
+              backgroundColor: 'transparent',
+              height: 72,
+              '& .MuiBottomNavigationAction-root': {
+                minWidth: 'auto',
+                padding: '0',
+                color: 'rgba(255, 255, 255, 0.4)',
+                transition: 'all 0.3s ease',
+                '&.Mui-selected': {
+                  color: BRAND_INDIGO,
+                  '& .lucide': {
+                    transform: 'scale(1.2) translateY(-2px)',
+                    filter: `drop-shadow(0 0 10px ${BRAND_INDIGO}90)`,
+                  }
+                },
+              },
+            }}
+          >
+            {mainItems.map((item) => (
+              <BottomNavigationAction
+                key={item.value}
+                value={item.value}
+                icon={<item.icon size={24} strokeWidth={2} className="lucide" />}
+              />
+            ))}
+          </BottomNavigation>
+        </Paper>
+      </Box>
+    </>
   );
 }
