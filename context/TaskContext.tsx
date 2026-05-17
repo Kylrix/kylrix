@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect, useRef, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { ID, Query } from 'appwrite';
 import { tasks as taskApi, calendars as calendarApi, taskCollaborators, subscribeToTable, buildTaskPermissions } from '@/lib/kylrixflow';
@@ -1203,7 +1203,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     return state.projects.find(p => p.id === state.selectedProjectId) || null;
   }, [state.projects, state.selectedProjectId]);
 
-  const value: TaskContextType = {
+  const value = useMemo<TaskContextType>(() => ({
     ...state,
     addTask,
     updateTask,
@@ -1238,7 +1238,42 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     getTaskStats,
     getSelectedTask,
     getSelectedProject,
-  };
+  }), [
+    state,
+    addTask,
+    updateTask,
+    deleteTask,
+    completeTask,
+    selectTask,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
+    toggleSubtask,
+    addComment,
+    listTaskCollaborators,
+    addTaskCollaborator,
+    updateTaskCollaborator,
+    deleteTaskCollaborator,
+    addProject,
+    updateProject,
+    deleteProject,
+    selectProject,
+    addLabel,
+    updateLabel,
+    deleteLabel,
+    setFilter,
+    setSort,
+    setViewMode,
+    toggleSidebar,
+    setSidebarOpen,
+    setTaskDialogOpen,
+    setSearchQuery,
+    getFilteredTasks,
+    getTasksByProject,
+    getTaskStats,
+    getSelectedTask,
+    getSelectedProject,
+  ]);
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
 }

@@ -13,6 +13,7 @@ import ConnectTopbar from '@/components/layout/ConnectTopbar';
 import { DISABLE_GLOBAL_HEALTH_OVERHEAD } from '@/lib/dev/disable-global-health-overhead';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import Overlay from '@/components/ui/Overlay';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
@@ -47,48 +48,14 @@ const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr:
 
 function ProUpgradeDrawerMount() {
   const { showProUpgrade } = useProUpgrade();
+  if (!showProUpgrade) return null;
   return <ProUpgradeDrawer />;
 }
 
 export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
 
-  React.useEffect(() => {
-    async function ensureDailyLoginMint() {
-      if (!user?.$id) return;
-      
-      const today = new Date();
-      today.setUTCHours(0, 0, 0, 0);
-      const todayKey = today.toISOString();
-      
-      const lastLogin = localStorage.getItem('kylrix_last_login_mint');
-      if (lastLogin === todayKey) return; // Already minted today
-      
-      try {
-        const { TaskDelegator } = await import('@/lib/services/internal/task-delegator');
-        TaskDelegator.defer(async () => {
-          const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
-          await runTokenOperationSecure({
-            action: 'mint_activity',
-            userId: user.$id,
-            jwt: document.cookie.split('; ').find(row => row.startsWith('session='))?.split('=')[1],
-            idempotencyKey: `mint:daily_login:${todayKey}:${user.$id}`,
-            activityType: 'daily_login',
-            uniqueActors: 1,
-            trustScore: 70,
-            sourceType: 'daily_login',
-            sourceId: todayKey,
-          });
-          localStorage.setItem('kylrix_last_login_mint', todayKey);
-        });
-      } catch (err) {
-        console.warn('[Token] Daily login mint deferred task failed:', err);
-      }
-    }
-    
-    // void ensureDailyLoginMint();
-  }, [user?.$id]);
   const isAppRoute = Boolean(
     pathname?.startsWith('/note') ||
     pathname?.startsWith('/vault') ||
@@ -98,6 +65,12 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/settings')
   );
   const isWebsiteRoute = !isAppRoute;
+  const isSharedPage = pathname?.includes('/shared/');
+  const isVaultResetRoute = pathname?.startsWith('/vault/reset');
+  
+  const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
+  const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
+  const isConnectChatDetail = Boolean(pathname?.match(/^\/connect\/chat\/[^/]+$/));
   const { isCollapsed } = useSidebar();
   const [hideDesktopSidebar, setHideDesktopSidebar] = React.useState(false);
   const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();
@@ -107,14 +80,22 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { closeWallet } = useWalletOverlay();
   const { closeAgenticDrawer } = useAgenticDrawer();
   const { closeProUpgrade } = useProUpgrade();
+  const { open: openUnified } = useUnifiedDrawer();
 
   React.useEffect(() => {
+    if (!isLoading && !user && isAppRoute && !isSharedPage) {
+      openUnified('login');
+    }
+  }, [isLoading, user, isAppRoute, isSharedPage, openUnified]);
+
+  React.useEffect(() => {
+    // Consolidate all interaction closures into a single batch to prevent re-render storms on navigation
     closeSidebar();
     closeOverlay();
     closeWallet();
     closeAgenticDrawer();
     closeProUpgrade();
-  }, [pathname, closeAgenticDrawer, closeOverlay, closeProUpgrade, closeSidebar, closeWallet]);
+  }, [pathname, closeSidebar, closeOverlay, closeWallet, closeAgenticDrawer, closeProUpgrade]);
 
   React.useEffect(() => {
     const handler = (event: Event) => {
@@ -138,12 +119,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   }, [isDynamicSidebarOpen]);
   
   // If it's a shared note page, we might want a different shell
-  const isSharedPage = pathname?.includes('/shared/');
-  const isVaultResetRoute = pathname?.startsWith('/vault/reset');
-  
-  const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
-  const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
-  const isConnectChatDetail = Boolean(pathname?.match(/^\/connect\/chat\/[^/]+$/));
 
   const shouldShowBottomBar = Boolean(
     isAppRoute &&
@@ -161,19 +136,22 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden' }}>
       <Overlay />
       <UnifiedBottomDrawer />
-      {/**
-       * Single persistent topbar for the entire app + marketing surface. UnifiedTopbar
-       * already swaps its skin/content by pathname, so we mount it once here. App routes
-       * used to mount it via app/(app)/layout.tsx — that wrapper is now redundant and
-       * the topbar's React identity stays stable across website ↔ app navigation.
+      {/** 
+       * Global Chrome Layer (Z: 1000+)
+       * ConnectTopbar handles its own AppBar (Z: 1201).
+       * We wrap it in pointer-events: none to ensure the 100vw box doesn't shield the page.
        */}
-      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000, pointerEvents: 'none' }}>
+      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1200, pointerEvents: 'none' }}>
         <Suspense fallback={null}>
           <ConnectTopbar />
         </Suspense>
       </Box>
 
-      {isAppRoute && !isSharedPage && !isVaultResetRoute && !hideDesktopSidebar && <DesktopSidebar />}
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && !hideDesktopSidebar && (
+        <Box sx={{ zIndex: 1100, position: 'relative' }}>
+          <DesktopSidebar />
+        </Box>
+      )}
       <RightSidebar />
       
       <Box
@@ -181,6 +159,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         sx={{
           minWidth: 0,
           pointerEvents: 'auto',
+          position: 'relative',
+          zIndex: 1,
           pt: '88px',
           pb: isWebsiteRoute ? 0 : { xs: 12, md: 4 },
           // Avoid `transition: all` — it animates every property and can jank main-thread layout.

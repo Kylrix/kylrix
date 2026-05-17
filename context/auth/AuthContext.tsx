@@ -22,6 +22,9 @@ interface AuthContextType {
   refreshUser: () => Promise<User | null>;
   openIDMWindow: (target?: string) => void;
   idmWindowOpen: boolean;
+  loginWithEmailOTP: (email: string) => Promise<void>;
+  verifyEmailOTP: (email: string, userId: string, secret: string) => Promise<void>;
+  verifyMFA: (challengeId: string, otp: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -236,6 +239,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
+  const loginWithEmailOTP = useCallback(async (email: string) => {
+    const { ID } = await import('appwrite');
+    const result = await account.createEmailToken(ID.unique(), email);
+    return result.userId;
+  }, []);
+
+  const verifyEmailOTP = useCallback(async (email: string, userId: string, secret: string) => {
+    await account.createSession(userId, secret);
+    await refreshUser();
+  }, [refreshUser]);
+
+  const verifyMFA = useCallback(async (challengeId: string, otp: string) => {
+    await (account as any).createMfaSession('totp', otp);
+    await refreshUser();
+  }, [refreshUser]);
+
   const value = useMemo(() => ({
     user,
     isLoading,
@@ -245,7 +264,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     refreshUser,
     openIDMWindow,
     idmWindowOpen,
-  }), [user, isLoading, isAuthenticating, logout, refreshUser, openIDMWindow, idmWindowOpen]);
+    loginWithEmailOTP,
+    verifyEmailOTP,
+    verifyMFA,
+  }), [user, isLoading, isAuthenticating, logout, refreshUser, openIDMWindow, idmWindowOpen, loginWithEmailOTP, verifyEmailOTP, verifyMFA]);
 
   return (
     <AuthContext.Provider value={value}>

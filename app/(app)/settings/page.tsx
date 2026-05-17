@@ -157,6 +157,9 @@ export default function SettingsPage() {
                     pt: { xs: 2, md: 2.5 },
                     pb: { xs: 3, md: 4 },
                     px: { xs: 2, md: 3 },
+                    pointerEvents: 'auto',
+                    position: 'relative',
+                    zIndex: 1
                 }}
             >
                 <Button

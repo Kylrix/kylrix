@@ -1,37 +1,39 @@
 'use client';
 
 import React from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
-import { X } from 'lucide-react';
-import Drawer from '@mui/material/Drawer';
+import dynamic from 'next/dynamic';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 // Import all dynamic drawer components
-import { LoginDrawer } from './LoginDrawer';
-import { AgenticDrawer } from './AgenticDrawer';
-import { NoteDrawer } from './NoteDrawer';
-// ... etc
-
-const DRAWER_SX = {
-  borderTopLeftRadius: '24px',
-  borderTopRightRadius: '24px',
-  bgcolor: '#161412',
-  borderTop: '1px solid #34322F',
-  maxWidth: 720,
-  width: '100%',
-  mx: 'auto'
-};
+const LoginDrawer = dynamic(() => import('./LoginDrawer').then(mod => mod.LoginDrawer), { ssr: false });
+const AgenticDrawer = dynamic(() => import('./AgenticDrawer').then(mod => mod.AgenticDrawer), { ssr: false });
+const NoteDrawer = dynamic(() => import('./NoteDrawer').then(mod => mod.NoteDrawer), { ssr: false });
+const ShareNoteDrawer = dynamic(() => import('./ShareNoteDrawer').then(mod => mod.ShareNoteDrawer), { ssr: false });
+const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then(mod => mod.DeleteNoteDrawer), { ssr: false });
 
 export function UnifiedBottomDrawer() {
-  const { activeContent, close } = useUnifiedDrawer();
+  const { activeContent, drawerData } = useUnifiedDrawer();
 
-  // The child components (LoginDrawer, AgenticDrawer, NoteDrawer) already contain their own <Drawer> 
-  // wrappers with specific dimensions/styles. We just render the active one here.
+  // The child components already contain their own <Drawer> 
+  // wrappers. We just render the active one here.
   switch (activeContent) {
     case 'login': return <LoginDrawer />;
     case 'agentic': return <AgenticDrawer />;
     case 'note': return <NoteDrawer />;
+    case 'share-note': 
+        return <ShareNoteDrawer 
+            isOpen={true} 
+            onClose={() => {}} // Handled by context close
+            noteId={drawerData?.noteId} 
+            noteTitle={drawerData?.noteTitle} 
+        />;
+    case 'delete-note':
+        return <DeleteNoteDrawer 
+            isOpen={true} 
+            onClose={() => {}} // Handled by context close
+            onConfirm={drawerData?.onConfirm} 
+            noteTitle={drawerData?.noteTitle} 
+        />;
     default: return null;
   }
 }

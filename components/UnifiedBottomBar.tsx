@@ -241,18 +241,10 @@ export function UnifiedBottomBar() {
 
     evaluateDrawerState();
 
-    const observer = new MutationObserver(() => {
-      evaluateDrawerState();
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'aria-hidden'],
-    });
-
-    return () => observer.disconnect();
+    // The MutationObserver was polling the entire DOM subtree for modal changes, 
+    // which caused significant main-thread jank and random interaction freezes.
+    // We now rely on explicit context (DrawerStateContext) for visibility reconciliation.
+    return () => {};
   }, []);
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));

@@ -5,7 +5,7 @@ import { Box, Typography, IconButton, Button, Stack, Select, MenuItem, FormContr
 import { X } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
-import { grantPermissionSecure, PermissionLevel } from '@/lib/services/internal/unified-permission-service';
+import { grantPermissionSecure, PermissionLevel } from '@/lib/actions/secure-ops';
 import UserSearch from '@/components/UserSearch';
 import { useAuth } from '@/context/auth/AuthContext';
 import toast from 'react-hot-toast';

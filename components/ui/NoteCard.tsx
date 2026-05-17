@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, Chip, alpha } from '@mui/material';
 import { useContextMenu } from './ContextMenuContext';
 import { useDynamicSidebar } from './DynamicSidebar';
@@ -26,8 +26,7 @@ import {
   Spellcheck as GrammarIcon,
 } from '@mui/icons-material';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
-import { ShareNoteDrawer } from '../overlays/ShareNoteDrawer';
-import { DeleteNoteDrawer } from '../overlays/DeleteNoteDrawer';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 import { updateNote, createNote, toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl, getNotePublicState } from '@/lib/appwrite';
 import { useToast } from './Toast';
@@ -46,17 +45,19 @@ interface NoteCardProps {
 
 const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete, onNoteSelect }) => {
   const [mounted, setMounted] = useState(false);
-  const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
-  const [isDeleteDrawerOpen, setIsDeleteDrawerOpen] = useState(false);
   const [isPaywallDialogOpen, setIsPaywallDialogOpen] = useState(false);
   const [isAIProcessing, setIsAIProcessing] = useState(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-
+  
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
   const { isPinned, pinNote, unpinNote, upsertNote } = useNotes();
   const { user } = useAuth();
+  
+  // Decouple from frequent state changes in UnifiedDrawerContext
+  const unifiedDrawer = useUnifiedDrawer();
+  const openShare = useCallback(() => unifiedDrawer.open('share-note', { noteId: note.$id, noteTitle: note.title }), [unifiedDrawer, note.$id, note.title]);
+  const openDelete = useCallback(() => unifiedDrawer.open('delete-note', { noteTitle: note.title, onConfirm: async () => onDelete?.(note.$id) }), [unifiedDrawer, note.title, note.$id, onDelete]);
+  
   const { promptSudo } = useSudo();
   const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError, showInfo } = useToast();
@@ -208,7 +209,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         }
       }
     };
-
     handleRotate();
   };
 
@@ -268,12 +268,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     );
   };
 
-  const handleDelete = () => {
-    if (onDelete && note.$id) {
-      onDelete(note.$id);
-    }
-  };
-
   const contextMenuItems = [
     { label: pinned ? 'Unpin' : 'Pin', icon: pinned ? <PinIcon sx={{ fontSize: 18 }} /> : <PinOutlinedIcon sx={{ fontSize: 18 }} />, onClick: () => { handlePinToggle(); } },
     ...(isPublic ? [{ label: 'Copy Share Link', icon: <LinkIcon sx={{ fontSize: 18 }} />, onClick: () => { handleCopyShareLink(); } }, { label: 'Change Public Link', icon: <RefreshIcon sx={{ fontSize: 18 }} />, onClick: () => { handleRotatePublicLink(); } }] : []),
@@ -285,8 +279,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       { label: 'AI Fix Grammar', icon: <GrammarIcon sx={{ fontSize: 18, color: 'primary.main' }} />, onClick: () => { handleAIAction('grammar'); } },
       { label: 'Convert To Todo', icon: <TodoIcon sx={{ fontSize: 18, color: 'primary.main' }} />, onClick: () => { handleCreateTodo(); } }
     ] : []),
-    { label: 'Share with...', icon: <ShareIcon sx={{ fontSize: 18 }} />, onClick: () => setIsShareDrawerOpen(true) },
-    { label: 'Delete', icon: <TrashIcon sx={{ fontSize: 18 }} />, onClick: () => setIsDeleteDrawerOpen(true), variant: 'destructive' as const }
+    { label: 'Share with...', icon: <ShareIcon sx={{ fontSize: 18 }} />, onClick: openShare },
+    { label: 'Delete', icon: <TrashIcon sx={{ fontSize: 18 }} />, onClick: openDelete, variant: 'destructive' as const }
   ];
 
   const openCardActionsMenu = (e: React.MouseEvent) => {
@@ -298,18 +292,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   return (
     <>
-      <DeleteNoteDrawer
-        isOpen={isDeleteDrawerOpen}
-        onClose={() => setIsDeleteDrawerOpen(false)}
-        onConfirm={async () => onDelete?.(note.$id)}
-        noteTitle={note.title || 'Untitled note'}
-      />
-      <ShareNoteDrawer 
-        isOpen={isShareDrawerOpen} 
-        onClose={() => setIsShareDrawerOpen(false)} 
-        noteId={note.$id} 
-        noteTitle={note.title || 'Untitled note'} 
-      />
       {!mounted ? (
         <Box sx={{ height: 200 }} />
       ) : (
