@@ -24,3 +24,4 @@ single-codebase workflow.
 - `kylrix-appwrite-audit`
 - `kylrix-sdk-consistency`
 - `kylrix-token-ops-security`
+- `render-glitch-detector`
