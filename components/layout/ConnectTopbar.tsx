@@ -21,6 +21,8 @@ import {
   Bot,
   ChevronDown,
   Wallet,
+  Copy as CopyIcon,
+  User as UserIcon,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -48,6 +50,11 @@ function isRenderableImageSrc(value?: string | null) {
   return /^(https?:)?\/\//.test(value) || value.startsWith('data:') || value.startsWith('blob:');
 }
 
+function shortenUserId(fullId?: string | null) {
+  if (!fullId) return null;
+  return fullId.length > 12 ? `${fullId.slice(0, 6)}...${fullId.slice(-6)}` : fullId;
+}
+
 export default function ConnectTopbar({
   className,
 }: ConnectTopbarProps) {
@@ -72,6 +79,7 @@ export default function ConnectTopbar({
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username'>('idle');
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
@@ -141,7 +149,29 @@ export default function ConnectTopbar({
 
   const openProfileMenu = useCallback((event: MouseEvent<HTMLElement>) => {
     setProfileMenuAnchorEl(event.currentTarget);
+    setCopyState('idle');
   }, []);
+
+  const handleCopyUserId = useCallback(async () => {
+    if (!profileSeed.userId || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(profileSeed.userId);
+    setCopyState('copied-userid');
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [profileSeed.userId]);
+
+  const handleCopyUsername = useCallback(async () => {
+    if (!profileSeed.username || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(`@${profileSeed.username}`);
+    setCopyState('copied-username');
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [profileSeed.username]);
+
+  const handleOpenFullProfile = useCallback(() => {
+    if (!profileSeed.username) return;
+    stageProfileView(profileSeed as any, profileSeed.avatar || null);
+    handleCloseAll();
+    router.push(`/u/${encodeURIComponent(profileSeed.username)}?transition=profile`);
+  }, [profileSeed, handleCloseAll, router]);
 
   const connectApps = useMemo(
     () =>
@@ -171,26 +201,6 @@ export default function ConnectTopbar({
 
   const renderProfilePanel = () => {
     if (!profileMenuAnchorEl || !user) return null;
-    const handleProfileWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-      const node = event.currentTarget;
-      const atTop = node.scrollTop <= 0;
-
-      if (event.deltaY < 0 && atTop) {
-        event.preventDefault();
-        handleCloseAll();
-        return;
-      }
-
-      if (event.deltaY > 0 && isTopbarScrollAtBottom(node)) {
-        event.preventDefault();
-        const username = profileSeed.username;
-        if (username) {
-          stageProfileView(profileSeed as any, profileSeed.avatar || null);
-          handleCloseAll();
-          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
-        }
-      }
-    };
 
     return (
       <Box
@@ -202,7 +212,6 @@ export default function ConnectTopbar({
         }}
       >
         <Box
-          onWheel={handleProfileWheel}
           sx={{ px: { xs: 2, md: 4 }, py: 1.5, maxHeight: TOPBAR_LAYOUT.searchDockMaxHeight, overflowY: 'auto' }}
         >
           <Paper
@@ -236,20 +245,55 @@ export default function ConnectTopbar({
               </Box>
 
               <Box sx={{ display: 'grid', gap: 1.25, maxHeight: '58vh', overflowY: 'auto', pr: 0.5, pb: 0.5 }}>
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
                   <Avatar
                     src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
-                    sx={{ width: 104, height: 104, bgcolor: tone.secondary, color: '#fff', fontWeight: 900, borderRadius: '28px' }}
+                    sx={{ width: 104, height: 104, bgcolor: tone.secondary, color: '#fff', fontWeight: 900, borderRadius: '28px', flexShrink: 0 }}
                   >
                     {profileName.slice(0, 1).toUpperCase()}
                   </Avatar>
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1.05 }} noWrap>
-                      {profileName}
-                    </Typography>
-                    <Typography sx={{ color: alpha('#fff', 0.62), fontWeight: 700, fontSize: '0.86rem', lineHeight: 1.35 }} noWrap>
-                      {profileUsername ? `@${String(profileUsername).replace(/^@+/, '')}` : 'profile'}
-                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
+                      <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1.05, minWidth: 0, flex: 1 }} noWrap>
+                        {profileName}
+                      </Typography>
+                      <IconButton
+                        onClick={handleOpenFullProfile}
+                        disabled={!profileSeed.username}
+                        size="small"
+                        sx={{
+                          flexShrink: 0,
+                          width: 32,
+                          height: 32,
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' },
+                          '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)' }
+                        }}
+                      >
+                        <UserIcon size={18} />
+                      </IconButton>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                      <Typography sx={{ color: alpha('#fff', 0.62), fontWeight: 700, fontSize: '0.86rem', lineHeight: 1.35, minWidth: 0, flex: 1 }} noWrap>
+                        {profileUsername ? `@${String(profileUsername).replace(/^@+/, '')}` : 'profile'}
+                      </Typography>
+                      {profileUsername && (
+                        <IconButton
+                          onClick={handleCopyUsername}
+                          size="small"
+                          title={copyState === 'copied-username' ? 'Copied!' : 'Copy username'}
+                          sx={{
+                            flexShrink: 0,
+                            width: 28,
+                            height: 28,
+                            color: copyState === 'copied-username' ? '#10B981' : 'rgba(255, 255, 255, 0.4)',
+                            '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' }
+                          }}
+                        >
+                          <CopyIcon size={14} />
+                        </IconButton>
+                      )}
+                    </Box>
                   </Box>
                 </Box>
 
@@ -257,9 +301,27 @@ export default function ConnectTopbar({
                   <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.75 }}>
                     Identity
                   </Typography>
-                  <Typography sx={{ color: 'white', fontSize: '0.88rem', lineHeight: 1.55, wordBreak: 'break-word' }}>
-                    {profileUsername ? `@${String(profileUsername).replace(/^@+/, '')}` : 'No username set.'}
-                  </Typography>
+                  
+                  {/* UserId section with copy button */}
+                  <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                    <Typography sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', fontWeight: 600, minWidth: 0, flex: 1, wordBreak: 'break-all' }}>
+                      {shortenUserId(profileSeed.userId) || 'No ID'}
+                    </Typography>
+                    <IconButton
+                      onClick={handleCopyUserId}
+                      size="small"
+                      title={copyState === 'copied-userid' ? 'Copied!' : 'Copy user ID'}
+                      sx={{
+                        flexShrink: 0,
+                        width: 28,
+                        height: 28,
+                        color: copyState === 'copied-userid' ? '#10B981' : 'rgba(255, 255, 255, 0.4)',
+                        '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' }
+                      }}
+                    >
+                      <CopyIcon size={14} />
+                    </IconButton>
+                  </Box>
                 </Box>
 
                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
@@ -323,26 +385,25 @@ export default function ConnectTopbar({
                   </Button>
                 </Stack>
 
-                <Box sx={{ display: 'flex', justifyContent: 'center', pt: 0.5, pb: 0.25 }}>
-                  <motion.div
-                    drag="y"
-                    dragConstraints={{ top: 0, bottom: 140 }}
-                    dragElastic={0.14}
-                    onDragEnd={(_, info) => {
-                      if (info.offset.y > 64) {
-                        const username = profileUsername ? String(profileUsername).replace(/^@+/, '').toLowerCase() : null;
-                        if (username) {
-                          stageProfileView(profileSeed as any, profileSeed.avatar || null);
-                          handleCloseAll();
-                          router.push(`${getEcosystemUrl('connect')}/u/${encodeURIComponent(username)}?transition=profile`);
-                        }
-                      }
-                    }}
-                    style={{ touchAction: 'pan-y', cursor: 'grab' }}
-                  >
-                    <Box sx={{ width: 56, height: 6, borderRadius: 999, bgcolor: alpha('#fff', 0.14) }} />
-                  </motion.div>
-                </Box>
+                <Button
+                  onClick={handleOpenFullProfile}
+                  disabled={!profileSeed.username}
+                  variant="contained"
+                  sx={{
+                    width: '100%',
+                    borderRadius: '16px',
+                    px: 2,
+                    py: 1.25,
+                    textTransform: 'none',
+                    fontWeight: 900,
+                    bgcolor: '#F59E0B',
+                    color: '#000',
+                    '&:hover': { bgcolor: alpha('#F59E0B', 0.86) },
+                    '&.Mui-disabled': { bgcolor: 'rgba(245,158,11,0.28)', color: 'rgba(255,255,255,0.6)' },
+                  }}
+                >
+                  See full profile
+                </Button>
               </Box>
             </Box>
           </Paper>
