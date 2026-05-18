@@ -12,7 +12,7 @@ import {
   FileText as NotesIcon,
   Share2 as SharedIcon,
   Tag as TagsIcon,
-  Settings as SettingsIcon,
+  FolderKanban as ProjectsIcon,
   Lock as VaultIcon,
   Shield as TotpIcon,
   CheckSquare as FlowIcon,
@@ -68,26 +68,22 @@ export function UnifiedBottomBar() {
     if (appContext === 'note') {
       if (pathname?.includes('/shared')) return 'shared';
       if (pathname?.includes('/tags')) return 'tags';
-      if (pathname?.includes('/settings')) return 'settings';
       return 'notes';
     }
     if (appContext === 'vault') {
       if (pathname?.includes('/sharing')) return 'sharing';
       if (pathname?.includes('/totp')) return 'totp';
-      if (pathname?.includes('/settings')) return 'settings';
       return 'credentials';
     }
     if (appContext === 'flow') {
       if (pathname?.includes('/forms')) return 'forms';
       if (pathname?.includes('/events')) return 'events';
-      if (pathname?.includes('/settings')) return 'settings';
       if (pathname === '/flow' || pathname?.includes('/tasks')) return 'goals';
       return 'goals';
     }
     if (appContext === 'connect') {
       if (pathname?.includes('/chats')) return 'chats';
       if (pathname?.includes('/calls')) return 'calls';
-      if (pathname?.includes('/settings')) return 'settings';
       return 'home';
     }
     return null;
@@ -99,7 +95,7 @@ export function UnifiedBottomBar() {
         notes: '/note/notes',
         shared: '/note/shared',
         tags: '/note/tags',
-        settings: '/settings',
+        projects: '/projects',
       };
       router.push(routes[newValue] || '/note/notes');
     } else if (appContext === 'vault') {
@@ -107,7 +103,7 @@ export function UnifiedBottomBar() {
         credentials: '/vault/dashboard',
         sharing: '/vault/sharing',
         totp: '/vault/totp',
-        settings: '/vault/settings',
+        projects: '/projects',
       };
       router.push(routes[newValue] || '/vault/dashboard');
     } else if (appContext === 'flow') {
@@ -115,7 +111,7 @@ export function UnifiedBottomBar() {
         goals: '/flow',
         forms: '/flow/forms',
         events: '/flow/events',
-        settings: '/settings',
+        projects: '/projects',
       };
       router.push(routes[newValue] || '/flow');
     } else if (appContext === 'connect') {
@@ -123,7 +119,7 @@ export function UnifiedBottomBar() {
         home: '/connect',
         chats: '/connect/chats',
         calls: '/connect/calls',
-        settings: '/settings',
+        projects: '/projects',
       };
       router.push(routes[newValue] || '/connect');
     }
@@ -149,9 +145,9 @@ export function UnifiedBottomBar() {
           icon={<TagsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
-          key="settings"
-          value="settings"
-          icon={<SettingsIcon size={24} strokeWidth={1.5} className="lucide" />}
+          key="projects"
+          value="projects"
+          icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
       ];
     }
@@ -174,9 +170,9 @@ export function UnifiedBottomBar() {
         />
 ,
         <BottomNavigationAction
-          key="settings"
-          value="settings"
-          icon={<SettingsIcon size={24} strokeWidth={1.5} className="lucide" />}
+          key="projects"
+          value="projects"
+          icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
       ];
     }
@@ -198,9 +194,9 @@ export function UnifiedBottomBar() {
           icon={<EventsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
-          key="settings"
-          value="settings"
-          icon={<SettingsIcon size={24} strokeWidth={1.5} className="lucide" />}
+          key="projects"
+          value="projects"
+          icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
       ];
     }
@@ -222,9 +218,9 @@ export function UnifiedBottomBar() {
           icon={<CallsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
         <BottomNavigationAction
-          key="settings"
-          value="settings"
-          icon={<SettingsIcon size={24} strokeWidth={1.5} className="lucide" />}
+          key="projects"
+          value="projects"
+          icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />}
         />,
       ];
     }
@@ -239,7 +235,7 @@ export function UnifiedBottomBar() {
   if (pathname?.startsWith('/accounts')) return null;
 
   // Hide bottom bar on settings page, when a real bottom sheet is open, or on full-page note editor
-  if (pathname === '/settings' || activeContent !== 'navbar' || mode === 'compact' || isDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
+  if (pathname?.includes('/settings') || activeContent !== 'navbar' || mode === 'compact' || isDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
 
   return (
     <Box

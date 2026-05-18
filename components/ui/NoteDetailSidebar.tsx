@@ -169,8 +169,8 @@ export function NoteDetailSidebar({
 
   // ENCRYPTION LOGIC
   const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
-  const isEncryptedNote = (isT4Encrypted || isPublic) && !noteMeta?.clientDecrypted && !isLocallyDecrypted;
-  const isT4EncryptedPublicNote = !!isPublic && isT4Encrypted;
+  const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted;
+  const isT4EncryptedPublicNote = isPublic && isT4Encrypted;
 
   // Sync local state with liveNote (crucial for auto-decryption healing)
   useEffect(() => {
@@ -586,7 +586,7 @@ export function NoteDetailSidebar({
       </Box>
 
       {/* Content Card */}
-      <Box sx={{ p: 2.5, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', flex: 1, minHeight: 300, boxShadow: '0 12px 32px rgba(0,0,0,0.4)', transition: 'all 0.3s ease', '&:focus-within': { borderColor: theme.palette.primary.main, transform: 'translateY(-2px)' } }}>
+      <Box sx={{ p: 2.5, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', minHeight: { xs: 340, md: 460 }, height: { xs: 'clamp(340px, 46vh, 460px)', md: 'clamp(460px, 58vh, 760px)' }, boxShadow: '0 12px 32px rgba(0,0,0,0.4)', transition: 'all 0.3s ease', display: 'flex', flexDirection: 'column', overflow: 'hidden', '&:focus-within': { borderColor: theme.palette.primary.main, transform: 'translateY(-2px)' } }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
           <Typography variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Content</Typography>
           {isEditingContent && (
@@ -596,17 +596,19 @@ export function NoteDetailSidebar({
             </ToggleButtonGroup>
           )}
         </Box>
-        {isEditingContent ? (
-          format === 'text' ? (
-            <TextField fullWidth multiline rows={14} variant="standard" value={content} onChange={(e) => setContent(e.target.value)} onBlur={() => setIsEditingContent(false)} autoFocus inputRef={contentTextareaRef} InputProps={{ disableUnderline: true, sx: { color: 'rgba(255,255,255,0.85)', fontSize: '1rem', lineHeight: 1.8 } }} />
+        <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 1 }}>
+          {isEditingContent ? (
+            format === 'text' ? (
+              <TextField fullWidth multiline rows={14} variant="standard" value={content} onChange={(e) => setContent(e.target.value)} onBlur={() => setIsEditingContent(false)} autoFocus inputRef={contentTextareaRef} InputProps={{ disableUnderline: true, sx: { color: 'rgba(255,255,255,0.85)', fontSize: '1rem', lineHeight: 1.8 } }} />
+            ) : (
+              <Box onClick={() => setShowDoodleEditor(true)} sx={{ height: 200, border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '18px', display: 'grid', placeItems: 'center', cursor: 'pointer', '&:hover': { bgcolor: alpha('#fff', 0.02) } }}><Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>Open Sketchpad</Typography></Box>
+            )
           ) : (
-            <Box onClick={() => setShowDoodleEditor(true)} sx={{ height: 200, border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '18px', display: 'grid', placeItems: 'center', cursor: 'pointer', '&:hover': { bgcolor: alpha('#fff', 0.02) } }}><Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>Open Sketchpad</Typography></Box>
-          )
-        ) : (
-          <Box onClick={activateContentEditing} sx={{ cursor: isEncryptedNote && !vaultUnlocked ? 'pointer' : 'text' }}>
-             <NoteContentRenderer content={displayContent} format={displayFormat} emptyFallback={<Typography variant="body2" sx={{ fontStyle: 'italic', color: theme.palette.text.secondary }}>🔒 Encrypted note content</Typography>} onEditDoodle={displayFormat === 'doodle' ? activateContentEditing : undefined} />
-          </Box>
-        )}
+            <Box onClick={activateContentEditing} sx={{ cursor: isEncryptedNote && !vaultUnlocked ? 'pointer' : 'text', minHeight: '100%' }}>
+               <NoteContentRenderer content={displayContent} format={displayFormat} emptyFallback={<Typography variant="body2" sx={{ fontStyle: 'italic', color: theme.palette.text.secondary }}>🔒 Encrypted note content</Typography>} onEditDoodle={displayFormat === 'doodle' ? activateContentEditing : undefined} />
+            </Box>
+          )}
+        </Box>
       </Box>
 
       {/* Tags Section */}

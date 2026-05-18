@@ -20,6 +20,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebarContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
+import QuickCreateFab from '@/components/ui/QuickCreateFab';
 
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
@@ -40,6 +41,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     pathname?.startsWith('/vault') ||
     pathname?.startsWith('/flow') ||
     pathname?.startsWith('/connect') ||
+    pathname?.startsWith('/projects') ||
     pathname?.startsWith('/accounts') ||
     pathname?.startsWith('/settings')
   ), [pathname]);
@@ -117,6 +119,9 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && (
         <UnifiedBottomBar />
+      )}
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && (
+        <QuickCreateFab />
       )}
 
       {/* --- LAYER 2: OVERLAYS (Strict Unmounting) --- */}
