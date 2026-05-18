@@ -55,6 +55,7 @@ interface CreateNoteFormProps {
     tags?: string[];
   };
   initialFormat?: 'text' | 'doodle';
+  noteKind?: 'note' | 'project';
   noteId?: string;
 }
 
@@ -64,6 +65,7 @@ export default function CreateNoteForm({
   onNoteCreated,
   initialContent,
   initialFormat = 'text',
+  noteKind = 'note',
   noteId,
 }: CreateNoteFormProps) {
   const theme = useTheme();
@@ -90,8 +92,10 @@ export default function CreateNoteForm({
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
   const [hasPaywall, setHasPaywall] = useState(false);
   const [paywallAmount, setPaywallAmount] = useState<number | ''>(0);
+  const [composerKind, setComposerKind] = useState<'note' | 'project'>(noteKind);
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
   const createdToastShown = useRef(false);
+  const persistInFlightRef = useRef<Promise<Notes | null> | null>(null);
 
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -110,10 +114,11 @@ export default function CreateNoteForm({
     format,
     tags: normalizeTags(tags),
     isPublic,
+    composerKind,
     hasPaywall,
     paywallAmount,
     resolvedNoteId: resolvedNoteId || null,
-  }), [title, content, format, tags, isPublic, hasPaywall, paywallAmount, resolvedNoteId]);
+  }), [title, content, format, tags, isPublic, composerKind, hasPaywall, paywallAmount, resolvedNoteId]);
 
   const isDirty = snapshot !== lastSavedSnapshot;
 
@@ -133,11 +138,13 @@ export default function CreateNoteForm({
       const cacheKey = `note_${noteId}`;
       const cached = getCachedData<Notes>(cacheKey);
       if (cached && !cancelled) {
+        const nextComposerKind = (cached as any).kind === 'project' ? 'project' : noteKind;
         setResolvedNoteId(cached.$id);
         setTitle(cached.title || '');
         setContent(cached.content || '');
         setFormat((cached.format as 'text' | 'doodle') || initialFormat);
         setTags(normalizeTags(cached.tags || []));
+        setComposerKind(nextComposerKind);
         const cachedPublic = getNotePublicState(cached as Notes);
         setIsPublic(cachedPublic);
         setPersistedIsPublic(cachedPublic);
@@ -149,6 +156,7 @@ export default function CreateNoteForm({
           content: cached.content || '',
           format: (cached.format as 'text' | 'doodle') || 'text',
           tags: normalizeTags(cached.tags || []),
+          composerKind: nextComposerKind,
           isPublic: !!cached.isPublic,
           hasPaywall: !!paywall?.enabled,
           paywallAmount: paywall?.amount || 0,
@@ -159,11 +167,13 @@ export default function CreateNoteForm({
       try {
         const loaded = await fetchOptimized(cacheKey, () => getNote(noteId));
         if (cancelled || !loaded) return;
+        const nextComposerKind = (loaded as any).kind === 'project' ? 'project' : noteKind;
         setResolvedNoteId(loaded.$id);
         setTitle(loaded.title || '');
         setContent(loaded.content || '');
         setFormat((loaded.format as 'text' | 'doodle') || initialFormat);
         setTags(normalizeTags(loaded.tags || []));
+        setComposerKind(nextComposerKind);
         const loadedPublic = getNotePublicState(loaded as Notes);
         setIsPublic(loadedPublic);
         setPersistedIsPublic(loadedPublic);
@@ -175,6 +185,7 @@ export default function CreateNoteForm({
           content: loaded.content || '',
           format: (loaded.format as 'text' | 'doodle') || 'text',
           tags: normalizeTags(loaded.tags || []),
+          composerKind: nextComposerKind,
           isPublic: !!loaded.isPublic,
           hasPaywall: !!paywall?.enabled,
           paywallAmount: paywall?.amount || 0,
@@ -191,7 +202,7 @@ export default function CreateNoteForm({
     return () => {
       cancelled = true;
     };
-  }, [fetchOptimized, getCachedData, initialFormat, noteId]);
+  }, [fetchOptimized, getCachedData, initialFormat, noteId, noteKind]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -234,12 +245,18 @@ export default function CreateNoteForm({
   }, [content]);
 
   const persist = useCallback(async (showToast = true) => {
+    if (persistInFlightRef.current) {
+      return persistInFlightRef.current;
+    }
+
+    const runPersist = (async () => {
     const normalizedTags = normalizeTags(tags);
     const payload = {
       title: title.trim(),
       content: content.trim(),
       format,
       tags: normalizedTags,
+      kind: composerKind,
       isPublic,
       metadata: JSON.stringify({
         paywall: hasPaywall && paywallAmount ? {
@@ -264,8 +281,8 @@ export default function CreateNoteForm({
       let saved: Notes;
       const generatedTitle = payload.title || (
         format === 'doodle'
-          ? `Sketch ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-          : buildAutoTitleFromContent(payload.content) || 'Untitled Thought'
+          ? `${composerKind === 'project' ? 'Project sketch' : 'Sketch'} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : buildAutoTitleFromContent(payload.content) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
       );
 
       if (resolvedNoteId) {
@@ -331,6 +348,7 @@ export default function CreateNoteForm({
           content: saved.content || '',
           format: (saved.format as 'text' | 'doodle') || format,
           tags: normalizeTags((saved.tags || []) as string[]),
+          composerKind,
           isPublic: livePublicState,
           hasPaywall: !!paywall?.enabled,
           paywallAmount: paywall?.amount || 0,
@@ -348,7 +366,15 @@ export default function CreateNoteForm({
     } finally {
       setIsSaving(false);
     }
-  }, [content, format, hasPaywall, isPublic, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
+    })();
+
+    persistInFlightRef.current = runPersist;
+    try {
+      return await runPersist;
+    } finally {
+      persistInFlightRef.current = null;
+    }
+  }, [composerKind, content, format, hasPaywall, isPublic, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
 
   const handleClose = useCallback(async () => {
     const shouldPersist = Boolean((resolvedNoteId && isDirty) || (!resolvedNoteId && (title.trim() || content.trim())));
@@ -429,7 +455,7 @@ export default function CreateNoteForm({
             </Box>
             <Box>
               <Typography sx={{ fontWeight: 900, letterSpacing: '-0.03em' }}>
-                {resolvedNoteId ? 'Edit note' : 'New note'}
+                {resolvedNoteId ? (composerKind === 'project' ? 'Edit project' : 'Edit note') : (composerKind === 'project' ? 'New project' : 'New note')}
               </Typography>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
                 {isSaving ? 'Saving…' : isDirty ? 'Unsaved changes' : 'Autosaves on close'}

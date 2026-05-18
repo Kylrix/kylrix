@@ -788,6 +788,31 @@ export async function deleteNote(noteId: string) {
     // Remove reactions directly attached to the note
     await deleteReactionsForTarget(TargetType.NOTE, noteId);
 
+    // Remove any note key mappings / decryption caches tied to this note
+    try {
+      const mappingsQuery = databases.listDocuments(
+        APPWRITE_CONFIG.DATABASES.VAULT,
+        'key_mapping',
+        [
+          Query.equal('resourceType', 'note'),
+          Query.equal('resourceId', noteId),
+          Query.limit(1000),
+        ] as any
+      );
+      const mappingsRes = await Promise.race([
+        mappingsQuery,
+        new Promise<{ documents: any[] }>((resolve) => setTimeout(() => resolve({ documents: [] }), 2500)),
+      ]);
+      await Promise.all(
+        (mappingsRes.documents as any[]).map((mapping) =>
+          databases.deleteDocument(APPWRITE_CONFIG.DATABASES.VAULT, 'key_mapping', mapping.$id)
+        )
+      );
+    } catch (err) {
+      console.error('deleteNote key_mapping cleanup failed:', err);
+    }
+    invalidatePublicNoteDecryptionKey(noteId);
+
     // Remove comments and their reactions
     const commentsRes = await databases.listDocuments(
       APPWRITE_DATABASE_ID,
@@ -1283,7 +1308,7 @@ export async function deleteReactionsForTarget(targetType: TargetType, targetId:
   const ids = Array.isArray(targetId) ? targetId.filter(Boolean) : [targetId];
   if (!ids.length) return;
   try {
-    const res = await databases.listDocuments(
+    const query = databases.listDocuments(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_REACTIONS,
       [
@@ -1292,6 +1317,10 @@ export async function deleteReactionsForTarget(targetType: TargetType, targetId:
         Query.limit(Math.min(1000, Math.max(50, ids.length * 10)))
       ] as any
     );
+    const timeout = new Promise<{ documents: any[] }>((resolve) =>
+      setTimeout(() => resolve({ documents: [] }), 2500)
+    );
+    const res = await Promise.race([query, timeout]);
     await Promise.all(
       (res.documents as any[]).map((doc) =>
         databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, doc.$id)

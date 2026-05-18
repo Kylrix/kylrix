@@ -37,6 +37,8 @@ import {
   ArrowBack as BackIcon,
   Link as LinkIcon,
   Lock as LockIcon,
+  LockOpen as UnlockIcon,
+  Public as PublicIcon,
   Refresh as RefreshIcon,
   Close as CloseIcon,
   Share as ShareIcon,
@@ -47,7 +49,6 @@ import {
   VpnKey as KeyIcon,
 } from '@mui/icons-material';
 import { useToast } from '@/components/ui/Toast';
-import { useRouter } from 'next/navigation';
 import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -64,6 +65,7 @@ import {
   listFlowEvents, 
   listKeepCredentials, 
   Query, 
+  realtime,
   toggleNoteVisibility, 
   rotatePublicNoteLink, 
   getShareableUrl, 
@@ -103,15 +105,24 @@ export function NoteDetailSidebar({
   const { setIsDrawerOpen } = useDrawerState();
   const { showSuccess, showError } = useToast();
   const { openProUpgrade } = useProUpgrade();
-  const router = useRouter();
   const { closeSidebar } = useDynamicSidebar();
   const { openCallLauncher } = useCallLauncher();
 
   const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
+  const [realtimeNote, setRealtimeNote] = useState<Notes | null>(null);
+  const noteRef = useRef(note);
   const liveNote = useMemo(
-    () => allNotes.find((candidate) => candidate.$id === note.$id) || note,
-    [allNotes, note]
+    () => (realtimeNote?.$id === note.$id ? realtimeNote : allNotes.find((candidate) => candidate.$id === note.$id) || note),
+    [allNotes, note, realtimeNote]
   );
+
+  useEffect(() => {
+    noteRef.current = note;
+  }, [note]);
+
+  useEffect(() => {
+    setRealtimeNote(null);
+  }, [note.$id]);
   
   const noteMeta = useMemo(() => {
     try {
@@ -283,6 +294,52 @@ export function NoteDetailSidebar({
     return () => { active = false; };
   }, [liveNote.$id]);
 
+  const hasEditableCollaborators = useMemo(() => {
+    return collaboratorProfiles.some((profile: any) => {
+      const level = String(profile?.permissionLevel || profile?.permission || '').trim().toLowerCase();
+      return level === 'write' || level === 'admin';
+    });
+  }, [collaboratorProfiles]);
+
+  useEffect(() => {
+    if (!liveNote.$id) return;
+    if (isLoadingCollaborators) return;
+    if (!hasEditableCollaborators) {
+      setRealtimeNote(null);
+      return;
+    }
+
+    const channel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents.${liveNote.$id}`;
+    const unsubscribe = realtime.subscribe(channel, (response) => {
+      const payload = response.payload as Notes;
+      if (!payload?.$id) return;
+
+      const isCreate = response.events.some((event) => event.includes('.create'));
+      const isUpdate = response.events.some((event) => event.includes('.update'));
+      const isDelete = response.events.some((event) => event.includes('.delete'));
+
+      if (isDelete) {
+        setRealtimeNote(null);
+        return;
+      }
+
+      if (!isCreate && !isUpdate) return;
+
+      setRealtimeNote((current) => {
+        const base = current || noteRef.current;
+        return base ? { ...base, ...payload } : payload;
+      });
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        (unsubscribe as any)();
+      } else if (unsubscribe && typeof (unsubscribe as any).unsubscribe === 'function') {
+        (unsubscribe as any).unsubscribe();
+      }
+    };
+  }, [liveNote.$id, hasEditableCollaborators, isLoadingCollaborators]);
+
   useEffect(() => {
     let active = true;
     const fetchSuggest = async () => {
@@ -406,6 +463,24 @@ export function NoteDetailSidebar({
     }
   }, [liveNote, onUpdate, showSuccess, showError]);
 
+  const handleOpenSharedNote = useCallback(async () => {
+    if (!isPublic) {
+      showError('Note is private', 'Make the note public before opening its shared link.');
+      return;
+    }
+
+    const sharedUrl = isT4Encrypted
+      ? await getCurrentPublicNoteShareUrl(liveNote.$id)
+      : getShareableUrl(liveNote.$id);
+
+    if (!sharedUrl) {
+      showError('Shared link unavailable', 'Could not resolve the shared note URL.');
+      return;
+    }
+
+    window.open(sharedUrl, '_blank', 'noopener,noreferrer');
+  }, [isPublic, isT4Encrypted, liveNote.$id, showError]);
+
   const handleStartNoteHuddle = useCallback(() => {
     const ownerId = liveNote.userId;
     const collaborators = Array.isArray(liveNote.collaborators) 
@@ -466,9 +541,32 @@ export function NoteDetailSidebar({
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
         <IconButton onClick={onBack || closeSidebar} sx={{ color: theme.palette.text.secondary }}><BackIcon /></IconButton>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Tooltip title={isPublic ? 'Make Private' : 'Make Public'}>
+            <IconButton
+              onClick={handleTogglePublic}
+              sx={{
+                color: isPublic ? theme.palette.success.main : theme.palette.text.secondary,
+                bgcolor: isPublic ? alpha(theme.palette.success.main, 0.12) : alpha(theme.palette.text.primary, 0.04),
+                '&:hover': { bgcolor: isPublic ? alpha(theme.palette.success.main, 0.18) : alpha(theme.palette.text.primary, 0.08) }
+              }}
+            >
+              {isPublic ? <PublicIcon fontSize="small" /> : <LockIcon fontSize="small" />}
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Action hub"><IconButton onClick={() => setShowActionHub(true)} sx={{ color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.08) }}><ActionIcon fontSize="small" /></IconButton></Tooltip>
           <Tooltip title="Start huddle"><IconButton onClick={handleStartNoteHuddle} sx={{ color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.08) }}><VideoCallIcon fontSize="small" /></IconButton></Tooltip>
-          {showExpandButton && <Tooltip title="Full page"><IconButton onClick={() => { closeSidebar(); router.push(`/notes/${liveNote.$id}`); }} sx={{ color: theme.palette.text.secondary }}><OpenIcon fontSize="small" /></IconButton></Tooltip>}
+          {showExpandButton && isPublic && (
+            <Tooltip title={isPublic ? 'Open shared note' : 'Make public to open shared link'}>
+              <span>
+                <IconButton
+                  onClick={handleOpenSharedNote}
+                  sx={{ color: theme.palette.text.secondary }}
+                >
+                  <LinkIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
           <Tooltip title={isPinned(liveNote.$id) ? 'Unpin' : 'Pin'}><IconButton onClick={handlePinToggle} sx={{ color: isPinned(liveNote.$id) ? theme.palette.primary.main : theme.palette.text.secondary }}><PinIcon fontSize="small" /></IconButton></Tooltip>
           {isT4EncryptedPublicNote && <Tooltip title="Rotate link"><IconButton onClick={rotateNoteLink} sx={{ color: theme.palette.text.secondary }}><RefreshIcon fontSize="small" /></IconButton></Tooltip>}
           {showHeaderDeleteButton && <Tooltip title="Delete"><IconButton onClick={() => setShowDeleteConfirm(true)} sx={{ color: theme.palette.text.secondary, '&:hover': { color: theme.palette.error.main, bgcolor: alpha(theme.palette.error.main, 0.1) } }}><TrashIcon fontSize="small" /></IconButton></Tooltip>}
@@ -477,7 +575,9 @@ export function NoteDetailSidebar({
 
       {/* Title Card */}
       <Box sx={{ p: 2.5, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', boxShadow: '0 12px 32px rgba(0,0,0,0.4)', transition: 'all 0.3s ease', '&:focus-within': { borderColor: theme.palette.secondary.main, transform: 'translateY(-2px)' } }}>
-        <Typography variant="caption" sx={{ color: theme.palette.secondary.main, fontWeight: 900, textTransform: 'uppercase', display: 'block', mb: 1, letterSpacing: '0.1em' }}>Title</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 1 }}>
+          <Typography variant="caption" sx={{ color: theme.palette.secondary.main, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Title</Typography>
+        </Box>
         {isEditingTitle ? (
           <TextField fullWidth variant="standard" value={title} onChange={(e) => setTitle(e.target.value)} onBlur={() => setIsEditingTitle(false)} autoFocus InputProps={{ disableUnderline: true, sx: { fontSize: '1.4rem', fontWeight: 900, color: 'white', fontFamily: 'var(--font-clash)' } }} />
         ) : (
@@ -606,6 +706,14 @@ export function NoteDetailSidebar({
             <IconButton onClick={() => setShowActionHub(false)} sx={{ color: 'rgba(255,255,255,0.6)' }}><CloseIcon /></IconButton>
           </Box>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+            <Button
+              variant="outlined"
+              startIcon={isPublic ? <LockIcon /> : <UnlockIcon />}
+              onClick={() => { setShowActionHub(false); void handleTogglePublic(); }}
+              sx={{ borderRadius: '14px', fontWeight: 800, color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}
+            >
+              {isPublic ? 'Make Private' : 'Make Public'}
+            </Button>
             <Button variant="contained" startIcon={<TaskIcon />} onClick={handleCreateTaskFromNote} disabled={isCreatingTaskFromNote} sx={{ borderRadius: '14px', fontWeight: 900, bgcolor: theme.palette.primary.main }}>Create Goal</Button>
             <Button variant="outlined" startIcon={<LockIcon />} onClick={() => { setShowActionHub(false); rotateNoteLink(); }} disabled={!isPublic} sx={{ borderRadius: '14px', fontWeight: 800, color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>Rotate Link</Button>
           </Box>
