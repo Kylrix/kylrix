@@ -93,7 +93,7 @@ export const Profile = ({ username }: ProfileProps) => {
                 if (profilePicId?.startsWith('http')) {
                     setProfileUrl(profilePicId);
                 } else if (profilePicId) {
-                    const url = await fetchProfilePreview(profilePicId, 140, 140);
+                    const url = await fetchProfilePreview(profilePicId, 320, 320);
                     if (mounted) setProfileUrl(url as unknown as string);
                 } else if (mounted) setProfileUrl(null);
             } catch (_err: unknown) {
@@ -106,16 +106,18 @@ export const Profile = ({ username }: ProfileProps) => {
     }, [profile, currentUser]);
 
     useEffect(() => {
+        // Only subscribe if we have a target username to avoid infinite cycles
+        if (!normalizedUsername) return;
+
         const unsubscribe = subscribeIdentityCache((identity) => {
-            if (normalizedUsername && identity.username === normalizedUsername) {
-                setProfile(identity);
-            } else if (profile?.userId && identity.userId === profile.userId) {
+            // Single stable comparison: only update if username matches
+            if (identity.username === normalizedUsername) {
                 setProfile(identity);
             }
         });
 
         return unsubscribe;
-    }, [normalizedUsername, profile?.userId]);
+    }, [normalizedUsername]);
 
     // Determine whether the viewed profile belongs to the logged-in user.
     // Previously we compared the URL username to the viewed profile username which
@@ -403,9 +405,9 @@ export const Profile = ({ username }: ProfileProps) => {
         <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 4 } }}>
                 {/* Profile Header Card */}
                 <Paper sx={{ 
-                    p: { xs: 3, sm: 4 }, 
+                    p: { xs: 3, sm: 5 }, 
                     borderRadius: '28px', 
-                    mb: 4,
+                    mb: 5,
                     background: '#161412',
                     border: '1px solid rgba(255, 255, 255, 0.06)',
                     position: 'relative',
@@ -422,42 +424,46 @@ export const Profile = ({ username }: ProfileProps) => {
                         borderRadius: '28px'
                     }
                 }} elevation={0}>
-                {/* Accent gradient accent for visual interest */}
+                {/* Accent gradient - static, no re-render triggers */}
                 <Box sx={{
                     position: 'absolute',
-                    top: -80,
-                    right: -80,
-                    width: 180,
-                    height: 180,
+                    top: -100,
+                    right: -100,
+                    width: 200,
+                    height: 200,
                     background: 'radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0) 70%)',
-                    filter: 'blur(50px)',
+                    filter: 'blur(35px)',
+                    willChange: 'auto',
                     zIndex: 0
                 }} />
 
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'center', sm: 'flex-start' }, gap: { xs: 3, sm: 4 }, position: 'relative', zIndex: 1 }}>
-                    {/* Avatar */}
-                    <Box onClick={handleNavigateToPublic} sx={{ cursor: 'pointer', flexShrink: 0 }}>
-                        <IdentityAvatar
-                            src={profileUrl || profile.avatar}
-                            alt={profile.displayName || profile.username || 'profile'}
-                            fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
-                            verified={identityFlags.verified}
-                            pro={identityFlags.pro}
-                            size={140}
-                            verifiedSize={22}
-                            borderRadius="24px"
-                        />
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={{ xs: 3, sm: 5 }} alignItems={{ xs: 'center', sm: 'flex-start' }} position="relative" zIndex={1}>
+                    {/* Avatar Section */}
+                    <Box sx={{ flexShrink: 0, textAlign: 'center' }}>
+                        <Box onClick={handleNavigateToPublic} sx={{ cursor: 'pointer', mb: 2 }}>
+                            <IdentityAvatar
+                                src={profileUrl || profile.avatar}
+                                alt={profile.displayName || profile.username || 'profile'}
+                                fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
+                                verified={identityFlags.verified}
+                                pro={identityFlags.pro}
+                                size={160}
+                                verifiedSize={24}
+                                borderRadius="28px"
+                            />
+                        </Box>
                     </Box>
 
-                    {/* Profile Info */}
+                    {/* Profile Info Section */}
                     <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
-                        <Typography onClick={handleNavigateToPublic} variant="h3" sx={{ 
+                        <Typography onClick={handleNavigateToPublic} variant="h2" sx={{ 
                             fontWeight: 900, 
                             mb: 0.5,
                             fontFamily: 'var(--font-clash)',
                             letterSpacing: '-0.04em',
                             cursor: 'pointer',
                             transition: 'opacity 0.2s',
+                            fontSize: { xs: '1.75rem', sm: '2rem' },
                             '&:hover': { opacity: 0.8 }
                         }}>
                             <IdentityName verified={identityFlags.verified} sx={{ fontWeight: 900 }}>
@@ -474,19 +480,22 @@ export const Profile = ({ username }: ProfileProps) => {
                         }}>
                             @{profile.username}
                         </Typography>
-                        <Typography variant="body2" sx={{ 
-                            mt: 2.5, 
-                            lineHeight: 1.6,
-                            color: 'rgba(255, 255, 255, 0.7)',
-                            maxWidth: '500px',
-                            opacity: profile?.__isFallback ? 0.4 : 1,
-                            fontWeight: 500
-                        }}>
-                            {profile.bio || (profile?.__isFallback ? 'This identity is private within Connect.' : 'No bio yet.')}
-                        </Typography>
+                        
+                        {profile.bio && (
+                            <Typography variant="body2" sx={{ 
+                                mt: 2.5, 
+                                lineHeight: 1.7,
+                                color: 'rgba(255, 255, 255, 0.75)',
+                                maxWidth: '100%',
+                                fontWeight: 500,
+                                mb: 3
+                            }}>
+                                {profile.bio}
+                            </Typography>
+                        )}
 
                         {/* Action Buttons */}
-                        <Box sx={{ display: 'flex', gap: 1, mt: 4, justifyContent: { xs: 'center', sm: 'flex-start' }, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mt: 3.5 }} alignItems={{ xs: 'stretch', sm: 'flex-start' }}>
                             {isOwnProfile ? (
                                 <>
                                     <Button
@@ -503,7 +512,8 @@ export const Profile = ({ username }: ProfileProps) => {
                                             '&:hover': { 
                                                 bgcolor: '#DBA400'
                                             },
-                                            textTransform: 'none'
+                                            textTransform: 'none',
+                                            whiteSpace: 'nowrap'
                                         }}
                                         onClick={() => setIsEditModalOpen(true)}
                                     >
@@ -525,7 +535,8 @@ export const Profile = ({ username }: ProfileProps) => {
                                                 borderColor: 'rgba(99, 102, 241, 0.4)',
                                                 bgcolor: 'rgba(99, 102, 241, 0.04)'
                                             },
-                                            textTransform: 'none'
+                                            textTransform: 'none',
+                                            whiteSpace: 'nowrap'
                                         }}
                                         onClick={() => {
                                             router.push(`/accounts/settings?source=${encodeURIComponent(window.location.origin)}`);
@@ -551,7 +562,8 @@ export const Profile = ({ username }: ProfileProps) => {
                                             '&:hover': { 
                                                 bgcolor: isFollowing ? 'rgba(245, 158, 11, 0.08)' : '#DBA400'
                                             },
-                                            textTransform: 'none'
+                                            textTransform: 'none',
+                                            whiteSpace: 'nowrap'
                                         }}
                                         onClick={handleFollow}
                                         disabled={followLoading || !currentUser}
@@ -574,7 +586,8 @@ export const Profile = ({ username }: ProfileProps) => {
                                                 borderColor: 'rgba(99, 102, 241, 0.4)',
                                                 bgcolor: 'rgba(99, 102, 241, 0.04)'
                                             },
-                                            textTransform: 'none'
+                                            textTransform: 'none',
+                                            whiteSpace: 'nowrap'
                                         }}
                                         onClick={handleMessage}
                                     >
@@ -595,7 +608,8 @@ export const Profile = ({ username }: ProfileProps) => {
                                                 borderColor: 'rgba(99, 102, 241, 0.4)',
                                                 bgcolor: 'rgba(99, 102, 241, 0.04)'
                                             },
-                                            textTransform: 'none'
+                                            textTransform: 'none',
+                                            whiteSpace: 'nowrap'
                                         }}
                                         onClick={handleTip}
                                         disabled={!currentUser}
@@ -617,7 +631,8 @@ export const Profile = ({ username }: ProfileProps) => {
                                                 borderColor: '#F59E0B',
                                                 bgcolor: 'rgba(245, 158, 11, 0.06)'
                                             },
-                                            textTransform: 'none'
+                                            textTransform: 'none',
+                                            whiteSpace: 'nowrap'
                                         }}
                                         onClick={handleRequest}
                                         disabled={!currentUser}
@@ -641,7 +656,8 @@ export const Profile = ({ username }: ProfileProps) => {
                                                 color: 'rgba(239, 68, 68, 0.8)',
                                                 bgcolor: 'rgba(239, 68, 68, 0.04)'
                                             },
-                                            textTransform: 'none'
+                                            textTransform: 'none',
+                                            whiteSpace: 'nowrap'
                                         }}
                                         onClick={() => setIsReportModalOpen(true)}
                                         disabled={!currentUser}
@@ -650,9 +666,9 @@ export const Profile = ({ username }: ProfileProps) => {
                                     </Button>
                                 </>
                             )}
-                        </Box>
+                        </Stack>
                     </Box>
-                </Box>
+                </Stack>
             </Paper>
 
             {!isOwnProfile && profile?.userId && (
