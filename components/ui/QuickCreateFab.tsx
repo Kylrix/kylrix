@@ -119,7 +119,7 @@ export default function QuickCreateFab() {
         sx={{
           position: 'fixed',
           inset: 0,
-          zIndex: 999,
+          zIndex: 1301,
           pointerEvents: 'none',
           opacity: open ? 1 : 0,
           transition: 'opacity 220ms ease',
@@ -129,7 +129,7 @@ export default function QuickCreateFab() {
       />
       <SpeedDial
         ariaLabel="Quick create"
-        sx={baseSx}
+        sx={{ ...baseSx, zIndex: 1310 }}
         icon={<SpeedDialIcon icon={<Plus size={24} strokeWidth={1.5} />} openIcon={<X size={24} strokeWidth={1.5} />} />}
         onClose={() => setOpen(false)}
         onOpen={() => setOpen(true)}
