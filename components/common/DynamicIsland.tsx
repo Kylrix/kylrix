@@ -366,7 +366,7 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
   const profile = profileFromContext || cachedIdentity || null;
   const previewSource = profile?.avatarUrl || profile?.avatarFileId || profile?.avatar || (user?.prefs as any)?.profilePicId || null;
   const profilePreviewUrl = useCachedProfilePreview(previewSource, 160, 160);
-  const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
+  const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username'>('idle');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -392,33 +392,21 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
   const handleCopyUserId = useCallback(async () => {
     if (!fullUserId || typeof navigator === 'undefined' || !navigator.clipboard) return;
     await navigator.clipboard.writeText(fullUserId);
-    setCopyState('copied');
+    setCopyState('copied-userid');
     window.setTimeout(() => setCopyState('idle'), 1600);
   }, [fullUserId]);
+
+  const handleCopyUsername = useCallback(async () => {
+    if (!username || typeof navigator === 'undefined' || !navigator.clipboard) return;
+    await navigator.clipboard.writeText(`@${username}`);
+    setCopyState('copied-username');
+    window.setTimeout(() => setCopyState('idle'), 1600);
+  }, [username]);
 
   const handleSignOut = useCallback(() => {
     onClosePanel();
     void logout();
   }, [logout, onClosePanel]);
-
-  const handleProfileWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
-    const node = scrollContainerRef.current;
-    if (!node) return;
-
-    const atTop = node.scrollTop <= 0;
-    const atBottom = Math.ceil(node.scrollTop + node.clientHeight) >= node.scrollHeight;
-
-    if (event.deltaY < 0 && atTop) {
-      event.preventDefault();
-      onClosePanel();
-      return;
-    }
-
-    if (event.deltaY > 0 && atBottom) {
-      event.preventDefault();
-      void openFullProfile();
-    }
-  }, [onClosePanel, openFullProfile]);
 
   if (isLoading && !profile) {
     return (
@@ -446,11 +434,10 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
   return (
     <Box
       ref={scrollContainerRef}
-      onWheel={handleProfileWheel}
       sx={{ display: 'grid', gap: 1.25, minWidth: 0, overflowX: 'hidden', overflowY: 'auto', maxHeight: '58vh', pr: 0.5, pb: 0.5 }}
     >
 
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', minWidth: 0 }}>
+      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', minWidth: 0 }}>
         <Box sx={{ flexShrink: 0 }}>
           <IdentityAvatar
             src={profilePreviewUrl || previewSource || undefined}
@@ -462,15 +449,68 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
         </Box>
 
         <Box sx={{ minWidth: 0, flex: 1 }}>
-          <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1.05 }} noWrap>
-            {displayName}
-          </Typography>
-          <Typography sx={{ color: alpha('#fff', 0.62), fontWeight: 700, fontSize: '0.86rem', lineHeight: 1.35 }} noWrap>
-            @{username || 'profile'}
-          </Typography>
-          <Typography sx={{ color: alpha('#fff', 0.52), fontFamily: 'var(--font-mono)', fontSize: '0.72rem', mt: 0.75 }} noWrap>
-            {shortUserId}
-          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.5 }}>
+            <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1.05, minWidth: 0, flex: 1 }} noWrap>
+              {displayName}
+            </Typography>
+            <IconButton
+              onClick={openFullProfile}
+              disabled={!username}
+              size="small"
+              sx={{
+                flexShrink: 0,
+                width: 32,
+                height: 32,
+                color: 'rgba(255, 255, 255, 0.6)',
+                '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' },
+                '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)' }
+              }}
+            >
+              <UserIcon size={18} />
+            </IconButton>
+          </Box>
+
+          {/* Identity section with userId and copy button */}
+          <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', mb: 0.75 }}>
+            <Typography sx={{ color: alpha('#fff', 0.62), fontFamily: 'var(--font-mono)', fontSize: '0.75rem', fontWeight: 600, minWidth: 0, flex: 1 }} noWrap>
+              {shortUserId}
+            </Typography>
+            <IconButton
+              onClick={handleCopyUserId}
+              size="small"
+              title={copyState === 'copied-userid' ? 'Copied!' : 'Copy user ID'}
+              sx={{
+                flexShrink: 0,
+                width: 28,
+                height: 28,
+                color: copyState === 'copied-userid' ? '#10B981' : 'rgba(255, 255, 255, 0.4)',
+                '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' }
+              }}
+            >
+              <CopyIcon size={14} />
+            </IconButton>
+          </Box>
+
+          {/* Username section with copy button */}
+          <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+            <Typography sx={{ color: alpha('#fff', 0.62), fontWeight: 700, fontSize: '0.86rem', minWidth: 0, flex: 1 }} noWrap>
+              @{username || 'profile'}
+            </Typography>
+            <IconButton
+              onClick={handleCopyUsername}
+              size="small"
+              title={copyState === 'copied-username' ? 'Copied!' : 'Copy username'}
+              sx={{
+                flexShrink: 0,
+                width: 28,
+                height: 28,
+                color: copyState === 'copied-username' ? '#10B981' : 'rgba(255, 255, 255, 0.4)',
+                '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' }
+              }}
+            >
+              <CopyIcon size={14} />
+            </IconButton>
+          </Box>
         </Box>
       </Box>
 
@@ -493,14 +533,14 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
             justifyContent: 'flex-start',
             borderRadius: '16px',
             bgcolor: 'rgba(255,255,255,0.03)',
-            color: 'white',
+            color: copyState === 'copied-userid' ? '#10B981' : 'white',
             px: 1.5,
             py: 1.15,
             textTransform: 'none',
             '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
           }}
         >
-          {copyState === 'copied' ? 'Copied user id' : `Copy ${shortUserId}`}
+          {copyState === 'copied-userid' ? 'Copied user id' : `Copy ${shortUserId}`}
         </Button>
         <Button
           onClick={handleSignOut}
@@ -538,22 +578,6 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
       >
         See full profile
       </Button>
-
-      <Box sx={{ display: 'flex', justifyContent: 'center', pt: 0.25, pb: 0.25 }}>
-        <motion.div
-          drag="y"
-          dragConstraints={{ top: 0, bottom: 140 }}
-          dragElastic={0.14}
-          onDragEnd={(_, info) => {
-            if (info.offset.y > 64) {
-              void openFullProfile();
-            }
-          }}
-          style={{ touchAction: 'pan-y', cursor: 'grab' }}
-        >
-          <Box sx={{ width: 56, height: 6, borderRadius: 999, bgcolor: alpha('#fff', 0.14) }} />
-        </motion.div>
-      </Box>
     </Box>
   );
 };

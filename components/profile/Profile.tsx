@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
 import { UsersService } from '@/lib/services/users';
 import { SocialService } from '@/lib/services/social';
 import { useAuth } from '@/lib/auth';
@@ -32,8 +31,6 @@ import { EditProfileModal } from './EditProfileModal';
 import { ActorsListDrawer } from '../social/ActorsListDrawer';
 import type { Actor } from '../social/ActorsListDrawer';
 
-import { getUserProfilePicId } from '@/lib/utils';
-import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getCachedIdentityByUsername, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
 import { getProfileView, stageProfileView } from '@/lib/profile-handoff';
 import { IdentityAvatar, IdentityName, computeIdentityFlags } from '../common/IdentityBadge';
@@ -59,7 +56,6 @@ export const Profile = ({ username }: ProfileProps) => {
     const preloadedProfile = normalizedUsername ? getProfileView(normalizedUsername)?.profile || null : null;
     const cachedUsernameProfile = normalizedUsername ? getCachedIdentityByUsername(normalizedUsername) : null;
     const [profile, setProfile] = useState<any>(() => preloadedProfile || cachedUsernameProfile);
-    const [profileUrl, setProfileUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(() => !normalizedUsername || !(preloadedProfile || cachedUsernameProfile));
     const [isFollowing, setIsFollowing] = useState(false);
     const [followLoading, setFollowLoading] = useState(false);
@@ -77,57 +73,6 @@ export const Profile = ({ username }: ProfileProps) => {
     const [actorsList, setActorsList] = useState<Actor[]>([]);
     const morphFromPanel = searchParams.get('transition') === 'profile';
 
-    // Load the profile avatar preview. Prefer the viewed profile's avatar if present;
-    // fall back to the logged-in user's profile pic when viewing an identity without an avatar.
-    useEffect(() => {
-        let mounted = true;
-
-        const profilePicId = profile?.avatar || getUserProfilePicId(currentUser);
-        const cached = getCachedProfilePreview(profilePicId || undefined);
-        if (cached !== undefined && mounted) {
-            setProfileUrl(cached ?? null);
-        }
-
-        const fetchPreview = async () => {
-            try {
-                if (profilePicId?.startsWith('http')) {
-                    setProfileUrl(profilePicId);
-                } else if (profilePicId) {
-                    const url = await fetchProfilePreview(profilePicId, 320, 320);
-                    if (mounted) setProfileUrl(url as unknown as string);
-                } else if (mounted) setProfileUrl(null);
-            } catch (_err: unknown) {
-                if (mounted) setProfileUrl(null);
-            }
-        };
-
-        fetchPreview();
-        return () => { mounted = false; };
-    }, [profile, currentUser]);
-
-    useEffect(() => {
-        // Only subscribe if we have a target username to avoid infinite cycles
-        if (!normalizedUsername) return;
-
-        const unsubscribe = subscribeIdentityCache((identity) => {
-            // Single stable comparison: only update if username matches
-            if (identity.username === normalizedUsername) {
-                setProfile(identity);
-            }
-        });
-
-        return unsubscribe;
-    }, [normalizedUsername]);
-
-    // Determine whether the viewed profile belongs to the logged-in user.
-    // Previously we compared the URL username to the viewed profile username which
-    // incorrectly marked any viewed profile as "own" when the username in the URL
-    // matched the profile (even for other users). Instead, prefer ID-based checks
-    // and fall back to comparing against the logged-in user's profile username.
-    // Only consider this the "own profile" when the fetched profile's userId
-    // exactly matches the currently authenticated user's id. This prevents
-    // accidental "Edit Profile" controls from appearing when viewing other
-    // users that happen to share a username or when context usernames collide.
     const isOwnProfile = Boolean(currentUser && profile && profile.userId && currentUser.$id && profile.userId === currentUser.$id);
     const identityFlags = computeIdentityFlags({
         createdAt: profile?.$createdAt || profile?.createdAt || null,
@@ -138,6 +83,20 @@ export const Profile = ({ username }: ProfileProps) => {
         tier: profile?.tier || null,
         publicKey: profile?.publicKey || null,
     });
+
+    // Subscribe to identity cache updates for this specific username
+    useEffect(() => {
+        if (!normalizedUsername) return;
+
+        const unsubscribe = subscribeIdentityCache((identity) => {
+            // Only update if the username matches to avoid cross-contamination
+            if (identity.username === normalizedUsername) {
+                setProfile(identity);
+            }
+        });
+
+        return unsubscribe;
+    }, [normalizedUsername]);
 
     const loadRelatedData = useCallback(async (data: any) => {
         if (!data) return;
@@ -203,14 +162,13 @@ export const Profile = ({ username }: ProfileProps) => {
 
             if (data) {
                 seedIdentityCache(data);
-                stageProfileView(data, profileUrl || null);
+                stageProfileView(data, null);
                 setProfile((prev: any) => {
                     if (prev && prev.$id === data.$id && prev.username === data.username && prev.bio === data.bio && prev.displayName === data.displayName && prev.avatar === data.avatar) {
                         return prev;
                     }
                     return data;
                 });
-                stageProfileView(data, null);
                 void loadRelatedData(data);
             } else {
                 setProfile(null);
@@ -220,7 +178,7 @@ export const Profile = ({ username }: ProfileProps) => {
         } finally {
             setLoading(false);
         }
-    }, [cachedUsernameProfile, currentUser, loadRelatedData, myProfile, normalizedUsername, preloadedProfile, profileUrl]);
+    }, [cachedUsernameProfile, currentUser, loadRelatedData, myProfile, normalizedUsername, preloadedProfile]);
 
     useEffect(() => {
         loadProfile();
@@ -397,11 +355,6 @@ export const Profile = ({ username }: ProfileProps) => {
     };
 
     return (
-        <motion.div
-            initial={morphFromPanel ? { opacity: 0, y: 18, scale: 0.985 } : false}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 280, damping: 28 }}
-        >
         <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 4 } }}>
                 {/* Profile Header Card */}
                 <Paper sx={{ 
@@ -442,7 +395,7 @@ export const Profile = ({ username }: ProfileProps) => {
                     <Box sx={{ flexShrink: 0, textAlign: 'center' }}>
                         <Box onClick={handleNavigateToPublic} sx={{ cursor: 'pointer', mb: 2 }}>
                             <IdentityAvatar
-                                src={profileUrl || profile.avatar}
+                                fileId={profile?.avatar}
                                 alt={profile.displayName || profile.username || 'profile'}
                                 fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
                                 verified={identityFlags.verified}
@@ -918,6 +871,5 @@ export const Profile = ({ username }: ProfileProps) => {
                 onAction={handleActorAction}
             />
         </Box>
-        </motion.div>
     );
 };
