@@ -36,7 +36,7 @@ export default function ReportUserDialog({
   contextType = 'profile',
   contextId = null,
   contextUrl = null,
-  sourceApp = 'connect',
+  sourceApp = 'kylrix',
 }: ReportUserDialogProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));

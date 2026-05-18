@@ -140,7 +140,7 @@ export default function UserQuickProfileDrawer({
   const openProfileAction = useCallback(() => {
     if (!username) return;
     onClose();
-    router.push(`/connect/u/${encodeURIComponent(username.replace(/^@+/, ''))}`);
+    router.push(`/u/${encodeURIComponent(username.replace(/^@+/, ''))}`);
   }, [username, onClose, router]);
 
   const tipAction = useCallback(async () => {
