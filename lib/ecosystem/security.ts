@@ -60,6 +60,49 @@ export class EcosystemSecurity {
     });
   }
 
+  async fetchSecuritySnapshot(userId: string, forceRefresh = false) {
+    const resolvedUserId = String(userId || '').trim();
+    if (!resolvedUserId) return this.status;
+
+    if (this.snapshotInflight && !forceRefresh) {
+      return this.snapshotInflight;
+    }
+
+    const snapshotPromise = (async () => {
+      const [userRowsRes, keychainRowsRes] = await Promise.all([
+        tablesDB.listRows({
+          databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+          tableId: APPWRITE_CONFIG.TABLES.VAULT.USER,
+          queries: [Query.equal('userId', resolvedUserId), Query.limit(1)] as any,
+        }).catch(() => ({ rows: [] as any[] })),
+        tablesDB.listRows({
+          databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+          tableId: APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+          queries: [Query.equal('userId', resolvedUserId)] as any,
+        }).catch(() => ({ rows: [] as any[] })),
+      ]);
+
+      const userDoc = (userRowsRes.rows || [])[0] || null;
+      const keychainEntries = Array.isArray(keychainRowsRes.rows) ? keychainRowsRes.rows : [];
+
+      this.hasMasterpassState = !!(userDoc?.masterpass === true || keychainEntries.some((entry: any) => entry?.type === 'password'));
+      this.hasPasskeyState = !!(userDoc?.isPasskey === true || keychainEntries.some((entry: any) => entry?.type === 'passkey'));
+      this.hasRecoveryCodesState = Array.isArray(userDoc?.backupCodes)
+        ? userDoc.backupCodes.length > 0
+        : Boolean(userDoc?.backupCodes);
+
+      this.emitStatusChange();
+      return this.status;
+    })().finally(() => {
+      if (this.snapshotInflight === snapshotPromise) {
+        this.snapshotInflight = null;
+      }
+    });
+
+    this.snapshotInflight = snapshotPromise;
+    return snapshotPromise;
+  }
+
   onStatusChange(listener: (status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean; hasMasterpass: boolean | null; hasPasskey: boolean | null; hasRecoveryCodes: boolean | null }) => void) {
     this.statusListeners.add(listener);
     listener(this.status);

@@ -24,7 +24,7 @@ type LoginStep = 'initial' | 'email' | 'otp' | 'mfa';
 
 export function LoginDrawer() {
   const { activeContent, close } = useUnifiedDrawer();
-  const { loginWithEmailOTP, verifyEmailOTP, verifyMFA } = useAuth();
+  const { loginWithEmailOTP, verifyEmailOTP, verifyMFA, refreshUser } = useAuth();
   
   const [step, setStep] = useState<LoginStep>('initial');
   const [email, setEmail] = useState('');
@@ -32,8 +32,36 @@ export function LoginDrawer() {
   const [otp, setOtp] = useState('');
   const [mfaChallengeId, setMfaChallengeId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(false);
 
   const isOpen = activeContent === 'login';
+
+  useEffect(() => {
+    if (!isOpen) {
+      setCheckingSession(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const verifySession = async () => {
+      setCheckingSession(true);
+      try {
+        const current = await refreshUser(true);
+        if (!cancelled && current) {
+          close();
+        }
+      } finally {
+        if (!cancelled) setCheckingSession(false);
+      }
+    };
+
+    void verifySession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, close, refreshUser]);
 
   const handleSendOTP = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -127,11 +155,18 @@ export function LoginDrawer() {
       case 'initial':
         return (
           <Stack spacing={2}>
-            <OAuthButtons disabled={loading} />
+            {checkingSession ? (
+              <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
+                <CircularProgress size={20} />
+              </Box>
+            ) : (
+              <OAuthButtons disabled={loading || checkingSession} />
+            )}
             <Button
               fullWidth
               variant="outlined"
               onClick={() => setStep('email')}
+              disabled={checkingSession}
               startIcon={<Mail size={18} />}
               sx={{
                 bgcolor: 'rgba(255,255,255,0.03)',

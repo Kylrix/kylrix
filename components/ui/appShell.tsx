@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { getCurrentUser } from '@/lib/appwrite';
 import { useAuth } from './AuthContext';
 import Navigation from '../Navigation';
@@ -20,7 +20,6 @@ interface AppShellProps {
 }
 
 export default function AppShell({ children }: AppShellProps) {
-  const router = useRouter();
   const pathname = usePathname();
   const { openIDMWindow, idmWindowOpen } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
@@ -41,26 +40,6 @@ export default function AppShell({ children }: AppShellProps) {
         setAuthChecked(true);
       });
   }, [pathname, openIDMWindow]);
-
-  const handleCreateNote = () => {
-    router.push('/notes/new');
-  };
-
-  const handleCreateDoodle = () => {
-    router.push('/notes/new?format=doodle');
-  };
-
-  const handleCreateVoiceNote = () => {
-    console.log('Creating voice note...');
-  };
-
-  const handleCreatePhotoNote = () => {
-    console.log('Creating photo note...');
-  };
-
-  const handleCreateLinkNote = () => {
-    console.log('Creating link note...');
-  };
 
   if (!authChecked) {
     return (
@@ -132,13 +111,7 @@ export default function AppShell({ children }: AppShellProps) {
           </Box>
         </Box>
 
-        <QuickCreateFab
-          onCreateNote={handleCreateNote}
-          onCreateDoodle={handleCreateDoodle}
-          onCreateVoiceNote={handleCreateVoiceNote}
-          onCreatePhotoNote={handleCreatePhotoNote}
-          onCreateLinkNote={handleCreateLinkNote}
-        />
+        <QuickCreateFab />
       </Box>
 
       {idmWindowOpen && (

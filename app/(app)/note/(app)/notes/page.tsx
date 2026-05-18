@@ -123,15 +123,33 @@ export default function NotesPage() {
     goToPage(1);
   }, [upsertNote, clearSearch, goToPage]);
 
+  const openComposer = useCallback((kind: 'note' | 'project', format: 'text' | 'doodle' = 'text') => {
+    openOverlay(
+      <CreateNoteForm
+        onNoteCreated={handleNoteCreated}
+        initialFormat={format}
+        noteKind={kind}
+      />
+    );
+  }, [handleNoteCreated, openOverlay]);
+
   // Removed AI generation logic from core page to fully decouple.
   // URL ai-prompt parameter no longer auto-triggers AI generation.
   useEffect(() => {
     const openCreateNote = typeof window !== 'undefined' ? sessionStorage.getItem('open-create-note') : null;
     if (openCreateNote) {
       try { sessionStorage.removeItem('open-create-note'); } catch { }
-      openOverlay(<CreateNoteForm onNoteCreated={handleNoteCreated} />);
+      openComposer('note');
     }
-  }, [openOverlay, handleNoteCreated]);
+  }, [openComposer]);
+
+  useEffect(() => {
+    const openCreateProject = typeof window !== 'undefined' ? sessionStorage.getItem('open-create-project') : null;
+    if (openCreateProject) {
+      try { sessionStorage.removeItem('open-create-project'); } catch { }
+      openComposer('project');
+    }
+  }, [openComposer]);
 
   // Handle format query parameter for doodle creation
   useEffect(() => {
@@ -139,7 +157,7 @@ export default function NotesPage() {
     if (format === 'doodle') {
       // Remove the format param from URL
       window.history.replaceState({}, '', '/note/notes');
-      openOverlay(<CreateNoteForm initialFormat="doodle" onNoteCreated={handleNoteCreated} />);
+      openOverlay(<CreateNoteForm initialFormat="doodle" onNoteCreated={handleNoteCreated} noteKind="note" />);
     }
   }, [searchParams, openOverlay, handleNoteCreated]);
 
