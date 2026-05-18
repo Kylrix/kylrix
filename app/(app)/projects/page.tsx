@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
+  IconButton,
   Button,
   Chip,
   Grid,
@@ -19,7 +20,9 @@ import {
   Lock,
   MessageCircle,
   Sparkles,
+  ArrowLeft,
 } from 'lucide-react';
+import ProjectsActionFab from '@/components/projects/ProjectsActionFab';
 
 const pillars = [
   {
@@ -56,7 +59,24 @@ export default function ProjectsPage() {
   const router = useRouter();
 
   return (
-    <Box sx={{ maxWidth: 1240, mx: 'auto', px: { xs: 2, md: 3 }, pb: { xs: 4, md: 6 } }}>
+    <Box sx={{ maxWidth: 1240, mx: 'auto', px: { xs: 2, md: 3 }, pb: { xs: 10, md: 6 } }}>
+      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2.5 }}>
+        <IconButton
+          onClick={() => router.back()}
+          sx={{
+            bgcolor: '#161412',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.06)',
+            '&:hover': { bgcolor: '#1C1A18' },
+          }}
+        >
+          <ArrowLeft size={18} />
+        </IconButton>
+        <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontWeight: 700 }}>
+          Back
+        </Typography>
+      </Stack>
+
       <Paper
         elevation={0}
         sx={{
@@ -169,6 +189,8 @@ export default function ProjectsPage() {
           </Grid>
         ))}
       </Grid>
+
+      <ProjectsActionFab />
     </Box>
   );
 }

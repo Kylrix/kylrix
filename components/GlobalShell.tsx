@@ -48,6 +48,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
 
   const isSharedPage = pathname?.includes('/shared/');
   const isVaultResetRoute = pathname?.startsWith('/vault/reset');
+  const isProjectsPage = pathname?.startsWith('/projects');
   const isLandingPage = pathname === '/';
 
   // 2. UI State
@@ -117,16 +118,16 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         </Box>
       </Box>
 
-      {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && (
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && !isProjectsPage && (
         <UnifiedBottomBar />
       )}
-      {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && (
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && !isProjectsPage && (
         <QuickCreateFab />
       )}
 
       {/* --- LAYER 2: OVERLAYS (Strict Unmounting) --- */}
       {isOverlayOpen && <Overlay />}
-      {unifiedDrawerActive !== 'navbar' && <UnifiedBottomDrawer />}
+      {unifiedDrawerActive !== 'navbar' && !isProjectsPage && <UnifiedBottomDrawer />}
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}
       {isDynamicSidebarOpen && <DynamicSidebar />}
