@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { UsersService } from '@/lib/services/users';
 import { SocialService } from '@/lib/services/social';
 import { useAuth } from '@/lib/auth';
@@ -85,17 +85,45 @@ export const Profile = ({ username }: ProfileProps) => {
     });
 
     // Subscribe to identity cache updates for this specific username
+    // Use debouncing to prevent rapid re-renders from multiple cache updates
+    const debounceTimerRef = useRef<NodeJS.Timeout>();
+    const lastProfileRef = useRef<any>(profile);
+
     useEffect(() => {
         if (!normalizedUsername) return;
 
         const unsubscribe = subscribeIdentityCache((identity) => {
-            // Only update if the username matches to avoid cross-contamination
-            if (identity.username === normalizedUsername) {
-                setProfile(identity);
-            }
+            // Only proceed if the username matches
+            if (identity.username !== normalizedUsername) return;
+
+            // Clear existing debounce timer
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+            // Debounce the update: only set profile after 50ms of no updates
+            debounceTimerRef.current = setTimeout(() => {
+                setProfile((prev: any) => {
+                    // Only update if data actually changed to avoid unnecessary renders
+                    if (
+                        prev &&
+                        prev.$id === identity.$id &&
+                        prev.username === identity.username &&
+                        prev.bio === identity.bio &&
+                        prev.displayName === identity.displayName &&
+                        prev.avatar === identity.avatar &&
+                        JSON.stringify(prev.socialStats) === JSON.stringify(identity.socialStats)
+                    ) {
+                        return prev;
+                    }
+                    lastProfileRef.current = identity;
+                    return identity;
+                });
+            }, 50);
         });
 
-        return unsubscribe;
+        return () => {
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+            unsubscribe();
+        };
     }, [normalizedUsername]);
 
     const loadRelatedData = useCallback(async (data: any) => {

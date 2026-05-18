@@ -369,9 +369,13 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
   const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username'>('idle');
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Reset copy state only when panel opens/closes (detected by scrollContainerRef changes)
+  const prevProfileRef = useRef(profile);
   useEffect(() => {
+    if (prevProfileRef.current === profile) return; // No profile change
+    prevProfileRef.current = profile;
     setCopyState('idle');
-  }, [profile?.userId, profile?.$id]);
+  }, [profile?.username]); // Only depend on stable username
 
   const username = profile?.username ? String(profile.username).replace(/^@+/, '').toLowerCase() : null;
   const displayName = profile?.displayName || username || user?.name || user?.email || 'Profile';
@@ -602,11 +606,10 @@ export const DynamicIslandPanelSurface: React.FC<{
     <Box sx={{ display: 'flex', justifyContent: 'center', pointerEvents: 'auto', width: '100%' }}>
       <motion.div
         key={`panel-${panel}`}
-        layout
         initial={{ y: -12, scale: 0.98, opacity: 0 }}
         animate={{ y: 0, scale: 1, opacity: 1 }}
         exit={{ y: -12, scale: 0.98, opacity: 0 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+        transition={{ duration: 0.2, ease: 'easeOut' }}
         style={{ pointerEvents: 'auto', width: '100%' }}
       >
         <Paper
