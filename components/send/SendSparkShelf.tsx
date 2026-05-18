@@ -189,7 +189,7 @@ export function SendSparkShelf({ sparks, onSaveSparks, onClaim }: Props) {
           <IconButton size="small" aria-label="Copy link" onClick={() => void copyUrl(spark.url)} sx={{ color: PRIMARY }}>
             <Copy size={16} />
           </IconButton>
-          <IconButton size="small" aria-label="Open" onClick={() => window.open(spark.url, '_blank')} sx={{ color: PRIMARY }}>
+          <IconButton size="small" aria-label="Open" onClick={() => window.open(spark.url.replace('/send/', '/note/shared/'), '_blank')} sx={{ color: PRIMARY }}>
             <ExternalLink size={16} />
           </IconButton>
         </Stack>
