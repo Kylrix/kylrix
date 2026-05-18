@@ -229,13 +229,22 @@ export function UnifiedBottomBar() {
 
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
   const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
+  const isProjectsPage = pathname?.startsWith('/projects');
 
   // Accounts: never use unified bottom chrome — `/accounts/settings/*` renders its own bottom nav in layout;
   // billing/success/checkout/login and other interim flows should stay full-bleed with no duplicate empty bar.
   if (pathname?.startsWith('/accounts')) return null;
 
   // Hide bottom bar on settings page, when a real bottom sheet is open, or on full-page note editor
-  if (pathname?.includes('/settings') || activeContent !== 'navbar' || mode === 'compact' || isDrawerOpen || isNoteFullPageDetail || isConnectCallDetail) return null;
+  if (
+    isProjectsPage ||
+    pathname?.includes('/settings') ||
+    activeContent !== 'navbar' ||
+    mode === 'compact' ||
+    isDrawerOpen ||
+    isNoteFullPageDetail ||
+    isConnectCallDetail
+  ) return null;
 
   return (
     <Box
