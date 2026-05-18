@@ -4639,6 +4639,1167 @@
             ]
         },
         {
+            "$id": "kylrix_token_ledger",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "kylrix_token_ledger",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "rowType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "txId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "idempotencyKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "eventType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "counterpartyUserId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "amountMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "deltaMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "balanceAfterMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 20,
+                    "default": "settled",
+                    "encrypt": false
+                },
+                {
+                    "key": "sourceType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "sourceId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "createdAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "genesisAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "contractVersion",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "maxSupplyMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "totalMintedMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "totalBurnedMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "circulatingMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "rootBalanceMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "riskLevel",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "lastActivityAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "lastSpikeAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_token_row_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "rowType",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_token_user_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_token_counterparty_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "counterpartyUserId",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_token_event_created",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "eventType",
+                        "createdAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_token_source",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "sourceType",
+                        "sourceId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "uniq_token_idempotency",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "idempotencyKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "uniq_token_tx",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "txId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "engagement_views",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "engagement_views",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "rowType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 24,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "eventId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "idempotencyKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "appId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ownerUserId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "viewerKind",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 16,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "viewerUserId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "viewerTokenHash",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "fingerprintHash",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "ipHash",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "uaHash",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": true
+                },
+                {
+                    "key": "conversationId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "messageId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "receiptType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 24,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isCounted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "bucketDay",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "bucketMonth",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 7,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "occurredAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "uniq_views_event",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "eventId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "uniq_views_idempotency",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "idempotencyKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_views_content_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "contentType",
+                        "contentId",
+                        "bucketDay"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_views_owner_month",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerUserId",
+                        "bucketMonth"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_views_viewer_dedupe",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "viewerKind",
+                        "viewerUserId",
+                        "contentId",
+                        "bucketDay"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_views_receipts",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "messageId",
+                        "receiptType",
+                        "occurredAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC",
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_views_app_time",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "appId",
+                        "occurredAt"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "DESC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "engagement_view_rollups",
+            "$permissions": [
+                "create(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "engagement_view_rollups",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "rowType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 24,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "rollupKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metricType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 48,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "appId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scopeType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "scopeId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentType",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "contentId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 191,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ownerUserId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "bucketDay",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 10,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "bucketMonth",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 7,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "uniqueViewCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "totalViewCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "receiptCount",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "weightedScore",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "trustScore",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 2147483647
+                },
+                {
+                    "key": "lastEventAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "uniq_rollup_key",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "rollupKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_rollup_scope_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "scopeType",
+                        "scopeId",
+                        "bucketDay"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_rollup_owner_month",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerUserId",
+                        "bucketMonth"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_rollup_content_day",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "contentType",
+                        "contentId",
+                        "bucketDay"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_rollup_metric_month",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "metricType",
+                        "bucketMonth"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "kylrix_signals",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "kylrix_signals",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "dailyMintedMicro",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "lastMintAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "thermalScore",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "riskLevel",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 16,
+                    "default": "normal",
+                    "encrypt": false
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_signals_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_signals_updated",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "updatedAt"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "uniq_signals_user",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "account_ledger",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "account_ledger",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "attentionBalance",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "successTaxRate",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "reputationScore",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "lastPeakVelocity",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "thermalCacheScore",
+                    "type": "double",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "thermalCacheAt",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_ledger_user",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_ledger_updated",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "updatedAt"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "uniq_ledger_user",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "system_pulse",
+            "$permissions": [
+                "read(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "system_pulse",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "metricKey",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metricValue",
+                    "type": "double",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -1.7976931348623157e+308,
+                    "max": 1.7976931348623157e+308
+                },
+                {
+                    "key": "sampleCount",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                },
+                {
+                    "key": "updatedAt",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "min": -9223372036854775808,
+                    "max": 9223372036854775807
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_pulse_key",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "metricKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "uniq_pulse_key",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "metricKey"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "focusSessions",
             "$permissions": [
                 "create(\"users\")"
@@ -5391,1147 +6552,6 @@
                         "parentId"
                     ],
                     "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "kylrix_token_ledger",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "kylrix_token_ledger",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "rowType",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 16,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "txId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "idempotencyKey",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "eventType",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 32,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "counterpartyUserId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "amountMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "deltaMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "balanceAfterMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "status",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 20,
-                    "default": "settled",
-                    "encrypt": false
-                },
-                {
-                    "key": "sourceType",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "sourceId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "metadata",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 65535,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "createdAt",
-                    "type": "datetime",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "genesisAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "contractVersion",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 32,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "maxSupplyMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "totalMintedMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "totalBurnedMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "circulatingMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "rootBalanceMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "riskLevel",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 16,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "lastActivityAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "lastSpikeAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "updatedAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_token_row_created",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "rowType",
-                        "createdAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "DESC"
-                    ]
-                },
-                {
-                    "key": "idx_token_user_created",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId",
-                        "createdAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "DESC"
-                    ]
-                },
-                {
-                    "key": "idx_token_counterparty_created",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "counterpartyUserId",
-                        "createdAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "DESC"
-                    ]
-                },
-                {
-                    "key": "idx_token_event_created",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "eventType",
-                        "createdAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "DESC"
-                    ]
-                },
-                {
-                    "key": "idx_token_source",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "sourceType",
-                        "sourceId"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "uniq_token_idempotency",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "idempotencyKey"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "uniq_token_tx",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "txId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "kylrix_signals",
-            "$permissions": [
-                "create(\"users\")",
-                "read(\"users\")",
-                "update(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "kylrix_signals",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "dailyMintedMicro",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "lastMintAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "thermalScore",
-                    "type": "double",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "riskLevel",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 16,
-                    "default": "normal",
-                    "encrypt": false
-                },
-                {
-                    "key": "updatedAt",
-                    "type": "datetime",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_signals_user",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_signals_updated",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "updatedAt"
-                    ],
-                    "orders": [
-                        "DESC"
-                    ]
-                },
-                {
-                    "key": "uniq_signals_user",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "account_ledger",
-            "$permissions": [
-                "create(\"users\")",
-                "read(\"users\")",
-                "update(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "account_ledger",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "attentionBalance",
-                    "type": "double",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "successTaxRate",
-                    "type": "double",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "reputationScore",
-                    "type": "double",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "lastPeakVelocity",
-                    "type": "double",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "thermalCacheScore",
-                    "type": "double",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "thermalCacheAt",
-                    "type": "integer",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "updatedAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_ledger_user",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_ledger_updated",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "updatedAt"
-                    ],
-                    "orders": [
-                        "DESC"
-                    ]
-                },
-                {
-                    "key": "uniq_ledger_user",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "system_pulse",
-            "$permissions": [
-                "read(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "system_pulse",
-            "enabled": true,
-            "rowSecurity": false,
-            "columns": [
-                {
-                    "key": "metricKey",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "metricValue",
-                    "type": "double",
-                    "required": true,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "sampleCount",
-                    "type": "integer",
-                    "required": true,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "updatedAt",
-                    "type": "integer",
-                    "required": true,
-                    "array": false,
-                    "default": null
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_pulse_key",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "metricKey"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "uniq_pulse_key",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "metricKey"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "engagement_views",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "engagement_views",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "rowType",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 24,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "eventId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "idempotencyKey",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "appId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 32,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "contentType",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 32,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "contentId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "ownerUserId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "viewerKind",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 16,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "viewerUserId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "viewerTokenHash",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": true
-                },
-                {
-                    "key": "fingerprintHash",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": true
-                },
-                {
-                    "key": "ipHash",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": true
-                },
-                {
-                    "key": "uaHash",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": true
-                },
-                {
-                    "key": "conversationId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "messageId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "receiptType",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 24,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "isCounted",
-                    "type": "boolean",
-                    "required": false,
-                    "default": true,
-                    "array": false
-                },
-                {
-                    "key": "bucketDay",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 10,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "bucketMonth",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 7,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "occurredAt",
-                    "type": "datetime",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "metadata",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 65535,
-                    "default": null,
-                    "encrypt": false
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "uniq_views_event",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "eventId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "uniq_views_idempotency",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "idempotencyKey"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_views_content_day",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "contentType",
-                        "contentId",
-                        "bucketDay"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_views_owner_month",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "ownerUserId",
-                        "bucketMonth"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_views_viewer_dedupe",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "viewerKind",
-                        "viewerUserId",
-                        "contentId",
-                        "bucketDay"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC",
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_views_receipts",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "conversationId",
-                        "messageId",
-                        "receiptType",
-                        "occurredAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC",
-                        "ASC",
-                        "DESC"
-                    ]
-                },
-                {
-                    "key": "idx_views_app_time",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "appId",
-                        "occurredAt"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "DESC"
-                    ]
-                }
-            ]
-        },
-        {
-            "$id": "engagement_view_rollups",
-            "$permissions": [
-                "create(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "engagement_view_rollups",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "rowType",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 24,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "rollupKey",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "metricType",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 48,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "appId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 32,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "scopeType",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 32,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "scopeId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "contentType",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 32,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "contentId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 191,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "ownerUserId",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 64,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "bucketDay",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 10,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "bucketMonth",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 7,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "uniqueViewCount",
-                    "type": "integer",
-                    "required": false,
-                    "min": 0,
-                    "max": 2147483647,
-                    "default": 0,
-                    "array": false
-                },
-                {
-                    "key": "totalViewCount",
-                    "type": "integer",
-                    "required": false,
-                    "min": 0,
-                    "max": 2147483647,
-                    "default": 0,
-                    "array": false
-                },
-                {
-                    "key": "receiptCount",
-                    "type": "integer",
-                    "required": false,
-                    "min": 0,
-                    "max": 2147483647,
-                    "default": 0,
-                    "array": false
-                },
-                {
-                    "key": "weightedScore",
-                    "type": "integer",
-                    "required": false,
-                    "min": 0,
-                    "max": 2147483647,
-                    "default": 0,
-                    "array": false
-                },
-                {
-                    "key": "trustScore",
-                    "type": "integer",
-                    "required": false,
-                    "min": 0,
-                    "max": 2147483647,
-                    "default": 0,
-                    "array": false
-                },
-                {
-                    "key": "lastEventAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "updatedAt",
-                    "type": "datetime",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "metadata",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 65535,
-                    "default": null,
-                    "encrypt": false
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "uniq_rollup_key",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "rollupKey"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_rollup_scope_day",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "scopeType",
-                        "scopeId",
-                        "bucketDay"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_rollup_owner_month",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "ownerUserId",
-                        "bucketMonth"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_rollup_content_day",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "contentType",
-                        "contentId",
-                        "bucketDay"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC",
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_rollup_metric_month",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "metricType",
-                        "bucketMonth"
-                    ],
-                    "orders": [
-                        "ASC",
                         "ASC"
                     ]
                 }
