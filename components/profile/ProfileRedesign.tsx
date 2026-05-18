@@ -8,13 +8,11 @@ import {
   Button,
   ButtonBase,
   Chip,
-  CircularProgress,
   Container,
   Divider,
   Paper,
   Skeleton,
   Stack,
-  Tab,
   Tabs,
   Typography,
 } from '@mui/material';
@@ -331,8 +329,8 @@ function MomentCard({
                 </Typography>
               </Box>
             </Stack>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>
-              Open
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap', fontWeight: 700 }}>
+              Open post
             </Typography>
           </Stack>
 
@@ -352,7 +350,7 @@ function MomentCard({
             >
               <Stack spacing={0.5}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {type === 'reply' ? 'Replying to' : 'Pulsed from'}
+                  {type === 'reply' ? 'Replying to' : 'Boosted from'}
                 </Typography>
                 <Typography sx={{ fontWeight: 700, color: 'rgba(255,255,255,0.76)' }}>
                   {sourceLabel} <Box component="span" sx={{ color: 'rgba(255,255,255,0.44)', fontWeight: 600 }}>{sourceHandle}</Box>
@@ -390,8 +388,7 @@ function MomentCard({
   );
 }
 
-function TabPanel({
-  active,
+function FeedPanel({
   loading,
   error,
   items,
@@ -402,7 +399,6 @@ function TabPanel({
   onEmptyAction,
   onOpenMoment,
 }: {
-  active: boolean;
   loading: boolean;
   error: string | null;
   items: any[];
@@ -413,8 +409,6 @@ function TabPanel({
   onEmptyAction: () => void;
   onOpenMoment: (momentId: string) => void;
 }) {
-  if (!active) return null;
-
   if (loading) return <ProfileMomentSkeleton />;
 
   if (error) {
@@ -504,7 +498,8 @@ export function ProfileRedesign({ username }: ProfileProps) {
   const [actorsTitle, setActorsTitle] = useState('');
   const [actorsList, setActorsList] = useState<Actor[]>([]);
 
-  const activeTab = normalizeTab(searchParams.get('tab'));
+  const tabParam = searchParams.get('tab');
+  const [selectedTab, setSelectedTab] = useState<TabKey>(() => normalizeTab(tabParam));
   const targetUserId = profile?.userId || profile?.$id || null;
   const isOwnProfile = Boolean(currentUser && targetUserId && currentUser.$id === targetUserId);
   const identityFlags = computeIdentityFlags({
@@ -537,16 +532,19 @@ export function ProfileRedesign({ username }: ProfileProps) {
     [categorized.postLike.length, categorized.pulses.length, categorized.replies.length],
   );
 
-  const pageSearchParams = useMemo(() => new URLSearchParams(searchParams.toString()), [searchParams]);
+  useEffect(() => {
+    setSelectedTab(normalizeTab(tabParam));
+  }, [tabParam]);
 
   const updateTab = useCallback(
     (nextTab: TabKey) => {
-      const params = new URLSearchParams(pageSearchParams.toString());
+      setSelectedTab(nextTab);
+      const params = new URLSearchParams(searchParams.toString());
       params.set('tab', nextTab);
       const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.replace(nextUrl);
+      router.replace(nextUrl, { scroll: false });
     },
-    [pageSearchParams, pathname, router],
+    [pathname, router, searchParams],
   );
 
   const loadRelatedData = useCallback(
@@ -678,6 +676,36 @@ export function ProfileRedesign({ username }: ProfileProps) {
     }),
     [categorized.postLike, categorized.pulses, categorized.replies],
   );
+
+  const tabMeta = {
+    moments: {
+      title: 'Moments',
+      description: 'Original posts, updates, and longer-form thoughts.',
+      emptyTitle: 'No moments yet',
+      emptyBody: isOwnProfile ? 'Your first post, quote, or update will appear here.' : 'This profile has not shared any moments yet.',
+      emptyActionLabel: 'Explore Connect',
+      emptyIcon: <Sparkles size={20} />,
+    },
+    replies: {
+      title: 'Replies',
+      description: 'Threaded replies and back-and-forth conversation.',
+      emptyTitle: 'No replies yet',
+      emptyBody: 'Replies and thread comments from this user will land here.',
+      emptyActionLabel: 'Back to moments',
+      emptyIcon: <MessageCircle size={20} />,
+    },
+    pulses: {
+      title: 'Pulses',
+      description: 'Reposts and pulse-style boosts from this profile.',
+      emptyTitle: 'No pulses yet',
+      emptyBody: 'Boosts and repost-style pulses will appear here once this user starts sharing them.',
+      emptyActionLabel: 'Back to moments',
+      emptyIcon: <Repeat2 size={20} />,
+    },
+  } as const;
+
+  const activeTabMeta = tabMeta[selectedTab];
+  const activeTabItems = categorizedByTab[selectedTab];
 
   const handleRetry = () => setRefreshNonce((value) => value + 1);
 
@@ -1100,13 +1128,10 @@ export function ProfileRedesign({ username }: ProfileProps) {
                 <Box
                   sx={{
                     display: 'grid',
-                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(5, minmax(0, 1fr))' },
+                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(2, minmax(0, 1fr))' },
                     gap: 1.25,
                   }}
                 >
-                  <ProfileStatCard label="Moments" value={categorizedByTab.moments.length} icon={<Sparkles size={16} />} onClick={() => updateTab('moments')} active={activeTab === 'moments'} />
-                  <ProfileStatCard label="Replies" value={categorizedByTab.replies.length} icon={<MessageCircle size={16} />} onClick={() => updateTab('replies')} active={activeTab === 'replies'} />
-                  <ProfileStatCard label="Pulses" value={categorizedByTab.pulses.length} icon={<Repeat2 size={16} />} onClick={() => updateTab('pulses')} active={activeTab === 'pulses'} />
                   <ProfileStatCard label="Followers" value={stats.followers} icon={<Users size={16} />} onClick={handleOpenFollowers} />
                   <ProfileStatCard label="Following" value={stats.following} icon={<Users size={16} />} onClick={handleOpenFollowing} />
                 </Box>
@@ -1130,109 +1155,189 @@ export function ProfileRedesign({ username }: ProfileProps) {
             overflow: 'hidden',
           }}
         >
-          <Box sx={{ px: { xs: 1, md: 2 }, pt: 1 }}>
-            <Tabs
-              value={activeTab}
-              onChange={(_, value) => updateTab(value)}
-              variant="scrollable"
-              allowScrollButtonsMobile
-              textColor="inherit"
-              TabIndicatorProps={{ sx: { backgroundColor: '#F59E0B', height: 3, borderRadius: 999 } }}
-              sx={{
-                minHeight: 60,
-                '& .MuiTab-root': {
-                  minHeight: 60,
-                  textTransform: 'none',
-                  color: 'rgba(255,255,255,0.58)',
-                  fontWeight: 800,
-                  letterSpacing: '0.01em',
-                },
-                '& .Mui-selected': {
-                  color: '#fff',
-                },
-              }}
-            >
-              {TAB_KEYS.map((tabKey) => {
-                const labels = {
-                  moments: { label: 'Moments', count: tabCounts.moments },
-                  replies: { label: 'Replies', count: tabCounts.replies },
-                  pulses: { label: 'Pulses', count: tabCounts.pulses },
-                }[tabKey];
-                const iconMap = {
-                  moments: <Sparkles size={16} />,
-                  replies: <MessageCircle size={16} />,
-                  pulses: <Repeat2 size={16} />,
-                };
-
-                return (
-                  <Tab
-                    key={tabKey}
-                    value={tabKey}
-                    icon={iconMap[tabKey]}
-                    iconPosition="start"
-                    label={
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <span>{labels.label}</span>
-                        <Box
-                          component="span"
-                          sx={{
-                            px: 1,
-                            py: 0.25,
-                            borderRadius: 999,
-                            bgcolor: '#1F1D1B',
-                            color: 'rgba(255,255,255,0.72)',
-                            fontSize: '0.72rem',
-                            fontWeight: 800,
-                            lineHeight: 1,
-                          }}
-                        >
-                          {labels.count}
-                        </Box>
-                      </Stack>
-                    }
-                  />
-                );
-              })}
-            </Tabs>
-          </Box>
-          <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
           <Box sx={{ p: { xs: 2, md: 3 } }}>
-            <TabPanel
-              active={activeTab === 'moments'}
-              loading={momentsLoading}
-              error={momentsError}
-              items={categorizedByTab.moments}
-              emptyTitle="No moments yet"
-              emptyBody={isOwnProfile ? 'Your first post, quote, or update will appear here.' : 'This profile has not shared any moments yet.'}
-              emptyActionLabel="Explore Connect"
-              emptyIcon={<Sparkles size={20} />}
-              onEmptyAction={() => router.push('/connect')}
-              onOpenMoment={(momentId) => router.push(`/connect/post/${momentId}`)}
-            />
-            <TabPanel
-              active={activeTab === 'replies'}
-              loading={momentsLoading}
-              error={momentsError}
-              items={categorizedByTab.replies}
-              emptyTitle="No replies yet"
-              emptyBody="Replies and thread comments from this user will land here."
-              emptyActionLabel="Back to moments"
-              emptyIcon={<MessageCircle size={20} />}
-              onEmptyAction={() => updateTab('moments')}
-              onOpenMoment={(momentId) => router.push(`/connect/post/${momentId}`)}
-            />
-            <TabPanel
-              active={activeTab === 'pulses'}
-              loading={momentsLoading}
-              error={momentsError}
-              items={categorizedByTab.pulses}
-              emptyTitle="No pulses yet"
-              emptyBody="Boosts and repost-style pulses will appear here once this user starts sharing them."
-              emptyActionLabel="Back to moments"
-              emptyIcon={<Repeat2 size={20} />}
-              onEmptyAction={() => updateTab('moments')}
-              onOpenMoment={(momentId) => router.push(`/connect/post/${momentId}`)}
-            />
+            <Stack spacing={2.5}>
+              <Stack
+                direction={{ xs: 'column', md: 'row' }}
+                spacing={1.5}
+                alignItems={{ xs: 'flex-start', md: 'center' }}
+                justifyContent="space-between"
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      display: 'block',
+                      color: 'rgba(255,255,255,0.42)',
+                      letterSpacing: '0.2em',
+                      fontWeight: 800,
+                    }}
+                  >
+                    Signal archive
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      mt: 0.5,
+                      fontWeight: 900,
+                      color: 'var(--foreground)',
+                      fontFamily: 'var(--font-clash)',
+                      letterSpacing: '-0.04em',
+                    }}
+                  >
+                    {activeTabMeta.title}
+                  </Typography>
+                  <Typography sx={{ mt: 0.75, color: 'rgba(255,255,255,0.64)', lineHeight: 1.7 }}>
+                    {activeTabMeta.description}
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Chip
+                    label={`${activeTabItems.length} items`}
+                    size="small"
+                    sx={{
+                      bgcolor: '#1F1D1B',
+                      color: 'rgba(255,255,255,0.78)',
+                      fontWeight: 800,
+                      borderRadius: 999,
+                    }}
+                  />
+                  {selectedTab !== 'moments' && (
+                    <Button
+                      onClick={() => updateTab('moments')}
+                      variant="outlined"
+                      sx={{
+                        borderColor: 'rgba(255,255,255,0.12)',
+                        color: 'rgba(255,255,255,0.82)',
+                        fontWeight: 800,
+                        borderRadius: 999,
+                        px: 2,
+                        textTransform: 'none',
+                      }}
+                    >
+                      Back to moments
+                    </Button>
+                  )}
+                </Stack>
+              </Stack>
+
+              <Box
+                sx={{
+                  p: 1,
+                  borderRadius: 4,
+                  bgcolor: '#1A1715',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                }}
+              >
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  {TAB_KEYS.map((tabKey) => {
+                    const meta = tabMeta[tabKey];
+                    const active = selectedTab === tabKey;
+                    const icon =
+                      tabKey === 'moments' ? <Sparkles size={16} /> : tabKey === 'replies' ? <MessageCircle size={16} /> : <Repeat2 size={16} />;
+
+                    return (
+                      <ButtonBase
+                        key={tabKey}
+                        onClick={() => updateTab(tabKey)}
+                        sx={{
+                          flex: 1,
+                          minHeight: 72,
+                          px: 2,
+                          py: 1.5,
+                          borderRadius: 3,
+                          border: active ? '1px solid rgba(245,158,11,0.22)' : '1px solid transparent',
+                          bgcolor: active ? '#201D1A' : 'transparent',
+                          textAlign: 'left',
+                          transition: 'transform 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out',
+                          '&:hover': {
+                            bgcolor: active ? '#201D1A' : '#1E1A18',
+                            transform: 'translateY(-1px)',
+                          },
+                          '&.Mui-focusVisible': {
+                            outline: 'none',
+                            boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.85)',
+                          },
+                        }}
+                      >
+                        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2} sx={{ width: '100%' }}>
+                          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+                            <Box
+                              sx={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 2.5,
+                                display: 'grid',
+                                placeItems: 'center',
+                                bgcolor: active ? '#F59E0B' : '#1F1D1B',
+                                color: active ? '#0A0908' : '#F59E0B',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {icon}
+                            </Box>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography sx={{ fontWeight: 900, color: active ? '#fff' : 'rgba(255,255,255,0.82)', lineHeight: 1.1 }}>
+                                {meta.title}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  display: 'block',
+                                  mt: 0.25,
+                                  color: 'rgba(255,255,255,0.48)',
+                                  maxWidth: 240,
+                                }}
+                              >
+                                {meta.description}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                          <Box
+                            sx={{
+                              px: 1.1,
+                              py: 0.45,
+                              borderRadius: 999,
+                              bgcolor: active ? 'rgba(245,158,11,0.12)' : '#171513',
+                              color: active ? '#F59E0B' : 'rgba(255,255,255,0.64)',
+                              fontWeight: 900,
+                              fontSize: '0.8rem',
+                              lineHeight: 1,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {tabCounts[tabKey]}
+                          </Box>
+                        </Stack>
+                      </ButtonBase>
+                    );
+                  })}
+                </Stack>
+              </Box>
+
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+
+              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" spacing={1}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.54)', fontSize: '0.85rem' }}>
+                  Showing {activeTabItems.length} {activeTabMeta.title.toLowerCase()}
+                </Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.36)', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
+                  tab={selectedTab}
+                </Typography>
+              </Stack>
+
+              <FeedPanel
+                loading={momentsLoading}
+                error={momentsError}
+                items={activeTabItems}
+                emptyTitle={activeTabMeta.emptyTitle}
+                emptyBody={activeTabMeta.emptyBody}
+                emptyActionLabel={activeTabMeta.emptyActionLabel}
+                emptyIcon={activeTabMeta.emptyIcon}
+                onEmptyAction={() => (selectedTab === 'moments' ? router.push('/connect') : updateTab('moments'))}
+                onOpenMoment={(momentId) => router.push(`/connect/post/${momentId}`)}
+              />
+            </Stack>
           </Box>
         </Paper>
       </Box>
