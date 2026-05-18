@@ -336,30 +336,50 @@ export const Profile = ({ username }: ProfileProps) => {
 
     if (loading && !profile) {
         return (
-            <Box sx={{ maxWidth: 800, mx: 'auto', p: 2, pt: 4 }}>
-                <Paper sx={{ p: 4, borderRadius: '32px', mb: 4, bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)' }} elevation={0}>
+            <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 4 } }}>
+                <Paper sx={{ p: { xs: 3, sm: 4 }, borderRadius: '28px', mb: 4, bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.06)' }} elevation={0}>
                     <Stack direction="row" spacing={2} alignItems="center">
-                        <Skeleton variant="rounded" width={72} height={72} sx={{ borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <Skeleton variant="rounded" width={140} height={140} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.04)' }} />
                         <Box sx={{ flex: 1 }}>
-                            <Skeleton width="35%" height={32} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                            <Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                            <Skeleton width="50%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                            <Skeleton width="40%" height={36} sx={{ bgcolor: 'rgba(255,255,255,0.04)', mb: 1 }} />
+                            <Skeleton width="25%" sx={{ bgcolor: 'rgba(255,255,255,0.04)', mb: 2 }} />
+                            <Skeleton width="60%" sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
                         </Box>
                     </Stack>
                 </Paper>
                 <Stack spacing={2}>
-                    <Skeleton variant="rounded" height={140} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.05)' }} />
-                    <Skeleton variant="rounded" height={140} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} variant="rounded" height={100} sx={{ borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.04)' }} />
+                    ))}
                 </Stack>
             </Box>
         );
     }
 
     if (!profile) return (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h5" gutterBottom>Profile not found</Typography>
-            <Typography color="text.secondary">The user @{username} doesn&apos;t exist in our ecosystem.</Typography>
-            <Button sx={{ mt: 2 }} variant="contained" onClick={() => router.push('/')}>Go Home</Button>
+        <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 2, sm: 3 }, textAlign: 'center', py: { xs: 8, sm: 12 } }}>
+            <Typography variant="h5" gutterBottom sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)' }}>
+                Profile not found
+            </Typography>
+            <Typography color="text.secondary" sx={{ mt: 1, mb: 4, opacity: 0.6 }}>
+                The user @{username} doesn&apos;t exist in our ecosystem.
+            </Typography>
+            <Button 
+                variant="contained" 
+                onClick={() => router.push('/')}
+                sx={{ 
+                    bgcolor: '#F59E0B',
+                    color: '#0A0908',
+                    fontWeight: 700,
+                    borderRadius: '12px',
+                    px: 3,
+                    py: 1,
+                    '&:hover': { bgcolor: '#DBA400' },
+                    textTransform: 'none'
+                }}
+            >
+                Go Home
+            </Button>
         </Box>
     );
 
@@ -380,17 +400,17 @@ export const Profile = ({ username }: ProfileProps) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ type: 'spring', stiffness: 280, damping: 28 }}
         >
-        <Box sx={{ maxWidth: 800, mx: 'auto', p: 2, pt: 4 }}>
+        <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 4 } }}>
+                {/* Profile Header Card */}
                 <Paper sx={{ 
-                    p: 4, 
-                    borderRadius: '32px', 
+                    p: { xs: 3, sm: 4 }, 
+                    borderRadius: '28px', 
                     mb: 4,
                     background: '#161412',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
                     position: 'relative',
                     overflow: 'hidden',
-                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     '&::before': {
                         content: '""',
                         position: 'absolute',
@@ -398,24 +418,25 @@ export const Profile = ({ username }: ProfileProps) => {
                         left: 0,
                         right: 0,
                         height: '1px',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: '32px'
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent)',
+                        borderRadius: '28px'
                     }
                 }} elevation={0}>
-                {/* Brand Accent Blur */}
+                {/* Accent gradient accent for visual interest */}
                 <Box sx={{
                     position: 'absolute',
-                    top: -100,
-                    right: -100,
-                    width: 200,
-                    height: 200,
-                    background: 'radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0) 70%)',
-                    filter: 'blur(40px)',
+                    top: -80,
+                    right: -80,
+                    width: 180,
+                    height: 180,
+                    background: 'radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0) 70%)',
+                    filter: 'blur(50px)',
                     zIndex: 0
                 }} />
 
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: 'center', gap: 4, position: 'relative', zIndex: 1 }}>
-                    <Box onClick={handleNavigateToPublic} sx={{ cursor: 'pointer' }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'center', sm: 'flex-start' }, gap: { xs: 3, sm: 4 }, position: 'relative', zIndex: 1 }}>
+                    {/* Avatar */}
+                    <Box onClick={handleNavigateToPublic} sx={{ cursor: 'pointer', flexShrink: 0 }}>
                         <IdentityAvatar
                             src={profileUrl || profile.avatar}
                             alt={profile.displayName || profile.username || 'profile'}
@@ -424,15 +445,20 @@ export const Profile = ({ username }: ProfileProps) => {
                             pro={identityFlags.pro}
                             size={140}
                             verifiedSize={22}
-                            borderRadius="28px"
+                            borderRadius="24px"
                         />
                     </Box>
+
+                    {/* Profile Info */}
                     <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
                         <Typography onClick={handleNavigateToPublic} variant="h3" sx={{ 
                             fontWeight: 900, 
                             mb: 0.5,
                             fontFamily: 'var(--font-clash)',
-                            letterSpacing: '-0.04em'
+                            letterSpacing: '-0.04em',
+                            cursor: 'pointer',
+                            transition: 'opacity 0.2s',
+                            '&:hover': { opacity: 0.8 }
                         }}>
                             <IdentityName verified={identityFlags.verified} sx={{ fontWeight: 900 }}>
                                 {profile.displayName || profile.username || 'Anonymous'}
@@ -443,34 +469,41 @@ export const Profile = ({ username }: ProfileProps) => {
                             mb: 2,
                             fontWeight: 600,
                             fontFamily: 'var(--font-mono)',
-                            fontSize: '0.9rem'
+                            fontSize: '0.85rem',
+                            letterSpacing: '0.02em'
                         }}>
                             @{profile.username}
                         </Typography>
-                        <Typography variant="body1" sx={{ 
-                            mt: 2, 
+                        <Typography variant="body2" sx={{ 
+                            mt: 2.5, 
                             lineHeight: 1.6,
-                            color: 'var(--color-gunmetal)',
+                            color: 'rgba(255, 255, 255, 0.7)',
                             maxWidth: '500px',
-                            opacity: profile?.__isFallback ? 0.4 : 1
+                            opacity: profile?.__isFallback ? 0.4 : 1,
+                            fontWeight: 500
                         }}>
-                            {profile.bio || (profile?.__isFallback ? 'This identity is private within Connect.' : 'No bio yet. This user prefers to stay mysterious.')}
+                            {profile.bio || (profile?.__isFallback ? 'This identity is private within Connect.' : 'No bio yet.')}
                         </Typography>
 
-                        <Box sx={{ display: 'flex', gap: 1.5, mt: 4, justifyContent: { xs: 'center', sm: 'flex-start' }, flexWrap: 'wrap' }}>
+                        {/* Action Buttons */}
+                        <Box sx={{ display: 'flex', gap: 1, mt: 4, justifyContent: { xs: 'center', sm: 'flex-start' }, flexWrap: 'wrap', alignItems: 'center' }}>
                             {isOwnProfile ? (
                                 <>
                                     <Button
                                         variant="contained"
-                                        startIcon={<EditIcon size={18} />}
+                                        startIcon={<EditIcon size={16} />}
                                         sx={{ 
-                                            borderRadius: '14px',
-                                            px: 3,
-                                            py: 1,
+                                            borderRadius: '12px',
+                                            px: 2.5,
+                                            py: 0.75,
                                             fontWeight: 700,
+                                            fontSize: '0.9rem',
                                             bgcolor: '#F59E0B',
-                                            color: 'black',
-                                            '&:hover': { bgcolor: alpha('#F59E0B', 0.8) }
+                                            color: '#0A0908',
+                                            '&:hover': { 
+                                                bgcolor: '#DBA400'
+                                            },
+                                            textTransform: 'none'
                                         }}
                                         onClick={() => setIsEditModalOpen(true)}
                                     >
@@ -478,23 +511,23 @@ export const Profile = ({ username }: ProfileProps) => {
                                     </Button>
                                     <Button
                                         variant="outlined"
-                                        startIcon={<SettingsIcon size={18} />}
+                                        startIcon={<SettingsIcon size={16} />}
                                         sx={{ 
-                                            borderRadius: '14px',
-                                            px: 3,
-                                            py: 1,
+                                            borderRadius: '12px',
+                                            px: 2.5,
+                                            py: 0.75,
                                             fontWeight: 700,
-                                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                                            color: 'var(--color-titanium)',
-                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            fontSize: '0.9rem',
+                                            borderColor: 'rgba(255, 255, 255, 0.12)',
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            bgcolor: 'rgba(255, 255, 255, 0.02)',
                                             '&:hover': { 
-                                                borderColor: '#6366F1',
-                                                bgcolor: alpha('#6366F1', 0.05)
-                                            }
+                                                borderColor: 'rgba(99, 102, 241, 0.4)',
+                                                bgcolor: 'rgba(99, 102, 241, 0.04)'
+                                            },
+                                            textTransform: 'none'
                                         }}
                                         onClick={() => {
-                                            const domain = process.env.NEXT_PUBLIC_DOMAIN || 'kylrix.space';
-                                            const idSubdomain = process.env.NEXT_PUBLIC_AUTH_SUBDOMAIN || 'accounts';
                                             router.push(`/accounts/settings?source=${encodeURIComponent(window.location.origin)}`);
                                         }}
                                     >
@@ -505,18 +538,20 @@ export const Profile = ({ username }: ProfileProps) => {
                                 <>
                                     <Button
                                         variant={isFollowing ? "outlined" : "contained"}
-                                        startIcon={<PersonAddIcon size={18} />}
+                                        startIcon={<PersonAddIcon size={16} />}
                                         sx={{ 
-                                            borderRadius: '14px',
-                                            px: 3,
-                                            py: 1,
+                                            borderRadius: '12px',
+                                            px: 2.5,
+                                            py: 0.75,
                                             fontWeight: 700,
+                                            fontSize: '0.9rem',
                                             bgcolor: isFollowing ? 'transparent' : '#F59E0B',
-                                            color: isFollowing ? '#F59E0B' : 'black',
-                                            borderColor: isFollowing ? '#F59E0B' : 'none',
+                                            color: isFollowing ? '#F59E0B' : '#0A0908',
+                                            borderColor: isFollowing ? '#F59E0B' : 'transparent',
                                             '&:hover': { 
-                                                bgcolor: isFollowing ? alpha('#F59E0B', 0.05) : alpha('#F59E0B', 0.8) 
-                                            }
+                                                bgcolor: isFollowing ? 'rgba(245, 158, 11, 0.08)' : '#DBA400'
+                                            },
+                                            textTransform: 'none'
                                         }}
                                         onClick={handleFollow}
                                         disabled={followLoading || !currentUser}
@@ -525,19 +560,21 @@ export const Profile = ({ username }: ProfileProps) => {
                                     </Button>
                                     <Button
                                         variant="outlined"
-                                        startIcon={<ChatIcon size={18} />}
+                                        startIcon={<ChatIcon size={16} />}
                                         sx={{ 
-                                            borderRadius: '14px',
-                                            px: 3,
-                                            py: 1,
+                                            borderRadius: '12px',
+                                            px: 2.5,
+                                            py: 0.75,
                                             fontWeight: 700,
-                                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                                            color: 'var(--color-titanium)',
-                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            fontSize: '0.9rem',
+                                            borderColor: 'rgba(255, 255, 255, 0.12)',
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            bgcolor: 'rgba(255, 255, 255, 0.02)',
                                             '&:hover': { 
-                                                borderColor: '#6366F1',
-                                                bgcolor: alpha('#6366F1', 0.05)
-                                            }
+                                                borderColor: 'rgba(99, 102, 241, 0.4)',
+                                                bgcolor: 'rgba(99, 102, 241, 0.04)'
+                                            },
+                                            textTransform: 'none'
                                         }}
                                         onClick={handleMessage}
                                     >
@@ -546,17 +583,19 @@ export const Profile = ({ username }: ProfileProps) => {
                                     <Button
                                         variant="outlined"
                                         sx={{
-                                            borderRadius: '14px',
-                                            px: 3,
-                                            py: 1,
+                                            borderRadius: '12px',
+                                            px: 2.5,
+                                            py: 0.75,
                                             fontWeight: 700,
-                                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                                            color: '#6366F1',
-                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            fontSize: '0.9rem',
+                                            borderColor: 'rgba(255, 255, 255, 0.12)',
+                                            color: 'rgba(255, 255, 255, 0.7)',
+                                            bgcolor: 'rgba(255, 255, 255, 0.02)',
                                             '&:hover': {
-                                                borderColor: '#6366F1',
-                                                bgcolor: alpha('#6366F1', 0.05)
-                                            }
+                                                borderColor: 'rgba(99, 102, 241, 0.4)',
+                                                bgcolor: 'rgba(99, 102, 241, 0.04)'
+                                            },
+                                            textTransform: 'none'
                                         }}
                                         onClick={handleTip}
                                         disabled={!currentUser}
@@ -566,17 +605,19 @@ export const Profile = ({ username }: ProfileProps) => {
                                     <Button
                                         variant="outlined"
                                         sx={{
-                                            borderRadius: '14px',
-                                            px: 3,
-                                            py: 1,
+                                            borderRadius: '12px',
+                                            px: 2.5,
+                                            py: 0.75,
                                             fontWeight: 700,
-                                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                                            fontSize: '0.9rem',
+                                            borderColor: 'rgba(255, 255, 255, 0.12)',
                                             color: '#F59E0B',
-                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            bgcolor: 'rgba(255, 255, 255, 0.02)',
                                             '&:hover': {
                                                 borderColor: '#F59E0B',
-                                                bgcolor: alpha('#F59E0B', 0.08)
-                                            }
+                                                bgcolor: 'rgba(245, 158, 11, 0.06)'
+                                            },
+                                            textTransform: 'none'
                                         }}
                                         onClick={handleRequest}
                                         disabled={!currentUser}
@@ -585,19 +626,22 @@ export const Profile = ({ username }: ProfileProps) => {
                                     </Button>
                                     <Button
                                         variant="outlined"
-                                        startIcon={<Flag size={18} />}
+                                        startIcon={<Flag size={16} />}
                                         sx={{ 
-                                            borderRadius: '14px',
-                                            px: 3,
-                                            py: 1,
+                                            borderRadius: '12px',
+                                            px: 2.5,
+                                            py: 0.75,
                                             fontWeight: 700,
-                                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                                            color: 'var(--color-titanium)',
-                                            bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                            fontSize: '0.9rem',
+                                            borderColor: 'rgba(255, 255, 255, 0.12)',
+                                            color: 'rgba(255, 255, 255, 0.6)',
+                                            bgcolor: 'rgba(255, 255, 255, 0.02)',
                                             '&:hover': { 
-                                                borderColor: '#EF4444',
-                                                bgcolor: alpha('#EF4444', 0.06)
-                                            }
+                                                borderColor: 'rgba(239, 68, 68, 0.4)',
+                                                color: 'rgba(239, 68, 68, 0.8)',
+                                                bgcolor: 'rgba(239, 68, 68, 0.04)'
+                                            },
+                                            textTransform: 'none'
                                         }}
                                         onClick={() => setIsReportModalOpen(true)}
                                         disabled={!currentUser}
@@ -620,117 +664,162 @@ export const Profile = ({ username }: ProfileProps) => {
                     contextType="profile"
                     contextId={profile.$id}
                     contextUrl={typeof window !== 'undefined' ? window.location.href : null}
-                    sourceApp="connect"
+                    sourceApp="kylrix"
                 />
             )}
 
-            <Typography variant="h6" sx={{ 
-                fontWeight: 800, 
-                mb: 3, 
-                fontFamily: 'var(--font-clash)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                opacity: 0.8
-            }}>
-                <Activity size={20} color="#F59E0B" /> Activity Stats
-            </Typography>
-            <Stack direction="row" spacing={2}>
-                <Paper sx={{ 
-                    p: 3, 
-                    textAlign: 'center', 
-                    borderRadius: '24px', 
-                    flex: 1,
-                    background: '#161412',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                    position: 'relative',
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '1px',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: '24px'
-                    }
-                }} elevation={0}>
-                    <Typography variant="h4" sx={{ fontWeight: 900, color: '#F59E0B', fontFamily: 'var(--font-clash)' }}>{stats.posts}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.1em', mt: 1 }}>Posts</Typography>
-                </Paper>
-                <Paper sx={{ 
-                    p: 3, 
-                    textAlign: 'center', 
-                    borderRadius: '24px', 
-                    flex: 1,
-                    background: '#161412',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                    position: 'relative',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                        bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        borderColor: 'rgba(99, 102, 241, 0.3)'
-                    },
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '1px',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: '24px'
-                    }
-                }} elevation={0} onClick={handleOpenFollowers}>
-                    <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--color-primary)', fontFamily: 'var(--font-clash)' }}>{stats.followers}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.1em', mt: 1 }}>Followers</Typography>
-                </Paper>
-                <Paper sx={{ 
-                    p: 3, 
-                    textAlign: 'center', 
-                    borderRadius: '24px', 
-                    flex: 1,
-                    background: '#161412',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                    position: 'relative',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    '&:hover': {
-                        bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        borderColor: 'rgba(245, 158, 11, 0.3)'
-                    },
-                    '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        height: '1px',
-                        background: 'rgba(255,255,255,0.05)',
-                        borderRadius: '24px'
-                    }
-                }} elevation={0} onClick={handleOpenFollowing}>
-                    <Typography variant="h4" sx={{ fontWeight: 900, color: '#F59E0B', fontFamily: 'var(--font-clash)' }}>{stats.following}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.1em', mt: 1 }}>Following</Typography>
-                </Paper>
-            </Stack>
-
-            <Box sx={{ mt: 6 }}>
+            {/* Stats Section */}
+            <Box sx={{ mb: 6 }}>
                 <Typography variant="h6" sx={{ 
                     fontWeight: 800, 
-                    mb: 3, 
+                    mb: 2.5, 
                     fontFamily: 'var(--font-clash)',
-                    opacity: 0.8
+                    fontSize: '0.95rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    opacity: 0.6
                 }}>
-                    Moments
+                    Activity
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                    <Paper sx={{ 
+                        p: { xs: 2.5, sm: 3 }, 
+                        textAlign: 'center', 
+                        borderRadius: '20px', 
+                        flex: 1,
+                        background: '#161412',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '1px',
+                            background: 'rgba(255,255,255,0.03)',
+                            borderRadius: '20px'
+                        }
+                    }} elevation={0}>
+                        <Typography variant="h4" sx={{ fontWeight: 900, color: '#F59E0B', fontFamily: 'var(--font-clash)', fontSize: '1.8rem' }}>
+                            {stats.posts}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.08em', mt: 1, display: 'block' }}>
+                            Posts
+                        </Typography>
+                    </Paper>
+                    <Paper sx={{ 
+                        p: { xs: 2.5, sm: 3 }, 
+                        textAlign: 'center', 
+                        borderRadius: '20px', 
+                        flex: 1,
+                        background: '#161412',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                        position: 'relative',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.02)',
+                            borderColor: 'rgba(99, 102, 241, 0.2)'
+                        },
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '1px',
+                            background: 'rgba(255,255,255,0.03)',
+                            borderRadius: '20px'
+                        }
+                    }} elevation={0} onClick={handleOpenFollowers}>
+                        <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--color-primary)', fontFamily: 'var(--font-clash)', fontSize: '1.8rem' }}>
+                            {stats.followers}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.08em', mt: 1, display: 'block' }}>
+                            Followers
+                        </Typography>
+                    </Paper>
+                    <Paper sx={{ 
+                        p: { xs: 2.5, sm: 3 }, 
+                        textAlign: 'center', 
+                        borderRadius: '20px', 
+                        flex: 1,
+                        background: '#161412',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                        position: 'relative',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                            bgcolor: 'rgba(255, 255, 255, 0.02)',
+                            borderColor: 'rgba(245, 158, 11, 0.2)'
+                        },
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '1px',
+                            background: 'rgba(255,255,255,0.03)',
+                            borderRadius: '20px'
+                        }
+                    }} elevation={0} onClick={handleOpenFollowing}>
+                        <Typography variant="h4" sx={{ fontWeight: 900, color: '#F59E0B', fontFamily: 'var(--font-clash)', fontSize: '1.8rem' }}>
+                            {stats.following}
+                        </Typography>
+                        <Typography variant="caption" sx={{ fontWeight: 700, opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.08em', mt: 1, display: 'block' }}>
+                            Following
+                        </Typography>
+                    </Paper>
+                </Stack>
+            </Box>
+
+            {/* Moments Section */}
+            <Box>
+                <Typography variant="h6" sx={{ 
+                    fontWeight: 800, 
+                    mb: 2.5, 
+                    fontFamily: 'var(--font-clash)',
+                    fontSize: '0.95rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    opacity: 0.6
+                }}>
+                    Activity Feed
                 </Typography>
 
                 {momentsLoading ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress size={24} /></Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+                        <CircularProgress size={32} sx={{ color: '#F59E0B' }} />
+                    </Box>
+                ) : moments.length === 0 ? (
+                    <Paper sx={{
+                        p: 4,
+                        textAlign: 'center',
+                        borderRadius: '20px',
+                        background: '#161412',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                        position: 'relative',
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: '1px',
+                            background: 'rgba(255,255,255,0.03)',
+                            borderRadius: '20px'
+                        }
+                    }} elevation={0}>
+                        <Typography sx={{ opacity: 0.4, fontWeight: 600 }}>
+                            No posts yet. Check back soon.
+                        </Typography>
+                    </Paper>
                 ) : (
                     <Stack spacing={2}>
                         {moments.map((moment) => (
@@ -738,41 +827,58 @@ export const Profile = ({ username }: ProfileProps) => {
                                 key={moment.$id}
                                 onClick={() => router.push(`/connect/post/${moment.$id}`)}
                                 sx={{
-                                    p: 2.5,
-                                    borderRadius: 5,
-                                    bgcolor: 'rgba(255, 255, 255, 0.02)',
-                                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                                    p: 3,
+                                    borderRadius: '18px',
+                                    bgcolor: '#161412',
+                                    border: '1px solid rgba(255, 255, 255, 0.06)',
                                     cursor: 'pointer',
                                     transition: 'all 0.2s ease',
+                                    position: 'relative',
+                                    boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
                                     '&:hover': {
-                                        bgcolor: 'rgba(255, 255, 255, 0.04)',
-                                        borderColor: 'rgba(245, 158, 11, 0.3)',
-                                        transform: 'translateY(-2px)'
+                                        bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                        borderColor: 'rgba(245, 158, 11, 0.2)',
+                                        transform: 'translateY(-1px)',
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                                    },
+                                    '&::before': {
+                                        content: '""',
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: '1px',
+                                        background: 'rgba(255,255,255,0.03)',
+                                        borderRadius: '18px'
                                     }
                                 }}
+                                elevation={0}
                             >
-                                <Typography variant="body2" sx={{ mb: 2, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.6 }}>
+                                <Typography variant="body2" sx={{ mb: 2.5, color: 'rgba(255, 255, 255, 0.9)', lineHeight: 1.6, fontWeight: 500 }}>
                                     {moment.caption}
                                 </Typography>
-                                <Stack direction="row" spacing={3} sx={{ color: 'text.disabled' }}>
+                                <Stack direction="row" spacing={3} sx={{ color: 'rgba(255, 255, 255, 0.4)' }}>
                                     <Stack direction="row" spacing={0.5} alignItems="center">
                                         <Heart size={14} fill={moment.isLiked ? '#F59E0B' : 'none'} color={moment.isLiked ? '#F59E0B' : 'currentColor'} />
-                                        <Typography variant="caption" fontWeight={700}>{moment.stats?.likes || 0}</Typography>
+                                        <Typography variant="caption" fontWeight={600} sx={{ color: moment.isLiked ? '#F59E0B' : 'inherit' }}>
+                                            {moment.stats?.likes || 0}
+                                        </Typography>
                                     </Stack>
                                     <Stack direction="row" spacing={0.5} alignItems="center">
                                         <MessageCircle size={14} />
-                                        <Typography variant="caption" fontWeight={700}>{moment.stats?.replies || 0}</Typography>
+                                        <Typography variant="caption" fontWeight={600}>
+                                            {moment.stats?.replies || 0}
+                                        </Typography>
                                     </Stack>
                                     <Stack direction="row" spacing={0.5} alignItems="center">
                                         <Repeat2 size={14} />
-                                        <Typography variant="caption" fontWeight={700}>{moment.stats?.pulses || 0}</Typography>
+                                        <Typography variant="caption" fontWeight={600}>
+                                            {moment.stats?.pulses || 0}
+                                        </Typography>
                                     </Stack>
                                 </Stack>
                             </Paper>
                         ))}
-                        {moments.length === 0 && (
-                            <Typography sx={{ textAlign: 'center', py: 4, opacity: 0.4, fontWeight: 600 }}>No moments shared yet.</Typography>
-                        )}
                     </Stack>
                 )}
             </Box>
