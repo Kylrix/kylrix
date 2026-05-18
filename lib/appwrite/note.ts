@@ -2757,7 +2757,7 @@ async function loadT4NoteKey(noteId: string, ownerId: string): Promise<CryptoKey
   const mek = ecosystemSecurity.getMasterKey();
   if (mek) {
     try {
-      const rawKey = await ecosystemSecurity.decryptBinaryWithKey(mapping.wrappedKey, mek);
+      const rawKey = await ecosystemSecurity.decryptBinaryWithKey(mapping.wrappedKey, mek, true);
       return await crypto.subtle.importKey(
         'raw',
         rawKey,
@@ -2784,29 +2784,31 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
       try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
     })();
 
-    if (meta.clientDecrypted) {
-      return note;
-    }
-
-    // T4 notes always require a symmetric key from key_mapping
-    if (!meta.isEncrypted || meta.encryptionVersion !== 'T4') {
-      return note;
-    }
+    if (meta.clientDecrypted) return note;
+    if (!meta.isEncrypted || meta.encryptionVersion !== 'T4') return note;
 
     let keyBase64 = forceKeyRefresh ? null : getCachedPublicNoteDecryptionKey(note.$id);
     
     if (!keyBase64) {
-      // 1. Try public route
-      keyBase64 = await getCurrentPublicNoteDecryptionKey(note.$id);
-      
-      // 2. If not public, try owner route (requires unlocked vault)
-      if (!keyBase64 && ecosystemSecurity.status.isUnlocked) {
-        const currentUser = await getCurrentUser();
-        if (currentUser && (note.userId === currentUser.$id || (note as any).owner_id === currentUser.$id)) {
-           const ownerKey = await loadT4NoteKey(note.$id, currentUser.$id);
-           keyBase64 = await exportUrlSafeCryptoKey(ownerKey);
-        }
-      }
+      // Unwrapping logic: attempt MEK (owner) then public route
+      const tryUnwrap = async () => {
+          const mek = ecosystemSecurity.getMasterKey();
+          if (mek) {
+              try {
+                  const currentUser = await getCurrentUser();
+                  if (currentUser && (note.userId === currentUser.$id || (note as any).owner_id === currentUser.$id)) {
+                      const keyMappingRes = await getT4NoteKeyMapping(note.$id, currentUser.$id);
+                      const mapping = keyMappingRes.documents[0] as any;
+                      if (mapping?.wrappedKey) {
+                          const rawKey = await ecosystemSecurity.decryptBinaryWithKey(mapping.wrappedKey, mek, true);
+                          return await exportUrlSafeCryptoKey(await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']));
+                      }
+                  }
+              } catch (e) { /* silent fallback */ }
+          }
+          return await getCurrentPublicNoteDecryptionKey(note.$id);
+      };
+      keyBase64 = await tryUnwrap();
     }
 
     if (!keyBase64) return null;
@@ -2816,39 +2818,27 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
     
     try {
       if (meta.encryptedTitle) {
-        decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle, key);
+        decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle, key, true);
       } else if (note.title === '🔒 Encrypted Note' || note.title?.includes('🔒')) {
         decryptedTitle = 'Untitled Note';
       }
     } catch (err) {
-      console.warn('[NoteService] Title decryption failed, using fallback:', err);
       decryptedTitle = note.title || 'Untitled Note';
     }
 
-    let decryptedContent = '';
     try {
-        decryptedContent = await ecosystemSecurity.decryptWithKey(note.content || '', key);
+        const decryptedContent = await ecosystemSecurity.decryptWithKey(note.content || '', key, true);
+        cachePublicNoteDecryptionKey(note.$id, keyBase64);
+        return {
+          ...note,
+          metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
+          title: decryptedTitle,
+          content: decryptedContent,
+        };
     } catch (err) {
-        console.error('[NoteService] Content decryption failed:', err);
-        throw err; // Re-throw to be caught by the outer catch
+        return null;
     }
-    cachePublicNoteDecryptionKey(note.$id, keyBase64);
-
-    return {
-      ...note,
-      metadata: JSON.stringify({
-        ...meta,
-        clientDecrypted: true,
-      }),
-      title: decryptedTitle,
-      content: decryptedContent,
-    };
   } catch (error) {
-    if (!forceKeyRefresh) {
-      invalidatePublicNoteDecryptionKey(note.$id);
-      return await decryptPublicEncryptedNote(note, true);
-    }
-    console.error('decryptPublicEncryptedNote failed:', error);
     return null;
   }
 }
@@ -2899,9 +2889,7 @@ async function preparePublicNoteUpdate(
     let wrappedKey: string;
     if (mek) {
         const rawSymmetric = await crypto.subtle.exportKey('raw', symmetricKey);
-        // Use binary-safe btoa hack for non-string key data
-        const rawString = String.fromCharCode(...new Uint8Array(rawSymmetric));
-        wrappedKey = await ecosystemSecurity.encryptWithKey(rawString, mek);
+        wrappedKey = await ecosystemSecurity.encryptBinaryWithKey(new Uint8Array(rawSymmetric), mek);
     } else {
         // Fallback to ECDH
         wrappedKey = await ecosystemSecurity.wrapKeyWithECDH(symmetricKey, ownerPublicKey);

@@ -156,8 +156,9 @@ export function NoteDetailSidebar({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
 
+  // ENCRYPTION LOGIC
   const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
-  const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted;
+  const isEncryptedNote = (isT4Encrypted || isPublic) && !noteMeta?.clientDecrypted && !isLocallyDecrypted;
   const isT4EncryptedPublicNote = !!isPublic && isT4Encrypted;
 
   // Sync local state with liveNote (crucial for auto-decryption healing)
@@ -185,7 +186,6 @@ export function NoteDetailSidebar({
             setIsLocallyDecrypted(true);
             setIsEditingContent(false);
             setIsEditingTitle(false);
-            
             onUpdate(decrypted);
             showSuccess('Note decrypted', 'Content is now visible.');
           }
@@ -461,7 +461,7 @@ export function NoteDetailSidebar({
   }, [liveNote.attachments]);
 
   return (
-    <Box sx={{ p: { xs: 2, md: 2.5 }, display: 'flex', flexDirection: 'column', gap: 3.5, height: '100%', overflowY: 'auto', bgcolor: '#0A0908' }}>
+    <Box sx={{ p: { xs: 2, md: 2.5 }, display: 'flex', flexDirection: 'column', gap: 4, height: '100%', overflowY: 'auto', bgcolor: '#0A0908' }}>
       {/* Header */}
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
         <IconButton onClick={onBack || closeSidebar} sx={{ color: theme.palette.text.secondary }}><BackIcon /></IconButton>
@@ -543,7 +543,7 @@ export function NoteDetailSidebar({
       </Box>
 
       {/* Linked Ecosystem Content */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, px: 1 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, px: 1 }}>
         {[
           { label: 'Goals', items: linkedTasks, loading: isLoadingTasks, icon: <TaskIcon sx={{ fontSize: 18 }} />, color: '#10B981', link: (id: string) => `/flow?taskId=${id}` },
           { label: 'Events', items: linkedEvents, loading: isLoadingEvents, icon: <EventIcon sx={{ fontSize: 18 }} />, color: '#6366F1', link: (id: string) => `/flow/events?eventId=${id}` },
@@ -611,12 +611,18 @@ export function NoteDetailSidebar({
           </Box>
           <Box>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 900, textTransform: 'uppercase', mb: 2, display: 'block' }}>Suggestions</Typography>
-            {isLoadingSuggestions ? <CircularProgress size={16} /> : crossSuggestions.map(s => (
-              <Box key={s.id} sx={{ p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: '12px', mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Box><Typography variant="body2" sx={{ fontWeight: 800 }}>{s.label}</Typography><Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>{s.description}</Typography></Box>
-                <Button size="small" onClick={() => window.open(`https://kylrix.space/integrations?action=${s.id}`, '_blank')}>USE</Button>
-              </Box>
-            ))}
+            {isLoadingSuggestions ? <CircularProgress size={16} /> : crossSuggestions.length > 0 ? (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {crossSuggestions.map(s => (
+                        <Box key={s.id} sx={{ p: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: '12px', mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box><Typography variant="body2" sx={{ fontWeight: 800 }}>{s.label}</Typography><Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>{s.description}</Typography></Box>
+                            <Button size="small" onClick={() => window.open(`https://kylrix.space/integrations?action=${s.id}`, '_blank')}>USE</Button>
+                        </Box>
+                    ))}
+                </Box>
+            ) : (
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic' }}>No suggestions available</Typography>
+            )}
           </Box>
         </Box>
       </Drawer>
