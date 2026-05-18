@@ -105,11 +105,6 @@ interface SharedNoteClientProps {
    initialKey?: string;
 }
 
-function decodeUrlSafeBase64ToBuffer(key: string): Uint8Array {
-  const normalized = key.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-  return Uint8Array.from(Buffer.from(padded, 'base64'));
-}
 
 function isRenderableImageSrc(value?: string | null) {
   if (!value) return false;
@@ -208,7 +203,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     }
 
     if (isT4EncryptedPublicNote) {
-      const keyBuffer = decodeUrlSafeBase64ToBuffer(key);
+      const keyBuffer = ecosystemSecurity.decodeBase64(key);
       const cryptoKey = await crypto.subtle.importKey(
         'raw',
         keyBuffer as any,
