@@ -57,13 +57,61 @@ export async function createCloudflareTracks(data: { sessionId: string; tracks: 
   return await response.json();
 }
 
+export async function fetchTurnCredentials() {
+  const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API;
+  const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
+  const TURN_KEY_ID = process.env.CLOUDFLARE_TURN_KEY_ID;
+
+  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID || !TURN_KEY_ID) {
+    throw new Error('Cloudflare configuration missing');
+  }
+
+  const response = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${TURN_KEY_ID}/credentials/generate-ice-servers`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ttl: 86400 }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return await response.json();
+}
+
+export async function subscribeToCloudflareTracks(data: { sessionId: string; tracks: any[] }) {
+  const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API;
+  const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
+
+  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID) {
+    throw new Error('Cloudflare configuration missing');
+  }
+
+  const response = await fetch(`https://rtc.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/${data.sessionId}/tracks/new`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ tracks: data.tracks }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return await response.json();
+}
+
 export async function generateAIResponse(data: {
   prompt: string;
   history?: AIChatMessage[];
   systemInstruction?: string;
   apiKey?: string;
 }) {
-    // In Next.js 15, we can use headers() to get request info if needed by resolveCurrentUser
     const userHeaders = await headers();
     const user = await resolveCurrentUser(userHeaders as any);
 

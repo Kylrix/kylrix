@@ -2,14 +2,12 @@ import type { PeerConnectionEvents, SignalData, PeerState } from '@/types/p2p';
 import { createCloudflareSession, createCloudflareTracks } from '@/lib/server/api';
 
 export class WebRTCManager {
-  private peerConnection: RTCPeerConnection | null = null;
+  private sfuPeerConnection: RTCPeerConnection | null = null;
+  private p2pPeerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
   private config: RTCConfiguration = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:global.stun.twilio.com:3478' }
-    ]
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
   };
   
   private events: PeerConnectionEvents;
@@ -17,14 +15,22 @@ export class WebRTCManager {
   private candidateQueue: RTCIceCandidateInit[] = [];
   private isRemoteDescriptionSet = false;
   private currentTargetId: string | null = null;
-  private mediaRecorder: MediaRecorder | null = null;
-  private recordedChunks: Blob[] = [];
-  private screenStream: MediaStream | null = null;
   private sessionId: string | null = null;
-  private cloudflareSessionToken: string | null = null;
+  private isSfuMode: boolean = false;
 
   constructor(events: PeerConnectionEvents) {
     this.events = events;
+    // Pre-fetch TURN servers
+    this.initializeTurnServers();
+  }
+
+  private async initializeTurnServers() {
+      try {
+          const { iceServers } = await fetchTurnCredentials();
+          this.config.iceServers = [...this.config.iceServers, ...iceServers];
+      } catch (err) {
+          console.warn('[WebRTCManager] Failed to fetch TURN servers, using STUN-only.');
+      }
   }
 
   private async fetchCloudflareSession() {
@@ -146,46 +152,47 @@ export class WebRTCManager {
     }
   }
 
-  public createPeerConnection(senderId: string, targetId: string) {
-    if (this.peerConnection) return;
+  public createPeerConnection(senderId: string, targetId: string, isSfu: boolean) {
+    this.isSfuMode = isSfu;
     this.currentTargetId = targetId;
 
-    console.log(`[WebRTCManager] Creating PeerConnection for ${senderId} -> ${targetId}`);
-    this.peerConnection = new RTCPeerConnection(this.config);
+    if (isSfu) {
+        if (this.sfuPeerConnection) return;
+        this.sfuPeerConnection = new RTCPeerConnection(this.config);
+    } else {
+        if (this.p2pPeerConnection) return;
+        this.p2pPeerConnection = new RTCPeerConnection(this.config);
+    }
 
-    this.peerConnection.onicecandidate = (event) => {
-      if (event.candidate && this.currentTargetId) {
-        console.log(`[WebRTCManager] ICE Candidate generated for ${this.currentTargetId}`);
-        this.events.onSignal({
-          type: 'candidate',
-          candidate: event.candidate.toJSON(),
-          target: this.currentTargetId,
-          sender: senderId
-        });
-      }
-    };
+    const pc = isSfu ? this.sfuPeerConnection : this.p2pPeerConnection;
+    if (!pc) return;
 
-    this.peerConnection.ontrack = (event) => {
-      console.log(`[WebRTCManager] Remote track received`);
+    if (!isSfu) {
+        pc.onicecandidate = (event) => {
+            if (event.candidate && this.currentTargetId) {
+                this.events.onSignal({
+                    type: 'candidate',
+                    candidate: event.candidate.toJSON(),
+                    target: this.currentTargetId,
+                    sender: senderId
+                });
+            }
+        };
+    }
+
+    pc.ontrack = (event) => {
       this.remoteStream = event.streams[0];
       this.events.onTrack(this.remoteStream);
     };
 
-    this.peerConnection.onconnectionstatechange = () => {
-      const state = this.peerConnection?.connectionState as PeerState;
-      console.log(`[WebRTCManager] Connection state changed: ${state}`);
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState as PeerState;
       this.updateState(state);
     };
 
-    this.peerConnection.oniceconnectionstatechange = () => {
-      console.log(`[WebRTCManager] ICE state changed: ${this.peerConnection?.iceConnectionState}`);
-    };
-
-    // Add local tracks to connection
     if (this.localStream) {
-      console.log(`[WebRTCManager] Adding ${this.localStream.getTracks().length} local tracks`);
       this.localStream.getTracks().forEach(track => {
-        this.peerConnection?.addTrack(track, this.localStream!);
+        pc.addTrack(track, this.localStream!);
       });
     }
   }
@@ -291,11 +298,30 @@ export class WebRTCManager {
     }
   }
 
-  private async processCandidateQueue() {
-    for (const candidate of this.candidateQueue) {
-      await this.peerConnection?.addIceCandidate(new RTCIceCandidate(candidate));
-    }
-    this.candidateQueue = [];
+  public async subscribeToRemoteTracks(sessionId: string, trackNames: string[]) {
+    if (!this.sfuPeerConnection) return;
+    
+    // Cloudflare SFU subscription protocol
+    const tracks = trackNames.map(name => ({
+      location: 'remote',
+      sessionId: sessionId, // Peer A's session ID
+      trackName: name
+    }));
+
+    const response = await subscribeToCloudflareTracks({ sessionId: this.sessionId!, tracks });
+    
+    // Accept SFU SDP offer
+    await this.sfuPeerConnection.setRemoteDescription(new RTCSessionDescription(response.sessionDescription));
+    const answer = await this.sfuPeerConnection.createAnswer();
+    await this.sfuPeerConnection.setLocalDescription(answer);
+
+    // Ship answer back (renegotiation)
+    this.events.onSignal({
+      type: 'renegotiate',
+      sdp: answer.sdp,
+      target: this.currentTargetId!,
+      sender: 'me'
+    });
   }
 
   public cleanup() {
