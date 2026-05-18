@@ -294,17 +294,14 @@ export function NoteDetailSidebar({
     return () => { active = false; };
   }, [liveNote.$id]);
 
-  const hasEditableCollaborators = useMemo(() => {
-    return collaboratorProfiles.some((profile: any) => {
-      const level = String(profile?.permissionLevel || profile?.permission || '').trim().toLowerCase();
-      return level === 'write' || level === 'admin';
-    });
+  const hasCollaborators = useMemo(() => {
+    return collaboratorProfiles.length > 0;
   }, [collaboratorProfiles]);
 
   useEffect(() => {
     if (!liveNote.$id) return;
     if (isLoadingCollaborators) return;
-    if (!hasEditableCollaborators) {
+    if (!hasCollaborators) {
       setRealtimeNote(null);
       return;
     }
@@ -338,7 +335,7 @@ export function NoteDetailSidebar({
         (unsubscribe as any).unsubscribe();
       }
     };
-  }, [liveNote.$id, hasEditableCollaborators, isLoadingCollaborators]);
+  }, [liveNote.$id, hasCollaborators, isLoadingCollaborators]);
 
   useEffect(() => {
     let active = true;
