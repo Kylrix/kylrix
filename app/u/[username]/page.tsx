@@ -1,5 +1,5 @@
-import { Profile } from '@/components/profile/Profile';
-import { Container } from '@mui/material';
+import { Profile } from '@/components/profile/ProfileRedesign';
+import { Box } from '@mui/material';
 
 export default function UserProfilePage({
   params,
@@ -7,8 +7,8 @@ export default function UserProfilePage({
   params: { username: string };
 }) {
   return (
-    <Container maxWidth="lg" sx={{ py: 3, pointerEvents: 'auto' }}>
+    <Box sx={{ width: '100%', pointerEvents: 'auto' }}>
       <Profile username={params.username} />
-    </Container>
+    </Box>
   );
 }

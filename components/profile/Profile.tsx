@@ -16,7 +16,6 @@ import {
 } from '@mui/material';
 import { 
     Edit3 as EditIcon, 
-    Settings as SettingsIcon, 
     UserPlus as PersonAddIcon, 
     MessageSquare as ChatIcon,
     Activity,
@@ -72,8 +71,9 @@ export const Profile = ({ username }: ProfileProps) => {
     const [actorsTitle, setActorsTitle] = useState('');
     const [actorsList, setActorsList] = useState<Actor[]>([]);
     const morphFromPanel = searchParams.get('transition') === 'profile';
+    const targetUserId = profile?.userId || profile?.$id || null;
 
-    const isOwnProfile = Boolean(currentUser && profile && profile.userId && currentUser.$id && profile.userId === currentUser.$id);
+    const isOwnProfile = Boolean(currentUser && targetUserId && currentUser.$id === targetUserId);
     const identityFlags = computeIdentityFlags({
         createdAt: profile?.$createdAt || profile?.createdAt || null,
         lastUsernameEdit: profile?.last_username_edit || profile?.preferences?.last_username_edit || null,
@@ -292,16 +292,17 @@ export const Profile = ({ username }: ProfileProps) => {
 
     const handleMessage = () => {
         if (!profile) return;
-        const targetId = profile.userId || profile.$id;
+        const targetId = targetUserId;
+        if (!targetId) return;
         router.push(`/chats?userId=${targetId}`);
     };
 
     const handleTip = () => {
-        if (!currentUser || !profile) return;
+        if (!currentUser || !profile || !targetUserId) return;
         openWalletWithIntent({
             mode: 'send',
             toUser: {
-                id: String(profile.userId || profile.$id || ''),
+                id: String(targetUserId),
                 username: String(profile.username || ''),
                 displayName: String(profile.displayName || profile.username || 'User'),
             },
@@ -309,13 +310,13 @@ export const Profile = ({ username }: ProfileProps) => {
     };
 
     const handleRequest = () => {
-        if (!currentUser || !profile) return;
+        if (!currentUser || !profile || !targetUserId) return;
         openTokenUserSearch({
             mode: 'request',
             fromUserId: currentUser.$id,
             source: 'profile_request',
             preselectedUser: {
-                id: String(profile.userId || profile.$id || ''),
+                id: String(targetUserId),
                 username: String(profile.username || ''),
                 displayName: String(profile.displayName || profile.username || 'User'),
             },
@@ -497,33 +498,8 @@ export const Profile = ({ username }: ProfileProps) => {
                                             whiteSpace: 'nowrap'
                                         }}
                                         onClick={() => setIsEditModalOpen(true)}
-                                    >
+                                        >
                                         Edit Profile
-                                    </Button>
-                                    <Button
-                                        variant="outlined"
-                                        startIcon={<SettingsIcon size={16} />}
-                                        sx={{ 
-                                            borderRadius: '12px',
-                                            px: 2.5,
-                                            py: 0.75,
-                                            fontWeight: 700,
-                                            fontSize: '0.9rem',
-                                            borderColor: 'rgba(255, 255, 255, 0.12)',
-                                            color: 'rgba(255, 255, 255, 0.7)',
-                                            bgcolor: 'rgba(255, 255, 255, 0.02)',
-                                            '&:hover': { 
-                                                borderColor: 'rgba(99, 102, 241, 0.4)',
-                                                bgcolor: 'rgba(99, 102, 241, 0.04)'
-                                            },
-                                            textTransform: 'none',
-                                            whiteSpace: 'nowrap'
-                                        }}
-                                        onClick={() => {
-                                            router.push(`/accounts/settings?source=${encodeURIComponent(window.location.origin)}`);
-                                        }}
-                                    >
-                                        Settings
                                     </Button>
                                 </>
                             ) : (
@@ -652,11 +628,11 @@ export const Profile = ({ username }: ProfileProps) => {
                 </Stack>
             </Paper>
 
-            {!isOwnProfile && profile?.userId && (
+            {!isOwnProfile && targetUserId && (
                 <ReportUserDialog
                     open={isReportModalOpen}
                     onClose={() => setIsReportModalOpen(false)}
-                    targetUserId={profile.userId || profile.$id}
+                    targetUserId={targetUserId}
                     targetUsername={profile.username}
                     contextType="profile"
                     contextId={profile.$id}
