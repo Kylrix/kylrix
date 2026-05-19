@@ -28,10 +28,21 @@ Do **not** use `rgba`, `alpha()`, `hsla`, or `opacity` \< 1 for **background fil
 | Role | Hex | Typical use |
 | :--- | :--- | :--- |
 | Canvas / void | `#0A0908` or `#000000` | Inset panels, input wells |
-| Primary surface | `#161412` | Drawer paper, bottom nav shell (`UnifiedBottomBar`) |
+| Primary surface | `#161412` | **Dark Ash (default)** for primary components, Drawer paper, bottom nav shell (`UnifiedBottomBar`) |
 | Hover / lifted | `#1C1A18` (`#1F1D1B` in `globals`) | Rows, hover fill |
 | Opaque edge / hairline | e.g. `#34322F` on `#161412` | Borders (replaces translucent white strokes) |
 | Ecosystem primary | `#6366F1` — hover e.g. `#575CF0` solid | Primary buttons, emphasis (solid only) |
+
+## Card & Surface Standards (3D Depth)
+
+All primary interactive surfaces (cards, dashboard items) must follow these kinetic and depth rules:
+
+- **Radius:** `24px`
+- **Vertical Rhythm:** `padding: 2.5` (20px), `marginBottom: 1.5` (12px).
+- **Idle Shadow:** `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px rgba(37,35,33,0.9)`
+- **Hover Shadow:** `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px rgba(37,35,33,1.0)`
+- **Kinetic Transition:** `transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'`
+- **Hover Lift:** `transform: 'translateY(-2px)'`
 
 App accents — from `AGENTS.md` — only for app-scoped UI.
 

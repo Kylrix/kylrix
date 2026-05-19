@@ -27,3 +27,4 @@ disable-model-invocation: true
 8. **Do not cram copy:** Keep hero and drawer copy short. Prefer one clear sentence per block and clear whitespace between text groups.
 9. **Authorized fonts only:** Use `var(--font-satoshi)`, `var(--font-clash)`, and `var(--font-mono)`; never introduce ad-hoc or default fallback-only typography for primary UI.
 10. **Drawer-to-sidebar responsiveness:** Topbar drawers become sidebars on desktop (top drawer -> left sidebar, bottom drawer -> right sidebar). Avoid desktop topbar extension panels.
+11. **Dark Ash Baseline:** Use `#161412` (Dark Ash / Deep Ash) as the default background for all primary surfaces and components (cards, drawers, bottom bars) sitting on the pitch-black (`#0A0908`) shell.

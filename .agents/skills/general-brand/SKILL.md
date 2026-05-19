@@ -31,8 +31,8 @@ It does **not** rely on glassy, airy, or playful UI tropes.
 1. **Pitch black is the stage.**
    Use near-black / pitch-black for app shells and full-bleed backgrounds.
 
-2. **Deep ash is the primary surface.**
-   Anything that directly sits on black should usually be deep ash, not mid-gray.
+2. **Dark Ash is the primary surface.**
+   Use `#161412` (Dark Ash / Deep Ash) for primary components. Anything that directly sits on black should usually be dark ash, not mid-gray.
 
 3. **Nested contrast is a feature.**
    A surface can invert against its immediate container when it improves focus, like the passkey list inside settings.
@@ -45,14 +45,24 @@ It does **not** rely on glassy, airy, or playful UI tropes.
 
 6. **A focused surface should feel physically closer.**
    Use subtle blur, blur scrims, rim borders, and layered depth to make the active panel feel present.
+   - **Idle Shadow:** `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px rgba(37,35,33,0.9)`
+   - **Hover Shadow:** `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px rgba(37,35,33,1.0)`
+   - **Transition:** `all 0.4s cubic-bezier(0.16, 1, 0.3, 1)`
 
 ## Surface hierarchy
 
 Use a small stack of dark tones:
-- **Pitch black** for the outer shell
-- **Deep ash** for primary components
-- **Inset ash / rim ash** for nested cards, lists, and technical sections
+- **Pitch black** (`#0A0908`) for the outer shell
+- **Dark Ash** (`#161412`) for primary components (default)
+- **Inset ash / rim ash** (`#1C1A18`) for nested cards, lists, and borders
 - **Softer ash** only for secondary separators and hover states
+
+## Card Rhythm
+
+Standard spacing for primary card components:
+- **Radius:** `24px`
+- **Vertical Padding:** `2.5` (20px)
+- **Vertical Spacing (Margin Bottom):** `1.5` (12px)
 
 Avoid:
 - flat charcoal everywhere

@@ -1243,27 +1243,20 @@ export const ChatService = {
                 );
 
                 if (isEncrypted) {
-                    let messageKey = _conv?.type === 'group' && String(_conv?.encryptionVersion || '').toUpperCase() === 'T4' && userId
-                        ? await resolveConversationKey(_conv, userId, msg.createdAt)
-                        : convKey;
-                    if (!messageKey && userId) {
-                        await UsersService.forceSyncProfileWithIdentity({ $id: userId });
-                        messageKey = _conv?.type === 'group' && String(_conv?.encryptionVersion || '').toUpperCase() === 'T4'
-                            ? await resolveConversationKey(_conv, userId, msg.createdAt)
-                            : await resolveConversationKey(_conv, userId);
-                    }
-                    if (!messageKey) return msg;
-
-                    if (msg.type === 'text' && msg.content && msg.content.length > 40) {
-                        msg.content = await ecosystemSecurity.decryptWithKey(msg.content, messageKey);
-                    }
-                    if (msg.metadata && msg.metadata.length > 40) {
-                        const decryptedMeta = await ecosystemSecurity.decryptWithKey(msg.metadata, messageKey);
-                        try {
-                            msg.metadata = JSON.parse(decryptedMeta);
-                        } catch {
-                            msg.metadata = decryptedMeta;
+                    try {
+                        if (msg.type === 'text' && msg.content && msg.content.length > 40) {
+                            msg.content = await ecosystemSecurity.decrypt(msg.content);
                         }
+                        if (msg.metadata && msg.metadata.length > 40) {
+                            const decryptedMeta = await ecosystemSecurity.decrypt(msg.metadata);
+                            try {
+                                msg.metadata = JSON.parse(decryptedMeta);
+                            } catch {
+                                msg.metadata = decryptedMeta;
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[ChatService] Failed to decrypt message:', msg.$id, e);
                     }
                 }
                 return msg;

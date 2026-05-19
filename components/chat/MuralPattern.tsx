@@ -4,7 +4,7 @@ import { Box } from '@mui/material';
 
 const TILE_WIDTH = 640;
 const TILE_HEIGHT = 456;
-const STROKE = '#f3f0ea';
+const STROKE = '#ffffff';
 
 type MotifType =
   | 'note'
@@ -527,7 +527,7 @@ export default function MuralPattern() {
         backgroundRepeat: 'repeat',
         backgroundSize: `${TILE_WIDTH}px ${TILE_HEIGHT}px`,
         zIndex: 0,
-        filter: 'grayscale(1) brightness(1.05) contrast(0.9) opacity(0.93)',
+        filter: 'opacity(0.35)',
       }}
     />
   );

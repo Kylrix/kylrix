@@ -598,80 +598,8 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
 
     return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, bgcolor: '#161412', position: 'relative', overflow: 'hidden' }}>
-            {!externalQuery && (
-                <Box sx={{ p: 3, pb: 2, borderBottom: '1px solid #34322F' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
-                        <IconButton
-                            onClick={() => router.push('/')}
-                            aria-label="Back to menu"
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                bgcolor: '#1C1A18',
-                                color: '#fff',
-                                border: '1px solid #34322F',
-                                '&:hover': {
-                                    bgcolor: '#1F1D1B',
-                                    borderColor: '#6366F1',
-                                }
-                            }}
-                        >
-                            <ArrowLeftIcon fontSize="small" />
-                        </IconButton>
-                        <Typography
-                            variant="h5"
-                            sx={{
-                                fontWeight: 900,
-                                fontFamily: 'var(--font-clash)',
-                                letterSpacing: '-0.02em',
-                                color: '#fff'
-                            }}
-                        >
-                            Messages
-                        </Typography>
-                    </Box>
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1.5,
-                            bgcolor: '#0A0908',
-                            borderRadius: '12px',
-                            px: 2,
-                            py: 1.2,
-                            border: '1px solid #34322F',
-                            '&:focus-within': {
-                                borderColor: '#F59E0B',
-                            }
-                        }}
-                    >
-                        <SearchIcon sx={{ fontSize: 18, color: '#9B9691' }} />
-                        <input
-                            placeholder="Search conversations..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            style={{
-                                background: 'none',
-                                border: 'none',
-                                color: 'white',
-                                fontSize: '0.9rem',
-                                outline: 'none',
-                                width: '100%',
-                                fontFamily: 'var(--font-satoshi)'
-                            }}
-                        />
-                        {searching && <CircularProgress size={14} sx={{ color: '#F59E0B' }} />}
-                    </Box>
-                </Box>
-            )}
-
-            <Box sx={{
-                overflowY: 'auto',
-                flex: 1,
-                px: 2,
-                py: 2
-            }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            <Box sx={{ flex: 1 }}>
                 {showGlobalResults && (
                     <Box sx={{ mb: 4 }}>
                         <Typography sx={{ px: 1, mb: 2, display: 'block', fontWeight: 900, color: '#9B9691', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.7rem', fontFamily: 'var(--font-mono)' }}>
@@ -688,8 +616,8 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
                                             sx={{
                                                 borderRadius: '16px',
                                                 py: 1.5,
-                                                bgcolor: '#1C1A18',
-                                                border: '1px solid #34322F',
+                                                bgcolor: '#161412',
+                                                border: '1px solid #1C1A18',
                                                 '&:hover': {
                                                     bgcolor: '#1F1D1B',
                                                     borderColor: '#F59E0B',
@@ -737,20 +665,24 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
                                 <ListItemButton
                                     component={Link}
                                     href={`/connect/chat/${conv.$id}`}
-                                        sx={{
-                                        borderRadius: '16px',
-                                        py: 2,
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        bgcolor: '#1C1A18',
-                                        border: '1px solid #34322F',
+                                sx={{
+                                        borderRadius: '24px',
+                                        py: 2.5,
+                                        mb: 1.5,
+                                        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                                        bgcolor: '#161412',
+                                        border: '1px solid #1C1A18',
+                                        boxShadow: `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px ${alpha('#252321', 0.9)}`,
                                         ...(activePreviewConversationId === conv.$id ? {
-                                            borderColor: '#6366F1',
+                                            borderColor: '#F59E0B',
                                             transform: 'translateY(-2px)',
+                                            boxShadow: `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px ${alpha('#252321', 1.0)}`,
                                         } : {}),
                                         '&:hover': {
-                                            bgcolor: '#1F1D1B',
-                                            borderColor: '#34322F',
-                                            transform: 'translateY(-2px)'
+                                            bgcolor: '#1C1A18',
+                                            borderColor: alpha('#F59E0B', 0.2),
+                                            transform: 'translateY(-2px)',
+                                            boxShadow: `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px ${alpha('#252321', 1.0)}`,
                                         }
                                     }}
                                 >

@@ -1,3 +1,4 @@
+import { createServerClient } from '@/lib/appwrite-server-only';
 import { ID, Permission, Role, Query, TablesDB } from 'node-appwrite';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -69,7 +70,7 @@ export async function createMessageInternal(payload: {
   replyTo?: string;
   jwt?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${payload.jwt}` } }) : undefined);
+  const { account } = await createServerClient(payload.jwt);
   const user = await account.get().catch(() => null);
 
   if (!user) throw new Error('Unauthorized');
@@ -119,7 +120,7 @@ export async function toggleReactionInternal(payload: {
   action: 'POST' | 'DELETE';
   jwt?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${payload.jwt}` } }) : undefined);
+  const { account } = await createServerClient(payload.jwt);
   const user = await account.get().catch(() => null);
 
   if (!user) throw new Error('Unauthorized');
@@ -188,7 +189,7 @@ export async function repairConversationInternal(payload: {
   conversationId?: string;
   jwt?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${payload.jwt}` } }) : undefined);
+  const { account } = await createServerClient(payload.jwt);
   const user = await account.get().catch(() => null);
 
   if (!user) throw new Error('Unauthorized');
@@ -369,7 +370,7 @@ export async function joinRequestInternal(payload: {
   action?: 'accept' | 'reject',
   jwt?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt ? new Request('http://localhost', { headers: { authorization: `Bearer ${payload.jwt}` } }) : undefined);
+  const { account } = await createServerClient(payload.jwt);
   const user = await account.get().catch(() => null);
 
   const { databases } = createAdminClient();

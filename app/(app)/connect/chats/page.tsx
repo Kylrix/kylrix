@@ -1,8 +1,7 @@
 'use client';
 
-import { UserSearch } from '@/components/search/UserSearch';
 import { ChatList } from '@/components/chat/ChatList';
-import { Box, Button, Stack, Typography, useMediaQuery, useTheme, Container, Paper, Grid } from '@mui/material';
+import { Box, IconButton, Typography, Stack, Button } from '@mui/material';
 import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
@@ -12,26 +11,7 @@ import toast from 'react-hot-toast';
 import { useSudo } from '@/context/SudoContext';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { MessageSquare, ShieldCheck, Search } from 'lucide-react';
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <Typography 
-      variant="overline" 
-      sx={{ 
-        display: 'block',
-        fontWeight: 900, 
-        color: '#F59E0B', 
-        mb: 2, 
-        letterSpacing: '0.12em',
-        fontFamily: 'var(--font-mono)',
-        fontSize: '0.7rem'
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
+import { ArrowLeft, ShieldCheck } from 'lucide-react';
 
 function ChatHandler() {
   const searchParams = useSearchParams();
@@ -112,11 +92,9 @@ function ChatHandler() {
 }
 
 export default function Home() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
+  const router = useRouter();
   const { requestSudo } = useSudo();
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
-  const [localSearch, setLocalSearch] = useState('');
 
   useEffect(() => {
     const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
@@ -138,113 +116,34 @@ export default function Home() {
       minHeight: '100vh', 
       bgcolor: '#0A0908',
       position: 'relative',
-      pointerEvents: 'auto'
+      pointerEvents: 'auto',
+      pt: { xs: 2, md: 4 }
     }}>
         <Suspense fallback={null}>
           <ChatHandler />
         </Suspense>
         
         {isUnlocked ? (
-          <>
-            {/* Header Section */}
-            <Box sx={{ 
-              px: { xs: 2, md: 6 }, 
-              py: { xs: 4, md: 5 }, 
-              display: 'flex', 
-              flexDirection: { xs: 'column', md: 'row' },
-              alignItems: { xs: 'stretch', md: 'flex-end' },
-              justifyContent: 'space-between',
-              gap: 4,
-              mb: 4,
-              borderBottom: '1px solid #1C1A18'
-            }}>
-              <Box>
-                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
-                    <Box sx={{ p: 1, borderRadius: '12px', bgcolor: '#161412', color: '#F59E0B', border: '1px solid #1C1A18' }}>
-                        <MessageSquare size={20} />
-                    </Box>
-                    <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.03em', color: '#fff' }}>
-                        Messages
-                    </Typography>
-                </Stack>
-                <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500, fontSize: '1rem' }}>
-                  Secure decentralized communication across the ecosystem
-                </Typography>
-              </Box>
+          <Box sx={{ px: { xs: 2, md: 6 } }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
+              <IconButton 
+                onClick={() => router.back()} 
+                sx={{ 
+                  color: '#fff', 
+                  bgcolor: '#161412',
+                  border: '1px solid #1C1A18',
+                  '&:hover': { bgcolor: '#1C1A18' }
+                }}
+              >
+                <ArrowLeft size={20} />
+              </IconButton>
+              <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+                Chats
+              </Typography>
+            </Stack>
 
-              {!isMobile && (
-                <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 400 } }}>
-                    <Box sx={{ 
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.5,
-                      bgcolor: '#161412',
-                      borderRadius: '16px',
-                      px: 2.5,
-                      py: 1.5,
-                      border: '1px solid #34322F',
-                      '&:focus-within': { borderColor: '#F59E0B' }
-                    }}>
-                      <Search size={18} color="#9B9691" />
-                      <input 
-                        placeholder="Find people or groups..."
-                        value={localSearch}
-                        onChange={(e) => setLocalSearch(e.target.value)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'white',
-                          fontSize: '0.95rem',
-                          outline: 'none',
-                          width: '100%',
-                          fontFamily: 'var(--font-satoshi)'
-                        }}
-                      />
-                    </Box>
-                </Stack>
-              )}
-            </Box>
-
-            {/* Main Content Area */}
-            <Container maxWidth="xl" sx={{ px: { xs: 2, md: 6 } }}>
-              <Grid container spacing={6}>
-                <Grid item xs={12} lg={8}>
-                    <SectionTitle>Conversation History</SectionTitle>
-                    <Paper elevation={0} sx={{ 
-                      borderRadius: '32px', 
-                      bgcolor: '#161412', 
-                      border: '1px solid #1C1A18',
-                      overflow: 'hidden',
-                      minHeight: 500
-                    }}>
-                        <ChatList externalQuery={localSearch} />
-                    </Paper>
-                </Grid>
-
-                {!isMobile && (
-                  <Grid item lg={4}>
-                      <Stack spacing={4}>
-                          <Box>
-                            <SectionTitle>Ecosystem Directory</SectionTitle>
-                            <Paper elevation={0} sx={{ p: 4, borderRadius: '32px', bgcolor: '#161412', border: '1px solid #1C1A18', backgroundImage: 'none' }}>
-                                <Typography sx={{ fontWeight: 900, mb: 3, fontSize: '1.1rem', fontFamily: 'var(--font-clash)' }}>Find People</Typography>
-                                <UserSearch />
-                            </Paper>
-                          </Box>
-
-                          <Paper elevation={0} sx={{ p: 4, borderRadius: '32px', bgcolor: '#0A0908', border: '1px solid #1C1A18', backgroundImage: 'none' }}>
-                              <Typography variant="h6" sx={{ fontWeight: 900, mb: 1.5, fontFamily: 'var(--font-clash)', color: '#F59E0B' }}>Privacy First</Typography>
-                              <Typography variant="body2" sx={{ color: '#9B9691', lineHeight: 1.6, fontWeight: 500 }}>
-                                  Your messages are secured with your master password. Only you and your recipients can read them.
-                              </Typography>
-                          </Paper>
-                      </Stack>
-                  </Grid>
-                )}
-              </Grid>
-            </Container>
-          </>
+            <ChatList />
+          </Box>
         ) : (
           <Box sx={{ minHeight: '80vh', display: 'grid', placeItems: 'center', px: 3 }}>
             <Stack spacing={3} alignItems="center" sx={{ maxWidth: 420, textAlign: 'center' }}>
@@ -280,3 +179,4 @@ export default function Home() {
     </Box>
   );
 }
+

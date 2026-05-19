@@ -260,160 +260,116 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
 
     return (
         <>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <IconButton
                     size="small"
                     onClick={attachmentDisabled ? onUpgradeRequested : onAttach}
                     aria-disabled={attachmentDisabled}
                     sx={{
-                        color: attachmentDisabled ? 'rgba(255,255,255,0.32)' : 'text.secondary',
-                        width: 40,
-                        height: 40,
+                        color: attachmentDisabled ? 'rgba(255,255,255,0.32)' : '#9B9691',
+                        width: 44,
+                        height: 44,
                         flexShrink: 0,
-                        bgcolor: attachmentDisabled ? 'rgba(255, 255, 255, 0.015)' : 'rgba(255, 255, 255, 0.02)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        bgcolor: '#161412',
+                        border: '1px solid #1C1A18',
                         '&:hover': {
-                            bgcolor: attachmentDisabled ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.05)',
-                            borderColor: attachmentDisabled ? 'rgba(255,255,255,0.08)' : 'rgba(245, 158, 11, 0.35)',
-                            color: attachmentDisabled ? 'rgba(255,255,255,0.42)' : '#F59E0B',
+                            bgcolor: '#1C1A18',
+                            borderColor: attachmentDisabled ? '#1C1A18' : '#F59E0B',
+                            color: attachmentDisabled ? '#9B9691' : '#fff',
                             cursor: attachmentDisabled ? 'not-allowed' : 'pointer',
                         },
                     }}
                 >
-                    <PlusCircle size={18} strokeWidth={1.8} />
+                    <PlusCircle size={20} strokeWidth={2} />
                 </IconButton>
 
                 <IconButton
                     onClick={onToggleRecording}
                     sx={{
-                        color: isRecording ? '#ff4d4d' : 'text.secondary',
-                        width: 40,
-                        height: 40,
+                        color: isRecording ? '#ff4d4d' : '#9B9691',
+                        width: 44,
+                        height: 44,
                         flexShrink: 0,
-                        bgcolor: 'rgba(255, 255, 255, 0.02)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        bgcolor: '#161412',
+                        border: '1px solid #1C1A18',
                         '&:hover': {
-                            bgcolor: 'rgba(255, 255, 255, 0.05)',
-                            borderColor: 'rgba(245, 158, 11, 0.35)',
-                            color: '#F59E0B',
+                            bgcolor: '#1C1A18',
+                            borderColor: '#F59E0B',
+                            color: '#fff',
                         },
                     }}
                 >
-                    {isRecording ? <Square size={18} strokeWidth={1.8} /> : <Mic size={18} strokeWidth={1.8} />}
+                    {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} strokeWidth={2} />}
                 </IconButton>
 
-                <TextField
-                    fullWidth
-                    placeholder="Type a message..."
-                    value={draft}
-                    inputRef={textRef}
-                    onChange={(e) => setDraft(e.target.value)}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            void submitDraft();
-                        }
-                    }}
-                    sx={{
-                        flex: 1,
-                        '& .MuiOutlinedInput-root': {
-                            minHeight: 40,
-                            borderRadius: '999px',
-                            bgcolor: '#161514',
-                            fontSize: '0.95rem',
-                            transition: 'all 0.2s ease',
-                            '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.06)' },
-                            '&:hover fieldset': { borderColor: 'rgba(245, 158, 11, 0.18)' },
-                            '&.Mui-focused fieldset': { borderColor: '#F59E0B' },
-                        },
-                        '& .MuiInputBase-input': {
-                            py: 1,
-                            px: 1.5,
-                        },
-                    }}
-                    InputProps={{
-                        startAdornment: enableMentions ? (
-                            <InputAdornment position="start">
-                                <IconButton
-                                    size="small"
-                                    onClick={(e) => setMentionAnchorEl(e.currentTarget)}
-                                    sx={{
-                                        color: 'text.secondary',
-                                        mr: 0.5,
-                                        '&:hover': { color: '#F59E0B' },
-                                    }}
-                                >
-                                    <AtSign size={16} strokeWidth={2} />
-                                </IconButton>
-                            </InputAdornment>
-                        ) : undefined,
-                    }}
-                />
+                <Box sx={{ flex: 1, position: 'relative' }}>
+                    <TextField
+                        fullWidth
+                        multiline
+                        maxRows={4}
+                        placeholder="Encrypted payload..."
+                        value={draft}
+                        onChange={(e) => setDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                submitDraft();
+                            }
+                        }}
+                        inputRef={textRef}
+                        variant="standard"
+                        InputProps={{
+                            disableUnderline: true,
+                            sx: {
+                                px: 2,
+                                py: 1.5,
+                                bgcolor: '#161412',
+                                borderRadius: '18px',
+                                border: '1px solid #1C1A18',
+                                color: '#fff',
+                                fontWeight: 600,
+                                fontFamily: 'var(--font-satoshi)',
+                                fontSize: '0.95rem',
+                                '&:focus-within': {
+                                    borderColor: '#6366F1',
+                                    bgcolor: '#1C1A18',
+                                }
+                            }
+                        }}
+                    />
+                    {attachment && (
+                        <Box sx={{ position: 'absolute', top: -36, left: 0, right: 0, px: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+                            <Box sx={{ px: 1.2, py: 0.5, borderRadius: '8px', bgcolor: '#6366F1', color: '#fff', display: 'flex', alignItems: 'center', gap: 0.75, fontSize: '0.75rem', fontWeight: 800 }}>
+                                <FileIcon size={12} strokeWidth={2.5} />
+                                {attachment.name.slice(0, 16)}...
+                            </Box>
+                        </Box>
+                    )}
+                </Box>
 
                 <IconButton
-                    onClick={() => void submitDraft()}
-                    disabled={sending || (!draft.trim() && !attachment)}
+                    disabled={!draft.trim() && !attachment && !isRecording}
+                    onClick={submitDraft}
                     sx={{
-                        bgcolor: draft.trim() || attachment ? '#F59E0B' : 'rgba(255, 255, 255, 0.02)',
-                        color: '#000',
-                        width: 40,
-                        height: 40,
+                        color: (draft.trim() || attachment) ? '#6366F1' : 'rgba(255,255,255,0.1)',
+                        width: 44,
+                        height: 44,
                         flexShrink: 0,
-                        borderRadius: '999px',
-                        opacity: sending ? 0.82 : 1,
-                        transform: sending ? 'translateY(-1px)' : 'none',
+                        bgcolor: (draft.trim() || attachment) ? '#161412' : 'transparent',
+                        border: '1px solid',
+                        borderColor: (draft.trim() || attachment) ? '#1C1A18' : 'transparent',
                         '&:hover': {
-                            bgcolor: draft.trim() || attachment ? alpha('#F59E0B', 0.85) : 'rgba(255, 255, 255, 0.05)',
-                            boxShadow: draft.trim() || attachment ? '0 0 15px rgba(245, 158, 11, 0.25)' : 'none'
+                            bgcolor: '#1C1A18',
+                            borderColor: '#6366F1',
                         },
-                        '&.Mui-disabled': { bgcolor: 'rgba(255, 255, 255, 0.03)', color: 'rgba(255, 255, 255, 0.14)' }
+                        '&.Mui-disabled': {
+                            color: 'rgba(255,255,255,0.05)',
+                        }
                     }}
                 >
-                    <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Send size={18} strokeWidth={2} />
-                        {sending && (
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    top: -2,
-                                    right: -2,
-                                    width: 7,
-                                    height: 7,
-                                    borderRadius: '50%',
-                                    bgcolor: '#10B981',
-                                    boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.22)',
-                                }}
-                            />
-                        )}
-                    </Box>
+                    {sending ? <RefreshCw className="animate-spin" size={20} /> : <Send size={20} strokeWidth={2.5} />}
                 </IconButton>
             </Box>
-
-            <Menu
-                anchorEl={mentionAnchorEl}
-                open={Boolean(mentionAnchorEl)}
-                onClose={() => setMentionAnchorEl(null)}
-                PaperProps={{
-                    sx: {
-                        mt: 1,
-                        minWidth: 220,
-                        borderRadius: '16px',
-                        bgcolor: '#1F1D1B',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                        backgroundImage: 'none',
-                    }
-                }}
-            >
-                <MenuItem onClick={() => { insertMention('@all'); setMentionAnchorEl(null); }} sx={{ gap: 1.5, py: 1.1, fontWeight: 700 }}>
-                    <AtSign size={16} /> @all
-                </MenuItem>
-                <Divider sx={{ my: 0.5, opacity: 0.08 }} />
-                {(mentionTargets || []).map((target) => (
-                    <MenuItem key={target.id} onClick={() => { insertMention(target.token); setMentionAnchorEl(null); }} sx={{ gap: 1.5, py: 1.1, fontWeight: 600 }}>
-                        <AtSign size={16} /> {target.label}
-                    </MenuItem>
-                ))}
-            </Menu>
         </>
     );
 });
@@ -902,9 +858,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
                             if (isEncrypted) {
                                 try {
-                                    const convKey = ecosystemSecurity.getConversationKey(conversationId);
                                     const decrypt = async (val: string) => {
-                                        if (convKey) return await ecosystemSecurity.decryptWithKey(val, convKey);
                                         return await ecosystemSecurity.decrypt(val);
                                     };
 
@@ -1159,12 +1113,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
         // 3. Encrypt name and metadata if it's a group
         if (type === MessagesType.TEXT && ecosystemSecurity.status.isUnlocked) {
-            const convKey = ecosystemSecurity.getConversationKey(conversationId);
-            if (convKey) {
-                await ecosystemSecurity.encryptWithKey(text, convKey);
-            } else {
-                await ecosystemSecurity.encrypt(text);
-            }
+            text = await ecosystemSecurity.encrypt(text);
         }
 
         try {
@@ -1757,37 +1706,32 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
     return (
         <Box sx={{
-            height: '100dvh',
-            maxHeight: '100dvh',
-            minHeight: 0,
-            bgcolor: '#161412',
-            position: 'relative',
+            bgcolor: '#0A0908',
+            position: 'fixed',
+            top: '88px', // Start below GlobalShell topbar
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1200,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
         }}>
 
             <MuralPattern />
-            <AppBar position="static" color="transparent" elevation={0} sx={{ 
-                borderBottom: '1px solid rgba(255, 255, 255, 0.05)', 
-                bgcolor: '#161514',
-                position: 'relative',
-                zIndex: 1,
+            <AppBar position="absolute" color="transparent" elevation={0} sx={{ 
+                top: 0,
+                left: 0,
+                right: 0,
+                borderBottom: '1px solid #1C1A18', 
+                bgcolor: '#0A0908',
+                zIndex: 10,
                 pt: 'env(safe-area-inset-top)',
-                boxShadow: '0 1px 0 rgba(0,0,0,0.4)',
-                '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '1px',
-                    background: 'rgba(255,255,255,0.05)'
-                }
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
             }}>
                 <Toolbar sx={{ gap: 1, minHeight: '72px' }}>
-                    <IconButton edge="start" onClick={() => router.back()} sx={{ color: 'text.secondary' }}>
-                        <ChevronLeft size={20} strokeWidth={1.5} />
+                    <IconButton edge="start" onClick={() => router.back()} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff', bgcolor: '#161412' } }}>
+                        <ChevronLeft size={20} strokeWidth={2} />
                     </IconButton>
                     <Box
                         onClick={(e) => setAnchorEl(e.currentTarget)}
@@ -1797,29 +1741,29 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                             fileId={conversation?.avatarUrl || conversation?.avatar || null}
                             alt={conversation?.name}
                             fallback={isSelf ? 'B' : (conversation?.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U')}
-                            size={36}
+                            size={38}
                             pro={isSelf}
                         />
                         <Box>
                             {conversation?.type === 'direct' && !isSelf ? (
                                 <IdentityName
                                     verified={partnerVerification.verified}
-                                    sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: 'text.primary' }}
+                                    sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: '#fff', fontSize: '1rem' }}
                                 >
                                     {conversation?.name || 'Loading...'}
                                 </IdentityName>
                             ) : (
-                                <Typography variant="subtitle1" sx={{ fontWeight: 800, fontFamily: 'var(--font-clash)', lineHeight: 1.2, color: isSelf ? '#6366F1' : 'text.primary' }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: isSelf ? '#6366F1' : '#fff', fontSize: '1rem' }}>
                                     {conversation?.name || 'Loading...'}
                                 </Typography>
                             )}
                             {conversation?.type === 'group' && (
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, opacity: 0.65, display: 'block' }}>
+                                <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.65rem', fontFamily: 'var(--font-mono)' }}>
                                     {(conversation?.participantCount || conversation?.participants?.length || 0)} members
                                 </Typography>
                             )}
                             {!isSelf && conversation?.type === 'direct' && (
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, opacity: 0.6, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 700, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                     {(() => {
                                         const otherId = conversation.participants.find((p: string) => p !== user?.$id);
                                         const otherPresence = presence[otherId];
@@ -1829,7 +1773,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
                                         if (isOnline) return (
                                             <>
-                                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1' }} />
+                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#6366F1', boxShadow: '0 0 8px #6366F1' }} />
                                                 Online
                                             </>
                                         );
@@ -1838,8 +1782,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 </Typography>
                             )}
                             {isSelf && (
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, opacity: 0.6 }}>
-                                    End-to-end encrypted vault
+                                <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 700, fontSize: '0.75rem' }}>
+                                    Secured Cloud
                                 </Typography>
                             )}
                         </Box>
@@ -1965,55 +1909,56 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             </Drawer>
 
             {/* Messages Area */}
-            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, pb: 'calc(16px + env(safe-area-inset-bottom))', position: 'relative', zIndex: 2 }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, pb: 'calc(100px + env(safe-area-inset-bottom))', pt: 'calc(80px + env(safe-area-inset-top))', position: 'relative', zIndex: 2 }}>
                 {!isUnlocked && conversation?.isEncrypted && (
-                    <Box sx={{ p: 2, mb: 2, bgcolor: '#161514', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.07)', boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.08), 0 0 24px rgba(99, 102, 241, 0.1)', textAlign: 'center' }}>
-                        <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 600, color: '#6366F1' }}>
-                            This conversation is end-to-end encrypted.
+                    <Box sx={{ p: 2.5, mb: 2, bgcolor: '#161412', borderRadius: '24px', border: '1px solid #1C1A18', boxShadow: '0 8px 32px rgba(0,0,0,0.4)', textAlign: 'center' }}>
+                        <Typography variant="body2" sx={{ mb: 2, fontWeight: 800, color: '#6366F1', fontFamily: 'var(--font-clash)', fontSize: '1rem' }}>
+                            End-to-End Encrypted Channel
                         </Typography>
                         <Button
-                            variant="outlined"
+                            variant="contained"
                             size="small"
                             onClick={() => setUnlockModalOpen(true)}
-                            startIcon={<Key size={16} strokeWidth={1.5} />}
+                            startIcon={<Key size={16} strokeWidth={2} />}
                             sx={{ 
-                                borderRadius: '10px', 
-                                fontWeight: 800,
-                                borderColor: '#6366F1',
-                                color: '#6366F1',
+                                borderRadius: '12px', 
+                                fontWeight: 900,
+                                bgcolor: '#6366F1',
+                                color: '#fff',
+                                textTransform: 'none',
+                                px: 3,
                                 '&:hover': {
-                                    borderColor: '#6366F1',
-                                    bgcolor: alpha('#6366F1', 0.1)
+                                    bgcolor: '#575CF0',
                                 }
                             }}
                         >
-                            Unlock Vault to Read
+                            Unlock to Read
                         </Button>
                     </Box>
                 )}
                 {loading ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, py: 1 }}>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, py: 1 }}>
+                        <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: '#161412' }} />
                             <Box sx={{ flex: 1 }}>
-                                <Skeleton width="28%" sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
-                                <Skeleton width="42%" sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
+                                <Skeleton width="35%" sx={{ bgcolor: '#161412', height: 20 }} />
+                                <Skeleton width="45%" sx={{ bgcolor: '#161412', height: 16 }} />
                             </Box>
                         </Stack>
                         {Array.from({ length: 5 }).map((_, index) => (
                             <Skeleton
                                 key={index}
                                 variant="rounded"
-                                height={68}
-                                sx={{ borderRadius: '18px', bgcolor: 'rgba(255,255,255,0.06)' }}
+                                height={72}
+                                sx={{ borderRadius: '24px', bgcolor: '#161412' }}
                             />
                         ))}
                     </Box>
                 ) : (
                     <>
                         {showFirstContactWarning && (
-                            <Box sx={{ p: 1.5, mb: 1, borderRadius: '16px', bgcolor: '#161514', border: '1px solid rgba(245, 158, 11, 0.18)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.06), 0 0 24px rgba(245, 158, 11, 0.08)' }}>
-                                <Typography variant="body2" sx={{ fontSize: '0.85rem', lineHeight: 1.5, color: 'text.primary', fontWeight: 600 }}>
+                            <Box sx={{ p: 2, mb: 2, borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(245, 158, 11, 0.25)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+                                <Typography variant="body2" sx={{ fontSize: '0.9rem', lineHeight: 1.6, color: '#fff', fontWeight: 600 }}>
                                     {buildSafetyWarning(conversation?.name || 'this contact')}
                                 </Typography>
                             </Box>
@@ -2022,10 +1967,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         {messages.map((msg, index) => (
                         <React.Fragment key={msg.$id}>
                             {index === clientReadSegments.firstUnreadIncomingIndex && (
-                                <Box sx={{ display: 'flex', justifyContent: 'center', my: 0.5 }}>
-                                    <Box sx={{ px: 1.5, py: 0.4, borderRadius: '999px', bgcolor: '#161514', border: '1px solid rgba(245, 158, 11, 0.18)', boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.06)' }}>
-                                        <Typography variant="caption" sx={{ fontSize: '0.68rem', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: '#F59E0B' }}>
-                                            Unread messages
+                                <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                                    <Box sx={{ px: 2, py: 0.6, borderRadius: '999px', bgcolor: '#161412', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                                        <Typography variant="caption" sx={{ fontSize: '0.7rem', fontWeight: 900, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#F59E0B', fontFamily: 'var(--font-mono)' }}>
+                                            Unread payload
                                         </Typography>
                                     </Box>
                                 </Box>
@@ -2080,32 +2025,22 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                             <Paper
                                                 onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                                                 sx={{
-                                                    p: 1.2,
-                                                    px: 1.8,
+                                                    p: 1.5,
+                                                    px: 2.25,
                                                     width: 'fit-content',
                                                     maxWidth: '100%',
                                                     alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
-                                                    borderRadius: isOutgoing ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                                    bgcolor: '#161514',
+                                                    borderRadius: isOutgoing ? '24px 24px 4px 24px' : '24px 24px 24px 4px',
+                                                    bgcolor: '#161412',
                                                     backgroundImage: 'none',
-                                                    border: '1px solid',
-                                                    borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.45)' : 'rgba(245, 158, 11, 0.35)',
-                                                    color: 'text.primary',
+                                                    border: '1px solid #1C1A18',
+                                                    color: '#fff',
                                                     boxShadow: isOutgoing
-                                                        ? '0 0 0 1px rgba(99, 102, 241, 0.14), 0 0 26px rgba(99, 102, 241, 0.12), 0 16px 34px rgba(0,0,0,0.42)'
-                                                        : '0 0 0 1px rgba(245, 158, 11, 0.12), 0 0 26px rgba(245, 158, 11, 0.14), 0 16px 34px rgba(0,0,0,0.42)',
+                                                        ? `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px ${alpha('#252321', 0.9)}, 0 0 0 1px rgba(99, 102, 241, 0.2)`
+                                                        : `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px ${alpha('#252321', 0.9)}, 0 0 0 1px rgba(245, 158, 11, 0.2)`,
                                                     position: 'relative',
                                                     zIndex: 2,
-                                                    '&::after': {
-                                                        content: '""',
-                                                        position: 'absolute',
-                                                        top: 0,
-                                                        left: 0,
-                                                        right: 0,
-                                                        height: '1px',
-                                                        background: isOutgoing ? 'rgba(99, 102, 241, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                                        borderRadius: isOutgoing ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
-                                                    }
+                                                    transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                                                 }}
                                             >
                                                 {msg.replyTo && (
@@ -2228,14 +2163,15 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 PaperProps={{
                     sx: {
-                        mt: 1,
+                        mt: 1.5,
                         minWidth: 240,
                         maxWidth: 320,
                         borderRadius: '16px',
-                        bgcolor: '#1F1D1B',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        bgcolor: '#1C1A18',
+                        border: '1px solid #34322F',
                         backgroundImage: 'none',
-                        p: 1.5,
+                        p: 2,
+                        boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
                     }
                 }}
             >
@@ -2279,48 +2215,52 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 </Stack>
             </Popover>
 
-            {/* Input Area */}
-            <Box sx={{ mt: 'auto', p: 2, pb: isMobile ? 4 : 2, bgcolor: 'transparent', position: 'relative', zIndex: 2 }}>
+            {/* Input Area (Bottom Drawer style) */}
+            <Box sx={{ 
+                position: 'absolute', 
+                bottom: 0, 
+                left: 0, 
+                right: 0, 
+                px: { xs: 1.5, md: 2 },
+                pb: 'max(1rem, env(safe-area-inset-bottom))', 
+                pt: 1.5,
+                bgcolor: '#161412', 
+                borderTop: '1px solid #1C1A18',
+                borderRadius: '24px 24px 0 0',
+                boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
+                zIndex: 20 
+            }}>
                 {replyingTo && (
                     <Box sx={{ 
-                        mb: 1, 
+                        mb: 1.5, 
                         p: 1.5, 
-                        bgcolor: 'rgba(255, 255, 255, 0.03)', 
-                        borderLeft: '4px solid',
-                        borderColor: 'primary.main',
-                        borderRadius: '12px 12px 0 0',
+                        bgcolor: '#0A0908', 
+                        borderLeft: '4px solid #F59E0B',
+                        borderRadius: '16px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        animation: 'slideUp 0.2s ease'
+                        border: '1px solid #1C1A18',
                     }}>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', display: 'block' }}>
+                            <Typography variant="caption" sx={{ fontWeight: 900, color: '#F59E0B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-mono)' }}>
                                 Replying to {replyingTo.senderId === user?.$id ? 'yourself' : (conversation?.name || 'Partner')}
                             </Typography>
-                            <Typography variant="body2" noWrap sx={{ opacity: 0.6, fontSize: '0.85rem' }}>
+                            <Typography variant="body2" noWrap sx={{ color: '#9B9691', fontSize: '0.85rem', fontWeight: 500 }}>
                                 {replyingTo.content}
                             </Typography>
                         </Box>
-                        <IconButton size="small" onClick={() => setReplyingTo(null)} sx={{ ml: 1, opacity: 0.5 }}>
+                        <IconButton size="small" onClick={() => setReplyingTo(null)} sx={{ ml: 1, color: '#9B9691' }}>
                             <X size={16} />
                         </IconButton>
                     </Box>
                 )}
-                <Paper elevation={0} sx={{
-                    p: 0.5,
+                <Box sx={{
                     display: 'flex',
-                    alignItems: 'center',
+                    alignItems: 'flex-end',
                     gap: 0.75,
-                    borderRadius: replyingTo ? '0 0 24px 24px' : '24px',
-                    bgcolor: '#161514',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
                     position: 'relative',
                     zIndex: 2,
-                    '&:focus-within': {
-                        borderColor: 'primary.main',
-                        bgcolor: '#161514',
-                    }
                 }}>
                     <input type="file" hidden ref={fileInputRef} onChange={onFileChange} />
 
@@ -2332,27 +2272,27 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         transformOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                         PaperProps={{
                             sx: {
-                                mb: 1,
+                                mb: 1.5,
                                 borderRadius: '16px',
-                                bgcolor: '#1F1D1B',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                bgcolor: '#1C1A18',
+                                border: '1px solid #34322F',
                                 backgroundImage: 'none',
-                                minWidth: 200
+                                minWidth: 200,
+                                boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
                             }
                         }}
                     >
-                        <MenuItem onClick={() => { handleFileSelect('*'); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                            <FileIcon size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Upload File
+                        <MenuItem onClick={() => { handleFileSelect('*'); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.5, px: 2, fontWeight: 700, fontSize: '0.85rem', '&:hover': { bgcolor: '#252321' } }}>
+                            <FileIcon size={18} strokeWidth={2} color="#9B9691" /> Upload File
                         </MenuItem>
-                        <MenuItem onClick={() => { setNoteModalOpen(true); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                            <FileText size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Attach Note
+                        <MenuItem onClick={() => { setNoteModalOpen(true); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.5, px: 2, fontWeight: 700, fontSize: '0.85rem', '&:hover': { bgcolor: '#252321' } }}>
+                            <FileText size={18} strokeWidth={2} color="#9B9691" /> Attach Note
                         </MenuItem>
-                        <MenuItem onClick={() => { setSecretModalOpen(true); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem' }}>
-                            <Key size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Attach Secret (Keep)
+                        <MenuItem onClick={() => { setSecretModalOpen(true); setAttachAnchorEl(null); }} sx={{ gap: 1.5, py: 1.5, px: 2, fontWeight: 700, fontSize: '0.85rem', '&:hover': { bgcolor: '#252321' } }}>
+                            <Key size={18} strokeWidth={2} color="#9B9691" /> Attach Secret
                         </MenuItem>
                     </Menu>
 
-                    <Box sx={{ position: 'sticky', bottom: 0, pt: 1.5, pb: 'calc(12px + env(safe-area-inset-bottom))', bgcolor: '#161514', zIndex: 2 }}>
                     <ChatDraftInput
                         key={conversationId}
                         attachment={attachment}
@@ -2366,8 +2306,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         onSend={handleSend}
                         onToggleRecording={toggleRecording}
                     />
-                    </Box>
-                </Paper>
+                </Box>
             </Box>
 
             <NoteSelectorModal
