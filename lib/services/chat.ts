@@ -1,9 +1,7 @@
 import { ID, Permission, Query, Role } from 'appwrite';
-import { createMessageAction, toggleReactionAction, repairConversationAction, joinRequestAction } from '@/lib/actions/chat';
-import { permissionsAction } from '@/lib/actions/permissions';
 import { account, storage, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
-import { getEcosystemUrl } from '../constants';
+import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
 import { seedIdentityCache } from '@/lib/identity-cache';
@@ -17,7 +15,12 @@ const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
 const EPOCHS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.EPOCHS;
 const KEY_MAPPING_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const KEY_MAPPING_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
-const GROUP_AVATAR_ROUTE = `/api/connect/group-avatar`;
+const ACCOUNTS_API_URL = `${KYLRIX_AUTH_URI}/api/permissions`;
+const ACCOUNTS_MESSAGE_API_URL = `${KYLRIX_AUTH_URI}/api/connect/messages`;
+const ACCOUNTS_MESSAGE_REACTIONS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/message-reactions`;
+const ACCOUNTS_JOIN_REQUESTS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/join-requests`;
+const ACCOUNTS_KEY_REPAIR_API_URL = `${KYLRIX_AUTH_URI}/api/connect/repair`;
+const GROUP_AVATAR_ROUTE = `${KYLRIX_AUTH_URI}/api/connect/group-avatar`;
 const conversationKeyCache = new Map<string, CryptoKey>();
 const conversationPreviewCache = new Map<string, {
     lastMessageId: string;
@@ -61,75 +64,6 @@ const setConversationPreviewCache = (
 };
 
 const getConversationPreviewCache = (conversationId: string) => conversationPreviewCache.get(conversationId) || null;
-
-/** Coalesce concurrent identical message list fetches (decryption still runs per waiter — avoids duplicate listRows). */
-const messagesFetchInflight = new Map<string, Promise<{ rows: any[]; total: number }>>();
-
-function messagesInflightKey(conversationId: string, limit: number, offset: number, userId?: string) {
-    return `conv:${conversationId}:lim:${limit}:off:${offset}:u:${userId || '_'}`;
-}
-
-function clearMessagesFetchInflight(conversationId?: string) {
-    if (!conversationId) {
-        messagesFetchInflight.clear();
-        return;
-    }
-    const prefix = `conv:${conversationId}:`;
-    for (const k of messagesFetchInflight.keys()) {
-        if (k.startsWith(prefix)) messagesFetchInflight.delete(k);
-    }
-}
-
-/** TablesDB conversation row + participant hydrate — decrypted layer always recomputed. */
-const CONV_BASE_TTL_MS = 45_000;
-const conversationBaseCache = new Map<string, { payload: any; at: number }>();
-const conversationBaseInflight = new Map<string, Promise<any>>();
-
-function cloneConversationBase(row: any) {
-    if (!row || typeof row !== 'object') return row;
-    const base = { ...row };
-    if (Array.isArray(row.participants)) base.participants = [...row.participants];
-    if (Array.isArray(row.admins)) base.admins = [...row.admins];
-    if (Array.isArray(row.isPinned)) base.isPinned = [...row.isPinned];
-    if (Array.isArray(row.isMuted)) base.isMuted = [...row.isMuted];
-    if (Array.isArray(row.isArchived)) base.isArchived = [...row.isArchived];
-    return base;
-}
-
-function bustConversationRowCache(conversationId?: string) {
-    if (!conversationId) {
-        conversationBaseCache.clear();
-        conversationBaseInflight.clear();
-        return;
-    }
-    conversationBaseCache.delete(conversationId);
-    conversationBaseInflight.delete(conversationId);
-}
-
-/** Full inbox snapshot (expensive listRows); invalidate on any conversation/list mutation. */
-const CONV_LIST_TTL_MS = 40_000;
-const conversationsListCache = new Map<string, { payload: { total: number; rows: any[] }; at: number }>();
-const conversationsListInflight = new Map<string, Promise<{ total: number; rows: any[] }>>();
-
-function bustConversationsListCache() {
-    conversationsListCache.clear();
-    conversationsListInflight.clear();
-}
-
-const CHAT_CACHE_HOOK_TAG = '__kylrix_chat_cache_v1';
-
-function installChatVaultLockHooksOnce() {
-    if (typeof window === 'undefined') return;
-    const w = window as unknown as Record<string, boolean>;
-    if (w[CHAT_CACHE_HOOK_TAG]) return;
-    w[CHAT_CACHE_HOOK_TAG] = true;
-    window.addEventListener('vault-locked', () => {
-        bustConversationsListCache();
-        bustConversationRowCache();
-    });
-}
-
-installChatVaultLockHooksOnce();
 
 const getConversationMemberSnapshot = async (conversationId: string, fallbackParticipants: string[] = []) => {
     const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
@@ -289,14 +223,21 @@ const buildInviteMeta = (current: any, patch: Record<string, unknown>) => {
     return JSON.stringify(next);
 };
 
-async function getAuth(auth?: { jwt?: string; cookie?: string }) {
-    if (auth?.jwt) return auth.jwt;
-    try {
+async function getPermissionUpdateAuth(auth?: { jwt?: string; cookie?: string }) {
+    let jwt = auth?.jwt || null;
+    if (!jwt && !auth?.cookie) {
         const session = await account.createJWT().catch(() => null);
-        return session?.jwt || null;
-    } catch {
-        return null;
+        jwt = session?.jwt || null;
     }
+
+    if (!jwt && !auth?.cookie) {
+        throw new Error('Unable to authenticate permission update request');
+    }
+
+    return {
+        ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+        ...(auth?.cookie ? { Cookie: auth.cookie } : {}),
+    };
 }
 
 async function callPermissionsApi(
@@ -304,24 +245,44 @@ async function callPermissionsApi(
     payload: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const jwt = await getAuth(auth);
-    return await permissionsAction(method, { ...payload, jwt });
+    const headers = await getPermissionUpdateAuth(auth);
+    const response = await fetch(ACCOUNTS_API_URL, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+        },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Permission update failed');
+    }
+
+    return response.json().catch(() => ({}));
 }
 
 async function callMessageCreateApi(
     payload: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const jwt = await getAuth(auth);
-    return await createMessageAction({
-        conversationId: payload.conversationId as string,
-        senderId: payload.senderId as string,
-        content: payload.content as string,
-        type: payload.type as string,
-        attachments: payload.attachments as string[],
-        replyTo: payload.replyTo as string,
-        jwt: jwt as any,
+    const headers = await getPermissionUpdateAuth(auth);
+    const response = await fetch(ACCOUNTS_MESSAGE_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+        },
+        body: JSON.stringify(payload),
     });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Message creation failed');
+    }
+
+    return response.json().catch(() => ({}));
 }
 
 async function callMessageReactionApi(
@@ -329,26 +290,44 @@ async function callMessageReactionApi(
     payload: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const jwt = await getAuth(auth);
-    return await toggleReactionAction({
-        conversationId: payload.conversationId as string,
-        messageId: payload.messageId as string,
-        emoji: payload.emoji as string,
-        action: method,
-        jwt: jwt as any,
+    const headers = await getPermissionUpdateAuth(auth);
+    const response = await fetch(ACCOUNTS_MESSAGE_REACTIONS_API_URL, {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+        },
+        body: JSON.stringify(payload),
     });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Reaction update failed');
+    }
+
+    return response.json().catch(() => ({}));
 }
 
 async function callConversationRepairApi(
     payload: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const jwt = await getAuth(auth);
-    return await repairConversationAction({
-        userId: payload.userId as string,
-        conversationId: payload.conversationId as string,
-        jwt: jwt as any,
+    const headers = await getPermissionUpdateAuth(auth);
+    const response = await fetch(ACCOUNTS_KEY_REPAIR_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+        },
+        body: JSON.stringify(payload),
     });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Conversation repair failed');
+    }
+
+    return response.json().catch(() => ({}));
 }
 
 async function callJoinRequestApi(
@@ -356,15 +335,22 @@ async function callJoinRequestApi(
     payload?: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const jwt = await getAuth(auth);
-    return await joinRequestAction({
+    const headers = await getPermissionUpdateAuth(auth);
+    const response = await fetch(ACCOUNTS_JOIN_REQUESTS_API_URL, {
         method,
-        resourceType: payload?.resourceType as string || 'chat.conversation',
-        resourceId: payload?.resourceId as string,
-        requesterId: payload?.requesterId as string,
-        action: payload?.action as 'accept' | 'reject',
-        jwt: jwt as any,
+        headers: {
+            'Content-Type': 'application/json',
+            ...headers,
+        },
+        body: payload ? JSON.stringify(payload) : undefined,
     });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Join request update failed');
+    }
+
+    return response.json().catch(() => ({}));
 }
 
 async function fetchKeyMapping(resourceType: string, resourceId: string, grantee: string) {
@@ -521,7 +507,7 @@ async function resolveConversationKey(
           }, auth);
 
           if (repairResult?.identity) {
-            const repairedProfile = await UsersService.getProfileById(userId);
+            const repairedProfile = await UsersService.getProfileById(userId, true);
             seedIdentityCache(repairedProfile);
           }
 
@@ -635,43 +621,13 @@ export const ChatService = {
 
         conversationKeyCache.delete(conversationId);
         ecosystemSecurity.clearConversationKey(conversationId);
-        bustConversationRowCache(conversationId);
-        bustConversationsListCache();
         return repairResult;
     },
-    async getConversationById(
-        conversationId: string,
-        userId?: string,
-        opts?: { bypassBaseCache?: boolean },
-    ) {
-        if (opts?.bypassBaseCache) {
-            bustConversationRowCache(conversationId);
-        }
-
-        const hit = conversationBaseCache.get(conversationId);
-        let base: any;
-
-        if (hit && Date.now() - hit.at < CONV_BASE_TTL_MS) {
-            base = cloneConversationBase(hit.payload);
-        } else {
-            let pending = conversationBaseInflight.get(conversationId);
-            if (!pending) {
-                pending = (async () => {
-                    const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
-                    const normalizedConversation = await normalizeConversationRow(conv);
-                    return await this._hydrateConversationParticipants(normalizedConversation);
-                })().finally(() => {
-                    conversationBaseInflight.delete(conversationId);
-                });
-                conversationBaseInflight.set(conversationId, pending);
-            }
-
-            const fresh = await pending;
-            conversationBaseCache.set(conversationId, { payload: fresh, at: Date.now() });
-            base = cloneConversationBase(fresh);
-        }
-
-        return await this._decryptConversation(base, userId);
+    async getConversationById(conversationId: string, userId?: string) {
+        const conv = await tablesDB.getRow(DB_ID, CONV_TABLE, conversationId);
+        const normalizedConversation = await normalizeConversationRow(conv);
+        const hydrated = await this._hydrateConversationParticipants(normalizedConversation);
+        return await this._decryptConversation(hydrated, userId);
     },
 
     async _hydrateConversationParticipants(conversation: any) {
@@ -734,7 +690,7 @@ export const ChatService = {
         return conv;
     },
 
-    async _fetchConversationsUncached(userId: string): Promise<{ total: number; rows: any[] }> {
+    async getConversations(userId: string) {
         console.log('[ChatService] getConversations for:', userId);
 
         const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
@@ -839,47 +795,6 @@ export const ChatService = {
         };
     },
 
-    async getConversations(userId: string) {
-        if (typeof window === 'undefined') {
-            return this._fetchConversationsUncached(userId);
-        }
-
-        const hit = conversationsListCache.get(userId);
-        if (hit && Date.now() - hit.at < CONV_LIST_TTL_MS) {
-            return {
-                total: hit.payload.total,
-                rows: hit.payload.rows.map((r: any) => cloneConversationBase(r)),
-            };
-        }
-
-        let pending = conversationsListInflight.get(userId);
-        if (!pending) {
-            pending = this._fetchConversationsUncached(userId).finally(() => {
-                conversationsListInflight.delete(userId);
-            });
-            conversationsListInflight.set(userId, pending);
-        }
-
-        const result = await pending;
-        conversationsListCache.set(userId, { payload: result, at: Date.now() });
-
-        // Background: warm up identity cache for all participants
-        void (async () => {
-            const allParticipants = new Set<string>();
-            result.rows.forEach(c => c.participants?.forEach((p: string) => allParticipants.add(p)));
-            const ids = Array.from(allParticipants);
-            if (ids.length > 0) {
-                const { UsersService } = await import('./users');
-                await Promise.all(ids.map(id => UsersService.getProfileById(id)));
-            }
-        })();
-
-        return {
-            total: result.total,
-            rows: result.rows.map((r: any) => cloneConversationBase(r)),
-        };
-    },
-
     async createConversation(participants: string[], type: 'direct' | 'group' = 'direct', name?: string) {
         if (!ecosystemSecurity.status.isUnlocked) {
             throw new Error('Vault must be unlocked before creating conversations');
@@ -936,7 +851,6 @@ export const ChatService = {
 
                         if (arraysEqual(existingParticipantSet, targetParticipantSet)) {
                             console.log('[ChatService] Direct chat already exists, returning existing:', conversation.$id);
-                            bustConversationsListCache();
                             return conversation;
                         }
                     }
@@ -1071,7 +985,6 @@ export const ChatService = {
             }
         }
 
-        bustConversationsListCache();
         return newConv;
     },
 
@@ -1138,34 +1051,12 @@ export const ChatService = {
             }
         }
 
-        // T3-1: Chat Message Mint
-        if (type === 'text') {
-            try {
-                const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
-                await runTokenOperationSecure({
-                    action: 'mint_activity',
-                    userId: senderId,
-                    idempotencyKey: `mint:message_send:${message.$id}`,
-                    activityType: 'chat_message',
-                    uniqueActors: 1, // Logic for unique actors in conversation TBD
-                    trustScore: 75,
-                    sourceType: 'message_send',
-                    sourceId: message.$id,
-                });
-            } catch (err) {
-                console.warn('[ChatService] Failed to trigger chat_message mint:', err);
-            }
-        }
-
         setConversationPreviewCache(conversationId, {
             lastMessageId: message.$id,
             lastMessageText: type === 'text' || type === 'attachment' ? content : `[${type}]`,
             lastMessageAt: message.$createdAt || message.createdAt || new Date().toISOString(),
             lastMessageSenderId: senderId,
         });
-
-        bustConversationRowCache(conversationId);
-        bustConversationsListCache();
 
         // 3. (Background) Re-keying check
         if (ecosystemSecurity.status.isUnlocked && conversation?.creatorId === senderId) {
@@ -1203,84 +1094,65 @@ export const ChatService = {
         }, permissionSyncAuth);
     },
 
-    async getMessages(
-        conversationId: string,
-        limit = 50,
-        offset = 0,
-        userId?: string,
-        opts?: { prefetchedConversation?: any },
-    ) {
-        const ik = messagesInflightKey(conversationId, limit, offset, userId);
-        const inflight = messagesFetchInflight.get(ik);
-        if (inflight) return inflight;
+    async getMessages(conversationId: string, limit = 50, offset = 0, userId?: string) {
+        // Ensure UI has explicitly unwrapped the Conversation Key before fetching messages
+        const _conv = await this.getConversationById(conversationId, userId);
+        const convKey = userId ? await resolveConversationKey(_conv, userId) : conversationKeyCache.get(conversationId) || ecosystemSecurity.getConversationKey(conversationId);
 
-        const request = (async () => {
-            // Reuse decrypted conversation when caller already loaded it (avoids duplicate decrypt work).
-            const _conv =
-                opts?.prefetchedConversation != null
-                    ? opts.prefetchedConversation
-                    : await this.getConversationById(conversationId, userId);
-            const convKey = userId ? await resolveConversationKey(_conv, userId) : conversationKeyCache.get(conversationId) || ecosystemSecurity.getConversationKey(conversationId);
+        const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
+            Query.equal('conversationId', conversationId),
+            Query.orderDesc('createdAt'),
+            Query.limit(limit),
+            Query.offset(offset)
+        ]);
 
-            const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
-                Query.equal('conversationId', conversationId),
-                Query.orderDesc('createdAt'),
-                Query.limit(limit),
-                Query.offset(offset),
-            ]);
+        // Decrypt messages in parallel
+        res.rows = await Promise.all(res.rows.map(async (msg: any) => {
+            const isEncrypted = ecosystemSecurity.status.isUnlocked && (
+                (msg.type === 'text' && msg.content && msg.content.length > 40) ||
+                (msg.metadata && msg.metadata.length > 40)
+            );
 
-            // Decrypt messages in parallel
-            res.rows = await Promise.all(res.rows.map(async (msg: any) => {
-                // Background: warm up identity cache for senders
-                void (async () => {
-                    const { UsersService } = await import('./users');
-                    void UsersService.getProfileById(msg.senderId);
-                })();
+            if (isEncrypted) {
+                let messageKey = _conv?.type === 'group' && String(_conv?.encryptionVersion || '').toUpperCase() === 'T4' && userId
+                    ? await resolveConversationKey(_conv, userId, msg.createdAt)
+                    : convKey;
+                if (!messageKey && userId) {
+                    await UsersService.forceSyncProfileWithIdentity({ $id: userId });
+                    messageKey = _conv?.type === 'group' && String(_conv?.encryptionVersion || '').toUpperCase() === 'T4'
+                        ? await resolveConversationKey(_conv, userId, msg.createdAt)
+                        : await resolveConversationKey(_conv, userId);
+                }
+                if (!messageKey) return msg;
 
-                const isEncrypted = ecosystemSecurity.status.isUnlocked && (
-                    (msg.type === 'text' && msg.content && msg.content.length > 40) ||
-                    (msg.metadata && msg.metadata.length > 40)
-                );
-
-                if (isEncrypted) {
+                if (msg.type === 'text' && msg.content && msg.content.length > 40) {
+                    msg.content = await ecosystemSecurity.decryptWithKey(msg.content, messageKey);
+                }
+                if (msg.metadata && msg.metadata.length > 40) {
+                    const decryptedMeta = await ecosystemSecurity.decryptWithKey(msg.metadata, messageKey);
                     try {
-                        if (msg.type === 'text' && msg.content && msg.content.length > 40) {
-                            msg.content = await ecosystemSecurity.decrypt(msg.content);
-                        }
-                        if (msg.metadata && msg.metadata.length > 40) {
-                            const decryptedMeta = await ecosystemSecurity.decrypt(msg.metadata);
-                            try {
-                                msg.metadata = JSON.parse(decryptedMeta);
-                            } catch {
-                                msg.metadata = decryptedMeta;
-                            }
-                        }
-                    } catch (e) {
-                        console.error('[ChatService] Failed to decrypt message:', msg.$id, e);
+                        msg.metadata = JSON.parse(decryptedMeta);
+                    } catch {
+                        msg.metadata = decryptedMeta;
                     }
                 }
-                return msg;
-            }));
-
-            const latestMessage = res.rows[0];
-            if (latestMessage) {
-                setConversationPreviewCache(conversationId, {
-                    lastMessageId: latestMessage.$id,
-                    lastMessageText: latestMessage.type === 'text' || latestMessage.type === 'attachment'
-                        ? String(latestMessage.content || '')
-                        : `[${latestMessage.type || 'message'}]`,
-                    lastMessageAt: getMessageActivityAt(latestMessage) || latestMessage.$createdAt || latestMessage.$updatedAt || new Date().toISOString(),
-                    lastMessageSenderId: latestMessage.senderId || null,
-                });
             }
+            return msg;
+        }));
 
-            return res;
-        })().finally(() => {
-            messagesFetchInflight.delete(ik);
-        });
+        const latestMessage = res.rows[0];
+        if (latestMessage) {
+            setConversationPreviewCache(conversationId, {
+                lastMessageId: latestMessage.$id,
+                lastMessageText: latestMessage.type === 'text' || latestMessage.type === 'attachment'
+                    ? String(latestMessage.content || '')
+                    : `[${latestMessage.type || 'message'}]`,
+                lastMessageAt: getMessageActivityAt(latestMessage) || latestMessage.$createdAt || latestMessage.$updatedAt || new Date().toISOString(),
+                lastMessageSenderId: latestMessage.senderId || null,
+            });
+        }
 
-        messagesFetchInflight.set(ik, request);
-        return request;
+        return res;
     },
 
     /**
@@ -1303,8 +1175,6 @@ export const ChatService = {
             batches.push(Promise.all(batch));
         }
         await Promise.all(batches);
-        clearMessagesFetchInflight(conversationId);
-        bustConversationsListCache();
         return { success: true, count: res.total };
     },
 
@@ -1330,20 +1200,30 @@ export const ChatService = {
 
         const encryptedSettings = await ecosystemSecurity.encrypt(JSON.stringify(settings));
 
-        const updated = await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
+        return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, {
             settings: encryptedSettings
         });
-        bustConversationRowCache(conversationId);
-        bustConversationsListCache();
-        return updated;
     },
 
     /**
-     * Entirely deletes all messages, members, keys, and the conversation itself.
-     * This is a "factory reset" for the conversation.
+     * Entirely deletes all messages in a conversation (Reserved for Saved Messages/Self-Chat)
      */
     async nuclearWipe(conversationId: string) {
-        bustConversationRowCache(conversationId);
+        const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
+            Query.equal('conversationId', conversationId),
+            Query.limit(1000)
+        ]);
+
+        const batches = [];
+        for (let i = 0; i < res.rows.length; i += 10) {
+            const batch = res.rows.slice(i, i + 10).map(msg => tablesDB.deleteRow(DB_ID, MSG_TABLE, msg.$id));
+            batches.push(Promise.all(batch));
+        }
+        await Promise.all(batches);
+        return { success: true };
+    },
+
+    async deleteConversationFully(conversationId: string) {
         const conversation = await this.getConversationById(conversationId).catch(() => null);
 
         const deleteAllRows = async (dbId: string, tableId: string, query: any[]) => {
@@ -1356,50 +1236,27 @@ export const ChatService = {
             await Promise.all(batches);
         };
 
-        // 1. Delete all messages
-        const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
-            Query.equal('conversationId', conversationId),
-            Query.limit(1000)
-        ]);
-        const msgBatches = [];
-        for (let i = 0; i < res.rows.length; i += 10) {
-            const batch = res.rows.slice(i, i + 10).map(msg => tablesDB.deleteRow(DB_ID, MSG_TABLE, msg.$id));
-            msgBatches.push(Promise.all(batch));
-        }
-        await Promise.all(msgBatches);
-        clearMessagesFetchInflight(conversationId);
+        await this.nuclearWipe(conversationId);
 
-        // 2. Delete all members
         await deleteAllRows(DB_ID, CONV_MEMBERS_TABLE, [
             Query.equal('conversationId', conversationId),
             Query.limit(1000)
         ]);
 
-        // 3. Delete all epochs
         await deleteAllRows(DB_ID, EPOCHS_TABLE, [
             Query.equal('resourceId', conversationId),
             Query.limit(1000)
         ]);
 
-        // 4. Delete all key mappings
         await deleteAllRows(KEY_MAPPING_DB, KEY_MAPPING_TABLE, [
             Query.equal('resourceId', conversationId),
             Query.limit(1000)
         ]);
 
-        // 5. Finally, delete the conversation record
         await tablesDB.deleteRow(DB_ID, CONV_TABLE, conversationId);
-        
         conversationKeyCache.delete(conversationId);
-        ecosystemSecurity.clearConversationKey(conversationId);
-        bustConversationRowCache(conversationId);
-        bustConversationsListCache();
 
         return { success: true, conversation };
-    },
-
-    async deleteConversationFully(conversationId: string) {
-        return this.nuclearWipe(conversationId);
     },
 
     async updateConversation(conversationId: string, data: Partial<{
@@ -1418,7 +1275,7 @@ export const ChatService = {
         inviteLinkExpiry: string | null;
         inviteMeta: string | null;
     }>) {
-        const current = await this.getConversationById(conversationId, undefined, { bypassBaseCache: true }).catch(() => null);
+        const current = await this.getConversationById(conversationId).catch(() => null);
         const patch: Record<string, unknown> = { ...data };
         if (Array.isArray(patch.participants)) {
             patch.participants = uniqueIds(patch.participants as string[]);
@@ -1438,10 +1295,7 @@ export const ChatService = {
             patch.avatarFileId = typeof patch.avatarFileId === 'string' ? patch.avatarFileId : patch.avatarFileId ?? null;
         }
 
-        const updated = await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, patch);
-        bustConversationRowCache(conversationId);
-        bustConversationsListCache();
-        return updated;
+        return await tablesDB.updateRow(DB_ID, CONV_TABLE, conversationId, patch);
     },
 
     async addParticipant(conversationId: string, userId: string) {
@@ -1686,11 +1540,8 @@ export const ChatService = {
         });
     },
 
-    async deleteMessage(messageId: string, conversationId?: string) {
-        const out = await tablesDB.deleteRow(DB_ID, MSG_TABLE, messageId);
-        clearMessagesFetchInflight(conversationId);
-        bustConversationsListCache();
-        return out;
+    async deleteMessage(messageId: string) {
+        return await tablesDB.deleteRow(DB_ID, MSG_TABLE, messageId);
     },
 
     async updateMessage(messageId: string, data: Partial<{ content: string; type: string; readBy: string[] }>) {
