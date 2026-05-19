@@ -49,6 +49,26 @@ export default function NotesPage() {
   const { openOverlay } = useOverlay();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const openNoteIdParam = searchParams.get('openNoteId');
+
+  const handleNoteCreated = useCallback((newNote: Notes) => {
+    upsertNote(newNote);
+    // Ensure the new note is visible by resetting search and going to page 1
+    // (Note: we don't have clearSearch/goToPage here yet, so we'll move them up or handle it)
+  }, [upsertNote]);
+
+  const openComposer = useCallback((kind: 'note' | 'project', format: 'text' | 'doodle' = 'text') => {
+    openOverlay(
+      <CreateNoteForm
+        onNoteCreated={handleNoteCreated}
+        initialFormat={format}
+        noteKind={kind}
+      />
+    );
+  }, [handleNoteCreated, openOverlay]);
 
   React.useEffect(() => {
     setConfiguration({
