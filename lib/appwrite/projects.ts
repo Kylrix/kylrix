@@ -53,7 +53,32 @@ export const ProjectsService = {
     );
   },
 
-  async updateProject(projectId: string, data: Partial<Projects>) {
+  async listProjectCollaborators(projectId: string) {
+    return databases.listDocuments<ProjectObjects>(
+      DATABASE_ID,
+      PROJECT_OBJECTS_COLLECTION_ID,
+      [
+          Query.equal('projectId', projectId),
+          Query.equal('entityKind', 'collaborator')
+      ]
+    );
+  },
+
+  async addCollaborator(projectId: string, userId: string, role: string = 'member') {
+      // 1. Add object link
+      const obj = await this.addObjectToProject(projectId, 'collaborator', userId, role);
+      
+      // 2. Update project permissions (grant read/update if shared)
+      const project = await this.getProject(projectId);
+      const permissions = new Set(project.$permissions);
+      permissions.add(Permission.read(Role.user(userId)));
+      permissions.add(Permission.update(Role.user(userId)));
+      
+      await this.updateProject(projectId, { visibility: 'shared' }, Array.from(permissions));
+      return obj;
+  },
+
+  async updateProject(projectId: string, data: Partial<Projects>, permissions?: string[]) {
     const now = new Date().toISOString();
     return databases.updateDocument<Projects>(
       DATABASE_ID,
@@ -62,7 +87,8 @@ export const ProjectsService = {
       {
         ...data,
         updatedAt: now,
-      }
+      },
+      permissions
     );
   },
 
