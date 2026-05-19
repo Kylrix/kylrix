@@ -1,7 +1,8 @@
 'use client';
 
 import { ChatList } from '@/components/chat/ChatList';
-import ChatComposerFab from '@/components/chat/ChatComposerFab';
+import { useFAB } from '@/context/FABContext';
+import { MessageSquare, Phone } from 'lucide-react';
 import { Box, IconButton, Typography, Stack, Button } from '@mui/material';
 import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -97,6 +98,24 @@ export default function Home() {
   const { requestSudo } = useSudo();
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
 
+  const { setConfiguration, resetConfiguration } = useFAB();
+
+  useEffect(() => {
+    if (isUnlocked) {
+      setConfiguration({
+        isVisible: true,
+        mainColor: '#F59E0B',
+        actions: [
+          { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => router.push('/connect/chats?new=1') },
+          { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') },
+        ]
+      });
+    } else {
+      setConfiguration({ isVisible: false });
+    }
+    return () => resetConfiguration();
+  }, [isUnlocked, setConfiguration, resetConfiguration, router]);
+
   useEffect(() => {
     const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
       setIsUnlocked(status.isUnlocked);
@@ -144,7 +163,6 @@ export default function Home() {
             </Stack>
 
             <ChatList />
-            <ChatComposerFab />
           </Box>
         ) : (
           <Box sx={{ minHeight: '80vh', display: 'grid', placeItems: 'center', px: 3 }}>

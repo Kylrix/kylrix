@@ -44,6 +44,8 @@ import { useLayout } from '@/context/LayoutContext';
 import { useAI } from '@/hooks/useAI';
 import { useMediaQuery } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { notes as noteApi } from '@/lib/kylrixflow';
 import UserSearch from '@/components/UserSearch';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
@@ -76,6 +78,8 @@ interface TaskDetailsProps {
 export default function TaskDetails({ taskId }: TaskDetailsProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user } = useAuth();
+  const { open: openUnified } = useUnifiedDrawer();
   const { closeSecondarySidebar } = useLayout();
   const {
     tasks,
@@ -692,10 +696,9 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
                 {taskParticipantProfiles.map((profile) => (
                     <Box 
                         key={profile.userId} 
-                        onClick={() => openUnified('note', { // Using 'note' as the key for CollaboratorManager in UnifiedBottomDrawer
-                            resourceId: taskId,
-                            resourceType: 'task',
-                            resourceTitle: task.title,
+                        onClick={() => openUnified('assign-goal', { 
+                            taskId: taskId,
+                            taskTitle: task.title,
                             actorName: user?.name || 'A Kylrix User',
                             initialCollaborator: profile
                         })}

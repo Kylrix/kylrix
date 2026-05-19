@@ -4,6 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Container } from '@mui/material';
 import { Feed } from '@/components/social/Feed';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useFAB } from '@/context/FABContext';
+import { MessageSquare, Phone, Plus } from 'lucide-react';
 
 function ConnectHomeContent() {
   const searchParams = useSearchParams();
@@ -16,6 +18,19 @@ function ConnectHomeContent() {
     noteLink?: string;
     draftText?: string;
   } | null>(null);
+  const { setConfiguration, resetConfiguration } = useFAB();
+
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#F59E0B',
+      actions: [
+        { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => router.push('/connect/chats?new=1') },
+        { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') },
+      ]
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, router]);
 
   const shouldCompose = useMemo(() => searchParams.get('compose') === '1', [searchParams]);
 

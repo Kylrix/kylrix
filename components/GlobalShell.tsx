@@ -20,8 +20,8 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebarContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
-import QuickCreateFab from '@/components/ui/QuickCreateFab';
-import GlobalFAB from '@/components/layout/GlobalFAB';
+import { FABProvider } from '@/context/FABContext';
+import UniversalFAB from '@/components/layout/UniversalFAB';
 
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
@@ -94,6 +94,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
             overflowX: 'hidden'
         }}
     >
+      <FABProvider>
       {/* --- LAYER 0: CONTENT --- */}
       <Box
         component="main"
@@ -124,9 +125,10 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         <UnifiedBottomBar />
       )}
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && !isProjectsPage && !isConnectPage && (
-        <QuickCreateFab />
+        <Box sx={{ display: 'none' }} />
       )}
-      <GlobalFAB />
+      <UniversalFAB />
+      </FABProvider>
 
       {/* --- LAYER 2: OVERLAYS (Strict Unmounting) --- */}
       {isOverlayOpen && <Overlay />}

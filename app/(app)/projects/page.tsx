@@ -25,8 +25,9 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Workflow,
+  Sparkles,
 } from 'lucide-react';
-import ProjectsActionFab from '@/components/projects/ProjectsActionFab';
+import { useFAB } from '@/context/FABContext';
 import ProjectCard from '@/components/projects/ProjectCard';
 import CreateProjectModal from '@/components/projects/CreateProjectModal';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -78,6 +79,20 @@ export default function ProjectsPage() {
     }
   }, [showError]);
 
+  const { setConfiguration, resetConfiguration } = useFAB();
+
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#6366F1',
+      actions: [
+        { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => setIsCreateModalOpen(true) },
+        { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note/notes') },
+      ]
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, router]);
+
   useEffect(() => {
     fetchProjects();
   }, [fetchProjects]);
@@ -125,25 +140,9 @@ export default function ProjectsPage() {
                 </Typography>
             </Box>
 
-            <Button
-                variant="contained"
-                startIcon={<Plus size={20} />}
-                onClick={() => setIsCreateModalOpen(true)}
-                sx={{
-                    bgcolor: '#6366F1',
-                    color: '#000',
-                    borderRadius: '14px',
-                    fontWeight: 900,
-                    textTransform: 'none',
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1rem',
-                    boxShadow: '0 12px 24px rgba(99, 102, 241, 0.2)',
-                    '&:hover': { bgcolor: alpha('#6366F1', 0.9), transform: 'translateY(-2px)' }
-                }}
-            >
-                Create Project
-            </Button>
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                {/* Empty box to maintain layout if needed, but FAB handles creation now */}
+            </Box>
         </Stack>
 
         {/* Quick Actions / Suggestions */}
@@ -232,8 +231,6 @@ export default function ProjectsPage() {
         onClose={() => setIsCreateModalOpen(false)}
         onCreated={(newProject) => setProjects(prev => [newProject, ...prev])}
       />
-      
-      <ProjectsActionFab />
     </Box>
   );
 }

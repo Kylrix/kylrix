@@ -21,7 +21,11 @@ import {
   Login as ArrowRightOnRectangleIcon,
   PushPin as PinIcon,
   Refresh as RefreshIcon,
+  FolderSpecial as ProjectIcon,
+  Description as NoteIcon,
+  Tag as TagIcon,
 } from '@mui/icons-material';
+import { useFAB } from '@/context/FABContext';
 import CreateNoteForm from './CreateNoteForm';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
@@ -43,7 +47,21 @@ export default function NotesPage() {
     refetchNotes
   } = useNotes();
   const { openOverlay } = useOverlay();
+  const { setConfiguration, resetConfiguration } = useFAB();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+
+  React.useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#EC4899',
+      actions: [
+        { id: 'new-note', label: 'NEW NOTE', icon: <NoteIcon />, onClick: () => openComposer('note') },
+        { id: 'new-project', label: 'NEW PROJECT', icon: <ProjectIcon />, onClick: () => openComposer('project') },
+        { id: 'manage-tags', label: 'MANAGE TAGS', icon: <TagIcon />, onClick: () => router.push('/note/tags') },
+      ]
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, openComposer, router]);
 
   const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -339,22 +357,6 @@ return (
               disabled={isRefreshing}
             >
               <RefreshIcon />
-            </IconButton>
-            <IconButton 
-              onClick={handleCreateNoteClick} 
-              {...sidebarIgnoreProps} 
-              sx={{ 
-                color: 'secondary.main',
-                bgcolor: 'rgba(236, 72, 153, 0.05)',
-                borderRadius: '12px',
-                border: '1px solid rgba(236, 72, 153, 0.1)',
-                '&:hover': {
-                  bgcolor: 'rgba(236, 72, 153, 0.1)',
-                  borderColor: 'rgba(236, 72, 153, 0.2)',
-                }
-              }}
-            >
-              <PlusCircleIcon />
             </IconButton>
           </Stack>
         </Box>

@@ -26,7 +26,9 @@ import {
 } from '@mui/icons-material';
 import { useMediaQuery } from '@mui/material';
 import TaskItem from './TaskItem';
+import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
+import { useFAB } from '@/context/FABContext';
 import { ViewMode, SortField, TaskStatus } from '@/types';
 
 export default function TaskList() {
@@ -44,6 +46,20 @@ export default function TaskList() {
     projects,
     selectedProjectId,
   } = useTask();
+  const { setConfiguration, resetConfiguration } = useFAB();
+  const router = React.useRef(useRouter()).current;
+
+  React.useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#10B981',
+      actions: [
+        { id: 'new-goal', label: 'NEW GOAL', icon: <AddIcon />, onClick: () => setTaskDialogOpen(true) },
+        { id: 'focus', label: 'FOCUS MODE', icon: <CalendarIcon />, onClick: () => window.location.href = '/flow/focus' },
+      ]
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, setTaskDialogOpen]);
 
   const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
   const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);

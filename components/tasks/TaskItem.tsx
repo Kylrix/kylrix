@@ -29,6 +29,9 @@ import { Task, Priority } from '@/types';
 import { useTask } from '@/context/TaskContext';
 import { useLayout } from '@/context/LayoutContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { UserPlus as AssignIcon } from 'lucide-react';
 
 interface TaskItemProps {
   task: Task;
@@ -56,6 +59,8 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   const { completeTask, deleteTask, updateTask, labels, projects, selectTask } = useTask();
   const { openSecondarySidebar } = useLayout();
   const { openCallLauncher } = useCallLauncher();
+  const { user } = useAuth();
+  const { open: openUnified } = useUnifiedDrawer();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -96,6 +101,15 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
       taskId: task.id,
       participantIds,
       title: task.title ? `Task Huddle: ${task.title}` : 'Task Huddle',
+    });
+  };
+
+  const handleAssignGoal = () => {
+    handleMenuClose();
+    openUnified('assign-goal', {
+        taskId: task.id,
+        taskTitle: task.title,
+        actorName: user?.name || 'A Kylrix User'
     });
   };
 
@@ -325,6 +339,10 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
         <MenuItem onClick={handleArchive}>
           <ListItemIcon><ArchiveIcon sx={{ fontSize: 16, color: '#A1A1AA' }} /></ListItemIcon>
           <ListItemText primary="Archive" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
+        </MenuItem>
+        <MenuItem onClick={handleAssignGoal}>
+          <ListItemIcon><AssignIcon size={16} color="#A1A1AA" /></ListItemIcon>
+          <ListItemText primary="Assign Goal" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
         </MenuItem>
         <MenuItem onClick={handleStartTaskHuddle}>
           <ListItemIcon><VideoCallIcon sx={{ fontSize: 16, color: '#A1A1AA' }} /></ListItemIcon>

@@ -9,6 +9,7 @@ const LoginDrawer = dynamic(() => import('./LoginDrawer').then(mod => mod.LoginD
 const AgenticDrawer = dynamic(() => import('./AgenticDrawer').then(mod => mod.AgenticDrawer), { ssr: false });
 const NoteDrawer = dynamic(() => import('./NoteDrawer').then(mod => mod.NoteDrawer), { ssr: false });
 const ShareNoteDrawer = dynamic(() => import('./ShareNoteDrawer').then(mod => mod.ShareNoteDrawer), { ssr: false });
+const AssignGoalDrawer = dynamic(() => import('./AssignGoalDrawer').then(mod => mod.AssignGoalDrawer), { ssr: false });
 const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then(mod => mod.DeleteNoteDrawer), { ssr: false });
 
 export function UnifiedBottomDrawer() {
@@ -26,6 +27,13 @@ export function UnifiedBottomDrawer() {
             onClose={close} 
             noteId={drawerData?.noteId} 
             noteTitle={drawerData?.noteTitle} 
+        />;
+    case 'assign-goal':
+        return <AssignGoalDrawer 
+            isOpen={true} 
+            onClose={close} 
+            taskId={drawerData?.taskId} 
+            taskTitle={drawerData?.taskTitle} 
         />;
     case 'delete-note':
         return <DeleteNoteDrawer 

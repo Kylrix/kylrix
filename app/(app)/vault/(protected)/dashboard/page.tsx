@@ -23,6 +23,7 @@ import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import SudoModal from '@/components/overlays/SudoModal';
 import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
+import { useFAB } from '@/context/FABContext';
 import { 
   Box, 
   Typography, 
@@ -48,7 +49,7 @@ import { alpha } from '@mui/material/styles';
 import FolderIcon from '@mui/icons-material/Folder';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
-import { LayoutGrid, List as ListIcon, ShieldCheck } from 'lucide-react';
+import { LayoutGrid, List as ListIcon, ShieldCheck, Plus, Sparkles } from 'lucide-react';
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -107,6 +108,20 @@ function DashboardPageContent() {
       router.replace(newPath);
     }
   }, [searchParams, router]);
+
+  const { setConfiguration, resetConfiguration } = useFAB();
+
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#10B981',
+      actions: [
+        { id: 'add', label: 'ADD PASSWORD', icon: <Plus size={20} />, onClick: () => handleAdd() },
+        { id: 'organize', label: 'AI ORGANIZE', icon: <Sparkles size={20} />, onClick: () => handleSmartOrganize() },
+      ]
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration]);
 
   // Update master password drawer state when auth state changes
   useEffect(() => {
@@ -414,26 +429,9 @@ function DashboardPageContent() {
               <Box sx={{ width: { xs: '100%', md: 400 } }}>
                 <SearchBar onSearch={handleSearch} onSmartOrganize={handleSmartOrganize} />
               </Box>
-              <Button 
-                variant="contained" 
-                startIcon={<AddIcon sx={{ fontSize: 18 }} />}
-                onClick={handleAdd}
-                sx={{ 
-                  borderRadius: '16px', 
-                  px: 4, 
-                  py: 1.5, 
-                  fontWeight: 900,
-                  bgcolor: '#10B981',
-                  color: '#000',
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                  boxShadow: '0 12px 24px rgba(16, 185, 129, 0.2)',
-                  '&:hover': { bgcolor: alpha('#10B981', 0.9), transform: 'translateY(-2px)' },
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-                }}
-              >
-                Add Password
-              </Button>
+              <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+                {/* Space maintained, but FAB handles addition now */}
+              </Box>
           </Stack>
         </Box>
 
