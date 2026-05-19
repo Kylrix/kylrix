@@ -210,9 +210,9 @@ function DashboardPageContent() {
     } finally {
       setOrganizing(false);
     }
-  }, [user?.$id, organizing, allCredentials, applyOrganizationChanges]);
+  }, [user?.$id, organizing, allCredentials, applyOrganizationChanges, analyze]);
 
-  const applyOrganizationChanges = async (plan: { [folderName: string]: string[] }) => {
+  const applyOrganizationChanges = useCallback(async (plan: { [folderName: string]: string[] }) => {
     const toastId = toast.loading("Applying changes...");
     try {
       const currentFolders = await listFolders(user!.$id);
@@ -247,7 +247,7 @@ function DashboardPageContent() {
       console.error("Failed to apply changes", error);
       toast.error("Partial failure during organization.", { id: toastId });
     }
-  };
+  }, [user, allCredentials]);
 
   const hydrateVaultData = useCallback(async () => {
     if (!user?.$id || !isVaultUnlocked()) return;
