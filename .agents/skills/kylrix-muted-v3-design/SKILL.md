@@ -43,6 +43,7 @@ MUI defaults are **not** brand fonts:
 - **Display / titles:** `fontFamily: 'var(--font-clash)'`, optional `letterSpacing: '-0.02em'`
 - **Technical:** `fontFamily: 'var(--font-mono)'`
 - **Muted text:** opaque hex (`#9B9691`), not translucent white `rgba`.
+- **Simple Language:** Use plain English. Prohibit technical jargon like "Entropy," "E2EE," "Decentralized," "Nexus," or "Node." Use "Secure," "Private," "Personal," or "System."
 
 ## Prohibited (do not ship)
 
@@ -80,6 +81,7 @@ MUI defaults are **not** brand fonts:
 - [ ] Fonts use `--font-satoshi` / `--font-clash` / `--font-mono`
 - [ ] Bottom sheet surface matches unified bottom bar treatment
 - [ ] Copy is concise and not crammed
+- [ ] No technical jargon (E2EE, entropy, node, etc.); use plain English
 - [ ] Only approved font tokens are used
 
 ## Reference implementation

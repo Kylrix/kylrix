@@ -66,19 +66,23 @@ export default function CredentialItem({
       onClick={onClick}
       sx={{
         p: 2.5,
+        mb: 1.5,
         borderRadius: '24px',
         bgcolor: '#161412',
         border: '1px solid #1C1A18',
         cursor: 'pointer',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         display: 'flex',
         alignItems: 'center',
         backgroundImage: 'none',
+        // Extreme concentration: pinpoint lift shadow
+        boxShadow: `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px ${alpha('#252321', 0.9)}`,
         '&:hover': {
           bgcolor: '#1C1A18',
-          borderColor: alpha('#10B981', 0.3),
+          borderColor: alpha('#10B981', 0.2),
           transform: 'translateY(-2px)',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6)',
+          // Tight hover shadow
+          boxShadow: `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px ${alpha('#252321', 1.0)}`,
           '& .fav-box': { borderColor: alpha('#10B981', 0.2), bgcolor: alpha('#10B981', 0.05) }
         }
       }}

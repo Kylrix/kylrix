@@ -406,7 +406,7 @@ function DashboardPageContent() {
                 </Typography>
             </Stack>
             <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500, fontSize: '1rem' }}>
-              {effectiveTotal} encrypted assets secured with Zero-Knowledge protocols
+              {effectiveTotal} items secured with advanced privacy protections
             </Typography>
           </Box>
 
@@ -616,11 +616,11 @@ function DashboardPageContent() {
                             <Typography sx={{ fontWeight: 900, mb: 3, fontSize: '1.1rem' }}>Node Health</Typography>
                             <Stack spacing={3}>
                                 <Box>
-                                    <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, textTransform: 'uppercase', display: 'block', mb: 1 }}>Symmetric Entropy</Typography>
+                                    <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, textTransform: 'uppercase', display: 'block', mb: 1 }}>Security Level</Typography>
                                     <Box sx={{ height: 6, borderRadius: 3, bgcolor: '#0A0908', overflow: 'hidden' }}>
                                         <Box sx={{ width: '94%', height: '100%', bgcolor: '#10B981' }} />
                                     </Box>
-                                    <Typography variant="caption" sx={{ color: '#10B981', fontWeight: 900, mt: 0.5, display: 'block' }}>Optimal (256-bit GCM)</Typography>
+                                    <Typography variant="caption" sx={{ color: '#10B981', fontWeight: 900, mt: 0.5, display: 'block' }}>Optimal</Typography>
                                 </Box>
                                 <Box>
                                     <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, textTransform: 'uppercase', display: 'block', mb: 1 }}>Sync Relay</Typography>
@@ -630,9 +630,9 @@ function DashboardPageContent() {
                         </Paper>
 
                         <Paper elevation={0} sx={{ p: 4, borderRadius: '32px', bgcolor: alpha('#10B981', 0.03), border: '1px solid rgba(16, 185, 129, 0.1)', backgroundImage: 'none' }}>
-                            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1.5 }}>Zero Knowledge</Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1.5 }}>Your Privacy</Typography>
                             <Typography variant="body2" sx={{ color: '#9B9691', lineHeight: 1.6 }}>
-                                Your MasterPass never leaves your device. Data is decrypted locally in memory and never stored in plain text on our servers.
+                                Your password never leaves your device. Everything is kept private and secure in your own personal space.
                             </Typography>
                         </Paper>
                     </Stack>

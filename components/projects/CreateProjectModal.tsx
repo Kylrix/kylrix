@@ -57,7 +57,7 @@ const suggestions = [
   },
   { 
     title: 'Team Sprint', 
-    summary: 'Hub for active tasks and shared notes.',
+    summary: 'A project for active tasks and shared notes.',
     icon: Zap,
     color: '#A855F7',
   },

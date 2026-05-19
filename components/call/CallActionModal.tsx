@@ -53,6 +53,7 @@ import type { CallLaunchContext } from '@/context/CallLauncherContext';
 import { updateNote } from '@/lib/appwrite/note';
 import { tasks as taskApi } from '@/lib/kylrixflow';
 import { ActivityService } from '@/lib/services/activity';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 // Brand Colors
 const COLORS = {
@@ -85,6 +86,11 @@ export const CallActionModal = ({
     const { user } = useAuth();
     const router = useRouter();
     const theme = useTheme();
+    const { setIsDrawerOpen } = useDrawerState();
+
+    useEffect(() => {
+        setIsDrawerOpen(open);
+    }, [open, setIsDrawerOpen]);
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
     const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);

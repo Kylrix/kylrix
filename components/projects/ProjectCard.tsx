@@ -141,7 +141,7 @@ export default function ProjectCard({ project, onClick, onDelete }: ProjectCardP
             overflow: 'hidden',
           }}
         >
-          {project.summary || 'Unified ecosystem hub for coordinating cross-app resources and workflows.'}
+          {project.summary || 'Unified ecosystem project for coordinating cross-app resources and workflows.'}
         </Typography>
 
         <Box sx={{ pt: 2, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

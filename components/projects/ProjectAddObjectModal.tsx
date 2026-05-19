@@ -82,7 +82,7 @@ export default function ProjectAddObjectModal({ open, onClose, projectId, onAdde
     try {
       const kind = tab === 0 ? 'note' : tab === 1 ? 'goal' : 'password';
       await ProjectsService.addObjectToProject(projectId, kind, entityId);
-      showSuccess('Added to hub');
+      showSuccess('Added to project');
       onAdded();
       onClose();
     } catch (err: any) {

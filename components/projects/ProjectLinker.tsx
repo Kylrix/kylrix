@@ -90,7 +90,7 @@ export default function ProjectLinker({ open, onClose, entityId, entityKind, onL
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
             <Typography variant="h6" sx={{ color: '#fff', fontWeight: 900 }}>Add to Project</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Select a hub for this {entityKind}</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Select a project for this {entityKind}</Typography>
           </Box>
           <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)' }}>
             <X size={20} />

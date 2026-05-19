@@ -26,6 +26,8 @@ import {
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useCallLauncher } from '@/context/CallLauncherContext';
+import { useOverlay } from '@/components/ui/OverlayContext';
 
 /**
  * Persistent unified app-specific bottom bar.
@@ -38,6 +40,8 @@ export function UnifiedBottomBar() {
   const { activeContent } = useUnifiedDrawer();
   const { mode } = useAppChrome();
   const { isDrawerOpen } = useDrawerState();
+  const { isOpen: isCallLauncherOpen } = useCallLauncher();
+  const { isOpen: isOverlayOpen } = useOverlay();
 
   // Determine which app we're in
   const appContext = useMemo(() => {
@@ -243,7 +247,9 @@ export function UnifiedBottomBar() {
     mode === 'compact' ||
     isDrawerOpen ||
     isNoteFullPageDetail ||
-    isConnectCallDetail
+    isConnectCallDetail ||
+    isCallLauncherOpen || 
+    isOverlayOpen
   ) return null;
 
   return (

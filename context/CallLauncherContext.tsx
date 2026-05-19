@@ -27,6 +27,7 @@ export interface CallLaunchContext {
 }
 
 type CallLauncherContextValue = {
+  isOpen: boolean;
   openCallLauncher: (context?: CallLaunchContext) => void;
   closeCallLauncher: () => void;
 };
@@ -50,10 +51,11 @@ export function CallLauncherProvider({ children }: { children: React.ReactNode }
 
   const value = useMemo(
     () => ({
+      isOpen: open,
       openCallLauncher,
       closeCallLauncher,
     }),
-    [openCallLauncher, closeCallLauncher],
+    [open, openCallLauncher, closeCallLauncher],
   );
 
   return (

@@ -121,7 +121,7 @@ export default function ProjectsPage() {
                     Projects
                 </Typography>
                 <Typography sx={{ mt: 1.5, color: 'rgba(255,255,255,0.4)', maxWidth: 500, fontSize: '1rem', fontWeight: 500 }}>
-                    Group your notes, tasks, and passwords into simple hubs.
+                    Group your notes, tasks, and passwords into simple projects.
                 </Typography>
             </Box>
 

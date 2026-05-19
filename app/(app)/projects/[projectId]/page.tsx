@@ -167,7 +167,7 @@ export default function ProjectDetailPage() {
       openUnified('share-note', {
           resourceId: projectId as string,
           resourceType: 'project',
-          resourceTitle: project?.title || 'Project Hub',
+          resourceTitle: project?.title || 'Project',
           onShared: (userId: string) => {
               ProjectsService.addCollaborator(projectId as string, userId);
               fetchProjectData();
@@ -187,7 +187,7 @@ export default function ProjectDetailPage() {
     return (
       <Box sx={{ textAlign: 'center', py: 10 }}>
         <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900 }}>
-          Hub not found
+          Project not found
         </Typography>
         <Button onClick={() => router.push('/projects')} sx={{ mt: 2, color: '#6366F1' }}>
           Back to projects
@@ -380,9 +380,9 @@ export default function ProjectDetailPage() {
                     </Typography>
                     <Grid container spacing={2}>
                         {[
-                            { title: 'Project Documentation', icon: FileText, color: '#EC4899', desc: 'Create a new note specific to this hub context.' },
-                            { title: 'Sprint Planning', icon: CheckSquare, color: '#A855F7', desc: 'Initialize a goal to track immediate execution.' },
-                            { title: 'Access Hardening', icon: Lock, color: '#10B981', desc: 'Store new environment secrets for the team.' }
+                            { title: 'Project Documentation', icon: FileText, color: '#EC4899', desc: 'Create a new note specific to this project.' },
+                            { title: 'Sprint Planning', icon: CheckSquare, color: '#A855F7', desc: 'Initialize a goal to track execution.' },
+                            { title: 'Access Hardening', icon: Lock, color: '#10B981', desc: 'Store new secrets for the team.' }
                         ].map(wf => (
                             <Grid item xs={12} md={4} key={wf.title}>
                                 <Paper elevation={0} sx={{ p: 2.5, borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.06)', transition: 'all 0.2s ease', cursor: 'pointer', '&:hover': { borderColor: alpha(wf.color, 0.3), transform: 'translateY(-2px)' } }}>
@@ -401,7 +401,7 @@ export default function ProjectDetailPage() {
             {/* Right Sidebar Column */}
             <Grid item xs={12} lg={3.5}>
                 <Stack spacing={4}>
-                    {/* Collaborators Hub */}
+                    {/* Participants */}
                     <Paper
                         elevation={0}
                         sx={{
@@ -454,7 +454,6 @@ export default function ProjectDetailPage() {
                         </Stack>
                     </Paper>
 
-                    {/* Meta Hub */}
                     <Paper
                         elevation={0}
                         sx={{
@@ -465,9 +464,9 @@ export default function ProjectDetailPage() {
                             backgroundImage: 'none',
                         }}
                     >
-                        <Typography sx={{ color: '#fff', fontWeight: 900, mb: 1.5, fontSize: '1.1rem' }}>Hub Insights</Typography>
+                        <Typography sx={{ color: '#fff', fontWeight: 900, mb: 1.5, fontSize: '1.1rem' }}>Project Insights</Typography>
                         <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', lineHeight: 1.6, mb: 3 }}>
-                            {project.summary || 'This project hub is used to centralize and coordinate cross-ecosystem objects.'}
+                            {project.summary || 'This project is used to group and coordinate your work.'}
                         </Typography>
                         
                         <Stack spacing={2}>
@@ -515,7 +514,7 @@ function EmptyState({ kind }: { kind: string }) {
     return (
         <Box sx={{ textAlign: 'center', py: 6, opacity: 0.4 }}>
             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>{icon}</Box>
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>No {kind}s linked to this hub yet.</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>No {kind}s linked to this project yet.</Typography>
         </Box>
     );
 }
