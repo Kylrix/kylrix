@@ -41,6 +41,7 @@ import {
   PlusCircle,
   Workflow,
   History,
+  Globe,
 } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';

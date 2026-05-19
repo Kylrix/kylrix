@@ -34,6 +34,7 @@ export const ActivityService = {
      */
     async updatePresence(userId: string, status: 'online' | 'offline' | 'away' | 'busy', customStatus?: string) {
         try {
+            const safeStatus = customStatus ? customStatus.slice(0, 128) : undefined;
             // Check if presence record exists
             const existing = await tablesDB.listRows(DB_ID, ACTIVITY_TABLE, [
                 Query.equal('userId', userId),
@@ -46,14 +47,14 @@ export const ActivityService = {
             if (existing.total > 0) {
                 result = await tablesDB.updateRow(DB_ID, ACTIVITY_TABLE, existing.rows[0].$id, {
                     status,
-                    customStatus,
+                    customStatus: safeStatus,
                     lastSeen: new Date().toISOString()
                 });
             } else {
                 result = await tablesDB.createRow(DB_ID, ACTIVITY_TABLE, ID.unique(), {
                     userId,
                     status,
-                    customStatus,
+                    customStatus: safeStatus,
                     lastSeen: new Date().toISOString()
                 });
             }
@@ -61,6 +62,7 @@ export const ActivityService = {
             return result;
         } catch (error: unknown) {
             console.error('Failed to update presence:', error);
+            throw error;
         }
     },
 

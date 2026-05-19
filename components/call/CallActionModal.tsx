@@ -41,7 +41,9 @@ import {
     Copy,
     ExternalLink,
     Mic,
-    VideoIcon
+    VideoIcon,
+    Settings,
+    ShieldCheck
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';
@@ -49,6 +51,10 @@ import { useAuth } from '@/lib/auth';
 import { CallService } from '@/lib/services/call';
 import { UsersService } from '@/lib/services/users';
 import toast from 'react-hot-toast';
+import { 
+    FormControlLabel, 
+    Switch 
+} from '@mui/material';
 import type { CallLaunchContext } from '@/context/CallLauncherContext';
 import { updateNote } from '@/lib/appwrite/note';
 import { tasks as taskApi } from '@/lib/kylrixflow';
@@ -103,6 +109,7 @@ export const CallActionModal = ({
     const [joinId, setJoinId] = useState('');
     const [duration, setDuration] = useState(120); // Default 2 hours
     const [creating, setCreating] = useState(false);
+    const [allowGuests, setAllowGuests] = useState(true);
     const [liveCallState, setLiveCallState] = useState<null | {
         callId: string;
         title: string;
@@ -112,6 +119,12 @@ export const CallActionModal = ({
     const isScopedLaunch = Boolean(launchContext?.conversationId);
     const isNoteLaunch = Boolean(launchContext?.noteId);
     const isTaskLaunch = Boolean(launchContext?.taskId);
+
+    useEffect(() => {
+        if (open) {
+            setAllowGuests(!(isScopedLaunch || isNoteLaunch || isTaskLaunch));
+        }
+    }, [open, isScopedLaunch, isNoteLaunch, isTaskLaunch]);
 
     const annotateTaskHuddle = async (taskId: string, callId: string, startedAtIso: string, durationMinutes: number) => {
         try {
@@ -240,7 +253,7 @@ export const CallActionModal = ({
                     conversationId: launchContext.conversationId,
                     participantIds: participants,
                     isPrivate: true,
-                    allowGuests: false,
+                    allowGuests,
                 });
             } else if (launchContext?.noteId) {
                 const participants: string[] = Array.from(new Set(launchContext.participantIds || [user.$id]));
@@ -254,7 +267,7 @@ export const CallActionModal = ({
                     noteId: launchContext.noteId,
                     participantIds: participants,
                     isPrivate: true,
-                    allowGuests: false,
+                    allowGuests,
                 });
                 const startedAtIso = new Date().toISOString();
                 await updateNote(launchContext.noteId, {
@@ -273,18 +286,19 @@ export const CallActionModal = ({
                     sourceApp: 'flow',
                     participantIds: participants,
                     isPrivate: true,
-                    allowGuests: false,
+                    allowGuests,
                 });
                 await annotateTaskHuddle(launchContext.taskId, _link.$id, new Date().toISOString(), duration);
             } else {
-                _link = await CallService.createCallLink(
-                    user.$id,
-                    'video',
-                    undefined,
-                    instantTitle || undefined,
-                    undefined,
-                    duration
-                );
+                _link = await CallService.createScopedCallLink({
+                    userId: user.$id,
+                    type: 'video',
+                    title: instantTitle || undefined,
+                    durationMinutes: duration,
+                    scope: 'link',
+                    sourceApp: 'connect',
+                    allowGuests,
+                });
             }
             await ActivityService.setLiveCallActivity(
                 user.$id,
@@ -495,6 +509,54 @@ export const CallActionModal = ({
                                 }}
                             />
                         )}
+
+                        <Paper sx={{ 
+                            p: 2, 
+                            borderRadius: '16px', 
+                            bgcolor: 'rgba(255,255,255,0.02)', 
+                            border: `1px solid ${COLORS.rim}`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                        }}>
+                            <Stack direction="row" spacing={1.5} alignItems="center">
+                                <Box sx={{ 
+                                    width: 36, 
+                                    height: 36, 
+                                    borderRadius: '10px', 
+                                    bgcolor: alpha(allowGuests ? COLORS.secondary : '#6B7280', 0.1),
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: allowGuests ? COLORS.secondary : '#6B7280'
+                                }}>
+                                    {allowGuests ? <Users size={18} /> : <ShieldCheck size={18} />}
+                                </Box>
+                                <Box>
+                                    <Typography variant="body2" fontWeight={800} color="white">
+                                        Allow Guest Access
+                                    </Typography>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>
+                                        {allowGuests ? 'Anyone with the link can join' : 'Only logged-in users can join'}
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                            <Switch 
+                                checked={allowGuests}
+                                onChange={(e) => setAllowGuests(e.target.checked)}
+                                sx={{
+                                    '& .MuiSwitch-switchBase.Mui-checked': {
+                                        color: COLORS.secondary,
+                                        '&:hover': {
+                                            backgroundColor: alpha(COLORS.secondary, theme.palette.action.hoverOpacity),
+                                        },
+                                    },
+                                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                        backgroundColor: COLORS.secondary,
+                                    },
+                                }}
+                            />
+                        </Paper>
                     </Box>
                 )}
 

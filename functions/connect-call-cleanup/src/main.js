@@ -31,7 +31,8 @@ export default async ({ req, res, log, error }) => {
     try {
         log(`Cleaning up call for User ${userId} (Code: ${payload.code})`);
 
-        // 1. Archive the final call log entry
+        // 1. Archive the final call log entry (SKIPPED: Table 'call_logs' does not exist in live schema)
+        /*
         await databases.createDocument(
             CHAT_DB_ID,
             CALL_LOGS_TABLE,
@@ -46,6 +47,7 @@ export default async ({ req, res, log, error }) => {
                 conversationId: payload.conversationId || null
             }
         );
+        */
 
         // 2. Clear "in-call" status from Global Directory if it exists
         if (userId) {

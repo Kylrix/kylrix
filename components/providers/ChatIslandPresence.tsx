@@ -2,7 +2,7 @@
 
 import { Avatar, Badge, Box, Typography, alpha } from '@mui/material';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Lock, MessageCircle } from 'lucide-react';
+import { Lock, MessageCircle, Video } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export interface ChatIslandNotification {
@@ -11,6 +11,8 @@ export interface ChatIslandNotification {
   content: string;
   avatar?: string;
   isEncrypted: boolean;
+  type?: 'chat' | 'call';
+  callId?: string;
 }
 
 interface ChatIslandPresenceProps {
@@ -67,7 +69,11 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                 cursor: 'pointer',
               }}
               onClick={() => {
-                router.push(`/connect/chat/${notification.id}`);
+                if (notification.type === 'call' && notification.callId) {
+                  router.push(`/connect/call/${notification.callId}`);
+                } else {
+                  router.push(`/connect/chat/${notification.id}`);
+                }
                 onDismiss();
               }}
             >
@@ -140,7 +146,11 @@ export default function ChatIslandPresence({ notification, onDismiss }: ChatIsla
                   display: 'flex',
                 }}
               >
-                <MessageCircle size={16} color="#6366F1" />
+                {notification.type === 'call' ? (
+                  <Video size={16} color="#6366F1" />
+                ) : (
+                  <MessageCircle size={16} color="#6366F1" />
+                )}
               </Box>
             </Box>
           </motion.div>

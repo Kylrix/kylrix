@@ -4,6 +4,8 @@ import { APPWRITE_CONFIG } from '../appwrite/config';
 import { createCallMetadata, parseCallMetadata, type KylrixCallScope } from '@/lib/sdk/calls';
 import { getNamedListCache } from './list-cache';
 
+import { ActivityService } from './activity';
+
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
 
@@ -37,6 +39,7 @@ export const CallService = {
         startsAt?: string,
         durationMinutes: number = 120,
         metadata?: string,
+        allowGuests: boolean = true,
     ) {
         try {
             // Default to starting now if not provided
@@ -59,17 +62,29 @@ export const CallService = {
 
             console.log('[CallService] Creating call in new table with payload:', payload);
 
-            return await tablesDB.createRow({
+            const permissions = [
+                Permission.update(Role.user(userId)),
+                Permission.delete(Role.user(userId)),
+            ];
+
+            if (allowGuests) {
+                permissions.push(Permission.read(Role.any()));
+            } else {
+                permissions.push(Permission.read(Role.users()));
+            }
+
+            const result = await tablesDB.createRow({
                 databaseId: DB_ID,
                 tableId: LINKS_TABLE,
                 rowId: ID.unique(),
                 data: payload,
-                permissions: [
-                    Permission.read(Role.any()),
-                    Permission.update(Role.user(userId)),
-                    Permission.delete(Role.user(userId)),
-                ]
+                permissions
             });
+
+            historyCache.invalidate();
+            activeCallsCache.invalidate();
+
+            return result;
         } catch (_e) {
             console.error('[CallService] createCallLink failed:', _e);
             throw _e;
@@ -114,6 +129,7 @@ export const CallService = {
             input.startsAt,
             input.durationMinutes ?? 120,
             metadata,
+            input.allowGuests ?? false
         );
     },
 
@@ -140,40 +156,36 @@ export const CallService = {
     },
 
     async getActiveParticipants(callId: string) {
-        try {
-            const res = await tablesDB.listRows({
-                databaseId: DB_ID,
-                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
-                queries: [Query.equal('callId', callId)],
-            });
-            return res.rows || [];
-        } catch (_e) {
-            return [];
-        }
+        // Since we don't have a call_logs table, we can't easily track active participants
+        // in a persistent way without a separate table. For now, returning empty.
+        // Presence is handled by the 'app_activity' table in the activity service.
+        return [];
     },
 
     async createAnonymousSession() {
-        return {
-            $id: ID.unique(),
-            createdAt: new Date().toISOString(),
-        };
+        try {
+            const { account } = await import('../appwrite/client');
+            return await account.createAnonymousSession();
+        } catch (_e) {
+            return {
+                $id: ID.unique(),
+                createdAt: new Date().toISOString(),
+            };
+        }
     },
 
     async sendSignal(senderId: string, targetId: string, signal: Record<string, unknown>) {
         try {
-            await tablesDB.createRow({
-                databaseId: DB_ID,
-                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
-                rowId: ID.unique(),
-                data: {
-                    senderId,
-                    targetId,
-                    signal,
-                    createdAt: new Date().toISOString(),
-                },
-            });
+            // Signals are now sent via the 'app_activity' table for transient handshakes.
+            // This prevents polluting chat history and stops generic message notifications.
+            await ActivityService.updatePresence(senderId, 'busy', JSON.stringify({ 
+                ...signal, 
+                target: targetId,
+                sender: senderId,
+                ts: Date.now() 
+            }));
         } catch (_e) {
-            return;
+            console.error('[CallService] sendSignal failed:', _e);
         }
     },
 
@@ -182,17 +194,24 @@ export const CallService = {
             try {
                 const res = await tablesDB.listRows({
                     databaseId: DB_ID,
-                    tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                    tableId: LINKS_TABLE,
                     queries: [
                         Query.or([
                             Query.equal('userId', userId),
-                            Query.equal('callerId', userId),
                             Query.equal('receiverId', userId),
                         ]),
-                        Query.limit(50)
+                        Query.limit(50),
+                        Query.orderDesc('startsAt')
                     ],
                 });
-                return res.rows || [];
+                
+                return (res.rows || []).map(row => ({
+                    ...row,
+                    isLink: true,
+                    status: new Date(row.expiresAt).getTime() > Date.now() ? 'active' : 'ended',
+                    startedAt: row.startsAt,
+                    callerId: row.userId,
+                }));
             } catch (_e) {
                 return [];
             }
@@ -204,82 +223,39 @@ export const CallService = {
             try {
                 const res = await tablesDB.listRows({
                     databaseId: DB_ID,
-                    tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                    tableId: LINKS_TABLE,
                     queries: [
                         Query.or([
                             Query.equal('userId', userId),
-                            Query.equal('callerId', userId),
                             Query.equal('receiverId', userId),
                         ]),
-                        Query.equal('status', 'active'),
+                        Query.greaterThanEqual('expiresAt', new Date().toISOString()),
                         Query.limit(50)
                     ],
                 });
-                return res.rows || [];
+
+                return (res.rows || []).map(row => ({
+                    ...row,
+                    isLink: true,
+                    status: 'active',
+                    startedAt: row.startsAt,
+                    callerId: row.userId,
+                })).filter(link => new Date(link.startsAt).getTime() <= Date.now());
             } catch (_e) {
                 return [];
             }
         }, force);
     },
 
-    async deleteCallLog(callId: string) {
+    async deleteCall(callId: string) {
         try {
             await tablesDB.deleteRow({
                 databaseId: DB_ID,
-                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
+                tableId: LINKS_TABLE,
                 rowId: callId,
             });
             historyCache.invalidate();
             activeCallsCache.invalidate();
-        } catch (_e) {
-            return;
-        }
-    },
-
-    async endCall(callId: string) {
-        try {
-            const call = await tablesDB.getRow({
-                databaseId: DB_ID,
-                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
-                rowId: callId,
-            });
-            const participants = await this.getActiveParticipants(callId);
-            const durationMs = new Date().getTime() - new Date(call.createdAt).getTime();
-            const durationSecs = durationMs / 1000;
-
-            await tablesDB.updateRow({
-                databaseId: DB_ID,
-                tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LOGS,
-                rowId: callId,
-                data: {
-                    status: 'ended',
-                    endedAt: new Date().toISOString(),
-                },
-            });
-            activeCallsCache.invalidate();
-            historyCache.invalidate();
-
-            if (durationSecs >= 300) {
-                const uniqueParticipants = Array.from(new Set(participants.map(p => p.userId || p.senderId)));
-                try {
-                    const { runTokenOperationSecure } = await import('@/lib/actions/secure-ops');
-                    for (const userId of uniqueParticipants) {
-                        await runTokenOperationSecure({
-                            action: 'mint_activity',
-                            userId,
-                            idempotencyKey: `mint:call_participate:${callId}:${userId}`,
-                            activityType: 'call_participate',
-                            uniqueActors: Math.max(1, uniqueParticipants.length - 1),
-                            trustScore: 80,
-                            sourceType: 'call_participate',
-                            sourceId: callId,
-                            metadata: { durationSecs, participantCount: uniqueParticipants.length },
-                        });
-                    }
-                } catch (err) {
-                    console.warn('[CallService] Failed to trigger call_participate mint:', err);
-                }
-            }
         } catch (_e) {
             return;
         }
