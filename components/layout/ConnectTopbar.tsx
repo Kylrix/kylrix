@@ -11,8 +11,11 @@ import {
   Button,
   ButtonBase,
   IconButton,
+  InputAdornment,
+  InputBase,
   Paper,
   Stack,
+  TextField,
   Tooltip,
   Typography,
   CircularProgress,
@@ -23,18 +26,21 @@ import {
   Wallet,
   Copy as CopyIcon,
   User as UserIcon,
+  Search,
+  X as CloseIcon,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
 import { useAuth } from '@/lib/auth';
 import { getProfilePicturePreview } from '@/lib/appwrite';
 import { getUserProfilePicId } from '@/lib/utils';
-import { getEcosystemUrl } from '@/lib/constants';
+import { getEcosystemUrl, APP_BASE_PATHS } from '@/lib/constants';
 import { TOPBAR_LAYOUT, getAppTone, type KylrixApp } from '@/lib/sdk/design';
-import { createEcosystemPanelItems, createTopbarPanelMotion, isTopbarScrollAtBottom, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
+import { createEcosystemPanelItems, createTopbarPanelMotion, createTopbarSearchSurface, isTopbarScrollAtBottom, isTopbarScrollAtTop } from '@/lib/sdk/topbar';
 import { createProfilePreviewManager, getUserProfilePicId as getSdkUserProfilePicId } from '@/lib/sdk/appwrite';
 import { stageProfileView } from '@/lib/profile-handoff';
 import { getAppColor } from '@/lib/ecosystem-app-colors';
+import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
@@ -80,6 +86,11 @@ export default function ConnectTopbar({
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username'>('idle');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [peopleResults, setPeopleResults] = useState<any[]>([]);
+  const [searchingPeople, setSearchingPeople] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
@@ -138,9 +149,19 @@ export default function ConnectTopbar({
     };
   }, [previewManager, profilePicId]);
 
+  const openSearch = useCallback(() => {
+    setProfileMenuAnchorEl(null);
+    setAppMenuAnchorEl(null);
+    setSearchOpen(true);
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 10);
+  }, []);
+
   const handleCloseAll = useCallback(() => {
     setProfileMenuAnchorEl(null);
     setAppMenuAnchorEl(null);
+    setSearchOpen(false);
   }, []);
 
   const openAppMenu = useCallback((event: MouseEvent<HTMLElement>) => {
@@ -151,6 +172,47 @@ export default function ConnectTopbar({
     setProfileMenuAnchorEl(event.currentTarget);
     setCopyState('idle');
   }, []);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setPeopleResults([]);
+      return;
+    }
+
+    let mounted = true;
+    const searchPeople = async () => {
+      setSearchingPeople(true);
+      try {
+        const results = await searchGlobalUsers(query);
+        if (mounted) setPeopleResults(results);
+      } catch (err) {
+        console.error('Failed to search people', err);
+      } finally {
+        if (mounted) setSearchingPeople(false);
+      }
+    };
+
+    const timer = setTimeout(searchPeople, 300);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
+
+  const searchSurface = useMemo(
+    () =>
+      createTopbarSearchSurface({
+        query: searchQuery,
+        routeLabel: activeApp.charAt(0).toUpperCase() + activeApp.slice(1),
+        currentApp: activeApp,
+        snippets: [],
+        resolveUrl: (app, path = '') => {
+          return (APP_BASE_PATHS[app as keyof typeof APP_BASE_PATHS] || '/') + path;
+        },
+      }),
+    [searchQuery, activeApp],
+  );
 
   const handleCopyUserId = useCallback(async () => {
     if (!profileSeed.userId || typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -184,7 +246,7 @@ export default function ConnectTopbar({
 
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 
-  const activePanel = profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
+  const activePanel = searchOpen ? 'search' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
 
   useEffect(() => {
     if (!activePanel) return;
@@ -198,6 +260,247 @@ export default function ConnectTopbar({
     window.addEventListener('pointerdown', handlePointerDown, true);
     return () => window.removeEventListener('pointerdown', handlePointerDown, true);
   }, [activePanel, handleCloseAll]);
+
+  const renderSearchPanel = () => {
+    if (!searchOpen) return null;
+
+    const query = searchQuery.trim().toLowerCase();
+    const hasQuery = query.length >= 2;
+
+    return (
+      <Box
+        data-note-search-surface="true"
+        sx={{
+          width: '100%',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          bgcolor: '#161412',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          onWheel={(event) => {
+            const node = event.currentTarget;
+            if (event.deltaY < 0 && isTopbarScrollAtTop(node)) {
+              event.preventDefault();
+              handleCloseAll();
+            }
+          }}
+          sx={{
+            width: '100%',
+            px: { xs: 2, md: 4 },
+            py: 1.5,
+            maxHeight: TOPBAR_LAYOUT.searchDockMaxHeight,
+            overflowY: 'auto',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+              <Logo app={activeApp} size={18} variant="icon" />
+            </Box>
+            <TextField
+              id="topbar-search-field"
+              inputRef={searchInputRef}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search notes, tags, shared links, people"
+              variant="standard"
+              fullWidth
+              autoFocus
+              InputProps={{
+                disableUnderline: true,
+                sx: {
+                  color: 'white',
+                  fontWeight: 800,
+                  fontSize: '0.98rem',
+                  '& input::placeholder': { color: 'rgba(255,255,255,0.42)', opacity: 1 },
+                },
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Typography sx={{ color: 'rgba(255,255,255,0.42)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mr: 0.5 }}>
+                      Search
+                    </Typography>
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                      <CloseIcon size={16} />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              }}
+              sx={{ flex: 1, minWidth: { xs: '100%', md: 320 } }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  handleCloseAll();
+                }
+              }}
+            />
+          </Box>
+
+          <Stack spacing={1.25} sx={{ mt: 1.25 }}>
+            <Box sx={{ display: 'grid', gap: 1 }}>
+              {!hasQuery && (
+                <Box sx={{ px: 0.5, py: 0.5 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.84rem' }}>
+                    Start typing to search notes, goals, moments, calls, people, and apps.
+                  </Typography>
+                </Box>
+              )}
+
+              <Box sx={{ display: 'grid', gap: 0.75 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {searchSurface.quickActionLabel}
+                </Typography>
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  {searchSurface.quickActions.slice(0, 3).map((action) => (
+                    <Box
+                      key={action.id}
+                      component="button"
+                      onClick={() => {
+                          handleCloseAll();
+                          router.push(action.href);
+                      }}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 1.5,
+                        py: 1.1,
+                        borderRadius: '18px',
+                        bgcolor: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        color: 'white',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
+                      }}
+                    >
+                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
+                        <Logo app={action.kind as any} size={16} variant="icon" />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                          {action.title}
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              <Box sx={{ display: 'grid', gap: 0.75 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {searchSurface.searchAcrossLabel}
+                </Typography>
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  {searchSurface.searchTargets.slice(0, 4).map((action) => (
+                    <Box
+                      key={action.id}
+                      component="button"
+                      onClick={() => {
+                          handleCloseAll();
+                          router.push(action.href);
+                      }}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 1.5,
+                        py: 1.1,
+                        borderRadius: '18px',
+                        bgcolor: action.kind === 'note' ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${action.kind === 'note' ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.05)'}`,
+                        color: 'white',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: action.kind === 'note' ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.06)' }
+                      }}
+                    >
+                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
+                        <Logo app={action.kind as any} size={16} variant="icon" />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                          {action.title}
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+
+              {(searchingPeople || peopleResults.length > 0) && (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    People
+                  </Typography>
+                  {searchingPeople ? (
+                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.84rem' }}>
+                      Searching people...
+                    </Typography>
+                  ) : (
+                    peopleResults.slice(0, 3).map((person) => (
+                      <Box
+                        key={person.$id || person.id}
+                        component="button"
+                        onClick={() => {
+                          const username = person.username || person.prefs?.username;
+                          if (username) {
+                            stageProfileView(person, person.avatar || null);
+                            handleCloseAll();
+                            router.push(`/u/${encodeURIComponent(username.replace(/^@+/, ''))}?transition=profile`);
+                          }
+                        }}
+                        sx={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.25,
+                          px: 1.5,
+                          py: 1.1,
+                          borderRadius: '18px',
+                          bgcolor: 'rgba(255,255,255,0.02)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          color: 'white',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
+                        }}
+                      >
+                        <Avatar
+                          src={person.avatar || undefined}
+                          sx={{ width: 32, height: 32, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.08)', color: 'white', fontSize: '0.8rem', fontWeight: 800 }}
+                        >
+                          {(person.displayName || person.name || 'U')[0].toUpperCase()}
+                        </Avatar>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                          <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                            {person.displayName || person.name}
+                          </Typography>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                            @{String(person.username || person.prefs?.username || 'user').replace(/^@+/, '')}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))
+                  )}
+                </Box>
+              )}
+            </Box>
+          </Stack>
+        </Box>
+      </Box>
+    );
+  };
 
   const renderProfilePanel = () => {
     if (!profileMenuAnchorEl || !user) return null;
@@ -555,7 +858,86 @@ export default function ConnectTopbar({
               </IconButton>
             </Box>
 
-            <Box sx={{ flex: 1 }} />
+            {user ? (
+              <Box
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {searchOpen ? (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      width: { xs: 'calc(100vw - 32px)', sm: 420, md: 520 },
+                      maxWidth: 'calc(100vw - 32px)',
+                      height: 44,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      px: 1.5,
+                      py: 0,
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      bgcolor: '#000',
+                      color: 'white',
+                      borderRadius: '24px',
+                      boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 26px rgba(0,0,0,0.55)',
+                    }}
+                  >
+                    <Search size={16} strokeWidth={2.25} style={{ flexShrink: 0, opacity: 0.84 }} />
+                    <InputBase
+                      id="topbar-search-input"
+                      inputRef={searchInputRef}
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Search people, notes, apps..."
+                      sx={{
+                        flex: 1,
+                        color: 'white',
+                        fontWeight: 800,
+                        '& input::placeholder': { color: 'rgba(255,255,255,0.42)', opacity: 1 },
+                      }}
+                    />
+                    <IconButton size="small" onClick={() => setSearchOpen(false)} sx={{ color: 'rgba(255,255,255,0.6)' }}>
+                      <CloseIcon size={16} />
+                    </IconButton>
+                  </Paper>
+                ) : (
+                  <Button
+                    onClick={openSearch}
+                    sx={{
+                      width: { xs: 44, md: 170 },
+                      minWidth: { xs: 44, md: 170 },
+                      maxWidth: { xs: 44, md: 170 },
+                      height: 44,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 1,
+                      px: 1.25,
+                      py: 0,
+                      minHeight: 44,
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      bgcolor: '#000',
+                      color: 'white',
+                      borderRadius: '999px',
+                      boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 26px rgba(0,0,0,0.55)',
+                      textTransform: 'none',
+                      '&:hover': { bgcolor: '#0f0f0f', transform: 'translateY(-1px)' },
+                    }}
+                  >
+                    <Search size={16} strokeWidth={2.25} />
+                    <Typography sx={{ display: { xs: 'none', md: 'block' }, fontWeight: 800 }}>
+                      Search
+                    </Typography>
+                  </Button>
+                )}
+              </Box>
+            ) : (
+              <Box sx={{ flex: 1 }} />
+            )}
 
             <Stack direction="row" alignItems="center" spacing={1.25} sx={{ flexShrink: 0 }}>
               {isClient && (
@@ -633,6 +1015,7 @@ export default function ConnectTopbar({
           </Box>
         </Box>
 
+        {renderSearchPanel()}
         {renderAppPanel()}
         {renderProfilePanel()}
       </AppBar>

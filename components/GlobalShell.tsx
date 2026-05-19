@@ -21,6 +21,7 @@ import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext';
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import QuickCreateFab from '@/components/ui/QuickCreateFab';
+import GlobalFAB from '@/components/layout/GlobalFAB';
 
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
@@ -50,6 +51,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const isVaultResetRoute = pathname?.startsWith('/vault/reset');
   const isProjectsPage = pathname?.startsWith('/projects');
   const isLandingPage = pathname === '/';
+  const isConnectPage = pathname?.startsWith('/connect');
 
   // 2. UI State
   const { activeContent: unifiedDrawerActive, open: openUnified } = useUnifiedDrawer();
@@ -121,9 +123,10 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && !isProjectsPage && (
         <UnifiedBottomBar />
       )}
-      {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && !isProjectsPage && (
+      {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && !isProjectsPage && !isConnectPage && (
         <QuickCreateFab />
       )}
+      <GlobalFAB />
 
       {/* --- LAYER 2: OVERLAYS (Strict Unmounting) --- */}
       {isOverlayOpen && <Overlay />}

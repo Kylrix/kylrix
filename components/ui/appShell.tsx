@@ -23,6 +23,7 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const { openIDMWindow, idmWindowOpen } = useAuth();
   const [authChecked, setAuthChecked] = useState(false);
+  const isConnectPage = pathname?.startsWith('/connect');
 
 
   useEffect(() => {
@@ -111,7 +112,7 @@ export default function AppShell({ children }: AppShellProps) {
           </Box>
         </Box>
 
-        <QuickCreateFab />
+        {!isConnectPage && <QuickCreateFab />}
       </Box>
 
       {idmWindowOpen && (

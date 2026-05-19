@@ -18,6 +18,8 @@ import {
   MessageSquare as ChatIcon,
   Phone as CallIcon,
   MessageCircle as ReplyIcon,
+  Hash as ChannelIcon,
+  Users as GroupIcon,
 } from 'lucide-react';
 import { useTask } from '@/context/TaskContext';
 import { useNoteDrawer } from '@/context/NoteDrawerContext';
@@ -79,7 +81,8 @@ export default function GlobalFAB() {
         }
         return [
             { id: 'chat', name: 'NEW CHAT', icon: <ChatIcon size={22} />, color: '#F59E0B', onClick: () => { router.push('/connect/chats?new=1'); setIsExpanded(false); } },
-            { id: 'call', name: 'START CALL', icon: <CallIcon size={22} />, color: '#F59E0B', onClick: () => { router.push('/connect/calls?start=1'); setIsExpanded(false); } },
+            { id: 'huddle', name: 'START HUDDLE', icon: <CallIcon size={22} />, color: '#F59E0B', onClick: () => { router.push('/connect/calls?start=1'); setIsExpanded(false); } },
+            { id: 'channel', name: 'NEW CHANNEL', icon: <ChannelIcon size={22} />, color: '#F59E0B', onClick: () => { router.push('/connect/chats?type=channel&new=1'); setIsExpanded(false); } },
         ];
     }
 
