@@ -80,6 +80,8 @@ import { formatFileSize } from '@/lib/utils';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAutosave } from '@/hooks/useAutosave';
+import ProjectLinker from '@/components/projects/ProjectLinker';
+import { FolderKanban } from 'lucide-react';
 
 export interface NoteDetailSidebarProps {
   note: Notes;
@@ -161,6 +163,7 @@ export function NoteDetailSidebar({
 
   const [showActionHub, setShowActionHub] = useState(false);
   const [showRotateConfirm, setShowRotateConfirm] = useState(false);
+  const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
   const [crossSuggestions, setCrossSuggestions] = useState<any[]>([]);
@@ -714,6 +717,7 @@ export function NoteDetailSidebar({
               {isPublic ? 'Make Private' : 'Make Public'}
             </Button>
             <Button variant="contained" startIcon={<TaskIcon />} onClick={handleCreateTaskFromNote} disabled={isCreatingTaskFromNote} sx={{ borderRadius: '14px', fontWeight: 900, bgcolor: theme.palette.primary.main }}>Create Goal</Button>
+            <Button variant="outlined" startIcon={<FolderKanban size={18} />} onClick={() => { setShowActionHub(false); setShowProjectLinker(true); }} sx={{ borderRadius: '14px', fontWeight: 800, color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>Add to Project</Button>
             <Button variant="outlined" startIcon={<LockIcon />} onClick={() => { setShowActionHub(false); rotateNoteLink(); }} disabled={!isPublic} sx={{ borderRadius: '14px', fontWeight: 800, color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>Rotate Link</Button>
           </Box>
           <Box>
@@ -736,6 +740,13 @@ export function NoteDetailSidebar({
 
       <ConfirmationDialog open={showRotateConfirm} title="Rotate public link?" message="The previous link will become permanently invalid. Anyone with the old link will lose access." confirmLabel={isRotating ? "Rotating..." : "Rotate Link"} isDestructive={true} isLoading={isRotating} onClose={() => setShowRotateConfirm(false)} onConfirm={handleConfirmedRotate} />
       
+      <ProjectLinker 
+        open={showProjectLinker} 
+        onClose={() => setShowProjectLinker(false)} 
+        entityId={liveNote.$id} 
+        entityKind="note" 
+      />
+
       <Dialog open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} PaperProps={{ sx: { borderRadius: '32px', bgcolor: '#161412', border: '1px solid #1C1A18', backgroundImage: 'none', p: 2 } }}>
         <DialogTitle sx={{ fontWeight: 900, color: '#FF453A' }}>Delete Note</DialogTitle>
         <DialogContent><Typography sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Are you sure you want to delete this note? This action is permanent.</Typography></DialogContent>

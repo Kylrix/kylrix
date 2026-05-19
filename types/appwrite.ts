@@ -381,5 +381,27 @@ export type Tasks = Models.Row & {
 
 export type Stickers = Models.Row & { name: string; description: string | null; creatorId: string | null; packId: string | null; imageUrl: string; imageFileId: string | null; animatedUrl: string | null; animatedFileId: string | null; tags: string[]; category: string | null; isPremium: boolean; isAnimated: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }
 
+export type Projects = Models.Row & {
+    title: string;
+    summary: string | null;
+    ownerId: string;
+    visibility: 'private' | 'shared' | 'public';
+    status: 'active' | 'paused' | 'archived';
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type ProjectObjects = Models.Row & {
+    projectId: string;
+    entityKind: string;
+    entityId: string;
+    role: string | null;
+    position: number;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
 // Re-export auto-generated types from appwrite.d.ts
 export type { Keychain, KeyMapping } from './appwrite.d';

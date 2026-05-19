@@ -50,6 +50,8 @@ import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
 import { account } from '@/lib/appwrite';
 import { UsersService } from '@/lib/services/users';
+import { FolderKanban } from 'lucide-react';
+import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { CollaboratorPermission, TaskCollaborator } from '@/types';
 
 const priorityColors: Record<Priority, string> = {
@@ -125,6 +127,7 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
   const [isLoadingAssignees, setIsLoadingAssignees] = useState(false);
   const [taskCollaboratorRows, setTaskCollaboratorRows] = useState<TaskCollaborator[]>([]);
   const [pendingCollaborators, setPendingCollaborators] = useState<any[]>([]);
+  const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [pendingCollaboratorPermission, setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
 
   // AI Integration
@@ -413,6 +416,20 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <IconButton 
             size="small" 
+            onClick={() => setShowProjectLinker(true)} 
+            sx={{ 
+              color: 'text.secondary', 
+              bgcolor: 'rgba(255, 255, 255, 0.02)',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              transition: 'all 0.2s ease',
+              '&:hover': { color: '#6366F1', bgcolor: 'rgba(255, 255, 255, 0.08)', transform: 'translateY(-1px)' } 
+            }}
+          >
+            <FolderKanban size={18} />
+          </IconButton>
+          <IconButton 
+            size="small" 
             onClick={handleStartEdit} 
             sx={{ 
               color: 'text.secondary', 
@@ -441,6 +458,13 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
           </IconButton>
         </Box>
       </Box>
+
+      <ProjectLinker 
+        open={showProjectLinker} 
+        onClose={() => setShowProjectLinker(false)} 
+        entityId={taskId} 
+        entityKind="goal" 
+      />
 
       {/* Scrollable Content */}
       <Box sx={{ 
