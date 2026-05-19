@@ -22,6 +22,8 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import GppMaybeIcon from '@mui/icons-material/GppMaybe';
 import GppGoodIcon from '@mui/icons-material/GppGood';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import FolderIcon from '@mui/icons-material/Folder';
+import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { Credentials } from '@/lib/appwrite/types';
 import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
@@ -37,6 +39,7 @@ export default function CredentialDetail({
 }) {
   const theme = useTheme();
   const [showPassword, setShowPassword] = useState(false);
+  const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const { requestSudo } = useSudo();
 
@@ -180,10 +183,24 @@ export default function CredentialDetail({
         <IconButton onClick={onClose} sx={{ color: 'text.secondary' }}>
           {isMobile ? <ArrowBackIcon sx={{ fontSize: 20 }} /> : <CloseIcon sx={{ fontSize: 20 }} />}
         </IconButton>
-        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: '"Space Grotesk", sans-serif' }}>
+        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: '"Space Grotesk", sans-serif', flexGrow: 1 }}>
           Credential Details
         </Typography>
+        <IconButton 
+          size="small" 
+          onClick={() => setShowProjectLinker(true)} 
+          sx={{ color: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05), border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.2) }}
+        >
+          <FolderIcon sx={{ fontSize: 18 }} />
+        </IconButton>
       </Box>
+
+      <ProjectLinker 
+        open={showProjectLinker} 
+        onClose={() => setShowProjectLinker(false)} 
+        entityId={credential.$id} 
+        entityKind="password" 
+      />
 
       {/* Content */}
       <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 3 }}>

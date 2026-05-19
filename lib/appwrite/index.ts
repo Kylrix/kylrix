@@ -4,6 +4,7 @@ export * from './config';
 export * from './auth';
 export * from './note';
 export * from './vault';
+export * from './projects';
 
 import { AppwriteService as SharedService } from './auth';
 import { VaultService } from './vault';
