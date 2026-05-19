@@ -121,7 +121,7 @@ function DashboardPageContent() {
       ]
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration]);
+  }, [setConfiguration, resetConfiguration, handleSmartOrganize]);
 
   // Update master password drawer state when auth state changes
   useEffect(() => {
@@ -183,7 +183,7 @@ function DashboardPageContent() {
   }, [user]);
 
   // AI Smart Organization Handler
-  const handleSmartOrganize = async () => {
+  const handleSmartOrganize = useCallback(async () => {
     if (!user?.$id || organizing) return;
 
     setOrganizing(true);
@@ -210,7 +210,7 @@ function DashboardPageContent() {
     } finally {
       setOrganizing(false);
     }
-  };
+  }, [user?.$id, organizing, allCredentials, applyOrganizationChanges]);
 
   const applyOrganizationChanges = async (plan: { [folderName: string]: string[] }) => {
     const toastId = toast.loading("Applying changes...");

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense  } from 'react';
+import React, { useState, Suspense } from 'react';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
 import { Box, Typography, Container, CircularProgress, Paper, TextField, Button } from '@mui/material';
@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
-export default function CallsPage() {
+function CallsContent() {
     const [modalOpen, setModalOpen] = useState(false);
     const searchParams = useSearchParams();
     const [joinInput, setJoinId] = useState('');
@@ -45,7 +45,7 @@ export default function CallsPage() {
     };
 
     return (
-        <Container maxWidth="md" sx={{ py: 3, position: 'relative', minHeight: '100vh', pointerEvents: 'auto' }}>
+        <>
             <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'center', justifyContent: 'space-between' }}>
                 <Typography variant="h5" fontWeight="bold">Call History</Typography>
                 
@@ -90,9 +90,7 @@ export default function CallsPage() {
                 </Paper>
             </Box>
             
-            <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
-                <CallHistory key={refreshKey} onNewCall={() => setModalOpen(true)} />
-            </Suspense>
+            <CallHistory key={refreshKey} onNewCall={() => setModalOpen(true)} />
 
             <CallActionModal 
                 open={modalOpen} 
@@ -101,6 +99,16 @@ export default function CallsPage() {
                     setRefreshKey(prev => prev + 1);
                 }} 
             />
+        </>
+    );
+}
+
+export default function CallsPage() {
+    return (
+        <Container maxWidth="md" sx={{ py: 3, position: 'relative', minHeight: '100vh', pointerEvents: 'auto' }}>
+            <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
+                <CallsContent />
+            </Suspense>
         </Container>
     );
 }

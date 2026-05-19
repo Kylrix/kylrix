@@ -63,7 +63,7 @@ export const UserSearch = () => {
         setLoading(true);
         try {
             const res = await UsersService.searchUsers(query);
-            const nextRows = res.rows as any;
+            const nextRows = Array.isArray(res) ? res : (res as any).rows || [];
             nextRows.forEach((u: any) => seedIdentityCache(u));
             setResults(nextRows);
         } catch (error) {

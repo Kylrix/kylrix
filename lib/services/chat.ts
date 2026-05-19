@@ -442,10 +442,13 @@ async function resolveConversationKey(
 
     if (conversation.type === 'group' && String(conversation.encryptionVersion || '').toUpperCase() === 'T4') {
         const epochKey = await fetchEpochKeyForConversation(conversation.$id, userId, messageCreatedAt);
-        if (epochKey && !messageCreatedAt) {
-            conversationKeyCache.set(conversation.$id, epochKey);
+        if (epochKey) {
+            if (!messageCreatedAt) {
+                conversationKeyCache.set(conversation.$id, epochKey);
+            }
+            return epochKey;
         }
-        return epochKey;
+        // Fallback to direct chat mapping for base metadata decryption
     }
 
     const directKey = await fetchConversationKeyFromLockbox(conversation.$id, userId, conversation.creatorId);
@@ -929,6 +932,16 @@ export const ChatService = {
                         const profile = await UsersService.getProfileById(participantId);
                         if (!profile?.publicKey) return null;
 
+                        // Validate key length for X25519 (32 bytes decoded)
+                        try {
+                            const normalized = profile.publicKey.replace(/-/g, '+').replace(/_/g, '/');
+                            const binary = atob(normalized);
+                            if (binary.length !== 32) throw new Error('Invalid length');
+                        } catch (e) {
+                            console.error(`[ChatService] Invalid public key for user ${participantId}:`, profile.publicKey);
+                            throw new Error(`${profile.displayName || profile.username || 'A participant'} has an invalid secure identity key. They must refresh their security settings before joining secure chats.`);
+                        }
+
                         return {
                             resourceType: 'chat',
                             resourceId: newConv.$id,
@@ -958,7 +971,10 @@ export const ChatService = {
                                 resourceId: newConv.$id,
                             })),
                         });
-                    } else if (directLockboxRows.length > 0) {
+                    }
+                    
+                    // Always sync base 'chat' lockbox rows for immediate metadata decryption
+                    if (directLockboxRows.length > 0) {
                         await syncLockboxRows(directLockboxRows);
                     }
 
@@ -1387,6 +1403,16 @@ export const ChatService = {
                     epochNumber: nextEpochNumber,
                     keyMappings,
                 });
+
+                // Also sync base 'chat' lockbox rows for the newly added participant/everyone
+                // This ensures conversation metadata (name/preview) remains decryptable
+                if (keyMappings.length > 0) {
+                    await syncLockboxRows(keyMappings.map(entry => ({
+                        ...entry,
+                        resourceType: 'chat',
+                        resourceId: conversationId
+                    })));
+                }
             }
             return updated;
         }

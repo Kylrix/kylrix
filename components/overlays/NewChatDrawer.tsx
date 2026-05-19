@@ -28,47 +28,42 @@ import { useRouter } from 'next/navigation';
 import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
+import UserSearch from '@/components/UserSearch';
+
+const DRAWER_SX = {
+    borderTopLeftRadius: '26px',
+    borderTopRightRadius: '26px',
+    bgcolor: '#161412',
+    borderTop: '1px solid #34322F',
+    maxWidth: 720,
+    width: '100%',
+    mx: 'auto',
+    maxHeight: '60vh'
+};
+
+const isValidPublicKey = (key: string | null | undefined): boolean => {
+    if (!key) return false;
+    try {
+        const normalized = key.replace(/-/g, '+').replace(/_/g, '/');
+        const binary = atob(normalized);
+        return binary.length === 32;
+    } catch {
+        return false;
+    }
+};
 
 export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const { user } = useAuth();
     const router = useRouter();
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
     const { requestSudo } = useSudo();
+    const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
 
-    const [query, setQuery] = useState('');
-    const [results, setResults] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-
-    const handleSearch = useCallback(async () => {
-        if (!query.trim()) {
-            setResults([]);
-            return;
-        }
-        setLoading(true);
-        try {
-            // Strict check: only users with public keys
-            const res = await UsersService.searchUsers(query, { requirePublicKey: true });
-            const rows = Array.isArray(res) ? res : (res as any).rows || [];
-            setResults(rows.filter((u: any) => u.$id !== user?.$id));
-        } catch (error) {
-            console.error('Search failed:', error);
-        } finally {
-            setLoading(false);
-        }
-    }, [query, user?.$id]);
-
-    useEffect(() => {
-        const timeoutId = setTimeout(handleSearch, 400);
-        return () => clearTimeout(timeoutId);
-    }, [query, handleSearch]);
-
-    const startChat = async (targetUser: any) => {
+    const startChat = useCallback(async (targetUser: any) => {
         if (!user) return;
-        const targetUserId = targetUser.userId || targetUser.$id;
+        const targetUserId = targetUser.id || targetUser.$id;
 
-        if (!targetUser.publicKey) {
-            toast.error("User hasn't set up secure chatting yet.");
+        if (!isValidPublicKey(targetUser.publicKey)) {
+            toast.error("User hasn't set up secure chatting yet (invalid key).");
             return;
         }
 
@@ -97,26 +92,24 @@ export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: (
                 }
             }
         });
-    };
+    }, [user, router, onClose, requestSudo]);
+
+    useEffect(() => {
+        if (selectedUsers.length > 0) {
+            startChat(selectedUsers[0]);
+            setSelectedUsers([]);
+        }
+    }, [selectedUsers, startChat]);
 
     return (
         <Drawer
-            anchor={isMobile ? 'bottom' : 'right'}
+            anchor="bottom"
             open={isOpen}
             onClose={onClose}
-            PaperProps={{
-                sx: {
-                    width: isMobile ? '100%' : 440,
-                    height: isMobile ? '85vh' : '100%',
-                    bgcolor: '#0A0908',
-                    backgroundImage: 'none',
-                    borderLeft: '1px solid #1C1A18',
-                    borderTop: isMobile ? '1px solid #1C1A18' : 'none',
-                    borderRadius: isMobile ? '24px 24px 0 0' : 0,
-                }
-            }}
+            PaperProps={{ sx: DRAWER_SX }}
+            ModalProps={{ keepMounted: false, disablePortal: true }}
         >
-            <Box sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ p: 2.75, pb: 'calc(2.75rem + env(safe-area-inset-bottom))' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
                         <Box sx={{ p: 1, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B' }}>
@@ -124,74 +117,27 @@ export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: (
                         </Box>
                         <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>New Chat</Typography>
                     </Stack>
-                    <IconButton onClick={onClose} sx={{ color: '#9B9691' }}><X size={20} /></IconButton>
+                    <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)' }}><X size={20} /></IconButton>
                 </Box>
 
-                <Paper
-                    sx={{
-                        p: '4px 12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        bgcolor: '#161412',
-                        border: '1px solid #1C1A18',
-                        borderRadius: '14px',
-                        mb: 3
-                    }}
-                >
-                    <Search size={18} style={{ color: '#9B9691', marginRight: 8 }} />
-                    <TextField
-                        fullWidth
-                        variant="standard"
-                        placeholder="Search by username..."
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        InputProps={{ disableUnderline: true, sx: { color: 'white', py: 1 } }}
+                <Box sx={{ flex: 1 }}>
+                    <UserSearch 
+                        label="SEARCH GLOBAL DIRECTORY"
+                        placeholder="Search by name or @username"
+                        selectedUsers={selectedUsers}
+                        onSelect={(u) => setSelectedUsers([u])}
+                        onRemove={() => setSelectedUsers([])}
+                        multiple={false}
+                        excludeIds={[user?.$id].filter(Boolean)}
                     />
-                    {loading && <CircularProgress size={16} sx={{ color: '#F59E0B' }} />}
-                </Paper>
-
-                <Box sx={{ flex: 1, overflowY: 'auto' }}>
-                    {!query.trim() ? (
-                        <Box sx={{ textAlign: 'center', py: 8, opacity: 0.5 }}>
-                            <ShieldCheck size={48} strokeWidth={1} style={{ marginBottom: 16 }} />
-                            <Typography variant="body2">Search for users with published keys to start a secure direct chat.</Typography>
+                    
+                    {!selectedUsers.length && (
+                        <Box sx={{ textAlign: 'center', py: 6, opacity: 0.5 }}>
+                            <ShieldCheck size={40} strokeWidth={1} style={{ marginBottom: 12 }} />
+                            <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>
+                                Only verified users with published keys are surfacing here.
+                            </Typography>
                         </Box>
-                    ) : results.length === 0 && !loading ? (
-                        <Typography sx={{ textAlign: 'center', py: 4, color: '#9B9691' }}>No verified users found.</Typography>
-                    ) : (
-                        <List spacing={1}>
-                            {results.map((u) => (
-                                <ListItem key={u.$id} disablePadding sx={{ mb: 1 }}>
-                                    <Button
-                                        fullWidth
-                                        onClick={() => startChat(u)}
-                                        sx={{
-                                            justifyContent: 'flex-start',
-                                            textAlign: 'left',
-                                            p: 2,
-                                            borderRadius: '16px',
-                                            bgcolor: '#161412',
-                                            border: '1px solid #1C1A18',
-                                            color: 'white',
-                                            '&:hover': { bgcolor: '#1C1A18', borderColor: '#F59E0B' }
-                                        }}
-                                    >
-                                        <ListItemAvatar>
-                                            <Avatar src={u.avatar} sx={{ bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
-                                                {(u.displayName || u.username || '?')[0].toUpperCase()}
-                                            </Avatar>
-                                        </ListItemAvatar>
-                                        <ListItemText
-                                            primary={u.displayName || u.username}
-                                            secondary={`@${u.username}`}
-                                            primaryTypographyProps={{ fontWeight: 800, color: 'white' }}
-                                            secondaryTypographyProps={{ color: '#9B9691' }}
-                                        />
-                                        <ArrowRight size={18} style={{ opacity: 0.3 }} />
-                                    </Button>
-                                </ListItem>
-                            ))}
-                        </List>
                     )}
                 </Box>
             </Box>

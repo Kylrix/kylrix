@@ -660,6 +660,11 @@ export class EcosystemSecurity {
     if (!this.identityKeyPair) throw new Error("E2E Identity not initialized");
 
     const targetRaw = this.decodeBase64(targetPublicKeyBase64);
+    
+    if (targetRaw.length !== 32) {
+        throw new Error(`X25519 target key must be 32 bytes (256 bits). Received ${targetRaw.length} bytes. The recipient's public key might be corrupted or in an unsupported format.`);
+    }
+
     const targetKey = await crypto.subtle.importKey(
         "raw",
         targetRaw as BufferSource,
