@@ -36,15 +36,19 @@ import {
   DialogContent, 
   DialogActions, 
   Chip,
+  Divider,
   Menu,
   MenuItem,
   useTheme,
   useMediaQuery,
+  Stack,
+  IconButton,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import FolderIcon from '@mui/icons-material/Folder';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
+import { LayoutGrid, List as ListIcon, ShieldCheck } from 'lucide-react';
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -52,12 +56,12 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
       variant="overline" 
       sx={{ 
         display: 'block',
-        fontWeight: 800, 
+        fontWeight: 900, 
         color: '#10B981', 
         mb: 2, 
-        letterSpacing: '0.15em',
+        letterSpacing: '0.12em',
         fontFamily: 'var(--font-mono)',
-        fontSize: '0.75rem'
+        fontSize: '0.7rem'
       }}
     >
       {children}
@@ -147,8 +151,6 @@ function DashboardPageContent() {
 
   // AI Organization State
   const [organizing, setOrganizing] = useState(false);
-  // Remove unused organizationPreview state
-  // const [organizationPreview, setOrganizationPreview] = useState<{...} | null>(null);
 
   // Fetch all credentials once
   const loadAllCredentials = useCallback(async () => {
@@ -173,29 +175,14 @@ function DashboardPageContent() {
     const toastId = toast.loading("AI is analyzing your vault structure...");
 
     try {
-      // 1. Get credentials that are NOT in a folder yet (or just all credentials to reorganize everything?)
-      // Let's focus on uncategorized items first for safety, or let user decide.
-      // For V1, let's reorganize everything to ensure a clean state.
-      // Passing all credentials to the sanitizer (it strips secrets).
-
       const analysisResult = (await analyze('VAULT_ORGANIZE', allCredentials)) as { [folderName: string]: string[] };
 
-      // Expected result: { "Finance": ["id1", "id2"], "Social": ["id3"] }
       if (!analysisResult || Object.keys(analysisResult).length === 0) {
         toast.error("AI couldn't find a better organization structure.", { id: toastId });
         return;
       }
 
-      // setOrganizationPreview(analysisResult); 
       toast.success("Organization plan ready! Please review.", { id: toastId });
-      // Note: We need a UI to confirm these changes. Using a simple native confirm for now or a custom modal in future.
-      // For better UX, we'll auto-apply or show a summary dialog. 
-      // Let's implement the application logic here directly for the hackathon MVP speed,
-      // but ideally this should be a "Review Changes" modal.
-
-      // Triggering the confirmation modal
-      // (We'll reuse the delete modal state structure or add a new one if time permits, 
-      // but for now let's just use window.confirm to be safe and fast)
 
       const confirmMsg = `AI suggests creating/merging into ${Object.keys(analysisResult).length} folders. Proceed?`;
       if (window.confirm(confirmMsg)) {
@@ -213,20 +200,17 @@ function DashboardPageContent() {
   const applyOrganizationChanges = async (plan: { [folderName: string]: string[] }) => {
     const toastId = toast.loading("Applying changes...");
     try {
-      // 1. Refresh current folders to avoid duplicates
       const currentFolders = await listFolders(user!.$id);
       const folderMap = new Map(currentFolders.map(f => [f.name.toLowerCase(), f.$id]));
 
-      // 2. Process each proposed folder
       for (const [folderName, credentialIds] of Object.entries(plan)) {
         let folderId = folderMap.get(folderName.toLowerCase());
 
-        // Create folder if it doesn't exist
         if (!folderId) {
           const newFolder = await createFolder({
             name: folderName,
             userId: user!.$id,
-            parentFolderId: null, // flattened structure for now
+            parentFolderId: null,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           });
@@ -234,10 +218,7 @@ function DashboardPageContent() {
           if (folderId) folderMap.set(folderName.toLowerCase(), folderId);
         }
 
-        // 3. Move credentials to folder
-        // We do this in parallel batches to speed it up
         await Promise.all(credentialIds.map(async (credId) => {
-          // Check if credential actually exists and needs moving
           const cred = allCredentials.find(c => c.$id === credId);
           if (cred && cred.folderId !== folderId) {
             await updateCredential(credId, { folderId });
@@ -246,7 +227,6 @@ function DashboardPageContent() {
       }
 
       toast.success("Vault organized successfully!", { id: toastId });
-      // Refresh UI
       window.location.reload();
     } catch (error: unknown) {
       console.error("Failed to apply changes", error);
@@ -325,7 +305,6 @@ function DashboardPageContent() {
 
     try {
       await deleteCredential(credentialToDelete.$id);
-      // Remove from the main list
       setAllCredentials((prev) =>
         prev.filter((c) => c.$id !== credentialToDelete.$id),
       );
@@ -339,7 +318,6 @@ function DashboardPageContent() {
     }
   };
 
-  // Refresh all data from server
   const refreshCredentials = () => {
     if (!user?.$id) return;
     loadAllCredentials();
@@ -350,16 +328,13 @@ function DashboardPageContent() {
 
   const { isAuthReady } = useAppwriteVault();
 
-  // Client-side filtering and search
   const filteredCredentials = useMemo(() => {
     let source = allCredentials;
 
-    // 1. Filter by folder
     if (selectedFolder) {
       source = source.filter((c) => c.folderId === selectedFolder);
     }
 
-    // 2. Filter by search term (if any)
     if (searchTerm.trim()) {
       const normalizedTerm = searchTerm.trim().toLowerCase();
       source = source.filter((c) => {
@@ -379,7 +354,6 @@ function DashboardPageContent() {
     return source;
   }, [allCredentials, searchTerm, selectedFolder]);
 
-  // Client-side pagination logic
   const paginatedCredentials = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return filteredCredentials.slice(startIndex, startIndex + pageSize);
@@ -387,7 +361,7 @@ function DashboardPageContent() {
 
   if (!isAuthReady || !user) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', bgcolor: '#0A0908' }}>
         <CircularProgress color="primary" />
       </Box>
     );
@@ -404,73 +378,87 @@ function DashboardPageContent() {
         flexDirection: 'column', 
         minHeight: '100vh', 
         pb: 10,
+        bgcolor: '#0A0908',
         transition: 'filter 0.3s ease',
-        filter: showMasterPassDrawer ? 'blur(4px)' : 'none',
+        filter: showMasterPassDrawer ? 'blur(8px)' : 'none',
         pointerEvents: showMasterPassDrawer ? 'none' : 'auto',
-        opacity: showMasterPassDrawer ? 0.5 : 1
+        opacity: showMasterPassDrawer ? 0.3 : 1
       }}>
         {/* Header Section */}
         <Box sx={{ 
-          px: { xs: 2, md: 4 }, 
-          py: 3, 
+          px: { xs: 2, md: 6 }, 
+          py: { xs: 4, md: 5 }, 
           display: 'flex', 
           flexDirection: { xs: 'column', md: 'row' },
-          alignItems: { xs: 'stretch', md: 'center' },
-          gap: 3,
-          mb: 2
+          alignItems: { xs: 'stretch', md: 'flex-end' },
+          justifyContent: 'space-between',
+          gap: 4,
+          mb: 4,
+          borderBottom: '1px solid #1C1A18'
         }}>
-          <Box sx={{ flexShrink: 0 }}>
-            <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.04em' }}>
-              Vault
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              {effectiveTotal} items secured
+          <Box>
+            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+                <Box sx={{ p: 1, borderRadius: '12px', bgcolor: alpha('#10B981', 0.1), color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                    <ShieldCheck size={20} />
+                </Box>
+                <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.03em', color: '#fff' }}>
+                    Vault Dashboard
+                </Typography>
+            </Stack>
+            <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500, fontSize: '1rem' }}>
+              {effectiveTotal} encrypted assets secured with Zero-Knowledge protocols
             </Typography>
           </Box>
 
-          <Box sx={{ flexGrow: 1 }}>
-            <SearchBar onSearch={handleSearch} onSmartOrganize={handleSmartOrganize} />
-          </Box>
-
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon sx={{ fontSize: 18 }} />}
-            onClick={handleAdd}
-            sx={{ 
-              borderRadius: '14px', 
-              px: 3, 
-              py: 1.2, 
-              fontWeight: 800,
-              bgcolor: '#10B981',
-              color: '#000',
-              boxShadow: '0 1px 0 rgba(0, 0, 0, 0.4)',
-              '&:hover': { bgcolor: alpha('#10B981', 0.8) }
-            }}
-          >
-            Add Password
-          </Button>
+          <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 'auto' } }}>
+              <Box sx={{ width: { xs: '100%', md: 400 } }}>
+                <SearchBar onSearch={handleSearch} onSmartOrganize={handleSmartOrganize} />
+              </Box>
+              <Button 
+                variant="contained" 
+                startIcon={<AddIcon sx={{ fontSize: 18 }} />}
+                onClick={handleAdd}
+                sx={{ 
+                  borderRadius: '16px', 
+                  px: 4, 
+                  py: 1.5, 
+                  fontWeight: 900,
+                  bgcolor: '#10B981',
+                  color: '#000',
+                  textTransform: 'none',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 12px 24px rgba(16, 185, 129, 0.2)',
+                  '&:hover': { bgcolor: alpha('#10B981', 0.9), transform: 'translateY(-2px)' },
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+              >
+                Add Password
+              </Button>
+          </Stack>
         </Box>
 
         {/* Main Content Area */}
-        <Container maxWidth="lg" sx={{ px: { xs: 2, md: 4 } }}>
-          {/* Filters & Actions */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 4, gap: 2, flexWrap: 'wrap' }}>
+        <Container maxWidth="xl" sx={{ px: { xs: 2, md: 6 } }}>
+          {/* Filters & Navigation */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 6, gap: 3, flexWrap: 'wrap' }}>
             <Button
               variant="outlined"
               startIcon={<FolderIcon sx={{ fontSize: 18 }} />}
               endIcon={<ExpandMoreIcon sx={{ fontSize: 16 }} />}
               onClick={(e) => setFolderAnchorEl(e.currentTarget)}
               sx={{ 
-                borderRadius: '12px', 
-                bgcolor: 'rgba(255, 255, 255, 0.02)',
-                borderColor: 'rgba(255, 255, 255, 0.05)',
-                color: 'text.primary',
-                fontWeight: 700,
-                px: 2,
-                '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.2)' }
+                borderRadius: '14px', 
+                bgcolor: '#161412',
+                borderColor: '#1C1A18',
+                color: '#fff',
+                fontWeight: 800,
+                px: 3,
+                py: 1.2,
+                textTransform: 'none',
+                '&:hover': { bgcolor: '#1C1A18', borderColor: '#34322F' }
               }}
             >
-              {selectedFolder ? folders.find((f) => f.$id === selectedFolder)?.name : "All Folders"}
+              {selectedFolder ? folders.find((f) => f.$id === selectedFolder)?.name : "Root Explorer"}
             </Button>
             
             <Menu
@@ -480,23 +468,24 @@ function DashboardPageContent() {
               PaperProps={{
                 sx: {
                   mt: 1,
-                  borderRadius: '16px',
+                  borderRadius: '20px',
                   bgcolor: '#161412',
-                  border: '1px solid rgba(255, 255, 255, 0.05)',
+                  border: '1px solid #1C1A18',
                   backgroundImage: 'none',
-                  minWidth: '200px',
-                  boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)'
+                  minWidth: '240px',
+                  boxShadow: '0 32px 64px rgba(0, 0, 0, 0.6)'
                 }
               }}
             >
-              <MenuItem onClick={() => { setSelectedFolder(null); setCurrentPage(1); setFolderAnchorEl(null); }} sx={{ fontWeight: 700 }}>
-                All Folders
+              <MenuItem onClick={() => { setSelectedFolder(null); setCurrentPage(1); setFolderAnchorEl(null); }} sx={{ fontWeight: 800, py: 1.5, px: 2.5 }}>
+                All Documents
               </MenuItem>
+              <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
               {folders.map((folder) => (
                 <MenuItem 
                   key={folder.$id} 
                   onClick={() => { setSelectedFolder(folder.$id); setCurrentPage(1); setFolderAnchorEl(null); }}
-                  sx={{ fontWeight: 600 }}
+                  sx={{ fontWeight: 700, py: 1.5, px: 2.5 }}
                 >
                   {folder.name}
                 </MenuItem>
@@ -505,111 +494,151 @@ function DashboardPageContent() {
 
             {isSearching && (
               <Chip 
-                label={`${effectiveTotal} results for "${searchTerm}"`}
+                label={`Matching Items: ${effectiveTotal}`}
                 onDelete={() => handleSearch("")}
                 sx={{ 
-                  borderRadius: '10px', 
+                  borderRadius: '12px', 
                   bgcolor: alpha('#10B981', 0.1), 
                   color: '#10B981',
-                  fontWeight: 800,
-                  border: '1px solid rgba(16, 185, 129, 0.2)'
+                  fontWeight: 900,
+                  fontSize: '0.75rem',
+                  textTransform: 'uppercase',
+                  border: '1px solid rgba(16, 185, 129, 0.2)',
+                  height: 32
                 }}
               />
             )}
           </Box>
 
-          {/* Recent Section */}
-          {!isSearching && !selectedFolder && recentCredentials.length > 0 && (
-            <Box sx={{ mb: 6 }}>
-              <SectionTitle>Recent Items</SectionTitle>
-              <Grid container spacing={2}>
-                {recentCredentials.map((cred) => (
-                  <Grid size={{ xs: 12 }} key={`recent-${cred.$id}`}>
-                    <CredentialItem
-                      credential={cred}
-                      onCopy={handleCopy}
-                      onEdit={() => handleEdit(cred)}
-                      onDelete={() => openDeleteModal(cred)}
-                      onClick={() => {
-                        setSelectedCredential(cred);
-                        setShowDetail(true);
-                      }}
+          <Grid container spacing={6}>
+            <Grid item xs={12} lg={8.5}>
+                {/* Recent Section */}
+                {!isSearching && !selectedFolder && recentCredentials.length > 0 && (
+                    <Box sx={{ mb: 8 }}>
+                    <SectionTitle>Recently Accessed</SectionTitle>
+                    <Grid container spacing={2}>
+                        {recentCredentials.slice(0, 3).map((cred) => (
+                        <Grid item xs={12} key={`recent-${cred.$id}`}>
+                            <CredentialItem
+                            credential={cred}
+                            onCopy={handleCopy}
+                            onEdit={() => handleEdit(cred)}
+                            onDelete={() => openDeleteModal(cred)}
+                            onClick={() => {
+                                setSelectedCredential(cred);
+                                setShowDetail(true);
+                            }}
+                            />
+                        </Grid>
+                        ))}
+                    </Grid>
+                    </Box>
+                )}
+
+                {/* All Items Section */}
+                <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <SectionTitle>
+                    {isSearching ? "Search Index" : selectedFolder ? folders.find(f => f.$id === selectedFolder)?.name : "Main Index"}
+                    </SectionTitle>
+                    
+                    {!loading && effectiveTotal > 0 && (
+                    <PaginationControls
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={effectiveTotal}
+                        pageSize={pageSize}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handlePageSizeChange}
                     />
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
+                    )}
+                </Box>
 
-          {/* All Items Section */}
-          <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <SectionTitle>
-              {isSearching ? "Search Results" : "All Items"}
-            </SectionTitle>
-            
-            {!loading && effectiveTotal > 0 && (
-              <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={effectiveTotal}
-                pageSize={pageSize}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-              />
+                {/* Credentials List */}
+                <Stack spacing={1.5}>
+                    {loading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                        <CredentialSkeleton key={`skeleton-${i}`} />
+                    ))
+                    ) : paginatedCredentials.length === 0 ? (
+                    <Paper elevation={0} sx={{ 
+                        p: 10, 
+                        textAlign: 'center', 
+                        borderRadius: '32px', 
+                        bgcolor: '#161412', 
+                        border: '1px dashed #1C1A18'
+                    }}>
+                        <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>
+                            {isSearching ? "Zero Results" : "Secure Repository Empty"}
+                        </Typography>
+                        <Typography sx={{ color: '#9B9691', maxWidth: 320, mx: 'auto' }}>
+                            {isSearching
+                            ? `No encrypted records matching "${searchTerm}" were found in this node.`
+                            : "Your decentralized vault is ready for its first record."}
+                        </Typography>
+                    </Paper>
+                    ) : (
+                    paginatedCredentials.map((cred: Credentials) => (
+                        <CredentialItem
+                            key={cred.$id}
+                            credential={cred}
+                            onCopy={handleCopy}
+                            onEdit={() => handleEdit(cred)}
+                        onDelete={() => openDeleteModal(cred)}
+                        onClick={() => {
+                            setSelectedCredential(cred);
+                            setShowDetail(true);
+                        }}
+                        />
+                    ))
+                    )}
+                </Stack>
+
+                {/* Bottom Pagination */}
+                {!loading && effectiveTotal > pageSize && (
+                    <Box sx={{ mt: 8, display: 'flex', justifyContent: 'center' }}>
+                    <PaginationControls
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={effectiveTotal}
+                        pageSize={pageSize}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handlePageSizeChange}
+                    />
+                    </Box>
+                )}
+            </Grid>
+
+            {/* Visual Sidebar for Stats/Identity */}
+            {!isMobileView && (
+                <Grid item lg={3.5}>
+                    <Stack spacing={4}>
+                        <Paper elevation={0} sx={{ p: 4, borderRadius: '32px', bgcolor: '#161412', border: '1px solid #1C1A18', backgroundImage: 'none' }}>
+                            <Typography sx={{ fontWeight: 900, mb: 3, fontSize: '1.1rem' }}>Node Health</Typography>
+                            <Stack spacing={3}>
+                                <Box>
+                                    <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, textTransform: 'uppercase', display: 'block', mb: 1 }}>Symmetric Entropy</Typography>
+                                    <Box sx={{ height: 6, borderRadius: 3, bgcolor: '#0A0908', overflow: 'hidden' }}>
+                                        <Box sx={{ width: '94%', height: '100%', bgcolor: '#10B981' }} />
+                                    </Box>
+                                    <Typography variant="caption" sx={{ color: '#10B981', fontWeight: 900, mt: 0.5, display: 'block' }}>Optimal (256-bit GCM)</Typography>
+                                </Box>
+                                <Box>
+                                    <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, textTransform: 'uppercase', display: 'block', mb: 1 }}>Sync Relay</Typography>
+                                    <Typography variant="body2" sx={{ fontWeight: 800 }}>Kylrix-Nexus-East</Typography>
+                                </Box>
+                            </Stack>
+                        </Paper>
+
+                        <Paper elevation={0} sx={{ p: 4, borderRadius: '32px', bgcolor: alpha('#10B981', 0.03), border: '1px solid rgba(16, 185, 129, 0.1)', backgroundImage: 'none' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 900, mb: 1.5 }}>Zero Knowledge</Typography>
+                            <Typography variant="body2" sx={{ color: '#9B9691', lineHeight: 1.6 }}>
+                                Your MasterPass never leaves your device. Data is decrypted locally in memory and never stored in plain text on our servers.
+                            </Typography>
+                        </Paper>
+                    </Stack>
+                </Grid>
             )}
-          </Box>
-
-          {/* Credentials List */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            {loading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <CredentialSkeleton key={`skeleton-${i}`} />
-              ))
-            ) : paginatedCredentials.length === 0 ? (
-              <Paper sx={{ 
-                p: 8, 
-                textAlign: 'center', 
-                borderRadius: '32px', 
-                bgcolor: 'rgba(255, 255, 255, 0.01)', 
-                border: '1px dashed', 
-                borderColor: 'rgba(255, 255, 255, 0.1)' 
-              }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                  {isSearching
-                    ? `No credentials found matching "${searchTerm}"`
-                    : "Your vault is empty. Add your first password to get started!"}
-                </Typography>
-              </Paper>
-            ) : (
-              paginatedCredentials.map((cred: Credentials) => (
-                <CredentialItem
-                    key={cred.$id}
-                    credential={cred}
-                    onCopy={handleCopy}
-                    onEdit={() => handleEdit(cred)}
-                  onDelete={() => openDeleteModal(cred)}
-                  onClick={() => {
-                    setSelectedCredential(cred);
-                    setShowDetail(true);
-                  }}
-                />
-              ))
-            )}
-          </Box>
-
-          {/* Bottom Pagination */}
-          {!loading && effectiveTotal > pageSize && (
-            <Box sx={{ mt: 6, display: 'flex', justifyContent: 'center' }}>
-              <PaginationControls
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={effectiveTotal}
-                pageSize={pageSize}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-              />
-            </Box>
-          )}
+          </Grid>
         </Container>
 
         <CredentialDialog
@@ -624,65 +653,54 @@ function DashboardPageContent() {
           onSaved={refreshCredentials}
         />
 
-          {/* Delete Confirmation Dialog */}
         <Dialog
           open={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
           PaperProps={{
             sx: {
-              borderRadius: '24px',
+              borderRadius: '32px',
               bgcolor: '#161412',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
+              border: '1px solid #1C1A18',
               backgroundImage: 'none',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(0, 0, 0, 0.4)',
-              p: 1
+              boxShadow: '0 40px 80px rgba(0, 0, 0, 0.6)',
+              p: 2
             }
           }}
         >
-          <DialogTitle sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
-            Delete Credential
+          <DialogTitle sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', fontSize: '1.5rem', color: '#FF453A' }}>
+            Destroy Record
           </DialogTitle>
           <DialogContent>
-            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 500 }}>
-              Are you sure you want to delete the credential for <strong>{credentialToDelete?.name}</strong>? This action cannot be undone.
+            <Typography variant="body1" sx={{ color: '#9B9691', fontWeight: 500, lineHeight: 1.6 }}>
+              Deleting <strong>{credentialToDelete?.name}</strong> will permanently remove the record from your node. This action is irreversible.
             </Typography>
           </DialogContent>
-          <DialogActions sx={{ p: 3, gap: 1 }}>
-            <Button 
-              fullWidth 
-              variant="outlined" 
-              onClick={() => setIsDeleteModalOpen(false)}
-              sx={{ borderRadius: '14px', fontWeight: 700 }}
-            >
-              Cancel
-            </Button>
+          <DialogActions sx={{ p: 3, pt: 1, gap: 2, flexDirection: 'column' }}>
             <Button 
               fullWidth 
               variant="contained" 
-              color="error"
-              onClick={() => {
-                requestSudo({
-                  onSuccess: () => handleDelete()
-                });
-              }}
+              onClick={() => requestSudo({ onSuccess: () => handleDelete() })}
               sx={{ 
-                borderRadius: '14px', 
-                fontWeight: 800,
-                bgcolor: alpha('#ef4444', 0.1),
-                color: '#ef4444',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
-                '&:hover': {
-                  bgcolor: alpha('#ef4444', 0.2),
-                  borderColor: alpha('#ef4444', 0.4)
-                }
+                borderRadius: '16px', 
+                fontWeight: 900,
+                bgcolor: '#FF453A',
+                color: '#000',
+                py: 1.5,
+                '&:hover': { bgcolor: alpha('#FF453A', 0.9) }
               }}
             >
-              Delete
+              Confirm Destruction
+            </Button>
+            <Button 
+              fullWidth 
+              onClick={() => setIsDeleteModalOpen(false)}
+              sx={{ borderRadius: '16px', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}
+            >
+              Abort
             </Button>
           </DialogActions>
         </Dialog>
 
-        {/* Credential Detail Sidebar/Overlay */}
         {showDetail && selectedCredential && (
           <CredentialDetail
             credential={selectedCredential}
@@ -691,7 +709,6 @@ function DashboardPageContent() {
           />
         )}
 
-        {/* Master Password Unlock Drawer */}
         <SudoModal
           isOpen={showMasterPassDrawer}
           app="vault"
@@ -710,8 +727,8 @@ export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#000' }}>
-          <CircularProgress />
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#0A0908' }}>
+          <CircularProgress color="primary" />
         </Box>
       }
     >

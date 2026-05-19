@@ -17,7 +17,7 @@ import {
   Select,
   MenuItem,
   Stack,
-  IconButton,
+  Grid,
 } from '@mui/material';
 import { 
   Rocket, 
@@ -39,25 +39,25 @@ interface CreateProjectModalProps {
 const suggestions = [
   { 
     title: 'Product Launch', 
-    summary: 'Coordinate specs, roadmap tasks, and social announcements in one hub.',
+    summary: 'Coordinate specs, goals, and announcements.',
     icon: Rocket,
     color: '#EC4899',
   },
   { 
     title: 'Security Audit', 
-    summary: 'Centralize sensitive credentials, vault secrets, and hardening checklists.',
+    summary: 'Secure credentials and hardening checklists.',
     icon: ShieldAlert,
     color: '#10B981',
   },
   { 
     title: 'Client Handover', 
-    summary: 'Package final documentation, access keys, and project context for transfer.',
+    summary: 'Package documents and access keys.',
     icon: Briefcase,
     color: '#F59E0B',
   },
   { 
     title: 'Team Sprint', 
-    summary: 'Rapid execution hub for active tasks, huddle links, and shared notes.',
+    summary: 'Hub for active tasks and shared notes.',
     icon: Zap,
     color: '#A855F7',
   },
@@ -81,7 +81,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
         visibility,
         status: 'active',
       });
-      showSuccess('Project created', 'Your new hub is ready for integration.');
+      showSuccess('Project created');
       onCreated(project);
       handleClose();
     } catch (err: any) {
@@ -122,11 +122,8 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
     >
       <DialogTitle sx={{ p: 3, pb: 1 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
-            <Box sx={{ p: 1, borderRadius: '12px', bgcolor: alpha('#6366F1', 0.1), color: '#6366F1', display: 'grid', placeItems: 'center' }}>
-                <Sparkles size={20} />
-            </Box>
             <Typography variant="h5" sx={{ fontWeight: 900, color: '#fff', fontFamily: 'var(--font-clash)' }}>
-                Initialize Hub
+                New Project
             </Typography>
         </Stack>
       </DialogTitle>
@@ -134,8 +131,8 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
         <Grid container>
             {/* Suggested Patterns */}
             <Grid item xs={12} md={5} sx={{ p: 3, borderRight: { md: '1px solid rgba(255,255,255,0.06)' }, bgcolor: alpha('#fff', 0.01) }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 2.5, display: 'block' }}>
-                    Suggested Hubs
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 2, display: 'block' }}>
+                    Quick Start
                 </Typography>
                 <Stack spacing={1.5}>
                     {suggestions.map((s) => (
@@ -159,7 +156,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
                                 </Box>
                                 <Box sx={{ flex: 1 }}>
                                     <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>{s.title}</Typography>
-                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', mt: 0.25 }}>{s.summary.slice(0, 40)}...</Typography>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', mt: 0.25 }}>{s.summary}</Typography>
                                 </Box>
                                 <ArrowRight size={14} color="rgba(255,255,255,0.2)" />
                             </Stack>
@@ -170,13 +167,13 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
 
             {/* Custom Configuration */}
             <Grid item xs={12} md={7} sx={{ p: 3 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 2.5, display: 'block' }}>
-                    Configuration
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 2, display: 'block' }}>
+                    Details
                 </Typography>
                 <Stack spacing={3}>
                     <TextField
                         fullWidth
-                        label="Hub Title"
+                        label="Project Title"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         variant="outlined"
@@ -195,7 +192,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
                     />
                     <TextField
                         fullWidth
-                        label="Purpose / Summary"
+                        label="Project Summary"
                         value={summary}
                         onChange={(e) => setSummary(e.target.value)}
                         variant="outlined"
@@ -213,10 +210,10 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
                         }}
                     />
                     <FormControl fullWidth>
-                        <InputLabel sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Visibility Level</InputLabel>
+                        <InputLabel sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Visibility</InputLabel>
                         <Select
                             value={visibility}
-                            label="Visibility Level"
+                            label="Visibility"
                             onChange={(e) => setVisibility(e.target.value as any)}
                             sx={{
                                 color: '#fff',
@@ -227,9 +224,9 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
                                 '& .MuiSvgIcon-root': { color: 'rgba(255,255,255,0.3)' }
                             }}
                         >
-                            <MenuItem value="private">Private (Only you)</MenuItem>
-                            <MenuItem value="shared">Shared (Collaborators only)</MenuItem>
-                            <MenuItem value="public">Public (Anyone with link)</MenuItem>
+                            <MenuItem value="private">Private</MenuItem>
+                            <MenuItem value="shared">Shared</MenuItem>
+                            <MenuItem value="public">Public</MenuItem>
                         </Select>
                     </FormControl>
                 </Stack>
@@ -255,7 +252,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
             '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
           }}
         >
-          {loading ? 'Initializing...' : 'Create Hub'}
+          {loading ? 'Creating...' : 'Create Project'}
         </Button>
       </DialogActions>
     </Dialog>

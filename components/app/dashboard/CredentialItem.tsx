@@ -11,7 +11,8 @@ import {
   ListItemText,
   Chip,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  alpha
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EditIcon from '@mui/icons-material/Edit';
@@ -20,6 +21,7 @@ import MoreVertIcon from '@mui/icons-material/MoreVert';
 import PersonIcon from '@mui/icons-material/Person';
 import LockIcon from '@mui/icons-material/Lock';
 import type { Credentials } from '@/lib/appwrite/types';
+import { Shield, ExternalLink } from 'lucide-react';
 
 export default function CredentialItem({
   credential,
@@ -63,66 +65,72 @@ export default function CredentialItem({
       elevation={0}
       onClick={onClick}
       sx={{
-        p: 2,
-        mb: 1.5,
-        borderRadius: '20px',
+        p: 2.5,
+        borderRadius: '24px',
         bgcolor: '#161412',
-        border: '1px solid',
-        borderColor: 'rgba(255, 255, 255, 0.04)',
+        border: '1px solid #1C1A18',
         cursor: 'pointer',
-        transition: 'all 0.2s ease',
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         display: 'flex',
         alignItems: 'center',
+        backgroundImage: 'none',
         '&:hover': {
           bgcolor: '#1C1A18',
-          borderColor: 'rgba(16, 185, 129, 0.4)',
+          borderColor: alpha('#10B981', 0.3),
           transform: 'translateY(-2px)',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)'
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6)',
+          '& .fav-box': { borderColor: alpha('#10B981', 0.2), bgcolor: alpha('#10B981', 0.05) }
         }
       }}
     >
       {/* Icon */}
-      <Box sx={{ 
-        width: 48, 
-        height: 48, 
-        borderRadius: '14px', 
-        bgcolor: 'rgba(255, 255, 255, 0.03)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        flexShrink: 0,
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        overflow: 'hidden'
-      }}>
+      <Box 
+        className="fav-box"
+        sx={{ 
+            width: 52, 
+            height: 52, 
+            borderRadius: '16px', 
+            bgcolor: 'rgba(255, 255, 255, 0.02)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            flexShrink: 0,
+            border: '1px solid rgba(255, 255, 255, 0.05)',
+            overflow: 'hidden',
+            transition: 'all 0.3s ease'
+        }}
+      >
         {faviconUrl ? (
-          <Box component="img" src={faviconUrl} sx={{ width: 28, height: 28 }} />
+          <Box component="img" src={faviconUrl} sx={{ width: 32, height: 32 }} />
         ) : (
-          <Typography sx={{ fontWeight: 800, color: '#10B981', fontSize: '1.2rem' }}>
+          <Typography sx={{ fontWeight: 900, color: '#10B981', fontSize: '1.3rem', fontFamily: 'var(--font-clash)' }}>
             {credential.name?.charAt(0)?.toUpperCase() || "?"}
           </Typography>
         )}
       </Box>
 
       {/* Info */}
-      <Box sx={{ ml: 2.5, flexGrow: 1, minWidth: 0 }}>
-        <Typography variant="subtitle1" noWrap sx={{ fontWeight: 800, color: 'text.primary', lineHeight: 1.2, fontFamily: '"Space Grotesk", sans-serif' }}>
+      <Box sx={{ ml: 3, flexGrow: 1, minWidth: 0 }}>
+        <Typography variant="subtitle1" noWrap sx={{ fontWeight: 900, color: '#fff', lineHeight: 1.2, fontFamily: 'var(--font-clash)', fontSize: '1.05rem' }}>
           {credential.name}
         </Typography>
-        <Typography variant="body2" noWrap sx={{ color: 'text.secondary', mt: 0.5 }}>
+        <Typography variant="body2" noWrap sx={{ color: '#9B9691', mt: 0.5, fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>
           {credential.username}
         </Typography>
         {(credential as any).sharedFrom && (
           <Chip
             size="small"
-            label={`shared from ${(credential as any).sharedFrom}`}
+            label={`Received from ${(credential as any).sharedFrom}`}
             sx={{
               mt: 1,
               height: 20,
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              bgcolor: 'rgba(255, 255, 255, 0.05)',
-              color: 'text.secondary',
-              borderRadius: '6px'
+              fontSize: '0.62rem',
+              fontWeight: 900,
+              bgcolor: alpha('#10B981', 0.08),
+              color: '#10B981',
+              borderRadius: '6px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.02em'
             }}
           />
         )}
@@ -132,23 +140,23 @@ export default function CredentialItem({
       <Box sx={{ display: 'flex', gap: 0.5, ml: 2 }}>
         {!isMobile ? (
           <>
-            <Tooltip title="Copy Username">
-              <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopy(credential.username || ''); }} sx={{ color: 'text.secondary' }}>
+            <Tooltip title="Copy Email">
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopy(credential.username || ''); }} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.05)' } }}>
                 <PersonIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
             <Tooltip title="Copy Password">
-              <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopy(credential.password || ''); }} sx={{ color: '#10B981' }}>
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopy(credential.password || ''); }} sx={{ color: '#10B981', '&:hover': { bgcolor: alpha('#10B981', 0.1) } }}>
                 <LockIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Edit">
-              <IconButton size="small" onClick={(e) => { e.stopPropagation(); onEdit(); }} sx={{ color: 'text.secondary' }}>
+            <Tooltip title="Edit Record">
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); onEdit(); }} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.05)' } }}>
                 <EditIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Delete">
-              <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDelete(); }} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}>
+            <Tooltip title="Destroy">
+              <IconButton size="small" onClick={(e) => { e.stopPropagation(); onDelete(); }} sx={{ color: 'rgba(255,255,255,0.15)', '&:hover': { color: '#FF453A', bgcolor: alpha('#FF453A', 0.05) } }}>
                 <DeleteIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
@@ -165,7 +173,6 @@ export default function CredentialItem({
         )}
       </Box>
 
-      {/* Mobile Copy Menu */}
       <Menu
         anchorEl={copyAnchorEl}
         open={Boolean(copyAnchorEl)}
@@ -173,25 +180,23 @@ export default function CredentialItem({
         PaperProps={{
           sx: {
             borderRadius: '16px',
-            bgcolor: 'rgba(10, 10, 10, 0.95)',
-            backdropFilter: 'blur(25px) saturate(180%)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            bgcolor: '#161412',
+            border: '1px solid #1C1A18',
             backgroundImage: 'none',
-            minWidth: '180px'
+            minWidth: '200px'
           }
         }}
       >
-        <MenuItem onClick={() => handleCopy(credential.username || '')}>
+        <MenuItem onClick={() => handleCopy(credential.username || '')} sx={{ py: 1.5, px: 2.5 }}>
           <ListItemIcon><PersonIcon sx={{ fontSize: 18 }} /></ListItemIcon>
-          <ListItemText primary="Copy Username" primaryTypographyProps={{ fontWeight: 600 }} />
+          <ListItemText primary="Copy Username" primaryTypographyProps={{ fontWeight: 800, fontSize: '0.85rem' }} />
         </MenuItem>
-        <MenuItem onClick={() => handleCopy(credential.password || '')}>
-          <ListItemIcon><LockIcon sx={{ fontSize: 18 }} /></ListItemIcon>
-          <ListItemText primary="Copy Password" primaryTypographyProps={{ fontWeight: 600 }} />
+        <MenuItem onClick={() => handleCopy(credential.password || '')} sx={{ py: 1.5, px: 2.5 }}>
+          <ListItemIcon><LockIcon sx={{ fontSize: 18, color: '#10B981' }} /></ListItemIcon>
+          <ListItemText primary="Copy Password" primaryTypographyProps={{ fontWeight: 800, fontSize: '0.85rem', color: '#10B981' }} />
         </MenuItem>
       </Menu>
 
-      {/* Mobile More Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -199,21 +204,20 @@ export default function CredentialItem({
         PaperProps={{
           sx: {
             borderRadius: '16px',
-            bgcolor: 'rgba(10, 10, 10, 0.95)',
-            backdropFilter: 'blur(25px) saturate(180%)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            bgcolor: '#161412',
+            border: '1px solid #1C1A18',
             backgroundImage: 'none',
-            minWidth: '150px'
+            minWidth: '180px'
           }
         }}
       >
-        <MenuItem onClick={() => { onEdit(); setAnchorEl(null); }}>
+        <MenuItem onClick={() => { onEdit(); setAnchorEl(null); }} sx={{ py: 1.5, px: 2.5 }}>
           <ListItemIcon><EditIcon sx={{ fontSize: 18 }} /></ListItemIcon>
-          <ListItemText primary="Edit" primaryTypographyProps={{ fontWeight: 600 }} />
+          <ListItemText primary="Edit Record" primaryTypographyProps={{ fontWeight: 800, fontSize: '0.85rem' }} />
         </MenuItem>
-        <MenuItem onClick={() => { onDelete(); setAnchorEl(null); }} sx={{ color: 'error.main' }}>
-          <ListItemIcon><DeleteIcon sx={{ fontSize: 18, color: theme.palette.error.main }} /></ListItemIcon>
-          <ListItemText primary="Delete" primaryTypographyProps={{ fontWeight: 700 }} />
+        <MenuItem onClick={() => { onDelete(); setAnchorEl(null); }} sx={{ py: 1.5, px: 2.5, color: '#FF453A' }}>
+          <ListItemIcon><DeleteIcon sx={{ fontSize: 18, color: '#FF453A' }} /></ListItemIcon>
+          <ListItemText primary="Destroy" primaryTypographyProps={{ fontWeight: 900, fontSize: '0.85rem' }} />
         </MenuItem>
       </Menu>
     </Paper>
