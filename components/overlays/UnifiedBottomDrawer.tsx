@@ -12,6 +12,9 @@ const ShareNoteDrawer = dynamic(() => import('./ShareNoteDrawer').then(mod => mo
 const AssignGoalDrawer = dynamic(() => import('./AssignGoalDrawer').then(mod => mod.AssignGoalDrawer), { ssr: false });
 const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then(mod => mod.DeleteNoteDrawer), { ssr: false });
 
+const NewChatDrawer = dynamic(() => import('./NewChatDrawer').then(mod => mod.NewChatDrawer), { ssr: false });
+const NewChannelDrawer = dynamic(() => import('./NewChannelDrawer').then(mod => mod.NewChannelDrawer), { ssr: false });
+
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
 
@@ -42,6 +45,10 @@ export function UnifiedBottomDrawer() {
             onConfirm={drawerData?.onConfirm} 
             noteTitle={drawerData?.noteTitle} 
         />;
+    case 'new-chat':
+        return <NewChatDrawer isOpen={true} onClose={close} />;
+    case 'new-channel':
+        return <NewChannelDrawer isOpen={true} onClose={close} />;
     default: return null;
   }
 }
