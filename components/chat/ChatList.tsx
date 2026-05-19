@@ -55,7 +55,7 @@ const GlobalSearchAvatar = ({ u }: { u: any }) => {
     );
 };
 
-export const ChatList = () => {
+export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => {
     const { user } = useAuth();
     const { unreadConversations } = useChatNotifications();
     const router = useRouter();
@@ -78,6 +78,13 @@ export const ChatList = () => {
     }>>({});
     const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
     const [, startTransition] = useTransition();
+
+    // Sync external query to local search
+    useEffect(() => {
+        if (externalQuery !== undefined) {
+            setSearchQuery(externalQuery);
+        }
+    }, [externalQuery]);
 
     const isLikelyEncrypted = (val: string) => {
         if (!val) return false;
@@ -591,136 +598,122 @@ export const ChatList = () => {
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
 
     return (
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, bgcolor: '#000000', position: 'relative', overflow: 'hidden' }}>
-            <Box sx={{ p: 3, pb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
-                    <IconButton
-                        onClick={() => router.push('/')}
-                        aria-label="Back to menu"
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, bgcolor: '#161412', position: 'relative', overflow: 'hidden' }}>
+            {!externalQuery && (
+                <Box sx={{ p: 3, pb: 2, borderBottom: '1px solid #34322F' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 2 }}>
+                        <IconButton
+                            onClick={() => router.push('/')}
+                            aria-label="Back to menu"
+                            sx={{
+                                width: 40,
+                                height: 40,
+                                bgcolor: '#1C1A18',
+                                color: '#fff',
+                                border: '1px solid #34322F',
+                                '&:hover': {
+                                    bgcolor: '#1F1D1B',
+                                    borderColor: '#6366F1',
+                                }
+                            }}
+                        >
+                            <ArrowLeftIcon fontSize="small" />
+                        </IconButton>
+                        <Typography
+                            variant="h5"
+                            sx={{
+                                fontWeight: 900,
+                                fontFamily: 'var(--font-clash)',
+                                letterSpacing: '-0.02em',
+                                color: '#fff'
+                            }}
+                        >
+                            Messages
+                        </Typography>
+                    </Box>
+                    <Box
                         sx={{
-                            width: 40,
-                            height: 40,
-                bgcolor: '#161412',
-                            color: 'text.primary',
-                            border: '1px solid rgba(255, 255, 255, 0.06)',
-                            boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 16px rgba(245, 158, 11, 0.08)',
-                            '&:hover': {
-                                bgcolor: '#161412',
-                                borderColor: 'rgba(255, 255, 255, 0.12)',
-                                boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            bgcolor: '#0A0908',
+                            borderRadius: '12px',
+                            px: 2,
+                            py: 1.2,
+                            border: '1px solid #34322F',
+                            '&:focus-within': {
+                                borderColor: '#F59E0B',
                             }
                         }}
                     >
-                        <ArrowLeftIcon fontSize="small" />
-                    </IconButton>
-                    <Typography
-                        variant="h5"
-                        sx={{
-                            fontWeight: 900,
-                            fontFamily: 'var(--font-clash)',
-                            letterSpacing: '-0.02em',
-                            color: 'text.primary'
-                        }}
-                    >
-                        Messages
-                    </Typography>
+                        <SearchIcon sx={{ fontSize: 18, color: '#9B9691' }} />
+                        <input
+                            placeholder="Search conversations..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            style={{
+                                background: 'none',
+                                border: 'none',
+                                color: 'white',
+                                fontSize: '0.9rem',
+                                outline: 'none',
+                                width: '100%',
+                                fontFamily: 'var(--font-satoshi)'
+                            }}
+                        />
+                        {searching && <CircularProgress size={14} sx={{ color: '#F59E0B' }} />}
+                    </Box>
                 </Box>
-                <Box
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        bgcolor: '#161412',
-                        borderRadius: '12px',
-                        px: 2,
-                        py: 1,
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 22px rgba(245, 158, 11, 0.08)',
-                        position: 'relative',
-                        '&::after': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: '1px',
-                            background: 'rgba(255,255,255,0.05)',
-                            borderRadius: '12px'
-                        },
-                        '&:focus-within': {
-                            borderColor: '#6366F1',
-                            bgcolor: '#161412'
-                        }
-                    }}
-                >
-                    <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-                    <input
-                        placeholder="Search conversations or people..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'white',
-                            fontSize: '0.875rem',
-                            outline: 'none',
-                            width: '100%',
-                            fontFamily: 'var(--font-satoshi)'
-                        }}
-                    />
-                    {searching && <CircularProgress size={14} sx={{ color: 'primary.main' }} />}
-                </Box>
-            </Box>
+            )}
 
             <Box sx={{
                 overflowY: 'auto',
                 flex: 1,
-                px: 1
+                px: 2,
+                py: 2
             }}>
                 {showGlobalResults && (
-                    <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" sx={{ px: 2, mb: 1, display: 'block', fontWeight: 800, opacity: 0.4, textTransform: 'uppercase', letterSpacing: 1 }}>
-                            Global Search
+                    <Box sx={{ mb: 4 }}>
+                        <Typography sx={{ px: 1, mb: 2, display: 'block', fontWeight: 900, color: '#9B9691', textTransform: 'uppercase', letterSpacing: '0.1em', fontSize: '0.7rem', fontFamily: 'var(--font-mono)' }}>
+                            Global Directory
                         </Typography>
                         <List sx={{ pt: 0 }}>
                             {searchResults.map((u) => {
                                 const targetId = u.userId || u.$id;
                                 const hasChat = conversations.some(c => c.type === 'direct' && c.participants?.includes(targetId));
                                 return (
-                                    <ListItem key={u.$id} disablePadding sx={{ mb: 0.5 }}>
+                                    <ListItem key={u.$id} disablePadding sx={{ mb: 1 }}>
                                         <ListItemButton
                                             onClick={() => startChat(u)}
                                             sx={{
-                                                borderRadius: '12px',
-                                                py: 1,
-                            bgcolor: '#161412',
-                                                border: '1px solid rgba(255, 255, 255, 0.07)',
-                                                boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.08)',
+                                                borderRadius: '16px',
+                                                py: 1.5,
+                                                bgcolor: '#1C1A18',
+                                                border: '1px solid #34322F',
                                                 '&:hover': {
-                                                    bgcolor: '#161412',
-                                                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                                                    boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
+                                                    bgcolor: '#1F1D1B',
+                                                    borderColor: '#F59E0B',
                                                 }
                                             }}
                                         >
-                                            <ListItemAvatar sx={{ minWidth: 56 }}>
+                                            <ListItemAvatar sx={{ minWidth: 60 }}>
                                                 <GlobalSearchAvatar u={u} />
                                             </ListItemAvatar>
                                             <ListItemText
                                                 primary={u.displayName || u.username}
-                                                secondary={`@${u.username}`}
-                                                primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem' }}
-                                                secondaryTypographyProps={{ fontSize: '0.75rem', sx: { opacity: 0.5 } }}
+                                                secondary={`@${String(u.username).replace(/^@/, '')}`}
+                                                primaryTypographyProps={{ fontWeight: 800, fontSize: '0.95rem', color: '#fff' }}
+                                                secondaryTypographyProps={{ fontSize: '0.8rem', sx: { color: '#9B9691', mt: 0.2 } }}
                                             />
                                             {!hasChat && (
                                                 <Box sx={{ 
-                                                    px: 1, 
-                                                    py: 0.2, 
-                                                    borderRadius: '4px', 
-                                                    bgcolor: alpha('#6366F1', 0.1), 
-                                                    border: '1px solid rgba(99, 102, 241, 0.2)' 
+                                                    px: 1.5, 
+                                                    py: 0.5, 
+                                                    borderRadius: '8px', 
+                                                    bgcolor: '#F59E0B', 
+                                                    color: '#000'
                                                 }}>
-                                                    <Typography sx={{ fontSize: '9px', fontWeight: 900, color: '#6366F1' }}>NEW</Typography>
+                                                    <Typography sx={{ fontSize: '10px', fontWeight: 900 }}>NEW</Typography>
                                                 </Box>
                                             )}
                                         </ListItemButton>
@@ -728,38 +721,36 @@ export const ChatList = () => {
                                 );
                             })}
                         </List>
-                        <Divider sx={{ mx: 2, my: 1, opacity: 0.05 }} />
+                        <Divider sx={{ my: 3, borderColor: '#34322F' }} />
                     </Box>
                 )}
 
                 {hasNoConversations && !showGlobalResults ? (
-                    <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
-                        <Typography sx={{ fontWeight: 600, fontSize: '0.9rem' }}>No conversations</Typography>
-                        <Typography variant="caption" sx={{ opacity: 0.6 }}>Search for people to start a chat</Typography>
+                    <Box sx={{ p: 6, textAlign: 'center' }}>
+                        <Typography sx={{ fontWeight: 900, color: '#fff', fontSize: '1.1rem', mb: 1, fontFamily: 'var(--font-clash)' }}>Quiet Frequency</Typography>
+                        <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500 }}>No encrypted channels found matching your query.</Typography>
                     </Box>
                 ) : (
                     <List sx={{ pt: 0 }}>
                         {filteredConversations.map((conv) => (
-                            <ListItem key={conv.$id} disablePadding sx={{ mb: 0.5 }}>
+                            <ListItem key={conv.$id} disablePadding sx={{ mb: 1 }}>
                                 <ListItemButton
                                     component={Link}
                                     href={`/connect/chat/${conv.$id}`}
                                         sx={{
-                                        borderRadius: '12px',
-                                        py: 1.5,
-                                        transition: 'all 160ms ease',
-                                        bgcolor: '#161412',
-                                        border: '1px solid rgba(255, 255, 255, 0.07)',
-                                        boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.05), 0 0 18px rgba(245, 158, 11, 0.08)',
+                                        borderRadius: '16px',
+                                        py: 2,
+                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        bgcolor: '#1C1A18',
+                                        border: '1px solid #34322F',
                                         ...(activePreviewConversationId === conv.$id ? {
-                                                bgcolor: '#161412',
-                                            boxShadow: '0 0 0 1px rgba(99, 102, 241, 0.25), 0 0 30px rgba(99, 102, 241, 0.12)',
-                                            transform: 'translateY(-1px)',
+                                            borderColor: '#6366F1',
+                                            transform: 'translateY(-2px)',
                                         } : {}),
                                         '&:hover': {
-                                                    bgcolor: '#161412',
-                                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                                            boxShadow: '0 0 0 1px rgba(245, 158, 11, 0.08), 0 0 22px rgba(245, 158, 11, 0.12)'
+                                            bgcolor: '#1F1D1B',
+                                            borderColor: '#34322F',
+                                            transform: 'translateY(-2px)'
                                         }
                                     }}
                                 >
@@ -779,7 +770,7 @@ export const ChatList = () => {
                                                 setSelectedConversation(conv);
                                             }}
                                             sx={{
-                                                mr: 1.25,
+                                                mr: 2,
                                                 display: 'inline-flex',
                                                 cursor: 'pointer',
                                             }}
@@ -788,7 +779,7 @@ export const ChatList = () => {
                                                 src={conv.avatarUrl || conv.avatar || null}
                                                 alt={conv.name}
                                                 fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U'}
-                                                size={44}
+                                                size={48}
                                                 pro={conv.isSelf}
                                             />
                                         </Box>
@@ -806,27 +797,28 @@ export const ChatList = () => {
 
                                                 return (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(resolvedPreview)) ? (
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <LockIcon sx={{ fontSize: 12, opacity: 0.5 }} />
-                                                    <span>Encrypted message</span>
+                                                    <LockIcon sx={{ fontSize: 12, color: '#9B9691' }} />
+                                                    <span>Secured Payload</span>
                                                 </Box>
                                                 ) : resolvedPreview;
                                             })()
                                         }
                                         primaryTypographyProps={{
-                                            fontWeight: 700,
-                                            fontSize: '0.95rem',
-                                            color: conv.isSelf ? '#6366F1' : 'text.primary',
-                                            fontFamily: 'var(--font-clash)'
+                                            fontWeight: 800,
+                                            fontSize: '1rem',
+                                            color: conv.isSelf ? '#F59E0B' : '#fff',
+                                            fontFamily: 'var(--font-clash)',
+                                            letterSpacing: '-0.01em'
                                         }}
                                         secondaryTypographyProps={{
                                             noWrap: true,
-                                            fontSize: '0.75rem',
-                                            sx: { opacity: 0.5, mt: 0.3 }
+                                            fontSize: '0.85rem',
+                                            sx: { color: '#9B9691', mt: 0.5, fontWeight: 500 }
                                         }}
                                     />
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1.5, ml: 1 }}>
                                         {conv.lastMessageAt && (
-                                            <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4, fontWeight: 600 }}>
+                                            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#9B9691', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
                                                 {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                             </Typography>
                                         )}
@@ -840,11 +832,13 @@ export const ChatList = () => {
                                             return isUnread ? (
                                                 <Badge 
                                                     variant="dot" 
-                                                    color="primary" 
                                                     sx={{ 
                                                         '& .MuiBadge-badge': { 
-                                                            bgcolor: '#6366F1',
-                                                            boxShadow: '0 0 8px rgba(99, 102, 241, 0.5)'
+                                                            bgcolor: '#F59E0B',
+                                                            boxShadow: '0 0 12px rgba(245, 158, 11, 0.4)',
+                                                            width: 10,
+                                                            height: 10,
+                                                            borderRadius: '50%'
                                                         } 
                                                     }} 
                                                 />
