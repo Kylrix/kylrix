@@ -6,13 +6,26 @@ import { CallActionModal } from '@/components/call/CallActionModal';
 import { Box, Typography, Container, CircularProgress, Paper, TextField, Button } from '@mui/material';
 import { Hash, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function CallsPage() {
     const [modalOpen, setModalOpen] = useState(false);
+    const searchParams = useSearchParams();
     const [joinInput, setJoinId] = useState('');
     const [refreshKey, setRefreshKey] = useState(0);
     const router = useRouter();
+
+    useEffect(() => {
+        if (searchParams.get('start') === '1') {
+            setModalOpen(true);
+            // Clean up URL
+            const params = new URLSearchParams(searchParams.toString());
+            params.delete('start');
+            const next = params.toString();
+            router.replace(next ? `/connect/calls?${next}` : '/connect/calls');
+        }
+    }, [searchParams, router]);
 
     const handleJoin = () => {
         if (!joinInput.trim()) {

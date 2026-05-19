@@ -19,18 +19,20 @@ function ConnectHomeContent() {
     draftText?: string;
   } | null>(null);
   const { setConfiguration, resetConfiguration } = useFAB();
+  const { open: openUnified } = useUnifiedDrawer();
 
   useEffect(() => {
     setConfiguration({
       isVisible: true,
       mainColor: '#F59E0B',
       actions: [
-        { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => router.push('/connect/chats?new=1') },
+        { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat') },
+        { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },
         { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') },
       ]
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, router]);
+  }, [setConfiguration, resetConfiguration, router, openUnified]);
 
   const shouldCompose = useMemo(() => searchParams.get('compose') === '1', [searchParams]);
 

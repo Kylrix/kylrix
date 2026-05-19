@@ -13,7 +13,8 @@ import toast from 'react-hot-toast';
 import { useSudo } from '@/context/SudoContext';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Plus } from 'lucide-react';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 function ChatHandler() {
   const searchParams = useSearchParams();
@@ -99,6 +100,7 @@ export default function Home() {
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
 
   const { setConfiguration, resetConfiguration } = useFAB();
+  const { open: openUnified } = useUnifiedDrawer();
 
   useEffect(() => {
     if (isUnlocked) {
@@ -106,7 +108,8 @@ export default function Home() {
         isVisible: true,
         mainColor: '#F59E0B',
         actions: [
-          { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => router.push('/connect/chats?new=1') },
+          { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat') },
+          { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },
           { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') },
         ]
       });
@@ -114,7 +117,7 @@ export default function Home() {
       setConfiguration({ isVisible: false });
     }
     return () => resetConfiguration();
-  }, [isUnlocked, setConfiguration, resetConfiguration, router]);
+  }, [isUnlocked, setConfiguration, resetConfiguration, router, openUnified]);
 
   useEffect(() => {
     const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
