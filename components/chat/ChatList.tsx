@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useTransition } from 'react';
-import { ChatService } from '@/lib/services/chat';
+import { ChatService, rememberConversationRoster } from '@/lib/services/chat';
 import { useAuth } from '@/lib/auth';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -78,6 +78,14 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
     }>>({});
     const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
     const [, startTransition] = useTransition();
+
+    useEffect(() => {
+        rememberConversationRoster(conversations);
+    }, [conversations]);
+
+    useEffect(() => () => {
+        rememberConversationRoster([]);
+    }, []);
 
     // Sync external query to local search
     useEffect(() => {

@@ -25,6 +25,8 @@ const conversationPreviewCache = new Map<string, {
     lastMessageAt: string;
     lastMessageSenderId?: string | null;
 }>();
+const conversationRosterCache = new Map<string, any>();
+const conversationRosterListeners = new Set<(rows: any[]) => void>();
 
 const arraysEqual = (left: string[], right: string[]) =>
     left.length === right.length && left.every((value, index) => value === right[index]);
@@ -61,6 +63,38 @@ const setConversationPreviewCache = (
 };
 
 const getConversationPreviewCache = (conversationId: string) => conversationPreviewCache.get(conversationId) || null;
+
+const emitConversationRosterCache = () => {
+    const rows = Array.from(conversationRosterCache.values());
+    conversationRosterListeners.forEach((listener) => {
+        try {
+            listener(rows);
+        } catch (error) {
+            console.warn('[ChatService] Conversation roster listener failed:', error);
+        }
+    });
+};
+
+export const rememberConversationRoster = (rows: any[]) => {
+    conversationRosterCache.clear();
+    if (Array.isArray(rows)) {
+        for (const row of rows) {
+            if (!row?.$id) continue;
+            conversationRosterCache.set(row.$id, row);
+        }
+    }
+    emitConversationRosterCache();
+};
+
+export const getConversationRosterSnapshot = () => Array.from(conversationRosterCache.values());
+
+export const subscribeConversationRoster = (listener: (rows: any[]) => void) => {
+    conversationRosterListeners.add(listener);
+    listener(getConversationRosterSnapshot());
+    return () => {
+        conversationRosterListeners.delete(listener);
+    };
+};
 
 const getConversationMemberSnapshot = async (conversationId: string, fallbackParticipants: string[] = []) => {
     const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [

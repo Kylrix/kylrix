@@ -180,7 +180,7 @@ export function PublicCall({ id }: { id: string }) {
         } finally {
             setLoading(false);
         }
-    }, [id, requestedType, user]);
+    }, [id, requestedType, user, localUser]);
 
     useEffect(() => {
         loadCallDetails();

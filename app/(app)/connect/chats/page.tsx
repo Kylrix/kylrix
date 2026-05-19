@@ -1,6 +1,7 @@
 'use client';
 
 import { ChatList } from '@/components/chat/ChatList';
+import ChatComposerFab from '@/components/chat/ChatComposerFab';
 import { Box, IconButton, Typography, Stack, Button } from '@mui/material';
 import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -143,6 +144,7 @@ export default function Home() {
             </Stack>
 
             <ChatList />
+            <ChatComposerFab />
           </Box>
         ) : (
           <Box sx={{ minHeight: '80vh', display: 'grid', placeItems: 'center', px: 3 }}>
@@ -179,4 +181,3 @@ export default function Home() {
     </Box>
   );
 }
-
