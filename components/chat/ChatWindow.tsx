@@ -1111,11 +1111,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         setTimeout(() => scrollToBottom(), 50);
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-        // 3. Encrypt name and metadata if it's a group
-        if (type === MessagesType.TEXT && ecosystemSecurity.status.isUnlocked) {
-            text = await ecosystemSecurity.encrypt(text);
-        }
-
         try {
             let actualAttachments = initialAttachments;
             if (file) {
@@ -1127,8 +1122,6 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             const sentMessage = await ChatService.sendMessage(conversationId, user.$id, text, type, actualAttachments, replyToId);
 
             // Replace optimistic message with the real one to maintain state (readBy, etc)
-            // CRITICAL: We MUST override the content back to plaintext. The sentMessage from the API 
-            // contains the encrypted blob, and if we set it as is, the UI will show gibberish!
             const messageForState = { ...sentMessage, content: text } as unknown as ChatMessage;
             startTransition(() => {
                 setMessages(prev => prev.map(m => m.$id === optimisticId ? messageForState : m));

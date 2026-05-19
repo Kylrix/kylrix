@@ -28,6 +28,8 @@ interface ChatNotification {
     content: string;
     avatar?: string;
     isEncrypted: boolean;
+    type?: 'chat' | 'call';
+    callId?: string;
 }
 
 interface ChatNotificationContextType {
@@ -62,6 +64,35 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
     useEffect(() => {
         replyHistoryCache.current = new Map();
     }, [user?.$id]);
+
+    const showCallNotification = useCallback(async (signal: any, senderId: string) => {
+        if (!user || senderId === user.$id) return;
+
+        try {
+            const cached = getCachedIdentityById(senderId);
+            const profile = cached || await UsersService.getProfileById(senderId);
+            if (profile) seedIdentityCache(profile);
+            const senderName = (profile?.displayName || profile?.username) || signal.senderName || 'Guest';
+            
+            const notif: ChatNotification = {
+                id: signal.callId || senderId,
+                senderName: `Call Request: ${senderName}`,
+                content: `Wants to join the session`,
+                avatar: profile?.avatar || undefined,
+                isEncrypted: false,
+                type: 'call',
+                callId: signal.callId
+            };
+
+            setActiveNotification(notif);
+
+            setTimeout(() => {
+                setActiveNotification(prev => prev?.id === notif.id ? null : prev);
+            }, 8000);
+        } catch (err) {
+            console.warn('[ChatNotification] Failed to show call notification:', err);
+        }
+    }, [user]);
 
     const showDynamicIsland = useCallback(async (message: any) => {
         if (!user || message.senderId === user.$id) return;
@@ -117,7 +148,8 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                 senderName: shouldWarn ? `First message from ${senderName}` : senderName,
                 content: shouldWarn ? buildSafetyWarning(senderName) : content,
                 avatar: profile?.avatar || undefined,
-                isEncrypted: isEncrypted && !ecosystemSecurity.status.isUnlocked
+                isEncrypted: isEncrypted && !ecosystemSecurity.status.isUnlocked,
+                type: 'chat'
             };
 
             setActiveNotification(notif);
@@ -181,21 +213,19 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
     useEffect(() => {
         if (!user?.$id) return;
 
-        // Subscribe to NEW messages across all conversations
-        const channel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`;
+        // 1. Subscribe to NEW messages across all conversations
+        const chatChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`;
         
-        const unsub = realtime.subscribe([channel], (response) => {
+        const unsubChat = realtime.subscribe([chatChannel], (response) => {
             if (response.events.some(e => e.includes('.create'))) {
                 const payload = response.payload;
                 
-                // We receive events for rows we can read.
                 if (payload.senderId === user.$id) {
                     replyHistoryCache.current.set(payload.conversationId, true);
                     return;
                 }
 
                 if (payload.senderId !== user.$id) {
-                    console.log('[ChatNotification] New message received:', payload.$id);
                     setLastMessage(payload);
                     setUnreadConversations(prev => new Set(prev).add(payload.conversationId));
                     showDynamicIsland(payload);
@@ -203,11 +233,34 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
             }
         });
 
+        // 2. Subscribe to Call Signals via Activity Table
+        const activityChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.rows`;
+
+        const unsubActivity = realtime.subscribe([activityChannel], (response) => {
+            if (response.events.some(e => e.includes('.update') || e.includes('.create'))) {
+                const activity = response.payload;
+                if (!activity.customStatus) return;
+
+                try {
+                    const signal = JSON.parse(activity.customStatus);
+                    // Only notify for join_request signals targeting us
+                    if (signal.target === user.$id && signal.type === 'join_request') {
+                        if (Date.now() - signal.ts < 10000) {
+                            showCallNotification(signal, activity.userId);
+                        }
+                    }
+                } catch (e) {}
+            }
+        });
+
         return () => {
-            if (typeof unsub === 'function') (unsub as any)();
-            else (unsub as any)?.unsubscribe?.();
+            if (typeof unsubChat === 'function') (unsubChat as any)();
+            else (unsubChat as any)?.unsubscribe?.();
+
+            if (typeof unsubActivity === 'function') (unsubActivity as any)();
+            else (unsubActivity as any)?.unsubscribe?.();
         };
-    }, [user?.$id, showDynamicIsland]);
+    }, [user?.$id, showDynamicIsland, showCallNotification]);
 
     const contextValue = useMemo<ChatNotificationContextType>(
         () => ({ unreadConversations, lastMessage, scanComplete, markConversationRead }),

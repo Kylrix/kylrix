@@ -104,24 +104,14 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
         }
     }, [user, loadCalls]);
 
-    const handleEndCall = async (callId: string) => {
-        try {
-            await CallService.endCall(callId);
-            toast.success('Call ended');
-            loadCalls();
-        } catch (_e) {
-            toast.error('Failed to end call');
-        }
-    };
-
     const handleDeleteCall = async (callId: string) => {
-        if (!confirm('Are you sure you want to delete this call log?')) return;
+        if (!confirm('Are you sure you want to delete this call?')) return;
         try {
-            await CallService.deleteCallLog(callId);
-            toast.success('Call log deleted');
+            await CallService.deleteCall(callId);
+            toast.success('Call deleted');
             loadCalls();
         } catch (_e) {
-            toast.error('Failed to delete call log');
+            toast.error('Failed to delete call');
         }
     };
 
@@ -189,11 +179,6 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
                             <ListItem
                                 secondaryAction={
                                     <Stack direction="row" spacing={1}>
-                                        <Tooltip title="End Call">
-                                            <IconButton edge="end" onClick={(e) => { e.stopPropagation(); handleEndCall(call.$id); }} color="warning">
-                                                <StopIcon />
-                                            </IconButton>
-                                        </Tooltip>
                                         <Tooltip title="Delete Permanently">
                                             <IconButton edge="end" onClick={(e) => { e.stopPropagation(); handleDeleteCall(call.$id); }} color="error">
                                                 <DeleteIcon />

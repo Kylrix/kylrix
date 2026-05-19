@@ -163,6 +163,13 @@ export const CallInterface = ({
         setIsRecording(!isRecording);
     };
 
+    const handleReconnect = async () => {
+        if (!user || !targetId) return;
+        setStatus('Reconnecting...');
+        hasInitiatedCall.current = true;
+        await rtcManager.current?.createOffer(user.$id, targetId);
+    };
+
     const broadcastMessage = async (content: string, attachment?: any) => {
         if (!user || !targetId) return;
         
@@ -284,18 +291,7 @@ export const CallInterface = ({
                         if (signal.target !== user.$id) return;
                         if (Date.now() - signal.ts > 10000) return;
 
-                        if (signal.type === 'join_request') {
-                            if (signal.callId === (callCode || conversationId) || !signal.callId) {
-                                setJoinRequests(prev => {
-                                    if (prev.some(r => r.senderId === signal.sender)) return prev;
-                                    return [...prev, { 
-                                        senderId: signal.sender, 
-                                        senderName: signal.senderName || 'Guest' 
-                                    }];
-                                });
-                                toast(`Join Request from ${signal.senderName || 'Guest'}`, { icon: '👋' });
-                            }
-                        } else if (signal.type === 'let_in') {
+                        if (signal.type === 'let_in') {
                             console.log('[CallInterface] Admitted by host, creating offer...');
                             setStatus('Joining...');
                             setTargetId(signal.sender);
@@ -306,8 +302,7 @@ export const CallInterface = ({
                                     rtcManager.current?.createOffer(user.$id, signal.sender);
                                 }, 500);
                             }
-                        } else if (signal.type === 'chat_message') {
-                            setChatMessages(prev => [...prev, signal.message]);
+                        } else if (signal.type === 'chat_message') {                            setChatMessages(prev => [...prev, signal.message]);
                             // We use a ref or a separate state for unread count to avoid re-running this effect
                             setUnreadChatCount(c => c + 1);
                             toast(`${signal.message.senderName}: ${signal.message.content.substring(0, 30)}...`, { 
@@ -788,6 +783,12 @@ export const CallInterface = ({
                 <Tooltip title={isRecording ? "Stop Recording" : "Record Call"}>
                     <IconButton onClick={toggleRecording} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: isRecording ? '#EF4444' : 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
                         {isRecording ? <Square size={18} /> : <Circle size={18} fill={isRecording ? '#EF4444' : 'none'} />}
+                    </IconButton>
+                </Tooltip>
+
+                <Tooltip title="Reconnect">
+                    <IconButton onClick={handleReconnect} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: '#6366F1', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <Monitor size={20} />
                     </IconButton>
                 </Tooltip>
 

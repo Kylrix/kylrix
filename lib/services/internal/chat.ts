@@ -319,7 +319,7 @@ export async function repairConversationInternal(payload: {
       const canonical = rows[0];
       const metadata = typeof canonical.metadata === 'string' ? JSON.parse(canonical.metadata || '{}') : (canonical.metadata || {});
       
-      if (metadata.wrappedBy && !metadata.wrappedByPublicKey) {
+      if (metadata.wrappedBy && !metadata.senderPublicKey) {
         try {
           const wrappedByProfiles = await databases.listDocuments(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
             Query.equal('userId', String(metadata.wrappedBy)),
@@ -327,6 +327,7 @@ export async function repairConversationInternal(payload: {
           ]);
           const wrappedByProfile = wrappedByProfiles.documents[0];
           if (wrappedByProfile?.publicKey) {
+            metadata.senderPublicKey = wrappedByProfile.publicKey;
             metadata.wrappedByPublicKey = wrappedByProfile.publicKey;
           }
         } catch { /* best effort */ }

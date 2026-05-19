@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 export default function CallsPage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [joinInput, setJoinId] = useState('');
+    const [refreshKey, setRefreshKey] = useState(0);
     const router = useRouter();
 
     const handleJoin = () => {
@@ -77,10 +78,16 @@ export default function CallsPage() {
             </Box>
             
             <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
-                <CallHistory onNewCall={() => setModalOpen(true)} />
+                <CallHistory key={refreshKey} onNewCall={() => setModalOpen(true)} />
             </Suspense>
 
-            <CallActionModal open={modalOpen} onClose={() => setModalOpen(false)} />
+            <CallActionModal 
+                open={modalOpen} 
+                onClose={() => {
+                    setModalOpen(false);
+                    setRefreshKey(prev => prev + 1);
+                }} 
+            />
         </Container>
     );
 }

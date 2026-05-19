@@ -89,6 +89,11 @@ export function PublicCall({ id }: { id: string }) {
 
     const loadCallDetails = useCallback(async () => {
         try {
+            // Ensure session for guest if not logged in
+            if (!user && !localUser) {
+                await CallService.createAnonymousSession().catch(() => null);
+            }
+
             // First try by ID (new way)
             let link: any = await CallService.getCallLink(id);
             
@@ -231,26 +236,14 @@ export function PublicCall({ id }: { id: string }) {
                 setLocalUser(activeUser);
             }
 
-            // 2. If host, skip request and go to pre-check
-            if (activeUser.$id === linkData.userId) {
-                setShowPreCheck(true);
-                setJoining(false);
-                setAutoStartAfterPreCheck(false);
-                return;
-            }
-
-            // 3. Send join request signal to the host
-            await CallService.sendSignal(activeUser.$id, linkData.userId, {
-                type: 'join_request',
-                senderName: displayName || activeUser.name || 'Guest',
-                callId: id
-            });
-
-            setRequestStatus('pending');
-            toast("Request sent to host. Please wait...", { icon: '⏳' });
+            // 2. Host or guest, proceed directly to PreCheck
+            // Bypass manual request/admit flow entirely for speed and reliability.
+            setShowPreCheck(true);
+            setJoining(false);
+            setAutoStartAfterPreCheck(false);
         } catch (_e) {
             setJoining(false);
-            toast.error("Failed to send join request");
+            toast.error("Failed to initialize join");
         }
     };
 

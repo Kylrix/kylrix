@@ -6,6 +6,8 @@ import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
 import { seedIdentityCache } from '@/lib/identity-cache';
 import { sendKylrixEmailNotification } from '../email-notifications';
+import { permissionsAction } from '@/lib/actions/permissions';
+import { createMessageAction, repairConversationAction, toggleReactionAction, joinRequestAction as joinRequestServerAction } from '@/lib/actions/chat';
 
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -15,11 +17,6 @@ const MSG_TABLE = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
 const EPOCHS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.EPOCHS;
 const KEY_MAPPING_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const KEY_MAPPING_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
-const ACCOUNTS_API_URL = `${KYLRIX_AUTH_URI}/api/permissions`;
-const ACCOUNTS_MESSAGE_API_URL = `${KYLRIX_AUTH_URI}/api/connect/messages`;
-const ACCOUNTS_MESSAGE_REACTIONS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/message-reactions`;
-const ACCOUNTS_JOIN_REQUESTS_API_URL = `${KYLRIX_AUTH_URI}/api/connect/join-requests`;
-const ACCOUNTS_KEY_REPAIR_API_URL = `${KYLRIX_AUTH_URI}/api/connect/repair`;
 const GROUP_AVATAR_ROUTE = `${KYLRIX_AUTH_URI}/api/connect/group-avatar`;
 const conversationKeyCache = new Map<string, CryptoKey>();
 const conversationPreviewCache = new Map<string, {
@@ -223,21 +220,14 @@ const buildInviteMeta = (current: any, patch: Record<string, unknown>) => {
     return JSON.stringify(next);
 };
 
-async function getPermissionUpdateAuth(auth?: { jwt?: string; cookie?: string }) {
-    let jwt = auth?.jwt || null;
-    if (!jwt && !auth?.cookie) {
+async function getAuth(auth?: { jwt?: string; cookie?: string }) {
+    if (auth?.jwt) return auth.jwt;
+    try {
         const session = await account.createJWT().catch(() => null);
-        jwt = session?.jwt || null;
+        return session?.jwt || null;
+    } catch {
+        return null;
     }
-
-    if (!jwt && !auth?.cookie) {
-        throw new Error('Unable to authenticate permission update request');
-    }
-
-    return {
-        ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
-        ...(auth?.cookie ? { Cookie: auth.cookie } : {}),
-    };
 }
 
 async function callPermissionsApi(
@@ -245,44 +235,24 @@ async function callPermissionsApi(
     payload: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_API_URL, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Permission update failed');
-    }
-
-    return response.json().catch(() => ({}));
+    const jwt = await getAuth(auth);
+    return await permissionsAction(method, { ...payload, jwt });
 }
 
 async function callMessageCreateApi(
     payload: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_MESSAGE_API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: JSON.stringify(payload),
+    const jwt = await getAuth(auth);
+    return await createMessageAction({
+        conversationId: payload.conversationId as string,
+        senderId: payload.senderId as string,
+        content: payload.content as string,
+        type: payload.type as string,
+        attachments: payload.attachments as string[],
+        replyTo: payload.replyTo as string,
+        jwt: jwt as any,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Message creation failed');
-    }
-
-    return response.json().catch(() => ({}));
 }
 
 async function callMessageReactionApi(
@@ -290,44 +260,26 @@ async function callMessageReactionApi(
     payload: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_MESSAGE_REACTIONS_API_URL, {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: JSON.stringify(payload),
+    const jwt = await getAuth(auth);
+    return await toggleReactionAction({
+        conversationId: payload.conversationId as string,
+        messageId: payload.messageId as string,
+        emoji: payload.emoji as string,
+        action: method,
+        jwt: jwt as any,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Reaction update failed');
-    }
-
-    return response.json().catch(() => ({}));
 }
 
 async function callConversationRepairApi(
     payload: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_KEY_REPAIR_API_URL, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: JSON.stringify(payload),
+    const jwt = await getAuth(auth);
+    return await repairConversationAction({
+        userId: payload.userId as string,
+        conversationId: payload.conversationId as string,
+        jwt: jwt as any,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Conversation repair failed');
-    }
-
-    return response.json().catch(() => ({}));
 }
 
 async function callJoinRequestApi(
@@ -335,39 +287,42 @@ async function callJoinRequestApi(
     payload?: Record<string, unknown>,
     auth?: { jwt?: string; cookie?: string }
 ) {
-    const headers = await getPermissionUpdateAuth(auth);
-    const response = await fetch(ACCOUNTS_JOIN_REQUESTS_API_URL, {
+    const jwt = await getAuth(auth);
+    return await joinRequestServerAction({
         method,
-        headers: {
-            'Content-Type': 'application/json',
-            ...headers,
-        },
-        body: payload ? JSON.stringify(payload) : undefined,
+        resourceType: payload?.resourceType as string || 'chat.conversation',
+        resourceId: payload?.resourceId as string,
+        requesterId: payload?.requesterId as string,
+        action: payload?.action as 'accept' | 'reject',
+        jwt: jwt as any,
     });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Join request update failed');
-    }
-
-    return response.json().catch(() => ({}));
 }
 
 async function fetchKeyMapping(resourceType: string, resourceId: string, grantee: string) {
-    const res = await tablesDB.listRows(KEY_MAPPING_DB, KEY_MAPPING_TABLE, [
-        Query.equal('resourceType', resourceType),
-        Query.equal('resourceId', resourceId),
-        Query.equal('grantee', grantee),
-        Query.limit(1),
-    ]);
+    try {
+        const res = await tablesDB.listRows(KEY_MAPPING_DB, KEY_MAPPING_TABLE, [
+            Query.equal('resourceType', resourceType),
+            Query.equal('resourceId', resourceId),
+            Query.equal('grantee', String(grantee || '').trim()),
+            Query.limit(1),
+        ]).catch(() => ({ rows: [] as any[] }));
 
-    return res.rows[0] || null;
+        if (res.rows && res.rows.length > 0) return res.rows[0];
+    } catch (e) {
+        console.warn('[ChatService] fetchKeyMapping lookup failed', e);
+    }
+
+    return null;
 }
 
 async function fetchProfilePublicKey(userId: string) {
     try {
         const profile = await UsersService.getProfileById(userId);
-        return profile?.publicKey || null;
+        if (profile?.publicKey) return profile.publicKey;
+
+        await UsersService.forceSyncProfileWithIdentity({ $id: userId }).catch(() => null);
+        const refreshed = await UsersService.getProfileById(userId).catch(() => null);
+        return refreshed?.publicKey || null;
     } catch {
         return null;
     }
@@ -383,7 +338,8 @@ async function unwrapKeyMapping(row: any, fallbackUserId?: string) {
         metadata = {};
     }
 
-    const wrappedByPublicKey = metadata.wrappedByPublicKey
+    const wrappedByPublicKey = metadata.senderPublicKey
+        || metadata.wrappedByPublicKey
         || (metadata.wrappedBy ? await fetchProfilePublicKey(metadata.wrappedBy) : null)
         || (fallbackUserId ? await fetchProfilePublicKey(fallbackUserId) : null);
 
@@ -472,9 +428,10 @@ async function resolveConversationKey(
         && conversation.participants.every((participantId: string) => participantId === userId);
 
     if (isSelfChat && ecosystemSecurity.status.isUnlocked && ecosystemSecurity.status.hasIdentity) {
-        const rebuiltKey = await ecosystemSecurity.generateConversationKey();
         const publicKey = await ecosystemSecurity.ensureE2EIdentity(userId);
         if (!publicKey) return null;
+
+        const rebuiltKey = await ecosystemSecurity.generateConversationKey();
 
         ecosystemSecurity.setConversationKey(conversation.$id, rebuiltKey);
         conversationKeyCache.set(conversation.$id, rebuiltKey);
@@ -507,7 +464,7 @@ async function resolveConversationKey(
           }, auth);
 
           if (repairResult?.identity) {
-            const repairedProfile = await UsersService.getProfileById(userId, true);
+            const repairedProfile = await UsersService.getProfileById(userId);
             seedIdentityCache(repairedProfile);
           }
 
@@ -945,6 +902,7 @@ export const ChatService = {
                             wrappedKey: await ecosystemSecurity.wrapKeyWithECDH(convKey, profile.publicKey),
                             metadata: buildLockboxMetadata({
                                 wrappedBy: creatorId,
+                                senderPublicKey: creatorPublicKey,
                                 wrappedByPublicKey: creatorPublicKey,
                                 conversationId: newConv.$id,
                                 conversationType: type,

@@ -375,7 +375,7 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
     if (prevProfileRef.current === profile) return; // No profile change
     prevProfileRef.current = profile;
     setCopyState('idle');
-  }, [profile?.username]); // Only depend on stable username
+  }, [profile?.username, profile]); // Include profile in dependencies
 
   const username = profile?.username ? String(profile.username).replace(/^@+/, '').toLowerCase() : null;
   const displayName = profile?.displayName || username || user?.name || user?.email || 'Profile';
