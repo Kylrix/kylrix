@@ -311,7 +311,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     setError(null);
     try {
       const fetcher = async () => {
-        const res = await fetch(`/api/shared/${noteId}`, { cache: 'no-store' });
+        const res = await fetch(`/note/api/shared/${noteId}`, { cache: 'no-store' });
         if (!res.ok) {
           const payload = await res.json().catch(() => ({}));
           const message = payload.error || 'Failed to load shared note';
@@ -357,7 +357,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
       setVerifiedNote(note);
 
       if (note.userId) {        try {
-          const profileRes = await fetch('/api/shared/profiles', {
+          const profileRes = await fetch('/note/api/shared/profiles', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userIds: [note.userId] }),
