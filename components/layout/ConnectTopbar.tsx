@@ -963,7 +963,7 @@ export default function ConnectTopbar({
                     </Button>
                   )}
                   {user && (
-                    <Tooltip title="Agentic Workspace">
+                    <Tooltip title="Smart Systems">
                       <IconButton
                         onClick={() => openAgenticDrawer()}
                         sx={{
