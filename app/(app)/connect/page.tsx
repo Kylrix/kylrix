@@ -5,6 +5,7 @@ import { Container } from '@mui/material';
 import { Feed } from '@/components/social/Feed';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFAB } from '@/context/FABContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { MessageSquare, Phone, Plus } from 'lucide-react';
 
 function ConnectHomeContent() {
