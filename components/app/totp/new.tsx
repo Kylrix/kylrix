@@ -83,7 +83,7 @@ export default function NewTotpDialog({
           ...form,
           updatedAt: new Date().toISOString(),
         });
-        toast.success("TOTP code updated!");
+        toast.success("Smart Code updated!");
       } else {
         await createTotpSecret({
           userId: user.$id,
@@ -95,13 +95,13 @@ export default function NewTotpDialog({
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
-        toast.success("TOTP code added!");
+        toast.success("Smart Code added!");
       }
       onClose();
     } catch (e: unknown) {
       const err = e as { message?: string };
       toast.error(
-        err.message || `Failed to ${initialData ? "update" : "add"} TOTP code.`,
+        err.message || `Failed to ${initialData ? "update" : "add"} Smart Code.`,
       );
     }
     setLoading(false);
@@ -111,12 +111,13 @@ export default function NewTotpDialog({
     <Dialog 
       open={open} 
       onClose={onClose}
+      keepMounted={false}
+      disablePortal={true}
       PaperProps={{
         sx: {
           borderRadius: '28px',
-          bgcolor: 'rgba(10, 10, 10, 0.95)',
-          backdropFilter: 'blur(25px) saturate(180%)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          bgcolor: '#161412',
+          border: '1px solid #1C1A18',
           backgroundImage: 'none',
           maxWidth: '450px',
           width: '100%',
@@ -127,13 +128,14 @@ export default function NewTotpDialog({
       <form onSubmit={handleSubmit}>
         <DialogTitle sx={{ 
           fontWeight: 900, 
-          fontFamily: 'var(--font-space-grotesk)', 
+          fontFamily: 'var(--font-clash)', 
           pt: 4, 
           px: 4,
           fontSize: '1.5rem',
-          letterSpacing: '-0.02em'
+          letterSpacing: '-0.02em',
+          color: '#fff'
         }}>
-          {initialData ? "Edit" : "Add"} TOTP Code
+          {initialData ? "Edit" : "Add"} Smart Code
         </DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2, px: 4 }}>
           <TextField
@@ -147,11 +149,13 @@ export default function NewTotpDialog({
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '16px',
-                bgcolor: 'rgba(255, 255, 255, 0.03)',
-                '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
+                bgcolor: '#0A0908',
+                '& fieldset': { borderColor: '#1C1A18' },
                 '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                '&.Mui-focused fieldset': { borderColor: '#10B981' }
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.5)' }
+              '& .MuiInputLabel-root': { color: '#9B9691' },
+              '& .MuiInputLabel-root.Mui-focused': { color: '#10B981' }
             }}
           />
           <TextField
@@ -165,17 +169,19 @@ export default function NewTotpDialog({
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '16px',
-                bgcolor: 'rgba(255, 255, 255, 0.03)',
-                '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
+                bgcolor: '#0A0908',
+                '& fieldset': { borderColor: '#1C1A18' },
                 '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                '&.Mui-focused fieldset': { borderColor: '#10B981' }
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.5)' }
+              '& .MuiInputLabel-root': { color: '#9B9691' },
+              '& .MuiInputLabel-root.Mui-focused': { color: '#10B981' }
             }}
           />
           <TextField
             fullWidth
-            label="Secret Key"
-            placeholder="Enter the base32 secret"
+            label="Secure Key"
+            placeholder="Enter the secure key"
             value={form.secretKey}
             onChange={(e) => setForm({ ...form, secretKey: e.target.value })}
             required
@@ -183,11 +189,13 @@ export default function NewTotpDialog({
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '16px',
-                bgcolor: 'rgba(255, 255, 255, 0.03)',
-                '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.1)' },
+                bgcolor: '#0A0908',
+                '& fieldset': { borderColor: '#1C1A18' },
                 '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
+                '&.Mui-focused fieldset': { borderColor: '#10B981' }
               },
-              '& .MuiInputLabel-root': { color: 'rgba(255, 255, 255, 0.5)' }
+              '& .MuiInputLabel-root': { color: '#9B9691' },
+              '& .MuiInputLabel-root.Mui-focused': { color: '#10B981' }
             }}
           />
           
@@ -198,7 +206,7 @@ export default function NewTotpDialog({
                 onChange={(e) => setShowAdvanced(e.target.checked)}
                 sx={{ 
                   color: 'rgba(255, 255, 255, 0.2)', 
-                  '&.Mui-checked': { color: '#6366F1' } 
+                  '&.Mui-checked': { color: '#10B981' } 
                 }}
               />
             }
@@ -218,8 +226,8 @@ export default function NewTotpDialog({
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
-                      bgcolor: 'rgba(255, 255, 255, 0.01)',
-                      '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.05)' },
+                      bgcolor: '#0A0908',
+                      '& fieldset': { borderColor: '#1C1A18' },
                     }
                   }}
                 />
@@ -235,8 +243,8 @@ export default function NewTotpDialog({
                   sx={{
                     '& .MuiOutlinedInput-root': {
                       borderRadius: '12px',
-                      bgcolor: 'rgba(255, 255, 255, 0.01)',
-                      '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.05)' },
+                      bgcolor: '#0A0908',
+                      '& fieldset': { borderColor: '#1C1A18' },
                     }
                   }}
                 />
@@ -253,6 +261,8 @@ export default function NewTotpDialog({
               borderRadius: '16px', 
               py: 1.5, 
               color: 'rgba(255, 255, 255, 0.5)',
+              textTransform: 'none',
+              fontWeight: 800,
               '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.05)' }
             }}
           >
@@ -267,13 +277,14 @@ export default function NewTotpDialog({
               borderRadius: '16px', 
               py: 1.5, 
               fontWeight: 800,
-              bgcolor: '#6366F1',
+              bgcolor: '#10B981',
               color: '#000',
-              '&:hover': { bgcolor: '#00D1DA' },
-              '&.Mui-disabled': { bgcolor: 'rgba(99, 102, 241, 0.3)' }
+              textTransform: 'none',
+              '&:hover': { bgcolor: '#059669' },
+              '&.Mui-disabled': { bgcolor: 'rgba(16, 185, 129, 0.3)' }
             }}
           >
-            {loading ? <CircularProgress size={24} color="inherit" /> : (initialData ? "Save Changes" : "Add TOTP")}
+            {loading ? <CircularProgress size={24} color="inherit" /> : (initialData ? "Save Changes" : "Add Smart Code")}
           </Button>
         </DialogActions>
       </form>

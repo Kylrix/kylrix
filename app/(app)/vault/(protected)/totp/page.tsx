@@ -6,7 +6,6 @@ import {
   Box, 
   Typography, 
   Button, 
-  Grid, 
   Paper, 
   IconButton, 
   TextField, 
@@ -16,13 +15,16 @@ import {
   DialogContent, 
   DialogActions, 
   Chip,
+  Stack,
+  InputAdornment
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import ShieldIcon from '@mui/icons-material/Shield';
-import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';
 import { authenticator } from 'otplib';
@@ -37,17 +39,20 @@ function TOTPPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isVaultUnlocked } = useAppwriteVault();
+  
   type TotpItem = {
     $id: string;
     issuer?: string | null;
     accountName?: string | null;
-    secretKey: string; // stored/encrypted elsewhere; never display
+    secretKey: string;
     period?: number | null;
     digits?: number | null;
     algorithm?: string | null;
     folderId?: string | null;
     sharedFrom?: string | null;
+    url?: string | null;
   };
+  
   const [totpCodes, setTotpCodes] = useState<TotpItem[]>([]);
   const [folders, setFolders] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -150,10 +155,10 @@ function TOTPPageContent() {
     try {
       await deleteTotpSecret(id);
       setTotpCodes((codes) => codes.filter((c) => c.$id !== id));
-      toast.success("TOTP code deleted.");
+      toast.success("Verification code deleted.");
     } catch (e: unknown) {
       const err = e as { message?: string };
-      toast.error(err.message || "Failed to delete TOTP code.");
+      toast.error(err.message || "Failed to delete verification code.");
     } finally {
       setDeleteDialog({ open: false, id: null });
     }
@@ -177,6 +182,21 @@ function TOTPPageContent() {
     setShowNew(true);
   };
 
+  const getFaviconUrl = (url: string | null | undefined) => {
+    if (!url) return null;
+    try {
+      const domain = new URL(url).hostname;
+      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+    } catch {
+      try {
+        if (url.includes('.') && !url.startsWith('http')) {
+          return `https://www.google.com/s2/favicons?domain=${url}&sz=64`;
+        }
+      } catch {}
+      return null;
+    }
+  };
+
   const TOTPCard = ({ totp }: { totp: TotpItem }) => {
     const code = generateTOTP(
       totp.secretKey,
@@ -188,84 +208,161 @@ function TOTPPageContent() {
     const timeRemaining = getTimeRemaining(totp.period || 30);
     const progress = (timeRemaining / (totp.period || 30)) * 100;
     const folderName = totp.folderId ? folders.get(totp.folderId) : null;
+    const faviconUrl = getFaviconUrl(totp.url);
+    const issuerInitials = totp.issuer ? totp.issuer.trim().charAt(0).toUpperCase() : "?";
 
     return (
       <Paper
         elevation={0}
         sx={{
-          p: 3,
+          p: 2.5,
           borderRadius: '24px',
-          bgcolor: 'rgba(255, 255, 255, 0.02)',
-          border: '1px solid',
-          borderColor: 'rgba(255, 255, 255, 0.08)',
-          transition: 'all 0.2s ease',
+          bgcolor: '#161412',
+          border: '1px solid #1C1A18',
+          transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+          boxShadow: '0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px rgba(37,35,33,0.9)',
+          display: 'flex',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          justifyContent: 'space-between',
+          backgroundImage: 'none',
           '&:hover': {
-            bgcolor: 'rgba(255, 255, 255, 0.04)',
-            borderColor: 'rgba(255, 255, 255, 0.15)',
-            transform: 'translateY(-2px)'
+            bgcolor: '#1C1A18',
+            borderColor: alpha('#10B981', 0.2),
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px rgba(37,35,33,1)',
+            '& .fav-box': { borderColor: alpha('#10B981', 0.2), bgcolor: alpha('#10B981', 0.05) }
           }
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle1" noWrap sx={{ fontWeight: 800, color: 'text.primary' }}>
-              {totp.issuer || "Unknown Issuer"}
-            </Typography>
-            <Typography variant="body2" noWrap sx={{ color: 'text.secondary', mb: 1 }}>
-              {totp.accountName || "No account name"}
-            </Typography>
-            {folderName && (
-              <Chip 
-                label={folderName} 
-                size="small" 
-                sx={{ 
-                  height: 20, 
-                  fontSize: '0.65rem', 
-                  fontWeight: 700, 
-                  bgcolor: 'rgba(255, 255, 255, 0.05)',
-                  color: 'text.secondary',
-                  borderRadius: '6px'
-                }} 
-              />
-            )}
-            {totp.sharedFrom && (
-              <Chip
-                label={`shared from ${totp.sharedFrom}`}
-                size="small"
-                sx={{
-                  mt: 1,
-                  height: 20,
-                  fontSize: '0.65rem',
-                  fontWeight: 700,
-                  bgcolor: 'rgba(255, 255, 255, 0.05)',
-                  color: 'text.secondary',
-                  borderRadius: '6px'
+        {/* Left Side: Logo/Avatar & Info */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, minWidth: 0, width: { xs: '100%', sm: 'auto' } }}>
+          {faviconUrl ? (
+            <Box 
+              className="fav-box"
+              sx={{
+                width: 52,
+                height: 52,
+                borderRadius: '16px',
+                bgcolor: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <Box 
+                component="img" 
+                src={faviconUrl} 
+                alt={totp.issuer || 'app favicon'}
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
                 }}
+                sx={{ width: 28, height: 28, borderRadius: '6px' }} 
               />
-            )}
-          </Box>
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <IconButton size="small" onClick={() => openEditDialog(totp)} sx={{ color: 'text.secondary' }}>
-              <EditIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-            <IconButton size="small" onClick={() => openDeleteDialog(totp.$id)} sx={{ color: 'text.secondary', '&:hover': { color: 'error.main' } }}>
-              <DeleteIcon sx={{ fontSize: 16 }} />
-            </IconButton>
+            </Box>
+          ) : (
+            <Box 
+              className="fav-box"
+              sx={{ 
+                width: 52, 
+                height: 52, 
+                borderRadius: '16px', 
+                bgcolor: 'rgba(255, 255, 255, 0.02)', 
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                flexShrink: 0
+              }}
+            >
+              <Typography sx={{ fontWeight: 900, color: '#10B981', fontSize: '1.25rem', fontFamily: 'var(--font-clash)' }}>
+                {issuerInitials}
+              </Typography>
+            </Box>
+          )}
+
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="subtitle1" noWrap sx={{ fontWeight: 800, color: '#fff', fontFamily: 'var(--font-clash)', fontSize: '1.05rem', lineHeight: 1.2 }}>
+              {totp.issuer || "Smart Code"}
+            </Typography>
+            <Typography variant="body2" noWrap sx={{ color: '#9B9691', mt: 0.5, fontWeight: 500, fontFamily: 'var(--font-satoshi)', fontSize: '0.9rem' }}>
+              {totp.accountName || "No account info"}
+            </Typography>
+            
+            <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.5 }}>
+              {folderName && (
+                <Chip 
+                  label={folderName} 
+                  size="small" 
+                  sx={{ 
+                    height: 18, 
+                    fontSize: '0.6rem', 
+                    fontWeight: 900, 
+                    bgcolor: 'rgba(255, 255, 255, 0.04)',
+                    color: '#9B9691',
+                    borderRadius: '4px',
+                    textTransform: 'uppercase'
+                  }} 
+                />
+              )}
+              {totp.sharedFrom && (
+                <Chip
+                  label={`Received`}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: '0.6rem',
+                    fontWeight: 900,
+                    bgcolor: alpha('#10B981', 0.08),
+                    color: '#10B981',
+                    borderRadius: '4px',
+                    textTransform: 'uppercase'
+                  }}
+                />
+              )}
+            </Stack>
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Typography variant="h4" sx={{ fontWeight: 800, fontFamily: 'var(--font-mono)', letterSpacing: '0.1em', color: '#10B981' }}>
+        {/* Right Side: Code, Timer & Actions */}
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: { xs: 2, sm: 3 }, 
+            width: { xs: '100%', sm: 'auto' }, 
+            justifyContent: { xs: 'space-between', sm: 'flex-end' },
+            mt: { xs: 2.5, sm: 0 },
+            pt: { xs: 2.5, sm: 0 },
+            borderTop: { xs: '1px solid rgba(255, 255, 255, 0.04)', sm: 'none' }
+          }}
+        >
+          {/* 6-Digit Code & Copy Button */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: '#10B981' }}>
               {code.substring(0, 3)} {code.substring(3)}
             </Typography>
-            <IconButton size="small" onClick={() => copyToClipboard(code)} sx={{ color: '#10B981', bgcolor: 'rgba(16, 185, 129, 0.05)' }}>
-              <ContentCopyIcon sx={{ fontSize: 16 }} />
+            <IconButton 
+              size="small" 
+              onClick={() => copyToClipboard(code)} 
+              sx={{ 
+                color: '#10B981', 
+                bgcolor: 'rgba(16, 185, 129, 0.05)',
+                border: '1px solid rgba(16, 185, 129, 0.1)',
+                borderRadius: '10px',
+                p: 1,
+                '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.1)' }
+              }}
+            >
+              <ContentCopyIcon sx={{ fontSize: 15 }} />
             </IconButton>
           </Box>
 
+          {/* Time Countdown Indicator */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="caption" sx={{ fontWeight: 700, color: timeRemaining <= 5 ? 'error.main' : 'text.secondary' }}>
+            <Typography variant="caption" sx={{ fontWeight: 800, color: timeRemaining <= 5 ? '#EF4444' : '#9B9691', minWidth: '22px', textAlign: 'right' }}>
               {timeRemaining}s
             </Typography>
             <Box sx={{ position: 'relative', display: 'inline-flex' }}>
@@ -275,7 +372,7 @@ function TOTPPageContent() {
                 size={28}
                 thickness={6}
                 sx={{
-                  color: timeRemaining <= 5 ? 'error.main' : '#10B981',
+                  color: timeRemaining <= 5 ? '#EF4444' : '#10B981',
                   '& .MuiCircularProgress-circle': {
                     strokeLinecap: 'round',
                   },
@@ -287,12 +384,42 @@ function TOTPPageContent() {
                 size={28}
                 thickness={6}
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.05)',
+                  color: 'rgba(255, 255, 255, 0.04)',
                   position: 'absolute',
                   left: 0,
                 }}
               />
             </Box>
+          </Box>
+
+          {/* Action Buttons */}
+          <Box sx={{ display: 'flex', gap: 0.75 }}>
+            <IconButton 
+              size="small" 
+              onClick={() => openEditDialog(totp)} 
+              sx={{ 
+                color: '#9B9691', 
+                border: '1px solid rgba(255, 255, 255, 0.04)',
+                borderRadius: '10px',
+                p: 1,
+                '&:hover': { color: '#fff', bgcolor: 'rgba(255, 255, 255, 0.05)' }
+              }}
+            >
+              <EditIcon sx={{ fontSize: 15 }} />
+            </IconButton>
+            <IconButton 
+              size="small" 
+              onClick={() => openDeleteDialog(totp.$id)} 
+              sx={{ 
+                color: '#9B9691', 
+                border: '1px solid rgba(255, 255, 255, 0.04)',
+                borderRadius: '10px',
+                p: 1,
+                '&:hover': { color: '#EF4444', bgcolor: 'rgba(239, 68, 68, 0.05)', borderColor: 'rgba(239, 68, 68, 0.2)' }
+              }}
+            >
+              <DeleteIcon sx={{ fontSize: 15 }} />
+            </IconButton>
           </Box>
         </Box>
       </Paper>
@@ -300,67 +427,130 @@ function TOTPPageContent() {
   };
 
   return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 800, fontFamily: 'var(--font-space-grotesk)', letterSpacing: '-0.02em' }}>
-              TOTP Codes
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Manage your two-factor authentication codes
-            </Typography>
-          </Box>
-          <Button 
-            variant="contained" 
-            startIcon={<AddIcon sx={{ fontSize: 18 }} />} 
-            onClick={() => setShowNew(true)}
+    <Box sx={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      minHeight: '100vh', 
+      pb: 10,
+      bgcolor: '#0A0908',
+      pt: { xs: 2, md: 4 }
+    }}>
+      {/* Header & Back Action */}
+      <Box sx={{ px: { xs: 2, md: 6 } }}>
+        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
+          <IconButton 
+            onClick={() => router.back()} 
             sx={{ 
-              borderRadius: '12px', 
-              fontWeight: 700, 
-              px: 3,
-              bgcolor: '#10B981',
-              color: '#000',
-              '&:hover': { bgcolor: alpha('#10B981', 0.8) }
+              color: '#fff', 
+              bgcolor: '#161412',
+              border: '1px solid #1C1A18',
+              '&:hover': { bgcolor: '#1C1A18' }
             }}
           >
-            Add TOTP
+            <ArrowLeft size={20} />
+          </IconButton>
+          <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+            Smart Codes
+          </Typography>
+        </Stack>
+
+        {/* Filter/Search Bar & Add Button Stack */}
+        <Stack 
+          direction={{ xs: 'column', sm: 'row' }} 
+          spacing={2} 
+          justifyContent="space-between" 
+          alignItems={{ xs: 'stretch', sm: 'center' }} 
+          sx={{ mb: 4, maxWidth: 800 }}
+        >
+          <TextField
+            fullWidth
+            placeholder="Search codes..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            variant="filled"
+            InputProps={{
+              disableUnderline: true,
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: "rgba(255,255,255,0.3)", fontSize: 18 }} />
+                </InputAdornment>
+              ),
+              sx: { 
+                borderRadius: '16px', 
+                bgcolor: '#161412', 
+                border: '1px solid #1C1A18',
+                height: 48,
+                '& input': { color: '#fff' }
+              }
+            }}
+            sx={{ maxWidth: { xs: '100%', sm: 400 }, flexGrow: 1 }}
+          />
+          <Button 
+            variant="contained" 
+            startIcon={<Plus size={18} />} 
+            onClick={() => setShowNew(true)}
+            sx={{ 
+              borderRadius: '16px', 
+              fontWeight: 900, 
+              px: 4,
+              height: 48,
+              bgcolor: '#10B981',
+              color: '#000',
+              textTransform: 'none',
+              fontSize: '0.95rem',
+              '&:hover': { bgcolor: '#059669' },
+              boxShadow: '0 8px 16px rgba(16, 185, 129, 0.1)'
+            }}
+          >
+            Add Code
           </Button>
-        </Box>
+        </Stack>
 
-        <TextField
-          fullWidth
-          placeholder="Search TOTP codes..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{
-            maxWidth: 400,
-            '& .MuiOutlinedInput-root': {
-              borderRadius: '16px',
-              bgcolor: 'rgba(255, 255, 255, 0.02)',
-              '& fieldset': { borderColor: 'rgba(255, 255, 255, 0.08)' },
-              '&:hover fieldset': { borderColor: 'rgba(255, 255, 255, 0.2)' },
-              '&.Mui-focused fieldset': { borderColor: 'primary.main' }
-            }
-          }}
-        />
-
+        {/* Main List Area */}
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 12 }}>
-            <CircularProgress />
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 12, maxWidth: 800 }}>
+            <CircularProgress color="primary" />
           </Box>
         ) : totpCodes.length === 0 ? (
-          <Paper sx={{ p: 8, textAlign: 'center', borderRadius: '32px', bgcolor: 'rgba(255, 255, 255, 0.01)', border: '1px dashed', borderColor: 'rgba(255, 255, 255, 0.1)' }}>
-            <ShieldIcon sx={{ fontSize: 64, display: 'block', mx: 'auto', mb: 3, color: 'rgba(255, 255, 255, 0.1)' }} />
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>No TOTP codes found</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4 }}>
-              Start by adding your first two-factor authentication code
+          <Paper 
+            elevation={0}
+            sx={{ 
+              p: 10, 
+              textAlign: 'center', 
+              borderRadius: '32px', 
+              bgcolor: '#161412', 
+              border: '1px dashed #1C1A18',
+              maxWidth: 800,
+              backgroundImage: 'none'
+            }}
+          >
+            <ShieldIcon sx={{ fontSize: 64, display: 'block', mx: 'auto', mb: 3, color: 'rgba(255, 255, 255, 0.05)' }} />
+            <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>
+              No Smart Codes
             </Typography>
-            <Button variant="outlined" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => setShowNew(true)} sx={{ borderRadius: '12px' }}>
-              Add TOTP
+            <Typography variant="body2" sx={{ color: '#9B9691', maxWidth: 320, mx: 'auto', mb: 4 }}>
+              Your secure vault is ready to manage two-step verification codes.
+            </Typography>
+            <Button 
+              variant="contained" 
+              startIcon={<Plus size={18} />} 
+              onClick={() => setShowNew(true)} 
+              sx={{ 
+                borderRadius: '16px', 
+                fontWeight: 900, 
+                px: 4,
+                height: 48,
+                bgcolor: '#10B981',
+                color: '#000',
+                textTransform: 'none',
+                '&:hover': { bgcolor: '#059669' }
+              }}
+            >
+              Add Code
             </Button>
           </Paper>
         ) : (
-          <Grid container spacing={3}>
+          <Stack spacing={1.5} sx={{ maxWidth: 800 }}>
             {totpCodes
               .filter((totp) => {
                 const q = search.trim().toLowerCase();
@@ -372,13 +562,14 @@ function TOTPPageContent() {
                 );
               })
               .map((totp) => (
-                <Grid size={{ xs: 12, md: 6, lg: 4 }} key={totp.$id}>
-                  <TOTPCard totp={totp} />
-                </Grid>
+                <TOTPCard key={totp.$id} totp={totp} />
               ))}
-          </Grid>
+          </Stack>
         )}
+      </Box>
 
+      {/* Dialogs */}
+      {showNew && (
         <NewTotpDialog
           open={showNew}
           onClose={() => {
@@ -387,56 +578,68 @@ function TOTPPageContent() {
           }}
           initialData={editingTotp || undefined}
         />
+      )}
 
+      {deleteDialog.open && (
         <Dialog
           open={deleteDialog.open}
           onClose={() => setDeleteDialog({ open: false, id: null })}
+          keepMounted={false}
+          disablePortal={true}
           PaperProps={{
             sx: {
               borderRadius: '24px',
-              bgcolor: 'rgba(10, 10, 10, 0.9)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid',
-              borderColor: 'rgba(255, 255, 255, 0.08)',
+              bgcolor: '#161412',
+              border: '1px solid #1C1A18',
               backgroundImage: 'none',
-              p: 1
+              p: 2,
+              maxWidth: 400,
+              width: '100%'
             }
           }}
         >
-          <DialogTitle sx={{ fontWeight: 800, fontFamily: 'var(--font-space-grotesk)' }}>
-            Delete TOTP Code
+          <DialogTitle sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', px: 3, pt: 3 }}>
+            Delete Smart Code
           </DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 3 }}>
-              Are you sure you want to delete this TOTP code? This action cannot be undone.
+          <DialogContent sx={{ px: 3 }}>
+            <Typography variant="body2" sx={{ color: '#9B9691', mb: 3, lineHeight: 1.6 }}>
+              Are you sure you want to delete this verification code? This action cannot be undone.
             </Typography>
-            {deleteDialog.open && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2, borderRadius: '16px', bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
-                {(() => {
-                  const selected = totpCodes.find((t) => t.$id === deleteDialog.id);
-                  if (!selected) return null;
-                  return (
-                    <>
-                      <Box>
-                        <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mb: 0.5 }}>Issuer</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{selected.issuer || "—"}</Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mb: 0.5 }}>Account</Typography>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{selected.accountName || "—"}</Typography>
-                      </Box>
-                    </>
-                  );
-                })()}
-              </Box>
-            )}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2.5, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid rgba(255,255,255,0.03)' }}>
+              {(() => {
+                const selected = totpCodes.find((t) => t.$id === deleteDialog.id);
+                if (!selected) return null;
+                return (
+                  <>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#9B9691', display: 'block', mb: 0.5, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Issuer</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>{selected.issuer || "—"}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" sx={{ color: '#9B9691', display: 'block', mb: 0.5, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>{selected.accountName || "—"}</Typography>
+                    </Box>
+                  </>
+                );
+              })()}
+            </Box>
           </DialogContent>
-          <DialogActions sx={{ p: 3, gap: 1 }}>
+          <DialogActions sx={{ p: 3, gap: 1.5, justifyContent: 'space-between' }}>
             <Button 
               fullWidth 
               variant="outlined" 
               onClick={() => setDeleteDialog({ open: false, id: null })}
-              sx={{ borderRadius: '12px' }}
+              sx={{ 
+                borderRadius: '14px', 
+                borderColor: 'rgba(255, 255, 255, 0.1)', 
+                color: '#fff',
+                textTransform: 'none',
+                fontWeight: 800,
+                '&:hover': {
+                  borderColor: '#fff',
+                  bgcolor: 'rgba(255, 255, 255, 0.05)'
+                }
+              }}
             >
               Cancel
             </Button>
@@ -451,13 +654,21 @@ function TOTPPageContent() {
                   });
                 }
               }}
-              sx={{ borderRadius: '12px' }}
+              sx={{ 
+                borderRadius: '14px', 
+                bgcolor: '#EF4444',
+                color: '#fff',
+                textTransform: 'none',
+                fontWeight: 800,
+                '&:hover': { bgcolor: '#DC2626' }
+              }}
             >
               Delete
             </Button>
           </DialogActions>
         </Dialog>
-      </Box>
+      )}
+    </Box>
   );
 }
 
@@ -465,8 +676,8 @@ export default function TOTPPage() {
   return (
     <Suspense
       fallback={
-        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#000' }}>
-          <CircularProgress />
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#0A0908' }}>
+          <CircularProgress color="primary" />
         </Box>
       }
     >
@@ -474,3 +685,4 @@ export default function TOTPPage() {
     </Suspense>
   );
 }
+
