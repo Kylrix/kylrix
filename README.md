@@ -1,61 +1,63 @@
 # Kylrix 🏴
 
-**The only E2EE workspace where productivity tools and autonomous agents coexist.**
+**The Sovereign Agentic OS for the $100B+ Future of Work.**
 
-For too long, agentic work has been a friction-filled mess of fragmented installs, API keys, and local environments that break the moment you close your laptop. While the market for AI agents explodes, the reality is stuck in pilot mode because where people work is not where their agents live.
+Kylrix is the first of its kind—a cutting-edge, open-source workspace where high-performance productivity tools and autonomous AI agents coexist in a single, E2EE environment. We aren't just building a tool; we are building the infrastructure for the next century of human-AI collaboration.
 
-**Kylrix follows the blueprint of the future: Cloud Agents.**
+For too long, agentic work has been a friction-filled mess of fragmented installs and data silos. While the market for AI agents explodes, the reality is stuck in "pilot mode" because where people work is not where their agents live. 
 
-One sovereign platform. You collaborate with people, assign tasks to agents, and work gets done while you sleep. No 'secret phrases', no data silos—just pure, high-performance productivity.
+**Kylrix changes everything.** By unifying agentic infrastructure with a world-class productivity suite, we are poised to capture the **$100B+ combined market** of AI agents and enterprise productivity.
 
 ---
 
-## 🚀 Why Kylrix?
+## 🚀 The First Sovereign Workspace
 
-Kylrix is the first truly sovereign, crypto-native workspace built for the new wave of **Sovereign Engineers** and **DAOs**. We eliminate the latency between thinking and doing by unifying your agentic infrastructure with your daily tools.
+Kylrix follows the blueprint of the future: **Cloud-Native Sovereign Agents.**
+
+One platform. You collaborate with people, assign tasks to agents, and work gets done while you sleep. We are putting professional-grade agentic power into the hands of the average user, democratizing the most advanced technology of our time through the power of open source.
 
 *   **⚡ Integrated Agentic Infra:** Your tools and agents live in the same environment. No more jumping between wrappers.
-*   **🔒 Root of Trust:** Solana wallets serve as the foundation for encryption, collaboration, and identity.
-*   **🛡️ Sovereign E2EE:** A high-performance alternative to Notion and Discord where you own your data. Zero lock-in, zero surveillance.
-*   **💸 Agent Economy:** Powered by Solana, agents can handle transactions and get paid for the work they complete autonomously.
+*   **🔒 Root of Trust:** Solana-native identity serves as the foundation for encryption, collaboration, and sovereignty.
+*   **🛡️ Sovereign E2EE:** A high-performance, private alternative to legacy suites where *you* own the data. 
+*   **💸 The Agent Economy:** Powered by Solana, your agents can handle transactions and get paid for the work they complete autonomously.
 
 ---
 
-## 🏗️ The Ecosystem
+## 🏗️ The Unified Suite
 
-Kylrix is designed to be a cohesive, end-to-end encrypted environment for teams who require absolute privacy and decentralized control over their capital and workflows.
+Kylrix is a cohesive ecosystem designed for teams and individuals who demand absolute privacy and decentralized control.
 
 *   **Kylrix Note:** Secure, markdown-based knowledge management.
-*   **Kylrix Vault:** Hardened storage for secrets and digital assets.
+*   **Kylrix Vault:** Hardened, zero-knowledge storage for secrets and digital assets.
 *   **Kylrix Flow:** Task orchestration designed for both humans and AI agents.
-*   **Kylrix Connect:** P2P-driven communication layer.
+*   **Kylrix Connect:** Real-time communication and P2P-driven collaboration.
 
 ---
 
-## 🛠️ Technical Philosophy
+## 🛠️ Technical Excellence
 
-We prioritize performance and digital autonomy. Kylrix is built with a lean, efficient stack to ensure your workspace remains fast and your agents remain responsive.
+We prioritize performance and digital autonomy. Kylrix is built with a lean, modern stack to ensure your workspace remains fast and your agents remain responsive.
 
-*   **Languages:** Zig, Go, TypeScript, and Dart.
-*   **Encryption:** Client-side E2EE using Solana-based key management.
-*   **Chain:** Solana for high-velocity agentic payments and trust.
+*   **Core Stack:** TypeScript, Next.js, and React.
+*   **Identity & Payments:** Solana (SVM).
+*   **Encryption:** Client-side E2EE using hardware-backed keys and Solana-based management.
 
 ---
 
 ## 🎨 Design: Muted Bold
 
-Kylrix follows a high-contrast, minimalist aesthetic designed for deep focus.
+Kylrix follows a high-contrast, "Muted V3" aesthetic designed for deep focus and elite craftsmanship.
 *   **Background:** #000000 (Pitch Black)
-*   **Components:** Deep Ash / Graphite
-*   **Accents:** High-vibrancy highlights
+*   **Surfaces:** Deep Ash / Graphite
+*   **Philosophy:** Chrome that disappears, leaving only your work and your agents.
 
 ---
 
-## 🤝 Get Involved
+## 🤝 Join the Sovereign Revolution
 
-Kylrix is built for those who value privacy as much as efficiency. Whether you are a sovereign architect or an agentic developer, the future of productivity is here.
+Kylrix is open source and built for those who value privacy as much as efficiency. Whether you are a sovereign architect or an agentic developer, the future is being built here.
 
 *   **Repository:** [github.com/Kylrix/kylrix](https://github.com/Kylrix/kylrix)
-*   **Connect:** Join the conversation on [Threads](https://www.threads.net/@nathfavour)
+*   **Connect:** Join the movement on [Threads](https://www.threads.net/@nathfavour)
 
 **Build freely. Stay sovereign. Work while you sleep.** 🌙
