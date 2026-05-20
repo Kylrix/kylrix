@@ -127,17 +127,21 @@ function NotesContent() {
   }, [handleNoteCreated, openOverlay]);
 
   useEffect(() => {
-    setConfiguration({
-      isVisible: true,
-      mainColor: '#EC4899',
-      actions: [
-        { id: 'new-note', label: 'NEW NOTE', icon: <NoteIcon />, onClick: () => openComposer('note') },
-        { id: 'new-project', label: 'NEW PROJECT', icon: <ProjectIcon />, onClick: () => openComposer('project') },
-        { id: 'manage-tags', label: 'MANAGE TAGS', icon: <TagIcon />, onClick: () => router.push('/note/tags') },
-      ]
-    });
+    if (isDynamicSidebarOpen) {
+      setConfiguration({ isVisible: false });
+    } else {
+      setConfiguration({
+        isVisible: true,
+        mainColor: '#EC4899',
+        actions: [
+          { id: 'new-note', label: 'NEW NOTE', icon: <NoteIcon />, onClick: () => openComposer('note') },
+          { id: 'new-project', label: 'NEW PROJECT', icon: <ProjectIcon />, onClick: () => openComposer('project') },
+          { id: 'manage-tags', label: 'MANAGE TAGS', icon: <TagIcon />, onClick: () => router.push('/note/tags') },
+        ]
+      });
+    }
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, openComposer, router]);
+  }, [setConfiguration, resetConfiguration, openComposer, router, isDynamicSidebarOpen]);
 
   const handleManualRefresh = useCallback(async () => {
     setIsRefreshing(true);
