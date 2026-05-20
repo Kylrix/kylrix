@@ -113,32 +113,23 @@ We are committed to reviewing legitimate, responsibly disclosed security concern
 
 ---
 
-## 🛠️ Immediate Local Contribution
+## 🛠️ Get Started in 60 Seconds
 
-We believe contributing to open source should be free of environment configuration hell. We have optimized our pipeline to ensure that onboarding a new developer node takes less than sixty seconds.
+We believe contributing should be free of environment configuration hell. 
 
-### Prerequisites
-Make sure you have `pnpm` and `docker` installed on your host system.
-
-### Steps to Localhost
 1. **Clone the Source Tree:**
    ```bash
-   git clone https://github.com/nathfavour/kylrix.git
+   git clone https://github.com/Kylrix/kylrix.git
    cd kylrix
    ```
 
-2. **Boot the Appwrite Docker Framework:**
-   ```bash
-   docker compose -f lib/appwrite/docker-compose.yml up -d
-   ```
-
-3. **Install Dependencies & Launch Engine:**
+2. **Install & Launch:**
    ```bash
    pnpm install
    pnpm dev
    ```
 
-The local Next.js Turbopack compiler will fire up instantly. Open your browser to **`http://localhost:3005`** and you are ready to write code, test micro-interactions, or contribute directly to the WESP security mesh.
+Open your browser to **`http://localhost:3005`**. For a deeper guide on contributing, please read our [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
