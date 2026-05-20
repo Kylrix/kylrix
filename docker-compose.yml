@@ -1,0 +1,31 @@
+# Kylrix Self-Hosting Docker Compose
+# Compatible with Docker and Podman
+
+services:
+  kylrix:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Pass these build args if you are using a custom Appwrite instance
+        - NEXT_PUBLIC_APPWRITE_ENDPOINT=${APPWRITE_ENDPOINT:-https://api.kylrix.space/v1}
+        - NEXT_PUBLIC_APPWRITE_PROJECT_ID=${APPWRITE_PROJECT_ID:-67fe9627001d97e37ef3}
+        - NEXT_PUBLIC_DOMAIN=${DOMAIN:-kylrix.space}
+    container_name: kylrix
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      # Runtime environment variables
+      - NODE_ENV=production
+      - NEXT_PUBLIC_APP_URL=${APP_URL:-http://localhost:3000}
+      - APPWRITE_API=${APPWRITE_ENDPOINT:-https://api.kylrix.space/v1}
+      - ADMINS=${ADMINS}
+      - KYLRIX_INTERNAL_JOBS_SECRET=${INTERNAL_JOBS_SECRET}
+      # Add other env vars from env.sample as needed
+    networks:
+      - kylrix-network
+
+networks:
+  kylrix-network:
+    driver: bridge
