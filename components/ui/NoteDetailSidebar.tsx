@@ -92,6 +92,10 @@ export interface NoteDetailSidebarProps {
   showHeaderDeleteButton?: boolean;
 }
 
+import { useFAB } from '@/context/FABContext';
+import { useContext } from 'react';
+import { FABContext } from '@/context/FABContext';
+
 export function NoteDetailSidebar({
   note,
   onUpdate,
@@ -100,6 +104,18 @@ export function NoteDetailSidebar({
   showExpandButton = true,
   showHeaderDeleteButton = true,
 }: NoteDetailSidebarProps) {
+  const context = useContext(FABContext);
+
+  useEffect(() => {
+    if (context) {
+      context.setConfiguration({ isVisible: false });
+    }
+    return () => {
+      if (context) {
+        context.resetConfiguration();
+      }
+    };
+  }, [context]);
 
   const theme = useTheme();
   const { open: openUnified } = useUnifiedDrawer();
