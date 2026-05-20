@@ -3210,15 +3210,19 @@ export async function rotatePublicNoteLink(noteId: string): Promise<(Notes & { d
   }
 }
 
-export async function getCurrentPublicNoteShareUrl(noteId: string): Promise<string | null> {
+export async function getCurrentPublicNoteShareUrl(noteId: string, note?: Notes): Promise<string | null> {
   try {
-    const note = await getNote(noteId);
-    if (!isNotePublic(note)) return null;
+    const liveNote = note || await getNote(noteId);
+    if (!isNotePublic(liveNote)) return null;
+
     const currentUser = await getCurrentUser();
     if (!currentUser) return null;
-    const ownerId = note.userId || currentUser.$id;
-    const key = await loadT4NoteKey(noteId, ownerId);
-    return getShareableUrl(noteId, await exportUrlSafeCryptoKey(key));
+
+    const ownerId = liveNote.userId || currentUser.$id;
+    const key = await loadT4NoteKey(liveNote.$id, ownerId);
+    const exportedKey = await exportUrlSafeCryptoKey(key);
+    
+    return getShareableUrl(liveNote.$id, exportedKey);
   } catch (error) {
     console.error('getCurrentPublicNoteShareUrl error:', error);
     return null;

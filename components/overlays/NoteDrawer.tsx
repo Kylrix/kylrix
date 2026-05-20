@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
-import { X } from 'lucide-react';
+import { X, Check } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
 import { useNoteDrawer } from '@/context/NoteDrawerContext';
 import { useNotes } from '@/context/NotesContext';
@@ -72,7 +72,7 @@ export function NoteDrawer() {
             {isExpanded ? 'Full Screen Note' : 'New Note'}
           </Typography>
           <IconButton onClick={handleClose} sx={{ color: '#9B9691' }}>
-            <X size={20} />
+            <Check size={20} />
           </IconButton>
         </Box>
 

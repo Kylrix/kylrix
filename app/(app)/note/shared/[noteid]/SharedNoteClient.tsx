@@ -202,16 +202,17 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
       throw new Error('This note is encrypted and requires a valid decryption key in the URL to view its contents.');
     }
 
-    if (isT4EncryptedPublicNote) {
-      const keyBuffer = ecosystemSecurity.decodeBase64(key);
-      const cryptoKey = await crypto.subtle.importKey(
-        'raw',
-        keyBuffer as any,
-        { name: 'AES-GCM', length: 256 },
-        true,
-        ['decrypt']
-      );
+    // Decrypt using the URI key (no MEK required)
+    const keyBuffer = ecosystemSecurity.decodeBase64(key);
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw',
+      keyBuffer as any,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['decrypt']
+    );
 
+    if (isT4EncryptedPublicNote) {
       return {
         ...note,
         title: await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || note.title || '', cryptoKey),

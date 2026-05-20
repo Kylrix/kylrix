@@ -4,14 +4,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box,
   Button,
-  Chip,
-  Divider,
-  FormControlLabel,
   IconButton,
-  InputAdornment,
   Paper,
   Stack,
-  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -21,21 +16,15 @@ import {
   useTheme,
 } from '@mui/material';
 import {
-  Close as CloseIcon,
-  Code as CodeIcon,
   Description as DescriptionIcon,
-  AttachMoney as MoneyIcon,
   ExpandLess as ExpandLessIcon,
   ExpandMore as ExpandMoreIcon,
-  FormatBold as BoldIcon,
-  FormatItalic as ItalicIcon,
-  FormatUnderlined as UnderlineIcon,
   DragHandle as DragHandleIcon,
-  LocalOffer as TagIcon,
   Lock as PrivateIcon,
   Public as PublicIcon,
   Brush as PencilIcon,
 } from '@mui/icons-material';
+import { Check } from 'lucide-react';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useToast } from '@/components/ui/Toast';
@@ -82,6 +71,7 @@ export default function CreateNoteForm({
   const [format, setFormat] = useState<'text' | 'doodle'>(initialFormat);
   const [tags, setTags] = useState<string[]>(normalizeTags(initialContent?.tags || []));
   const [isPublic, setIsPublic] = useState(false);
+  const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
   const [currentTag, setCurrentTag] = useState('');
   const [isExpanded, setIsExpanded] = useState(!isMobile);
   const [isSaving, setIsSaving] = useState(false);
@@ -96,6 +86,20 @@ export default function CreateNoteForm({
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
   const createdToastShown = useRef(false);
   const persistInFlightRef = useRef<Promise<Notes | null> | null>(null);
+
+  // Seamless auto-title logic
+  useEffect(() => {
+    if (isTitleManuallyEdited) return;
+
+    const generatedTitle = buildAutoTitleFromContent(content);
+    if (content.trim()) {
+      if (generatedTitle !== title) {
+        setTitle(generatedTitle);
+      }
+    } else {
+      setTitle('');
+    }
+  }, [content, isTitleManuallyEdited, title]);
 
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -503,144 +507,44 @@ export default function CreateNoteForm({
             </IconButton>
 
             <IconButton onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              <CloseIcon />
+              <Check size={20} />
             </IconButton>
           </Stack>
         </Box>
 
         <Box sx={{ px: 2, py: 2, overflowY: 'auto', minHeight: 0, flex: 1 }}>
           <Stack spacing={2.25}>
-            <TextField
-              fullWidth
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Title"
-              variant="standard"
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  fontSize: '1.4rem',
-                  fontWeight: 900,
-                  color: 'white',
-                  '& input::placeholder': { color: 'rgba(255,255,255,0.22)', opacity: 1 },
-                }
-              }}
-              sx={{
-                bgcolor: 'rgba(255,255,255,0.02)',
-                borderRadius: '18px',
-                px: 2,
-                py: 1.5,
-                border: '1px solid rgba(255,255,255,0.05)',
-              }}
-            />
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <TagIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.5)' }} />
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  Tags
-                </Typography>
-              </Stack>
-              <Stack direction="row" spacing={1} flexWrap="wrap">
-                {tags.map((tag) => (
-                  <Chip
-                    key={tag}
-                    label={tag}
-                    onDelete={() => removeTag(tag)}
-                    sx={{
-                      bgcolor: 'rgba(99,102,241,0.12)',
-                      color: 'white',
-                      border: '1px solid rgba(99,102,241,0.18)',
-                    }}
-                  />
-                ))}
-              </Stack>
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  value={currentTag}
-                  onChange={(event) => setCurrentTag(event.target.value)}
-                  onKeyDown={handleTagKeyDown}
-                  placeholder="Add a tag"
-                />
-                <Button
-                  variant="outlined"
-                  onClick={() => appendTag(currentTag)}
-                  sx={{ minWidth: 120, borderColor: 'rgba(255,255,255,0.1)', color: 'white' }}
-                >
-                  Add tag
-                </Button>
-              </Stack>
-              {existingTags.length > 0 && (
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  {existingTags
-                    .filter((tag) => !tags.includes(tag))
-                    .slice(0, 10)
-                    .map((tag) => (
-                      <Chip
-                        key={tag}
-                        label={tag}
-                        onClick={() => appendTag(tag)}
-                        clickable
-                        variant="outlined"
-                        sx={{
-                          color: 'rgba(255,255,255,0.82)',
-                          borderColor: 'rgba(255,255,255,0.08)',
-                        }}
-                      />
-                    ))}
-                </Stack>
-              )}
-            </Box>
-
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
-
-            {hasMasterKey && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <MoneyIcon sx={{ fontSize: 18, color: 'rgba(255,255,255,0.5)' }} />
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.55)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                    Paywall
-                  </Typography>
-                </Stack>
-                <FormControlLabel
-                  control={<Switch checked={hasPaywall} onChange={(e) => setHasPaywall(e.target.checked)} size="small" />}
-                  label={<Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.82)' }}>Lock behind paywall</Typography>}
-                />
-                {hasPaywall && (
-                  <TextField
-                    fullWidth
-                    size="small"
-                    type="number"
-                    inputProps={{ step: '0.01', min: '0' }}
-                    InputProps={{
-                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                    }}
-                    value={paywallAmount}
-                    onChange={(e) => setPaywallAmount(e.target.value ? parseFloat(e.target.value) : '')}
-                    placeholder="Price in USD"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '12px',
-                      }
-                    }}
-                  />
-                )}
-              </Box>
+            {(content.trim().length >= 5 || isTitleManuallyEdited) && (
+              <TextField
+                fullWidth
+                value={title}
+                onChange={(event) => {
+                  setTitle(event.target.value);
+                  setIsTitleManuallyEdited(true);
+                }}
+                placeholder="Title"
+                variant="standard"
+                InputProps={{
+                  disableUnderline: true,
+                  sx: {
+                    fontSize: '1.4rem',
+                    fontWeight: 900,
+                    color: 'white',
+                    '& input::placeholder': { color: 'rgba(255,255,255,0.22)', opacity: 1 },
+                  }
+                }}
+                sx={{
+                  bgcolor: 'rgba(255,255,255,0.02)',
+                  borderRadius: '18px',
+                  px: 2,
+                  py: 1.5,
+                  border: '1px solid rgba(255,255,255,0.05)',
+                }}
+              />
             )}
-
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
 
             {format === 'text' ? (
               <>
-                <Stack direction="row" spacing={1} flexWrap="wrap">
-                  <Button size="small" onClick={() => wrapSelection('**')} startIcon={<BoldIcon />} sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }} variant="outlined">Bold</Button>
-                  <Button size="small" onClick={() => wrapSelection('*')} startIcon={<ItalicIcon />} sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }} variant="outlined">Italic</Button>
-                  <Button size="small" onClick={() => wrapSelection('<u>', '</u>')} startIcon={<UnderlineIcon />} sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }} variant="outlined">Underline</Button>
-                  <Button size="small" onClick={() => wrapSelection('`')} startIcon={<CodeIcon />} sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }} variant="outlined">Code</Button>
-                </Stack>
-
                 <TextField
                   multiline
                   minRows={isExpanded ? 14 : 8}
@@ -692,14 +596,6 @@ export default function CreateNoteForm({
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>
                 Right click is handled here so copy, cut, paste, and shortcuts stay local.
               </Typography>
-              <Button
-                variant="text"
-                onClick={handleClose}
-                disabled={isSaving}
-                sx={{ color: '#EC4899', fontWeight: 800 }}
-              >
-                Done
-              </Button>
             </Box>
           </Stack>
         </Box>

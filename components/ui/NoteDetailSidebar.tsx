@@ -433,12 +433,20 @@ export function NoteDetailSidebar({
   };
 
   const handleCopyShareLink = async () => {
-    const url = await getCurrentPublicNoteShareUrl(liveNote.$id);
+    if (!isPublic) {
+      showError('Note is private', 'Make the note public before copying its link.');
+      return;
+    }
+
+    const url = isT4Encrypted
+      ? await getCurrentPublicNoteShareUrl(liveNote.$id, liveNote as any)
+      : getShareableUrl(liveNote.$id);
+
     if (url) {
-      navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(url);
       showSuccess('Link copied to clipboard');
     } else {
-      showError('Vault Locked', 'Unlock vault to copy link.');
+      showError('Shared link unavailable', 'Could not resolve the shared note URL.');
     }
   };
 
@@ -450,9 +458,9 @@ export function NoteDetailSidebar({
   const handleCreateTaskFromNote = useCallback(async () => {
     setIsCreatingTaskFromNote(true);
     try {
-      const task = await createTaskFromNote(liveNote);
+      const task = await createTaskFromNote(liveNote as any);
       if (task) {
-        onUpdate({ ...liveNote, linkedTaskId: task.$id });
+        onUpdate({ ...liveNote, linkedTaskId: task.$id } as any);
         showSuccess('Goal created from note');
         setShowActionHub(false);
       }
@@ -462,24 +470,6 @@ export function NoteDetailSidebar({
       setIsCreatingTaskFromNote(false);
     }
   }, [liveNote, onUpdate, showSuccess, showError]);
-
-  const handleOpenSharedNote = useCallback(async () => {
-    if (!isPublic) {
-      showError('Note is private', 'Make the note public before opening its shared link.');
-      return;
-    }
-
-    const sharedUrl = isT4Encrypted
-      ? await getCurrentPublicNoteShareUrl(liveNote.$id)
-      : getShareableUrl(liveNote.$id);
-
-    if (!sharedUrl) {
-      showError('Shared link unavailable', 'Could not resolve the shared note URL.');
-      return;
-    }
-
-    window.open(sharedUrl, '_blank', 'noopener,noreferrer');
-  }, [isPublic, isT4Encrypted, liveNote.$id, showError]);
 
   const handleStartNoteHuddle = useCallback(() => {
     const ownerId = liveNote.userId;
@@ -556,10 +546,10 @@ export function NoteDetailSidebar({
           <Tooltip title="Action hub"><IconButton onClick={() => setShowActionHub(true)} sx={{ color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.08) }}><ActionIcon fontSize="small" /></IconButton></Tooltip>
           <Tooltip title="Start huddle"><IconButton onClick={handleStartNoteHuddle} sx={{ color: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.08) }}><VideoCallIcon fontSize="small" /></IconButton></Tooltip>
           {showExpandButton && isPublic && (
-            <Tooltip title={isPublic ? 'Open shared note' : 'Make public to open shared link'}>
+            <Tooltip title="Copy share link">
               <span>
                 <IconButton
-                  onClick={handleOpenSharedNote}
+                  onClick={handleCopyShareLink}
                   sx={{ color: theme.palette.text.secondary }}
                 >
                   <LinkIcon fontSize="small" />
