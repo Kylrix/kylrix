@@ -77,6 +77,8 @@ function DashboardPageContent() {
   const { analyze, registerCreateModal } = useAI();
   const theme = useTheme();
   const isMobileView = useMediaQuery(theme.breakpoints.down('md'));
+  const { requestSudo } = useSudo();
+  const { setConfiguration, resetConfiguration } = useFAB();
   
   // Master password modal state
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(needsMasterPassword || !isVaultUnlocked());
@@ -87,62 +89,9 @@ function DashboardPageContent() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [dialogType, setDialogType] = useState<string>("login");
-  const [editCredential, setEditCredential] = useState<Credentials | null>(
-    null,
-  );
-  // Add state for prefilling dialog
+  const [editCredential, setEditCredential] = useState<Credentials | null>(null);
   const [dialogPrefill, setDialogPrefill] = useState<{ name?: string; url?: string } | undefined>(undefined);
-
-  // Handle action query param
-  useEffect(() => {
-    const action = searchParams?.get('action');
-    if (action && ['add-login', 'add-card'].includes(action)) {
-      setEditCredential(null);
-      setDialogType(action.split('-')[1]);
-      setShowDialog(true);
-      
-      // Clean up URL
-      const params = new URLSearchParams(window.location.search);
-      params.delete('action');
-      const newPath = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
-      router.replace(newPath);
-    }
-  }, [searchParams, router]);
-
-  const { setConfiguration, resetConfiguration } = useFAB();
-
-  useEffect(() => {
-    setConfiguration({
-      isVisible: true,
-      mainColor: '#10B981',
-      actions: [
-        { id: 'add', label: 'ADD PASSWORD', icon: <Plus size={20} />, onClick: () => handleAdd() },
-        { id: 'organize', label: 'AI ORGANIZE', icon: <Sparkles size={20} />, onClick: () => handleSmartOrganize() },
-      ]
-    });
-    return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, handleSmartOrganize]);
-
-  // Update master password drawer state when auth state changes
-  useEffect(() => {
-    if (needsMasterPassword || !isVaultUnlocked()) {
-      setShowMasterPassDrawer(true);
-    }
-  }, [needsMasterPassword, isVaultUnlocked]);
-
-  const [selectedCredential, setSelectedCredential] =
-    useState<Credentials | null>(null);
-
-  // Register the modal opener
-  useEffect(() => {
-    registerCreateModal((prefill) => {
-      setEditCredential(null);
-      setDialogType("login");
-      setDialogPrefill(prefill);
-      setShowDialog(true);
-    });
-  }, [registerCreateModal]);
-
+  const [selectedCredential, setSelectedCredential] = useState<Credentials | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
   // Pagination state
@@ -159,15 +108,19 @@ function DashboardPageContent() {
   const [_decryptedTotpSecrets, setDecryptedTotpSecrets] = useState<any[]>([]);
 
   // Delete confirmation state
-  const [credentialToDelete, setCredentialToDelete] =
-    useState<Credentials | null>(null);
+  const [credentialToDelete, setCredentialToDelete] = useState<Credentials | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const { requestSudo } = useSudo();
 
   // AI Organization State
   const [organizing, setOrganizing] = useState(false);
 
-  // Fetch all credentials once
+  // Handlers
+  const handleAdd = useCallback(() => {
+    setEditCredential(null);
+    setDialogType("login");
+    setShowDialog(true);
+  }, []);
+
   const loadAllCredentials = useCallback(async () => {
     if (!user?.$id) return;
     setLoading(true);
@@ -181,36 +134,6 @@ function DashboardPageContent() {
       setLoading(false);
     }
   }, [user]);
-
-  // AI Smart Organization Handler
-  const handleSmartOrganize = useCallback(async () => {
-    if (!user?.$id || organizing) return;
-
-    setOrganizing(true);
-    const toastId = toast.loading("AI is analyzing your vault structure...");
-
-    try {
-      const analysisResult = (await analyze('VAULT_ORGANIZE', allCredentials)) as { [folderName: string]: string[] };
-
-      if (!analysisResult || Object.keys(analysisResult).length === 0) {
-        toast.error("AI couldn't find a better organization structure.", { id: toastId });
-        return;
-      }
-
-      toast.success("Organization plan ready! Please review.", { id: toastId });
-
-      const confirmMsg = `AI suggests creating/merging into ${Object.keys(analysisResult).length} folders. Proceed?`;
-      if (window.confirm(confirmMsg)) {
-        await applyOrganizationChanges(analysisResult);
-      }
-
-    } catch (error: unknown) {
-      console.error("Smart Organize Failed:", error);
-      toast.error("Failed to organize vault.", { id: toastId });
-    } finally {
-      setOrganizing(false);
-    }
-  }, [user?.$id, organizing, allCredentials, applyOrganizationChanges, analyze]);
 
   const applyOrganizationChanges = useCallback(async (plan: { [folderName: string]: string[] }) => {
     const toastId = toast.loading("Applying changes...");
@@ -249,6 +172,35 @@ function DashboardPageContent() {
     }
   }, [user, allCredentials]);
 
+  const handleSmartOrganize = useCallback(async () => {
+    if (!user?.$id || organizing) return;
+
+    setOrganizing(true);
+    const toastId = toast.loading("AI is analyzing your vault structure...");
+
+    try {
+      const analysisResult = (await analyze('VAULT_ORGANIZE', allCredentials)) as { [folderName: string]: string[] };
+
+      if (!analysisResult || Object.keys(analysisResult).length === 0) {
+        toast.error("AI couldn't find a better organization structure.", { id: toastId });
+        return;
+      }
+
+      toast.success("Organization plan ready! Please review.", { id: toastId });
+
+      const confirmMsg = `AI suggests creating/merging into ${Object.keys(analysisResult).length} folders. Proceed?`;
+      if (window.confirm(confirmMsg)) {
+        await applyOrganizationChanges(analysisResult);
+      }
+
+    } catch (error: unknown) {
+      console.error("Smart Organize Failed:", error);
+      toast.error("Failed to organize vault.", { id: toastId });
+    } finally {
+      setOrganizing(false);
+    }
+  }, [user?.$id, organizing, allCredentials, applyOrganizationChanges, analyze]);
+
   const hydrateVaultData = useCallback(async () => {
     if (!user?.$id || !isVaultUnlocked()) return;
 
@@ -273,37 +225,53 @@ function DashboardPageContent() {
       });
   }, [user, isVaultUnlocked, loadAllCredentials]);
 
+  // Effects
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#10B981',
+      actions: [
+        { id: 'add', label: 'ADD PASSWORD', icon: <Plus size={20} />, onClick: () => handleAdd() },
+        { id: 'organize', label: 'AI ORGANIZE', icon: <Sparkles size={20} />, onClick: () => handleSmartOrganize() },
+      ]
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, handleSmartOrganize, handleAdd]);
+
+  useEffect(() => {
+    const action = searchParams?.get('action');
+    if (action && ['add-login', 'add-card'].includes(action)) {
+      setEditCredential(null);
+      setDialogType(action.split('-')[1]);
+      setShowDialog(true);
+      
+      const params = new URLSearchParams(window.location.search);
+      params.delete('action');
+      const newPath = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+      router.replace(newPath);
+    }
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    if (needsMasterPassword || !isVaultUnlocked()) {
+      setShowMasterPassDrawer(true);
+    }
+  }, [needsMasterPassword, isVaultUnlocked]);
+
+  useEffect(() => {
+    registerCreateModal((prefill) => {
+      setEditCredential(null);
+      setDialogType("login");
+      setDialogPrefill(prefill);
+      setShowDialog(true);
+    });
+  }, [registerCreateModal]);
+
   useEffect(() => {
     if (user?.$id && isVaultUnlocked()) {
       void hydrateVaultData();
     }
   }, [user, isVaultUnlocked, hydrateVaultData]);
-
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    setCurrentPage(1);
-  };
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handlePageSizeChange = (size: number) => {
-    setPageSize(size);
-    setCurrentPage(1);
-  };
-
-  const handleCopy = (value: string) => {
-    navigator.clipboard.writeText(value);
-    toast.success("Copied to clipboard!");
-  };
-
-  const handleAdd = () => {
-    setEditCredential(null);
-    setDialogType("login");
-    setShowDialog(true);
-  };
 
   const handleEdit = (cred: Credentials) => {
     setEditCredential(cred);
@@ -339,6 +307,26 @@ function DashboardPageContent() {
     listRecentCredentials(user.$id)
       .then(setRecentCredentials)
       .catch(console.error);
+  };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setCurrentPage(1);
+  };
+
+  const handleCopy = (value: string) => {
+    navigator.clipboard.writeText(value);
+    toast.success("Copied to clipboard!");
   };
 
   const { isAuthReady } = useAppwriteVault();
