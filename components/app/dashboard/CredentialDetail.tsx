@@ -273,11 +273,11 @@ export default function CredentialDetail({
             <FieldValue>{credential.username || "N/A"}</FieldValue>
           </Box>
 
-          {/* Password */}
+          {/* Secret */}
           <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
               <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Password
+                Secret Value
               </Typography>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 <Button 

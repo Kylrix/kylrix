@@ -149,7 +149,7 @@ export default function CredentialItem({
                 <PersonIcon sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Copy Password">
+            <Tooltip title="Copy Secret">
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleCopy(credential.password || ''); }} sx={{ color: '#10B981', '&:hover': { bgcolor: alpha('#10B981', 0.1) } }}>
                 <LockIcon sx={{ fontSize: 18 }} />
               </IconButton>
@@ -197,7 +197,7 @@ export default function CredentialItem({
         </MenuItem>
         <MenuItem onClick={() => handleCopy(credential.password || '')} sx={{ py: 1.5, px: 2.5 }}>
           <ListItemIcon><LockIcon sx={{ fontSize: 18, color: '#10B981' }} /></ListItemIcon>
-          <ListItemText primary="Copy Password" primaryTypographyProps={{ fontWeight: 800, fontSize: '0.85rem', color: '#10B981' }} />
+          <ListItemText primary="Copy Secret" primaryTypographyProps={{ fontWeight: 800, fontSize: '0.85rem', color: '#10B981' }} />
         </MenuItem>
       </Menu>
 
