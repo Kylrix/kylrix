@@ -355,9 +355,9 @@ export default function CredentialDialog({
                   <Box sx={{ display: 'flex', gap: 1.5 }}>
                     <TextField
                       fullWidth
-                      label="Password"
+                      label="Secret"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Password"
+                      placeholder="Secret"
                       value={form.password}
                       onChange={(e) => setForm({ ...form, password: e.target.value })}
                       required
