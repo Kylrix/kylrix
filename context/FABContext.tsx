@@ -31,7 +31,7 @@ const DEFAULT_CONFIG: FABConfiguration = {
   mainColor: '#6366F1',
 };
 
-const FABContext = createContext<FABContextType | undefined>(undefined);
+export const FABContext = createContext<FABContextType | undefined>(undefined);
 
 export function FABProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<FABConfiguration>(DEFAULT_CONFIG);
