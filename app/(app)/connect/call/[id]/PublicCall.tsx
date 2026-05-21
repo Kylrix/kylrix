@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { CallService } from '@/lib/services/call';
+import { parseCallMetadata } from '@/lib/sdk/calls';
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/lib/auth';
 import { CallInterface } from '@/components/call/CallInterface';
@@ -186,7 +187,7 @@ export function PublicCall({ id }: { id: string }) {
         loadCallDetails();
     }, [loadCallDetails, id]);
 
-    // Handle signals while in landing state (specifically waiting for 'let_in')
+    // Handle signals while in landing state (specifically waiting for 'let_in' or 'reject_join')
     useEffect(() => {
         if (!localUser || requestStatus !== 'pending') return;
 
@@ -199,11 +200,18 @@ export function PublicCall({ id }: { id: string }) {
                     
                     try {
                         const signal = JSON.parse(activity.customStatus);
-                        if (signal.target === localUser.$id && signal.type === 'let_in' && (signal.callId === id || !signal.callId)) {
-                            setShowPreCheck(true);
-                            setJoining(false);
-                            setAutoStartAfterPreCheck(true);
-                            toast.success("Host admitted you to the call!");
+                        if (signal.target === localUser.$id && (signal.callId === id || !signal.callId)) {
+                            if (signal.type === 'let_in') {
+                                setShowPreCheck(true);
+                                setJoining(false);
+                                setAutoStartAfterPreCheck(true);
+                                setRequestStatus('none');
+                                toast.success("Host admitted you to the call!");
+                            } else if (signal.type === 'reject_join') {
+                                setRequestStatus('rejected');
+                                setJoining(false);
+                                toast.error("The host declined your request to join.");
+                            }
                         }
                     } catch (_e) {}
                 }
@@ -236,11 +244,24 @@ export function PublicCall({ id }: { id: string }) {
                 setLocalUser(activeUser);
             }
 
-            // 2. Host or guest, proceed directly to PreCheck
-            // Bypass manual request/admit flow entirely for speed and reliability.
-            setShowPreCheck(true);
-            setJoining(false);
-            setAutoStartAfterPreCheck(false);
+            // Check if approval is required
+            const metadata = parseCallMetadata(linkData?.metadata) as any;
+            const requiresApproval = metadata?.approveParticipants && activeUser?.$id !== linkData?.userId;
+
+            if (requiresApproval) {
+                setRequestStatus('pending');
+                // Send join_request signal to the host
+                await CallService.sendSignal(activeUser.$id, linkData.userId, {
+                    type: 'join_request',
+                    callId: id,
+                    name: displayName || activeUser.name || 'Guest',
+                });
+                setJoining(false);
+            } else {
+                setShowPreCheck(true);
+                setJoining(false);
+                setAutoStartAfterPreCheck(false);
+            }
         } catch (_e) {
             setJoining(false);
             toast.error("Failed to initialize join");
@@ -449,7 +470,7 @@ export function PublicCall({ id }: { id: string }) {
                                         '&:hover': { bgcolor: '#4F46E5' }
                                     }}
                                 >
-                                    {joining ? <CircularProgress size={24} color="inherit" /> : (user ? 'Enter Meeting' : 'Ask to Join')}
+                                    {joining ? <CircularProgress size={24} color="inherit" /> : ((parseCallMetadata(linkData?.metadata) as any)?.approveParticipants && localUser?.$id !== linkData?.userId ? 'Ask to Join' : (user ? 'Enter Meeting' : 'Join Call'))}
                                 </Button>
 
                                 {!user && (
@@ -467,7 +488,7 @@ export function PublicCall({ id }: { id: string }) {
                                 )}
 
                             </Stack>
-                        ) : (
+                        ) : requestStatus === 'pending' ? (
                             <Stack spacing={3} alignItems="center" sx={{ py: 2 }}>
                                 <CircularProgress size={48} sx={{ color: '#6366F1' }} />
                                 <Typography variant="h6" sx={{ fontWeight: 800, color: 'white' }}>
@@ -476,6 +497,23 @@ export function PublicCall({ id }: { id: string }) {
                                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 300 }}>
                                     The host has been notified of your request to join this encrypted P2P session.
                                 </Typography>
+                            </Stack>
+                        ) : (
+                            <Stack spacing={3} alignItems="center" sx={{ py: 2 }}>
+                                <ShieldAlert size={48} color="#EF4444" />
+                                <Typography variant="h6" sx={{ fontWeight: 800, color: '#EF4444' }}>
+                                    Request Declined
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 300 }}>
+                                    The host has declined your request to join this session.
+                                </Typography>
+                                <Button
+                                    variant="outlined"
+                                    onClick={() => setRequestStatus('none')}
+                                    sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'white', borderRadius: 3, px: 4 }}
+                                >
+                                    Try Again
+                                </Button>
                             </Stack>
                         )}
 

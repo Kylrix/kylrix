@@ -105,6 +105,7 @@ export const CallService = {
         participantIds?: string[];
         isPrivate?: boolean;
         allowGuests?: boolean;
+        approveParticipants?: boolean;
     }) {
         const metadata = createCallMetadata({
             scope: input.scope,
@@ -116,10 +117,11 @@ export const CallService = {
             participantIds: input.participantIds || [],
             isPrivate: input.isPrivate ?? true,
             allowGuests: input.allowGuests ?? false,
+            approveParticipants: input.approveParticipants ?? false,
             startsAt: input.startsAt || null,
             expiresAt: null,
             title: input.title,
-        });
+        } as any);
 
         return this.createCallLink(
             input.userId,
@@ -156,10 +158,37 @@ export const CallService = {
     },
 
     async getActiveParticipants(callId: string) {
-        // Since we don't have a call_logs table, we can't easily track active participants
-        // in a persistent way without a separate table. For now, returning empty.
-        // Presence is handled by the 'app_activity' table in the activity service.
-        return [];
+        try {
+            const ACTIVITY_TABLE = APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY;
+            const res = await tablesDB.listRows({
+                databaseId: DB_ID,
+                tableId: ACTIVITY_TABLE,
+                queries: [
+                    Query.limit(100),
+                ]
+            });
+            const active: any[] = [];
+            for (const row of res.rows) {
+                if (row.customStatus) {
+                    try {
+                        const parsed = JSON.parse(row.customStatus);
+                        if (parsed.t === 'call' && parsed.id === callId && parsed.s === 'live') {
+                            active.push({
+                                userId: row.userId,
+                                lastSeen: row.lastSeen,
+                                status: row.status,
+                            });
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+            }
+            return active;
+        } catch (e) {
+            console.error('[CallService] getActiveParticipants failed:', e);
+            return [];
+        }
     },
 
     async createAnonymousSession() {
@@ -240,11 +269,76 @@ export const CallService = {
                     status: 'active',
                     startedAt: row.startsAt,
                     callerId: row.userId,
-                })).filter(link => new Date(link.startsAt).getTime() <= Date.now());
+                })).filter(link => new Date(link.startedAt).getTime() <= Date.now());
             } catch (_e) {
                 return [];
             }
         }, force);
+    },
+
+    async createGhostNoteForCall(userId: string, callId: string, title?: string) {
+        try {
+            const { databases } = await import('../appwrite/client');
+            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+            const metadata = JSON.stringify({
+                isGhost: true,
+                linkedSource: 'call',
+                linkedTaskId: callId,
+                expiresAt: expiresAt,
+                version: 'v2',
+            });
+
+            return await databases.createDocument(
+                APPWRITE_CONFIG.DATABASES.NOTE,
+                APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+                ID.unique(),
+                {
+                    title: title || 'Call Chat',
+                    content: '',
+                    format: 'markdown',
+                    isPublic: true,
+                    userId: null,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    metadata
+                },
+                [
+                    Permission.read(Role.any()),
+                    Permission.update(Role.any()),
+                ]
+            );
+        } catch (e) {
+            console.error('[CallService] createGhostNoteForCall failed:', e);
+            throw e;
+        }
+    },
+
+    async updateCallMetadata(callId: string, extraMetadata: Record<string, any>) {
+        try {
+            const call = await this.getCallLink(callId);
+            if (!call) throw new Error('Call not found');
+
+            const currentMetadata = parseCallMetadata(call.metadata);
+            const newMetadata = JSON.stringify({
+                ...currentMetadata,
+                ...extraMetadata,
+            });
+
+            const result = await tablesDB.updateRow({
+                databaseId: DB_ID,
+                tableId: LINKS_TABLE,
+                rowId: callId,
+                data: {
+                    metadata: newMetadata,
+                },
+            });
+
+            activeCallsCache.invalidate();
+            return result;
+        } catch (e) {
+            console.error('[CallService] updateCallMetadata failed:', e);
+            throw e;
+        }
     },
 
     async deleteCall(callId: string) {

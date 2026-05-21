@@ -40,11 +40,14 @@ import {
     Clock,
     Copy,
     Check,
-    Hash
+    Hash,
+    Minimize2,
+    Maximize2,
+    X,
+    ShieldAlert
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InCallChat } from './InCallChat';
-
 import { ChatService } from '@/lib/services/chat';
 
 interface ChatMessage {
@@ -97,6 +100,7 @@ export const CallInterface = ({
     const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
     const [participants, setParticipants] = useState<any[]>([]);
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -105,7 +109,39 @@ export const CallInterface = ({
     const [deviceMenuAnchor, setDeviceMenuAnchor] = useState<null | HTMLElement>(null);
     const [remoteTrackLive, setRemoteTrackLive] = useState(false);
     const [micLevel, setMicLevel] = useState(0);
-    
+    const [chatNoteId, setChatNoteId] = useState<string | null>(null);
+    const [userNames, setUserNames] = useState<Record<string, string>>({});
+
+    // PIP state
+    const [isPip, setIsPip] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('kylrix_active_pip');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    return parsed.isPip === true;
+                } catch {
+                    return false;
+                }
+            }
+        }
+        return false;
+    });
+
+    const [pipPosition, setPipPosition] = useState<{ x: number, y: number }>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('kylrix_active_pip');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.position) return parsed.position;
+                } catch {}
+            }
+            return { x: window.innerWidth - 340, y: window.innerHeight - 260 };
+        }
+        return { x: 100, y: 100 };
+    });
+
     const localVideoRef = useRef<HTMLVideoElement>(null);
     const remoteVideoRef = useRef<HTMLVideoElement>(null);
     const rtcManager = useRef<WebRTCManager | null>(null);
@@ -115,6 +151,7 @@ export const CallInterface = ({
     const touchStartYRef = useRef<number | null>(null);
     const micAudioContextRef = useRef<AudioContext | null>(null);
     const micAnimationFrameRef = useRef<number | null>(null);
+    const dragStartRef = useRef<{ startX: number, startY: number, posX: number, posY: number } | null>(null);
     
     useEffect(() => {
         if (callStartTime.current === null) {
@@ -124,6 +161,216 @@ export const CallInterface = ({
 
     const normalizedStatus = String(status || '').toLowerCase();
     const isPeerLive = remoteTrackLive || normalizedStatus === 'connected' || normalizedStatus === 'completed';
+
+    // Drag handlers for PIP window
+    const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isPip) return;
+        const target = e.target as HTMLElement;
+        // Don't drag if clicking buttons
+        if (target.closest('button') || target.closest('a') || target.closest('svg')) {
+            return;
+        }
+        if (e.type === 'mousedown') {
+            e.preventDefault();
+        }
+        const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+        dragStartRef.current = {
+            startX: clientX,
+            startY: clientY,
+            posX: pipPosition.x,
+            posY: pipPosition.y
+        };
+    };
+
+    useEffect(() => {
+        if (!isPip) return;
+
+        const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+            if (!dragStartRef.current) return;
+            const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+            const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+            
+            const deltaX = clientX - dragStartRef.current.startX;
+            const deltaY = clientY - dragStartRef.current.startY;
+            
+            const newX = Math.max(10, Math.min(window.innerWidth - 330, dragStartRef.current.posX + deltaX));
+            const newY = Math.max(10, Math.min(window.innerHeight - 250, dragStartRef.current.posY + deltaY));
+            
+            setPipPosition({ x: newX, y: newY });
+        };
+
+        const handleMouseUp = () => {
+            dragStartRef.current = null;
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('touchmove', handleMouseMove, { passive: true });
+        window.addEventListener('touchend', handleMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('touchmove', handleMouseMove);
+            window.removeEventListener('touchend', handleMouseUp);
+        };
+    }, [isPip]);
+
+    // Sync PIP state to localStorage
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (isPip) {
+            localStorage.setItem('kylrix_active_pip', JSON.stringify({
+                isPip: true,
+                position: pipPosition,
+                callCode,
+                conversationId,
+                isCaller,
+                callType: _callType,
+                targetId,
+                initialMediaSettings,
+                autoInitiate,
+                callTitle,
+                expiresAt,
+                ts: Date.now()
+            }));
+        } else {
+            localStorage.removeItem('kylrix_active_pip');
+        }
+    }, [isPip, pipPosition, callCode, conversationId, isCaller, _callType, targetId, initialMediaSettings, autoInitiate, callTitle, expiresAt]);
+
+    const resolveUserName = useCallback(async (userId: string) => {
+        if (userId === user?.$id) return user.displayName || user.name || 'Me';
+        if (userNames[userId]) return userNames[userId];
+        
+        try {
+            const { getCachedCommentIdentity } = await import('@/lib/commentIdentityCache');
+            const cached = getCachedCommentIdentity(userId);
+            if (cached) {
+                const name = cached.displayName || cached.name || cached.username || 'Participant';
+                setUserNames(prev => ({ ...prev, [userId]: name }));
+                return name;
+            }
+        } catch {}
+        
+        const part = participants.find(p => p.userId === userId);
+        if (part && part.name) {
+            setUserNames(prev => ({ ...prev, [userId]: part.name }));
+            return part.name;
+        }
+
+        try {
+            const { UsersService } = await import('@/lib/services/users');
+            const profile = await UsersService.getProfileById(userId);
+            if (profile) {
+                const name = profile.displayName || profile.name || profile.username || 'Participant';
+                setUserNames(prev => ({ ...prev, [userId]: name }));
+                try {
+                    const { upsertCommentIdentity } = await import('@/lib/commentIdentityCache');
+                    upsertCommentIdentity(profile);
+                } catch {}
+                return name;
+            }
+        } catch (e) {
+            console.error('Failed to fetch profile for', userId, e);
+        }
+        
+        return 'Participant';
+    }, [user, userNames, participants]);
+
+    // Lazy load/spin Ghost Note
+    useEffect(() => {
+        if (!callCode || !user) return;
+
+        const initGhostChat = async () => {
+            try {
+                const link = await CallService.getCallLink(callCode);
+                if (!link) return;
+
+                const metadata = link.metadata ? JSON.parse(link.metadata) : {};
+                if (metadata?.chatNoteId) {
+                    setChatNoteId(metadata.chatNoteId);
+                } else if (isCaller || link.userId === user.$id) {
+                    const title = callTitle || link.title || 'Huddle Chat';
+                    const ghostNote = await CallService.createGhostNoteForCall(user.$id, callCode, title);
+                    if (ghostNote) {
+                        setChatNoteId(ghostNote.$id);
+                        await CallService.updateCallMetadata(callCode, { chatNoteId: ghostNote.$id });
+                    }
+                }
+            } catch (e) {
+                console.error('[CallInterface] Failed to initialize ghost chat note:', e);
+            }
+        };
+
+        initGhostChat();
+    }, [callCode, user, isCaller, callTitle]);
+
+    // Fetch comments and subscribe to comments table
+    useEffect(() => {
+        if (!chatNoteId) return;
+
+        let active = true;
+
+        const loadMessages = async () => {
+            try {
+                const { listComments } = await import('@/lib/appwrite/note');
+                const res = await listComments(chatNoteId);
+                if (!active) return;
+
+                const msgs: ChatMessage[] = [];
+                for (const doc of res.documents) {
+                    const name = await resolveUserName(doc.userId);
+                    msgs.push({
+                        id: doc.$id,
+                        senderId: doc.userId,
+                        senderName: name,
+                        content: doc.content,
+                        timestamp: new Date(doc.createdAt).getTime(),
+                    });
+                }
+                msgs.sort((a, b) => a.timestamp - b.timestamp);
+                setChatMessages(msgs);
+            } catch (e) {
+                console.error('Failed to load comments for call chat:', e);
+            }
+        };
+
+        loadMessages();
+
+        const unsubscribe = client.subscribe(
+            `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.comments.documents`,
+            async (response: any) => {
+                if (!active) return;
+                const events = response.events;
+                const payload = response.payload;
+
+                if (events.some((e: string) => e.includes('.create'))) {
+                    if (payload.noteId === chatNoteId) {
+                        const name = await resolveUserName(payload.userId);
+                        const msg: ChatMessage = {
+                            id: payload.$id,
+                            senderId: payload.userId,
+                            senderName: name,
+                            content: payload.content,
+                            timestamp: new Date(payload.createdAt).getTime(),
+                        };
+                        setChatMessages(prev => {
+                            if (prev.some(m => m.id === msg.id)) return prev;
+                            return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
+                        });
+                        setUnreadChatCount(c => c + 1);
+                    }
+                }
+            }
+        );
+
+        return () => {
+            active = false;
+            unsubscribe();
+        };
+    }, [chatNoteId, resolveUserName]);
 
     const handleDeviceMenuOpen = async (event: React.MouseEvent<HTMLElement>) => {
         const devs = await rtcManager.current?.getDevices();
@@ -171,21 +418,31 @@ export const CallInterface = ({
     };
 
     const broadcastMessage = async (content: string, attachment?: any) => {
-        if (!user || !targetId) return;
+        if (!user) return;
         
+        if (chatNoteId) {
+            try {
+                const { createComment } = await import('@/lib/appwrite/note');
+                await createComment(chatNoteId, content);
+            } catch (e) {
+                console.error('[CallInterface] Failed to send chat message:', e);
+                toast.error("Failed to send message");
+            }
+            return;
+        }
+
+        if (!targetId) return;
         const msg: ChatMessage = {
             id: Math.random().toString(36).substring(7),
             senderId: user.$id,
-            senderName: user.name || 'Guest',
+            senderName: user.displayName || user.name || 'Guest',
             content,
             timestamp: Date.now(),
             attachment
         };
 
-        // Add to local state immediately
         setChatMessages(prev => [...prev, msg]);
 
-        // Broadcast to target
         try {
             await CallService.sendSignal(user.$id, targetId, {
                 type: 'chat_message',
@@ -195,6 +452,27 @@ export const CallInterface = ({
             console.error('Failed to broadcast message:', _e);
         }
     };
+
+    // Rebind streams when switching layouts (PIP vs non-PIP)
+    useEffect(() => {
+        const rebindStreams = () => {
+            if (rtcManager.current) {
+                const localStream = (rtcManager.current as any).localStream;
+                const remoteStream = (rtcManager.current as any).remoteStream;
+
+                if (localVideoRef.current && localStream) {
+                    localVideoRef.current.srcObject = localStream;
+                }
+                if (remoteVideoRef.current && remoteStream) {
+                    remoteVideoRef.current.srcObject = remoteStream;
+                }
+            }
+        };
+
+        rebindStreams();
+        const timer = setTimeout(rebindStreams, 300);
+        return () => clearTimeout(timer);
+    }, [isPip, remoteTrackLive, normalizedStatus]);
 
     useEffect(() => {
         const initDirectCall = async () => {
@@ -214,7 +492,6 @@ export const CallInterface = ({
         };
 
         if (conversationId && !targetId) {
-            // Use a separate effect or a timeout to avoid synchronous state updates during render
             const timer = setTimeout(() => {
                 initDirectCall();
             }, 0);
@@ -225,7 +502,6 @@ export const CallInterface = ({
     useEffect(() => {
         if (!user) return;
 
-        // 1. Setup WebRTC Manager
         rtcManager.current = new WebRTCManager({
             onTrack: (stream: MediaStream) => {
                 if (remoteVideoRef.current) {
@@ -239,10 +515,9 @@ export const CallInterface = ({
             },
             onStateChange: (state: string) => setStatus(state),
             onSignal: async (signal: any) => {
-                        if (['join_request', 'let_in', 'presence', 'chat_message', 'offer', 'answer', 'candidate'].includes(signal.type)) {
+                if (['join_request', 'let_in', 'reject_join', 'yank_member', 'presence', 'chat_message', 'offer', 'answer', 'candidate'].includes(signal.type)) {
                     if (signal.target) {
                         try {
-                            // Include callId in signal for better tracking
                             await CallService.sendSignal(user.$id, signal.target, { ...signal, callId: callCode || conversationId });
                         } catch (_e) {
                             console.error('Failed to send signal');
@@ -250,13 +525,10 @@ export const CallInterface = ({
                     }
                     return;
                 }
-
-                // Media negotiation is now handled by Cloudflare session APIs.
                 if (['offer', 'answer', 'candidate'].includes(signal.type)) return;
             }
         });
 
-        // 2. Initialize Media
         const initVideo = !isCompanion && initialMediaSettings.video;
         const initAudio = !isCompanion && initialMediaSettings.audio;
         
@@ -265,12 +537,11 @@ export const CallInterface = ({
                 localVideoRef.current.srcObject = stream;
             }
             
-            // 3. If this side should initiate, do it once the media stream is ready.
             if ((isCaller || autoInitiate) && targetId && !hasInitiatedCall.current) {
                 hasInitiatedCall.current = true;
                 rtcManager.current?.createOffer(user.$id, targetId);
             } else if ((isCaller || autoInitiate) && !targetId) {
-                  setStatus('Waiting for participants...');
+                setStatus('Waiting for participants...');
             }
         }).catch(err => {
              console.error("Failed to init media stream:", err);
@@ -278,7 +549,6 @@ export const CallInterface = ({
              toast.error("Could not access camera/microphone");
         });
 
-        // 4. Subscribe to signals via APP_ACTIVITY (WebSocket Realtime)
         const unsubscribe = client.subscribe(
             `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.rows`,
             (response: any) => {
@@ -289,21 +559,28 @@ export const CallInterface = ({
                     try {
                         const signal = JSON.parse(activity.customStatus);
                         if (signal.target !== user.$id) return;
-                        if (Date.now() - signal.ts > 10000) return;
+                        if (Date.now() - signal.ts > 60000) return; // relax to 60s for clock drifts
 
                         if (signal.type === 'let_in') {
                             console.log('[CallInterface] Admitted by host, creating offer...');
                             setStatus('Joining...');
                             setTargetId(signal.sender);
-                            // Small delay to ensure host is ready
                             if (!hasInitiatedCall.current) {
                                 hasInitiatedCall.current = true;
                                 setTimeout(() => {
                                     rtcManager.current?.createOffer(user.$id, signal.sender);
                                 }, 500);
                             }
-                        } else if (signal.type === 'chat_message') {                            setChatMessages(prev => [...prev, signal.message]);
-                            // We use a ref or a separate state for unread count to avoid re-running this effect
+                        } else if (signal.type === 'join_request') {
+                            setJoinRequests(prev => prev.some(r => r.senderId === signal.sender) ? prev : [...prev, { senderId: signal.sender, senderName: signal.name || 'Guest' }]);
+                            toast(`Join request from ${signal.name || 'Guest'}`, { icon: '🙋' });
+                        } else if (signal.type === 'yank_member') {
+                            toast.error("You have been removed from the call by the host.", { duration: 5000 });
+                            setTimeout(() => {
+                                endCall();
+                            }, 1500);
+                        } else if (signal.type === 'chat_message') {
+                            setChatMessages(prev => [...prev, signal.message]);
                             setUnreadChatCount(c => c + 1);
                             toast(`${signal.message.senderName}: ${signal.message.content.substring(0, 30)}...`, { 
                                 icon: '💬',
@@ -388,15 +665,39 @@ export const CallInterface = ({
         try {
             await CallService.sendSignal(user.$id, request.senderId, { type: 'let_in', callId: callCode || conversationId });
             setStatus('Connecting to guest...');
+            setParticipants(prev => {
+                if (prev.some(p => p.userId === request.senderId)) return prev;
+                return [...prev, { userId: request.senderId, name: request.senderName }];
+            });
         } catch (_e) {
             toast.error("Failed to admit guest");
         }
     };
 
-    const handleRejectRequest = (request: JoinRequest) => {
+    const handleRejectRequest = async (request: JoinRequest) => {
+        if (!user) return;
         setJoinRequests(prev => prev.filter(r => r.senderId !== request.senderId));
+        try {
+            await CallService.sendSignal(user.$id, request.senderId, { type: 'reject_join', callId: callCode || conversationId });
+        } catch (_e) {
+            console.error("Failed to send reject signal", _e);
+        }
     };
 
+    const handleYankParticipant = async (userIdToRemove: string) => {
+        if (!user || userIdToRemove === user.$id) return;
+        try {
+            await CallService.sendSignal(user.$id, userIdToRemove, { 
+                type: 'yank_member', 
+                target: userIdToRemove, 
+                callId: callCode || conversationId 
+            });
+            setParticipants(prev => prev.filter(p => p.userId !== userIdToRemove));
+            toast.success("Participant removed from call.");
+        } catch (_e) {
+            toast.error("Failed to remove participant");
+        }
+    };
      
     const endCall = useCallback(() => {
         if (rtcManager.current) {
@@ -405,10 +706,16 @@ export const CallInterface = ({
         if (user?.$id) {
             ActivityService.clearLiveCallActivity(user.$id).catch(() => undefined);
         }
-        router.back();
-    }, [router, user?.$id]);
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('kylrix_active_pip');
+            window.dispatchEvent(new Event('kylrix_call_ended'));
+        }
+        if (!isPip) {
+            router.back();
+        }
+    }, [router, user?.$id, isPip]);
 
-    // Presence & Participant Tracking
+
     useEffect(() => {
         if (!user || !callCode) return;
 
@@ -421,8 +728,6 @@ export const CallInterface = ({
                     callId: callCode || conversationId,
                     ts: Date.now()
                 };
-                // We broadcast this to the host or everyone if we are the host
-                // For now, we update our own activity which others can see
                 await CallService.sendSignal(user.$id, isCaller ? 'broadcast' : (targetId || 'host'), signal);
             } catch (_e) {}
         };
@@ -442,7 +747,6 @@ export const CallInterface = ({
         return () => clearInterval(interval);
     }, [user, callCode, conversationId, isCaller, targetId]);
 
-    // Timer for call expiration
     useEffect(() => {
         if (!expiresAt) return;
 
@@ -469,7 +773,6 @@ export const CallInterface = ({
                 setTimeRemaining(`${mins}m ${secs}s`);
             }
 
-            // Warning at 5 minutes
             if (diff <= 300000 && diff > 299000) {
                 toast("5 minutes remaining in this session", { icon: '⏳' });
             }
@@ -521,6 +824,129 @@ export const CallInterface = ({
         }
     };
 
+    const handleRestore = () => {
+        setIsPip(false);
+        const code = callCode || conversationId;
+        if (code) {
+            router.push(`/connect/call/${code}`);
+        }
+    };
+
+    if (isPip) {
+        return (
+            <Paper
+                elevation={24}
+                sx={{
+                    position: 'fixed',
+                    left: pipPosition.x,
+                    top: pipPosition.y,
+                    width: 320,
+                    height: 240,
+                    bgcolor: '#161412',
+                    borderRadius: '20px',
+                    border: '2px solid rgba(255,255,255,0.1)',
+                    boxShadow: '0 30px 60px rgba(0,0,0,0.8)',
+                    zIndex: 9999,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    cursor: 'grab',
+                    '&:active': { cursor: 'grabbing' }
+                }}
+                onMouseDown={handleDragStart}
+                onTouchStart={handleDragStart}
+            >
+                <Box sx={{ 
+                    height: 38, 
+                    px: 1.5, 
+                    bgcolor: '#0F0E0D', 
+                    borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    flexShrink: 0
+                }}>
+                    <Typography variant="caption" sx={{ fontWeight: 900, color: 'white', opacity: 0.8, userSelect: 'none' }}>
+                        {callTitle || 'Huddle'}
+                    </Typography>
+                    <Stack direction="row" spacing={0.5}>
+                        <IconButton size="small" onClick={handleRestore} sx={{ color: 'white', p: 0.5 }}>
+                            <Maximize2 size={13} />
+                        </IconButton>
+                        <IconButton size="small" onClick={endCall} sx={{ color: '#EF4444', p: 0.5 }}>
+                            <X size={13} />
+                        </IconButton>
+                    </Stack>
+                </Box>
+                
+                <Box sx={{ flex: 1, position: 'relative', bgcolor: '#000' }}>
+                    <Box 
+                        component="video" 
+                        ref={remoteVideoRef} 
+                        autoPlay 
+                        playsInline 
+                        sx={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'cover', 
+                            display: isPeerLive && !isVideoOff ? 'block' : 'none',
+                            transform: 'scaleX(-1)'
+                        }} 
+                    />
+                    
+                    {!isPeerLive && (
+                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2, textAlign: 'center' }}>
+                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 800 }}>
+                                {status === 'Initializing...' ? 'Connecting...' : status}
+                            </Typography>
+                        </Box>
+                    )}
+
+                    <Box sx={{ 
+                        position: 'absolute',
+                        bottom: 8,
+                        right: 8,
+                        width: 72,
+                        height: 96,
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        border: '1.5px solid rgba(255,255,255,0.2)',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+                        bgcolor: '#161412'
+                    }}>
+                        <Box component="video" ref={localVideoRef} autoPlay playsInline muted sx={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
+                    </Box>
+                </Box>
+
+                <Box sx={{ 
+                    height: 48, 
+                    bgcolor: '#0F0E0D', 
+                    borderTop: '1px solid rgba(255,255,255,0.05)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: 2,
+                    flexShrink: 0
+                }}>
+                    <IconButton onClick={toggleMute} size="small" sx={{ 
+                        bgcolor: isMuted ? '#EF4444' : 'rgba(255,255,255,0.05)', 
+                        color: 'white',
+                        p: 1
+                    }}>
+                        {isMuted ? <MicOff size={15} /> : <Mic size={15} />}
+                    </IconButton>
+                    <IconButton onClick={toggleVideo} size="small" sx={{ 
+                        bgcolor: isVideoOff ? '#EF4444' : 'rgba(255,255,255,0.05)', 
+                        color: 'white',
+                        p: 1
+                    }}>
+                        {isVideoOff ? <VideoOff size={15} /> : <Video size={15} />}
+                    </IconButton>
+                </Box>
+            </Paper>
+        );
+    }
+
     return (
         <Box sx={{ 
             position: 'fixed', 
@@ -571,21 +997,22 @@ export const CallInterface = ({
                     </Button>
                 </Box>
             )}
-            {/* Main Viewport */}
-            <Box sx={{ flex: 1, position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2 }}>
+            
+            {/* Main Viewport Container */}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'row', gap: 2, p: 2, height: 'calc(100vh - 108px - 36px)', minHeight: 0, position: 'relative' }}>
+                
+                {/* Video Area */}
                 <Paper 
                     elevation={24}
                     sx={{ 
-                        width: '100%',
+                        flex: 1,
                         height: '100%',
-                        maxWidth: '1200px',
-                        maxHeight: { xs: 'calc(100% - 120px)', md: '800px' },
                         bgcolor: '#161412', borderRadius: '32px', overflow: 'hidden', position: 'relative',
                         border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         boxShadow: '0 50px 100px -20px rgba(0,0,0,0.7)'
                     }}
                 >
-                        <Box 
+                    <Box 
                         component="video" ref={remoteVideoRef} autoPlay playsInline 
                         sx={{ 
                             width: '100%', height: '100%', objectFit: 'cover', 
@@ -648,62 +1075,136 @@ export const CallInterface = ({
                             )}
                         </Box>
                     )}
-                </Paper>
-                
-                <Paper 
-                    elevation={12}
-                    sx={{ 
-                        position: 'absolute',
-                        bottom: { xs: 16, sm: 26, md: 40 },
-                        right: { xs: 16, sm: 20, md: 40 },
-                        width: { xs: 112, sm: 160, md: 180 },
-                        height: { xs: 150, sm: 210, md: 240 }, 
-                        bgcolor: '#161412', borderRadius: '24px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)',
-                        boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 1301, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                >
-                    <Box component="video" ref={localVideoRef} autoPlay playsInline muted sx={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
-                    {isVideoOff && (
-                        <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.8)' }}>
-                            <VideoOff size={32} color="rgba(255,255,255,0.2)" />
-                        </Box>
-                    )}
+
+                    {/* Local Floating Video Frame */}
+                    <Paper 
+                        elevation={12}
+                        sx={{ 
+                            position: 'absolute',
+                            bottom: 24,
+                            right: 24,
+                            width: { xs: 90, sm: 130, md: 150 },
+                            height: { xs: 120, sm: 170, md: 200 }, 
+                            bgcolor: '#161412', borderRadius: '18px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.5)', zIndex: 1200, transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                        }}
+                    >
+                        <Box component="video" ref={localVideoRef} autoPlay playsInline muted sx={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }} />
+                        {isVideoOff && (
+                            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.8)' }}>
+                                <VideoOff size={28} color="rgba(255,255,255,0.2)" />
+                            </Box>
+                        )}
+                    </Paper>
                 </Paper>
 
+                {/* Participants Sidebar (Physically unmounted when closed) */}
+                {isParticipantsOpen && (
+                    <Paper
+                        elevation={16}
+                        sx={{
+                            width: 320,
+                            bgcolor: '#161412',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '24px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%',
+                            zIndex: 1302,
+                            overflow: 'hidden'
+                        }}
+                    >
+                        <Box sx={{ p: 2.5, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Typography variant="subtitle1" sx={{ fontWeight: 900, color: 'white' }}>
+                                Participants
+                            </Typography>
+                            <IconButton size="small" onClick={() => setIsParticipantsOpen(false)} sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                                <X size={18} />
+                            </IconButton>
+                        </Box>
+                        <Box sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            {/* Host / Me */}
+                            <Paper sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Stack direction="row" spacing={1.5} alignItems="center">
+                                    <Avatar sx={{ width: 32, height: 32, bgcolor: COLORS.primary, fontSize: '0.8rem', fontWeight: 900 }}>
+                                        {(user?.displayName || user?.name || 'M').slice(0, 1).toUpperCase()}
+                                    </Avatar>
+                                    <Box>
+                                        <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>
+                                            {user?.displayName || user?.name || 'You'}
+                                        </Typography>
+                                        <Typography variant="caption" sx={{ color: COLORS.primary, fontWeight: 700 }}>Host</Typography>
+                                    </Box>
+                                </Stack>
+                            </Paper>
+
+                            {/* Other participants */}
+                            {participants.map((p) => {
+                                if (p.userId === user?.$id) return null;
+                                return (
+                                    <Paper key={p.userId} sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Stack direction="row" spacing={1.5} alignItems="center">
+                                            <Avatar sx={{ width: 32, height: 32, bgcolor: COLORS.secondary, fontSize: '0.8rem', fontWeight: 900 }}>
+                                                {(userNames[p.userId] || p.name || 'P').slice(0, 1).toUpperCase()}
+                                            </Avatar>
+                                            <Box>
+                                                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>
+                                                    {userNames[p.userId] || p.name || 'Participant'}
+                                                </Typography>
+                                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>Active</Typography>
+                                            </Box>
+                                        </Stack>
+
+                                        {isCaller && (
+                                            <Tooltip title="Remove Participant">
+                                                <IconButton size="small" onClick={() => handleYankParticipant(p.userId)} sx={{ color: '#EF4444', '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1)' } }}>
+                                                    <UserX size={16} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+                                    </Paper>
+                                );
+                            })}
+                        </Box>
+                    </Paper>
+                )}
+
+                {/* Admission Requests Modal list */}
                 {joinRequests.length > 0 && (
                     <Box sx={{
                         position: 'absolute',
-                        top: { xs: 12, md: 100 },
-                        right: { xs: 12, md: 40 },
-                        left: { xs: 12, md: 'auto' },
-                        width: { xs: 'auto', md: 300 },
+                        top: 24,
+                        right: 24,
+                        width: 300,
                         zIndex: 1305,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 1
+                        gap: 1.5
                     }}>
                         {joinRequests.map(req => (
-                            <Paper key={req.senderId} sx={{ p: 2, bgcolor: '#161412', border: '1px solid #6366F1', borderRadius: 3 }}>
-                                <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'white', mb: 1.5 }}>{req.senderName} wants to join</Typography>
+                            <Paper key={req.senderId} sx={{ p: 2, bgcolor: '#161412', border: '1.5px solid #6366F1', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.6)' }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 900, color: 'white', mb: 1.5 }}>
+                                    {req.senderName} wants to join
+                                </Typography>
                                 <Box sx={{ display: 'flex', gap: 1 }}>
-                                    <Button fullWidth size="small" variant="contained" onClick={() => handleAcceptRequest(req)} startIcon={<UserCheck size={14} />} sx={{ bgcolor: '#6366F1', fontWeight: 900 }}>Admit</Button>
-                                    <Button size="small" variant="outlined" onClick={() => handleRejectRequest(req)} sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'white' }}><UserX size={14} /></Button>
+                                    <Button fullWidth size="small" variant="contained" onClick={() => handleAcceptRequest(req)} startIcon={<UserCheck size={14} />} sx={{ bgcolor: '#6366F1', fontWeight: 900, borderRadius: 2 }}>Admit</Button>
+                                    <Button size="small" variant="outlined" onClick={() => handleRejectRequest(req)} sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'white', borderRadius: 2 }}><UserX size={14} /></Button>
                                 </Box>
                             </Paper>
                         ))}
                     </Box>
                 )}
 
+                {/* Call Metadata/Status Floating panel */}
                 <Box sx={{
                     position: 'absolute',
-                    top: { xs: 12, md: 40 },
-                    left: { xs: 12, md: 40 },
-                    right: { xs: 12, md: 'auto' },
+                    top: 40,
+                    left: 40,
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1.1,
-                    maxWidth: { xs: 'calc(100% - 24px)', md: 420 },
-                    zIndex: 1302
+                    maxWidth: 420,
+                    zIndex: 1100
                 }}>
                     {callTitle && (
                         <Paper sx={{ px: 1.5, py: 0.9, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -730,22 +1231,21 @@ export const CallInterface = ({
                     </Paper>
                     <Paper sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 0.8, bgcolor: 'rgba(22,20,18,0.6)', backdropFilter: 'blur(10px)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.05)' }}>
                         <ShieldCheck size={14} color="#6366F1" />
-                        <Typography variant="caption" noWrap sx={{ fontWeight: 800, color: 'white', opacity: 0.8 }}>E2E ENCRYPTED P2P</Typography>
+                        <Typography variant="caption" noWrap sx={{ fontWeight: 800, color: 'white', opacity: 0.8 }}>SECURE DIRECT CALL</Typography>
                     </Paper>
                 </Box>
             </Box>
 
-            {/* Bottom Controls */}
+            {/* Bottom Control Bar */}
             <Box sx={{ height: 108, display: 'flex', justifyContent: 'center', alignItems: 'center', bgcolor: 'transparent', pb: 3, px: 2 }}>
                 <Paper
                     sx={{
-                        width: 'min(760px, 100%)',
+                        width: 'min(860px, 100%)',
                         px: { xs: 1, sm: 1.5 },
                         py: 1,
-                        borderRadius: '18px',
-                        bgcolor: 'rgba(22,20,18,0.9)',
+                        borderRadius: '24px',
+                        bgcolor: '#161412',
                         border: '1px solid rgba(255,255,255,0.08)',
-                        backdropFilter: 'blur(10px)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
@@ -768,61 +1268,82 @@ export const CallInterface = ({
                         </IconButton>
                     </Tooltip>
 
-                <Tooltip title={isScreenSharing ? "Stop Sharing" : "Share Screen"}>
-                    <IconButton onClick={toggleScreenShare} sx={{ width: 48, height: 48, bgcolor: isScreenSharing ? '#6366F1' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <Monitor size={20} />
-                    </IconButton>
-                </Tooltip>
+                    <Tooltip title={isScreenSharing ? "Stop Sharing" : "Share Screen"}>
+                        <IconButton onClick={toggleScreenShare} sx={{ width: 48, height: 48, bgcolor: isScreenSharing ? '#6366F1' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <Monitor size={20} />
+                        </IconButton>
+                    </Tooltip>
 
-                <Tooltip title={isVideoOff ? "Start Video" : "Stop Video"}>
-                    <IconButton onClick={toggleVideo} sx={{ width: 48, height: 48, bgcolor: isVideoOff ? '#EF4444' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', '&:hover': { bgcolor: isVideoOff ? '#DC2626' : 'rgba(255,255,255,0.1)' } }}>
-                        {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
-                    </IconButton>
-                </Tooltip>
+                    <Tooltip title={isVideoOff ? "Start Video" : "Stop Video"}>
+                        <IconButton onClick={toggleVideo} sx={{ width: 48, height: 48, bgcolor: isVideoOff ? '#EF4444' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', '&:hover': { bgcolor: isVideoOff ? '#DC2626' : 'rgba(255,255,255,0.1)' } }}>
+                            {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
+                        </IconButton>
+                    </Tooltip>
 
-                <Tooltip title={isRecording ? "Stop Recording" : "Record Call"}>
-                    <IconButton onClick={toggleRecording} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: isRecording ? '#EF4444' : 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        {isRecording ? <Square size={18} /> : <Circle size={18} fill={isRecording ? '#EF4444' : 'none'} />}
-                    </IconButton>
-                </Tooltip>
+                    <Tooltip title={isRecording ? "Stop Recording" : "Record Call"}>
+                        <IconButton onClick={toggleRecording} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: isRecording ? '#EF4444' : 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            {isRecording ? <Square size={18} /> : <Circle size={18} fill={isRecording ? '#EF4444' : 'none'} />}
+                        </IconButton>
+                    </Tooltip>
 
-                <Tooltip title="Reconnect">
-                    <IconButton onClick={handleReconnect} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: '#6366F1', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <Monitor size={20} />
-                    </IconButton>
-                </Tooltip>
+                    <Tooltip title="Reconnect">
+                        <IconButton onClick={handleReconnect} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: '#6366F1', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <Monitor size={20} />
+                        </IconButton>
+                    </Tooltip>
 
-                <Tooltip title="Messages">
-                    <Badge badgeContent={unreadChatCount} color="primary">
+                    <Tooltip title="Minimize (Picture in Picture)">
+                        <IconButton onClick={() => setIsPip(true)} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <Minimize2 size={20} />
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Messages">
+                        <Badge badgeContent={unreadChatCount} color="primary">
+                            <IconButton 
+                                onClick={() => {
+                                    setIsChatOpen(!isChatOpen);
+                                    setUnreadChatCount(0);
+                                }} 
+                                sx={{ 
+                                    width: 48, height: 48,
+                                    bgcolor: isChatOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
+                                    color: 'white', 
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    '&:hover': { bgcolor: isChatOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
+                                }}
+                            >
+                                <MessageSquare size={20} />
+                            </IconButton>
+                        </Badge>
+                    </Tooltip>
+
+                    <Tooltip title="Participants">
                         <IconButton 
-                            onClick={() => {
-                                setIsChatOpen(!isChatOpen);
-                                setUnreadChatCount(0);
-                            }} 
+                            onClick={() => setIsParticipantsOpen(!isParticipantsOpen)} 
                             sx={{ 
                                 width: 48, height: 48,
-                                bgcolor: isChatOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
+                                bgcolor: isParticipantsOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
                                 color: 'white', 
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                '&:hover': { bgcolor: isChatOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
+                                '&:hover': { bgcolor: isParticipantsOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
                             }}
                         >
-                            <MessageSquare size={20} />
+                            <Users size={20} />
                         </IconButton>
-                    </Badge>
-                </Tooltip>
+                    </Tooltip>
 
-                <Tooltip title="Audio/Video Devices">
-                    <IconButton onClick={handleDeviceMenuOpen} sx={{ width: 40, height: 40, color: 'rgba(255,255,255,0.65)' }}>
-                        <ChevronUp size={16} />
-                    </IconButton>
-                </Tooltip>
+                    <Tooltip title="Audio/Video Devices">
+                        <IconButton onClick={handleDeviceMenuOpen} sx={{ width: 40, height: 40, color: 'rgba(255,255,255,0.65)' }}>
+                            <ChevronUp size={16} />
+                        </IconButton>
+                    </Tooltip>
 
-                <Tooltip title="End Call">
-                    <Fab onClick={endCall} sx={{ width: 54, height: 54, bgcolor: '#EF4444', color: 'white', '&:hover': { bgcolor: '#DC2626', transform: 'scale(1.05)' }, transition: 'all 0.2s', boxShadow: '0 8px 26px rgba(239,68,68,0.45)' }}>
-                        <PhoneOff size={22} />
-                    </Fab>
-                </Tooltip>
+                    <Tooltip title="End Call">
+                        <Fab onClick={endCall} sx={{ width: 54, height: 54, bgcolor: '#EF4444', color: 'white', '&:hover': { bgcolor: '#DC2626', transform: 'scale(1.05)' }, transition: 'all 0.2s', boxShadow: '0 8px 26px rgba(239,68,68,0.45)' }}>
+                            <PhoneOff size={22} />
+                        </Fab>
+                    </Tooltip>
                 </Paper>
             </Box>
 
@@ -851,12 +1372,16 @@ export const CallInterface = ({
                 ))}
             </Menu>
 
-            <InCallChat 
-                isOpen={isChatOpen} 
-                onClose={() => setIsChatOpen(false)} 
-                messages={chatMessages}
-                onSendMessage={broadcastMessage}
-            />
+            {isChatOpen && (
+                <InCallChat 
+                    isOpen={isChatOpen} 
+                    onClose={() => setIsChatOpen(false)} 
+                    messages={chatMessages}
+                    onSendMessage={broadcastMessage}
+                    chatNoteId={chatNoteId}
+                    isHost={isCaller}
+                />
+            )}
         </Box>
     );
 };

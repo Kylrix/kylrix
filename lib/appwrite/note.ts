@@ -836,7 +836,7 @@ export async function deleteNote(noteId: string) {
   }
 }
 
-export async function listNotes(queries: any[] = [], limit: number = 100) {
+export async function listNotes(queries: any[] = [], limit: number = 100, options: { includeStories?: boolean; includeGhosts?: boolean } = {}) {
   // Default: notes for current user
   if (!queries.length) {
     const user = await getCurrentUser();
@@ -890,7 +890,15 @@ export async function listNotes(queries: any[] = [], limit: number = 100) {
     // Non-fatal hydration error
   }
 
-  return { ...res, documents: notes };
+  let filteredNotes = notes;
+  if (!options.includeStories) {
+    filteredNotes = filteredNotes.filter(n => !(n as any).isStory);
+  }
+  if (!options.includeGhosts) {
+    filteredNotes = filteredNotes.filter(n => !(n as any).isGhost);
+  }
+
+  return { ...res, documents: filteredNotes };
 }
 
 // New function to get all notes with cursor pagination (memory efficient)
@@ -2577,6 +2585,8 @@ export interface ListNotesPaginatedOptions {
   userId?: string; // override current user (admin/future use)
   queries?: any[]; // additional custom queries (overrides userId logic if provided)
   hydrateTags?: boolean; // default true
+  includeStories?: boolean;
+  includeGhosts?: boolean;
 }
 
 export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}) {
@@ -2586,6 +2596,8 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     userId,
     queries,
     hydrateTags = true,
+    includeStories = false,
+    includeGhosts = false,
   } = options;
 
   let baseQueries: any[] = [];
@@ -2651,13 +2663,21 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     } catch {/* non-fatal */}
   }
 
-  const batchLength = notes.length;
+  let filteredNotes = notes;
+  if (!includeStories) {
+    filteredNotes = filteredNotes.filter(n => !(n as any).isStory);
+  }
+  if (!includeGhosts) {
+    filteredNotes = filteredNotes.filter(n => !(n as any).isGhost);
+  }
+
+  const batchLength = filteredNotes.length;
   const hasMore = batchLength === limit; // heuristic
-  const nextCursor = hasMore && batchLength ? (notes[batchLength - 1] as any).$id || null : null;
+  const nextCursor = hasMore && batchLength ? (filteredNotes[batchLength - 1] as any).$id || null : null;
 
   return {
-    documents: notes,
-    total: typeof res.total === 'number' ? res.total : notes.length,
+    documents: filteredNotes,
+    total: typeof res.total === 'number' ? res.total : filteredNotes.length,
     nextCursor,
     hasMore,
   };
@@ -2789,7 +2809,7 @@ async function loadT4NoteKey(noteId: string, ownerId: string): Promise<CryptoKey
       const rawKey = await ecosystemSecurity.decryptBinaryWithKey(mapping.wrappedKey, mek, true);
       return await crypto.subtle.importKey(
         'raw',
-        rawKey,
+        rawKey as any,
         { name: 'AES-GCM', length: 256 },
         true,
         ['encrypt', 'decrypt']
@@ -2830,7 +2850,7 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
                       const mapping = keyMappingRes.documents[0] as any;
                       if (mapping?.wrappedKey) {
                           const rawKey = await ecosystemSecurity.decryptBinaryWithKey(mapping.wrappedKey, mek, true);
-                          return await exportUrlSafeCryptoKey(await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['decrypt']));
+                          return await exportUrlSafeCryptoKey(await crypto.subtle.importKey('raw', rawKey as any, { name: 'AES-GCM', length: 256 }, true, ['decrypt']));
                       }
                   }
               } catch (e) { /* silent fallback */ }

@@ -4,7 +4,7 @@ export type AttachmentSubType = 'totp' | 'password' | 'task' | 'ghost_note' | 'f
 export type PeerState = 'idle' | 'calling' | 'incoming' | 'connected' | 'disconnected' | 'failed' | 'new' | 'connecting';
 
 export interface SignalData {
-    type: 'offer' | 'answer' | 'candidate';
+    type: 'offer' | 'answer' | 'candidate' | 'renegotiate';
     sdp?: string;
     candidate?: RTCIceCandidateInit;
     sender: string;

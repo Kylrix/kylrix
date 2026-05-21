@@ -23,6 +23,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import { format } from 'date-fns';
 import { FormattedText } from '../common/FormattedText';
+import toast from 'react-hot-toast';
 
 interface ChatMessage {
     id: string;
@@ -37,12 +38,16 @@ export const InCallChat = ({
     isOpen, 
     onClose, 
     onSendMessage, 
-    messages 
+    messages,
+    chatNoteId,
+    isHost
 }: { 
     isOpen: boolean, 
     onClose: () => void, 
     onSendMessage: (content: string, attachment?: any) => void,
-    messages: ChatMessage[]
+    messages: ChatMessage[],
+    chatNoteId?: string | null,
+    isHost?: boolean
 }) => {
     const { user } = useAuth();
     const [input, setInput] = useState('');
@@ -58,6 +63,31 @@ export const InCallChat = ({
         if (!input.trim()) return;
         onSendMessage(input);
         setInput('');
+    };
+
+    const handlePromoteToStory = async () => {
+        if (!chatNoteId || !user?.$id) return;
+        try {
+            const { updateNote, getNote } = await import('@/lib/appwrite/note');
+            const note = await getNote(chatNoteId);
+            const currentMetadata = note.metadata ? JSON.parse(note.metadata) : {};
+            const newMetadata = JSON.stringify({
+                ...currentMetadata,
+                isGhost: false,
+                isStory: true,
+                expiresAt: null
+            });
+
+            await updateNote(chatNoteId, {
+                userId: user.$id,
+                metadata: newMetadata
+            } as any);
+
+            toast.success("Chat promoted to Story! It will be kept permanently.");
+        } catch (e) {
+            console.error('[InCallChat] Failed to promote chat to story:', e);
+            toast.error("Failed to promote chat");
+        }
     };
 
     if (!isOpen) return null;
@@ -83,20 +113,43 @@ export const InCallChat = ({
         >
             {/* Header */}
             <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Stack direction="row" spacing={1.5} alignItems="center">
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1 }}>
                     <MessageSquare size={18} color="#6366F1" />
                     <Typography variant="subtitle2" sx={{ fontWeight: 900, color: 'white' }}>In-call Messages</Typography>
+                    {isHost && chatNoteId && (
+                        <Tooltip title="Promote to Story (Keep Chat Permanently)">
+                            <IconButton 
+                                size="small" 
+                                onClick={handlePromoteToStory}
+                                sx={{ 
+                                    ml: 'auto', 
+                                    bgcolor: 'rgba(99, 102, 241, 0.1)', 
+                                    color: '#6366F1',
+                                    '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.2)' },
+                                    borderRadius: '8px',
+                                    p: '4px 8px',
+                                    gap: 0.5
+                                }}
+                            >
+                                <FileText size={14} />
+                                <Typography variant="caption" fontWeight={900}>Save</Typography>
+                            </IconButton>
+                        </Tooltip>
+                    )}
                 </Stack>
-                <IconButton onClick={onClose} size="small" sx={{ color: 'rgba(255,255,255,0.3)' }}>
+                <IconButton onClick={onClose} size="small" sx={{ color: 'rgba(255,255,255,0.3)', ml: 1 }}>
                     <X size={18} />
                 </IconButton>
             </Box>
 
             {/* Messages Area */}
             <Box ref={scrollRef} sx={{ flex: 1, overflowY: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ p: 2, bgcolor: alpha('#6366F1', 0.05), borderRadius: 3, border: '1px solid rgba(99, 102, 241, 0.1)' }}>
-                    <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 800, textAlign: 'center', display: 'block' }}>
-                        Messages are only visible to people in the call and are deleted when you leave.
+                <Box sx={{ p: 2, bgcolor: 'rgba(245, 158, 11, 0.05)', borderRadius: 3, border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+                    <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 800, display: 'block', mb: 0.5 }}>
+                        Public Call Thread
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 500, display: 'block', lineHeight: 1.4 }}>
+                        This chat is public to anyone with access to the call. Start a private chat thread in Connect for private messages.
                     </Typography>
                 </Box>
 

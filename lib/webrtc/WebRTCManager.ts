@@ -1,5 +1,10 @@
 import type { PeerConnectionEvents, SignalData, PeerState } from '@/types/p2p';
-import { createCloudflareSession, createCloudflareTracks } from '@/lib/server/api';
+import { 
+  createCloudflareSession, 
+  createCloudflareTracks, 
+  fetchTurnCredentials, 
+  subscribeToCloudflareTracks 
+} from '@/lib/server/api';
 
 export class WebRTCManager {
   private sfuPeerConnection: RTCPeerConnection | null = null;
@@ -18,6 +23,23 @@ export class WebRTCManager {
   private sessionId: string | null = null;
   private isSfuMode: boolean = false;
 
+  private cloudflareSessionToken: string | null = null;
+  private screenStream: MediaStream | null = null;
+  private recordedChunks: Blob[] = [];
+  private mediaRecorder: MediaRecorder | null = null;
+
+  private get peerConnection(): RTCPeerConnection | null {
+    return this.isSfuMode ? this.sfuPeerConnection : this.p2pPeerConnection;
+  }
+
+  private set peerConnection(pc: RTCPeerConnection | null) {
+    if (this.isSfuMode) {
+      this.sfuPeerConnection = pc;
+    } else {
+      this.p2pPeerConnection = pc;
+    }
+  }
+
   constructor(events: PeerConnectionEvents) {
     this.events = events;
     // Pre-fetch TURN servers
@@ -27,7 +49,9 @@ export class WebRTCManager {
   private async initializeTurnServers() {
       try {
           const { iceServers } = await fetchTurnCredentials();
-          this.config.iceServers = [...this.config.iceServers, ...iceServers];
+          const currentServers = this.config.iceServers || [];
+          const newServers = Array.isArray(iceServers) ? iceServers : [];
+          this.config.iceServers = [...currentServers, ...newServers];
       } catch (err) {
           console.warn('[WebRTCManager] Failed to fetch TURN servers, using STUN-only.');
       }
@@ -152,7 +176,7 @@ export class WebRTCManager {
     }
   }
 
-  public createPeerConnection(senderId: string, targetId: string, isSfu: boolean) {
+  public createPeerConnection(senderId: string, targetId: string, isSfu: boolean = false) {
     this.isSfuMode = isSfu;
     this.currentTargetId = targetId;
 
@@ -199,9 +223,9 @@ export class WebRTCManager {
 
   public async createOffer(senderId: string, targetId: string) {
     try {
-            const { sessionId } = await this.fetchCloudflareSession();
-            this.createPeerConnection(senderId, targetId);
-            if (!this.peerConnection) return;
+      const { sessionId } = await this.fetchCloudflareSession();
+      this.createPeerConnection(senderId, targetId, true);
+      if (!this.peerConnection) return;
 
       // Push local tracks to Cloudflare
       const tracks = this.localStream?.getTracks().map(track => ({
@@ -227,7 +251,7 @@ export class WebRTCManager {
       console.error('Cloudflare SFU Initiation failed, falling back to pure P2P:', error);
       
       // Fallback to pure P2P signaling
-      this.createPeerConnection(senderId, targetId);
+      this.createPeerConnection(senderId, targetId, false);
       if (!this.peerConnection) return;
 
       const offer = await this.peerConnection.createOffer();
@@ -242,9 +266,23 @@ export class WebRTCManager {
     }
   }
 
-    public async handleSignal(signal: SignalData & { cloudflareSessionId?: string, cloudflareTracks?: any[], ts?: number }) {
+  private async processCandidateQueue() {
+    if (!this.peerConnection) return;
+    while (this.candidateQueue.length > 0) {
+      const candidate = this.candidateQueue.shift();
+      if (candidate) {
+        try {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (err) {
+          console.error('[WebRTCManager] Error processing queued candidate:', err);
+        }
+      }
+    }
+  }
+
+  public async handleSignal(signal: SignalData & { cloudflareSessionId?: string, cloudflareTracks?: any[], ts?: number }) {
     if (!this.peerConnection && signal.type === 'offer') {
-      this.createPeerConnection(signal.target, signal.sender);
+      this.createPeerConnection(signal.target, signal.sender, false);
     }
 
     if (!this.peerConnection) return;

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 
 /**
  * CallActionModal pulls in a large MUI tree (drawer, lists, avatars, controls, icons).
@@ -10,6 +11,15 @@ import dynamic from "next/dynamic";
  */
 const CallActionModal = dynamic(
   () => import("@/components/call/CallActionModal").then((m) => ({ default: m.CallActionModal })),
+  { ssr: false }
+);
+
+/**
+ * CallInterface is dynamically imported to avoid loading WebRTC overhead 
+ * on non-call surfaces until a call is active in PIP.
+ */
+const CallInterface = dynamic(
+  () => import("@/components/call/CallInterface").then((m) => ({ default: m.CallInterface })),
   { ssr: false }
 );
 
@@ -39,6 +49,54 @@ export function CallLauncherProvider({ children }: { children: React.ReactNode }
   const [hasEverOpened, setHasEverOpened] = useState(false);
   const [context, setContext] = useState<CallLaunchContext | undefined>(undefined);
 
+  const pathname = usePathname();
+  const [activePip, setActivePip] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const checkPip = () => {
+      // If we are currently on the call page, do not mount the global PIP component
+      const isCallPage = pathname.includes("/connect/call/") || pathname.includes("/call/");
+      if (isCallPage) {
+        setActivePip(null);
+        return;
+      }
+
+      const saved = localStorage.getItem("kylrix_active_pip");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.isPip && Date.now() - parsed.ts < 8 * 60 * 60 * 1000) {
+            setActivePip(parsed);
+            return;
+          }
+        } catch (e) {
+          console.error("Failed to parse active PIP data", e);
+        }
+      }
+      setActivePip(null);
+    };
+
+    checkPip();
+
+    const handleCallEnded = () => {
+      setActivePip(null);
+    };
+
+    window.addEventListener("kylrix_call_ended", handleCallEnded);
+    window.addEventListener("storage", checkPip);
+
+    // Poll every 2 seconds as fallback for same-tab updates not covered by events
+    const interval = setInterval(checkPip, 2000);
+
+    return () => {
+      window.removeEventListener("kylrix_call_ended", handleCallEnded);
+      window.removeEventListener("storage", checkPip);
+      clearInterval(interval);
+    };
+  }, [pathname]);
+
   const openCallLauncher = useCallback((nextContext?: CallLaunchContext) => {
     setContext(nextContext);
     setHasEverOpened(true);
@@ -64,6 +122,21 @@ export function CallLauncherProvider({ children }: { children: React.ReactNode }
       {hasEverOpened ? (
         <CallActionModal open={open} onClose={closeCallLauncher} launchContext={context} />
       ) : null}
+      {activePip && (
+        <CallInterface
+          key={activePip.callCode || activePip.conversationId}
+          callCode={activePip.callCode}
+          conversationId={activePip.conversationId}
+          isCaller={activePip.isCaller}
+          callType={activePip.callType}
+          targetId={activePip.targetId}
+          initialMediaSettings={activePip.initialMediaSettings}
+          autoInitiate={activePip.autoInitiate}
+          callTitle={activePip.callTitle}
+          expiresAt={activePip.expiresAt}
+          initialPresentation="dock"
+        />
+      )}
     </CallLauncherContext.Provider>
   );
 }
@@ -75,4 +148,5 @@ export function useCallLauncher() {
   }
   return context;
 }
+
 
