@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
-import { Box, Typography, Stack, IconButton, Alert, CircularProgress } from '@mui/material';
+import React, { useEffect, useCallback, useMemo, useRef } from 'react';
+import { Box, Typography, Stack, IconButton, Alert } from '@mui/material';
 import { deleteNote } from '@/lib/appwrite';
 import { useNotes } from '@/context/NotesContext';
 
@@ -34,7 +34,7 @@ import { sidebarIgnoreProps } from '@/constants/sidebar';
 
 import { NotesErrorBoundary } from '@/components/ui/ErrorBoundary';
 
-function NotesContent() {
+export default function NotesPage() {
   const { 
     notes: allNotes, 
     totalNotes, 
@@ -298,439 +298,389 @@ function NotesContent() {
   }, [paginatedNotes, isPinned, hasSearchResults, currentPage]);
 
   return (
-    <Box sx={{ flex: 1, minHeight: '100vh', pointerEvents: 'auto' }}>
-      {/* Mobile Header */}
-      <Box
-        component="header"
-        sx={{
-          mb: 4,
-          display: { xs: 'flex', md: 'none' },
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          px: 2,
-          py: 1.5,
-          bgcolor: 'rgba(255, 255, 255, 0.01)',
-          borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-        }}
-      >
-        <Typography
-          variant="h4"
+    <NotesErrorBoundary>
+      <Box sx={{ flex: 1, minHeight: '100vh', pointerEvents: 'auto' }}>
+        {/* Mobile Header */}
+        <Box
+          component="header"
           sx={{
-            fontWeight: 900,
-            fontFamily: 'var(--font-clash-display)',
-            color: 'text.primary',
-            letterSpacing: '-0.04em',
+            mb: 4,
+            display: { xs: 'flex', md: 'none' },
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 1.5,
+            bgcolor: 'rgba(255, 255, 255, 0.01)',
+            borderRadius: '24px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
           }}
         >
-          Notes
-        </Typography>
-        <Stack direction="row" spacing={1.5} alignItems="center">
-          <IconButton 
-            onClick={handleManualRefresh} 
-            {...sidebarIgnoreProps} 
-            sx={{ 
-              color: isRefreshing ? 'secondary.main' : 'text.secondary',
-              bgcolor: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: 'rgba(255, 255, 255, 0.15)',
-              },
-              transition: 'all 0.3s ease',
-              '& svg': {
-                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(360deg)' }
-                }
-              }
-            }}
-            disabled={isRefreshing}
-          >
-            <RefreshIcon />
-          </IconButton>
-        </Stack>
-      </Box>
-
-      {/* Desktop Header */}
-      <Box
-        component="header"
-        sx={{
-          display: { xs: 'none', md: 'flex' },
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          mb: 6,
-          p: 4,
-          bgcolor: 'rgba(255, 255, 255, 0.01)',
-          borderRadius: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: '-1px',
-            left: '10%',
-            right: '10%',
-            height: '1px',
-            background: 'linear-gradient(90deg, transparent, secondary.main, primary.main, transparent)',
-          }
-        }}
-      >
-        <Box>
           <Typography
-            variant="h3"
+            variant="h4"
             sx={{
               fontWeight: 900,
               fontFamily: 'var(--font-clash-display)',
               color: 'text.primary',
-              mb: 1,
               letterSpacing: '-0.04em',
             }}
           >
             Notes
           </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: 'text.secondary',
-              fontWeight: 500,
-              fontFamily: 'var(--font-satoshi)',
-              opacity: 0.8
-            }}
-          >
-            {allNotes.length < totalNotes && !hasSearchResults ? (
-              <>Syncing <Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{allNotes.length}</Box> of <Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, fontSize: '0.85rem' }}>{totalNotes}</Box> notes</>
-            ) : (
-              hasSearchResults ? (
-                <><Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{totalCount}</Box> {totalCount === 1 ? 'result' : 'results'} found</>
-              ) : (
-                <><Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{totalNotes}</Box> {totalNotes === 1 ? 'note' : 'notes'}</>
-              )
-            )}
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <IconButton
-            onClick={handleManualRefresh}
-            {...sidebarIgnoreProps}
-            sx={{ 
-              color: isRefreshing ? 'secondary.main' : 'text.secondary',
-              bgcolor: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: 'rgba(255, 255, 255, 0.15)',
-              },
-              transition: 'all 0.3s ease',
-              '& svg': {
-                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(360deg)' }
-                }
-              }
-            }}
-            disabled={isRefreshing}
-          >
-            <RefreshIcon />
-          </IconButton>
-          <IconButton
-            onClick={handleToggleSidebar}
-            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            {...sidebarIgnoreProps}
-            sx={{ 
-              color: 'text.secondary',
-              bgcolor: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: 'rgba(255, 255, 255, 0.15)',
-              }
-            }}
-          >
-            {isCollapsed ? (
-              <ArrowRightOnRectangleIcon />
-            ) : (
-              <ArrowLeftOnRectangleIcon />
-            )}
-          </IconButton>
-          <IconButton 
-            onClick={handleCreateNoteClick} 
-            {...sidebarIgnoreProps} 
-            sx={{ 
-              color: 'primary.main',
-              bgcolor: 'rgba(99, 102, 241, 0.05)',
-              borderRadius: '12px',
-              border: '1px solid rgba(99, 102, 241, 0.1)',
-              px: 2,
-              '&:hover': {
-                bgcolor: 'rgba(99, 102, 241, 0.1)',
-                borderColor: 'rgba(99, 102, 241, 0.2)',
-              }
-            }}
-          >
-            <PlusCircleIcon />
-          </IconButton>
-        </Stack>
-      </Box>
-
-      {/* Tags Filter */}
-      {tags.length > 0 && (
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{
-            mb: 6,
-            overflowX: 'auto',
-            p: 1.5,
-            bgcolor: 'rgba(255, 255, 255, 0.01)',
-            borderRadius: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            alignItems: 'center',
-            '&::-webkit-scrollbar': { display: 'none' },
-            msOverflowStyle: 'none',
-            scrollbarWidth: 'none'
-          }}
-        >
-          {tags.map((tag, index) => (
-            <Button
-              key={index}
-              variant={searchQuery === tag ? 'contained' : 'outlined'}
-              size="small"
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <IconButton 
+              onClick={handleManualRefresh} 
+              {...sidebarIgnoreProps} 
               sx={{ 
-                whiteSpace: 'nowrap',
+                color: isRefreshing ? 'secondary.main' : 'text.secondary',
+                bgcolor: 'rgba(255, 255, 255, 0.03)',
                 borderRadius: '12px',
-                fontFamily: 'var(--font-satoshi)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                textTransform: 'none',
-                py: 1,
-                px: 2.5,
-                bgcolor: searchQuery === tag ? 'secondary.main' : 'rgba(255, 255, 255, 0.03)',
-                borderColor: searchQuery === tag ? 'secondary.main' : 'rgba(255, 255, 255, 0.08)',
-                color: searchQuery === tag ? '#fff' : 'rgba(255, 255, 255, 0.6)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 '&:hover': {
-                  bgcolor: searchQuery === tag ? 'secondary.light' : 'rgba(255, 255, 255, 0.05)',
-                  borderColor: searchQuery === tag ? 'secondary.light' : 'rgba(255, 255, 255, 0.15)',
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.15)',
+                },
+                transition: 'all 0.3s ease',
+                '& svg': {
+                  animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
                 }
               }}
-              aria-pressed={searchQuery === tag}
-              onClick={() => searchQuery === tag ? clearSearch() : setSearchQuery(tag)}
-              {...sidebarIgnoreProps}
+              disabled={isRefreshing}
             >
-              {tag}
-            </Button>
-          ))}
-
-          {hasSearchResults && (
-            <Button 
-              variant="text" 
-              size="small" 
-              onClick={clearSearch} 
-              sx={{ 
-                ml: 1, 
-                color: 'primary.main',
-                fontFamily: 'var(--font-jetbrains-mono)',
-                fontSize: '0.75rem',
-                letterSpacing: '0.05em'
-              }} 
-              {...sidebarIgnoreProps}
-            >
-              Clear
-            </Button>
-          )}
-        </Stack>
-      )}
-
-      {/* Top Pagination */}
-      {totalPages > 1 && (
-        <Box sx={{ mb: 3 }}>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            hasNextPage={hasNextPage}
-            hasPreviousPage={hasPreviousPage}
-            onPageChange={goToPage}
-            onNextPage={nextPage}
-            onPreviousPage={previousPage}
-            totalCount={hasSearchResults ? totalCount : allNotes.length}
-            pageSize={paginationConfig.pageSize}
-            compact={false}
-          />
+              <RefreshIcon />
+            </IconButton>
+          </Stack>
         </Box>
-      )}
 
-      {/* Error State */}
-      {error && (
-        <Alert
-          severity="error"
-          sx={{
-            mb: 3,
-            borderRadius: '16px',
-            bgcolor: 'rgba(211, 47, 47, 0.1)',
-            color: '#ff5252',
-            border: '1px solid rgba(211, 47, 47, 0.2)',
-            '& .MuiAlert-icon': { color: '#ff5252' }
-          }}
-        >
-          {error}
-        </Alert>
-      )}
-
-      {/* Notes Grid */}
-      {isInitialLoading ? (
-        <NoteGridSkeleton count={12} />
-      ) : paginatedNotes.length === 0 ? (
+        {/* Desktop Header */}
         <Box
+          component="header"
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
+            display: { xs: 'none', md: 'flex' },
             alignItems: 'center',
-            justifyContent: 'center',
-            py: 10,
-            textAlign: 'center'
+            justifyContent: 'space-between',
+            mb: 6,
+            p: 4,
+            bgcolor: 'rgba(255, 255, 255, 0.01)',
+            borderRadius: '32px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
+            position: 'relative',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: '-1px',
+              left: '10%',
+              right: '10%',
+              height: '1px',
+              background: 'linear-gradient(90deg, transparent, secondary.main, primary.main, transparent)',
+            }
           }}
         >
+          <Box>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: 900,
+                fontFamily: 'var(--font-clash-display)',
+                color: 'text.primary',
+                mb: 1,
+                letterSpacing: '-0.04em',
+              }}
+            >
+              Notes
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: 'text.secondary',
+                fontWeight: 500,
+                fontFamily: 'var(--font-satoshi)',
+                opacity: 0.8
+              }}
+            >
+              {allNotes.length < totalNotes && !hasSearchResults ? (
+                <>Syncing <Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{allNotes.length}</Box> of <Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, fontSize: '0.85rem' }}>{totalNotes}</Box> notes</>
+              ) : (
+                hasSearchResults ? (
+                  <><Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{totalCount}</Box> {totalCount === 1 ? 'result' : 'results'} found</>
+                ) : (
+                  <><Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{totalNotes}</Box> {totalNotes === 1 ? 'note' : 'notes'}</>
+                )
+              )}
+            </Typography>
+          </Box>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <IconButton
+              onClick={handleManualRefresh}
+              {...sidebarIgnoreProps}
+              sx={{ 
+                color: isRefreshing ? 'secondary.main' : 'text.secondary',
+                bgcolor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.15)',
+                },
+                transition: 'all 0.3s ease',
+                '& svg': {
+                  animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' }
+                  }
+                }
+              }}
+              disabled={isRefreshing}
+            >
+              <RefreshIcon />
+            </IconButton>
+            <IconButton
+              onClick={handleToggleSidebar}
+              aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              {...sidebarIgnoreProps}
+              sx={{ 
+                color: 'text.secondary',
+                bgcolor: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.15)',
+                }
+              }}
+            >
+              {isCollapsed ? (
+                <ArrowRightOnRectangleIcon />
+              ) : (
+                <ArrowLeftOnRectangleIcon />
+              )}
+            </IconButton>
+            <IconButton 
+              onClick={handleCreateNoteClick} 
+              {...sidebarIgnoreProps} 
+              sx={{ 
+                color: 'primary.main',
+                bgcolor: 'rgba(99, 102, 241, 0.05)',
+                borderRadius: '12px',
+                border: '1px solid rgba(99, 102, 241, 0.1)',
+                px: 2,
+                '&:hover': {
+                  bgcolor: 'rgba(99, 102, 241, 0.1)',
+                  borderColor: 'rgba(99, 102, 241, 0.2)',
+                }
+              }}
+            >
+              <PlusCircleIcon />
+            </IconButton>
+          </Stack>
+        </Box>
+
+        {/* Tags Filter */}
+        {tags.length > 0 && (
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              mb: 6,
+              overflowX: 'auto',
+              p: 1.5,
+              bgcolor: 'rgba(255, 255, 255, 0.01)',
+              borderRadius: '24px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              alignItems: 'center',
+              '&::-webkit-scrollbar': { display: 'none' },
+              msOverflowStyle: 'none',
+              scrollbarWidth: 'none'
+            }}
+          >
+            {tags.map((tag, index) => (
+              <Button
+                key={index}
+                variant={searchQuery === tag ? 'contained' : 'outlined'}
+                size="small"
+                sx={{ 
+                  whiteSpace: 'nowrap',
+                  borderRadius: '12px',
+                  fontFamily: 'var(--font-satoshi)',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  textTransform: 'none',
+                  py: 1,
+                  px: 2.5,
+                  bgcolor: searchQuery === tag ? 'secondary.main' : 'rgba(255, 255, 255, 0.03)',
+                  borderColor: searchQuery === tag ? 'secondary.main' : 'rgba(255, 255, 255, 0.08)',
+                  color: searchQuery === tag ? '#fff' : 'rgba(255, 255, 255, 0.6)',
+                  '&:hover': {
+                    bgcolor: searchQuery === tag ? 'secondary.light' : 'rgba(255, 255, 255, 0.05)',
+                    borderColor: searchQuery === tag ? 'secondary.light' : 'rgba(255, 255, 255, 0.15)',
+                  }
+                }}
+                aria-pressed={searchQuery === tag}
+                onClick={() => searchQuery === tag ? clearSearch() : setSearchQuery(tag)}
+                {...sidebarIgnoreProps}
+              >
+                {tag}
+              </Button>
+            ))}
+
+            {hasSearchResults && (
+              <Button 
+                variant="text" 
+                size="small" 
+                onClick={clearSearch} 
+                sx={{ 
+                  ml: 1, 
+                  color: 'primary.main',
+                  fontFamily: 'var(--font-jetbrains-mono)',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.05em'
+                }} 
+                {...sidebarIgnoreProps}
+              >
+                Clear
+              </Button>
+            )}
+          </Stack>
+        )}
+
+        {/* Top Pagination */}
+        {totalPages > 1 && (
+          <Box sx={{ mb: 3 }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              hasNextPage={hasNextPage}
+              hasPreviousPage={hasPreviousPage}
+              onPageChange={goToPage}
+              onNextPage={nextPage}
+              onPreviousPage={previousPage}
+              totalCount={hasSearchResults ? totalCount : allNotes.length}
+              pageSize={paginationConfig.pageSize}
+              compact={false}
+            />
+          </Box>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Alert
+            severity="error"
+            sx={{
+              mb: 3,
+              borderRadius: '16px',
+              bgcolor: 'rgba(211, 47, 47, 0.1)',
+              color: '#ff5252',
+              border: '1px solid rgba(211, 47, 47, 0.2)',
+              '& .MuiAlert-icon': { color: '#ff5252' }
+            }}
+          >
+            {error}
+          </Alert>
+        )}
+
+        {/* Notes Grid */}
+        {isInitialLoading ? (
+          <NoteGridSkeleton count={12} />
+        ) : paginatedNotes.length === 0 ? (
           <Box
             sx={{
-              width: 96,
-              height: 96,
-              bgcolor: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '24px',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              mb: 3,
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
+              py: 10,
+              textAlign: 'center'
             }}
           >
+            <Box
+              sx={{
+                width: 96,
+                height: 96,
+                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 3,
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              {hasSearchResults ? (
+                <MagnifyingGlassIcon sx={{ fontSize: 48, color: 'text.disabled', opacity: 0.5 }} />
+              ) : (
+                <PlusCircleIcon sx={{ fontSize: 48, color: 'text.disabled', opacity: 0.5 }} />
+              )}
+            </Box>
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 900,
+                fontFamily: 'var(--font-space-grotesk)',
+                color: 'text.primary',
+                mb: 1.5
+              }}
+            >
+              {hasSearchResults ? 'No Results' : 'Empty'}
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: 'text.secondary',
+                mb: 4,
+                maxWidth: 400,
+                fontWeight: 500
+              }}
+            >
+              {hasSearchResults
+                ? `No matches found for "${searchQuery}". Try a different search term.`
+                : 'Capture your thoughts and ideas here. Your notes are private and secure.'
+              }
+            </Typography>
             {hasSearchResults ? (
-              <MagnifyingGlassIcon sx={{ fontSize: 48, color: 'text.disabled', opacity: 0.5 }} />
+              <Stack direction="row" spacing={2}>
+                <Button variant="outlined" onClick={clearSearch}>
+                  Clear Search
+                </Button>
+                <Button onClick={handleCreateNoteClick} startIcon={<PlusCircleIcon />}>
+                  New Note
+                </Button>
+              </Stack>
             ) : (
-              <PlusCircleIcon sx={{ fontSize: 48, color: 'text.disabled', opacity: 0.5 }} />
+              <Button onClick={handleCreateNoteClick} startIcon={<PlusCircleIcon />}>
+                Open Composer
+              </Button>
             )}
           </Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 900,
-              fontFamily: 'var(--font-space-grotesk)',
-              color: 'text.primary',
-              mb: 1.5
-            }}
-          >
-            {hasSearchResults ? 'No Results' : 'Empty'}
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: 'text.secondary',
-              mb: 4,
-              maxWidth: 400,
-              fontWeight: 500
-            }}
-          >
-            {hasSearchResults
-              ? `No matches found for "${searchQuery}". Try a different search term.`
-              : 'Capture your thoughts and ideas here. Your notes are private and secure.'
-            }
-          </Typography>
-          {hasSearchResults ? (
-            <Stack direction="row" spacing={2}>
-              <Button variant="outlined" onClick={clearSearch}>
-                Clear Search
-              </Button>
-              <Button onClick={handleCreateNoteClick} startIcon={<PlusCircleIcon />}>
-                New Note
-              </Button>
-            </Stack>
-          ) : (
-            <Button onClick={handleCreateNoteClick} startIcon={<PlusCircleIcon />}>
-              Open Composer
-            </Button>
-          )}
-        </Box>
-      ) : (
-        <Stack spacing={4}>
-          {pinnedNotes.length > 0 && (
-            <Box 
-              sx={{ 
-                p: { xs: 2, md: 3 }, 
-                bgcolor: 'rgba(255, 255, 255, 0.01)', 
-                borderRadius: '32px', 
-                border: '1px solid rgba(255, 255, 255, 0.05)' 
-              }}
-            >
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3, px: 1 }}>
-                <Box 
-                  sx={{ 
-                    p: 1, 
-                    bgcolor: 'rgba(236, 72, 153, 0.05)', 
-                    borderRadius: '10px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    border: '1px solid rgba(236, 72, 153, 0.1)'
-                  }}
-                >
-                  <PinIcon sx={{ fontSize: 16, color: 'secondary.main', transform: 'rotate(45deg)' }} />
-                </Box>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 800, 
-                    fontFamily: 'var(--font-clash-display)', 
-                    textTransform: 'uppercase', 
-                    letterSpacing: '0.15em', 
-                    fontSize: '0.75rem', 
-                    color: 'secondary.main',
-                  }}
-                >
-                  Pinned Notes
-                </Typography>
-              </Stack>
-              <Box sx={gridSx}>
-                {pinnedNotes.map((note) => (
-                  <NoteCard
-                    key={note.$id}
-                    note={note}
-                    onUpdate={handleNoteUpdated}
-                    onDelete={handleNoteDeleted}
-                  />
-                ))}
-              </Box>
-            </Box>
-          )}
-
-          {regularNotes.length > 0 && (
-            <Box 
-              sx={{ 
-                p: { xs: 2, md: 3 }, 
-                bgcolor: 'rgba(255, 255, 255, 0.01)', 
-                borderRadius: '32px', 
-                border: '1px solid rgba(255, 255, 255, 0.05)' 
-              }}
-            >
-              {pinnedNotes.length > 0 && (
+        ) : (
+          <Stack spacing={4}>
+            {pinnedNotes.length > 0 && (
+              <Box 
+                sx={{ 
+                  p: { xs: 2, md: 3 }, 
+                  bgcolor: 'rgba(255, 255, 255, 0.01)', 
+                  borderRadius: '32px', 
+                  border: '1px solid rgba(255, 255, 255, 0.05)' 
+                }}
+              >
                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3, px: 1 }}>
                   <Box 
                     sx={{ 
                       p: 1, 
-                      bgcolor: 'rgba(255, 255, 255, 0.03)', 
+                      bgcolor: 'rgba(236, 72, 153, 0.05)', 
                       borderRadius: '10px', 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center',
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
+                      border: '1px solid rgba(236, 72, 153, 0.1)'
                     }}
                   >
-                    <MagnifyingGlassIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    <PinIcon sx={{ fontSize: 16, color: 'secondary.main', transform: 'rotate(45deg)' }} />
                   </Box>
                   <Typography 
                     variant="h6" 
@@ -740,64 +690,106 @@ function NotesContent() {
                       textTransform: 'uppercase', 
                       letterSpacing: '0.15em', 
                       fontSize: '0.75rem', 
-                      color: 'text.secondary',
-                      opacity: 0.6
+                      color: 'secondary.main',
                     }}
                   >
-                    All Notes
+                    Pinned Notes
                   </Typography>
                 </Stack>
-              )}
-              <Box sx={gridSx}>
-                {regularNotes.map((note) => (
-                  <NoteCard
-                    key={note.$id}
-                    note={note}
-                    onUpdate={handleNoteUpdated}
-                    onDelete={handleNoteDeleted}
-                  />
-                ))}
+                <Box sx={gridSx}>
+                  {pinnedNotes.map((note) => (
+                    <NoteCard
+                      key={note.$id}
+                      note={note}
+                      onUpdate={handleNoteUpdated}
+                      onDelete={handleNoteDeleted}
+                    />
+                  ))}
+                </Box>
               </Box>
-            </Box>
-          )}
-          
-          {hasMore && !isInitialLoading && !hasSearchResults && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-              <Button variant="outlined" onClick={loadMore} {...sidebarIgnoreProps}>
-                Load More
-              </Button>
-            </Box>
-          )}
-        </Stack>
-      )}
+            )}
 
-      {/* Bottom Pagination */}
-      {totalPages > 1 && paginatedNotes.length > 0 && (
-        <Box sx={{ mt: 4 }}>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            hasNextPage={hasNextPage}
-            hasPreviousPage={hasPreviousPage}
-            onPageChange={goToPage}
-            onNextPage={nextPage}
-            onPreviousPage={previousPage}
-            totalCount={hasSearchResults ? totalCount : (allNotes || []).length}
-            pageSize={paginationConfig.pageSize}
-            compact={false}
-          />
-        </Box>
-      )}
-    </Box>
-  );
-}
+            {regularNotes.length > 0 && (
+              <Box 
+                sx={{ 
+                  p: { xs: 2, md: 3 }, 
+                  bgcolor: 'rgba(255, 255, 255, 0.01)', 
+                  borderRadius: '32px', 
+                  border: '1px solid rgba(255, 255, 255, 0.05)' 
+                }}
+              >
+                {pinnedNotes.length > 0 && (
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3, px: 1 }}>
+                    <Box 
+                      sx={{ 
+                        p: 1, 
+                        bgcolor: 'rgba(255, 255, 255, 0.03)', 
+                        borderRadius: '10px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        border: '1px solid rgba(255, 255, 255, 0.08)'
+                      }}
+                    >
+                      <MagnifyingGlassIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+                    </Box>
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 800, 
+                        fontFamily: 'var(--font-clash-display)', 
+                        textTransform: 'uppercase', 
+                        letterSpacing: '0.15em', 
+                        fontSize: '0.75rem', 
+                        color: 'text.secondary',
+                        opacity: 0.6
+                      }}
+                    >
+                      All Notes
+                    </Typography>
+                  </Stack>
+                )}
+                <Box sx={gridSx}>
+                  {regularNotes.map((note) => (
+                    <NoteCard
+                      key={note.$id}
+                      note={note}
+                      onUpdate={handleNoteUpdated}
+                      onDelete={handleNoteDeleted}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+            
+            {hasMore && !isInitialLoading && !hasSearchResults && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                <Button variant="outlined" onClick={loadMore} {...sidebarIgnoreProps}>
+                  Load More
+                </Button>
+              </Box>
+            )}
+          </Stack>
+        )}
 
-export default function NotesPage() {
-  return (
-    <NotesErrorBoundary>
-      <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
-        <NotesContent />
-      </Suspense>
+        {/* Bottom Pagination */}
+        {totalPages > 1 && paginatedNotes.length > 0 && (
+          <Box sx={{ mt: 4 }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              hasNextPage={hasNextPage}
+              hasPreviousPage={hasPreviousPage}
+              onPageChange={goToPage}
+              onNextPage={nextPage}
+              onPreviousPage={previousPage}
+              totalCount={hasSearchResults ? totalCount : (allNotes || []).length}
+              pageSize={paginationConfig.pageSize}
+              compact={false}
+            />
+          </Box>
+        )}
+      </Box>
     </NotesErrorBoundary>
   );
 }
