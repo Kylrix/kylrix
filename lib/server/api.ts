@@ -15,22 +15,27 @@ export async function createCloudflareSession() {
   const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
 
   if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID) {
-    throw new Error('Cloudflare configuration missing');
+    return { success: false, error: 'Cloudflare configuration missing' };
   }
 
-  const response = await fetch(`https://rtc.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/new`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  try {
+    const response = await fetch(`https://rtc.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/new`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-  if (!response.ok) {
-    throw new Error(await response.text());
+    if (!response.ok) {
+      return { success: false, error: await response.text() };
+    }
+
+    const data = await response.json();
+    return { success: true, ...data };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Network error' };
   }
-
-  return await response.json();
 }
 
 export async function createCloudflareTracks(data: { sessionId: string; tracks: any[] }) {
@@ -38,23 +43,28 @@ export async function createCloudflareTracks(data: { sessionId: string; tracks: 
   const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
 
   if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID) {
-    throw new Error('Cloudflare configuration missing');
+    return { success: false, error: 'Cloudflare configuration missing' };
   }
 
-  const response = await fetch(`https://rtc.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/${data.sessionId}/tracks/new`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ tracks: data.tracks }),
-  });
+  try {
+    const response = await fetch(`https://rtc.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/${data.sessionId}/tracks/new`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ tracks: data.tracks }),
+    });
 
-  if (!response.ok) {
-    throw new Error(await response.text());
+    if (!response.ok) {
+      return { success: false, error: await response.text() };
+    }
+
+    const resData = await response.json();
+    return { success: true, ...resData };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Network error' };
   }
-
-  return await response.json();
 }
 
 export async function fetchTurnCredentials() {
@@ -63,23 +73,28 @@ export async function fetchTurnCredentials() {
   const TURN_KEY_ID = process.env.CLOUDFLARE_TURN_KEY_ID;
 
   if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID || !TURN_KEY_ID) {
-    throw new Error('Cloudflare configuration missing');
+    return { success: false, error: 'Cloudflare configuration missing', iceServers: [] };
   }
 
-  const response = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${TURN_KEY_ID}/credentials/generate-ice-servers`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ ttl: 86400 }),
-  });
+  try {
+    const response = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${TURN_KEY_ID}/credentials/generate-ice-servers`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ttl: 86400 }),
+    });
 
-  if (!response.ok) {
-    throw new Error(await response.text());
+    if (!response.ok) {
+      return { success: false, error: await response.text(), iceServers: [] };
+    }
+
+    const resData = await response.json();
+    return { success: true, ...resData };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Network error', iceServers: [] };
   }
-
-  return await response.json();
 }
 
 export async function subscribeToCloudflareTracks(data: { sessionId: string; tracks: any[] }) {
@@ -87,23 +102,28 @@ export async function subscribeToCloudflareTracks(data: { sessionId: string; tra
   const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
 
   if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID) {
-    throw new Error('Cloudflare configuration missing');
+    return { success: false, error: 'Cloudflare configuration missing' };
   }
 
-  const response = await fetch(`https://rtc.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/${data.sessionId}/tracks/new`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ tracks: data.tracks }),
-  });
+  try {
+    const response = await fetch(`https://rtc.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/${data.sessionId}/tracks/new`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ tracks: data.tracks }),
+    });
 
-  if (!response.ok) {
-    throw new Error(await response.text());
+    if (!response.ok) {
+      return { success: false, error: await response.text() };
+    }
+
+    const resData = await response.json();
+    return { success: true, ...resData };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Network error' };
   }
-
-  return await response.json();
 }
 
 export async function generateAIResponse(data: {

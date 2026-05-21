@@ -260,7 +260,7 @@ export function PublicCall({ id }: { id: string }) {
             } else {
                 setShowPreCheck(true);
                 setJoining(false);
-                setAutoStartAfterPreCheck(false);
+                setAutoStartAfterPreCheck(true);
             }
         } catch (_e) {
             setJoining(false);

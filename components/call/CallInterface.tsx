@@ -279,6 +279,16 @@ export const CallInterface = ({
         return 'Participant';
     }, [user, userNames, participants]);
 
+    // Automatically resolve names of active participants
+    const participantIds = participants.map(p => p.userId).join(',');
+    useEffect(() => {
+        participants.forEach(p => {
+            if (p.userId && !userNames[p.userId]) {
+                resolveUserName(p.userId);
+            }
+        });
+    }, [participantIds, resolveUserName]);
+
     // Lazy load/spin Ghost Note
     useEffect(() => {
         if (!callCode || !user) return;
@@ -1133,7 +1143,9 @@ export const CallInterface = ({
                                         <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>
                                             {user?.displayName || user?.name || 'You'}
                                         </Typography>
-                                        <Typography variant="caption" sx={{ color: COLORS.primary, fontWeight: 700 }}>Host</Typography>
+                                        <Typography variant="caption" sx={{ color: isCaller ? COLORS.primary : 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
+                                            {isCaller ? 'Host (You)' : 'Guest (You)'}
+                                        </Typography>
                                     </Box>
                                 </Stack>
                             </Paper>
@@ -1141,17 +1153,20 @@ export const CallInterface = ({
                             {/* Other participants */}
                             {participants.map((p) => {
                                 if (p.userId === user?.$id) return null;
+                                const isParticipantHost = isCaller ? false : p.userId === targetId;
                                 return (
                                     <Paper key={p.userId} sx={{ p: 1.5, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <Stack direction="row" spacing={1.5} alignItems="center">
-                                            <Avatar sx={{ width: 32, height: 32, bgcolor: COLORS.secondary, fontSize: '0.8rem', fontWeight: 900 }}>
+                                            <Avatar sx={{ width: 32, height: 32, bgcolor: isParticipantHost ? COLORS.primary : COLORS.secondary, fontSize: '0.8rem', fontWeight: 900 }}>
                                                 {(userNames[p.userId] || p.name || 'P').slice(0, 1).toUpperCase()}
                                             </Avatar>
                                             <Box>
                                                 <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>
                                                     {userNames[p.userId] || p.name || 'Participant'}
                                                 </Typography>
-                                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>Active</Typography>
+                                                <Typography variant="caption" sx={{ color: isParticipantHost ? COLORS.primary : 'rgba(255,255,255,0.4)', fontWeight: isParticipantHost ? 700 : 500 }}>
+                                                    {isParticipantHost ? 'Host' : 'Active'}
+                                                </Typography>
                                             </Box>
                                         </Stack>
 

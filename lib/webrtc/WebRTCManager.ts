@@ -48,7 +48,12 @@ export class WebRTCManager {
 
   private async initializeTurnServers() {
       try {
-          const { iceServers } = await fetchTurnCredentials();
+          const res = await fetchTurnCredentials();
+          if (res && 'success' in res && res.success === false) {
+              console.warn('[WebRTCManager] TURN Servers not configured:', res.error);
+              return;
+          }
+          const { iceServers } = res;
           const currentServers = this.config.iceServers || [];
           const newServers = Array.isArray(iceServers) ? iceServers : [];
           this.config.iceServers = [...currentServers, ...newServers];
@@ -62,6 +67,9 @@ export class WebRTCManager {
     
     console.log('[WebRTCManager] Fetching Cloudflare session...');
     const data = await createCloudflareSession();
+    if (!data || (data && 'success' in data && data.success === false)) {
+      throw new Error((data as any)?.error || 'Cloudflare configuration missing');
+    }
     console.log('[WebRTCManager] Cloudflare session created:', data.sessionId);
     this.sessionId = data.sessionId;
     this.cloudflareSessionToken = data.sessionToken;
@@ -235,6 +243,9 @@ export class WebRTCManager {
       }));
 
       const trackData = await createCloudflareTracks({ sessionId, tracks: tracks || [] });
+      if (trackData && 'success' in trackData && trackData.success === false) {
+        throw new Error(trackData.error);
+      }
 
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
