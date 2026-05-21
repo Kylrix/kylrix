@@ -26,6 +26,61 @@ import { IdentityAvatar, IdentityName, computeIdentityFlags } from './IdentityBa
 const storage = new Storage(client);
 const AVATAR_BUCKET_ID = 'profile_pictures';
 
+const compressImage = (file: File, maxWidth = 512, maxHeight = 512, quality = 0.7): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas compression failed'));
+              return;
+            }
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('Failed to load image for compression'));
+    };
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+  });
+};
+
 interface ProfileManagerProps {
   onProfileUpdate?: (data: { name?: string; username?: string; profilePicId?: string | null }) => void;
 }
@@ -102,6 +157,15 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (!file.type.startsWith('image/')) {
+        setError('Only image files are allowed.');
+        return;
+      }
+      if (file.size > 1024 * 1024) {
+        setError('Maximum file size of 1MB exceeded.');
+        return;
+      }
+      setError(null);
       setProfilePic(file);
       setProfilePicUrl(URL.createObjectURL(file));
     }
@@ -155,7 +219,13 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
       // 1. Handle Profile Picture Upload
       if (profilePic) {
         try {
-          const uploadedFile = await storage.createFile(AVATAR_BUCKET_ID, ID.unique(), profilePic);
+          // Compress the selected image on the client
+          const compressed = await compressImage(profilePic, 512, 512, 0.7);
+          // Strict check: must be < 1MB
+          if (compressed.size > 1024 * 1024) {
+            throw new Error('Maximum file size of 1MB exceeded.');
+          }
+          const uploadedFile = await storage.createFile(AVATAR_BUCKET_ID, ID.unique(), compressed);
           const oldId = currentPrefs.profilePicId;
           
           currentPrefs.profilePicId = uploadedFile.$id;
@@ -165,7 +235,8 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
             try { await storage.deleteFile(AVATAR_BUCKET_ID, oldId); } catch (_e: unknown) {}
           }
         } catch (_e: unknown) {
-          throw new Error('Failed to upload profile picture');
+          const errMsg = _e instanceof Error ? _e.message : 'Failed to upload profile picture';
+          throw new Error(errMsg);
         }
       }
 

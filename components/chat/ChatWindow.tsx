@@ -428,6 +428,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const recordingTimerRef = useRef<any>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const router = useRouter();
     const clientReadSegments = React.useMemo(
@@ -905,6 +906,19 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     }, [conversationId, user, user?.$id, loadConversation, loadMessages]);
 
     useEffect(() => {
+        return () => {
+            if (recordingTimerRef.current) {
+                clearTimeout(recordingTimerRef.current);
+            }
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                try {
+                    mediaRecorderRef.current.stop();
+                } catch (_) {}
+            }
+        };
+    }, []);
+
+    useEffect(() => {
         if (conversation?.isEncrypted && !isUnlocked && !unlockModalOpen) {
             setUnlockModalOpen(true);
         }
@@ -1177,6 +1191,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const toggleRecording = async () => {
         if (isRecording) {
             // Stop recording
+            if (recordingTimerRef.current) {
+                clearTimeout(recordingTimerRef.current);
+                recordingTimerRef.current = null;
+            }
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
                 mediaRecorderRef.current.stop();
             }
@@ -1185,7 +1203,16 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             // Start recording
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                const mediaRecorder = new MediaRecorder(stream);
+                
+                // Heavily compress voice note on client side (16kbps bitrate & Opus format)
+                let options = { audioBitsPerSecond: 16000 };
+                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    (options as any).mimeType = 'audio/webm;codecs=opus';
+                } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+                    (options as any).mimeType = 'audio/ogg;codecs=opus';
+                }
+                
+                const mediaRecorder = new MediaRecorder(stream, options);
                 mediaRecorderRef.current = mediaRecorder;
                 audioChunksRef.current = [];
 
@@ -1196,6 +1223,10 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 };
 
                 mediaRecorder.onstop = async () => {
+                    if (recordingTimerRef.current) {
+                        clearTimeout(recordingTimerRef.current);
+                        recordingTimerRef.current = null;
+                    }
                     const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
                     const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
                     
@@ -1216,6 +1247,15 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
 
                 mediaRecorder.start();
                 setIsRecording(true);
+
+                // Enforce strict client-side limit of 120 seconds (2 minutes)
+                recordingTimerRef.current = setTimeout(() => {
+                    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+                        mediaRecorderRef.current.stop();
+                    }
+                    setIsRecording(false);
+                }, 120000);
+
             } catch (err) {
                 console.error("Failed to start recording:", err);
                 alert("Microphone access is required for voice notes.");
