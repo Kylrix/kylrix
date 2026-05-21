@@ -357,9 +357,9 @@ export function PublicCall({ id }: { id: string }) {
         }}>
             <Container maxWidth="sm">
                 <Paper sx={{ 
-                    p: { xs: 4, md: 6 }, 
+                    p: { xs: 2.5, sm: 4, md: 6 }, 
                     bgcolor: '#161412', 
-                    borderRadius: 8, 
+                    borderRadius: { xs: 4, sm: 8 }, 
                     border: '1px solid rgba(255,255,255,0.05)',
                     boxShadow: '0 50px 100px -20px rgba(0,0,0,0.5)'
                 }}>

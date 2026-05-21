@@ -20,7 +20,8 @@ import {
     Button,
     Paper,
     alpha,
-    Stack, Menu, MenuItem, ListItemIcon, ListItemText, Divider 
+    Stack, Menu, MenuItem, ListItemIcon, ListItemText, Divider,
+    useMediaQuery
 } from '@mui/material';
 import {
     PhoneOff,
@@ -44,7 +45,8 @@ import {
     Minimize2,
     Maximize2,
     X,
-    ShieldAlert
+    ShieldAlert,
+    MoreHorizontal
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { InCallChat } from './InCallChat';
@@ -88,6 +90,8 @@ export const CallInterface = ({
     initialPresentation?: 'fullscreen' | 'dock'
 }) => {
     const { user } = useAuth();
+    const isMobile = useMediaQuery('(max-width:900px)');
+    const [moreMenuAnchor, setMoreMenuAnchor] = useState<null | HTMLElement>(null);
     const [status, setStatus] = useState('Initializing...');
     const [isMuted, setIsMuted] = useState(!initialMediaSettings.audio || initialMediaSettings.companion);
     const [isVideoOff, setIsVideoOff] = useState(!initialMediaSettings.video || initialMediaSettings.companion);
@@ -1045,11 +1049,12 @@ export const CallInterface = ({
                                         Share code to invite participant
                                     </Typography>
                                     
-                                    <Stack direction="row" spacing={1} sx={{ width: '100%', maxWidth: 420, minWidth: 0 }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ width: '100%', maxWidth: 420, minWidth: 0 }}>
                                         <Paper sx={{ 
                                             flex: 1, p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', 
                                             border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3,
-                                            display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden', minWidth: 0
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, overflow: 'hidden', minWidth: 0,
+                                            width: '100%'
                                         }}>
                                             <Typography variant="caption" sx={{
                                                 color: 'rgba(255,255,255,0.6)', fontWeight: 900,
@@ -1066,12 +1071,14 @@ export const CallInterface = ({
                                         <Paper sx={{
                                             p: 1.5, bgcolor: 'rgba(255,255,255,0.03)', 
                                             border: '1px solid rgba(255,255,255,0.05)', borderRadius: 3,
-                                            display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flex: { xs: 1, sm: 'none' }, width: '100%'
                                         }}>
-                                            <Hash size={14} color="rgba(255,255,255,0.3)" />
-                                            <Typography variant="caption" sx={{ color: 'white', fontWeight: 900, fontFamily: 'var(--font-jetbrains)' }}>
-                                                {(callCode || conversationId || '').slice(0, 8)}
-                                            </Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <Hash size={14} color="rgba(255,255,255,0.3)" />
+                                                <Typography variant="caption" sx={{ color: 'white', fontWeight: 900, fontFamily: 'var(--font-jetbrains)' }}>
+                                                    {(callCode || conversationId || '').slice(0, 8)}
+                                                </Typography>
+                                            </Box>
                                             <IconButton size="small" onClick={handleCopyId} sx={{ color: COLORS.secondary }}>
                                                 <Copy size={16} />
                                             </IconButton>
@@ -1113,10 +1120,15 @@ export const CallInterface = ({
                     <Paper
                         elevation={16}
                         sx={{
-                            width: 320,
+                            position: { xs: 'absolute', md: 'relative' },
+                            top: 0,
+                            bottom: 0,
+                            left: { xs: 0, md: 'auto' },
+                            right: 0,
+                            width: { xs: '100%', md: 320 },
                             bgcolor: '#161412',
                             border: '1px solid rgba(255,255,255,0.08)',
-                            borderRadius: '24px',
+                            borderRadius: { xs: 0, md: '24px' },
                             display: 'flex',
                             flexDirection: 'column',
                             height: '100%',
@@ -1186,11 +1198,11 @@ export const CallInterface = ({
 
                 {/* Admission Requests Modal list */}
                 {joinRequests.length > 0 && (
-                    <Box sx={{
+                    <Box sx={{ 
                         position: 'absolute',
-                        top: 24,
-                        right: 24,
-                        width: 300,
+                        top: { xs: 16, md: 24 },
+                        right: { xs: 16, md: 24 },
+                        width: { xs: 'calc(100% - 32px)', md: 300 },
                         zIndex: 1305,
                         display: 'flex',
                         flexDirection: 'column',
@@ -1213,12 +1225,12 @@ export const CallInterface = ({
                 {/* Call Metadata/Status Floating panel */}
                 <Box sx={{
                     position: 'absolute',
-                    top: 40,
-                    left: 40,
+                    top: { xs: 16, md: 40 },
+                    left: { xs: 16, md: 40 },
                     display: 'flex',
                     flexDirection: 'column',
                     gap: 1.1,
-                    maxWidth: 420,
+                    maxWidth: { xs: 'calc(100% - 32px)', md: 420 },
                     zIndex: 1100
                 }}>
                     {callTitle && (
@@ -1267,100 +1279,239 @@ export const CallInterface = ({
                         gap: 0.8,
                     }}
                 >
-                    <Tooltip title={isMuted ? "Unmute" : "Mute"}>
-                        <IconButton onClick={toggleMute} sx={{
-                            width: 48,
-                            height: 48,
-                            bgcolor: isMuted ? '#EF4444' : 'rgba(255,255,255,0.05)',
-                            color: 'white',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            boxShadow: !isMuted && micLevel > 0.08 ? `0 0 ${Math.max(8, 20 * micLevel)}px rgba(245,158,11,${Math.min(0.75, 0.3 + micLevel)})` : 'none',
-                            transform: !isMuted ? `scale(${1 + micLevel * 0.08})` : 'scale(1)',
-                            transition: 'box-shadow 120ms linear, transform 120ms linear, background-color 140ms ease',
-                            '&:hover': { bgcolor: isMuted ? '#DC2626' : 'rgba(255,255,255,0.1)' }
-                        }}>
-                            {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title={isScreenSharing ? "Stop Sharing" : "Share Screen"}>
-                        <IconButton onClick={toggleScreenShare} sx={{ width: 48, height: 48, bgcolor: isScreenSharing ? '#6366F1' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <Monitor size={20} />
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title={isVideoOff ? "Start Video" : "Stop Video"}>
-                        <IconButton onClick={toggleVideo} sx={{ width: 48, height: 48, bgcolor: isVideoOff ? '#EF4444' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', '&:hover': { bgcolor: isVideoOff ? '#DC2626' : 'rgba(255,255,255,0.1)' } }}>
-                            {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title={isRecording ? "Stop Recording" : "Record Call"}>
-                        <IconButton onClick={toggleRecording} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: isRecording ? '#EF4444' : 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            {isRecording ? <Square size={18} /> : <Circle size={18} fill={isRecording ? '#EF4444' : 'none'} />}
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title="Reconnect">
-                        <IconButton onClick={handleReconnect} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: '#6366F1', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <Monitor size={20} />
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title="Minimize (Picture in Picture)">
-                        <IconButton onClick={() => setIsPip(true)} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <Minimize2 size={20} />
-                        </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title="Messages">
-                        <Badge badgeContent={unreadChatCount} color="primary">
-                            <IconButton 
-                                onClick={() => {
-                                    setIsChatOpen(!isChatOpen);
-                                    setUnreadChatCount(0);
-                                }} 
-                                sx={{ 
-                                    width: 48, height: 48,
-                                    bgcolor: isChatOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
-                                    color: 'white', 
+                    {isMobile ? (
+                        <>
+                            {/* Mobile Bar - Compact Actions */}
+                            <Tooltip title={isMuted ? "Unmute" : "Mute"}>
+                                <IconButton onClick={toggleMute} sx={{
+                                    width: 40,
+                                    height: 40,
+                                    bgcolor: isMuted ? '#EF4444' : 'rgba(255,255,255,0.05)',
+                                    color: 'white',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    '&:hover': { bgcolor: isChatOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
-                                }}
-                            >
-                                <MessageSquare size={20} />
-                            </IconButton>
-                        </Badge>
-                    </Tooltip>
+                                    boxShadow: !isMuted && micLevel > 0.08 ? `0 0 ${Math.max(6, 16 * micLevel)}px rgba(245,158,11,${Math.min(0.75, 0.3 + micLevel)})` : 'none',
+                                    transform: !isMuted ? `scale(${1 + micLevel * 0.08})` : 'scale(1)',
+                                    transition: 'box-shadow 120ms linear, transform 120ms linear, background-color 140ms ease',
+                                    '&:hover': { bgcolor: isMuted ? '#DC2626' : 'rgba(255,255,255,0.1)' }
+                                }}>
+                                    {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
+                                </IconButton>
+                            </Tooltip>
 
-                    <Tooltip title="Participants">
-                        <IconButton 
-                            onClick={() => setIsParticipantsOpen(!isParticipantsOpen)} 
-                            sx={{ 
-                                width: 48, height: 48,
-                                bgcolor: isParticipantsOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
-                                color: 'white', 
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                '&:hover': { bgcolor: isParticipantsOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
-                            }}
-                        >
-                            <Users size={20} />
-                        </IconButton>
-                    </Tooltip>
+                            <Tooltip title={isVideoOff ? "Start Video" : "Stop Video"}>
+                                <IconButton onClick={toggleVideo} sx={{
+                                    width: 40,
+                                    height: 40,
+                                    bgcolor: isVideoOff ? '#EF4444' : 'rgba(255,255,255,0.05)',
+                                    color: 'white',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    '&:hover': { bgcolor: isVideoOff ? '#DC2626' : 'rgba(255,255,255,0.1)' }
+                                }}>
+                                    {isVideoOff ? <VideoOff size={18} /> : <Video size={18} />}
+                                </IconButton>
+                            </Tooltip>
 
-                    <Tooltip title="Audio/Video Devices">
-                        <IconButton onClick={handleDeviceMenuOpen} sx={{ width: 40, height: 40, color: 'rgba(255,255,255,0.65)' }}>
-                            <ChevronUp size={16} />
-                        </IconButton>
-                    </Tooltip>
+                            <Tooltip title="Messages">
+                                <Badge badgeContent={unreadChatCount} color="primary">
+                                    <IconButton 
+                                        onClick={() => {
+                                            setIsChatOpen(!isChatOpen);
+                                            setUnreadChatCount(0);
+                                        }} 
+                                        sx={{ 
+                                            width: 40, height: 40,
+                                            bgcolor: isChatOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
+                                            color: 'white', 
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            '&:hover': { bgcolor: isChatOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
+                                        }}
+                                    >
+                                        <MessageSquare size={18} />
+                                    </IconButton>
+                                </Badge>
+                            </Tooltip>
 
-                    <Tooltip title="End Call">
-                        <Fab onClick={endCall} sx={{ width: 54, height: 54, bgcolor: '#EF4444', color: 'white', '&:hover': { bgcolor: '#DC2626', transform: 'scale(1.05)' }, transition: 'all 0.2s', boxShadow: '0 8px 26px rgba(239,68,68,0.45)' }}>
-                            <PhoneOff size={22} />
-                        </Fab>
-                    </Tooltip>
+                            <Tooltip title="Participants">
+                                <IconButton 
+                                    onClick={() => setIsParticipantsOpen(!isParticipantsOpen)} 
+                                    sx={{ 
+                                        width: 40, height: 40,
+                                        bgcolor: isParticipantsOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
+                                        color: 'white', 
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        '&:hover': { bgcolor: isParticipantsOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
+                                    }}
+                                >
+                                    <Users size={18} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="More Options">
+                                <IconButton 
+                                    onClick={(e) => setMoreMenuAnchor(e.currentTarget)}
+                                    sx={{ 
+                                        width: 40, height: 40,
+                                        bgcolor: Boolean(moreMenuAnchor) ? '#6366F1' : 'rgba(255,255,255,0.05)', 
+                                        color: 'white', 
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' } 
+                                    }}
+                                >
+                                    <MoreHorizontal size={18} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="End Call">
+                                <IconButton onClick={endCall} sx={{
+                                    width: 40,
+                                    height: 40,
+                                    bgcolor: '#EF4444',
+                                    color: 'white',
+                                    boxShadow: '0 4px 12px rgba(239,68,68,0.4)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    '&:hover': { bgcolor: '#DC2626' }
+                                }}>
+                                    <PhoneOff size={18} />
+                                </IconButton>
+                            </Tooltip>
+                        </>
+                    ) : (
+                        <>
+                            {/* Desktop Bar (Default full view) */}
+                            <Tooltip title={isMuted ? "Unmute" : "Mute"}>
+                                <IconButton onClick={toggleMute} sx={{
+                                    width: 48,
+                                    height: 48,
+                                    bgcolor: isMuted ? '#EF4444' : 'rgba(255,255,255,0.05)',
+                                    color: 'white',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    boxShadow: !isMuted && micLevel > 0.08 ? `0 0 ${Math.max(8, 20 * micLevel)}px rgba(245,158,11,${Math.min(0.75, 0.3 + micLevel)})` : 'none',
+                                    transform: !isMuted ? `scale(${1 + micLevel * 0.08})` : 'scale(1)',
+                                    transition: 'box-shadow 120ms linear, transform 120ms linear, background-color 140ms ease',
+                                    '&:hover': { bgcolor: isMuted ? '#DC2626' : 'rgba(255,255,255,0.1)' }
+                                }}>
+                                    {isMuted ? <MicOff size={22} /> : <Mic size={22} />}
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={isScreenSharing ? "Stop Sharing" : "Share Screen"}>
+                                <IconButton onClick={toggleScreenShare} sx={{ width: 48, height: 48, bgcolor: isScreenSharing ? '#6366F1' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <Monitor size={20} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={isVideoOff ? "Start Video" : "Stop Video"}>
+                                <IconButton onClick={toggleVideo} sx={{ width: 48, height: 48, bgcolor: isVideoOff ? '#EF4444' : 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', '&:hover': { bgcolor: isVideoOff ? '#DC2626' : 'rgba(255,255,255,0.1)' } }}>
+                                    {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title={isRecording ? "Stop Recording" : "Record Call"}>
+                                <IconButton onClick={toggleRecording} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: isRecording ? '#EF4444' : 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    {isRecording ? <Square size={18} /> : <Circle size={18} fill={isRecording ? '#EF4444' : 'none'} />}
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Reconnect">
+                                <IconButton onClick={handleReconnect} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: '#6366F1', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <Monitor size={20} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Minimize (Picture in Picture)">
+                                <IconButton onClick={() => setIsPip(true)} sx={{ width: 48, height: 48, bgcolor: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    <Minimize2 size={20} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Messages">
+                                <Badge badgeContent={unreadChatCount} color="primary">
+                                    <IconButton 
+                                        onClick={() => {
+                                            setIsChatOpen(!isChatOpen);
+                                            setUnreadChatCount(0);
+                                        }} 
+                                        sx={{ 
+                                            width: 48, height: 48,
+                                            bgcolor: isChatOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
+                                            color: 'white', 
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            '&:hover': { bgcolor: isChatOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
+                                        }}
+                                    >
+                                        <MessageSquare size={20} />
+                                    </IconButton>
+                                </Badge>
+                            </Tooltip>
+
+                            <Tooltip title="Participants">
+                                <IconButton 
+                                    onClick={() => setIsParticipantsOpen(!isParticipantsOpen)} 
+                                    sx={{ 
+                                        width: 48, height: 48,
+                                        bgcolor: isParticipantsOpen ? '#6366F1' : 'rgba(255,255,255,0.05)', 
+                                        color: 'white', 
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        '&:hover': { bgcolor: isParticipantsOpen ? '#4F46E5' : 'rgba(255,255,255,0.1)' } 
+                                    }}
+                                >
+                                    <Users size={20} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="Audio/Video Devices">
+                                <IconButton onClick={handleDeviceMenuOpen} sx={{ width: 40, height: 40, color: 'rgba(255,255,255,0.65)' }}>
+                                    <ChevronUp size={16} />
+                                </IconButton>
+                            </Tooltip>
+
+                            <Tooltip title="End Call">
+                                <Fab onClick={endCall} sx={{ width: 54, height: 54, bgcolor: '#EF4444', color: 'white', '&:hover': { bgcolor: '#DC2626', transform: 'scale(1.05)' }, transition: 'all 0.2s', boxShadow: '0 8px 26px rgba(239,68,68,0.45)' }}>
+                                    <PhoneOff size={22} />
+                                </Fab>
+                            </Tooltip>
+                        </>
+                    )}
                 </Paper>
             </Box>
+
+            {/* Mobile More Options Menu */}
+            <Menu
+                anchorEl={moreMenuAnchor}
+                open={Boolean(moreMenuAnchor)}
+                onClose={() => setMoreMenuAnchor(null)}
+                PaperProps={{
+                    sx: { 
+                        bgcolor: '#161412', 
+                        color: 'white', 
+                        border: '1px solid rgba(255,255,255,0.1)', 
+                        borderRadius: 3,
+                        mt: -10,
+                        minWidth: 220
+                    }
+                }}
+            >
+                <MenuItem onClick={() => { toggleScreenShare(); setMoreMenuAnchor(null); }} sx={{ fontSize: '0.85rem', py: 1 }}>
+                    <ListItemIcon><Monitor size={16} color={isScreenSharing ? '#6366F1' : 'white'} /></ListItemIcon>
+                    <ListItemText primary={isScreenSharing ? "Stop Sharing" : "Share Screen"} />
+                </MenuItem>
+                <MenuItem onClick={() => { toggleRecording(); setMoreMenuAnchor(null); }} sx={{ fontSize: '0.85rem', py: 1 }}>
+                    <ListItemIcon><Circle size={16} fill={isRecording ? '#EF4444' : 'none'} color={isRecording ? '#EF4444' : 'white'} /></ListItemIcon>
+                    <ListItemText primary={isRecording ? "Stop Recording" : "Record Call"} />
+                </MenuItem>
+                <MenuItem onClick={() => { handleReconnect(); setMoreMenuAnchor(null); }} sx={{ fontSize: '0.85rem', py: 1 }}>
+                    <ListItemIcon><Monitor size={16} color="#6366F1" /></ListItemIcon>
+                    <ListItemText primary="Reconnect Stream" />
+                </MenuItem>
+                <MenuItem onClick={() => { setIsPip(true); setMoreMenuAnchor(null); }} sx={{ fontSize: '0.85rem', py: 1 }}>
+                    <ListItemIcon><Minimize2 size={16} color="white" /></ListItemIcon>
+                    <ListItemText primary="Picture-in-Picture" />
+                </MenuItem>
+                <MenuItem onClick={(e) => { setMoreMenuAnchor(null); handleDeviceMenuOpen(e); }} sx={{ fontSize: '0.85rem', py: 1 }}>
+                    <ListItemIcon><ChevronUp size={16} color="white" /></ListItemIcon>
+                    <ListItemText primary="Audio/Video Devices" />
+                </MenuItem>
+            </Menu>
 
             <Menu
                 anchorEl={deviceMenuAnchor}

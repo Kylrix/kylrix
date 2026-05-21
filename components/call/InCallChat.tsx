@@ -97,12 +97,13 @@ export const InCallChat = ({
             elevation={24}
             sx={{ 
                 position: 'absolute', 
-                right: 20, 
-                top: 80, 
-                bottom: 140, 
-                width: 360, 
+                right: { xs: 0, md: 20 }, 
+                top: { xs: 0, md: 80 }, 
+                bottom: { xs: 0, md: 140 }, 
+                width: { xs: '100%', md: 360 }, 
+                height: { xs: '100%', md: 'auto' },
                 bgcolor: '#161412', 
-                borderRadius: '24px', 
+                borderRadius: { xs: 0, md: '24px' }, 
                 display: 'flex', 
                 flexDirection: 'column',
                 border: '1px solid rgba(255,255,255,0.1)',

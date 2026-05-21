@@ -431,11 +431,17 @@ export const CallActionModal = ({
         '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
     };
 
+    if (!open) return null;
+
     return (
         <Drawer 
             open={open} 
             onClose={onClose}
             anchor={isMobile ? 'bottom' : 'right'}
+            ModalProps={{
+                keepMounted: false,
+                disablePortal: true
+            }}
             PaperProps={{
                 sx: {
                     bgcolor: COLORS.surface,

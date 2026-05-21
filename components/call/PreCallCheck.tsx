@@ -98,9 +98,9 @@ export function PreCallCheck({ onJoin, userProfile, isCompanionDetected = false 
 
     return (
         <Paper sx={{ 
-            p: 4, 
+            p: { xs: 2.5, sm: 4 }, 
             bgcolor: COLORS.surface, 
-            borderRadius: 8, 
+            borderRadius: { xs: 4, sm: 8 }, 
             border: `1px solid ${COLORS.rim}`,
             maxWidth: 800,
             width: '100%',
