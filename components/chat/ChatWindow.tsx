@@ -971,8 +971,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             mode === 'me' 
                 ? "Are you sure you want to clear this chat for yourself?" 
                 : mode === 'everyone'
-                    ? "This will delete all messages for everyone. This cannot be undone. Continue?"
-                    : "NUCLEAR OPTION: This will delete all messages, members, keys, and the conversation ITSELF. Continue?"
+                    ? "This will remove your messages and reactions for everyone. This cannot be undone. Continue?"
+                    : "NUCLEAR OPTION: This will delete the entire direct chat, including members, keys, and the conversation itself. Continue?"
         );
         if (!confirmed) return;
 
@@ -983,7 +983,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 toast.success("Chat cleared for you");
             } else if (mode === 'everyone') {
                 const res = await ChatService.wipeMyFootprint(conversationId, currentUserId);
-                toast.success(`Wiped ${res.count} messages for everyone`);
+                toast.success(`Removed ${res.count} messages and ${res.reactionsDeleted || 0} reactions for everyone`);
             } else if (mode === 'nuclear') {
                 await ChatService.nuclearWipe(conversationId);
                 toast.success("Conversation fully purged");
@@ -1830,9 +1830,11 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     <Trash2 size={18} strokeWidth={1.5} style={{ opacity: 0.7 }} /> Clear All Chat
                 </MenuItem>
 
-                <MenuItem onClick={() => handleClearChat('nuclear')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
-                    <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.9 }} /> Nuclear Wipe
-                </MenuItem>
+                {conversation?.type === 'direct' && (
+                    <MenuItem onClick={() => handleClearChat('nuclear')} sx={{ gap: 1.5, py: 1.2, fontWeight: 600, fontSize: '0.85rem', color: '#ff4d4d' }}>
+                        <Zap size={18} strokeWidth={1.5} style={{ opacity: 0.9 }} /> Nuclear Wipe
+                    </MenuItem>
+                )}
             </Menu>
 
             {/* Clear Options Drawer */}
@@ -1888,8 +1890,17 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                                 '&:hover': { bgcolor: '#ff3333' }
                             }}
                         >
-                            For Everyone (Hard Delete Messages)
+                            For Everyone (Messages + Reactions)
                         </Button>
+                        {conversation?.type === 'direct' && (
+                            <Button
+                                fullWidth
+                                onClick={() => handleClearChat('nuclear')}
+                                sx={{ color: '#ff4d4d', textTransform: 'none', fontWeight: 800, mt: 0.5 }}
+                            >
+                                Nuclear Wipe
+                            </Button>
+                        )}
                         <Button
                             fullWidth
                             onClick={() => setClearOptionsOpen(false)}

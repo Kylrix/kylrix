@@ -61,6 +61,104 @@ export async function resolveConversationParticipants(databases: any, conversati
   ));
 }
 
+const PAGE_SIZE = 100;
+
+async function listAllDocuments(
+  databases: any,
+  databaseId: string,
+  tableId: string,
+  queries: any[] = [],
+) {
+  const documents: any[] = [];
+  let offset = 0;
+
+  while (true) {
+    const response = await databases.listDocuments(databaseId, tableId, [
+      ...queries,
+      Query.limit(PAGE_SIZE),
+      Query.offset(offset),
+    ]);
+
+    const page = response.documents || [];
+    documents.push(...page);
+    if (page.length < PAGE_SIZE) break;
+    offset += page.length;
+  }
+
+  return documents;
+}
+
+async function deleteDocumentsInBatches(
+  databases: any,
+  databaseId: string,
+  tableId: string,
+  documentIds: string[],
+) {
+  const uniqueIds = Array.from(new Set(documentIds.filter(Boolean)));
+  if (!uniqueIds.length) return 0;
+
+  let deleted = 0;
+  for (let i = 0; i < uniqueIds.length; i += 10) {
+    const batch = uniqueIds.slice(i, i + 10).map((documentId) => databases.deleteDocument(databaseId, tableId, documentId));
+    await Promise.all(batch);
+    deleted += batch.length;
+  }
+
+  return deleted;
+}
+
+function getMessageBucketId(messageType: string | null | undefined) {
+  switch (messageType) {
+    case 'audio':
+      return 'voice';
+    case 'video':
+      return 'video';
+    case 'file':
+      return 'documents';
+    default:
+      return APPWRITE_CONFIG.BUCKETS.MESSAGES;
+  }
+}
+
+async function deleteMessageFiles(storage: any, messages: any[]) {
+  const deletions: Promise<unknown>[] = [];
+  const seen = new Set<string>();
+
+  for (const message of messages) {
+    const bucketId = getMessageBucketId(message?.type);
+    const attachments = Array.isArray(message?.attachments) ? message.attachments : [];
+    for (const attachmentId of attachments) {
+      const fileId = typeof attachmentId === 'string' ? attachmentId.trim() : '';
+      if (!fileId || seen.has(`${bucketId}:${fileId}`)) continue;
+      seen.add(`${bucketId}:${fileId}`);
+      deletions.push(storage.deleteFile(bucketId, fileId).catch(() => null));
+    }
+  }
+
+  await Promise.all(deletions);
+}
+
+async function deleteConversationArtifacts(databases: any, storage: any, conversationId: string, messages: any[]) {
+  await deleteMessageFiles(storage, messages);
+
+  const attachmentIds = messages.flatMap((message) => Array.isArray(message?.attachments) ? message.attachments : []);
+  const reactionRows = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
+    Query.equal('conversationId', conversationId),
+  ]);
+  const reactionIds = reactionRows.map((row) => row.$id);
+
+  await Promise.all([
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, messages.map((row) => row.$id)),
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds),
+  ]);
+
+  return {
+    messagesDeleted: messages.length,
+    reactionsDeleted: reactionIds.length,
+    attachmentsDeleted: attachmentIds.length,
+  };
+}
+
 export async function createMessageInternal(payload: {
   conversationId: string;
   senderId: string;
@@ -111,6 +209,149 @@ export async function createMessageInternal(payload: {
   );
 
   return JSON.parse(JSON.stringify(message));
+}
+
+export async function clearConversationFootprintInternal(payload: {
+  conversationId: string;
+  jwt?: string;
+}) {
+  const { account } = await createServerClient(payload.jwt);
+  const user = await account.get().catch(() => null);
+
+  if (!user) throw new Error('Unauthorized');
+
+  const { databases, storage } = createAdminClient();
+  const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
+  const participantIds = await resolveConversationParticipants(databases, conversation);
+
+  if (!participantIds.includes(user.$id)) {
+    throw new Error('Forbidden: Not a participant');
+  }
+
+  const ownedMessages = await listAllDocuments(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, [
+    Query.equal('conversationId', payload.conversationId),
+    Query.equal('senderId', user.$id),
+  ]);
+  const ownedMessageIds = ownedMessages.map((row) => row.$id);
+
+  const reactionsByUser = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
+    Query.equal('conversationId', payload.conversationId),
+    Query.equal('userId', user.$id),
+  ]);
+
+  const reactionsOnOwnedMessages = ownedMessageIds.length
+    ? await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
+        Query.equal('conversationId', payload.conversationId),
+        Query.equal('messageId', ownedMessageIds),
+      ])
+    : [];
+
+  const reactionIds = Array.from(new Set([
+    ...reactionsByUser.map((row) => row.$id),
+    ...reactionsOnOwnedMessages.map((row) => row.$id),
+  ]));
+
+  await deleteMessageFiles(storage, ownedMessages);
+  await Promise.all([
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds),
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, ownedMessageIds),
+  ]);
+
+  return {
+    success: true,
+    messagesDeleted: ownedMessageIds.length,
+    reactionsDeleted: reactionIds.length,
+  };
+}
+
+export async function deleteConversationFullyInternal(payload: {
+  conversationId: string;
+  jwt?: string;
+}) {
+  const { account } = await createServerClient(payload.jwt);
+  const user = await account.get().catch(() => null);
+
+  if (!user) throw new Error('Unauthorized');
+
+  const { databases, storage } = createAdminClient();
+  const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
+  const participantIds = await resolveConversationParticipants(databases, conversation);
+
+  if (!participantIds.includes(user.$id)) {
+    throw new Error('Forbidden: Not a participant');
+  }
+
+  const messages = await listAllDocuments(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, [
+    Query.equal('conversationId', payload.conversationId),
+  ]);
+  const reactions = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
+    Query.equal('conversationId', payload.conversationId),
+  ]);
+  const members = await listAllDocuments(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
+    Query.equal('conversationId', payload.conversationId),
+  ]);
+  const epochs = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, [
+    Query.equal('resourceId', payload.conversationId),
+  ]);
+  const keyMappings = await listAllDocuments(
+    databases,
+    APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+    APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING,
+    [Query.equal('resourceId', payload.conversationId)],
+  );
+  const joinRequests = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, [
+    Query.equal('resourceId', payload.conversationId),
+  ]);
+
+  await deleteConversationArtifacts(databases, storage, payload.conversationId, messages);
+
+  const avatarFileIds = typeof conversation?.avatarFileId === 'string' && conversation.avatarFileId
+    ? [conversation.avatarFileId]
+    : [];
+  await Promise.all(avatarFileIds.map((fileId: string) => storage.deleteFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, fileId).catch(() => null)));
+
+  await Promise.all([
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, CONVERSATIONS_TABLE_ID, [conversation.$id]),
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row) => row.$id)),
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row) => row.$id)),
+    deleteDocumentsInBatches(databases, APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, keyMappings.map((row) => row.$id)),
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row) => row.$id)),
+  ]);
+
+  return {
+    success: true,
+    conversationId: payload.conversationId,
+    messagesDeleted: messages.length,
+    reactionsDeleted: reactions.length,
+    membersDeleted: members.length,
+    epochsDeleted: epochs.length,
+    keyMappingsDeleted: keyMappings.length,
+    joinRequestsDeleted: joinRequests.length,
+  };
+}
+
+export async function nuclearWipeConversationInternal(payload: {
+  conversationId: string;
+  jwt?: string;
+}) {
+  const { account } = await createServerClient(payload.jwt);
+  const user = await account.get().catch(() => null);
+
+  if (!user) throw new Error('Unauthorized');
+
+  const { databases } = createAdminClient();
+  const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
+  const participantIds = await resolveConversationParticipants(databases, conversation);
+
+  if (!participantIds.includes(user.$id)) {
+    throw new Error('Forbidden: Not a participant');
+  }
+
+  if (String(conversation?.type || '').toLowerCase() !== 'direct') {
+    throw new Error('Forbidden: Nuclear wipe is direct chats only');
+  }
+
+  return await deleteConversationFullyInternal(payload);
 }
 
 export async function toggleReactionInternal(payload: {

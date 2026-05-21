@@ -7,7 +7,15 @@ import { UsersService } from './users';
 import { seedIdentityCache } from '@/lib/identity-cache';
 import { sendKylrixEmailNotification } from '../email-notifications';
 import { permissionsAction } from '@/lib/actions/permissions';
-import { createMessageAction, repairConversationAction, toggleReactionAction, joinRequestAction as joinRequestServerAction } from '@/lib/actions/chat';
+import {
+    createMessageAction,
+    repairConversationAction,
+    toggleReactionAction,
+    joinRequestAction as joinRequestServerAction,
+    clearConversationFootprintAction,
+    deleteConversationFullyAction,
+    nuclearWipeConversationAction,
+} from '@/lib/actions/chat';
 
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
@@ -1165,25 +1173,14 @@ export const ChatService = {
 
     /**
      * Wipes all messages authored by the user in this conversation.
-     * Hard-deletes documents from the server.
+     * Also removes reactions they authored and reactions attached to their messages.
      */
     async wipeMyFootprint(conversationId: string, userId: string) {
         console.log(`[ChatService] Wiping footprint for ${userId} in ${conversationId}`);
-        // 1. Fetch all messages sent by this user
-        const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
-            Query.equal('conversationId', conversationId),
-            Query.equal('senderId', userId),
-            Query.limit(1000) // Max limit for a wipe
-        ]);
-
-        // 2. Bulk delete in parallel batches of 10
-        const batches = [];
-        for (let i = 0; i < res.rows.length; i += 10) {
-            const batch = res.rows.slice(i, i + 10).map(msg => tablesDB.deleteRow(DB_ID, MSG_TABLE, msg.$id));
-            batches.push(Promise.all(batch));
-        }
-        await Promise.all(batches);
-        return { success: true, count: res.total };
+        const res = await clearConversationFootprintAction({ conversationId });
+        this.clearConversationPreviewCache(conversationId);
+        conversationKeyCache.delete(conversationId);
+        return { success: true, count: res?.messagesDeleted || 0, reactionsDeleted: res?.reactionsDeleted || 0 };
     },
 
     /**
@@ -1217,54 +1214,20 @@ export const ChatService = {
      * Entirely deletes all messages in a conversation (Reserved for Saved Messages/Self-Chat)
      */
     async nuclearWipe(conversationId: string) {
-        const res = await tablesDB.listRows(DB_ID, MSG_TABLE, [
-            Query.equal('conversationId', conversationId),
-            Query.limit(1000)
-        ]);
-
-        const batches = [];
-        for (let i = 0; i < res.rows.length; i += 10) {
-            const batch = res.rows.slice(i, i + 10).map(msg => tablesDB.deleteRow(DB_ID, MSG_TABLE, msg.$id));
-            batches.push(Promise.all(batch));
-        }
-        await Promise.all(batches);
-        return { success: true };
+        const res = await nuclearWipeConversationAction({ conversationId });
+        this.clearConversationPreviewCache(conversationId);
+        conversationKeyCache.delete(conversationId);
+        const { success: _ignored, ...rest } = res || {};
+        return { success: true, ...rest };
     },
 
     async deleteConversationFully(conversationId: string) {
         const conversation = await this.getConversationById(conversationId).catch(() => null);
-
-        const deleteAllRows = async (dbId: string, tableId: string, query: any[]) => {
-            const rows = await tablesDB.listRows(dbId, tableId, query).catch(() => ({ rows: [] as any[] }));
-            const batches: Promise<unknown>[] = [];
-            for (let i = 0; i < (rows.rows || []).length; i += 10) {
-                const batch = rows.rows.slice(i, i + 10).map((row: any) => tablesDB.deleteRow(dbId, tableId, row.$id));
-                batches.push(Promise.all(batch));
-            }
-            await Promise.all(batches);
-        };
-
-        await this.nuclearWipe(conversationId);
-
-        await deleteAllRows(DB_ID, CONV_MEMBERS_TABLE, [
-            Query.equal('conversationId', conversationId),
-            Query.limit(1000)
-        ]);
-
-        await deleteAllRows(DB_ID, EPOCHS_TABLE, [
-            Query.equal('resourceId', conversationId),
-            Query.limit(1000)
-        ]);
-
-        await deleteAllRows(KEY_MAPPING_DB, KEY_MAPPING_TABLE, [
-            Query.equal('resourceId', conversationId),
-            Query.limit(1000)
-        ]);
-
-        await tablesDB.deleteRow(DB_ID, CONV_TABLE, conversationId);
+        const res = await deleteConversationFullyAction({ conversationId });
+        this.clearConversationPreviewCache(conversationId);
         conversationKeyCache.delete(conversationId);
-
-        return { success: true, conversation };
+        const { success: _ignored, ...rest } = res || {};
+        return { success: true, conversation, ...rest };
     },
 
     async updateConversation(conversationId: string, data: Partial<{

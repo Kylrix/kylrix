@@ -2,6 +2,9 @@
 
 import {
   createMessageInternal,
+  clearConversationFootprintInternal,
+  deleteConversationFullyInternal,
+  nuclearWipeConversationInternal,
   toggleReactionInternal,
   repairConversationInternal,
   joinRequestInternal
@@ -35,6 +38,27 @@ export async function repairConversationAction(payload: {
   jwt?: string;
 }) {
   return await repairConversationInternal(payload);
+}
+
+export async function clearConversationFootprintAction(payload: {
+  conversationId: string;
+  jwt?: string;
+}) {
+  return await clearConversationFootprintInternal(payload);
+}
+
+export async function nuclearWipeConversationAction(payload: {
+  conversationId: string;
+  jwt?: string;
+}) {
+  return await nuclearWipeConversationInternal(payload);
+}
+
+export async function deleteConversationFullyAction(payload: {
+  conversationId: string;
+  jwt?: string;
+}) {
+  return await deleteConversationFullyInternal(payload);
 }
 
 export async function joinRequestAction(payload: {
