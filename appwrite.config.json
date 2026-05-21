@@ -6810,6 +6810,53 @@
                     ]
                 }
             ]
+        },
+        {
+            "$id": "telegram_connections",
+            "$permissions": [
+                "read(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Telegram Connections",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "pair_code",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 6,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tg_chat_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tg_username",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "is_verified",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false
+                }
+            ],
+            "indexes": []
         }
     ],
     "buckets": [
