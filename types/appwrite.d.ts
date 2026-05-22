@@ -14,18 +14,6 @@ export enum ReactionsTargetType {
     COMMENT = "comment"
 }
 
-export enum CollaboratorsPermission {
-    READ = "read",
-    WRITE = "write",
-    ADMIN = "admin"
-}
-
-export enum NoteRevisionsCause {
-    MANUAL = "manual",
-    AI = "ai",
-    COLLAB = "collab"
-}
-
 export enum SubscriptionsPlan {
     FREE = "free",
     PRO = "pro",
@@ -133,6 +121,19 @@ export enum FormSubmissionsStatus {
     FLAGGED = "flagged"
 }
 
+export enum CollaboratorsPermission {
+    READ = "read",
+    WRITE = "write",
+    ADMIN = "admin"
+}
+
+export enum CollaboratorsStatus {
+    PENDING = "pending",
+    ACCEPTED = "accepted",
+    DECLINED = "declined",
+    REVOKED = "revoked"
+}
+
 export type Notes = Models.Row & {
     id: string | null;
     createdAt: string | null;
@@ -192,14 +193,6 @@ export type Reactions = Models.Row & {
     userId: string;
 }
 
-export type Collaborators = Models.Row & {
-    noteId: string;
-    userId: string;
-    permission: CollaboratorsPermission;
-    invitedAt: string | null;
-    accepted: boolean | null;
-}
-
 export type ActivityLog = Models.Row & {
     userId: string;
     action: string;
@@ -229,19 +222,6 @@ export type NoteTags = Models.Row & {
     userId: string;
     createdAt: string | null;
     tag: string | null;
-}
-
-export type NoteRevisions = Models.Row & {
-    noteId: string;
-    revision: number;
-    userId: string | null;
-    title: string | null;
-    content: string | null;
-    createdAt: string | null;
-    diff: string | null;
-    diffFormat: string | null;
-    fullSnapshot: boolean | null;
-    cause: NoteRevisionsCause | null;
 }
 
 export type Subscriptions = Models.Row & {
@@ -633,15 +613,6 @@ export type EngagementViewRollups = Models.Row & {
     metadata: string | null;
 }
 
-export type KylrixSignals = Models.Row & {
-    userId: string;
-    dailyMintedMicro: string | null;
-    lastMintAt: string | null;
-    thermalScore: number | null;
-    riskLevel: string;
-    updatedAt: string;
-}
-
 export type AccountLedger = Models.Row & {
     userId: string;
     attentionBalance: number | null;
@@ -680,6 +651,13 @@ export type ProjectObjects = Models.Row & {
     metadata: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+}
+
+export type TelegramConnections = Models.Row & {
+    pair_code: string | null;
+    tg_chat_id: string | null;
+    tg_username: string | null;
+    is_verified: boolean;
 }
 
 export type FocusSessions = Models.Row & {
@@ -763,9 +741,16 @@ export type Agents = Models.Row & {
     status: string;
 }
 
-export type TelegramConnections = Models.Row & {
-    pair_code: string | null;
-    tg_chat_id: string | null;
-    tg_username: string | null;
-    is_verified: boolean;
+export type Collaborators = Models.Row & {
+    resourceId: string;
+    resourceType: string;
+    userId: string;
+    permission: CollaboratorsPermission;
+    inviterId: string | null;
+    status: CollaboratorsStatus;
+    invitedAt: string | null;
+    accepted: boolean | null;
+    expiresAt: string | null;
+    role: string | null;
+    metadata: string | null;
 }

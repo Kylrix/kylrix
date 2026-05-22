@@ -5643,6 +5643,53 @@
             ]
         },
         {
+            "$id": "telegram_connections",
+            "$permissions": [
+                "read(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "Telegram Connections",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "pair_code",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 6,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tg_chat_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "tg_username",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "is_verified",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
             "$id": "focusSessions",
             "$permissions": [],
             "databaseId": "whisperrflow",
@@ -6386,50 +6433,144 @@
             ]
         },
         {
-            "$id": "telegram_connections",
-            "$permissions": [
-                "read(\"users\")"
-            ],
-            "databaseId": "chat",
-            "name": "Telegram Connections",
+            "$id": "Collaborators",
+            "$permissions": [],
+            "databaseId": "whisperrflow",
+            "name": "Collaborators",
             "enabled": true,
             "rowSecurity": true,
             "columns": [
                 {
-                    "key": "pair_code",
+                    "key": "resourceId",
                     "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 6,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "tg_chat_id",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 255,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "tg_username",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 255,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "is_verified",
-                    "type": "boolean",
                     "required": true,
-                    "array": false
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "resourceType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "permission",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "read",
+                        "write",
+                        "admin"
+                    ]
+                },
+                {
+                    "key": "inviterId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "default": "pending",
+                    "format": "enum",
+                    "elements": [
+                        "pending",
+                        "accepted",
+                        "declined",
+                        "revoked"
+                    ]
+                },
+                {
+                    "key": "invitedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "accepted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "expiresAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                },
+                {
+                    "key": "role",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "idx_resource_user",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "resourceId",
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_userId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         }
     ],
     "buckets": [
