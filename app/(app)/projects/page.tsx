@@ -19,13 +19,26 @@ import {
 import {
   Plus,
   FolderKanban,
-  FileText,
-  CheckSquare,
-  Lock,
+  Rocket,
+  ShieldAlert,
+  Briefcase,
+  Zap,
   ArrowLeft,
   ArrowUpRight,
   Workflow,
   Sparkles,
+  ClipboardList,
+  Lightbulb,
+  GraduationCap,
+  Megaphone,
+  Key,
+  Video,
+  LifeBuoy,
+  Book,
+  Calendar,
+  Layers,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import ProjectCard from '@/components/projects/ProjectCard';
@@ -34,28 +47,88 @@ import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
-const suggestions = [
-    {
-        title: 'New Note',
-        description: 'Jot down ideas or documentation.',
-        icon: FileText,
-        color: '#EC4899',
-        href: '/note/notes'
-    },
-    {
-        title: 'New Goal',
-        description: 'Set a target for execution.',
-        icon: CheckSquare,
-        color: '#A855F7',
-        href: '/flow'
-    },
-    {
-        title: 'New Secret',
-        description: 'Secure a password or key.',
-        icon: Lock,
-        color: '#10B981',
-        href: '/vault/dashboard'
-    }
+const projectTemplates = [
+  { 
+    id: 'form-to-project',
+    title: 'Form to Project', 
+    summary: 'Link a form, ingest responses as context, and auto-spin tasks.',
+    icon: ClipboardList,
+    color: '#6366F1',
+    description: 'Transform feedback into action. Automatically connects form responses to your project context and creates execution tasks.'
+  },
+  { 
+    id: 'idea-to-execution',
+    title: 'Idea to Execution', 
+    summary: 'From note to roadmap. Scheduled meetings, secrets, and team sync.',
+    icon: Lightbulb,
+    color: '#EC4899',
+    description: 'The "Notion-killer" flow. Start with a simple note and instantly generate tasks, schedule weekly calls, and bundle secrets.'
+  },
+  { 
+    id: 'academic-research',
+    title: 'Academic Research', 
+    summary: 'Unlock long-form articles (6M+ chars), milestones, and surveys.',
+    icon: GraduationCap,
+    color: '#A855F7',
+    isPro: true,
+    description: 'Deep academic workflows. Supports massive long-form content, research milestones, and questionnaire-based data collection.'
+  },
+  { 
+    id: 'social-pulse',
+    title: 'Social Pulse Campaign', 
+    summary: 'Schedule moments, track engagement, and social events.',
+    icon: Megaphone,
+    color: '#10B981',
+    description: 'Sync your social presence. Coordinate Campaign Moments with scheduled events and real-time engagement tracking.'
+  },
+  { 
+    id: 'secure-handover',
+    title: 'Secure Client Handover', 
+    summary: 'Vault-locked secrets, handover calls, and ephemeral sharing.',
+    icon: Key,
+    color: '#F59E0B',
+    description: 'The ultimate professional hand-off. Bundle credentials securely, schedule a sync call, and use ephemeral links.'
+  },
+  { 
+    id: 'team-huddle-center',
+    title: 'Team Huddle Hub', 
+    summary: 'Persistent project calls and dedicated group chat threads.',
+    icon: Video,
+    color: '#3B82F6',
+    description: 'Centralize communication. Keeps your team synchronized with recurring call links and a project-isolated chat environment.'
+  },
+  { 
+    id: 'service-desk',
+    title: 'Service Desk Dashboard', 
+    summary: 'Support forms to tasks with dedicated focus sessions.',
+    icon: LifeBuoy,
+    color: '#EF4444',
+    description: 'Manage requests efficiently. Link support forms directly to project tasks and resolve them in timed focus blocks.'
+  },
+  { 
+    id: 'wiki-knowledge-hub',
+    title: 'Wiki Knowledge Hub', 
+    summary: 'Auto-organized notes with project-wide tag hierarchies.',
+    icon: Book,
+    color: '#06B6D4',
+    description: 'Build a living library. Organize multiple notes into a collaborative wiki with smart versioning and shared tags.'
+  },
+  { 
+    id: 'event-command-center',
+    title: 'Event Command Center', 
+    summary: 'RSVPs, speaker schedules, and logistics tasking.',
+    icon: Calendar,
+    color: '#F43F5E',
+    description: 'Master your meetups. Integrated guest management (Forms), event scheduling, and full logistic task-lists.'
+  },
+  { 
+    id: 'product-roadmap',
+    title: 'Product Roadmap', 
+    summary: 'Connect specs, track goals, and manage milestones.',
+    icon: Layers,
+    color: '#84CC16',
+    description: 'Execute your vision. Links technical specifications (Notes) to high-level goals and deadline-driven events.'
+  }
 ];
 
 export default function ProjectsPage() {
@@ -66,6 +139,7 @@ export default function ProjectsPage() {
   
   const [projects, setProjects] = useState<Projects[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -85,8 +159,11 @@ export default function ProjectsPage() {
     setProjects(prev => [newProject, ...prev]);
   }, []);
 
-  const openCreateDrawer = useCallback(() => {
-    open('new-project', { onCreated: handleCreated });
+  const openCreateDrawer = useCallback((template?: typeof projectTemplates[0]) => {
+    open('new-project', { 
+        onCreated: handleCreated,
+        template: template 
+    });
   }, [open, handleCreated]);
 
   useEffect(() => {
@@ -94,7 +171,7 @@ export default function ProjectsPage() {
       isVisible: true,
       mainColor: '#6366F1',
       actions: [
-        { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: openCreateDrawer },
+        { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => openCreateDrawer() },
         { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note/notes') }]
     });
     return () => resetConfiguration();
@@ -118,6 +195,8 @@ export default function ProjectsPage() {
   const handleProjectClick = (projectId: string) => {
     router.push(`/projects/${projectId}`);
   };
+
+  const displayedTemplates = showAllTemplates ? projectTemplates : projectTemplates.slice(0, 3);
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff' }}>
@@ -152,37 +231,82 @@ export default function ProjectsPage() {
             </Box>
         </Stack>
 
-        {/* Quick Actions / Suggestions */}
-        <Grid container spacing={2} sx={{ mb: 8 }}>
-            {suggestions.map((s) => (
-                <Grid item xs={12} sm={4} key={s.title}>
-                    <Paper
-                        elevation={0}
-                        onClick={() => router.push(s.href)}
-                        sx={{
-                            p: 2.5,
-                            borderRadius: '24px',
-                            bgcolor: '#161412',
-                            border: '1px solid rgba(255,255,255,0.06)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            '&:hover': { bgcolor: '#1C1A18', borderColor: alpha(s.color, 0.2) }
-                        }}
-                    >
-                        <Stack direction="row" spacing={2} alignItems="center">
-                            <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(s.color, 0.1), color: s.color, display: 'grid', placeItems: 'center' }}>
-                                <s.icon size={20} />
-                            </Box>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 800 }}>{s.title}</Typography>
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>{s.description}</Typography>
-                            </Box>
-                            <ArrowUpRight size={16} color="rgba(255,255,255,0.2)" />
-                        </Stack>
-                    </Paper>
-                </Grid>
-            ))}
-        </Grid>
+        {/* Project Templates Section */}
+        <Box sx={{ mb: 8 }}>
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', display: 'block' }}>
+                    Start from a functional template
+                </Typography>
+                <Button 
+                    size="small"
+                    onClick={() => setShowAllTemplates(!showAllTemplates)}
+                    endIcon={showAllTemplates ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    sx={{ color: '#6366F1', fontWeight: 800, textTransform: 'none', fontSize: '0.75rem' }}
+                >
+                    {showAllTemplates ? 'Show Less' : 'Show All Templates'}
+                </Button>
+            </Stack>
+            
+            <Grid container spacing={2}>
+                {displayedTemplates.map((template) => (
+                    <Grid item xs={12} sm={6} md={4} key={template.title}>
+                        <Paper
+                            elevation={0}
+                            onClick={() => openCreateDrawer(template)}
+                            sx={{
+                                p: 3,
+                                borderRadius: '24px',
+                                bgcolor: '#161412',
+                                border: '1px solid rgba(255,255,255,0.06)',
+                                cursor: 'pointer',
+                                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                '&:hover': { 
+                                    bgcolor: '#1C1A18', 
+                                    borderColor: alpha(template.color, 0.3),
+                                    transform: 'translateY(-4px)',
+                                    boxShadow: `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px ${alpha(template.color, 0.1)}`
+                                }
+                            }}
+                        >
+                            {template.isPro && (
+                                <Chip 
+                                    label="PRO" 
+                                    size="small"
+                                    sx={{ 
+                                        position: 'absolute', 
+                                        top: 16, 
+                                        right: 16, 
+                                        bgcolor: alpha(template.color, 0.1), 
+                                        color: template.color, 
+                                        fontWeight: 900, 
+                                        fontSize: '0.65rem',
+                                        fontFamily: 'var(--font-mono)',
+                                        border: `1px solid ${alpha(template.color, 0.2)}`
+                                    }} 
+                                />
+                            )}
+                            <Stack spacing={2.5}>
+                                <Box sx={{ width: 48, height: 48, borderRadius: '14px', bgcolor: alpha(template.color, 0.1), color: template.color, display: 'grid', placeItems: 'center' }}>
+                                    <template.icon size={24} strokeWidth={2.5} />
+                                </Box>
+                                <Box>
+                                    <Typography variant="body1" sx={{ fontWeight: 900, color: '#fff', fontSize: '1.1rem', letterSpacing: '-0.01em' }}>{template.title}</Typography>
+                                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1, display: 'block', lineHeight: 1.5, fontWeight: 500, minHeight: 44 }}>
+                                        {template.description}
+                                    </Typography>
+                                </Box>
+                                <Stack direction="row" alignItems="center" spacing={1} sx={{ color: template.color, pt: 1 }}>
+                                    <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Create Project</Typography>
+                                    <Plus size={14} strokeWidth={3} />
+                                </Stack>
+                            </Stack>
+                        </Paper>
+                    </Grid>
+                ))}
+            </Grid>
+        </Box>
 
         <Grid container spacing={4}>
             {/* Main Projects List */}

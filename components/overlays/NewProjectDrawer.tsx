@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -28,11 +28,15 @@ import {
   ShieldAlert, 
   Briefcase, 
   Zap,
-  ChevronRight,
 } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { FormsService } from '@/lib/services/forms';
+import { listNotesByUser } from '@/lib/appwrite/note';
+import { tasks } from '@/lib/kylrixflow';
+import { ID } from 'appwrite';
 
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
@@ -48,82 +52,138 @@ const RADIUS_LARGE = '24px';
 const RADIUS_MEDIUM = '16px';
 const RADIUS_SMALL = '12px';
 
-const suggestions = [
-  { 
-    title: 'Product Launch', 
-    summary: 'Coordinate specs, goals, and announcements.',
-    icon: Rocket,
-    color: '#EC4899',
-  },
-  { 
-    title: 'Security Audit', 
-    summary: 'Secure credentials and hardening checklists.',
-    icon: ShieldAlert,
-    color: '#10B981',
-  },
-  { 
-    title: 'Client Handover', 
-    summary: 'Package documents and access keys.',
-    icon: Briefcase,
-    color: '#F59E0B',
-  },
-  { 
-    title: 'Team Sprint', 
-    summary: 'A project for active tasks and shared notes.',
-    icon: Zap,
-    color: '#A855F7',
-  }
-];
-
 export function NewProjectDrawer() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { activeContent, drawerData, close } = useUnifiedDrawer();
   const isOpen = activeContent === 'new-project';
   const { showSuccess, showError } = useToast();
+  const { user } = useAuth();
 
+  const template = drawerData?.template;
   const onSuccess = drawerData?.onCreated as ((project: any) => void) | undefined;
 
+  const [step, setStep] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Resources for picking
+  const [resources, setResources] = useState<any[]>([]);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [selectedResourceId, setSelectedResourceId] = useState<string>('');
+
+  // Form State
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [visibility, setVisibility] = useState<'private' | 'shared' | 'public'>('private');
 
+  const fetchResources = useCallback(async () => {
+    if (!user?.$id) return;
+    setLoadingResources(true);
+    try {
+        if (template?.id === 'form-to-project' || template?.id === 'service-desk' || template?.id === 'event-command-center') {
+            const res = await FormsService.listUserForms(user.$id);
+            setResources(res.rows);
+        } else if (template?.id === 'idea-to-execution' || template?.id === 'wiki-knowledge-hub' || template?.id === 'product-roadmap') {
+            const res = await listNotesByUser(user.$id);
+            setResources(res);
+        }
+    } catch (e) {
+        console.error('Failed to fetch resources', e);
+    } finally {
+        setLoadingResources(false);
+    }
+  }, [user?.$id, template?.id]);
+
   useEffect(() => {
     if (isOpen) {
-      setTitle('');
-      setSummary('');
+      setTitle(template?.title || '');
+      setSummary(template?.summary || '');
       setVisibility('private');
       setIsExpanded(false);
+      setSelectedResourceId('');
+      
+      // Determine if we need a picker step
+      const needsPicker = ['form-to-project', 'idea-to-execution', 'service-desk', 'wiki-knowledge-hub', 'event-command-center', 'product-roadmap'].includes(template?.id);
+      if (needsPicker) {
+          setStep(1);
+          fetchResources();
+      } else {
+          setStep(2);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, template, fetchResources]);
+
+  const handleResourceSelect = (id: string) => {
+    setSelectedResourceId(id);
+    const selected = resources.find(r => r.$id === id);
+    if (selected) {
+        setTitle(selected.title || selected.name || template?.title);
+        setSummary(selected.description || selected.summary || template?.summary);
+    }
+    setStep(2);
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || !user?.$id) return;
 
     setLoading(true);
     try {
+      // 1. Prepare Metadata based on template
+      const metadata: any = {
+        templateId: template?.id,
+        createdAt: new Date().toISOString(),
+      };
+
+      if (template?.id === 'academic-research') {
+          metadata.proFeatures = true;
+          metadata.maxCharacterLimit = 6000000;
+          metadata.milestones = ['Proposal', 'Literature Review', 'Data Collection', 'Analysis', 'Final Draft'];
+      }
+
+      if (template?.id === 'idea-to-execution') {
+          metadata.meetings = [{ title: 'Weekly Sync', frequency: 'weekly', day: 'Monday' }];
+          metadata.vaultEnabled = true;
+      }
+
+      // 2. Create Project
       const project = await ProjectsService.createProject({
         title: title.trim(),
         summary: summary.trim(),
         visibility,
         status: 'active',
+        metadata: JSON.stringify(metadata)
       });
-      showSuccess('Project created');
+
+      // 3. Post-Creation Magic (Under the hood)
+      if (selectedResourceId) {
+          const resourceKind = (template?.id === 'form-to-project' || template?.id === 'service-desk' || template?.id === 'event-command-center') ? 'form' : 'note';
+          
+          // Link Resource
+          await ProjectsService.addObjectToProject(project.$id, resourceKind, selectedResourceId);
+          
+          // Auto-spin up Task if it's the Form-to-Project flow
+          if (template?.id === 'form-to-project' || template?.id === 'service-desk') {
+              await tasks.create({
+                  title: `Process: ${title}`,
+                  description: `Reviewing submissions from linked form and generating roadmap for ${title}.`,
+                  status: 'todo',
+                  priority: 'high',
+                  userId: user.$id,
+                  metadata: JSON.stringify({ origin: 'template_automation', sourceId: selectedResourceId })
+              });
+          }
+      }
+
+      showSuccess('Project activated');
       if (onSuccess) onSuccess(project);
       close();
     } catch (err: any) {
-      showError('Failed to create project', err.message);
+      showError('Setup failed', err.message);
     } finally {
       setLoading(false);
     }
-  };
-
-  const applySuggestion = (s: typeof suggestions[0]) => {
-      setTitle(s.title);
-      setSummary(s.summary);
   };
 
   const fontUi = 'var(--font-satoshi)';
@@ -207,19 +267,16 @@ export function NewProjectDrawer() {
                 border: BORDER,
               }}
             >
-              <ProjectIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />
+              {template?.icon ? <template.icon size={20} color={template.color} strokeWidth={2.5} /> : <ProjectIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />}
             </Box>
-            <Typography
-              sx={{
-                color: '#fff',
-                fontWeight: 900,
-                fontSize: '1.25rem',
-                fontFamily: fontDisplay,
-                letterSpacing: '-0.02em',
-              }}
-            >
-              New Project
-            </Typography>
+            <Box>
+                <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, letterSpacing: '-0.02em' }}>
+                    {template?.title || 'New Project'}
+                </Typography>
+                <Typography variant="caption" sx={{ color: TEXT_MUTED, fontWeight: 700, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                    {step === 1 ? 'Step 1: Link Context' : 'Step 2: Finalize'}
+                </Typography>
+            </Box>
           </Stack>
           <IconButton
             onClick={close}
@@ -247,178 +304,189 @@ export function NewProjectDrawer() {
             pr: 0.5
           }}
         >
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Quick Start
-            </Typography>
-            <Stack spacing={1}>
-                {suggestions.map((s) => (
-                    <Box 
-                        key={s.title}
-                        onClick={() => applySuggestion(s)}
-                        sx={{ 
-                            p: 1.5, 
-                            borderRadius: '16px', 
-                            border: '1px solid',
-                            bgcolor: title === s.title ? alpha(s.color, 0.08) : VOID,
-                            borderColor: title === s.title ? alpha(s.color, 0.2) : BORDER_HAIRLINE,
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            '&:hover': { bgcolor: alpha(s.color, 0.05), borderColor: alpha(s.color, 0.1) }
-                        }}
-                    >
-                        <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Box sx={{ color: s.color, display: 'grid', placeItems: 'center' }}>
-                                <s.icon size={18} />
-                            </Box>
-                            <Box sx={{ flex: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff', fontSize: '0.85rem' }}>{s.title}</Typography>
-                                <Typography variant="caption" sx={{ color: TEXT_MUTED, display: 'block', fontSize: '0.75rem' }}>{s.summary}</Typography>
-                            </Box>
-                            <ChevronRight size={14} color={TEXT_MUTED} />
-                        </Stack>
-                    </Box>
-                ))}
-            </Stack>
-          </Box>
+          {step === 1 && (
+              <Box>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
+                      Select existing {template?.id?.includes('form') ? 'Form' : 'Note'} to link
+                  </Typography>
+                  
+                  {loadingResources ? (
+                      <Stack direction="row" justifyContent="center" py={4}>
+                          <CircularProgress size={24} sx={{ color: template?.color || SYSTEM_PRIMARY }} />
+                      </Stack>
+                  ) : resources.length === 0 ? (
+                      <Box sx={{ p: 3, bgcolor: VOID, borderRadius: '16px', border: BORDER, textAlign: 'center' }}>
+                          <Typography variant="body2" sx={{ color: TEXT_MUTED, mb: 2 }}>You don&apos;t have any {template?.id?.includes('form') ? 'forms' : 'notes'} to link yet.</Typography>
+                          <Button variant="outlined" size="small" onClick={() => setStep(2)} sx={{ color: '#fff', borderColor: BORDER_HAIRLINE }}>Skip & Create Manual</Button>
+                      </Box>
+                  ) : (
+                      <Stack spacing={1}>
+                          {resources.map((res) => (
+                              <Box
+                                  key={res.$id}
+                                  onClick={() => handleResourceSelect(res.$id)}
+                                  sx={{
+                                      p: 2,
+                                      borderRadius: '16px',
+                                      bgcolor: VOID,
+                                      border: '1px solid',
+                                      borderColor: BORDER_HAIRLINE,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.2s ease',
+                                      '&:hover': { borderColor: template?.color || SYSTEM_PRIMARY, bgcolor: HOVER }
+                                  }}
+                              >
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>{res.title || res.name}</Typography>
+                                  <Typography variant="caption" sx={{ color: TEXT_MUTED, display: 'block', mt: 0.5 }}>{new Date(res.$createdAt).toLocaleDateString()}</Typography>
+                              </Box>
+                          ))}
+                          <Button variant="text" size="small" onClick={() => setStep(2)} sx={{ color: TEXT_MUTED, mt: 1 }}>Skip to manual setup</Button>
+                      </Stack>
+                  )}
+              </Box>
+          )}
 
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Project Title
-            </Typography>
-            <TextField
-              fullWidth
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Q3 Roadmap"
-              variant="standard"
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  bgcolor: VOID,
-                  borderRadius: '16px',
-                  color: 'white',
-                  px: 2,
-                  py: 1.5,
-                  fontFamily: fontUi,
-                  fontWeight: 600,
-                  border: BORDER,
-                  '&:hover': { borderColor: '#4F4C49' },
-                  '&.Mui-focused': { borderColor: SYSTEM_PRIMARY }
-                }
-              }}
-            />
-          </Box>
-
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Summary
-            </Typography>
-            <TextField
-              fullWidth
-              multiline
-              rows={2}
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="Optional project overview..."
-              variant="standard"
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  bgcolor: VOID,
-                  borderRadius: '16px',
-                  color: 'white',
-                  px: 2,
-                  py: 1.5,
-                  fontFamily: fontUi,
-                  fontWeight: 500,
-                  border: BORDER,
-                  '&:hover': { borderColor: '#4F4C49' },
-                  '&.Mui-focused': { borderColor: SYSTEM_PRIMARY }
-                }
-              }}
-            />
-          </Box>
-
-          <Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Visibility
-            </Typography>
-            <FormControl fullWidth variant="standard">
-                <Select
-                    value={visibility}
-                    onChange={(e) => setVisibility(e.target.value as any)}
-                    disableUnderline
-                    sx={{
-                        color: '#fff',
+          {step === 2 && (
+              <>
+                <Box>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
+                    Project Title
+                    </Typography>
+                    <TextField
+                    fullWidth
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Q3 Roadmap"
+                    variant="standard"
+                    InputProps={{
+                        disableUnderline: true,
+                        sx: {
                         bgcolor: VOID,
                         borderRadius: '16px',
-                        fontWeight: 700,
+                        color: 'white',
                         px: 2,
-                        py: 0.5,
-                        border: BORDER,
+                        py: 1.5,
                         fontFamily: fontUi,
-                        '& .MuiSelect-select': { py: 1.5 },
-                        '& .MuiSvgIcon-root': { color: TEXT_MUTED }
-                    }}
-                    MenuProps={{
-                        PaperProps: {
-                            sx: {
-                                bgcolor: SURFACE_ASH,
-                                border: BORDER,
-                                borderRadius: '12px',
-                                color: '#fff',
-                                mt: 1
-                            }
+                        fontWeight: 600,
+                        border: BORDER,
+                        '&:hover': { borderColor: '#4F4C49' },
+                        '&.Mui-focused': { borderColor: SYSTEM_PRIMARY }
                         }
                     }}
-                >
-                    <MenuItem value="private" sx={{ fontWeight: 600 }}>Private</MenuItem>
-                    <MenuItem value="shared" sx={{ fontWeight: 600 }}>Shared</MenuItem>
-                    <MenuItem value="public" sx={{ fontWeight: 600 }}>Public</MenuItem>
-                </Select>
-            </FormControl>
-          </Box>
+                    />
+                </Box>
 
-          <Box sx={{ mt: 'auto', pt: 4 }}>
-            <Button 
-              fullWidth
-              type="submit"
-              variant="contained"
-              disabled={loading || !title.trim()}
-              sx={{
-                bgcolor: SYSTEM_PRIMARY,
-                color: '#fff',
-                fontWeight: 800,
-                fontSize: '0.9rem',
-                py: 1.75,
-                borderRadius: RADIUS_SMALL,
-                textTransform: 'none',
-                boxShadow: 'none',
-                transition: BRAND_TRANSITION,
-                '&:hover': { bgcolor: SYSTEM_HOVER },
-                '&.Mui-disabled': { bgcolor: HOVER, color: TEXT_MUTED }
-              }}
-            >
-              {loading ? <CircularProgress size={20} color="inherit" /> : 'Create Project'}
-            </Button>
-            
-            <Button 
-              fullWidth
-              onClick={close}
-              sx={{ 
-                mt: 1.5,
-                color: TEXT_MUTED, 
-                fontWeight: 700, 
-                fontSize: '0.85rem',
-                textTransform: 'none',
-                '&:hover': { color: '#fff', bgcolor: 'transparent' }
-              }}
-            >
-              Dismiss
-            </Button>
-          </Box>
+                <Box>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
+                    Summary
+                    </Typography>
+                    <TextField
+                    fullWidth
+                    multiline
+                    rows={2}
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    placeholder="Optional project overview..."
+                    variant="standard"
+                    InputProps={{
+                        disableUnderline: true,
+                        sx: {
+                        bgcolor: VOID,
+                        borderRadius: '16px',
+                        color: 'white',
+                        px: 2,
+                        py: 1.5,
+                        fontFamily: fontUi,
+                        fontWeight: 500,
+                        border: BORDER,
+                        '&:hover': { borderColor: '#4F4C49' },
+                        '&.Mui-focused': { borderColor: SYSTEM_PRIMARY }
+                        }
+                    }}
+                    />
+                </Box>
+
+                <Box>
+                    <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
+                    Visibility
+                    </Typography>
+                    <FormControl fullWidth variant="standard">
+                        <Select
+                            value={visibility}
+                            onChange={(e) => setVisibility(e.target.value as any)}
+                            disableUnderline
+                            sx={{
+                                color: '#fff',
+                                bgcolor: VOID,
+                                borderRadius: '16px',
+                                fontWeight: 700,
+                                px: 2,
+                                py: 0.5,
+                                border: BORDER,
+                                fontFamily: fontUi,
+                                '& .MuiSelect-select': { py: 1.5 },
+                                '& .MuiSvgIcon-root': { color: TEXT_MUTED }
+                            }}
+                            MenuProps={{
+                                PaperProps: {
+                                    sx: {
+                                        bgcolor: SURFACE_ASH,
+                                        border: BORDER,
+                                        borderRadius: '12px',
+                                        color: '#fff',
+                                        mt: 1
+                                    }
+                                }
+                            }}
+                        >
+                            <MenuItem value="private" sx={{ fontWeight: 600 }}>Private</MenuItem>
+                            <MenuItem value="shared" sx={{ fontWeight: 600 }}>Shared</MenuItem>
+                            <MenuItem value="public" sx={{ fontWeight: 600 }}>Public</MenuItem>
+                        </Select>
+                    </FormControl>
+                </Box>
+
+                <Box sx={{ mt: 'auto', pt: 4 }}>
+                    <Button 
+                        fullWidth
+                        type="submit"
+                        variant="contained"
+                        disabled={loading || !title.trim()}
+                        sx={{
+                            bgcolor: template?.color || SYSTEM_PRIMARY,
+                            color: '#fff',
+                            fontWeight: 800,
+                            fontSize: '0.9rem',
+                            py: 1.75,
+                            borderRadius: RADIUS_SMALL,
+                            textTransform: 'none',
+                            boxShadow: 'none',
+                            transition: BRAND_TRANSITION,
+                            '&:hover': { bgcolor: template?.color || SYSTEM_HOVER, filter: 'brightness(0.9)' },
+                            '&.Mui-disabled': { bgcolor: HOVER, color: TEXT_MUTED }
+                        }}
+                    >
+                        {loading ? <CircularProgress size={20} color="inherit" /> : `Activate ${template?.title || 'Project'}`}
+                    </Button>
+                    
+                    <Button 
+                        fullWidth
+                        onClick={() => ['form-to-project', 'idea-to-execution'].includes(template?.id) ? setStep(1) : close()}
+                        sx={{ 
+                            mt: 1.5,
+                            color: TEXT_MUTED, 
+                            fontWeight: 700, 
+                            fontSize: '0.85rem',
+                            textTransform: 'none',
+                            '&:hover': { color: '#fff', bgcolor: 'transparent' }
+                        }}
+                    >
+                        {['form-to-project', 'idea-to-execution'].includes(template?.id) ? 'Back' : 'Dismiss'}
+                    </Button>
+                </Box>
+              </>
+          )}
         </Box>
       </Box>
     </Drawer>
