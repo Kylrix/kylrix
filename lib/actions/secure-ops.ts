@@ -18,7 +18,7 @@ import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
  * Standard actor discovery for Server Actions. 
  * Reads session cookies or explicit JWT to establish identity.
  */
-async function getActor(jwt?: string) {
+export async function getActor(jwt?: string) {
   try {
     const { account } = await createServerClient(jwt);
     const actor = await account.get().catch(err => {

@@ -4,7 +4,8 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { getActor } from './secure-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan } from '@/lib/utils';
-import { InputFile, ID } from 'node-appwrite';
+import { ID } from 'node-appwrite';
+import { InputFile } from 'node-appwrite/file';
 
 /**
  * Securely handles file uploads on the server.
