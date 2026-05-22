@@ -13,6 +13,7 @@ import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/l
 import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
+import { executeCascadeDeleteSecure } from './cascade-delete';
 
 // Short-lived in-memory cache for document reads during permission checks.
 // Prevents duplicate database fetches within a short timeframe (e.g. 5 seconds).
@@ -1290,77 +1291,7 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
   const APPWRITE_TABLE_ID_COMMENTS = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS;
 
   try {
-    try {
-      const reactionsRes = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
-      queries: [Query.equal('targetId', noteId), Query.limit(1000)] as any,
-    });
-      await Promise.all(
-        reactionsRes.rows.map((r: any) =>
-          tables.deleteRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
-      rowId: r.$id,
-    })
-        )
-      );
-    } catch {}
-
-    try {
-      const mappingsRes = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-      tableId: 'key_mapping',
-      queries: [
-          Query.equal('resourceType', 'note'),
-          Query.equal('resourceId', noteId),
-          Query.limit(1000)] as any,
-    });
-      await Promise.all(
-        (mappingsRes.rows as any[]).map((mapping) =>
-          tables.deleteRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
-      tableId: 'key_mapping',
-      rowId: mapping.$id,
-    })
-        )
-      );
-    } catch (err) {
-      console.error('deleteNoteSecure key_mapping cleanup failed:', err);
-    }
-
-    const commentsRes = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_COMMENTS,
-      queries: [Query.equal('noteId', noteId), Query.limit(1000)] as any,
-    });
-    const commentIds = (commentsRes.rows as any[]).map((c) => c.$id).filter(Boolean);
-    if (commentIds.length) {
-      try {
-        const reactionsRes = await tables.listRows({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
-      queries: [Query.equal('targetType', 'comment'), Query.equal('targetId', commentIds), Query.limit(1000)] as any,
-    });
-        await Promise.all(
-          reactionsRes.rows.map((r: any) =>
-            tables.deleteRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
-      rowId: r.$id,
-    })
-          )
-        );
-      } catch {}
-
-      await Promise.all(
-        commentIds.map((id) => tables.deleteRow({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_COMMENTS,
-      rowId: id,
-    }))
-      );
-    }
+    await executeCascadeDeleteSecure(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId);
   } catch (err: any) {
     console.error('deleteNoteSecure cascade cleanup failed:', err);
   }
@@ -1483,21 +1414,8 @@ export async function deleteProjectSecure(projectId: string, jwt?: string) {
 
   // Cascade delete all object links
   try {
-    const objects = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'project_objects',
-      queries: [Query.equal('projectId', projectId)] as any,
-    });
-    await Promise.all(
-      objects.rows.map((obj) =>
-        tables.deleteRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
-      tableId: 'project_objects',
-      rowId: obj.$id,
-    })
-      )
-    );
-  } catch (err) {
+    await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.CHAT, 'projects', projectId);
+  } catch (err: any) {
     console.error('deleteProjectSecure cascade objects cleanup failed:', err);
   }
 
@@ -1880,6 +1798,12 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
 
   const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
+  try {
+    await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, formId);
+  } catch (err: any) {
+    console.error('deleteFormSecure cascade cleanup failed:', err);
+  }
+
   const result = await tables.deleteRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
@@ -2137,21 +2061,8 @@ export async function deleteEventSecure(eventId: string, jwt?: string) {
 
   // Cascade delete guests
   try {
-    const guestsRes = await tables.listRows({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      queries: [Query.equal('eventId', eventId)] as any,
-    });
-    await Promise.all(
-      guestsRes.rows.map((g) =>
-        tables.deleteRow({
-      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      rowId: g.$id,
-    })
-      )
-    );
-  } catch (err) {
+    await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.EVENTS, eventId);
+  } catch (err: any) {
     console.error('deleteEventSecure cascade guests cleanup failed:', err);
   }
 
@@ -2386,6 +2297,16 @@ export async function endCallSecureAction(callId: string, jwt?: string) {
 
   if (!isAllowed) {
     throw new Error('Forbidden: Insufficient permissions to end this call');
+  }
+
+  try {
+    await executeCascadeDeleteSecure(
+      APPWRITE_CONFIG.DATABASES.CHAT,
+      APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+      callId
+    );
+  } catch (err: any) {
+    console.error('endCallSecureAction cascade cleanup failed:', err);
   }
 
   const result = await tables.deleteRow({
@@ -2943,6 +2864,12 @@ export async function deleteRowSecure(
   if (!isAllowed) throw new Error('Forbidden');
 
   const tables = createSystemTablesDB();
+  try {
+    await executeCascadeDeleteSecure(databaseId, tableId, rowId);
+  } catch (err: any) {
+    console.error('deleteRowSecure cascade cleanup failed:', err);
+  }
+
   const result = await tables.deleteRow({
     databaseId,
     tableId,
