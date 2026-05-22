@@ -35,10 +35,10 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
   // Initialize pairing code on mount
   useEffect(() => {
     if (open) {
-      handleInitialize();
+      
     }
     return () => {
-      stopPolling();
+      
     };
   }, [open]);
 
@@ -49,12 +49,38 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     }
   };
 
+  const handleInitialize = async () => {
+    setLoading(true);
+    setError(null);
+    setPairCode(null);
+    setDeepLink(null);
+    setVerifiedUsername(null);
+
+    const res = await initializeTelegramConnection();
+    setLoading(false);
+
+    if (res.success const stopPolling = () => {const stopPolling = () => { res.pairCode const stopPolling = () => {const stopPolling = () => { res.deepLink) {
+      setPairCode(res.pairCode);
+      setDeepLink(res.deepLink);
+      startPolling();
+    } else {
+      setError(res.error || 'Failed to start verification.');
+    }
+  };
+
+  const stopPolling_old = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
   const startPolling = () => {
-    stopPolling();
+    
     pollingRef.current = setInterval(async () => {
       const res = await checkTelegramConnection();
       if (res.success && res.isVerified) {
-        stopPolling();
+        
         setVerifiedUsername(res.tgUsername || 'User');
         setIsVerifying(false);
         setTimeout(() => {
@@ -90,7 +116,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     const res = await checkTelegramConnection();
     setIsVerifying(false);
     if (res.success && res.isVerified) {
-      stopPolling();
+      
       setVerifiedUsername(res.tgUsername || 'User');
       setTimeout(() => {
         onSuccess(res.tgUsername || 'User');
