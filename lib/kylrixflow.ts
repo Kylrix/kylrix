@@ -325,11 +325,27 @@ export const taskCollaborators = {
 
 export const events = {
     list: (queries?: string[]) => listRows<Event>(TABLES.EVENTS, queries),
-    create: (data: TableCreateData<Event>, permissions?: string[]) =>
-        createRow<Event>(TABLES.EVENTS, data, permissions),
+    create: async (data: TableCreateData<Event>, _permissions?: string[]) => {
+        const { createEventSecure } = await import('@/lib/actions/secure-ops');
+        return await createEventSecure(data);
+    },
     get: (id: string) => getRow<Event>(TABLES.EVENTS, id),
-    update: (id: string, data: TableUpdateData<Event>) => updateRow<Event>(TABLES.EVENTS, id, data),
-    delete: (id: string) => deleteRow(TABLES.EVENTS, id)
+    update: async (id: string, data: TableUpdateData<Event>) => {
+        const { updateEventSecure } = await import('@/lib/actions/secure-ops');
+        return await updateEventSecure(id, data);
+    },
+    delete: async (id: string) => {
+        const { deleteEventSecure } = await import('@/lib/actions/secure-ops');
+        return await deleteEventSecure(id);
+    },
+    addManager: async (eventId: string, userId: string, role: string = 'viewer') => {
+        const { addEventManagerSecure } = await import('@/lib/actions/secure-ops');
+        return await addEventManagerSecure(eventId, userId, role);
+    },
+    removeManager: async (eventId: string, userId: string) => {
+        const { removeEventManagerSecure } = await import('@/lib/actions/secure-ops');
+        return await removeEventManagerSecure(eventId, userId);
+    }
 };
 
 // --- Event Guests ---

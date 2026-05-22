@@ -14,6 +14,7 @@ import type {
   Settings,
 } from '@/types/appwrite';
 import { TargetType } from '@/types/appwrite';
+// Removed static import of secure-ops to prevent Next.js isomorphic bundling errors.
 
 import { APPWRITE_CONFIG } from './config';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -601,12 +602,17 @@ const noteCreationService = createNoteCreationService({
   },
 });
 
-export { createNoteCreationService };
+export { createNoteCreationService, cleanDocumentData, filterNoteData, getNotePermissions };
 export default AppwriteService;
 
 export async function createNote(data: Partial<Notes>) {
+  if (typeof window !== 'undefined') {
+    const { createNoteSecure } = await import('@/lib/actions/secure-ops');
+    return createNoteSecure(data);
+  }
   return noteCreationService.createNote(data as any);
 }
+
 
 export async function createMomentFromNote(note: Pick<Notes, '$id'>) {
   const { sharePublicNoteAsMomentSecure } = await import('@/lib/actions/secure-ops');
@@ -638,9 +644,17 @@ export async function getNote(noteId: string): Promise<Notes> {
 }
 
 export async function updateNote(noteId: string, data: Partial<Notes>) {
+  if (typeof window !== 'undefined') {
+    const { updateNoteSecure } = await import('@/lib/actions/secure-ops');
+    const result = await updateNoteSecure(noteId, data);
+    invalidateNoteRowClientCache(noteId);
+    return result as Notes;
+  }
+
   const cleanData = cleanDocumentData(data);
   const updatedAt = new Date().toISOString();
   const updatedData = filterNoteData({ ...cleanData, updatedAt: updatedAt });
+
 
   const user = await getCurrentUser();
   
@@ -784,9 +798,16 @@ export async function updateNote(noteId: string, data: Partial<Notes>) {
 }
 
 export async function deleteNote(noteId: string) {
+  if (typeof window !== 'undefined') {
+    const { deleteNoteSecure } = await import('@/lib/actions/secure-ops');
+    const result = await deleteNoteSecure(noteId);
+    invalidateNoteRowClientCache(noteId);
+    return result;
+  }
   try {
     // Remove reactions directly attached to the note
     await deleteReactionsForTarget(TargetType.NOTE, noteId);
+
 
     // Remove any note key mappings / decryption caches tied to this note
     try {

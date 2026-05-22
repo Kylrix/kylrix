@@ -167,12 +167,17 @@ export async function createMessageInternal(payload: {
   attachments?: string[];
   replyTo?: string;
   jwt?: string;
+  actorId?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const user = await account.get().catch(() => null);
+  let verifiedActorId = payload.actorId;
+  if (!verifiedActorId) {
+    const { account } = await createServerClient(payload.jwt);
+    const user = await account.get().catch(() => null);
+    if (!user) throw new Error('Unauthorized');
+    verifiedActorId = user.$id;
+  }
 
-  if (!user) throw new Error('Unauthorized');
-  if (user.$id !== payload.senderId) throw new Error('Forbidden');
+  if (verifiedActorId !== payload.senderId) throw new Error('Forbidden');
 
   const { databases } = createSystemClient();
   const conversation = await databases.getDocument(
@@ -214,29 +219,33 @@ export async function createMessageInternal(payload: {
 export async function clearConversationFootprintInternal(payload: {
   conversationId: string;
   jwt?: string;
+  actorId?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const user = await account.get().catch(() => null);
-
-  if (!user) throw new Error('Unauthorized');
+  let verifiedActorId = payload.actorId;
+  if (!verifiedActorId) {
+    const { account } = await createServerClient(payload.jwt);
+    const user = await account.get().catch(() => null);
+    if (!user) throw new Error('Unauthorized');
+    verifiedActorId = user.$id;
+  }
 
   const { databases, storage } = createSystemClient();
   const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
   const participantIds = await resolveConversationParticipants(databases, conversation);
 
-  if (!participantIds.includes(user.$id)) {
+  if (!participantIds.includes(verifiedActorId)) {
     throw new Error('Forbidden: Not a participant');
   }
 
   const ownedMessages = await listAllDocuments(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, [
     Query.equal('conversationId', payload.conversationId),
-    Query.equal('senderId', user.$id),
+    Query.equal('senderId', verifiedActorId),
   ]);
   const ownedMessageIds = ownedMessages.map((row) => row.$id);
 
   const reactionsByUser = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
     Query.equal('conversationId', payload.conversationId),
-    Query.equal('userId', user.$id),
+    Query.equal('userId', verifiedActorId),
   ]);
 
   const reactionsOnOwnedMessages = ownedMessageIds.length
@@ -267,17 +276,21 @@ export async function clearConversationFootprintInternal(payload: {
 export async function deleteConversationFullyInternal(payload: {
   conversationId: string;
   jwt?: string;
+  actorId?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const user = await account.get().catch(() => null);
-
-  if (!user) throw new Error('Unauthorized');
+  let verifiedActorId = payload.actorId;
+  if (!verifiedActorId) {
+    const { account } = await createServerClient(payload.jwt);
+    const user = await account.get().catch(() => null);
+    if (!user) throw new Error('Unauthorized');
+    verifiedActorId = user.$id;
+  }
 
   const { databases, storage } = createSystemClient();
   const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
   const participantIds = await resolveConversationParticipants(databases, conversation);
 
-  if (!participantIds.includes(user.$id)) {
+  if (!participantIds.includes(verifiedActorId)) {
     throw new Error('Forbidden: Not a participant');
   }
 
@@ -333,17 +346,21 @@ export async function deleteConversationFullyInternal(payload: {
 export async function nuclearWipeConversationInternal(payload: {
   conversationId: string;
   jwt?: string;
+  actorId?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const user = await account.get().catch(() => null);
-
-  if (!user) throw new Error('Unauthorized');
+  let verifiedActorId = payload.actorId;
+  if (!verifiedActorId) {
+    const { account } = await createServerClient(payload.jwt);
+    const user = await account.get().catch(() => null);
+    if (!user) throw new Error('Unauthorized');
+    verifiedActorId = user.$id;
+  }
 
   const { databases } = createSystemClient();
   const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
   const participantIds = await resolveConversationParticipants(databases, conversation);
 
-  if (!participantIds.includes(user.$id)) {
+  if (!participantIds.includes(verifiedActorId)) {
     throw new Error('Forbidden: Not a participant');
   }
 
@@ -360,23 +377,27 @@ export async function toggleReactionInternal(payload: {
   emoji: string;
   action: 'POST' | 'DELETE';
   jwt?: string;
+  actorId?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const user = await account.get().catch(() => null);
-
-  if (!user) throw new Error('Unauthorized');
+  let verifiedActorId = payload.actorId;
+  if (!verifiedActorId) {
+    const { account } = await createServerClient(payload.jwt);
+    const user = await account.get().catch(() => null);
+    if (!user) throw new Error('Unauthorized');
+    verifiedActorId = user.$id;
+  }
 
   const { databases } = createSystemClient();
   const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.conversationId);
   const participantIds = await resolveConversationParticipants(databases, conversation);
 
-  if (!participantIds.includes(user.$id)) {
+  if (!participantIds.includes(verifiedActorId)) {
     throw new Error('Forbidden: Not a participant');
   }
 
   if (payload.action === 'DELETE') {
     const existing = await databases.listDocuments(CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
-      Query.equal('userId', user.$id),
+      Query.equal('userId', verifiedActorId),
       Query.equal('messageId', payload.messageId),
       Query.equal('emoji', payload.emoji),
     ]);
@@ -391,14 +412,14 @@ export async function toggleReactionInternal(payload: {
     const reactionPayload = {
       conversationId: payload.conversationId,
       messageId: payload.messageId,
-      userId: user.$id,
+      userId: verifiedActorId,
       emoji: payload.emoji,
       createdAt: now,
     };
 
-    const recipientIds = participantIds.filter((id) => id !== user.$id);
-    const permissions = buildReactionPermissions(user.$id, recipientIds);
-    const docId = buildReactionDocumentId(user.$id, payload.messageId);
+    const recipientIds = participantIds.filter((id) => id !== verifiedActorId);
+    const permissions = buildReactionPermissions(verifiedActorId, recipientIds);
+    const docId = buildReactionDocumentId(verifiedActorId, payload.messageId);
 
     try {
       const reaction = await databases.createDocument(
@@ -429,16 +450,24 @@ export async function repairConversationInternal(payload: {
   userId?: string;
   conversationId?: string;
   jwt?: string;
+  actorId?: string;
+  actorLabels?: string[];
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const user = await account.get().catch(() => null);
+  let verifiedActorId = payload.actorId;
+  let verifiedLabels = payload.actorLabels || [];
 
-  if (!user) throw new Error('Unauthorized');
+  if (!verifiedActorId) {
+    const { account } = await createServerClient(payload.jwt);
+    const user = await account.get().catch(() => null);
+    if (!user) throw new Error('Unauthorized');
+    verifiedActorId = user.$id;
+    verifiedLabels = user.labels || [];
+  }
 
-  const targetUserId = payload.userId || user.$id;
-  const isAdmin = Array.isArray(user.labels) && user.labels.includes('admin');
+  const targetUserId = payload.userId || verifiedActorId;
+  const isAdmin = Array.isArray(verifiedLabels) && verifiedLabels.includes('admin');
 
-  if (user.$id !== targetUserId && !isAdmin) {
+  if (verifiedActorId !== targetUserId && !isAdmin) {
     throw new Error('Forbidden');
   }
 
@@ -611,16 +640,32 @@ export async function joinRequestInternal(payload: {
   requesterId?: string,
   action?: 'accept' | 'reject',
   jwt?: string;
+  actorId?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const user = await account.get().catch(() => null);
+  let verifiedActorId = payload.actorId;
+  let isFetched = false;
+  let fetchedUser: any = null;
+
+  const getUserLazily = async () => {
+    if (isFetched) return fetchedUser;
+    if (verifiedActorId) {
+      fetchedUser = { $id: verifiedActorId };
+    } else {
+      const { account } = await createServerClient(payload.jwt);
+      fetchedUser = await account.get().catch(() => null);
+      if (fetchedUser) verifiedActorId = fetchedUser.$id;
+    }
+    isFetched = true;
+    return fetchedUser;
+  };
 
   const { databases } = createSystemClient();
   const JOIN_REQUESTS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS;
 
   if (payload.method === 'GET') {
     const resource = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.resourceId);
-    const currentRequesterId = payload.requesterId || user?.$id || '';
+    await getUserLazily();
+    const currentRequesterId = payload.requesterId || verifiedActorId || '';
     
     let alreadyJoined = false;
     if (currentRequesterId) {
@@ -649,10 +694,11 @@ export async function joinRequestInternal(payload: {
     }));
   }
 
+  const user = await getUserLazily();
   if (!user) throw new Error('Unauthorized');
 
   if (payload.method === 'POST') {
-    const requestId = buildReactionDocumentId(user.$id, payload.resourceId);
+    const requestId = buildReactionDocumentId(verifiedActorId!, payload.resourceId);
     const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.resourceId);
     const managers = normalizeParticipantIds(conversation);
 
@@ -663,14 +709,14 @@ export async function joinRequestInternal(payload: {
       {
         resourceType: payload.resourceType,
         resourceId: payload.resourceId,
-        requesterId: user.$id,
+        requesterId: verifiedActorId,
         status: 'pending',
         createdAt: new Date().toISOString(),
       },
       [
-        Permission.read(Role.user(user.$id)),
-        Permission.update(Role.user(user.$id)),
-        Permission.delete(Role.user(user.$id)),
+        Permission.read(Role.user(verifiedActorId!)),
+        Permission.update(Role.user(verifiedActorId!)),
+        Permission.delete(Role.user(verifiedActorId!)),
         ...managers.map((id) => Permission.read(Role.user(id))),
       ],
     );
@@ -683,7 +729,7 @@ export async function joinRequestInternal(payload: {
     
     const conversation = await databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, payload.resourceId);
     const managers = normalizeParticipantIds(conversation);
-    if (!managers.includes(user.$id)) throw new Error('Forbidden');
+    if (!managers.includes(verifiedActorId!)) throw new Error('Forbidden');
 
     const existing = await databases.listDocuments(CHAT_DB_ID, JOIN_REQUESTS_TABLE_ID, [
       Query.equal('resourceType', payload.resourceType),
@@ -702,7 +748,7 @@ export async function joinRequestInternal(payload: {
       {
         status: nextStatus,
         resolvedAt: new Date().toISOString(),
-        resolvedBy: user.$id,
+        resolvedBy: verifiedActorId,
       }
     );
 
@@ -737,7 +783,7 @@ export async function joinRequestInternal(payload: {
     const existing = await databases.listDocuments(CHAT_DB_ID, JOIN_REQUESTS_TABLE_ID, [
       Query.equal('resourceType', payload.resourceType),
       Query.equal('resourceId', payload.resourceId),
-      Query.equal('requesterId', user.$id),
+      Query.equal('requesterId', verifiedActorId!),
     ]);
 
     for (const row of existing.documents) {

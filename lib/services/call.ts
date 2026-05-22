@@ -318,20 +318,8 @@ export const CallService = {
             const call = await this.getCallLink(callId);
             if (!call) throw new Error('Call not found');
 
-            const currentMetadata = parseCallMetadata(call.metadata);
-            const newMetadata = JSON.stringify({
-                ...currentMetadata,
-                ...extraMetadata,
-            });
-
-            const result = await tablesDB.updateRow({
-                databaseId: DB_ID,
-                tableId: LINKS_TABLE,
-                rowId: callId,
-                data: {
-                    metadata: newMetadata,
-                },
-            });
+            const { updateCallMetadataSecureAction } = await import('@/lib/actions/secure-ops');
+            const result = await updateCallMetadataSecureAction(callId, extraMetadata);
 
             activeCallsCache.invalidate();
             return result;
@@ -343,15 +331,19 @@ export const CallService = {
 
     async deleteCall(callId: string) {
         try {
-            await tablesDB.deleteRow({
-                databaseId: DB_ID,
-                tableId: LINKS_TABLE,
-                rowId: callId,
-            });
+            const { endCallSecureAction } = await import('@/lib/actions/secure-ops');
+            await endCallSecureAction(callId);
             historyCache.invalidate();
             activeCallsCache.invalidate();
         } catch (_e) {
             return;
         }
+    },
+
+    async addCohost(callId: string, cohostId: string, allowEndCall: boolean = false) {
+        const { addCallCohostSecureAction } = await import('@/lib/actions/secure-ops');
+        const result = await addCallCohostSecureAction(callId, cohostId, allowEndCall);
+        activeCallsCache.invalidate();
+        return result;
     }
 };

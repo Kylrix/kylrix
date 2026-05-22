@@ -12,7 +12,7 @@ export const ProjectsService = {
     const user = await getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
-    return databases.listDocuments<Projects>(
+    return databases.listDocuments<any>(
       DATABASE_ID,
       PROJECTS_COLLECTION_ID,
       [
@@ -23,7 +23,7 @@ export const ProjectsService = {
   },
 
   async getProject(projectId: string) {
-    return databases.getDocument<Projects>(
+    return databases.getDocument<any>(
       DATABASE_ID,
       PROJECTS_COLLECTION_ID,
       projectId
@@ -31,30 +31,12 @@ export const ProjectsService = {
   },
 
   async createProject(data: Partial<Projects>) {
-    const user = await getCurrentUser();
-    if (!user) throw new Error('Not authenticated');
-
-    const now = new Date().toISOString();
-    return databases.createDocument<Projects>(
-      DATABASE_ID,
-      PROJECTS_COLLECTION_ID,
-      ID.unique(),
-      {
-        ...data,
-        ownerId: user.$id,
-        createdAt: now,
-        updatedAt: now,
-      },
-      [
-        Permission.read(Role.user(user.$id)),
-        Permission.update(Role.user(user.$id)),
-        Permission.delete(Role.user(user.$id)),
-      ]
-    );
+    const { createProjectSecure } = await import('@/lib/actions/secure-ops');
+    return await createProjectSecure(data);
   },
 
   async listProjectCollaborators(projectId: string) {
-    return databases.listDocuments<ProjectObjects>(
+    return databases.listDocuments<any>(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
       [
@@ -65,49 +47,27 @@ export const ProjectsService = {
   },
 
   async addCollaborator(projectId: string, userId: string, role: string = 'member') {
-      // 1. Add object link
-      const obj = await this.addObjectToProject(projectId, 'collaborator', userId, role);
-      
-      // 2. Update project permissions (grant read/update if shared)
-      const project = await this.getProject(projectId);
-      const permissions = new Set(project.$permissions);
-      permissions.add(Permission.read(Role.user(userId)));
-      permissions.add(Permission.update(Role.user(userId)));
-      
-      await this.updateProject(projectId, { visibility: 'shared' }, Array.from(permissions));
-      return obj;
+    const { addProjectCollaboratorSecure } = await import('@/lib/actions/secure-ops');
+    return await addProjectCollaboratorSecure(projectId, userId, role);
+  },
+
+  async removeCollaborator(projectId: string, userId: string) {
+    const { removeProjectCollaboratorSecure } = await import('@/lib/actions/secure-ops');
+    return await removeProjectCollaboratorSecure(projectId, userId);
   },
 
   async updateProject(projectId: string, data: Partial<Projects>, permissions?: string[]) {
-    const now = new Date().toISOString();
-    return databases.updateDocument<Projects>(
-      DATABASE_ID,
-      PROJECTS_COLLECTION_ID,
-      projectId,
-      {
-        ...data,
-        updatedAt: now,
-      },
-      permissions
-    );
+    const { updateProjectSecure } = await import('@/lib/actions/secure-ops');
+    return await updateProjectSecure(projectId, data, permissions);
   },
 
   async deleteProject(projectId: string) {
-    // Delete all objects linked to this project first
-    const objects = await this.listProjectObjects(projectId);
-    for (const obj of objects.documents) {
-      await this.removeObjectFromProject(obj.$id);
-    }
-
-    return databases.deleteDocument(
-      DATABASE_ID,
-      PROJECTS_COLLECTION_ID,
-      projectId
-    );
+    const { deleteProjectSecure } = await import('@/lib/actions/secure-ops');
+    return await deleteProjectSecure(projectId);
   },
 
   async listProjectObjects(projectId: string) {
-    return databases.listDocuments<ProjectObjects>(
+    return databases.listDocuments<any>(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
       [Query.equal('projectId', projectId)]
@@ -119,7 +79,7 @@ export const ProjectsService = {
     if (!user) throw new Error('Not authenticated');
 
     const now = new Date().toISOString();
-    return databases.createDocument<ProjectObjects>(
+    return databases.createDocument<any>(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
       ID.unique(),

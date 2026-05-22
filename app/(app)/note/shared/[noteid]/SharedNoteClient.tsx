@@ -22,13 +22,13 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { NoteContentRenderer } from '@/components/NoteContentRenderer';
 import PaywallDisplay from '@/components/PaywallDisplay';
 import { 
-  createNote, 
   listNotes,
   realtime,
   APPWRITE_DATABASE_ID,
   APPWRITE_TABLE_ID_NOTES,
   isNoteEditableByAnyone
 } from '@/lib/appwrite';
+import { createNoteSecure as createNote } from '@/lib/actions/secure-ops';
 import { useToast } from '@/components/ui/Toast';
 import {
   Box,

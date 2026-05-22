@@ -16,22 +16,8 @@ export const FormsService = {
      * Create a new form definition
      */
     async createForm(userId: string, data: Omit<Forms, '$id' | '$createdAt' | '$updatedAt' | '$permissions' | '$databaseId' | '$collectionId' | 'userId' | '$sequence' | '$tableId'>) {
-        return await tablesDB.createRow<Forms>(
-            DATABASE_ID,
-    FORMS_TABLE,
-    ID.unique(),
-    {
-        ...data,
-        userId,
-        status: (data.status || 'draft') as FormsStatus,
-    },
-    [
-        Permission.read(Role.user(userId)),
-        Permission.read(Role.any()), // Allow public discovery via listRows filter
-        Permission.update(Role.user(userId)),
-        Permission.delete(Role.user(userId)),
-    ]
-);
+        const { createFormSecure } = await import('@/lib/actions/secure-ops');
+        return await createFormSecure(data);
     },
 
     /**
@@ -88,38 +74,8 @@ export const FormsService = {
      * Update a form definition with strict permission synchronization
      */
     async updateForm(formId: string, data: Partial<Forms>) {
-        const form = await this.getForm(formId);
-        const userId = form.userId;
-        
-        // 1. Determine current state (merged from existing + incoming updates)
-        const currentStatus = data.status || form.status;
-
-        // 2. Build the exact permission set for this form row
-        // We always ensure the owner has full control
-        const permissions = [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId)),
-        ];
-
-        // 3. Apply Visibility Logic:
-        // If status is 'published', allow Guest (any) read access to the form metadata/schema
-        if (currentStatus === 'published') {
-            permissions.push(Permission.read(Role.any()));
-        }
-
-        // Note: 'allowAnonymousFill' doesn't change the Form row's permissions,
-        // it's a logic gate in submitForm() and affects the Submissions table permissions.
-
-        console.log(`Syncing permissions for form ${formId}:`, permissions);
-
-        return await tablesDB.updateRow<Forms>(
-            DATABASE_ID,
-            FORMS_TABLE,
-            formId,
-            data,
-            permissions
-        );
+        const { updateFormSecure } = await import('@/lib/actions/secure-ops');
+        return await updateFormSecure(formId, data);
     },
 
     /**
@@ -378,11 +334,24 @@ export const FormsService = {
      * Delete a form
      */
     async deleteForm(formId: string) {
-        return await tablesDB.deleteRow(
-            DATABASE_ID,
-            FORMS_TABLE,
-            formId
-        );
+        const { deleteFormSecure } = await import('@/lib/actions/secure-ops');
+        return await deleteFormSecure(formId);
+    },
+
+    /**
+     * Add a collaborator to a form
+     */
+    async addCollaborator(formId: string, userId: string, role: string = 'viewer') {
+        const { addFormCollaboratorSecure } = await import('@/lib/actions/secure-ops');
+        return await addFormCollaboratorSecure(formId, userId, role);
+    },
+
+    /**
+     * Remove a collaborator from a form
+     */
+    async removeCollaborator(formId: string, userId: string) {
+        const { removeFormCollaboratorSecure } = await import('@/lib/actions/secure-ops');
+        return await removeFormCollaboratorSecure(formId, userId);
     },
 
     /**

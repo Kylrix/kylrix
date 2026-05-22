@@ -20,7 +20,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { databases, storage } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createNote } from '@/lib/appwrite/note';
+import { createNoteSecure as createNote } from '@/lib/actions/secure-ops';
 import { addAttachmentToNote } from '@/lib/appwrite/note';
 import { createCredential, createTotpSecret } from '@/lib/appwrite/vault';
 import type { SendKind } from '@/lib/send/types';

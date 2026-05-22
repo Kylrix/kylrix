@@ -32,6 +32,7 @@ export async function createMessageAction(payload: {
   const securedPayload = {
     ...payload,
     senderId: actor.$id,
+    actorId: actor.$id,
   };
 
   return await createMessageInternal(securedPayload);
@@ -44,7 +45,17 @@ export async function toggleReactionAction(payload: {
   action: 'POST' | 'DELETE';
   jwt?: string;
 }) {
-  return await toggleReactionInternal(payload);
+  const { account } = await createServerClient(payload.jwt);
+  const actor = await account.get();
+  
+  if (!actor?.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  return await toggleReactionInternal({
+    ...payload,
+    actorId: actor.$id,
+  });
 }
 
 export async function repairConversationAction(payload: {
@@ -66,6 +77,8 @@ export async function repairConversationAction(payload: {
   const securedPayload = {
     ...payload,
     userId: targetUserId,
+    actorId: actor.$id,
+    actorLabels: actor.labels || [],
   };
 
   return await repairConversationInternal(securedPayload);
@@ -75,21 +88,51 @@ export async function clearConversationFootprintAction(payload: {
   conversationId: string;
   jwt?: string;
 }) {
-  return await clearConversationFootprintInternal(payload);
+  const { account } = await createServerClient(payload.jwt);
+  const actor = await account.get();
+  
+  if (!actor?.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  return await clearConversationFootprintInternal({
+    ...payload,
+    actorId: actor.$id,
+  });
 }
 
 export async function nuclearWipeConversationAction(payload: {
   conversationId: string;
   jwt?: string;
 }) {
-  return await nuclearWipeConversationInternal(payload);
+  const { account } = await createServerClient(payload.jwt);
+  const actor = await account.get();
+  
+  if (!actor?.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  return await nuclearWipeConversationInternal({
+    ...payload,
+    actorId: actor.$id,
+  });
 }
 
 export async function deleteConversationFullyAction(payload: {
   conversationId: string;
   jwt?: string;
 }) {
-  return await deleteConversationFullyInternal(payload);
+  const { account } = await createServerClient(payload.jwt);
+  const actor = await account.get();
+  
+  if (!actor?.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  return await deleteConversationFullyInternal({
+    ...payload,
+    actorId: actor.$id,
+  });
 }
 
 export async function joinRequestAction(payload: {
@@ -104,7 +147,10 @@ export async function joinRequestAction(payload: {
   const { account } = await createServerClient(payload.jwt);
   const actor = await account.get().catch(() => null);
 
-  const securedPayload = { ...payload };
+  const securedPayload = {
+    ...payload,
+    actorId: actor?.$id,
+  };
 
   if (payload.method === 'POST') {
     if (!actor?.$id) {
