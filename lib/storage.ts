@@ -10,6 +10,7 @@ async function uploadFile(bucketId: string, file: File, fileId: string = ID.uniq
     formData.append('file', file);
     formData.append('bucketId', bucketId);
     formData.append('fileId', fileId);
+    const { secureUploadFile } = await import('./actions/client-ops');
     return await secureUploadFile(formData);
 }
 

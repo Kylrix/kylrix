@@ -1,12 +1,20 @@
 import { Client, Account, Databases, Messaging, Storage, Users, TablesDB } from 'node-appwrite';
 import { PROJECT_ID, ENDPOINT } from '../generated/appwrite/constants';
 
-/**
- * Creates a system client with full server-side permissions.
- * This represents the "System Executor" level to power standard, safe application features.
- * ALWAYS use this on the server only.
- */
+let cachedSystemClient: {
+  client: Client;
+  account: Account;
+  databases: Databases;
+  messaging: Messaging;
+  storage: Storage;
+  users: Users;
+} | null = null;
+
 export function createSystemClient() {
+  if (cachedSystemClient) {
+    return cachedSystemClient;
+  }
+
   const client = new Client();
   const apiKey = process.env.APPWRITE_API;
   
@@ -19,7 +27,7 @@ export function createSystemClient() {
     .setProject(PROJECT_ID)
     .setKey(apiKey || '');
 
-  return {
+  cachedSystemClient = {
     client,
     account: new Account(client),
     databases: new Databases(client),
@@ -27,25 +35,24 @@ export function createSystemClient() {
     storage: new Storage(client),
     users: new Users(client),
   };
+
+  return cachedSystemClient;
 }
+
+let cachedSystemTablesDB: TablesDB | null = null;
 
 /**
  * Creates a server-side TablesDB instance with system executor privileges.
  * Used for chat and shared system data access.
  */
 export function createSystemTablesDB() {
-  const apiKey = process.env.APPWRITE_API;
-
-  if (!apiKey) {
-    console.error('[System TablesDB] APPWRITE_API environment variable is missing.');
+  if (cachedSystemTablesDB) {
+    return cachedSystemTablesDB;
   }
 
-  const client = new Client()
-    .setEndpoint(ENDPOINT)
-    .setProject(PROJECT_ID)
-    .setKey(apiKey || '');
-
-  return new TablesDB(client);
+  const { client } = createSystemClient();
+  cachedSystemTablesDB = new TablesDB(client);
+  return cachedSystemTablesDB;
 }
 
 /**

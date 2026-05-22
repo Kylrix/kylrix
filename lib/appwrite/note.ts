@@ -1545,6 +1545,7 @@ export async function uploadFile(bucketId: string, file: File, userId?: string) 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('bucketId', bucketId);
+    const { secureUploadFile } = await import('@/lib/actions/client-ops');
     const result = await secureUploadFile(formData);
     return result;
   } catch (e: any) {
@@ -1854,8 +1855,12 @@ export async function getSharedUsers(noteId: string) {
 
           // Determine highest permission level based on $permissions array
           let highestPermission = 'read';
-          if (note.$permissions.includes()) highestPermission = 'admin';
-          else if (note.$permissions.includes()) highestPermission = 'write';
+          const userPermStr = `user:${user.$id}`;
+          const hasDelete = (note.$permissions || []).some((p: string) => p.includes('delete') && p.includes(userPermStr));
+          const hasUpdate = (note.$permissions || []).some((p: string) => p.includes('update') && p.includes(userPermStr)) ||
+                            (note.$permissions || []).some((p: string) => p.includes('write') && p.includes(userPermStr));
+          if (hasDelete) highestPermission = 'admin';
+          else if (hasUpdate) highestPermission = 'write';
 
           sharedUsers.push({
             id: user.$id,
@@ -2562,7 +2567,7 @@ export async function auditNoteTagPivots(userId?: string) {
     }
 
     const duplicatePairs = Object.entries(pairCounts)
-      .filter(([ count]) => count > 1)
+      .filter(([_, count]) => count > 1)
       .map(([key, count]) => {
         const [tagId, tag] = key.split('::');
         return { tagId, tag, count };

@@ -1,4 +1,4 @@
-import { databases } from '../appwrite/client';
+import { databases } from '../client';
 import { SystemPulse } from '../../types/discovery-engine';
 
 export async function migrateDiscoveryEngine() {

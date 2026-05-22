@@ -151,35 +151,35 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
     );
     if (existing.rows.length > 0) {
         const current = normalizeCollaborator(existing.rows[0]);
-        const updated = await tablesDB.updateRow<any>({
-            databaseId: TASK_COLLABORATOR_DATABASE,
-            tableId: TASK_COLLABORATOR_TABLE,
-            rowId: current.id,
-            data: {
+        const updated = await updateRow<any>(
+            TASK_COLLABORATOR_TABLE,
+            current.id,
+            {
                 noteId: taskResourceKey(taskId),
                 userId,
                 permission,
                 invitedAt: current.invitedAt ? current.invitedAt.toISOString() : new Date().toISOString(),
                 accepted: true,
             },
-            permissions: nextPermissions,
-        });
+            nextPermissions,
+            TASK_COLLABORATOR_DATABASE
+        );
         return normalizeCollaborator(updated);
     }
 
-    const created = await tablesDB.createRow<any>({
-        databaseId: TASK_COLLABORATOR_DATABASE,
-        tableId: TASK_COLLABORATOR_TABLE,
-        rowId: ID.unique(),
-        data: {
+    const created = await createRow<any>(
+        TASK_COLLABORATOR_TABLE,
+        {
             noteId: taskResourceKey(taskId),
             userId,
             permission,
             invitedAt: new Date().toISOString(),
             accepted: true,
         },
-        permissions: nextPermissions,
-    });
+        nextPermissions,
+        ID.unique(),
+        TASK_COLLABORATOR_DATABASE
+    );
     return normalizeCollaborator(created);
 }
 
@@ -190,45 +190,43 @@ async function updateTaskCollaborator(rowId: string, data: Partial<{ permission:
         rowId,
     });
     const nextPermission = data.permission ?? current.permission;
-    const updated = await tablesDB.updateRow<any>({
-        databaseId: TASK_COLLABORATOR_DATABASE,
-        tableId: TASK_COLLABORATOR_TABLE,
+    const updated = await updateRow<any>(
+        TASK_COLLABORATOR_TABLE,
         rowId,
-        data: {
+        {
             ...data,
             noteId: taskResourceKey(taskId),
             userId: current.userId,
             permission: nextPermission,
         },
-        permissions: permissions ?? mergePermissions(
+        permissions ?? mergePermissions(
             creatorId && creatorId !== 'guest' ? taskPermissionForLevel('admin', creatorId) : [],
             taskPermissionForLevel(nextPermission, current.userId)
         ),
-    });
+        TASK_COLLABORATOR_DATABASE
+    );
     return normalizeCollaborator(updated);
 }
 
 async function deleteTaskCollaborator(rowId: string) {
-    await tablesDB.deleteRow({
-        databaseId: TASK_COLLABORATOR_DATABASE,
-        tableId: TASK_COLLABORATOR_TABLE,
-        rowId,
-    });
+    await deleteRow(TASK_COLLABORATOR_TABLE, rowId, TASK_COLLABORATOR_DATABASE);
 }
 
 async function createRow<T extends Models.Row>(
     tableId: string,
     data: TableCreateData<T>,
     permissions?: string[],
-    rowId: string = ID.unique()
+    rowId: string = ID.unique(),
+    dbId: string = FLOW_DATABASE_ID
 ): Promise<T> {
-    const res = await tablesDB.createRow<T>({
-        databaseId: FLOW_DATABASE_ID,
-        tableId,
-        rowId,
-        data,
-        permissions
-    });
+    let res: T;
+    if (typeof window !== 'undefined') {
+        const { createRow } = await import('@/lib/actions/client-ops');
+        res = await createRow(dbId, tableId, data, permissions) as any;
+    } else {
+        const { createRowSecure } = await import('@/lib/actions/secure-ops');
+        res = await createRowSecure(dbId, tableId, data, permissions) as any;
+    }
     clearCache(tableId);
     return res;
 }
@@ -255,25 +253,40 @@ function clearCache(tableId: string) {
     }
 }
 
-async function updateRow<T extends Models.Row>(tableId: string, rowId: string, data: TableUpdateData<T>): Promise<T> {
-    const res = await tablesDB.updateRow<T>({
-        databaseId: FLOW_DATABASE_ID,
-        tableId,
-        rowId,
-        data
-    });
+async function updateRow<T extends Models.Row>(
+    tableId: string,
+    rowId: string,
+    data: TableUpdateData<T>,
+    permissions?: string[],
+    dbId: string = FLOW_DATABASE_ID
+): Promise<T> {
+    let res: T;
+    if (typeof window !== 'undefined') {
+        const { updateRow } = await import('@/lib/actions/client-ops');
+        res = await updateRow(dbId, tableId, rowId, data, permissions) as any;
+    } else {
+        const { updateRowSecure } = await import('@/lib/actions/secure-ops');
+        res = await updateRowSecure(dbId, tableId, rowId, data, permissions) as any;
+    }
     clearCache(tableId);
     return res;
 }
 
-async function deleteRow(tableId: string, rowId: string): Promise<void> {
-    await tablesDB.deleteRow({
-        databaseId: FLOW_DATABASE_ID,
-        tableId,
-        rowId
-    });
+async function deleteRow(
+    tableId: string,
+    rowId: string,
+    dbId: string = FLOW_DATABASE_ID
+): Promise<void> {
+    if (typeof window !== 'undefined') {
+        const { deleteRow } = await import('@/lib/actions/client-ops');
+        await deleteRow(dbId, tableId, rowId);
+    } else {
+        const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
+        await deleteRowSecure(dbId, tableId, rowId);
+    }
     clearCache(tableId);
 }
+
 
 // --- Calendars ---
 
@@ -292,16 +305,7 @@ export const tasks = {
     create: (data: TableCreateData<Task>, permissions?: string[]) => createRow<Task>(TABLES.TASKS, data, permissions),
     get: (id: string) => getRow<Task>(TABLES.TASKS, id),
     update: (id: string, data: TableUpdateData<Task>, permissions?: string[]) =>
-        tablesDB.updateRow<Task>({
-            databaseId: FLOW_DATABASE_ID,
-            tableId: TABLES.TASKS,
-            rowId: id,
-            data,
-            permissions
-        }).then((res) => {
-            clearCache(TABLES.TASKS);
-            return res;
-        }),
+        updateRow<Task>(TABLES.TASKS, id, data, permissions, FLOW_DATABASE_ID),
     delete: (id: string) => deleteRow(TABLES.TASKS, id)
 };
 

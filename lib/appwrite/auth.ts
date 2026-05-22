@@ -301,35 +301,15 @@ export class AppwriteService {
     ghostSecret: string;
     expiresAt?: string;
     isEncrypted?: boolean;
-    /** SHA-256 (hex) of a device-held deletion secret — enables server-side burn via admin SDK. */
     creatorDeletionProofHash?: string;
   }): Promise<any> {
-    const expiresAt = data.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    const metadata = JSON.stringify({
-      isGhost: true,
-      ghostSecret: data.ghostSecret,
-      expiresAt: expiresAt,
-      version: 'v2',
-      isEncrypted: data.isEncrypted || false,
-      ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {}),
-    });
-
-    return await databases.createDocument(
-      APPWRITE_CONFIG.DATABASES.NOTE,
-      APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      ID.unique(),
-      {
-        title: data.title,
-        content: data.content,
-        format: data.format || 'markdown',
-        isPublic: true,
-        userId: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        metadata
-      },
-      [Permission.read(Role.any())]
-    );
+    if (typeof window !== 'undefined') {
+      const { createGhostNote } = await import('@/lib/actions/client-ops');
+      return await createGhostNote(data);
+    } else {
+      const { createGhostNoteSecure } = await import('@/lib/actions/secure-ops');
+      return await createGhostNoteSecure(data);
+    }
   }
 
   /**
@@ -347,32 +327,12 @@ export class AppwriteService {
     creatorDeletionProofHash?: string;
     sendObject: { kind: string; bucketId?: string; fileId?: string };
   }): Promise<any> {
-    const expiresAt = data.expiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    const metadata = JSON.stringify({
-      isGhost: true,
-      send_object: data.sendObject,
-      ghostSecret: data.ghostSecret,
-      expiresAt,
-      version: 'v2',
-      isEncrypted: data.isEncrypted ?? false,
-      ...(data.creatorDeletionProofHash ? { creatorDeletionProofHash: data.creatorDeletionProofHash } : {}),
-    });
-
-    return await databases.createDocument(
-      APPWRITE_CONFIG.DATABASES.NOTE,
-      APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      ID.unique(),
-      {
-        title: data.title,
-        content: data.content,
-        format: data.format || 'markdown',
-        isPublic: true,
-        userId: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        metadata,
-      },
-      [Permission.read(Role.any())]
-    );
+    if (typeof window !== 'undefined') {
+      const { createSendGhostObject } = await import('@/lib/actions/client-ops');
+      return await createSendGhostObject(data);
+    } else {
+      const { createSendGhostObjectSecure } = await import('@/lib/actions/secure-ops');
+      return await createSendGhostObjectSecure(data);
+    }
   }
 }

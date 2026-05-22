@@ -759,6 +759,32 @@ export class EcosystemSecurity {
     return typeof res === 'string' ? res : new TextDecoder().decode(res);
   }
 
+  async decryptWithECDH(wrappedKeyBase64: string, ownerPublicKeyBase64: string, ivSize: number = 12): Promise<string> {
+    const sharedKey = await this.deriveSharedSecret(ownerPublicKeyBase64);
+    const combined = this.decodeBase64(wrappedKeyBase64);
+
+    const iv = combined.slice(0, ivSize);
+    const ciphertext = combined.slice(ivSize);
+
+    const raw = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv },
+        sharedKey,
+        ciphertext
+    );
+
+    return new TextDecoder().decode(raw);
+  }
+
+  async fetchKeychain(userId: string): Promise<any | null> {
+    const res = await tablesDB.listRows(
+      APPWRITE_CONFIG.DATABASES.VAULT,
+      APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+      [Query.equal('userId', userId), Query.limit(1)]
+    );
+    const rows = res.rows || [];
+    return rows[0] || null;
+  }
+
   getConversationKey(conversationId: string): CryptoKey | null {
     return this.conversationKeys.get(conversationId) || null;
   }

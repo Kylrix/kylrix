@@ -1477,6 +1477,7 @@ export const ChatService = {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('bucketId', APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS);
+        const { secureUploadFile } = await import('@/lib/actions/client-ops');
         const uploaded = await secureUploadFile(formData);
         try {
             await syncConversationAvatarAccess(uploaded.$id, existingParticipants, auth);

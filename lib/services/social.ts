@@ -584,6 +584,7 @@ export const SocialService = {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('bucketId', APPWRITE_CONFIG.BUCKETS.BLOG_MEDIA);
+            const { secureUploadFile } = await import('@/lib/actions/client-ops');
             const uploaded = await secureUploadFile(formData); //
             return uploaded.$id;
         } catch (_e) {

@@ -16,7 +16,7 @@ import {
   getCurrentUser, 
   invalidateCurrentUserCache,
   appwriteAccount,
-  appwriteDatabases,
+  appwriteDatabases as originalAppwriteDatabases,
   appwriteStorage,
   appwriteAvatars,
   APPWRITE_DATABASE_ID,
@@ -45,6 +45,47 @@ import { getEcosystemUrl } from "../ecosystem";
 
 import { APPWRITE_CONFIG } from "./config";
 import { sendKylrixEmailNotification } from "../email-notifications";
+
+// --- Isomorphic secure database interceptor ---
+async function secureCreateDocument(databaseId: string, collectionId: string, documentId: string, data: any, permissions?: string[]) {
+    if (typeof window !== 'undefined') {
+        const { createRow } = await import('@/lib/actions/client-ops');
+        return await createRow(databaseId, collectionId, data, permissions) as any;
+    } else {
+        const { createRowSecure } = await import('@/lib/actions/secure-ops');
+        return await createRowSecure(databaseId, collectionId, data, permissions) as any;
+    }
+}
+
+async function secureUpdateDocument(databaseId: string, collectionId: string, documentId: string, data: any, permissions?: string[]) {
+    if (typeof window !== 'undefined') {
+        const { updateRow } = await import('@/lib/actions/client-ops');
+        return await updateRow(databaseId, collectionId, documentId, data, permissions) as any;
+    } else {
+        const { updateRowSecure } = await import('@/lib/actions/secure-ops');
+        return await updateRowSecure(databaseId, collectionId, documentId, data, permissions) as any;
+    }
+}
+
+async function secureDeleteDocument(databaseId: string, collectionId: string, documentId: string) {
+    if (typeof window !== 'undefined') {
+        const { deleteRow } = await import('@/lib/actions/client-ops');
+        await deleteRow(databaseId, collectionId, documentId);
+    } else {
+        const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
+        await deleteRowSecure(databaseId, collectionId, documentId);
+    }
+}
+
+const secureDatabases = {
+    createDocument: secureCreateDocument,
+    updateDocument: secureUpdateDocument,
+    deleteDocument: secureDeleteDocument,
+    getDocument: (dbId: string, collId: string, docId: string) => originalAppwriteDatabases.getDocument(dbId, collId, docId),
+    listDocuments: (dbId: string, collId: string, queries?: string[]) => originalAppwriteDatabases.listDocuments(dbId, collId, queries),
+};
+
+const appwriteDatabases = secureDatabases;
 
 // --- Helper Utilities ---
 

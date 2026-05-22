@@ -29,7 +29,14 @@ import {
   runTokenOperationSecure,
   trackEngagementViewSecure,
   addObjectToProjectSecure,
-  removeObjectFromProjectSecure
+  removeObjectFromProjectSecure,
+  createCallSecure,
+  createGhostNoteSecure,
+  createSendGhostObjectSecure,
+  createGhostNoteForCallSecure,
+  createRowSecure,
+  updateRowSecure,
+  deleteRowSecure
 } from './secure-ops';
 
 // Helper to fetch JWT securely from client-side SDK
@@ -194,3 +201,37 @@ export async function secureUploadFile(formData: FormData) {
   const jwt = await getJwt();
   return secureUploadFileServer(formData, jwt);
 }
+
+export async function createCall(data: any) {
+  const jwt = await getJwt();
+  return createCallSecure(data, jwt);
+}
+
+export async function createGhostNote(data: any) {
+  return createGhostNoteSecure(data);
+}
+
+export async function createSendGhostObject(data: any) {
+  return createSendGhostObjectSecure(data);
+}
+
+export async function createGhostNoteForCall(callId: string, title?: string) {
+  const jwt = await getJwt();
+  return createGhostNoteForCallSecure(callId, title, jwt);
+}
+
+export async function createRow(databaseId: string, tableId: string, data: any, permissions?: string[]) {
+  const jwt = await getJwt();
+  return createRowSecure(databaseId, tableId, data, permissions, jwt);
+}
+
+export async function updateRow(databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[]) {
+  const jwt = await getJwt();
+  return updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
+}
+
+export async function deleteRow(databaseId: string, tableId: string, rowId: string) {
+  const jwt = await getJwt();
+  return deleteRowSecure(databaseId, tableId, rowId, jwt);
+}
+

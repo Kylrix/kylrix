@@ -157,8 +157,13 @@ export type Notes = Models.Row & {
     format: string | null;
     attachments: string[] | null;
     // Virtual attributes (hydrated from metadata)
-    linkedTaskId?: string;
-    linkedSource?: string;
+    linkedTaskId?: string | null;
+    linkedTaskIds?: string[] | null;
+    linkedEventId?: string | null;
+    linkedEventIds?: string[] | null;
+    linkedCredentialId?: string | null;
+    linkedCredentialIds?: string[] | null;
+    linkedSource?: string | null;
 }
 
 export type Tags = Models.Row & {

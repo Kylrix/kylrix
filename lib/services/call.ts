@@ -42,17 +42,15 @@ export const CallService = {
         allowGuests: boolean = true,
     ) {
         try {
-            // Default to starting now if not provided
             const startTime = startsAt ? new Date(startsAt) : new Date();
-            // Expire based on duration (default 2 hours)
             const expiresAt = new Date(startTime.getTime() + durationMinutes * 60 * 1000).toISOString();
 
-            // Live "calls" schema does not include a "code" attribute.
             const payload: any = {
                 userId,
                 type,
                 expiresAt,
                 startsAt: startTime.toISOString(),
+                allowGuests,
             };
 
             if (title) payload.title = title;
@@ -60,24 +58,16 @@ export const CallService = {
             else if (conversationId) payload.metadata = JSON.stringify({ conversationId });
             if (conversationId) payload.conversationId = conversationId;
 
-            console.log('[CallService] Creating call in new table with payload:', payload);
+            console.log('[CallService] Creating call using secure action with payload:', payload);
 
-            const permissions = [
-                ];
-
-            if (allowGuests) {
-                permissions.push(Permission.read(Role.any()));
+            let result: any;
+            if (typeof window !== 'undefined') {
+                const { createCall } = await import('@/lib/actions/client-ops');
+                result = await createCall(payload);
             } else {
-                permissions.push(Permission.read(Role.users()));
+                const { createCallSecure } = await import('@/lib/actions/secure-ops');
+                result = await createCallSecure(payload);
             }
-
-            const result = await tablesDB.createRow({
-                databaseId: DB_ID,
-                tableId: LINKS_TABLE,
-                rowId: ID.unique(),
-                data: payload,
-                permissions
-            });
 
             historyCache.invalidate();
             activeCallsCache.invalidate();
@@ -273,33 +263,15 @@ export const CallService = {
 
     async createGhostNoteForCall(userId: string, callId: string, title?: string) {
         try {
-            const { databases } = await import('../appwrite/client');
-            const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-            const metadata = JSON.stringify({
-                isGhost: true,
-                linkedSource: 'call',
-                linkedTaskId: callId,
-                expiresAt: expiresAt,
-                version: 'v2',
-            });
-
-            return await databases.createDocument(
-                APPWRITE_CONFIG.DATABASES.NOTE,
-                APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-                ID.unique(),
-                {
-                    title: title || 'Call Chat',
-                    content: '',
-                    format: 'markdown',
-                    isPublic: true,
-                    userId: null,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    metadata
-                },
-                [
-                    Permission.read(Role.any())]
-            );
+            let result: any;
+            if (typeof window !== 'undefined') {
+                const { createGhostNoteForCall } = await import('@/lib/actions/client-ops');
+                result = await createGhostNoteForCall(callId, title);
+            } else {
+                const { createGhostNoteForCallSecure } = await import('@/lib/actions/secure-ops');
+                result = await createGhostNoteForCallSecure(callId, title);
+            }
+            return result;
         } catch (e) {
             console.error('[CallService] createGhostNoteForCall failed:', e);
             throw e;

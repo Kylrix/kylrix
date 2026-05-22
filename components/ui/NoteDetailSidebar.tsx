@@ -354,19 +354,17 @@ export function NoteDetailSidebar({
     return () => { active = false; };
   }, [liveNote.$id]);
 
-  const { isAutosaving } = useAutosave({
-    data: { title, content, format, tags, isPublic: liveNote.isPublic, metadata: liveNote.metadata },
-    onSave: async (updatedData) => {
-      const payload = {
-        ...updatedData,
-        tags: updatedData.tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-      };
-      try {
-        const result = await updateNote(liveNote.$id, payload);
-        if (result) onUpdate(result);
-      } catch (err) {
-        console.error('Autosave failed:', err);
-      }
+  const candidateNote = useMemo<Notes>(() => ({
+    ...liveNote,
+    title,
+    content,
+    format,
+    tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+  }), [liveNote, title, content, format, tags]);
+
+  const { isSaving: isAutosaving } = useAutosave(candidateNote, {
+    onSave: (savedNote: Notes) => {
+      onUpdate(savedNote);
     },
     enabled: isEditing,
   });
@@ -409,26 +407,25 @@ export function NoteDetailSidebar({
 
   const handleConfirmedRotate = async () => {
     setIsRotating(true);
-    promptSudo({
-      onSuccess: async () => {
-        try {
-          const updated = await rotatePublicNoteLink(liveNote.$id);
-          if (updated) {
-            onUpdate(updated);
-            if (updated.decryptionKey) {
-              const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
-              navigator.clipboard.writeText(shareUrl);
-              showSuccess('Public link rotated', 'New link copied to clipboard.');
-            }
-            setShowRotateConfirm(false);
+    try {
+      const unlocked = await promptSudo("unlock");
+      if (unlocked) {
+        const updated = await rotatePublicNoteLink(liveNote.$id);
+        if (updated) {
+          onUpdate(updated);
+          if (updated.decryptionKey) {
+            const shareUrl = getShareableUrl(liveNote.$id, updated.decryptionKey);
+            navigator.clipboard.writeText(shareUrl);
+            showSuccess('Public link rotated', 'New link copied to clipboard.');
           }
-        } catch (error: any) {
-          showError('Rotate Failed', error.message || 'Failed to rotate link.');
-        } finally {
-          setIsRotating(false);
+          setShowRotateConfirm(false);
         }
       }
-    });
+    } catch (error: any) {
+      showError('Rotate Failed', error.message || 'Failed to rotate link.');
+    } finally {
+      setIsRotating(false);
+    }
   };
 
   const handleCopyShareLink = async () => {
@@ -760,7 +757,7 @@ export function NoteDetailSidebar({
                     <Box key={p.$id || p.userId} sx={{ p: 1.5, borderRadius: '18px', bgcolor: alpha('#fff', 0.03), border: `1px solid ${alpha('#fff', 0.06)}`, display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer', transition: 'all 0.2s ease', '&:hover': { bgcolor: alpha('#fff', 0.05) } }} onClick={() => openUnified('share-note', { noteId: liveNote.$id, noteTitle: liveNote.title, initialCollaborator: p })}>
                     <IdentityAvatar fileId={p.avatar} alt={p.username} fallback={p.username?.[0]?.toUpperCase()} size={34} verified={p.tier === 'admin' || p.verified} />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 800, noWrap: true }}>{p.displayName || p.username}</Typography>
+                        <Typography variant="body2" noWrap sx={{ fontWeight: 800 }}>{p.displayName || p.username}</Typography>
                         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block' }}>@{p.username}</Typography>
                     </Box>
                     <Typography variant="caption" sx={{ px: 1, py: 0.25, borderRadius: '6px', bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, fontWeight: 900, fontSize: '10px' }}>{p.permissionLevel || 'Viewer'}</Typography>

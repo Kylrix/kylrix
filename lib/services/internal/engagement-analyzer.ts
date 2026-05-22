@@ -49,14 +49,12 @@ export class EngagementAnalyzer {
   private static computeNerfCoefficient(velocity: number): number {
     return 1.0 / (1.0 + Math.exp(velocity - 5.0));
   }
-
-  private static getReason(velocity: number, ratio: number, saveRate: number, pulse: any): string {
+  private static getReason(velocity: number, ratio: number, saveRate: number, pulse: any): 'none' | 'high_velocity' | 'slop_ratio' | 'low_dwell' | 'low_save_rate' {
     if (velocity > 7.0) return 'high_velocity';
     if (ratio > pulse.medianInteractionRatio * 2) return 'slop_ratio';
     if (saveRate < 0.02) return 'low_save_rate';
     return 'none';
   }
-
   private static async getSystemPulse() {
     try {
         const docs = await databases.listDocuments(

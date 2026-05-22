@@ -1,6 +1,7 @@
 import { Client, Account } from 'node-appwrite';
 import { cookies } from 'next/headers';
 import { APPWRITE_CONFIG } from './appwrite/config';
+import { cache } from 'react';
 
 /**
  * Creates a server-side Appwrite client that respects the user's session.
@@ -10,7 +11,7 @@ import { APPWRITE_CONFIG } from './appwrite/config';
  * - Supports exhaustive cookie discovery.
  * - Prioritizes explicit JWT for cross-environment reliability.
  */
-export async function createServerClient(jwt?: string) {
+export const createServerClient = cache(async (jwt?: string) => {
   const client = new Client();
   
   // Canonical Cloud endpoint is more reliable for server-side session/JWT validation
@@ -45,4 +46,4 @@ export async function createServerClient(jwt?: string) {
     client,
     account: new Account(client),
   };
-}
+});
