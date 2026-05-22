@@ -625,99 +625,6 @@
             ]
         },
         {
-            "$id": "collaborators",
-            "$permissions": [],
-            "databaseId": "67ff05a9000296822396",
-            "name": "Collaborators",
-            "enabled": true,
-            "rowSecurity": true,
-            "columns": [
-                {
-                    "key": "noteId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "userId",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 256,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "permission",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "default": null,
-                    "format": "enum",
-                    "elements": [
-                        "read",
-                        "write",
-                        "admin"
-                    ]
-                },
-                {
-                    "key": "invitedAt",
-                    "type": "datetime",
-                    "required": false,
-                    "array": false,
-                    "default": null,
-                    "format": ""
-                },
-                {
-                    "key": "accepted",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                }
-            ],
-            "indexes": [
-                {
-                    "key": "idx_collaborators_note",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "noteId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_collaborators_user",
-                    "type": "key",
-                    "status": "available",
-                    "columns": [
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "idx_collaborators_note_user",
-                    "type": "unique",
-                    "status": "available",
-                    "columns": [
-                        "noteId",
-                        "userId"
-                    ],
-                    "orders": [
-                        "ASC",
-                        "ASC"
-                    ]
-                }
-            ]
-        },
-        {
             "$id": "activityLog",
             "$permissions": [],
             "databaseId": "67ff05a9000296822396",
@@ -1025,7 +932,6 @@
                 }
             ]
         },
-
         {
             "$id": "subscriptions",
             "$permissions": [],
@@ -5296,7 +5202,6 @@
                 }
             ]
         },
-
         {
             "$id": "account_ledger",
             "$permissions": [

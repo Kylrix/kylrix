@@ -14,6 +14,10 @@ disable-model-invocation: false
 appwrite --version
 ```
 
+⚠️ **CRITICAL GUARDRAIL (DO NOT BYPASS):**
+- **NEVER mutate the Appwrite CLI client config**: DO NOT run commands like `appwrite client --endpoint`, `appwrite client --key`, `appwrite client --project-id`, or `appwrite client --reset`. Doing so will instantly overwrite or delete the user's active login session on their local machine.
+- **Respect User Sessions**: Always assume the user is already authenticated in their terminal. If a command fails with "Session not found" or similar auth issues, **do not** try to configure the client or reset it. Stop immediately and politely ask the user to run `appwrite login` on their terminal.
+
 ⚠️ **Important:** This skill does **not** have permission to run `appwrite update`. If the version is too old and critical subcommands are missing, notify the user to update manually or consult Appwrite docs for the version you're running.
 
 Supported versions: **17.4.0+** (tables-db, init table, push tables commands available)
