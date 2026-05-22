@@ -1964,7 +1964,7 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
 export async function getNoteWithSharing(noteId: string): Promise<(Notes & { isSharedWithUser?: boolean, sharePermission?: string, sharedBy?: any }) | null> {
   try {
     const currentUser = await getCurrentUser();
-    if (!currentUser) return null;
+    
 
     const note = await getNote(noteId);
     
@@ -3241,7 +3241,7 @@ export async function getCurrentPublicNoteShareUrl(noteId: string, note?: Notes)
     if (!isNotePublic(liveNote)) return null;
 
     const currentUser = await getCurrentUser();
-    if (!currentUser) return null;
+    if (!currentUser) { return null; }
 
     const ownerId = liveNote.userId || currentUser.$id;
     const key = await loadT4NoteKey(liveNote.$id, ownerId);
@@ -3262,7 +3262,7 @@ export async function getCurrentPublicNoteDecryptionKey(noteId: string): Promise
     const note = await getNote(noteId);
     if (!isNotePublic(note)) return null;
     const currentUser = await getCurrentUser();
-    if (!currentUser) return null;
+    
     const ownerId = note.userId || currentUser.$id;
     const key = await loadT4NoteKey(noteId, ownerId);
     const exported = await exportUrlSafeCryptoKey(key);

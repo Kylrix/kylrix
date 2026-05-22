@@ -59,7 +59,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     const res = await initializeTelegramConnection();
     setLoading(false);
 
-    if (res.success const stopPolling = () => {const stopPolling = () => { res.pairCode const stopPolling = () => {const stopPolling = () => { res.deepLink) {
+    if (res.success && res.pairCode && res.deepLink) {
       setPairCode(res.pairCode);
       setDeepLink(res.deepLink);
       startPolling();
