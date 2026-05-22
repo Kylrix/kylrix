@@ -319,7 +319,6 @@ export function SendComposer() {
         formData.append('file', uploadFile);
         formData.append('bucketId', APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL);
         const uploaded = await secureUploadFile(formData); //
-          Permission.read(Role.any())]);
         sendObjectPayload = {
           kind: 'file',
           bucketId: APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL,
