@@ -29,10 +29,10 @@ import {
 } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import ProjectCard from '@/components/projects/ProjectCard';
-import CreateProjectModal from '@/components/projects/CreateProjectModal';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 const suggestions = [
     {
@@ -62,10 +62,10 @@ export default function ProjectsPage() {
   const theme = useTheme();
   const router = useRouter();
   const { showSuccess, showError } = useToast();
+  const { open } = useUnifiedDrawer();
   
   const [projects, setProjects] = useState<Projects[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -81,16 +81,24 @@ export default function ProjectsPage() {
 
   const { setConfiguration, resetConfiguration } = useFAB();
 
+  const handleCreated = useCallback((newProject: any) => {
+    setProjects(prev => [newProject, ...prev]);
+  }, []);
+
+  const openCreateDrawer = useCallback(() => {
+    open('new-project', { onCreated: handleCreated });
+  }, [open, handleCreated]);
+
   useEffect(() => {
     setConfiguration({
       isVisible: true,
       mainColor: '#6366F1',
       actions: [
-        { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => setIsCreateModalOpen(true) },
+        { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: openCreateDrawer },
         { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note/notes') }]
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, router]);
+  }, [setConfiguration, resetConfiguration, router, openCreateDrawer]);
 
   useEffect(() => {
     fetchProjects();
@@ -206,7 +214,7 @@ export default function ProjectsPage() {
                         <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 4, maxWidth: 360, mx: 'auto' }}>
                             Start a project to keep your work organized in one place.
                         </Typography>
-                        <Button variant="outlined" onClick={() => setIsCreateModalOpen(true)} sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}>Create First Project</Button>
+                        <Button variant="outlined" onClick={openCreateDrawer} sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}>Create First Project</Button>
                     </Paper>
                 ) : (
                     <Grid container spacing={2.5}>
@@ -224,12 +232,6 @@ export default function ProjectsPage() {
             </Grid>
         </Grid>
       </Container>
-
-      <CreateProjectModal 
-        open={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreated={(newProject) => setProjects(prev => [newProject, ...prev])}
-      />
     </Box>
   );
 }

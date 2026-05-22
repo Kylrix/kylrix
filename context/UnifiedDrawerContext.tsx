@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
-type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'delete-note' | 'assign-goal' | 'new-chat' | 'new-channel' | 'new-tag';
+type DrawerContent = 'navbar' | 'login' | 'agentic' | 'note' | 'wallet' | 'masterpass' | 'share-note' | 'delete-note' | 'assign-goal' | 'new-chat' | 'new-channel' | 'new-tag' | 'new-project';
 
 interface UnifiedDrawerContextType {
   activeContent: DrawerContent;

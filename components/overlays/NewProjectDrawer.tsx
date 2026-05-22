@@ -1,37 +1,42 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Stack, 
-  Button, 
-  TextField, 
-  Grid, 
-  CircularProgress, 
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Typography,
+  Stack,
+  Button,
+  TextField,
+  Grid,
+  CircularProgress,
   IconButton,
   Drawer,
   useTheme,
   useMediaQuery,
   alpha,
-  Tooltip,
-  Paper
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { 
   X as CloseIcon,
   Plus as PlusIcon,
-  Tag as TagIcon
+  FolderKanban as ProjectIcon,
+  Rocket, 
+  ShieldAlert, 
+  Briefcase, 
+  Zap,
+  ChevronRight,
 } from 'lucide-react';
-import { Tags } from '@/types/appwrite';
-import { createTag, updateTag } from '@/lib/appwrite';
-import { useAuth } from '@/context/auth/AuthContext';
-import { ID } from 'appwrite';
+import { ProjectsService } from '@/lib/appwrite/projects';
+import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 const SURFACE_ASH = '#161412';
 const VOID = '#0A0908';
 const HOVER = '#1C1A18';
-const LIFTED = '#1F1D1B';
 const BORDER_HAIRLINE = '#34322F';
 const TEXT_MUTED = '#9B9691';
 const SYSTEM_PRIMARY = '#6366F1';
@@ -43,93 +48,82 @@ const RADIUS_LARGE = '24px';
 const RADIUS_MEDIUM = '16px';
 const RADIUS_SMALL = '12px';
 
-const predefinedColors = [
-  '#6366F1', // Electric Teal
-  '#A855F7', // Purple
-  '#EC4899', // Pink
-  '#3B82F6', // Blue
-  '#10B981', // Emerald
-  '#F59E0B', // Amber
-  '#EF4444', // Red
-  '#8B5CF6', // Violet
-  '#F43F5E', // Rose
-  '#06B6D4', // Cyan
-  '#84CC16', // Lime
+const suggestions = [
+  { 
+    title: 'Product Launch', 
+    summary: 'Coordinate specs, goals, and announcements.',
+    icon: Rocket,
+    color: '#EC4899',
+  },
+  { 
+    title: 'Security Audit', 
+    summary: 'Secure credentials and hardening checklists.',
+    icon: ShieldAlert,
+    color: '#10B981',
+  },
+  { 
+    title: 'Client Handover', 
+    summary: 'Package documents and access keys.',
+    icon: Briefcase,
+    color: '#F59E0B',
+  },
+  { 
+    title: 'Team Sprint', 
+    summary: 'A project for active tasks and shared notes.',
+    icon: Zap,
+    color: '#A855F7',
+  }
 ];
 
-export function NewTagDrawer() {
+export function NewProjectDrawer() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { activeContent, drawerData, close } = useUnifiedDrawer();
-  const isOpen = activeContent === 'new-tag';
-  const { user } = useAuth();
-  
-  const editingTag = drawerData?.tag as Tags | undefined;
-  const onSuccess = drawerData?.onSuccess as (() => void) | undefined;
+  const isOpen = activeContent === 'new-project';
+  const { showSuccess, showError } = useToast();
+
+  const onSuccess = drawerData?.onCreated as ((project: any) => void) | undefined;
 
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    color: '#6366F1',
-  });
+  const [loading, setLoading] = useState(false);
+  const [title, setTitle] = useState('');
+  const [summary, setSummary] = useState('');
+  const [visibility, setVisibility] = useState<'private' | 'shared' | 'public'>('private');
 
   useEffect(() => {
     if (isOpen) {
-      if (editingTag) {
-        setFormData({
-          name: editingTag.name || '',
-          description: editingTag.description || '',
-          color: editingTag.color || '#6366F1',
-        });
-      } else {
-        setFormData({
-          name: '',
-          description: '',
-          color: '#6366F1',
-        });
-      }
-      setError(null);
+      setTitle('');
+      setSummary('');
+      setVisibility('private');
+      setIsExpanded(false);
     }
-  }, [isOpen, editingTag]);
+  }, [isOpen]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user?.$id || !formData.name.trim()) return;
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!title.trim()) return;
 
-    setIsSaving(true);
-    setError(null);
-
+    setLoading(true);
     try {
-      if (editingTag) {
-        await updateTag(editingTag.$id, {
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          color: formData.color,
-        });
-      } else {
-        await createTag({
-          id: ID.unique(),
-          userId: user.$id,
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          color: formData.color,
-          notes: [],
-          usageCount: 0,
-          createdAt: new Date().toISOString(),
-        });
-      }
-      
-      if (onSuccess) onSuccess();
+      const project = await ProjectsService.createProject({
+        title: title.trim(),
+        summary: summary.trim(),
+        visibility,
+        status: 'active',
+      });
+      showSuccess('Project created');
+      if (onSuccess) onSuccess(project);
       close();
     } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Failed to save tag');
+      showError('Failed to create project', err.message);
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
+  };
+
+  const applySuggestion = (s: typeof suggestions[0]) => {
+      setTitle(s.title);
+      setSummary(s.summary);
   };
 
   const fontUi = 'var(--font-satoshi)';
@@ -150,8 +144,8 @@ export function NewTagDrawer() {
                 top: '88px',
                 right: 0,
                 height: 'calc(100vh - 88px)',
-                width: 'min(460px, 94vw)',
-                maxWidth: 'min(460px, 94vw)',
+                width: 'min(500px, 94vw)',
+                maxWidth: 'min(500px, 94vw)',
                 borderTopLeftRadius: RADIUS_LARGE,
                 borderTopRightRadius: 0,
                 borderBottomLeftRadius: 0,
@@ -213,7 +207,7 @@ export function NewTagDrawer() {
                 border: BORDER,
               }}
             >
-              <TagIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />
+              <ProjectIcon size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />
             </Box>
             <Typography
               sx={{
@@ -224,7 +218,7 @@ export function NewTagDrawer() {
                 letterSpacing: '-0.02em',
               }}
             >
-              {editingTag ? 'Edit Tag' : 'New Tag'}
+              New Project
             </Typography>
           </Stack>
           <IconButton
@@ -253,23 +247,51 @@ export function NewTagDrawer() {
             pr: 0.5
           }}
         >
-          {error && (
-            <Paper sx={{ p: 1.5, bgcolor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px' }}>
-              <Typography sx={{ color: '#FCA5A5', fontSize: '0.8rem', fontWeight: 600 }}>{error}</Typography>
-            </Paper>
-          )}
+          <Box>
+            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
+              Quick Start
+            </Typography>
+            <Stack spacing={1}>
+                {suggestions.map((s) => (
+                    <Box 
+                        key={s.title}
+                        onClick={() => applySuggestion(s)}
+                        sx={{ 
+                            p: 1.5, 
+                            borderRadius: '16px', 
+                            border: '1px solid',
+                            bgcolor: title === s.title ? alpha(s.color, 0.08) : VOID,
+                            borderColor: title === s.title ? alpha(s.color, 0.2) : BORDER_HAIRLINE,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': { bgcolor: alpha(s.color, 0.05), borderColor: alpha(s.color, 0.1) }
+                        }}
+                    >
+                        <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Box sx={{ color: s.color, display: 'grid', placeItems: 'center' }}>
+                                <s.icon size={18} />
+                            </Box>
+                            <Box sx={{ flex: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff', fontSize: '0.85rem' }}>{s.title}</Typography>
+                                <Typography variant="caption" sx={{ color: TEXT_MUTED, display: 'block', fontSize: '0.75rem' }}>{s.summary}</Typography>
+                            </Box>
+                            <ChevronRight size={14} color={TEXT_MUTED} />
+                        </Stack>
+                    </Box>
+                ))}
+            </Stack>
+          </Box>
 
           <Box>
             <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Tag Name
+              Project Title
             </Typography>
             <TextField
               fullWidth
               required
-              autoFocus
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Research"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Q3 Roadmap"
               variant="standard"
               InputProps={{
                 disableUnderline: true,
@@ -291,15 +313,15 @@ export function NewTagDrawer() {
 
           <Box>
             <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Description
+              Summary
             </Typography>
             <TextField
               fullWidth
               multiline
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Optional notes about this tag..."
+              rows={2}
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="Optional project overview..."
               variant="standard"
               InputProps={{
                 disableUnderline: true,
@@ -320,56 +342,43 @@ export function NewTagDrawer() {
           </Box>
 
           <Box>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 2, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
-              Theme Color
+            <Typography variant="caption" sx={{ fontWeight: 800, color: TEXT_MUTED, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-mono)' }}>
+              Visibility
             </Typography>
-            <Grid container spacing={1.5} sx={{ mb: 1 }}>
-              {predefinedColors.map((color) => (
-                <Grid size="auto" key={color}>
-                  <Tooltip title={color} arrow>
-                    <Box
-                      onClick={() => setFormData({ ...formData, color })}
-                      sx={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: '10px',
-                        bgcolor: color,
-                        cursor: 'pointer',
-                        border: '3px solid',
-                        borderColor: formData.color === color ? 'white' : 'transparent',
-                        transition: BRAND_TRANSITION,
-                        '&:hover': { transform: 'scale(1.1)' }
-                      }}
-                    />
-                  </Tooltip>
-                </Grid>
-              ))}
-            </Grid>
-            
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2, p: 1.5, bgcolor: VOID, borderRadius: RADIUS_SMALL, border: BORDER }}>
-               <Box sx={{ position: 'relative', width: 32, height: 32, borderRadius: '6px', overflow: 'hidden', border: BORDER }}>
-                 <input 
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                  style={{ 
-                    position: 'absolute',
-                    top: '-50%',
-                    left: '-50%',
-                    width: '200%',
-                    height: '200%',
-                    border: 'none',
-                    padding: 0,
-                    margin: 0,
-                    cursor: 'pointer',
-                    background: 'none'
-                  }}
-                 />
-               </Box>
-               <Typography variant="caption" sx={{ fontWeight: 800, color: '#fff', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>
-                 {formData.color.toUpperCase()}
-               </Typography>
-            </Stack>
+            <FormControl fullWidth variant="standard">
+                <Select
+                    value={visibility}
+                    onChange={(e) => setVisibility(e.target.value as any)}
+                    disableUnderline
+                    sx={{
+                        color: '#fff',
+                        bgcolor: VOID,
+                        borderRadius: '16px',
+                        fontWeight: 700,
+                        px: 2,
+                        py: 0.5,
+                        border: BORDER,
+                        fontFamily: fontUi,
+                        '& .MuiSelect-select': { py: 1.5 },
+                        '& .MuiSvgIcon-root': { color: TEXT_MUTED }
+                    }}
+                    MenuProps={{
+                        PaperProps: {
+                            sx: {
+                                bgcolor: SURFACE_ASH,
+                                border: BORDER,
+                                borderRadius: '12px',
+                                color: '#fff',
+                                mt: 1
+                            }
+                        }
+                    }}
+                >
+                    <MenuItem value="private" sx={{ fontWeight: 600 }}>Private</MenuItem>
+                    <MenuItem value="shared" sx={{ fontWeight: 600 }}>Shared</MenuItem>
+                    <MenuItem value="public" sx={{ fontWeight: 600 }}>Public</MenuItem>
+                </Select>
+            </FormControl>
           </Box>
 
           <Box sx={{ mt: 'auto', pt: 4 }}>
@@ -377,7 +386,7 @@ export function NewTagDrawer() {
               fullWidth
               type="submit"
               variant="contained"
-              disabled={isSaving || !formData.name.trim()}
+              disabled={loading || !title.trim()}
               sx={{
                 bgcolor: SYSTEM_PRIMARY,
                 color: '#fff',
@@ -392,7 +401,7 @@ export function NewTagDrawer() {
                 '&.Mui-disabled': { bgcolor: HOVER, color: TEXT_MUTED }
               }}
             >
-              {isSaving ? <CircularProgress size={20} color="inherit" /> : (editingTag ? 'Update Tag' : 'Create Tag')}
+              {loading ? <CircularProgress size={20} color="inherit" /> : 'Create Project'}
             </Button>
             
             <Button 

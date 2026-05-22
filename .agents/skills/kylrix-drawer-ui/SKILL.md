@@ -12,5 +12,6 @@ disable-model-invocation: true
 2. Keep scroll containment explicit and prevent overflow clipping.
 3. Ensure clear close/expand affordances and keyboard accessibility.
 4. Keep drawer content concise; split crowded flows.
-5. **Spacing & parity:** Follow `.agents/skills/kylrix-muted-v3-design/SKILL.md` — match mobile bottom chrome (`UnifiedBottomBar`), no gradient fills, safe-area padding, full-width tap targets instead of cramped chip grids when listing actions.
+5. **Height Constraint:** Standard drawers should be capped at **max 60% page height** (`60dvh`) to maintain context with the background shell. Use `isExpanded` toggles or internal scrolling for longer forms.
+6. **Spacing & parity:** Follow `.agents/skills/kylrix-muted-v3-design/SKILL.md` — match mobile bottom chrome (`UnifiedBottomBar`), no gradient fills, safe-area padding, full-width tap targets instead of cramped chip grids when listing actions.
 6. **Desktop translation:** treat orientation as the source of truth, not route-specific hacks. Bottom drawers map to right sidebars on desktop; top drawers/topbar drawers map to left sidebars on desktop.
