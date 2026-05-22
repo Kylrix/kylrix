@@ -50,86 +50,168 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 const projectTemplates = [
   { 
     id: 'form-to-project',
-    title: 'Form to Project', 
-    summary: 'Link a form, ingest responses as context, and auto-spin tasks.',
+    title: 'Analyze Responses', 
+    summary: 'Convert intake forms into context and auto-spin execution tasks.',
     icon: ClipboardList,
     color: '#6366F1',
     description: 'Transform feedback into action. Automatically connects form responses to your project context and creates execution tasks.'
   },
   { 
     id: 'idea-to-execution',
-    title: 'Idea to Execution', 
-    summary: 'From note to roadmap. Scheduled meetings, secrets, and team sync.',
+    title: 'Launch Projects', 
+    summary: 'Spin up roadmaps, schedule syncs, and bundle secrets from a single note.',
     icon: Lightbulb,
     color: '#EC4899',
-    description: 'The "Notion-killer" flow. Start with a simple note and instantly generate tasks, schedule weekly calls, and bundle secrets.'
+    description: 'The definitive flow for starting fast. Start with a simple note and instantly generate tasks, schedule weekly calls, and bundle secrets.'
   },
   { 
     id: 'academic-research',
-    title: 'Academic Research', 
-    summary: 'Unlock long-form articles (6M+ chars), milestones, and surveys.',
+    title: 'Deep Research', 
+    summary: 'Handle 6M+ char studies, surveys, and research milestones.',
     icon: GraduationCap,
     color: '#A855F7',
     isPro: true,
-    description: 'Deep academic workflows. Supports massive long-form content, research milestones, and questionnaire-based data collection.'
+    description: 'Specialized academic workflows. Supports massive long-form content, research milestones, and questionnaire-based data collection.'
   },
   { 
     id: 'social-pulse',
-    title: 'Social Pulse Campaign', 
-    summary: 'Schedule moments, track engagement, and social events.',
+    title: 'Grow Audience', 
+    summary: 'Sync campaign moments with scheduled events and engagement tracking.',
     icon: Megaphone,
     color: '#10B981',
     description: 'Sync your social presence. Coordinate Campaign Moments with scheduled events and real-time engagement tracking.'
   },
   { 
     id: 'secure-handover',
-    title: 'Secure Client Handover', 
-    summary: 'Vault-locked secrets, handover calls, and ephemeral sharing.',
+    title: 'Secure Delivery', 
+    summary: 'Deliver results with vault-locked handover syncs and ephemeral links.',
     icon: Key,
     color: '#F59E0B',
-    description: 'The ultimate professional hand-off. Bundle credentials securely, schedule a sync call, and use ephemeral links.'
+    description: 'The professional hand-off. Bundle credentials securely, schedule a sync call, and use ephemeral sharing links.'
   },
   { 
     id: 'team-huddle-center',
-    title: 'Team Huddle Hub', 
-    summary: 'Persistent project calls and dedicated group chat threads.',
+    title: 'Unite Teams', 
+    summary: 'Centralize persistent calls and project-isolated group chat threads.',
     icon: Video,
     color: '#3B82F6',
     description: 'Centralize communication. Keeps your team synchronized with recurring call links and a project-isolated chat environment.'
   },
   { 
     id: 'service-desk',
-    title: 'Service Desk Dashboard', 
-    summary: 'Support forms to tasks with dedicated focus sessions.',
+    title: 'Scale Support', 
+    summary: 'Route form requests directly to tasks and focused execution sessions.',
     icon: LifeBuoy,
     color: '#EF4444',
     description: 'Manage requests efficiently. Link support forms directly to project tasks and resolve them in timed focus blocks.'
   },
   { 
     id: 'wiki-knowledge-hub',
-    title: 'Wiki Knowledge Hub', 
-    summary: 'Auto-organized notes with project-wide tag hierarchies.',
+    title: 'Store Knowledge', 
+    summary: 'Build structured libraries with project-wide tag hierarchies.',
     icon: Book,
     color: '#06B6D4',
     description: 'Build a living library. Organize multiple notes into a collaborative wiki with smart versioning and shared tags.'
   },
   { 
     id: 'event-command-center',
-    title: 'Event Command Center', 
-    summary: 'RSVPs, speaker schedules, and logistics tasking.',
+    title: 'Orchestrate Events', 
+    summary: 'Manage RSVPs, speaker schedules, and logistics tasking in one place.',
     icon: Calendar,
     color: '#F43F5E',
     description: 'Master your meetups. Integrated guest management (Forms), event scheduling, and full logistic task-lists.'
   },
   { 
     id: 'product-roadmap',
-    title: 'Product Roadmap', 
-    summary: 'Connect specs, track goals, and manage milestones.',
+    title: 'Execute Strategy', 
+    summary: 'Link technical specs to high-level goals and milestone execution.',
     icon: Layers,
     color: '#84CC16',
     description: 'Execute your vision. Links technical specifications (Notes) to high-level goals and deadline-driven events.'
   }
 ];
+
+function TemplateCard({ template, onSelect }: { template: typeof projectTemplates[0], onSelect: (t: any) => void }) {
+    const [expanded, setExpanded] = useState(false);
+
+    return (
+        <Paper
+            elevation={0}
+            onClick={() => onSelect(template)}
+            sx={{
+                p: 2,
+                borderRadius: '24px',
+                bgcolor: '#161412',
+                border: '1px solid rgba(255,255,255,0.06)',
+                cursor: 'pointer',
+                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&:hover': { 
+                    bgcolor: '#1C1A18', 
+                    borderColor: alpha(template.color, 0.3),
+                    transform: 'translateY(-4px)',
+                    boxShadow: `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px ${alpha(template.color, 0.1)}`
+                }
+            }}
+        >
+            {template.isPro && (
+                <Chip 
+                    label="PRO" 
+                    size="small"
+                    sx={{ 
+                        position: 'absolute', 
+                        top: 12, 
+                        right: 12, 
+                        bgcolor: alpha(template.color, 0.1), 
+                        color: template.color, 
+                        fontWeight: 900, 
+                        fontSize: '0.6rem',
+                        height: 18,
+                        fontFamily: 'var(--font-mono)',
+                        border: `1px solid ${alpha(template.color, 0.2)}`
+                    }} 
+                />
+            )}
+            <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ width: 36, height: 36, borderRadius: '10px', bgcolor: alpha(template.color, 0.1), color: template.color, display: 'grid', placeItems: 'center' }}>
+                        <template.icon size={18} strokeWidth={2.5} />
+                    </Box>
+                    <Typography variant="body1" sx={{ fontWeight: 900, color: '#fff', fontSize: '0.95rem', letterSpacing: '-0.01em' }}>{template.title}</Typography>
+                </Stack>
+                
+                <Box>
+                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', lineHeight: 1.4, fontWeight: 500, fontSize: '0.85rem' }}>
+                        {expanded ? template.description : template.summary}
+                    </Typography>
+                </Box>
+
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Button 
+                        size="small" 
+                        onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+                        sx={{ 
+                            p: 0, 
+                            minWidth: 0, 
+                            color: 'rgba(255,255,255,0.3)', 
+                            textTransform: 'none', 
+                            fontSize: '0.7rem', 
+                            fontWeight: 800,
+                            '&:hover': { color: '#fff', bgcolor: 'transparent' }
+                        }}
+                    >
+                        {expanded ? 'Show Less' : 'Learn More'}
+                    </Button>
+                    <Stack direction="row" alignItems="center" spacing={0.5} sx={{ color: template.color }}>
+                        <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activate</Typography>
+                        <Plus size={10} strokeWidth={4} />
+                    </Stack>
+                </Stack>
+            </Stack>
+        </Paper>
+    );
+}
 
 export default function ProjectsPage() {
   const theme = useTheme();
@@ -219,10 +301,10 @@ export default function ProjectsPage() {
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={4} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'flex-end' }} sx={{ mb: 4 }}>
             <Box>
                 <Typography variant="h1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', fontSize: { xs: '2.5rem', md: '3.5rem' }, lineHeight: 1, letterSpacing: '-0.03em' }}>
-                    Projects
+                    Active Execution
                 </Typography>
                 <Typography sx={{ mt: 1.5, color: 'rgba(255,255,255,0.4)', maxWidth: 500, fontSize: '1rem', fontWeight: 500 }}>
-                    Group your notes, tasks, and passwords into simple projects.
+                    Outcome-aware containers that unite your context, comms, and secrets into a single high-velocity workspace.
                 </Typography>
             </Box>
 
@@ -235,7 +317,7 @@ export default function ProjectsPage() {
         <Box sx={{ mb: 8 }}>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', display: 'block' }}>
-                    Start from a functional template
+                    Quick Activate
                 </Typography>
                 <Button 
                     size="small"
@@ -250,59 +332,7 @@ export default function ProjectsPage() {
             <Grid container spacing={2}>
                 {displayedTemplates.map((template) => (
                     <Grid item xs={12} sm={6} md={4} key={template.title}>
-                        <Paper
-                            elevation={0}
-                            onClick={() => openCreateDrawer(template)}
-                            sx={{
-                                p: 3,
-                                borderRadius: '24px',
-                                bgcolor: '#161412',
-                                border: '1px solid rgba(255,255,255,0.06)',
-                                cursor: 'pointer',
-                                transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                '&:hover': { 
-                                    bgcolor: '#1C1A18', 
-                                    borderColor: alpha(template.color, 0.3),
-                                    transform: 'translateY(-4px)',
-                                    boxShadow: `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 20px ${alpha(template.color, 0.1)}`
-                                }
-                            }}
-                        >
-                            {template.isPro && (
-                                <Chip 
-                                    label="PRO" 
-                                    size="small"
-                                    sx={{ 
-                                        position: 'absolute', 
-                                        top: 16, 
-                                        right: 16, 
-                                        bgcolor: alpha(template.color, 0.1), 
-                                        color: template.color, 
-                                        fontWeight: 900, 
-                                        fontSize: '0.65rem',
-                                        fontFamily: 'var(--font-mono)',
-                                        border: `1px solid ${alpha(template.color, 0.2)}`
-                                    }} 
-                                />
-                            )}
-                            <Stack spacing={2.5}>
-                                <Box sx={{ width: 48, height: 48, borderRadius: '14px', bgcolor: alpha(template.color, 0.1), color: template.color, display: 'grid', placeItems: 'center' }}>
-                                    <template.icon size={24} strokeWidth={2.5} />
-                                </Box>
-                                <Box>
-                                    <Typography variant="body1" sx={{ fontWeight: 900, color: '#fff', fontSize: '1.1rem', letterSpacing: '-0.01em' }}>{template.title}</Typography>
-                                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1, display: 'block', lineHeight: 1.5, fontWeight: 500, minHeight: 44 }}>
-                                        {template.description}
-                                    </Typography>
-                                </Box>
-                                <Stack direction="row" alignItems="center" spacing={1} sx={{ color: template.color, pt: 1 }}>
-                                    <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Create Project</Typography>
-                                    <Plus size={14} strokeWidth={3} />
-                                </Stack>
-                            </Stack>
-                        </Paper>
+                        <TemplateCard template={template} onSelect={openCreateDrawer} />
                     </Grid>
                 ))}
             </Grid>
@@ -312,7 +342,7 @@ export default function ProjectsPage() {
             {/* Main Projects List */}
             <Grid item xs={12}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', mb: 3, display: 'block' }}>
-                    My Projects ({projects.length})
+                    Execution Containers ({projects.length})
                 </Typography>
                 
                 {loading ? (
@@ -334,11 +364,11 @@ export default function ProjectsPage() {
                         <Box sx={{ width: 80, height: 80, borderRadius: '24px', bgcolor: alpha('#6366F1', 0.05), color: '#6366F1', display: 'grid', placeItems: 'center', mx: 'auto', mb: 3 }}>
                             <FolderKanban size={40} />
                         </Box>
-                        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 1 }}>No projects yet</Typography>
+                        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 1 }}>No active containers</Typography>
                         <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 4, maxWidth: 360, mx: 'auto' }}>
-                            Start a project to keep your work organized in one place.
+                            Activate a project to combine your context, communications, and secrets into one high-velocity workspace.
                         </Typography>
-                        <Button variant="outlined" onClick={openCreateDrawer} sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}>Create First Project</Button>
+                        <Button variant="outlined" onClick={() => openCreateDrawer()} sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}>Start Fresh Project</Button>
                     </Paper>
                 ) : (
                     <Grid container spacing={2.5}>
