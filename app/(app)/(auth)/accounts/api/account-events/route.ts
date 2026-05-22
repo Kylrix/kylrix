@@ -98,8 +98,7 @@ function parseReportReason(body: any, rawMetadata: any) {
 async function getProfileByUserId(databases: ReturnType<typeof createSystemClient>['databases'], userId: string) {
   const result = await databases.listDocuments(CHAT_DB_ID, PROFILES_TABLE_ID, [
     Query.equal('userId', userId),
-    Query.limit(2),
-  ]);
+    Query.limit(2)]);
 
   return {
     profile: result.documents[0] || null,

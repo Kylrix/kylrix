@@ -395,8 +395,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     user?.$id,
     invalidate,
     normalizeSharedNote,
-    parseSharedNoteMeta,
-  ]);
+    parseSharedNoteMeta]);
 
   useEffect(() => {
     fetchSharedNote();
@@ -546,8 +545,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     showError,
     user?.$id,
     verifiedNote,
-    router,
-  ]);
+    router]);
 
   const handleJoinSharedNoteHuddle = useCallback(() => {
     if (!existingHuddleId || !verifiedNote) return;

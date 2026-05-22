@@ -269,8 +269,7 @@ export function mergeForwardTargets(
           ...existing.searchableTerms,
           normalizeText(contact.nickname),
           normalizeText(contact.notes),
-          ...(contact.tags || []).map((tag) => normalizeText(tag)),
-        ]);
+          ...(contact.tags || []).map((tag) => normalizeText(tag))]);
         continue;
       }
 
@@ -309,13 +308,11 @@ export function createForwardDirectory(deps: ForwardDirectoryDeps) {
     async listForwardTargets(currentUserId: string, options: ForwardDirectoryOptions = {}) {
       const [conversations, contacts] = await Promise.all([
         deps.source.listConversations(currentUserId),
-        deps.source.listContacts(currentUserId),
-      ]);
+        deps.source.listContacts(currentUserId)]);
 
       const profileIds = uniqueStrings([
         ...conversations.flatMap((conversation) => Array.isArray(conversation.participants) ? conversation.participants : []),
-        ...contacts.map((contact) => contact.contactUserId),
-      ]).filter((userId) => userId !== currentUserId);
+        ...contacts.map((contact) => contact.contactUserId)]).filter((userId) => userId !== currentUserId);
 
       const profiles = profileIds.length > 0 ? await deps.source.resolveProfiles(profileIds) : [];
       return mergeForwardTargets(currentUserId, conversations, contacts, profiles, options, deps.sourceApp || 'connect');
@@ -459,27 +456,23 @@ export function createAppwriteForwardSource(client: AppwriteForwardSourceClient,
     async listConversations(userId: string) {
       const membershipRows = await client.listRows(config.databaseId, config.conversationMembersTableId, [
         Query.equal('userId', userId),
-        Query.limit(1000),
-      ]).catch(() => ({ rows: [] as any[] }));
+        Query.limit(1000)]).catch(() => ({ rows: [] as any[] }));
 
       const conversationIds = uniqueStrings((membershipRows.rows || []).map((row: any) => row.conversationId));
       if (conversationIds.length === 0) {
         const legacy = await client.listRows(config.databaseId, config.conversationsTableId, [
           Query.contains('participants', userId),
-          Query.limit(100),
-        ]).catch(() => ({ rows: [] as any[] }));
+          Query.limit(100)]).catch(() => ({ rows: [] as any[] }));
         return legacy.rows || [];
       }
 
       const conversationsResult = await client.listRows(config.databaseId, config.conversationsTableId, [
         Query.equal('$id', conversationIds),
-        Query.limit(conversationIds.length),
-      ]).catch(() => ({ rows: [] as any[] }));
+        Query.limit(conversationIds.length)]).catch(() => ({ rows: [] as any[] }));
 
       const allMembers = await client.listRows(config.databaseId, config.conversationMembersTableId, [
         Query.equal('conversationId', conversationIds),
-        Query.limit(Math.min(1000, conversationIds.length * 10)),
-      ]).catch(() => ({ rows: [] as any[] }));
+        Query.limit(Math.min(1000, conversationIds.length * 10))]).catch(() => ({ rows: [] as any[] }));
 
       const memberRowsByConversation = new Map<string, string[]>();
       for (const row of allMembers.rows || []) {
@@ -498,8 +491,7 @@ export function createAppwriteForwardSource(client: AppwriteForwardSourceClient,
     async listContacts(userId: string) {
       const contactsResult = await client.listRows(config.databaseId, config.contactsTableId, [
         Query.equal('userId', userId),
-        Query.limit(1000),
-      ]).catch(() => ({ rows: [] as any[] }));
+        Query.limit(1000)]).catch(() => ({ rows: [] as any[] }));
 
       return contactsResult.rows || [];
     },
@@ -508,8 +500,7 @@ export function createAppwriteForwardSource(client: AppwriteForwardSourceClient,
       if (!userIds.length) return [];
       const profileRows = await client.listRows(config.databaseId, config.profilesTableId, [
         Query.equal('userId', userIds),
-        Query.limit(userIds.length),
-      ]).catch(() => ({ rows: [] as any[] }));
+        Query.limit(userIds.length)]).catch(() => ({ rows: [] as any[] }));
 
       return (profileRows.rows || []).map((profile: any) => ({
         userId: profile.userId || profile.$id,
@@ -528,13 +519,10 @@ export function createAppwriteForwardSource(client: AppwriteForwardSourceClient,
       const [byUsername, byDisplayName] = await Promise.all([
         client.listRows(config.databaseId, config.profilesTableId, [
           Query.search('username', cleaned),
-          Query.limit(limit),
-        ]).catch(() => ({ rows: [] as any[] })),
+          Query.limit(limit)]).catch(() => ({ rows: [] as any[] })),
         client.listRows(config.databaseId, config.profilesTableId, [
           Query.search('displayName', cleaned),
-          Query.limit(limit),
-        ]).catch(() => ({ rows: [] as any[] })),
-      ]);
+          Query.limit(limit)]).catch(() => ({ rows: [] as any[] }))]);
 
       const rowsByUserId = new Map<string, any>();
       for (const profile of [...(byUsername.rows || []), ...(byDisplayName.rows || [])]) {

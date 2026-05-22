@@ -43,8 +43,7 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
     const canUseEmail = loginMethod !== 'email-otp';
     return [
       ...(canUseEmail ? (['email'] as Factor[]) : []),
-      'totp' as Factor,
-    ];
+      'totp' as Factor];
   }, [loginMethod]);
 
   useEffect(() => {

@@ -11,8 +11,7 @@ const steps = [
       'Open your project in Cursor.',
       'Create `.agents/skills/kylrix/SKILL.md`.',
       'Paste the Kylrix skill content and save.',
-      'Ask the agent to use `kylrix-muted-v3-design`.',
-    ],
+      'Ask the agent to use `kylrix-muted-v3-design`.'],
   },
   {
     tool: 'OpenClaw',
@@ -20,10 +19,8 @@ const steps = [
       'Open your project workspace.',
       'Add `SKILL.md` inside your agent skills folder.',
       'Paste the same Kylrix skill content.',
-      'Enable the skill in your session.',
-    ],
-  },
-];
+      'Enable the skill in your session.'],
+  }];
 
 export default function SkillInstallPage() {
   return (

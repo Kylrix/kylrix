@@ -288,8 +288,7 @@ export async function POST(req: Request) {
     };
 
     const subscription = await databases.createDocument(DATABASE_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
-      Permission.read(Role.user(meta.payerUserId)),
-    ]);
+      Permission.read(Role.user(meta.payerUserId))]);
 
     if (meta.couponId) {
       try {
@@ -329,8 +328,7 @@ export async function POST(req: Request) {
 
     try {
       const profileRes = await databases.listDocuments(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, [
-        Query.equal('userId', meta.payerUserId),
-      ]);
+        Query.equal('userId', meta.payerUserId)]);
 
       if (profileRes.total > 0) {
         await databases.updateDocument(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, profileRes.documents[0].$id, {

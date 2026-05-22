@@ -19,10 +19,7 @@ const agentsCache = getNamedListCache<AgentRecord[]>('agents', 45000);
 
 function agentPermissions(userId: string) {
   return [
-    Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-  ];
+    Permission.read(Role.user(userId))];
 }
 
 export const AgenticService = {

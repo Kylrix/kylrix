@@ -37,8 +37,7 @@ export default function NoteReactions({ targetId, targetType = TargetType.NOTE, 
               Query.equal('targetType', targetType),
               Query.equal('targetId', targetId),
               Query.orderAsc('createdAt'),
-              Query.limit(500),
-            ]);
+              Query.limit(500)]);
             return res.documents as unknown as Reactions[];
           } catch (sdkError) {
             const effectiveNoteId = targetType === TargetType.NOTE ? targetId : noteId;

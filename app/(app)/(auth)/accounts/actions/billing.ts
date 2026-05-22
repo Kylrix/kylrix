@@ -48,8 +48,7 @@ async function calculateStackedPeriod(databases: ReturnType<typeof createSystemC
       Query.equal('status', 'active'),
       Query.orderDesc('updatedAt'),
       Query.limit(1),
-      Query.select(['$id', 'currentPeriodStart', 'currentPeriodEnd', 'createdAt', 'updatedAt', 'status', 'plan']),
-    ]);
+      Query.select(['$id', 'currentPeriodStart', 'currentPeriodEnd', 'createdAt', 'updatedAt', 'status', 'plan'])]);
     const activeSubscriptions = (existingSubs.documents as SubscriptionRow[]).filter((row) => String(row.status || '').toLowerCase() === 'active');
     const latestSubscription = pickLatestSubscription(activeSubscriptions);
     if (latestSubscription?.currentPeriodEnd) {
@@ -232,8 +231,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       Query.or([Query.equal('status', 'active'), Query.equal('status', 'pending')]),
       Query.orderDesc('$createdAt'),
       Query.limit(1),
-      Query.select(['$id', 'userId', 'actorId', 'relatedUserId', 'status', 'metadata', 'discountPercent', 'expiresAt', '$createdAt']),
-    ]);
+      Query.select(['$id', 'userId', 'actorId', 'relatedUserId', 'status', 'metadata', 'discountPercent', 'expiresAt', '$createdAt'])]);
     coupon = couponResult.documents[0];
     if (!coupon) return { ok: true, claimed: false, message: 'No active coupon found' };
   }
@@ -325,8 +323,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     const profileResult = await databases.listDocuments(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
       Query.equal('userId', user.$id),
       Query.limit(1),
-      Query.select(['$id', 'userId', 'tier']),
-    ]);
+      Query.select(['$id', 'userId', 'tier'])]);
     if (profileResult.total > 0) {
       await databases.updateDocument(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, profileResult.documents[0].$id, {
         tier: 'PRO',
@@ -396,8 +393,7 @@ export async function hydrateSessionAction(jwt?: string | null) {
     const [profileRes, entitlement, tokenBal, walletsRes, activityRes] = await Promise.all([
       databases.listDocuments(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
         Query.equal('userId', userId),
-        Query.limit(1),
-      ]),
+        Query.limit(1)]),
       getVerifiedProEntitlementForUser(userId),
       // Use internal service logic for direct server access
       (async () => {
@@ -407,13 +403,11 @@ export async function hydrateSessionAction(jwt?: string | null) {
       databases.listDocuments(APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS, [
         Query.equal('ownerId', `user:${userId}`),
         Query.equal('type', 'main'),
-        Query.limit(10),
-      ]),
+        Query.limit(10)]),
       databases.listDocuments(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, [
         Query.equal('userId', userId),
         Query.orderDesc('$updatedAt'),
-        Query.limit(1),
-      ])
+        Query.limit(1)])
     ]);
 
     return {

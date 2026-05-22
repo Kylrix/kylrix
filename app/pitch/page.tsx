@@ -254,8 +254,7 @@ const slides: Slide[] = [
               {[
                 ['Review pitch deck', 'Due today'],
                 ['Ship onboarding', 'In progress'],
-                ['Send follow-up', 'Waiting on reply'],
-              ].map(([title, meta]) => (
+                ['Send follow-up', 'Waiting on reply']].map(([title, meta]) => (
                 <Box
                   key={title}
                   sx={{
@@ -403,8 +402,7 @@ const slides: Slide[] = [
             ['Note', 'Task', '#EC4899'],
             ['Task', 'Huddle', '#A855F7'],
             ['Huddle', 'Post', '#F59E0B'],
-            ['Post', 'Note', '#10B981'],
-          ].map(([from, to, color]) => (
+            ['Post', 'Note', '#10B981']].map(([from, to, color]) => (
             <Box
               key={`${from}-${to}`}
               sx={{
@@ -472,8 +470,7 @@ const slides: Slide[] = [
           {[
             ['Open core', 'Free and open source', '#6366F1'],
             ['Sovereign Pro', 'Managed sync and agents', '#A855F7'],
-            ['Agentic wallets', 'Wallet-native settlement rails', '#10B981'],
-          ].map(([title, copy, color]) => (
+            ['Agentic wallets', 'Wallet-native settlement rails', '#10B981']].map(([title, copy, color]) => (
             <Grid key={title} size={{ xs: 12 }}>
               <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.06)' }}>
                 <Stack direction="row" spacing={1.5} alignItems="center">
@@ -526,8 +523,7 @@ const slides: Slide[] = [
         </Stack>
       </Frame>
     ),
-  },
-];
+  }];
 
 export default function PitchPage() {
   const router = useRouter();

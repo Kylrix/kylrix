@@ -174,8 +174,7 @@ export default function AppsPage() {
                     {[
                       { icon: Shield, label: 'Private by default' },
                       { icon: Waypoints, label: 'Shared session' },
-                      { icon: Zap, label: 'Reactive graph' },
-                    ].map((item) => (
+                      { icon: Zap, label: 'Reactive graph' }].map((item) => (
                       <Box
                         key={item.label}
                         sx={{

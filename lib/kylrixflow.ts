@@ -57,17 +57,12 @@ const taskResourceKey = (taskId: string) => `${TASK_COLLABORATOR_RESOURCE_PREFIX
 const taskPermissionForLevel = (level: CollaboratorPermission, userId: string) => {
     if (level === 'admin') {
         return [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId)),
-        ];
+            Permission.read(Role.user(userId))];
     }
 
     if (level === 'write') {
         return [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-        ];
+            Permission.read(Role.user(userId))];
     }
 
     return [Permission.read(Role.user(userId))];
@@ -134,8 +129,7 @@ async function listTaskCollaborators(taskId: string): Promise<TaskCollaborator[]
         databaseId: TASK_COLLABORATOR_DATABASE,
         tableId: TASK_COLLABORATOR_TABLE,
         queries: [
-            Query.equal('noteId', taskResourceKey(taskId)),
-        ],
+            Query.equal('noteId', taskResourceKey(taskId))],
     });
 
     return res.rows.map(normalizeCollaborator);
@@ -148,8 +142,7 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
         queries: [
             Query.equal('noteId', taskResourceKey(taskId)),
             Query.equal('userId', userId),
-            Query.limit(1),
-        ],
+            Query.limit(1)],
     });
 
     const nextPermissions = permissions ?? mergePermissions(

@@ -100,8 +100,7 @@ export class EcosystemSecurity {
         ]).catch(() => ({ rows: [] as any[] })),
         tablesDB.listRows(APPWRITE_CONFIG.DATABASES.VAULT, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, [
             Query.equal('userId', resolvedUserId)
-        ]).catch(() => ({ rows: [] as any[] })),
-      ]);
+        ]).catch(() => ({ rows: [] as any[] }))]);
 
       const userDoc = (userRowsRes.rows || [])[0] || null;
       const keychainEntries = Array.isArray(keychainRowsRes.rows) ? keychainRowsRes.rows : [];
@@ -375,8 +374,7 @@ export class EcosystemSecurity {
       tableId,
       queries: [
         Query.equal('userId', userId),
-        Query.limit(1),
-      ],
+        Query.limit(1)],
     });
 
     if (existing.rows[0]) {

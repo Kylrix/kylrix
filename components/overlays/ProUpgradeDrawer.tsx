@@ -114,8 +114,7 @@ export function ProUpgradeDrawer() {
               'AI-powered features across all apps',
               'Advanced task automation',
               'Priority support',
-              'Advanced encryption options',
-            ].map((benefit) => (
+              'Advanced encryption options'].map((benefit) => (
               <Box key={benefit} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                 <Box
                   sx={{

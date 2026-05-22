@@ -13,21 +13,18 @@ function buildSuggestions(sourceApp: string, sourceType: string, sourceId: strin
     return [
       { id: `secret:${baseId}`, label: 'Link Credential', description: 'Attach a password entry to this note context.' },
       { id: `totp:${baseId}`, label: 'Link TOTP', description: 'Attach a one-time password surface to the note.' },
-      { id: `share:${baseId}`, label: 'Share Securely', description: 'Send the note into Connect with a safe preview.' },
-    ];
+      { id: `share:${baseId}`, label: 'Share Securely', description: 'Send the note into Connect with a safe preview.' }];
   }
 
   if (sourceType === 'secret' || sourceType === 'totp' || sourceApp === 'vault') {
     return [
       { id: `note:${baseId}`, label: 'Attach Note', description: 'Keep the related note alongside the secret.' },
-      { id: `task:${baseId}`, label: 'Create Task', description: 'Turn this secret context into a Flow follow-up.' },
-    ];
+      { id: `task:${baseId}`, label: 'Create Task', description: 'Turn this secret context into a Flow follow-up.' }];
   }
 
   return [
     { id: `note:${baseId}`, label: 'Attach Note', description: 'Expose a note-linking action.' },
-    { id: `secret:${baseId}`, label: 'Link Secret', description: 'Expose a vault-linking action.' },
-  ];
+    { id: `secret:${baseId}`, label: 'Link Secret', description: 'Expose a vault-linking action.' }];
 }
 
 export async function GET(request: NextRequest) {

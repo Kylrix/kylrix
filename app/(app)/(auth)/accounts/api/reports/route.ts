@@ -78,9 +78,7 @@ export async function GET(req: NextRequest) {
       Query.equal('type', 'report'),
       Query.or([
         Query.equal('actorId', user.$id),
-        Query.equal('userId', user.$id),
-      ]),
-    ];
+        Query.equal('userId', user.$id)])];
     if (statusFilter) {
       queries.push(Query.equal('status', statusFilter.toLowerCase()));
     }
@@ -155,8 +153,7 @@ export async function POST(req: NextRequest) {
         ID.unique(),
         payload,
         [
-          Permission.read(Role.user(user.$id)),
-        ],
+          Permission.read(Role.user(user.$id))],
       );
       created.push(row);
     }

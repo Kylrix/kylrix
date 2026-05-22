@@ -20,18 +20,15 @@ describe('forward directory', () => {
           name: 'Project Crew',
           lastMessageAt: '2026-04-30T21:00:00.000Z',
           lastMessageText: 'group update',
-        },
-      ],
+        }],
       [
         { userId: 'me', contactUserId: 'user-1', nickname: 'Bestie', isFavorite: true, isBlocked: false, relationship: 'friend', tags: ['close'] },
-        { userId: 'me', contactUserId: 'user-4', nickname: 'New Contact', isFavorite: false, isBlocked: false, relationship: 'colleague', tags: [] },
-      ],
+        { userId: 'me', contactUserId: 'user-4', nickname: 'New Contact', isFavorite: false, isBlocked: false, relationship: 'colleague', tags: [] }],
       [
         { userId: 'user-1', username: 'userone', displayName: 'User One', avatar: null },
         { userId: 'user-2', username: 'usertwo', displayName: 'User Two', avatar: null },
         { userId: 'user-3', username: 'userthree', displayName: 'User Three', avatar: null },
-        { userId: 'user-4', username: 'userfour', displayName: 'User Four', avatar: null },
-      ],
+        { userId: 'user-4', username: 'userfour', displayName: 'User Four', avatar: null }],
       { query: 'user', includeGroups: true, includeContactsOnly: true },
       'connect'
     );

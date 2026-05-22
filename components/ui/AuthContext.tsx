@@ -449,8 +449,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dismissEmailVerificationReminder,
     openIDMWindow,
     closeIDMWindow,
-    idmWindowOpen,
-  ]);
+    idmWindowOpen]);
 
   return (
     <AuthContext.Provider value={value}>

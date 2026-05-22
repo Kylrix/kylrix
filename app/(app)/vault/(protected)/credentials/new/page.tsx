@@ -77,8 +77,7 @@ export default function NewCredentialPage() {
   const addCustomField = () => {
     setCustomFields([
       ...customFields,
-      { id: Date.now().toString(), label: "", value: "" },
-    ]);
+      { id: Date.now().toString(), label: "", value: "" }]);
   };
 
   const updateCustomField = (

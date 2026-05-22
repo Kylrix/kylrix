@@ -63,9 +63,7 @@ export const CallService = {
             console.log('[CallService] Creating call in new table with payload:', payload);
 
             const permissions = [
-                Permission.update(Role.user(userId)),
-                Permission.delete(Role.user(userId)),
-            ];
+                ];
 
             if (allowGuests) {
                 permissions.push(Permission.read(Role.any()));
@@ -164,8 +162,7 @@ export const CallService = {
                 databaseId: DB_ID,
                 tableId: ACTIVITY_TABLE,
                 queries: [
-                    Query.limit(100),
-                ]
+                    Query.limit(100)]
             });
             const active: any[] = [];
             for (const row of res.rows) {
@@ -227,8 +224,7 @@ export const CallService = {
                     queries: [
                         Query.or([
                             Query.equal('userId', userId),
-                            Query.equal('receiverId', userId),
-                        ]),
+                            Query.equal('receiverId', userId)]),
                         Query.limit(50),
                         Query.orderDesc('startsAt')
                     ],
@@ -256,8 +252,7 @@ export const CallService = {
                     queries: [
                         Query.or([
                             Query.equal('userId', userId),
-                            Query.equal('receiverId', userId),
-                        ]),
+                            Query.equal('receiverId', userId)]),
                         Query.greaterThanEqual('expiresAt', new Date().toISOString()),
                         Query.limit(50)
                     ],
@@ -303,9 +298,7 @@ export const CallService = {
                     metadata
                 },
                 [
-                    Permission.read(Role.any()),
-                    Permission.update(Role.any()),
-                ]
+                    Permission.read(Role.any())]
             );
         } catch (e) {
             console.error('[CallService] createGhostNoteForCall failed:', e);

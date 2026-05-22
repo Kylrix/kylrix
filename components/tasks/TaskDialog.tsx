@@ -42,15 +42,13 @@ const priorityOptions: { value: Priority; label: string; color: string }[] = [
   { value: 'low', label: 'Low', color: '#94a3b8' },
   { value: 'medium', label: 'Medium', color: '#3b82f6' },
   { value: 'high', label: 'High', color: '#f59e0b' },
-  { value: 'urgent', label: 'Urgent', color: '#ef4444' },
-];
+  { value: 'urgent', label: 'Urgent', color: '#ef4444' }];
 
 const statusOptions: { value: TaskStatus; label: string }[] = [
   { value: 'todo', label: 'To Do' },
   { value: 'in-progress', label: 'In Progress' },
   { value: 'blocked', label: 'Blocked' },
-  { value: 'done', label: 'Done' },
-];
+  { value: 'done', label: 'Done' }];
 
 export default function TaskDialog() {
   const theme = useTheme();

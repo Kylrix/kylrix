@@ -32,8 +32,7 @@ function serializeMetadata(value: Record<string, unknown>) {
 async function fetchProfile(databases: ReturnType<typeof createSystemClient>["databases"], userId: string) {
   const result = await databases.listDocuments(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
     Query.equal("userId", userId),
-    Query.limit(2),
-  ]);
+    Query.limit(2)]);
 
   return result.documents[0] || null;
 }
@@ -45,8 +44,7 @@ async function fetchIdentityRows(databases: ReturnType<typeof createSystemClient
     [
       Query.equal("userId", userId),
       Query.equal("identityType", "e2e_connect"),
-      Query.limit(100),
-    ],
+      Query.limit(100)],
   );
 
   return result.documents;
@@ -66,8 +64,7 @@ async function fetchKeyMappings(databases: ReturnType<typeof createSystemClient>
     APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING,
     [
       Query.equal("grantee", userId),
-      Query.limit(1000),
-    ],
+      Query.limit(1000)],
   );
 
   return result.documents;
@@ -79,8 +76,7 @@ async function fetchEpochIds(databases: ReturnType<typeof createSystemClient>["d
     APPWRITE_CONFIG.TABLES.CHAT.EPOCHS,
     [
       Query.equal("resourceId", conversationId),
-      Query.limit(100),
-    ],
+      Query.limit(100)],
   );
 
   return result.documents.map((row) => row.$id);

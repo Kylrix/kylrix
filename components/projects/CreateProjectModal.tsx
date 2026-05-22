@@ -60,8 +60,7 @@ const suggestions = [
     summary: 'A project for active tasks and shared notes.',
     icon: Zap,
     color: '#A855F7',
-  },
-];
+  }];
 
 export default function CreateProjectModal({ open, onClose, onCreated }: CreateProjectModalProps) {
   const theme = useTheme();

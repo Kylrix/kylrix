@@ -147,8 +147,7 @@ const buildTaskHierarchy = (tasks: Task[]) => {
         completed: task.status === 'done',
         createdAt: task.createdAt,
         completedAt: task.status === 'done' ? task.completedAt : undefined,
-      },
-    ];
+      }];
   });
 
   return cloned.filter((task) => !task.parentTaskId);
@@ -184,8 +183,7 @@ const DEFAULT_LABELS: Label[] = [
   { id: 'label-3', name: 'Enhancement', color: '#3b82f6', description: 'Improvements' },
   { id: 'label-4', name: 'Documentation', color: '#8b5cf6', description: 'Docs updates' },
   { id: 'label-5', name: 'Urgent', color: '#f59e0b', description: 'Needs immediate attention' },
-  { id: 'label-6', name: 'Research', color: '#ec4899', description: 'Research tasks' },
-];
+  { id: 'label-6', name: 'Research', color: '#ec4899', description: 'Research tasks' }];
 
 // State
 interface TaskState {
@@ -609,18 +607,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const taskQueries = [
       Query.equal('userId', uid),
       Query.limit(1000),
-      Query.select(['$id', 'userId', 'title', 'status', 'priority', 'dueDate', 'tags', '$createdAt', '$updatedAt']),
-    ];
+      Query.select(['$id', 'userId', 'title', 'status', 'priority', 'dueDate', 'tags', '$createdAt', '$updatedAt'])];
     const calQueries = [
       Query.equal('userId', uid),
       Query.limit(100),
-      Query.select(['$id', 'userId', 'name', 'color', 'isDefault']),
-    ];
+      Query.select(['$id', 'userId', 'name', 'color', 'isDefault'])];
 
     const [tList, cList] = await Promise.all([
       fetchOptimized(tasksKey, () => taskApi.list(taskQueries), force ? 0 : FLOW_WARM_TTL),
-      fetchOptimized(calsKey, () => calendarApi.list(calQueries), force ? 0 : FLOW_WARM_TTL),
-    ]);
+      fetchOptimized(calsKey, () => calendarApi.list(calQueries), force ? 0 : FLOW_WARM_TTL)]);
 
     return { 
       tasks: tList.rows.map(mapAppwriteTaskToTask), 
@@ -872,8 +867,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         userId: creatorId,
         tags: [
           ...(parentTask.labels || []),
-          ...(parentTask.projectId && parentTask.projectId !== 'inbox' ? [`project:${parentTask.projectId}`] : []),
-        ],
+          ...(parentTask.projectId && parentTask.projectId !== 'inbox' ? [`project:${parentTask.projectId}`] : [])],
         assigneeIds: parentTask.assigneeIds || [],
         attachmentIds: [],
         eventId: '',
@@ -1272,8 +1266,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     getTasksByProject,
     getTaskStats,
     getSelectedTask,
-    getSelectedProject,
-  ]);
+    getSelectedProject]);
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
 }

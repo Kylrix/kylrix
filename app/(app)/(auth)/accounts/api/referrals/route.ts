@@ -30,16 +30,14 @@ function buildReferralPageUrl(username: string) {
 async function getProfileByUserId(databases: any, userId: string) {
   const result = await databases.listDocuments(CHAT_DB_ID, PROFILES_TABLE_ID, [
     Query.equal('userId', userId),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
   return result.documents[0] || null;
 }
 
 async function getProfileByUsername(databases: any, username: string) {
   const result = await databases.listDocuments(CHAT_DB_ID, PROFILES_TABLE_ID, [
     Query.equal('username', username),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
   return result.documents[0] || null;
 }
 
@@ -47,8 +45,7 @@ async function getReferralEvent(databases: any, userId: string) {
   const result = await databases.listDocuments(CHAT_DB_ID, EVENTS_TABLE_ID, [
     Query.equal('userId', userId),
     Query.equal('type', REFERRAL_KEY),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
   return result.documents[0] || null;
 }
 
@@ -57,8 +54,7 @@ async function getReputationRewardEvent(databases: any, referrerId: string, refe
     Query.equal('userId', referrerId),
     Query.equal('type', REPUTATION_KEY),
     Query.equal('relatedUserId', refereeId),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
   return result.documents[0] || null;
 }
 
@@ -73,8 +69,7 @@ async function createEvent(
     ID.unique(),
     payload,
     [
-      Permission.read(Role.user(targetUserId)),
-    ],
+      Permission.read(Role.user(targetUserId))],
   );
 }
 

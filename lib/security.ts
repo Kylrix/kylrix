@@ -172,8 +172,7 @@ export async function getDeviceFingerprint(): Promise<string> {
     navigator.language,
     new Date().getTimezoneOffset(),
     screen.width + 'x' + screen.height,
-    screen.colorDepth,
-  ];
+    screen.colorDepth];
 
   const fingerprint = components.join('|');
   return await hashData(fingerprint);

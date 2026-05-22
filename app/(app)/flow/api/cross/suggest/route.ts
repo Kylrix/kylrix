@@ -13,21 +13,18 @@ function buildSuggestions(sourceApp: string, sourceType: string, sourceId: strin
     return [
       { id: `task:${baseId}`, label: 'Create Task', description: 'Convert the note into an actionable task.' },
       { id: `event:${baseId}`, label: 'Create Event', description: 'Turn the note into a scheduled event.' },
-      { id: `followup:${baseId}`, label: 'Add Follow-up', description: 'Generate a follow-up action from this note.' },
-    ];
+      { id: `followup:${baseId}`, label: 'Add Follow-up', description: 'Generate a follow-up action from this note.' }];
   }
 
   if (sourceType === 'task' || sourceApp === 'flow') {
     return [
       { id: `note:${baseId}`, label: 'Attach Note', description: 'Link a source note to this task.' },
-      { id: `event:${baseId}`, label: 'Calendar Event', description: 'Map this task onto a calendar surface.' },
-    ];
+      { id: `event:${baseId}`, label: 'Calendar Event', description: 'Map this task onto a calendar surface.' }];
   }
 
   return [
     { id: `note:${baseId}`, label: 'Attach Note', description: 'Expose a note-link action.' },
-    { id: `event:${baseId}`, label: 'Create Event', description: 'Expose an event creation action.' },
-  ];
+    { id: `event:${baseId}`, label: 'Create Event', description: 'Expose an event creation action.' }];
 }
 
 export async function GET(request: NextRequest) {

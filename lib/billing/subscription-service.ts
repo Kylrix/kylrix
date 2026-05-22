@@ -44,8 +44,7 @@ export class SubscriptionService {
     };
 
     await databases.createDocument(NOTE_DB_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
-      Permission.read(Role.user(targetUserId)),
-    ]);
+      Permission.read(Role.user(targetUserId))]);
 
     try {
       const prefs = (await users.getPrefs(targetUserId)) as Record<string, unknown>;
@@ -57,8 +56,7 @@ export class SubscriptionService {
     try {
       const profileRes = await databases.listDocuments(CHAT_DB_ID, PROFILES_COLLECTION_ID, [
         Query.equal('userId', targetUserId),
-        Query.limit(2),
-      ]);
+        Query.limit(2)]);
       if (profileRes.total > 0) {
         await databases.updateDocument(CHAT_DB_ID, PROFILES_COLLECTION_ID, profileRes.documents[0].$id, {
           tier: 'PRO',

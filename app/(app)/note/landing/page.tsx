@@ -41,8 +41,7 @@ const features = [
     title: 'Smart Organization',
     description:
       'Organize your thoughts with tags, search, and secure cloud management.',
-  },
-];
+  }];
 
 export default function LandingPage() {
   const { openIDMWindow, isAuthenticated, user, isAuthenticating } = useAuth();

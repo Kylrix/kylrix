@@ -36,8 +36,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ username:
     const { databases } = createSystemClient();
     const result = await databases.listDocuments(CHAT_DB_ID, PROFILES_TABLE_ID, [
       Query.equal('username', username),
-      Query.limit(1),
-    ]);
+      Query.limit(1)]);
 
     const profile = result.documents[0] || null;
     if (!profile || !profile.username) {

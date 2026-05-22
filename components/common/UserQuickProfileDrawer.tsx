@@ -163,8 +163,7 @@ export default function UserQuickProfileDrawer({
   const appActions = useMemo(() => {
     const actions = [
       { label: 'Message', onClick: messageAction, icon: <MessageCircle size={16} /> },
-      { label: 'Tip', onClick: tipAction, icon: <Wallet size={16} /> },
-    ];
+      { label: 'Tip', onClick: tipAction, icon: <Wallet size={16} /> }];
     if (currentApp === 'note') {
       actions.unshift({ label: 'Send Note', onClick: noteAction, icon: <Send size={16} /> });
     }

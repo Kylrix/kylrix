@@ -403,7 +403,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [reactionPopoverAnchorEl, setReactionPopoverAnchorEl] = useState<HTMLElement | null>(null);
     const [reactionPopoverMessageId, setReactionPopoverMessageId] = useState<string | null>(null);
     const initialLoadRef = useRef<string | null>(null);
-    const [, startTransition] = useTransition();
+    const [ startTransition] = useTransition();
     const isProPlan = hasPaidKylrixPlan(user);
     const { openWalletWithIntent } = useWalletOverlay();
 
@@ -579,8 +579,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             const response = await tablesDB.listRows(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.MESSAGE_REACTIONS, [
                 Query.equal('conversationId', conversationId),
                 Query.limit(1000),
-                Query.orderAsc('createdAt'),
-            ]);
+                Query.orderAsc('createdAt')]);
 
             const reactionRows = dedupeReactionsByUser((response.rows || []) as unknown as ChatReaction[]);
             const grouped = reactionRows.reduce((acc: Record<string, ChatReaction[]>, reaction: ChatReaction) => {

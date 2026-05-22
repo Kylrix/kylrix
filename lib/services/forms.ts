@@ -131,10 +131,7 @@ export const FormsService = {
         });
 
         const submissionPermissions = [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId)),
-        ];
+            Permission.read(Role.user(userId))];
 
         if (existingDraft) {
             return await tablesDB.updateRow<FormSubmissions>(
@@ -229,10 +226,7 @@ export const FormsService = {
         // Submissions Table permissions:
         // 1. Owner can READ/UPDATE/DELETE
         const submissionPermissions = [
-            Permission.read(Role.user(form.userId)),
-            Permission.update(Role.user(form.userId)),
-            Permission.delete(Role.user(form.userId)),
-        ];
+            Permission.read(Role.user(form.userId))];
 
         // 2. If user is logged in, allow THEM to read their own submission later
         if (submitterId) {

@@ -55,8 +55,7 @@ export default function TaskList() {
       mainColor: '#10B981',
       actions: [
         { id: 'new-goal', label: 'NEW GOAL', icon: <AddIcon />, onClick: () => setTaskDialogOpen(true) },
-        { id: 'focus', label: 'FOCUS MODE', icon: <CalendarIcon />, onClick: () => window.location.href = '/flow/focus' },
-      ]
+        { id: 'focus', label: 'FOCUS MODE', icon: <CalendarIcon />, onClick: () => window.location.href = '/flow/focus' }]
     });
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, setTaskDialogOpen]);
@@ -73,15 +72,13 @@ export default function TaskList() {
     { field: 'createdAt', label: 'Created Date' },
     { field: 'updatedAt', label: 'Last Updated' },
     { field: 'title', label: 'Title' },
-    { field: 'status', label: 'Status' },
-  ];
+    { field: 'status', label: 'Status' }];
 
   const statusFilters: { status: TaskStatus; label: string; color: string }[] = [
     { status: 'todo', label: 'To Do', color: theme.palette.grey[500] },
     { status: 'in-progress', label: 'In Progress', color: theme.palette.info.main },
     { status: 'done', label: 'Done', color: theme.palette.success.main },
-    { status: 'blocked', label: 'Blocked', color: theme.palette.error.main },
-  ];
+    { status: 'blocked', label: 'Blocked', color: theme.palette.error.main }];
 
   const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
     setSortAnchorEl(event.currentTarget);

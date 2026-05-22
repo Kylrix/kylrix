@@ -42,8 +42,7 @@ interface AgentRow {
 const frameworks: Array<{ id: AgentFramework; title: string; comingSoon?: boolean }> = [
   { id: 'kylrix', title: 'Kylrix Internal' },
   { id: 'openclaw', title: 'OpenClaw', comingSoon: true },
-  { id: 'hermes', title: 'Hermes', comingSoon: true },
-];
+  { id: 'hermes', title: 'Hermes', comingSoon: true }];
 
 const fontUi = 'var(--font-satoshi)';
 const fontDisplay = 'var(--font-clash)';

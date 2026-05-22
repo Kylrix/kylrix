@@ -116,8 +116,7 @@ export default function EventPage() {
       try {
         const guests = await guestApi.list([
           Query.equal('eventId', eventId),
-          Query.equal('userId', user.$id),
-        ]);
+          Query.equal('userId', user.$id)]);
         if (guests.total > 0) {
           setIsRegistered(true);
           setGuestId(guests.rows[0].$id);

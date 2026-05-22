@@ -93,8 +93,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
         const [userData, session, factors] = await Promise.all([
           account.get(),
           account.getSession('current').catch(() => null),
-          account.listMfaFactors().catch(() => null),
-        ]);
+          account.listMfaFactors().catch(() => null)]);
         if (mounted) {
           const normalizedFactors = factors
             ? {
@@ -210,8 +209,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
     try {
       const [freshUser, factors] = await Promise.all([
         account.get(),
-        account.listMfaFactors().catch(() => null),
-      ]);
+        account.listMfaFactors().catch(() => null)]);
       const normalizedFactors = factors
         ? {
             email: Boolean((factors as any).email),

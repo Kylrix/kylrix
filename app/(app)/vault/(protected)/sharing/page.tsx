@@ -86,8 +86,7 @@ export default function SharingPage() {
         Promise.allSettled([
           listAllCredentials(user.$id),
           listTotpSecrets(user.$id),
-          listIncomingKeyMappings(user.$id),
-        ]),
+          listIncomingKeyMappings(user.$id)]),
       )
       .then(([credsResult, totpResult, shareResult]) => {
         if (credsResult.status === "fulfilled") setCredentials(credsResult.value);
@@ -143,8 +142,7 @@ export default function SharingPage() {
     const [credsResult, totpResult, shareResult] = await Promise.allSettled([
       listAllCredentials(user.$id),
       listTotpSecrets(user.$id),
-      listIncomingKeyMappings(user.$id),
-    ]);
+      listIncomingKeyMappings(user.$id)]);
 
     if (credsResult.status === "fulfilled") setCredentials(credsResult.value);
     if (totpResult.status === "fulfilled") setTotpSecrets(totpResult.value);

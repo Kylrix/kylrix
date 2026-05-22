@@ -74,10 +74,7 @@ export async function ensureGlobalIdentity(user: any, force = false) {
                 };
 
                 await databases.createDocument(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id, payload, [
-                    Permission.read(Role.any()),
-                    Permission.update(Role.user(user.$id)),
-                    Permission.delete(Role.user(user.$id))
-                ]);
+                    Permission.read(Role.any())]);
                 await syncProfileEvent({
                     type: 'username_change',
                     userId: user.$id,

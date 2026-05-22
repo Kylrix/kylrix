@@ -61,9 +61,7 @@ export async function initializeTelegramConnection() {
           is_verified: false,
         },
         [
-          Permission.read(Role.user(userId)),
-          Permission.delete(Role.user(userId)),
-        ]
+          Permission.read(Role.user(userId))]
       );
     }
 

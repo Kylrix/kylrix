@@ -10,25 +10,21 @@ const footerLinks = {
     { name: 'Features', href: '/#features' },
     { name: 'Pricing', href: '/pricing' },
     { name: 'Security', href: '/security' },
-    { name: 'Enterprise', href: '/enterprise' },
-  ],
+    { name: 'Enterprise', href: '/enterprise' }],
   resources: [
     { name: 'Documentation', href: '/docs' },
     { name: 'API Reference', href: '/api' },
-    { name: 'Status', href: '/status' },
-  ],
+    { name: 'Status', href: '/status' }],
   company: [
     { name: 'About Us', href: '/about' },
     { name: 'Careers', href: '/careers' },
     { name: 'Contact', href: '/contact' },
-    { name: 'Privacy Policy', href: '/privacy' },
-  ],
+    { name: 'Privacy Policy', href: '/privacy' }],
   download: [
     { name: 'iOS App', href: '#' },
     { name: 'Android App', href: '#' },
     { name: 'Desktop App', href: '#' },
-    { name: 'Browser Extension', href: '#' },
-  ],
+    { name: 'Browser Extension', href: '#' }],
 };
 
 export default function Footer() {

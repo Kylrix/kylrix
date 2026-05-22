@@ -34,8 +34,7 @@ const menuItems = [
   { label: 'Users', icon: Users, href: '/accounts/admin/users' },
   { label: 'Email Center', icon: Mail, href: '/accounts/admin/emails' },
   { label: 'Coupons', icon: Ticket, href: '/accounts/admin/coupons' },
-  { label: 'System Settings', icon: Settings, href: '/accounts/admin/settings' },
-];
+  { label: 'System Settings', icon: Settings, href: '/accounts/admin/settings' }];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

@@ -7,10 +7,7 @@ import { getCorsHeaders, verifyUser } from '@/lib/api/permission-updater';
 function buildMessagePermissions(senderId: string, recipientIds: string[]) {
   return [
     Permission.read(Role.user(senderId)),
-    Permission.update(Role.user(senderId)),
-    Permission.delete(Role.user(senderId)),
-    ...recipientIds.map((userId) => Permission.read(Role.user(userId))),
-  ];
+    ...recipientIds.map((userId) => Permission.read(Role.user(userId)))];
 }
 
 export async function OPTIONS(req: NextRequest) {

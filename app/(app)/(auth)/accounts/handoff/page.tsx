@@ -104,8 +104,7 @@ function AppHandoffContent() {
         }
         const [session, factors] = await Promise.all([
           account.getSession('current'),
-          account.listMfaFactors().catch(() => null),
-        ]);
+          account.listMfaFactors().catch(() => null)]);
 
         if (sessionNeedsTotpMfa({
           session,

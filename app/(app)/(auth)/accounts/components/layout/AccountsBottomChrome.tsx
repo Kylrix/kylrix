@@ -46,14 +46,12 @@ export function AccountsBottomChrome() {
     { value: 'profile', icon: ProfileIcon, label: 'Profile', path: '/accounts/settings/profile' },
     { value: 'security', icon: SecurityIcon, label: 'Security', path: '/accounts/settings/security' },
     { value: 'sessions', icon: SessionsIcon, label: 'Sessions', path: '/accounts/settings/sessions' },
-    { value: 'activity', icon: ActivityIcon, label: 'Activity', path: '/accounts/settings/activity' },
-  ];
+    { value: 'activity', icon: ActivityIcon, label: 'Activity', path: '/accounts/settings/activity' }];
 
   const secondaryItems = [
     { value: 'identities', icon: IdentityIcon, label: 'Identities', path: '/accounts/settings/identities' },
     { value: 'preferences', icon: PreferencesIcon, label: 'Preferences', path: '/accounts/settings/preferences' },
-    { value: 'account', icon: RootAccountIcon, label: 'Account', path: '/accounts/settings/account' },
-  ];
+    { value: 'account', icon: RootAccountIcon, label: 'Account', path: '/accounts/settings/account' }];
 
   const handleNavChange = (_: React.SyntheticEvent, newValue: string) => {
     const item = mainItems.find(i => i.value === newValue);

@@ -112,7 +112,11 @@ export async function mintNoteShareMomentSecure(input: { momentId: string }) {
   const tables = createSystemTablesDB();
   let moment: Record<string, unknown>;
   try {
-    moment = (await tables.getRow(chatDb, momentsTable, momentId)) as Record<string, unknown>;
+    moment = (await tables.getRow({
+      databaseId: chatDb,
+      tableId: momentsTable,
+      rowId: momentId,
+    })) as Record<string, unknown>;
   } catch {
     return { tokenMint: { accepted: false, reason: 'MOMENT_NOT_FOUND' } };
   }
@@ -126,11 +130,11 @@ export async function mintNoteShareMomentSecure(input: { momentId: string }) {
   let note: Record<string, unknown>;
   try {
     const tables = createSystemTablesDB();
-    note = (await tables.getRow(
-      APPWRITE_CONFIG.DATABASES.NOTE,
-      APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-      noteId,
-    )) as Record<string, unknown>;
+    note = (await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+      rowId: noteId,
+    })) as Record<string, unknown>;
   } catch {
     return { tokenMint: { accepted: false, reason: 'NOTE_NOT_FOUND' } };
   }
@@ -194,11 +198,11 @@ export async function sharePublicNoteAsMomentSecure(input: { noteId: string; tex
   if (!noteId) throw new Error('noteId is required');
 
   const tables = createSystemTablesDB();
-  const note = await tables.getRow(
-    APPWRITE_CONFIG.DATABASES.NOTE,
-    APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    noteId,
-  );
+  const note = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+      rowId: noteId,
+    });
 
   if (!Boolean(note?.isPublic)) throw new Error('Only public notes can be shared as moments');
   if (!hasWriteAccess(note, actor.$id)) throw new Error('Forbidden');
@@ -208,14 +212,14 @@ export async function sharePublicNoteAsMomentSecure(input: { noteId: string; tex
   const now = new Date().toISOString();
   const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
   const momentsTable = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
-  const tables = createSystemTablesDB();
   const perms = [
-    `read("user:${actor.$id}")`,
-    `update("user:${actor.$id}")`,
-    `delete("user:${actor.$id}")`,
-  ];
+    `read("user:${actor.$id}")`];
 
-  const moment = await tables.createRow(chatDb, momentsTable, ID.unique(), {
+  const moment = await tables.createRow({
+      databaseId: chatDb,
+      tableId: momentsTable,
+      rowId: ID.unique(),
+      data: {
     userId: actor.$id,
     caption: text,
     type: 'image',
@@ -225,7 +229,9 @@ export async function sharePublicNoteAsMomentSecure(input: { noteId: string; tex
     fileId: JSON.stringify(metadata),
     createdAt: now,
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-  }, perms);
+  },
+      permissions: perms,
+    });
 
   let tokenMint: Record<string, unknown> = { accepted: false, reason: 'MINT_FAILED' };
   try {
@@ -399,12 +405,19 @@ export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?
   const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
 
   if (cleanupAll && admin) {
-    const rows = await tables.listRows(DB_ID, LINKS_TABLE, [
+    const rows = await tables.listRows({
+      databaseId: DB_ID,
+      tableId: LINKS_TABLE,
+      queries: [
       Query.lessThan('expiresAt', new Date().toISOString()),
-      Query.limit(500),
-    ]);
+      Query.limit(500)],
+    });
     for (const row of rows.rows) {
-      await tables.deleteRow(DB_ID, LINKS_TABLE, row.$id);
+      await tables.deleteRow({
+      databaseId: DB_ID,
+      tableId: LINKS_TABLE,
+      rowId: row.$id,
+    });
     }
     return { deleted: rows.rows.length, callIds: rows.rows.map((row) => row.$id) };
   }
@@ -412,7 +425,11 @@ export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?
   if (targetUserId !== requester.$id && !admin && !callId) throw new Error('Forbidden');
 
   if (callId) {
-    const call = await tables.getRow(DB_ID, LINKS_TABLE, callId);
+    const call = await tables.getRow({
+      databaseId: DB_ID,
+      tableId: LINKS_TABLE,
+      rowId: callId,
+    });
     if (String((call as any)?.userId || '') !== (admin ? (targetUserId || requester.$id) : requester.$id)) {
       throw new Error('Forbidden');
     }
@@ -422,13 +439,20 @@ export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?
     return result.deleted ? { deleted: 1, callIds: [callId] } : { deleted: 0, callIds: [] as string[] };
   }
 
-  const expiredRows = await tables.listRows(DB_ID, LINKS_TABLE, [
+  const expiredRows = await tables.listRows({
+      databaseId: DB_ID,
+      tableId: LINKS_TABLE,
+      queries: [
     Query.equal('userId', targetUserId || requester.$id),
     Query.lessThan('expiresAt', new Date().toISOString()),
-    Query.limit(200),
-  ]);
+    Query.limit(200)],
+    });
   for (const row of expiredRows.rows) {
-    await tables.deleteRow(DB_ID, LINKS_TABLE, row.$id);
+    await tables.deleteRow({
+      databaseId: DB_ID,
+      tableId: LINKS_TABLE,
+      rowId: row.$id,
+    });
   }
   const presenceUser = targetUserId || requester.$id;
   await reconcileStaleLiveCallPresenceForUser(presenceUser).catch(() => undefined);
@@ -444,19 +468,19 @@ export async function getQuickProfileSecure(userId: string, jwt?: string) {
   const tables = createSystemTablesDB();
   const getProfile = async () => {
     try {
-      const byUserId = await tables.listRows(
-        APPWRITE_CONFIG.DATABASES.CHAT,
-        APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-        [Query.equal('userId', targetUserId), Query.limit(1)],
-      );
+      const byUserId = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+      queries: [Query.equal('userId', targetUserId), Query.limit(1)],
+    });
       if (byUserId.rows[0]) return byUserId.rows[0];
     } catch {}
     try {
-      return await tables.getRow(
-        APPWRITE_CONFIG.DATABASES.CHAT,
-        APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
-        targetUserId,
-      );
+      return await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+      rowId: targetUserId,
+    });
     } catch {
       return null;
     }
@@ -464,16 +488,15 @@ export async function getQuickProfileSecure(userId: string, jwt?: string) {
 
   const getWallets = async () => {
     const ownerId = `user:${targetUserId}`;
-    const rows = await tables.listRows(
-      APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
-      APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS,
-      [
+    const rows = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
+      tableId: APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS,
+      queries: [
         Query.equal('ownerId', ownerId),
         Query.equal('type', 'main'),
         Query.limit(50),
-        Query.select(['$id', 'chain', 'address', 'type', 'updatedAt', '$updatedAt']),
-      ],
-    );
+        Query.select(['$id', 'chain', 'address', 'type', 'updatedAt', '$updatedAt'])],
+    });
     const dedupedByChain = new Map<string, any>();
     for (const row of rows.rows) {
       const chain = String((row as any).chain || '').trim().toLowerCase();
@@ -549,7 +572,11 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
   // 2. Set the virtual permission level in metadata.collaborators
   if (input.resourceType === 'note') {
     const tables = createSystemTablesDB();
-    const noteDoc = await tables.getRow(dbId, tableId, input.resourceId);
+    const noteDoc = await tables.getRow({
+      databaseId: dbId,
+      tableId: tableId,
+      rowId: input.resourceId,
+    });
     let meta: any = {};
     try {
       meta = JSON.parse(noteDoc.metadata || '{}');
@@ -558,8 +585,13 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       meta.collaborators = {};
     }
     meta.collaborators[input.targetUserId] = input.permission; // 'viewer' | 'editor' | 'admin'
-    await tables.updateRow(dbId, tableId, input.resourceId, {
+    await tables.updateRow({
+      databaseId: dbId,
+      tableId: tableId,
+      rowId: input.resourceId,
+      data: {
       metadata: JSON.stringify(meta)
+    },
     });
   }
 
@@ -623,16 +655,25 @@ export async function revokePermissionSecure(input: {
     // 2. Remove virtual permission from metadata
     if (input.resourceType === 'note') {
         const tables = createSystemTablesDB();
-        const noteDoc = await tables.getRow(dbId, tableId, input.resourceId);
+        const noteDoc = await tables.getRow({
+      databaseId: dbId,
+      tableId: tableId,
+      rowId: input.resourceId,
+    });
         let meta: any = {};
         try {
             meta = JSON.parse(noteDoc.metadata || '{}');
         } catch {}
         if (meta.collaborators) {
             delete meta.collaborators[input.targetUserId];
-            await tables.updateRow(dbId, tableId, input.resourceId, {
+            await tables.updateRow({
+      databaseId: dbId,
+      tableId: tableId,
+      rowId: input.resourceId,
+      data: {
                 metadata: JSON.stringify(meta)
-            });
+            },
+    });
         }
     }
 
@@ -649,7 +690,7 @@ function extractCollaboratorsFromPermissions(permissions: string[]): Array<{ use
     for (const perm of permissions) {
         const match = perm.match(userRegex);
         if (match) {
-            const [, type, userId] = match;
+            const [ type, userId] = match;
             if (!userMap.has(userId)) userMap.set(userId, new Set());
             userMap.get(userId)!.add(type);
         }
@@ -675,7 +716,11 @@ export async function getResourceCollaboratorsSecure(input: {
     const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
     const tables = createSystemTablesDB();
-    const doc = await tables.getRow(dbId, tableId, input.resourceId);
+    const doc = await tables.getRow({
+      databaseId: dbId,
+      tableId: tableId,
+      rowId: input.resourceId,
+    });
     
     let filteredCollabs: Array<{ userId: string, level: string }> = [];
     
@@ -765,11 +810,11 @@ export async function createNoteSecure(data: any, jwt?: string) {
 
       const existingTagDocs: Record<string, any> = {};
       try {
-        const existingTagsRes = await tables.listRows(
-          APPWRITE_DATABASE_ID,
-          tagsCollection,
-          [Query.equal('userId', userId), Query.equal('nameLower', unique.map((tag: any) => tag.toLowerCase())), Query.limit(unique.length)] as any
-        );
+        const existingTagsRes = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: tagsCollection,
+      queries: [Query.equal('userId', userId), Query.equal('nameLower', unique.map((tag: any) => tag.toLowerCase())), Query.limit(unique.length)] as any,
+    });
         for (const td of existingTagsRes.rows as any[]) {
           if (td.nameLower) existingTagDocs[td.nameLower] = td;
         }
@@ -781,31 +826,31 @@ export async function createNoteSecure(data: any, jwt?: string) {
         const key = tagName.toLowerCase();
         if (!existingTagDocs[key]) {
           try {
-            const created = await tables.createRow(
-              APPWRITE_DATABASE_ID,
-              tagsCollection,
-              ID.unique(),
-              { name: tagName, nameLower: key, userId, createdAt: now, usageCount: 0 }
-            );
+            const created = await tables.createRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: tagsCollection,
+      rowId: ID.unique(),
+      data: { name: tagName, nameLower: key, userId, createdAt: now, usageCount: 0 },
+    });
             existingTagDocs[key] = created;
           } catch (createTagErr: any) {
             try {
-              const retry = await tables.listRows(
-                APPWRITE_DATABASE_ID,
-                tagsCollection,
-                [Query.equal('userId', userId), Query.equal('nameLower', key), Query.limit(1)] as any
-              );
+              const retry = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: tagsCollection,
+      queries: [Query.equal('userId', userId), Query.equal('nameLower', key), Query.limit(1)] as any,
+    });
               if (retry.rows.length) existingTagDocs[key] = retry.rows[0];
             } catch {}
           }
         }
       }
 
-      const existingPivot = await tables.listRows(
-        APPWRITE_DATABASE_ID,
-        noteTagsCollection,
-        [Query.equal('noteId', noteId), Query.limit(500)] as any
-      );
+      const existingPivot = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: noteTagsCollection,
+      queries: [Query.equal('noteId', noteId), Query.limit(500)] as any,
+    });
       const existingPairs = new Set(existingPivot.rows.map((p: any) => `${p.tagId || ''}::${p.tag || ''}`));
       for (const tagName of unique) {
         const key = tagName.toLowerCase();
@@ -815,26 +860,31 @@ export async function createNoteSecure(data: any, jwt?: string) {
         const pairKey = `${tagId}::${tagName}`;
         
         try {
-          const res = await tables.listRows(
-            APPWRITE_DATABASE_ID,
-            tagsCollection,
-            [Query.equal('userId', userId), Query.equal('name', tagName), Query.limit(1)] as any
-          );
+          const res = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: tagsCollection,
+      queries: [Query.equal('userId', userId), Query.equal('name', tagName), Query.limit(1)] as any,
+    });
           if (res.rows.length) {
             const tDoc: any = res.rows[0];
             const current = typeof tDoc.usageCount === 'number' && !isNaN(tDoc.usageCount) ? tDoc.usageCount : 0;
-            await tables.updateRow(APPWRITE_DATABASE_ID, tagsCollection, tDoc.$id, { usageCount: current + 1 });
+            await tables.updateRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: tagsCollection,
+      rowId: tDoc.$id,
+      data: { usageCount: current + 1 },
+    });
           }
         } catch {}
 
         if (existingPairs.has(pairKey)) continue;
         try {
-          await tables.createRow(
-            APPWRITE_DATABASE_ID,
-            noteTagsCollection,
-            ID.unique(),
-            { noteId, tagId, tag: tagName, userId, createdAt: now }
-          );
+          await tables.createRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: noteTagsCollection,
+      rowId: ID.unique(),
+      data: { noteId, tagId, tag: tagName, userId, createdAt: now },
+    });
         } catch (e: any) {
           console.error('note_tags create failed on server', e?.message || e);
         }
@@ -849,17 +899,27 @@ export async function createNoteSecure(data: any, jwt?: string) {
     tableId: APPWRITE_TABLE_ID_NOTES,
     getCurrentUser: async () => ({ $id: actor.$id }),
     createRow: async (databaseId, tableId, data, rowId, permissions) => {
-      return tables.createRow(databaseId, tableId, rowId || ID.unique(), data as any, permissions) as any;
+      return tables.createRow({
+      databaseId: databaseId,
+      tableId: tableId,
+      rowId: rowId || ID.unique(),
+      data: data as any,
+      permissions: permissions,
+    }) as any;
     },
     getNote: async (noteId) => {
-      const doc = await tables.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId) as any;
+      const doc = await tables.getRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_NOTES,
+      rowId: noteId,
+    }) as any;
       try {
         const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-        const pivot = await tables.listRows(
-          APPWRITE_DATABASE_ID,
-          noteTagsCollection,
-          [Query.equal('noteId', noteId), Query.limit(200)] as any
-        );
+        const pivot = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: noteTagsCollection,
+      queries: [Query.equal('noteId', noteId), Query.limit(200)] as any,
+    });
         if (pivot.rows.length) {
           const tags = Array.from(new Set(pivot.rows.map((p: any) => p.tag).filter(Boolean)));
           (doc as any).tags = tags;
@@ -904,7 +964,11 @@ export async function verifyResourcePermissionSecure(params: {
   let doc = data;
   if (!doc && databaseId && collectionId && documentId) {
     const tables = createSystemTablesDB();
-    doc = await tables.getRow(databaseId, collectionId, documentId);
+    doc = await tables.getRow({
+      databaseId: databaseId,
+      tableId: collectionId,
+      rowId: documentId,
+    });
   }
 
   if (!doc) {
@@ -1017,7 +1081,13 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
     permissions = getNotePermissions(actor.$id, !!data.isPublic);
   }
 
-  const doc = await tables.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId, updatedData, permissions) as any;
+  const doc = await tables.updateRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_NOTES,
+      rowId: noteId,
+      data: updatedData,
+      permissions: permissions,
+    }) as any;
 
   try {
     if (Array.isArray((data as any).tags)) {
@@ -1030,11 +1100,11 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
       const tagDocs: Record<string, any> = {};
       if (normalizedIncoming.length) {
         try {
-          const existingTagsRes = await tables.listRows(
-            APPWRITE_DATABASE_ID,
-            tagsCollection,
-            [Query.equal('userId', actor.$id), Query.equal('nameLower', normalizedIncoming.map(t => t.toLowerCase())), Query.limit(normalizedIncoming.length)] as any
-          );
+          const existingTagsRes = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: tagsCollection,
+      queries: [Query.equal('userId', actor.$id), Query.equal('nameLower', normalizedIncoming.map(t => t.toLowerCase())), Query.limit(normalizedIncoming.length)] as any,
+    });
           for (const td of existingTagsRes.rows as any[]) {
             if (td.nameLower) tagDocs[td.nameLower] = td;
           }
@@ -1045,20 +1115,20 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
           const key = tagName.toLowerCase();
           if (!tagDocs[key]) {
             try {
-              const created = await tables.createRow(
-                APPWRITE_DATABASE_ID,
-                tagsCollection,
-                ID.unique(),
-                { name: tagName, nameLower: key, userId: actor.$id, createdAt: updatedAt, usageCount: 0 }
-              );
+              const created = await tables.createRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: tagsCollection,
+      rowId: ID.unique(),
+      data: { name: tagName, nameLower: key, userId: actor.$id, createdAt: updatedAt, usageCount: 0 },
+    });
               tagDocs[key] = created;
             } catch (createErr) {
               try {
-                const retry = await tables.listRows(
-                  APPWRITE_DATABASE_ID,
-                  tagsCollection,
-                  [Query.equal('userId', actor.$id), Query.equal('nameLower', key), Query.limit(1)] as any
-                );
+                const retry = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: tagsCollection,
+      queries: [Query.equal('userId', actor.$id), Query.equal('nameLower', key), Query.limit(1)] as any,
+    });
                 if (retry.rows.length) tagDocs[key] = retry.rows[0];
               } catch {}
             }
@@ -1066,11 +1136,11 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
         }
       }
 
-      const existingPivot = await tables.listRows(
-        APPWRITE_DATABASE_ID,
-        noteTagsCollection,
-        [Query.equal('noteId', noteId), Query.limit(500)] as any
-      );
+      const existingPivot = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: noteTagsCollection,
+      queries: [Query.equal('noteId', noteId), Query.limit(500)] as any,
+    });
       const existingByTag: Record<string, any> = {};
       const existingPairs = new Set<string>();
       for (const p of existingPivot.rows as any[]) {
@@ -1084,12 +1154,12 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
           const tagDoc = tagDocs[key];
           if (tagDoc) {
             try {
-              await tables.updateRow(
-                APPWRITE_DATABASE_ID,
-                noteTagsCollection,
-                p.$id,
-                { tagId: tagDoc.$id || tagDoc.id }
-              );
+              await tables.updateRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: noteTagsCollection,
+      rowId: p.$id,
+      data: { tagId: tagDoc.$id || tagDoc.id },
+    });
               existingPairs.add(`${tagDoc.$id || tagDoc.id}::${p.tag}`);
             } catch (patchErr) {
               console.error('legacy pivot patch failed in updateNoteSecure', patchErr);
@@ -1107,25 +1177,30 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
         if (existingPairs.has(pairKey)) continue;
 
         try {
-          const res = await tables.listRows(
-            APPWRITE_DATABASE_ID,
-            APPWRITE_TABLE_ID_TAGS,
-            [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any
-          );
+          const res = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_TAGS,
+      queries: [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any,
+    });
           if (res.rows.length) {
             const tDoc: any = res.rows[0];
             const current = typeof tDoc.usageCount === 'number' && !isNaN(tDoc.usageCount) ? tDoc.usageCount : 0;
-            await tables.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tDoc.$id, { usageCount: current + 1 });
+            await tables.updateRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_TAGS,
+      rowId: tDoc.$id,
+      data: { usageCount: current + 1 },
+    });
           }
         } catch {}
 
         try {
-          await tables.createRow(
-            APPWRITE_DATABASE_ID,
-            noteTagsCollection,
-            ID.unique(),
-            { noteId, tagId, tag: tagName, userId: actor.$id, createdAt: updatedAt }
-          );
+          await tables.createRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: noteTagsCollection,
+      rowId: ID.unique(),
+      data: { noteId, tagId, tag: tagName, userId: actor.$id, createdAt: updatedAt },
+    });
           existingPairs.add(pairKey);
         } catch (ie) {
           console.error('note_tags create (updateNoteSecure) failed', ie);
@@ -1135,24 +1210,29 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
       for (const [tagName, pivotDoc] of Object.entries(existingByTag)) {
         if (!incomingSet.has(tagName)) {
           try {
-            const res = await tables.listRows(
-              APPWRITE_DATABASE_ID,
-              APPWRITE_TABLE_ID_TAGS,
-              [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any
-            );
+            const res = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_TAGS,
+      queries: [Query.equal('userId', actor.$id), Query.equal('name', tagName), Query.limit(1)] as any,
+    });
             if (res.rows.length) {
               const tDoc: any = res.rows[0];
               const current = typeof tDoc.usageCount === 'number' && !isNaN(tDoc.usageCount) ? tDoc.usageCount : 0;
-              await tables.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tDoc.$id, { usageCount: Math.max(0, current - 1) });
+              await tables.updateRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_TAGS,
+      rowId: tDoc.$id,
+      data: { usageCount: Math.max(0, current - 1) },
+    });
             }
           } catch {}
 
           try {
-            await tables.deleteRow(
-              APPWRITE_DATABASE_ID,
-              noteTagsCollection,
-              (pivotDoc as any).$id
-            );
+            await tables.deleteRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: noteTagsCollection,
+      rowId: (pivotDoc as any).$id,
+    });
           } catch (de) {
             console.error('note_tags stale delete failed in updateNoteSecure', de);
           }
@@ -1184,66 +1264,85 @@ export async function deleteNoteSecure(noteId: string, jwt?: string) {
 
   try {
     try {
-      const reactionsRes = await tables.listRows(
-        APPWRITE_DATABASE_ID,
-        APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
-        [Query.equal('targetId', noteId), Query.limit(1000)] as any
-      );
+      const reactionsRes = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
+      queries: [Query.equal('targetId', noteId), Query.limit(1000)] as any,
+    });
       await Promise.all(
         reactionsRes.rows.map((r: any) =>
-          tables.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_CONFIG.TABLES.NOTE.REACTIONS, r.$id)
+          tables.deleteRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
+      rowId: r.$id,
+    })
         )
       );
     } catch {}
 
     try {
-      const mappingsRes = await tables.listRows(
-        APPWRITE_CONFIG.DATABASES.VAULT,
-        'key_mapping',
-        [
+      const mappingsRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: 'key_mapping',
+      queries: [
           Query.equal('resourceType', 'note'),
           Query.equal('resourceId', noteId),
-          Query.limit(1000),
-        ] as any
-      );
+          Query.limit(1000)] as any,
+    });
       await Promise.all(
         (mappingsRes.rows as any[]).map((mapping) =>
-          tables.deleteRow(APPWRITE_CONFIG.DATABASES.VAULT, 'key_mapping', mapping.$id)
+          tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId: 'key_mapping',
+      rowId: mapping.$id,
+    })
         )
       );
     } catch (err) {
       console.error('deleteNoteSecure key_mapping cleanup failed:', err);
     }
 
-    const commentsRes = await tables.listRows(
-      APPWRITE_DATABASE_ID,
-      APPWRITE_TABLE_ID_COMMENTS,
-      [Query.equal('noteId', noteId), Query.limit(1000)] as any
-    );
+    const commentsRes = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_COMMENTS,
+      queries: [Query.equal('noteId', noteId), Query.limit(1000)] as any,
+    });
     const commentIds = (commentsRes.rows as any[]).map((c) => c.$id).filter(Boolean);
     if (commentIds.length) {
       try {
-        const reactionsRes = await tables.listRows(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
-          [Query.equal('targetType', 'comment'), Query.equal('targetId', commentIds), Query.limit(1000)] as any
-        );
+        const reactionsRes = await tables.listRows({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
+      queries: [Query.equal('targetType', 'comment'), Query.equal('targetId', commentIds), Query.limit(1000)] as any,
+    });
         await Promise.all(
           reactionsRes.rows.map((r: any) =>
-            tables.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_CONFIG.TABLES.NOTE.REACTIONS, r.$id)
+            tables.deleteRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
+      rowId: r.$id,
+    })
           )
         );
       } catch {}
 
       await Promise.all(
-        commentIds.map((id) => tables.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, id))
+        commentIds.map((id) => tables.deleteRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_COMMENTS,
+      rowId: id,
+    }))
       );
     }
   } catch (err: any) {
     console.error('deleteNoteSecure cascade cleanup failed:', err);
   }
 
-  const result = await tables.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId);
+  const result = await tables.deleteRow({
+      databaseId: APPWRITE_DATABASE_ID,
+      tableId: APPWRITE_TABLE_ID_NOTES,
+      rowId: noteId,
+    });
   return JSON.parse(JSON.stringify(result));
 }
 
@@ -1290,26 +1389,24 @@ export async function createProjectSecure(data: any, jwt?: string) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
   const now = new Date().toISOString();
   const permissions = [
-    Permission.read(Role.user(actor.$id)),
-    Permission.update(Role.user(actor.$id)),
-    Permission.delete(Role.user(actor.$id)),
-  ];
+    Permission.read(Role.user(actor.$id))];
 
-  const project = await databases.createDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'projects',
-    ID.unique(),
-    {
+  const project = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: ID.unique(),
+      data: {
       ...data,
       ownerId: actor.$id,
       createdAt: now,
       updatedAt: now,
     },
-    permissions
-  );
+      permissions: permissions,
+    });
 
   return JSON.parse(JSON.stringify(project));
 }
@@ -1325,19 +1422,20 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
     throw new Error('Forbidden: Insufficient permissions to update this project');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
   const now = new Date().toISOString();
   
-  const project = await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'projects',
-    projectId,
-    {
+  const project = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: projectId,
+      data: {
       ...data,
       updatedAt: now,
     },
-    permissions
-  );
+      permissions: permissions,
+    });
 
   return JSON.parse(JSON.stringify(project));
 }
@@ -1353,29 +1451,34 @@ export async function deleteProjectSecure(projectId: string, jwt?: string) {
     throw new Error('Forbidden: Insufficient permissions to delete this project');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
   // Cascade delete all object links
   try {
-    const objects = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASES.CHAT,
-      'project_objects',
-      [Query.equal('projectId', projectId)] as any
-    );
+    const objects = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      queries: [Query.equal('projectId', projectId)] as any,
+    });
     await Promise.all(
-      objects.documents.map((obj) =>
-        databases.deleteDocument(APPWRITE_CONFIG.DATABASES.CHAT, 'project_objects', obj.$id)
+      objects.rows.map((obj) =>
+        tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      rowId: obj.$id,
+    })
       )
     );
   } catch (err) {
     console.error('deleteProjectSecure cascade objects cleanup failed:', err);
   }
 
-  const result = await databases.deleteDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'projects',
-    projectId
-  );
+  const result = await tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: projectId,
+    });
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1391,14 +1494,15 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
   // 1. Fetch current project to update permissions
-  const project = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'projects',
-    projectId
-  );
+  const project = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: projectId,
+    });
 
   // Update physical permissions: add READ permission only
   const newPermissions = new Set(project.$permissions || []);
@@ -1414,53 +1518,49 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
   }
   metadata.collaborators[targetUserId] = permissionLevel;
 
-  await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'projects',
-    projectId,
-    {
+  await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: projectId,
+      data: {
       metadata: JSON.stringify(metadata),
     },
-    Array.from(newPermissions)
-  );
+      permissions: Array.from(newPermissions),
+    });
 
   // 2. Add object link in project_objects (if not already exists)
-  const existingObjects = await databases.listDocuments(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'project_objects',
-    [
+  const existingObjects = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      queries: [
       Query.equal('projectId', projectId),
       Query.equal('entityKind', 'collaborator'),
-      Query.equal('entityId', targetUserId),
-    ] as any
-  );
+      Query.equal('entityId', targetUserId)] as any,
+    });
 
   let objLink;
   const now = new Date().toISOString();
-  if (existingObjects.documents.length > 0) {
+  if (existingObjects.rows.length > 0) {
     // Update existing
-    objLink = await databases.updateDocument(
-      APPWRITE_CONFIG.DATABASES.CHAT,
-      'project_objects',
-      existingObjects.documents[0].$id,
-      {
+    objLink = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      rowId: existingObjects.rows[0].$id,
+      data: {
         role: permissionLevel,
         updatedAt: now,
-      }
-    );
+      },
+    });
   } else {
     // Create new project_objects row
     const objectPermissions = [
       Permission.read(Role.user(actor.$id)),
-      Permission.update(Role.user(actor.$id)),
-      Permission.delete(Role.user(actor.$id)),
-      Permission.read(Role.user(targetUserId)),
-    ];
-    objLink = await databases.createDocument(
-      APPWRITE_CONFIG.DATABASES.CHAT,
-      'project_objects',
-      ID.unique(),
-      {
+      Permission.read(Role.user(targetUserId))];
+    objLink = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      rowId: ID.unique(),
+      data: {
         projectId,
         entityKind: 'collaborator',
         entityId: targetUserId,
@@ -1468,8 +1568,8 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
         createdAt: now,
         updatedAt: now,
       },
-      objectPermissions
-    );
+      permissions: objectPermissions,
+    });
   }
 
   return JSON.parse(JSON.stringify(objLink));
@@ -1486,19 +1586,20 @@ export async function removeProjectCollaboratorSecure(projectId: string, targetU
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
   // 1. Fetch current project to update permissions
-  const project = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'projects',
-    projectId
-  );
+  const project = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: projectId,
+    });
 
   // Remove physical read permission
   const rawPermissions = project.$permissions || [];
   const updatedPerms = rawPermissions.filter((p: string) => {
-    return p !== `read("user:${targetUserId}")` && p !== `update("user:${targetUserId}")` && p !== `delete("user:${targetUserId}")`;
+    return p !== `read("user:${targetUserId}")`;
   });
 
   // Remove from metadata.collaborators
@@ -1510,30 +1611,33 @@ export async function removeProjectCollaboratorSecure(projectId: string, targetU
     delete metadata.collaborators[targetUserId];
   }
 
-  await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'projects',
-    projectId,
-    {
+  await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: projectId,
+      data: {
       metadata: JSON.stringify(metadata),
     },
-    updatedPerms
-  );
+      permissions: updatedPerms,
+    });
 
   // 2. Remove all collaborator objects from project_objects
   try {
-    const objects = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASES.CHAT,
-      'project_objects',
-      [
+    const objects = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      queries: [
         Query.equal('projectId', projectId),
         Query.equal('entityKind', 'collaborator'),
-        Query.equal('entityId', targetUserId),
-      ] as any
-    );
+        Query.equal('entityId', targetUserId)] as any,
+    });
     await Promise.all(
-      objects.documents.map((obj) =>
-        databases.deleteDocument(APPWRITE_CONFIG.DATABASES.CHAT, 'project_objects', obj.$id)
+      objects.rows.map((obj) =>
+        tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      rowId: obj.$id,
+    })
       )
     );
   } catch (err) {
@@ -1561,20 +1665,18 @@ export async function addObjectToProjectSecure(
     throw new Error('Forbidden: Insufficient permissions to manage objects in this project');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
   const now = new Date().toISOString();
 
   const permissions = [
-    Permission.read(Role.user(actor.$id)),
-    Permission.update(Role.user(actor.$id)),
-    Permission.delete(Role.user(actor.$id)),
-  ];
+    Permission.read(Role.user(actor.$id))];
 
-  const obj = await databases.createDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'project_objects',
-    ID.unique(),
-    {
+  const obj = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      rowId: ID.unique(),
+      data: {
       projectId,
       entityKind,
       entityId,
@@ -1583,8 +1685,8 @@ export async function addObjectToProjectSecure(
       createdAt: now,
       updatedAt: now,
     },
-    permissions
-  );
+      permissions: permissions,
+    });
 
   return JSON.parse(JSON.stringify(obj));
 }
@@ -1595,27 +1697,28 @@ export async function removeObjectFromProjectSecure(objectId: string, jwt?: stri
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
-  const obj = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'project_objects',
-    objectId
-  );
+  const obj = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      rowId: objectId,
+    });
 
   const projectId = obj.projectId;
-  const isOwner = obj.$permissions?.some((p: string) => p.includes(`delete("user:${actor.$id}")`));
+  const isOwner = obj.$permissions?.some((p: string) => p.includes());
   const isProjectAdmin = await verifyProjectPermission(projectId, actor.$id, 'admin').catch(() => false);
 
   if (!isOwner && !isProjectAdmin) {
     throw new Error('Forbidden: Insufficient permissions to remove this object from the project');
   }
 
-  const result = await databases.deleteDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    'project_objects',
-    objectId
-  );
+  const result = await tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      rowId: objectId,
+    });
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1663,25 +1766,24 @@ export async function createFormSecure(data: any, jwt?: string) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
   const permissions = [
     Permission.read(Role.user(actor.$id)),
     Permission.read(Role.any()), // Allow public discovery via listRows filter
-    Permission.update(Role.user(actor.$id)),
-    Permission.delete(Role.user(actor.$id)),
-  ];
+    ];
 
-  const form = await databases.createDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    ID.unique(),
-    {
+  const form = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: ID.unique(),
+      data: {
       ...data,
       userId: actor.$id,
       status: data.status || 'draft',
     },
-    permissions
-  );
+      permissions: permissions,
+    });
 
   return JSON.parse(JSON.stringify(form));
 }
@@ -1697,22 +1799,20 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
     throw new Error('Forbidden: Insufficient permissions to update this form');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
-  const form = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    formId
-  );
+  const form = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: formId,
+    });
 
   const ownerId = form.userId;
   const currentStatus = data.status || form.status;
 
   const permissions = [
-    Permission.read(Role.user(ownerId)),
-    Permission.update(Role.user(ownerId)),
-    Permission.delete(Role.user(ownerId)),
-  ];
+    Permission.read(Role.user(ownerId))];
 
   if (currentStatus === 'published') {
     permissions.push(Permission.read(Role.any()));
@@ -1729,13 +1829,13 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
     });
   }
 
-  const updatedForm = await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    formId,
-    data,
-    permissions
-  );
+  const updatedForm = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: formId,
+      data: data,
+      permissions: permissions,
+    });
 
   return JSON.parse(JSON.stringify(updatedForm));
 }
@@ -1751,12 +1851,13 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
     throw new Error('Forbidden: Insufficient permissions to delete this form');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
-  const result = await databases.deleteDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    formId
-  );
+  const result = await tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: formId,
+    });
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -1772,13 +1873,14 @@ export async function addFormCollaboratorSecure(formId: string, targetUserId: st
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
-  const form = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    formId
-  );
+  const form = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: formId,
+    });
 
   let settings: any = {};
   try {
@@ -1792,15 +1894,15 @@ export async function addFormCollaboratorSecure(formId: string, targetUserId: st
   const permissions = new Set(form.$permissions || []);
   permissions.add(`read("user:${targetUserId}")`);
 
-  const updatedForm = await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    formId,
-    {
+  const updatedForm = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: formId,
+      data: {
       settings: JSON.stringify(settings),
     },
-    Array.from(permissions)
-  );
+      permissions: Array.from(permissions),
+    });
 
   return JSON.parse(JSON.stringify(updatedForm));
 }
@@ -1816,13 +1918,14 @@ export async function removeFormCollaboratorSecure(formId: string, targetUserId:
     throw new Error('Forbidden: Insufficient permissions to manage collaborators');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
-  const form = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    formId
-  );
+  const form = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: formId,
+    });
 
   let settings: any = {};
   try {
@@ -1834,18 +1937,18 @@ export async function removeFormCollaboratorSecure(formId: string, targetUserId:
 
   const rawPermissions = form.$permissions || [];
   const updatedPerms = rawPermissions.filter((p: string) => {
-    return p !== `read("user:${targetUserId}")` && p !== `update("user:${targetUserId}")` && p !== `delete("user:${targetUserId}")`;
+    return p !== `read("user:${targetUserId}")`;
   });
 
-  const updatedForm = await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.FORMS,
-    formId,
-    {
+  const updatedForm = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
+      rowId: formId,
+      data: {
       settings: JSON.stringify(settings),
     },
-    updatedPerms
-  );
+      permissions: updatedPerms,
+    });
 
   return JSON.parse(JSON.stringify(updatedForm));
 }
@@ -1855,31 +1958,32 @@ export async function removeFormCollaboratorSecure(formId: string, targetUserId:
 // ==========================================
 
 async function verifyEventPermission(eventId: string, actorId: string, minLevel: 'viewer' | 'editor' | 'admin') {
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
-  const event = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    eventId
-  );
+  const event = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: eventId,
+    });
   
   const ownerId = String(event.userId || '').trim();
   if (ownerId && ownerId === actorId) {
     return true; // Owner has full permissions
   }
 
-  const guestsRes = await databases.listDocuments(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-    [
+  const guestsRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      queries: [
       Query.equal('eventId', eventId),
       Query.equal('userId', actorId),
       Query.limit(1)
-    ] as any
-  );
+    ] as any,
+    });
 
-  if (guestsRes.documents.length === 0) return false;
+  if (guestsRes.rows.length === 0) return false;
 
-  const guest = guestsRes.documents[0];
+  const guest = guestsRes.rows[0];
   const role = String(guest.role || '').trim(); // e.g. 'manager-viewer', 'manager-editor', 'manager-admin'
 
   if (!role.startsWith('manager-')) return false;
@@ -1920,23 +2024,21 @@ export async function createEventSecure(data: any, jwt?: string) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
   const permissions = [
-    Permission.read(Role.user(actor.$id)),
-    Permission.update(Role.user(actor.$id)),
-    Permission.delete(Role.user(actor.$id)),
-  ];
+    Permission.read(Role.user(actor.$id))];
 
-  const event = await databases.createDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    ID.unique(),
-    {
+  const event = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: ID.unique(),
+      data: {
       ...data,
       userId: actor.$id,
     },
-    permissions
-  );
+      permissions: permissions,
+    });
 
   return JSON.parse(JSON.stringify(event));
 }
@@ -1952,29 +2054,27 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
     throw new Error('Forbidden: Insufficient permissions to update this event');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
-  const event = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    eventId
-  );
+  const event = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: eventId,
+    });
 
   const ownerId = event.userId;
   const permissions = [
-    Permission.read(Role.user(ownerId)),
-    Permission.update(Role.user(ownerId)),
-    Permission.delete(Role.user(ownerId)),
-  ];
+    Permission.read(Role.user(ownerId))];
 
   // Include physical read permissions for all manager guests
   try {
-    const guestsRes = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      [Query.equal('eventId', eventId)] as any
-    );
-    guestsRes.documents.forEach((g: any) => {
+    const guestsRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      queries: [Query.equal('eventId', eventId)] as any,
+    });
+    guestsRes.rows.forEach((g: any) => {
       if (g.userId && String(g.role || '').startsWith('manager-')) {
         permissions.push(Permission.read(Role.user(g.userId)));
       }
@@ -1983,13 +2083,13 @@ export async function updateEventSecure(eventId: string, data: any, jwt?: string
     console.error('Failed to query manager physical read permissions in updateEventSecure', err);
   }
 
-  const updatedEvent = await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    eventId,
-    data,
-    permissions
-  );
+  const updatedEvent = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: eventId,
+      data: data,
+      permissions: permissions,
+    });
 
   return JSON.parse(JSON.stringify(updatedEvent));
 }
@@ -2005,29 +2105,34 @@ export async function deleteEventSecure(eventId: string, jwt?: string) {
     throw new Error('Forbidden: Insufficient permissions to delete this event');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
   // Cascade delete guests
   try {
-    const guestsRes = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      [Query.equal('eventId', eventId)] as any
-    );
+    const guestsRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      queries: [Query.equal('eventId', eventId)] as any,
+    });
     await Promise.all(
-      guestsRes.documents.map((g) =>
-        databases.deleteDocument(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.GUESTS, g.$id)
+      guestsRes.rows.map((g) =>
+        tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      rowId: g.$id,
+    })
       )
     );
   } catch (err) {
     console.error('deleteEventSecure cascade guests cleanup failed:', err);
   }
 
-  const result = await databases.deleteDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    eventId
-  );
+  const result = await tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: eventId,
+    });
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -2043,62 +2148,62 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
     throw new Error('Forbidden: Insufficient permissions to manage managers');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
   // 1. Fetch current event to update permissions
-  const event = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    eventId
-  );
+  const event = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: eventId,
+    });
 
   // Update physical permissions: add READ permission only
   const permissions = new Set(event.$permissions || []);
   permissions.add(`read("user:${targetUserId}")`);
 
-  await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    eventId,
-    {},
-    Array.from(permissions)
-  );
+  await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: eventId,
+      data: {},
+      permissions: Array.from(permissions),
+    });
 
   // 2. Add or update Guest entry
-  const guestsRes = await databases.listDocuments(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-    [
+  const guestsRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      queries: [
       Query.equal('eventId', eventId),
-      Query.equal('userId', targetUserId),
-    ] as any
-  );
+      Query.equal('userId', targetUserId)] as any,
+    });
 
   const virtualRole = `manager-${permissionLevel}`;
   let guestDoc;
-  if (guestsRes.documents.length > 0) {
+  if (guestsRes.rows.length > 0) {
     // Update role
-    guestDoc = await databases.updateDocument(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      guestsRes.documents[0].$id,
-      {
+    guestDoc = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      rowId: guestsRes.rows[0].$id,
+      data: {
         role: virtualRole,
-      }
-    );
+      },
+    });
   } else {
     // Create new
-    guestDoc = await databases.createDocument(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      ID.unique(),
-      {
+    guestDoc = await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      rowId: ID.unique(),
+      data: {
         eventId,
         userId: targetUserId,
         role: virtualRole,
         status: 'attending',
-      }
-    );
+      },
+    });
   }
 
   return JSON.parse(JSON.stringify(guestDoc));
@@ -2115,43 +2220,47 @@ export async function removeEventManagerSecure(eventId: string, targetUserId: st
     throw new Error('Forbidden: Insufficient permissions to manage managers');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
 
   // 1. Fetch current event to update permissions
-  const event = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    eventId
-  );
+  const event = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: eventId,
+    });
 
   // Remove physical read permission
   const rawPermissions = event.$permissions || [];
   const updatedPerms = rawPermissions.filter((p: string) => {
-    return p !== `read("user:${targetUserId}")` && p !== `update("user:${targetUserId}")` && p !== `delete("user:${targetUserId}")`;
+    return p !== `read("user:${targetUserId}")`;
   });
 
-  await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.FLOW,
-    APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
-    eventId,
-    {},
-    updatedPerms
-  );
+  await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.EVENTS,
+      rowId: eventId,
+      data: {},
+      permissions: updatedPerms,
+    });
 
   // 2. Remove Guest entry if it was a manager
   try {
-    const guestsRes = await databases.listDocuments(
-      APPWRITE_CONFIG.DATABASES.FLOW,
-      APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
-      [
+    const guestsRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      queries: [
         Query.equal('eventId', eventId),
-        Query.equal('userId', targetUserId),
-      ] as any
-    );
+        Query.equal('userId', targetUserId)] as any,
+    });
     await Promise.all(
-      guestsRes.documents.map((g: any) => {
+      guestsRes.rows.map((g: any) => {
         if (String(g.role || '').startsWith('manager-')) {
-          return databases.deleteDocument(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.GUESTS, g.$id);
+          return tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
+      rowId: g.$id,
+    });
         }
         return Promise.resolve();
       })
@@ -2173,12 +2282,13 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
-  const call = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-    callId
-  );
+  const call = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+      rowId: callId,
+    });
 
   const ownerId = String(call.userId || '').trim();
   if (ownerId !== actor.$id) {
@@ -2205,15 +2315,15 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
   const permissions = new Set(call.$permissions || []);
   permissions.add(`read("user:${cohostId}")`);
 
-  const updatedCall = await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-    callId,
-    {
+  const updatedCall = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+      rowId: callId,
+      data: {
       metadata: JSON.stringify(meta),
     },
-    Array.from(permissions)
-  );
+      permissions: Array.from(permissions),
+    });
 
   return JSON.parse(JSON.stringify(updatedCall));
 }
@@ -2224,12 +2334,13 @@ export async function endCallSecureAction(callId: string, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
-  const call = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-    callId
-  );
+  const call = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+      rowId: callId,
+    });
 
   const ownerId = String(call.userId || '').trim();
   let isAllowed = (ownerId === actor.$id);
@@ -2250,11 +2361,11 @@ export async function endCallSecureAction(callId: string, jwt?: string) {
     throw new Error('Forbidden: Insufficient permissions to end this call');
   }
 
-  const result = await databases.deleteDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-    callId
-  );
+  const result = await tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+      rowId: callId,
+    });
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -2265,12 +2376,13 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
+  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
-  const call = await databases.getDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-    callId
-  );
+  const call = await tables.getRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+      rowId: callId,
+    });
 
   const ownerId = String(call.userId || '').trim();
   let isAllowed = (ownerId === actor.$id);
@@ -2300,14 +2412,14 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
     ...extraMetadata,
   };
 
-  const updatedCall = await databases.updateDocument(
-    APPWRITE_CONFIG.DATABASES.CHAT,
-    APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
-    callId,
-    {
+  const updatedCall = await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
+      rowId: callId,
+      data: {
       metadata: JSON.stringify(mergedMeta),
-    }
-  );
+    },
+    });
 
   return JSON.parse(JSON.stringify(updatedCall));
 }

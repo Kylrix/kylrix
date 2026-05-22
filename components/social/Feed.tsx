@@ -583,8 +583,7 @@ const PostDetailSidebarContent = React.memo(function PostDetailSidebarContent({
             try {
                 const [root, threadReplies] = await Promise.all([
                     SocialService.getMomentById(momentId),
-                    SocialService.getReplies(momentId),
-                ]);
+                    SocialService.getReplies(momentId)]);
                 if (cancelled) return;
                 setMoment(root || null);
                 setReplies(Array.isArray(threadReplies) ? threadReplies : []);

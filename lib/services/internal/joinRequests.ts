@@ -41,10 +41,7 @@ function getManagers(conversation: any) {
 function buildRequestPermissions(requesterId: string, managers: string[]) {
   return [
     Permission.read(Role.user(requesterId)),
-    Permission.update(Role.user(requesterId)),
-    Permission.delete(Role.user(requesterId)),
-    ...managers.map((managerId) => Permission.read(Role.user(managerId))),
-  ];
+    ...managers.map((managerId) => Permission.read(Role.user(managerId)))];
 }
 
 async function getConversation(databases: ReturnType<typeof createSystemClient>['databases'], conversationId: string) {
@@ -56,8 +53,7 @@ async function getJoinRequest(databases: ReturnType<typeof createSystemClient>['
     Query.equal('resourceType', resourceType),
     Query.equal('resourceId', resourceId),
     Query.equal('requesterId', requesterId),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
   return existing.documents[0] || null;
 }
 
@@ -67,8 +63,7 @@ async function isConversationMember(databases: ReturnType<typeof createSystemCli
   const memberRows = await databases.listDocuments(CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
     Query.equal('conversationId', conversation.$id),
     Query.equal('userId', userId),
-    Query.limit(1),
-  ]).catch(() => ({ documents: [] as any[] }));
+    Query.limit(1)]).catch(() => ({ documents: [] as any[] }));
   return Boolean(memberRows.documents[0]);
 }
 
@@ -131,11 +126,8 @@ export async function resolveJoinRequest(input: {
     const participants = uniqueIds([...(Array.isArray(conversation?.participants) ? conversation.participants : []), input.requesterId]);
     const permissions = [
       Permission.read(Role.user(conversation.creatorId)),
-      Permission.update(Role.user(conversation.creatorId)),
-      Permission.delete(Role.user(conversation.creatorId)),
-      ...participants.flatMap((participantId) => [Permission.read(Role.user(participantId)), Permission.update(Role.user(participantId))]),
-      ...managers.map((managerId) => Permission.read(Role.user(managerId))),
-    ];
+      ...participants.flatMap((participantId) => [Permission.read(Role.user(participantId))]),
+      ...managers.map((managerId) => Permission.read(Role.user(managerId)))];
     await Promise.all([
       databases.updateDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, conversation.$id, { participants, participantCount: participants.length, updatedAt: new Date().toISOString() }, permissions),
       databases.createDocument(
@@ -143,12 +135,11 @@ export async function resolveJoinRequest(input: {
         CONVERSATION_MEMBERS_TABLE_ID,
         ID.unique(),
         { conversationId: conversation.$id, userId: input.requesterId },
-        [Permission.read(Role.user(input.requesterId)), Permission.update(Role.user(input.requesterId)), Permission.delete(Role.user(input.requesterId)), ...managers.map((managerId) => Permission.read(Role.user(managerId)))],
+        [Permission.read(Role.user(input.requesterId)), ...managers.map((managerId) => Permission.read(Role.user(managerId)))],
       ).catch((error: any) => {
         if (error?.code !== 409) throw error;
         return null;
-      }),
-    ]);
+      })]);
     if (conversation?.avatarFileId) {
       await mutateStorageFilePermissions(storage, input.actorId, {
         bucketId: APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS,

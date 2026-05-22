@@ -21,8 +21,7 @@ export async function calculateStackedSubscriptionCredit(
     const existingSubs = await databases.listDocuments(NOTE_DB_ID, SUB_COLLECTION_ID, [
       Query.equal('userId', userId),
       Query.limit(100),
-      Query.select(['$id', 'currentPeriodStart', 'currentPeriodEnd', 'createdAt', 'updatedAt', 'status', 'plan']),
-    ]);
+      Query.select(['$id', 'currentPeriodStart', 'currentPeriodEnd', 'createdAt', 'updatedAt', 'status', 'plan'])]);
 
     const activeSubscriptions = (existingSubs.documents as SubscriptionRow[]).filter(
       (row) => String(row.status || '').toLowerCase() === 'active',

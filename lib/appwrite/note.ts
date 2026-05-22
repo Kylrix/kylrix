@@ -257,10 +257,7 @@ function hydrateVirtualAttributes(doc: any): any {
  */
 function getNotePermissions(userId: string, isPublic: boolean) {
   const permissions = [
-    Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId))
-  ];
+    Permission.read(Role.user(userId))];
 
   if (isPublic) {
     // Role.any() includes guests, so Role.guests() is redundant.
@@ -835,13 +832,11 @@ export async function deleteNoteIsomorphicLegacy(noteId: string, jwt?: string) {
         [
           Query.equal('resourceType', 'note'),
           Query.equal('resourceId', noteId),
-          Query.limit(1000),
-        ] as any
+          Query.limit(1000)] as any
       );
       const mappingsRes = await Promise.race([
         mappingsQuery,
-        new Promise<{ documents: any[] }>((resolve) => setTimeout(() => resolve({ documents: [] }), 2500)),
-      ]);
+        new Promise<{ documents: any[] }>((resolve) => setTimeout(() => resolve({ documents: [] }), 2500))]);
       await Promise.all(
         (mappingsRes.documents as any[]).map((mapping) =>
           databases.deleteDocument(APPWRITE_CONFIG.DATABASES.VAULT, 'key_mapping', mapping.$id)
@@ -1154,10 +1149,7 @@ export async function createComment(noteId: string, content: string, parentComme
   };
 
   const permissions = [
-    Permission.read(Role.user(user.$id)),
-    Permission.update(Role.user(user.$id)),
-    Permission.delete(Role.user(user.$id)),
-  ];
+    Permission.read(Role.user(user.$id))];
 
   if (isPublicNote) {
     permissions.push(Permission.read(Role.any()));
@@ -1196,10 +1188,7 @@ export async function createExtension(data: Partial<Extensions>) {
   
   // Set initial permissions - private by default (only owner can access)
   const initialPermissions = [
-    Permission.read(Role.user(user.$id)),
-    Permission.update(Role.user(user.$id)),
-    Permission.delete(Role.user(user.$id))
-  ];
+    Permission.read(Role.user(user.$id))];
   
   const doc = await databases.createDocument(
     APPWRITE_DATABASE_ID,
@@ -1321,10 +1310,7 @@ export async function createReaction(data: Partial<Reactions>) {
 
   const permissions = userId
     ? [
-        Permission.read(isTargetPublic ? Role.any() : Role.user(userId)),
-        Permission.update(Role.user(userId)),
-        Permission.delete(Role.user(userId)),
-      ]
+        Permission.read(isTargetPublic ? Role.any() : Role.user(userId))]
     : [Permission.read(Role.any())];
   return databases.createDocument(
     APPWRITE_DATABASE_ID,
@@ -1554,10 +1540,7 @@ export async function uploadFile(bucketId: string, file: File, userId?: string) 
     }
 
     const permissions = [
-      Permission.read(Role.user(user.$id)),
-      Permission.update(Role.user(user.$id)),
-      Permission.delete(Role.user(user.$id))
-    ];
+      Permission.read(Role.user(user.$id))];
 
     const result = await storage.createFile(bucketId, ID.unique(), file, permissions);
     return result;
@@ -1868,8 +1851,8 @@ export async function getSharedUsers(noteId: string) {
 
           // Determine highest permission level based on $permissions array
           let highestPermission = 'read';
-          if (note.$permissions.includes(`delete("user:${user.$id}")`)) highestPermission = 'admin';
-          else if (note.$permissions.includes(`update("user:${user.$id}")`)) highestPermission = 'write';
+          if (note.$permissions.includes()) highestPermission = 'admin';
+          else if (note.$permissions.includes()) highestPermission = 'write';
 
           sharedUsers.push({
             id: user.$id,
@@ -2002,8 +1985,8 @@ export async function getNoteWithSharing(noteId: string): Promise<(Notes & { isS
 
       sharePermission = 'read';
       const perms = (note as any).$permissions || [];
-      if (perms.includes(`delete("user:${currentUser.$id}")`)) sharePermission = 'admin';
-      else if (perms.includes(`update("user:${currentUser.$id}")`)) sharePermission = 'write';
+      if (perms.includes()) sharePermission = 'admin';
+      else if (perms.includes()) sharePermission = 'write';
       else if (isNoteEditableByAnyone(note)) sharePermission = 'write';
     }
 
@@ -2576,7 +2559,7 @@ export async function auditNoteTagPivots(userId?: string) {
     }
 
     const duplicatePairs = Object.entries(pairCounts)
-      .filter(([, count]) => count > 1)
+      .filter(([ count]) => count > 1)
       .map(([key, count]) => {
         const [tagId, tag] = key.split('::');
         return { tagId, tag, count };
@@ -2662,8 +2645,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
   const finalQueries: any[] = [
     ...baseQueries,
     Query.limit(limit),
-    Query.orderDesc('$createdAt'),
-  ];
+    Query.orderDesc('$createdAt')];
   if (cursor) finalQueries.push(Query.cursorAfter(cursor));
 
   const res: any = await databases.listDocuments(
@@ -2828,8 +2810,7 @@ async function getT4NoteKeyMapping(noteId: string, ownerId: string) {
       Query.equal('resourceType', 'note'),
       Query.equal('resourceId', noteId),
       Query.equal('grantee', `user:${ownerId}`),
-      Query.limit(1),
-    ] as any
+      Query.limit(1)] as any
   );
 }
 
@@ -2991,10 +2972,7 @@ async function preparePublicNoteUpdate(
       metadata: JSON.stringify({ algorithm: 'AES-GCM', version: 'T4' })
     };
     const mappingPermissions = [
-      Permission.read(Role.user(ownerId)),
-      Permission.update(Role.user(ownerId)),
-      Permission.delete(Role.user(ownerId))
-    ];
+      Permission.read(Role.user(ownerId))];
 
     if (hasExistingKey) {
       await databases.updateDocument(
@@ -3068,10 +3046,7 @@ async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPub
         const commentUserId = comment.userId || ownerId;
         const permissions = [
           Permission.read(Role.user(ownerId)),
-          ...(isPublic ? [Permission.read(Role.any())] : []),
-          Permission.update(Role.user(commentUserId)),
-          Permission.delete(Role.user(commentUserId))
-        ];
+          ...(isPublic ? [Permission.read(Role.any())] : [])];
         try {
           await databases.updateDocument(
             APPWRITE_DATABASE_ID,
@@ -3101,10 +3076,7 @@ async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPub
         const reactionUserId = reaction.userId || ownerId;
         const permissions = [
           Permission.read(Role.user(ownerId)),
-          ...(isPublic ? [Permission.read(Role.any())] : []),
-          Permission.update(Role.user(reactionUserId)),
-          Permission.delete(Role.user(reactionUserId))
-        ];
+          ...(isPublic ? [Permission.read(Role.any())] : [])];
         try {
           await databases.updateDocument(
             APPWRITE_DATABASE_ID,
@@ -3135,10 +3107,7 @@ async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPub
           const reactionUserId = reaction.userId || ownerId;
           const permissions = [
             Permission.read(Role.user(ownerId)),
-            ...(isPublic ? [Permission.read(Role.any())] : []),
-            Permission.update(Role.user(reactionUserId)),
-            Permission.delete(Role.user(reactionUserId))
-          ];
+            ...(isPublic ? [Permission.read(Role.any())] : [])];
           try {
             await databases.updateDocument(
               APPWRITE_DATABASE_ID,
@@ -3205,15 +3174,11 @@ export async function toggleNoteVisibility(noteId: string): Promise<(Notes & { d
     }
 
     const permissions = [
-      Permission.read(Role.user(ownerId)),
-      Permission.update(Role.user(ownerId)),
-      Permission.delete(Role.user(ownerId))
-    ];
+      Permission.read(Role.user(ownerId))];
     if (newIsPublic) {
       permissions.push(Permission.read(Role.any()));
     }
     if (allowAnyoneEdit) {
-      permissions.push(Permission.update(Role.any()));
     }
 
     const updated = await databases.updateDocument(
@@ -3248,8 +3213,6 @@ export async function rotatePublicNoteLink(noteId: string): Promise<(Notes & { d
     const prepared = await preparePublicNoteUpdate(note, ownerId, true);
     const permissions = [
       Permission.read(Role.user(ownerId)),
-      Permission.update(Role.user(ownerId)),
-      Permission.delete(Role.user(ownerId)),
       Permission.read(Role.any())
     ];
 
@@ -3333,18 +3296,9 @@ export async function setAnyoneCanEdit(noteId: string, enabled: boolean): Promis
   const permissions = new Set<string>((note as any).$permissions || []);
 
   permissions.add(Permission.read(Role.user(ownerId)));
-  permissions.add(Permission.update(Role.user(ownerId)));
-  permissions.add(Permission.delete(Role.user(ownerId)));
 
   if (isNotePublic(note)) {
     permissions.add(Permission.read(Role.any()));
-  }
-
-  const editPermission = Permission.update(Role.any());
-  if (enabled) {
-    permissions.add(editPermission);
-  } else {
-    permissions.delete(editPermission);
   }
 
   const updated = await databases.updateDocument(

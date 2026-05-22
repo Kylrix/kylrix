@@ -119,11 +119,9 @@ function buildRecipientPermissions(userId: string, permission: PermissionLevel) 
   const grants = [Permission.read(Role.user(userId))];
 
   if (permission === 'write' || permission === 'admin') {
-    grants.push(Permission.update(Role.user(userId)));
   }
 
   if (permission === 'admin') {
-    grants.push(Permission.delete(Role.user(userId)));
   }
 
   return grants;
@@ -131,10 +129,7 @@ function buildRecipientPermissions(userId: string, permission: PermissionLevel) 
 
 function buildOwnerPermissions(ownerId: string) {
   return [
-    Permission.read(Role.user(ownerId)),
-    Permission.update(Role.user(ownerId)),
-    Permission.delete(Role.user(ownerId)),
-  ];
+    Permission.read(Role.user(ownerId))];
 }
 
 function buildStoragePermissions(targetUserIds: string[], permission: PermissionLevel) {
@@ -164,10 +159,7 @@ async function upsertKeyMapping(databases: Databases, actorId: string, mapping: 
   };
 
   const permissions = [
-    Permission.read(Role.user(normalized.grantee)),
-    Permission.update(Role.user(actorId)),
-    Permission.delete(Role.user(actorId)),
-  ];
+    Permission.read(Role.user(normalized.grantee))];
 
   try {
     return await databases.createDocument(
@@ -200,8 +192,7 @@ async function deleteKeyMappings(
 ) {
   const queries = [
     Query.equal('resourceType', resourceType),
-    Query.equal('resourceId', resourceId),
-  ];
+    Query.equal('resourceId', resourceId)];
 
   const normalizedGrantees = Array.from(new Set((grantees || []).map((value) => String(value).trim()).filter(Boolean)));
   if (normalizedGrantees.length > 0) {
@@ -228,10 +219,7 @@ async function createEpoch(
   const uniqueParticipants = Array.from(new Set(participantIds.map((value) => String(value).trim()).filter(Boolean)));
   const permissions = [
     Permission.read(Role.user(actorId)),
-    Permission.update(Role.user(actorId)),
-    Permission.delete(Role.user(actorId)),
-    ...uniqueParticipants.map((participantId) => Permission.read(Role.user(participantId))),
-  ];
+    ...uniqueParticipants.map((participantId) => Permission.read(Role.user(participantId)))];
 
   return await databases.createDocument(
     CHAT_DB,
@@ -250,8 +238,7 @@ export async function resolveNextEpochNumber(databases: Databases, resourceId: s
   const existing = await databases.listDocuments(CHAT_DB, EPOCHS_TABLE, [
     Query.equal('resourceId', resourceId),
     Query.orderDesc('epochNumber'),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
 
   const latest = existing.documents[0];
   const latestNumber = Number(latest?.epochNumber || 0);
@@ -299,10 +286,7 @@ export async function revokeStorageFilePermissions(
   const file = await storage.getFile(bucketId, fileId);
   const currentPermissions = new Set(Array.isArray(file?.$permissions) ? file.$permissions : []);
   const removalTokens = targetUserIds.flatMap((userId) => [
-    Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-  ]);
+    Permission.read(Role.user(userId))]);
 
   for (const token of removalTokens) {
     currentPermissions.delete(token);

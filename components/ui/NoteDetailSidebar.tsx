@@ -729,8 +729,7 @@ export function NoteDetailSidebar({
         {[
           { label: 'Goals', items: linkedTasks, loading: isLoadingTasks, icon: <TaskIcon sx={{ fontSize: 18 }} />, color: '#10B981', link: (id: string) => `/flow?taskId=${id}` },
           { label: 'Events', items: linkedEvents, loading: isLoadingEvents, icon: <EventIcon sx={{ fontSize: 18 }} />, color: '#6366F1', link: (id: string) => `/flow/events?eventId=${id}` },
-          { label: 'Secrets', items: linkedSecrets, loading: isLoadingSecrets, icon: <KeyIcon sx={{ fontSize: 18 }} />, color: '#F59E0B', link: (id: string) => `/vault?id=${id}` },
-        ].map(section => (
+          { label: 'Secrets', items: linkedSecrets, loading: isLoadingSecrets, icon: <KeyIcon sx={{ fontSize: 18 }} />, color: '#F59E0B', link: (id: string) => `/vault?id=${id}` }].map(section => (
           <Box key={section.label}>
             <Typography variant="caption" sx={{ color: section.color, fontWeight: 900, textTransform: 'uppercase', display: 'block', mb: 1.5, letterSpacing: '0.1em' }}>Linked {section.label}</Typography>
             {section.loading ? (

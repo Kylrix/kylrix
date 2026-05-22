@@ -49,8 +49,7 @@ const surfaceShadow =
 const heroMetrics = [
   { value: 'E2EE', label: 'by default' },
   { value: 'Agents', label: 'inside your workspace' },
-  { value: 'One system', label: 'for people and AI' },
-];
+  { value: 'One system', label: 'for people and AI' }];
 
 const livePanels = [
   {
@@ -62,8 +61,7 @@ const livePanels = [
     rows: [
       { title: 'Write a note', meta: 'Keep it private' },
       { title: 'Collect replies', meta: 'Forms stay linked' },
-      { title: 'Share by link', meta: 'Only who you choose' },
-    ],
+      { title: 'Share by link', meta: 'Only who you choose' }],
     footer: 'Notes, docs, forms',
     icon: FileText,
   },
@@ -76,8 +74,7 @@ const livePanels = [
     rows: [
       { title: 'Password entry', meta: 'Autofill ready' },
       { title: 'TOTP code', meta: 'Copy in one tap' },
-      { title: 'Recovery key', meta: 'Kept offline' },
-    ],
+      { title: 'Recovery key', meta: 'Kept offline' }],
     footer: 'Passwords, TOTP, keys',
     icon: Shield,
   },
@@ -90,8 +87,7 @@ const livePanels = [
     rows: [
       { title: 'Make it a task', meta: 'From a note' },
       { title: 'Start a huddle', meta: 'From the task' },
-      { title: 'Keep follow-up', meta: 'No context lost' },
-    ],
+      { title: 'Keep follow-up', meta: 'No context lost' }],
     footer: 'Tasks, meetings, follow-up',
     icon: Zap,
   },
@@ -104,12 +100,10 @@ const livePanels = [
     rows: [
       { title: 'Join a call', meta: 'From a discussion' },
       { title: 'Send a note', meta: 'Into a thread' },
-      { title: 'React live', meta: 'Presence stays current' },
-    ],
+      { title: 'React live', meta: 'Presence stays current' }],
     footer: 'Chat, calls, presence',
     icon: MessageSquare,
-  },
-];
+  }];
 
 const integrationCards = [
   {
@@ -143,8 +137,7 @@ const integrationCards = [
     title: 'Attach a note or task to a moment',
     copy: 'Keep the note, the task, and the chat thread tied to the same post, so nothing gets lost.',
     accent: '#10B981',
-  },
-];
+  }];
 
 const infraPanels = [
   {
@@ -164,8 +157,7 @@ const infraPanels = [
     label: 'Billing',
     copy: 'Coordinate human and agent work in one control plane so work can continue while you sleep.',
     icon: Waypoints,
-  },
-];
+  }];
 
 const AppSwitcherFab = React.memo(function AppSwitcherFab({ onOpenApp }: { onOpenApp: (subdomain: string) => void }) {
   const [open, setOpen] = useState(false);

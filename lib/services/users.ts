@@ -36,8 +36,7 @@ function deriveUsernameCandidates(user: { $id: string; email?: string; name?: st
         normalizeUsernameSuggestion(firstName),
         normalizeUsernameSuggestion(surname),
         normalizeUsernameSuggestion(emailPrefix),
-        normalizeUsernameSuggestion(`u${user.$id.slice(0, 12)}`),
-    ].filter(Boolean) as string[];
+        normalizeUsernameSuggestion(`u${user.$id.slice(0, 12)}`)].filter(Boolean) as string[];
     return Array.from(new Set(raw));
 }
 
@@ -99,8 +98,7 @@ async function processProfileBatch() {
             tableId: TABLE_ID,
             queries: [
                 Query.equal('userId', ids),
-                Query.limit(ids.length),
-            ],
+                Query.limit(ids.length)],
         });
 
         const found = new Map<string, any>();
@@ -227,10 +225,7 @@ export const UsersService = {
                 bio: data.bio || ''
             },
             [
-                Permission.read(Role.any()),
-                Permission.update(Role.user(userId)),
-                Permission.delete(Role.user(userId))
-            ]
+                Permission.read(Role.any())]
         ).then(async (row: any) => {
             rememberProfileRow(row, userId);
             seedIdentityCache(row);
@@ -301,8 +296,7 @@ export const UsersService = {
             const queries = [
                 Query.or([
                     Query.startsWith('username', query.toLowerCase()),
-                    Query.startsWith('displayName', query),
-                ]),
+                    Query.startsWith('displayName', query)]),
                 Query.limit(20)
             ];
             
@@ -360,10 +354,7 @@ export const UsersService = {
         if (!profile) throw new Error('Profile not found');
 
         const permissions = [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId)),
-        ];
+            Permission.read(Role.user(userId))];
 
         if (isDiscoverable) {
             permissions.push(Permission.read(Role.any()));
@@ -388,10 +379,7 @@ export const UsersService = {
         const bucketId = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
 
         const permissions = [
-            Permission.read(Role.user(userId)),
-            Permission.update(Role.user(userId)),
-            Permission.delete(Role.user(userId)),
-        ];
+            Permission.read(Role.user(userId))];
 
         if (isVisible) {
             permissions.push(Permission.read(Role.any()));
@@ -409,8 +397,7 @@ export const UsersService = {
             tableId: TABLE_ID,
             queries: [
                 Query.equal('email', email),
-                Query.limit(1),
-            ],
+                Query.limit(1)],
         });
         return res.rows[0] || null;
     }

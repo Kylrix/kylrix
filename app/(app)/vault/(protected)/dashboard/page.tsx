@@ -94,8 +94,7 @@ function DashboardPageContent() {
       isVisible: true,
       mainColor: '#10B981',
       actions: [
-        { id: 'add', label: 'ADD SECRET', icon: <Plus size={20} />, onClick: () => handleAdd() },
-      ]
+        { id: 'add', label: 'ADD SECRET', icon: <Plus size={20} />, onClick: () => handleAdd() }]
     });
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, handleAdd]);

@@ -42,8 +42,7 @@ async function findEventByIdempotency(idempotencyKey: string) {
   const { databases } = createSystemClient();
   const result = await databases.listDocuments(DB_ID, VIEWS_TABLE, [
     Query.equal('idempotencyKey', idempotencyKey),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
   return result.documents[0] || null;
 }
 
@@ -98,8 +97,7 @@ async function upsertRollup(input: {
 
   const existingResult = await databases.listDocuments(DB_ID, ROLLUPS_TABLE, [
     Query.equal('rollupKey', input.rollupKey),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
   const existing = existingResult.documents[0] as any;
   if (!existing) return;
 

@@ -151,8 +151,7 @@ export async function runMyAgent(agentId: string): Promise<{ summary: string }> 
       `Agent name: ${config.name || `Agent ${agent.$id.slice(0, 6)}`}`,
       `Goal: ${config.goal || 'General productivity assistance.'}`,
       'Generate a short execution summary and next actions based on current tasks.',
-      `Tasks JSON: ${JSON.stringify(tasks)}`,
-    ].join('\n');
+      `Tasks JSON: ${JSON.stringify(tasks)}`].join('\n');
 
     const result = await model.generateContent(prompt);
     const summary = result.response.text().trim().slice(0, 6000);

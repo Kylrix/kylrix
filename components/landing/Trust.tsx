@@ -23,8 +23,7 @@ export default function Trust() {
               {[
                 { icon: ShieldIcon, title: 'Advanced Encryption', desc: 'Military-grade encryption that protects your data at rest and in transit.', color: '#4CAF50' },
                 { icon: LockIcon, title: 'SOC 2 Certified', desc: 'Our security processes are regularly audited and certified by independent experts.', color: '#2196F3' },
-                { icon: FingerprintIcon, title: 'Private Access', desc: 'We never see your passwords. Your data is encrypted and decrypted locally.', color: '#9C27B0' },
-              ].map((item, i) => (
+                { icon: FingerprintIcon, title: 'Private Access', desc: 'We never see your passwords. Your data is encrypted and decrypted locally.', color: '#9C27B0' }].map((item, i) => (
                 <Stack key={i} direction="row" spacing={3} alignItems="flex-start">
                   <Box sx={{ 
                     p: 1.5, 

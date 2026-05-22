@@ -71,8 +71,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
         kind: 'context',
         title: 'Note is ready',
         description: 'Search notes, tags, shared links, and extensions from one place.',
-      },
-    ];
+      }];
   }
 
   if (pathname === '/note' || pathname === '/note/notes') {
@@ -88,8 +87,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
         kind: 'context',
         title: name,
         description: 'Your private workspace and note graph.',
-      },
-    ];
+      }];
   }
 
   if (pathname.startsWith('/note/notes/')) {
@@ -105,8 +103,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
         kind: 'shared',
         title: 'Sharing context',
         description: 'Jump to public links or shared copies of this note.',
-      },
-    ];
+      }];
   }
 
   if (pathname === '/note/shared' || pathname.startsWith('/note/shared/')) {
@@ -116,8 +113,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
         kind: 'shared',
         title: 'Shared notes',
         description: 'Review notes shared with you and your public notes.',
-      },
-    ];
+      }];
   }
 
   if (pathname === '/note/tags') {
@@ -127,8 +123,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
         kind: 'tag',
         title: 'Tags overview',
         description: 'Cluster your notes by topic, project, or signal.',
-      },
-    ];
+      }];
   }
 
   if (pathname === '/note/extensions') {
@@ -138,8 +133,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
         kind: 'extension',
         title: 'Extensions',
         description: 'Link automations, exporters, and custom surfaces.',
-      },
-    ];
+      }];
   }
 
   if (pathname === '/note/settings' || pathname.startsWith('/accounts/settings')) {
@@ -149,8 +143,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
         kind: 'settings',
         title: 'Settings',
         description: 'Tune your Note identity, privacy, and workspace.',
-      },
-    ];
+      }];
   }
 
   return [
@@ -159,8 +152,7 @@ function routeSnippets(pathname: string | null, user: any | null): PotatoSnippet
       kind: 'context',
       title: 'Note context',
       description: 'Search notes, tags, shared links, and extensions from one place.',
-    },
-  ];
+    }];
 }
 
 function matchesTerms(query: string, terms: string[]) {
@@ -220,8 +212,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
       accent: '#6366F1',
       terms: ['extension', 'extensions', 'automation', 'plugin'],
       onSelect: () => navigate('/note/extensions'),
-    },
-  ];
+    }];
 
   const searchTargets: PotatoAction[] = [
     {
@@ -273,8 +264,7 @@ function buildSurface(query: string, routeLabel: string, snippets: PotatoSnippet
       accent: '#6366F1',
       terms: ['setting', 'settings', 'privacy', 'workspace'],
       onSelect: () => navigate(`/settings?search=${encodeURIComponent(query)}`),
-    },
-  ];
+    }];
 
   const contextualHints = snippets.map((snippet) => ({
     id: snippet.id,

@@ -285,8 +285,7 @@ export const COLLECTION_SCHEMAS = {
         "updatedAt",
         "$id",
         "$createdAt",
-        "$updatedAt",
-      ],
+        "$updatedAt"],
       ENCRYPTED_FIELDS.credentials,
     ),
   },
@@ -312,8 +311,7 @@ export const COLLECTION_SCHEMAS = {
         "updatedAt",
         "$id",
         "$createdAt",
-        "$updatedAt",
-      ],
+        "$updatedAt"],
       ENCRYPTED_FIELDS.totpSecrets,
     ),
   },
@@ -333,8 +331,7 @@ export const COLLECTION_SCHEMAS = {
         "updatedAt",
         "$id",
         "$createdAt",
-        "$updatedAt",
-      ],
+        "$updatedAt"],
       ENCRYPTED_FIELDS.folders,
     ),
   },
@@ -353,8 +350,7 @@ export const COLLECTION_SCHEMAS = {
         "timestamp",
         "$id",
         "$createdAt",
-        "$updatedAt",
-      ],
+        "$updatedAt"],
       ENCRYPTED_FIELDS.securityLogs,
     ),
   },
@@ -376,8 +372,7 @@ export const COLLECTION_SCHEMAS = {
         "updatedAt",
         "$id",
         "$createdAt",
-        "$updatedAt",
-      ],
+        "$updatedAt"],
       ENCRYPTED_FIELDS.user,
     ),
   },
@@ -396,8 +391,7 @@ export const COLLECTION_SCHEMAS = {
         "updatedAt",
         "$id",
         "$createdAt",
-        "$updatedAt",
-      ],
+        "$updatedAt"],
       ENCRYPTED_FIELDS.keychain,
     ),
   },
@@ -503,10 +497,7 @@ export class VaultService {
       collId: APPWRITE_COLLECTION_CREDENTIALS_ID,
       userId: data.userId,
       permissions: [
-        Permission.read(Role.user(data.userId)),
-        Permission.update(Role.user(data.userId)),
-        Permission.delete(Role.user(data.userId)),
-      ]
+        Permission.read(Role.user(data.userId))]
     });
 
     try {
@@ -516,10 +507,7 @@ export class VaultService {
         ID.unique(),
         encryptedData,
         [
-          Permission.read(Role.user(data.userId)),
-          Permission.update(Role.user(data.userId)),
-          Permission.delete(Role.user(data.userId)),
-        ]
+          Permission.read(Role.user(data.userId))]
       );
       console.log("[AppwriteService] Credential Created Successfully:", doc.$id);
       this.clearCredentialCache(data.userId);
@@ -553,10 +541,7 @@ export class VaultService {
       ID.unique(),
       encryptedData,
       [
-        Permission.read(Role.user(data.userId)),
-        Permission.update(Role.user(data.userId)),
-        Permission.delete(Role.user(data.userId)),
-      ]
+        Permission.read(Role.user(data.userId))]
     );
     this.clearCredentialCache(data.userId);
     return (await this.decryptDocumentFields(
@@ -585,8 +570,7 @@ export class VaultService {
   static async listIncomingKeyMappings(userId: string): Promise<KeyMapping[]> {
     const response = await listDocumentsWithRetry(APPWRITE_COLLECTION_KEY_MAPPING_ID, [
       Query.equal("grantee", userId),
-      Query.orderDesc("$createdAt"),
-    ]);
+      Query.orderDesc("$createdAt")]);
     return response.documents as unknown as KeyMapping[];
   }
 
@@ -654,10 +638,7 @@ export class VaultService {
       },
       [
         Permission.read(Role.user(recipient.userId)),
-        Permission.read(Role.user(credential.userId)),
-        Permission.delete(Role.user(recipient.userId)),
-        Permission.delete(Role.user(credential.userId)),
-      ],
+        Permission.read(Role.user(credential.userId))],
     );
 
     try {
@@ -731,10 +712,7 @@ export class VaultService {
       },
       [
         Permission.read(Role.user(recipient.userId)),
-        Permission.read(Role.user(totpSecret.userId)),
-        Permission.delete(Role.user(recipient.userId)),
-        Permission.delete(Role.user(totpSecret.userId)),
-      ],
+        Permission.read(Role.user(totpSecret.userId))],
     );
 
     try {
@@ -822,10 +800,7 @@ export class VaultService {
       ID.unique(),
       sanitizedData as unknown as Record<string, unknown>,
       [
-        Permission.read(Role.user(data.userId)),
-        Permission.update(Role.user(data.userId)),
-        Permission.delete(Role.user(data.userId)),
-      ]
+        Permission.read(Role.user(data.userId))]
     );
     return this.mapDoc<Folders>(doc);
   }
@@ -841,9 +816,7 @@ export class VaultService {
       [
         Permission.read(Role.user(data.userId)),
         // Logs are usually read-only for the user, but for now we give full access
-        Permission.update(Role.user(data.userId)),
-        Permission.delete(Role.user(data.userId)),
-      ]
+        ]
     );
     return doc as unknown as SecurityLogs;
   }
@@ -857,10 +830,7 @@ export class VaultService {
       ID.unique(),
       data,
       [
-        Permission.read(Role.user(data.userId)),
-        Permission.update(Role.user(data.userId)),
-        Permission.delete(Role.user(data.userId)),
-      ]
+        Permission.read(Role.user(data.userId))]
     );
     // Invalidate ecosystem security snapshot
     const { ecosystemSecurity } = await import("../ecosystem/security");
@@ -908,10 +878,7 @@ export class VaultService {
       ID.unique(),
       data,
       [
-        Permission.read(Role.user(data.userId)),
-        Permission.update(Role.user(data.userId)),
-        Permission.delete(Role.user(data.userId)),
-      ]
+        Permission.read(Role.user(data.userId))]
     );
     return doc as unknown as User;
   }
@@ -1108,8 +1075,7 @@ export class VaultService {
         Query.orderAsc("name"),
         Query.limit(limit),
         Query.offset(offset),
-        ...queries,
-      ],
+        ...queries],
     );
 
     const decryptedDocuments = await Promise.all(
@@ -1144,8 +1110,7 @@ export class VaultService {
         Query.search("name", searchTerm),
         Query.orderAsc("name"),
         Query.limit(limit),
-        Query.offset(offset),
-      ],
+        Query.offset(offset)],
     );
 
     const decryptedDocuments = await Promise.all(
@@ -1197,8 +1162,7 @@ export class VaultService {
             Query.equal("userId", userId),
             Query.limit(limit),
             Query.offset(offset),
-            ...queries,
-          ],
+            ...queries],
         );
 
         const decryptedDocuments = await Promise.all(
@@ -1237,8 +1201,7 @@ export class VaultService {
       [
         Query.equal("userId", userId),
         Query.orderDesc("$updatedAt"),
-        Query.limit(limit),
-      ],
+        Query.limit(limit)],
     );
     return await Promise.all(
       response.documents.map(
@@ -1694,8 +1657,7 @@ export class VaultService {
     const [credentials, totpSecrets, folders] = await Promise.all([
       credentialsPromise,
       totpPromise,
-      foldersPromise,
-    ]);
+      foldersPromise]);
 
     return {
       credentials,
@@ -1717,10 +1679,7 @@ export class VaultService {
       ID.unique(),
       file,
       [
-        Permission.read(Role.user(userId)),
-        Permission.update(Role.user(userId)),
-        Permission.delete(Role.user(userId)),
-      ]
+        Permission.read(Role.user(userId))]
     );
   }
 
@@ -2187,8 +2146,7 @@ export async function deleteUserAccount(_userId: string) {
     VaultService.listTOTPSecrets(_userId),
     VaultService.listFolders(_userId),
     VaultService.listSecurityLogs(_userId),
-    VaultService.getUserDoc(_userId),
-  ]);
+    VaultService.getUserDoc(_userId)]);
 
   await Promise.all([
     ...creds.map((c: Credentials) => VaultService.deleteCredential(c.$id)),
@@ -2197,8 +2155,7 @@ export async function deleteUserAccount(_userId: string) {
     ...logs.map((l: SecurityLogs) => VaultService.deleteSecurityLog(l.$id)),
     userDoc?.$id
       ? VaultService.deleteUserDoc(userDoc.$id)
-      : Promise.resolve(),
-  ]);
+      : Promise.resolve()]);
 
   // Log the user out
   await appwriteAccount.deleteSession("current");
@@ -2275,8 +2232,7 @@ export async function resetMasterpassAndWipe(userId: string): Promise<void> {
     deleteCollectionDocs(APPWRITE_COLLECTION_FOLDERS_ID),
     deleteCollectionDocs(APPWRITE_COLLECTION_SECURITYLOGS_ID),
     deleteCollectionDocs(APPWRITE_COLLECTION_KEYCHAIN_ID),
-    deleteCollectionDocs(APPWRITE_COLLECTION_IDENTITIES_ID, PASSWORD_MANAGER_DATABASE_ID),
-  ];
+    deleteCollectionDocs(APPWRITE_COLLECTION_IDENTITIES_ID, PASSWORD_MANAGER_DATABASE_ID)];
 
   // Ecosystem Chat Wipe: Personal/Saved Messages
   const wipeChatData = async () => {

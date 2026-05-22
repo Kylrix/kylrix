@@ -34,8 +34,7 @@ export class StripeProvider implements PaymentProvider {
         {
           price: planId, // planId should be the Stripe Price ID
           quantity: months,
-        },
-      ],
+        }],
 
       mode: months >= 12 ? 'subscription' : 'payment', // Adjust mode based on months if needed
 

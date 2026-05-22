@@ -49,8 +49,7 @@ export const EMAIL_TEMPLATES: EmailTemplateMeta[] = [
     name: 'Gift Coupon',
     subject: 'A Kylrix gift is waiting for you',
     filename: 'Gift_Coupon.html',
-  },
-];
+  }];
 
 export function getEmailTemplateMeta(templateId: string): EmailTemplateMeta | null {
   return EMAIL_TEMPLATES.find((template) => template.id === templateId) ?? null;

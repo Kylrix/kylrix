@@ -175,8 +175,7 @@ export class AppwriteService {
           databaseId: CONNECT_DATABASE_ID,
           tableId,
           queries: [Query.search('displayName', text), Query.limit(limit)],
-        }),
-      ]);
+        })]);
 
       const merged = new Map<string, ProfileRow>();
       for (const row of [...byUsername.rows, ...byDisplayName.rows]) {

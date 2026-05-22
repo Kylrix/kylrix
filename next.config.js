@@ -11,8 +11,7 @@ const nextConfig = {
       '@mui/x-date-pickers',
       'lucide-react',
       'lodash',
-      'date-fns',
-    ],
+      'date-fns'],
   },
 };
 

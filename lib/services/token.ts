@@ -84,9 +84,7 @@ const toMicroString = (value: bigint) => value.toString();
 const nowIso = () => new Date().toISOString();
 
 const tokenPermissionsForUser = (userId: string) => [
-  Permission.read(Role.user(userId)),
-  Permission.update(Role.user(userId)),
-];
+  Permission.read(Role.user(userId))];
 
 /** Mirrors internal ledger: read for `userId`; add counterparty read for paired flows (transfer_out/in, fine/recovery). */
 const tokenPermissionsForSystemEvent = (userId: string, counterpartyUserId?: string | null) => {
@@ -99,8 +97,7 @@ const tokenPermissionsForSystemEvent = (userId: string, counterpartyUserId?: str
 };
 
 const statePermissions = [
-  Permission.read(Role.users()),
-];
+  Permission.read(Role.users())];
 
 async function getStateRow(): Promise<any | null> {
   try {
@@ -149,8 +146,7 @@ async function lookupEventByIdempotency(idempotencyKey: string) {
     queries: [
       Query.equal('rowType', 'event'),
       Query.equal('idempotencyKey', idempotencyKey),
-      Query.limit(1),
-    ],
+      Query.limit(1)],
   });
   return result.rows?.[0] || null;
 }
@@ -196,8 +192,7 @@ async function getUserDailyMintedMicro(userId: string) {
       Query.equal('userId', userId),
       Query.equal('eventType', 'mint_activity'),
       Query.greaterThanEqual('createdAt', since.toISOString()),
-      Query.limit(5000),
-    ],
+      Query.limit(5000)],
   });
   return (result.rows || []).reduce((sum: bigint, row: any) => sum + parseMicro(row.amountMicro), 0n);
 }
@@ -210,8 +205,7 @@ async function getRecentVolume(windowMinutes: number) {
     queries: [
       Query.equal('rowType', 'event'),
       Query.greaterThanEqual('createdAt', since),
-      Query.limit(5000),
-    ],
+      Query.limit(5000)],
   });
   return result.rows?.length || 0;
 }
@@ -225,8 +219,7 @@ async function getUserRecentOperationCount(userId: string, windowMinutes: number
       Query.equal('rowType', 'event'),
       Query.equal('userId', userId),
       Query.greaterThanEqual('createdAt', since),
-      Query.limit(5000),
-    ],
+      Query.limit(5000)],
   });
   return result.rows?.length || 0;
 }
@@ -488,8 +481,7 @@ export const KylrixTokenService = {
       suspicious: opSpike || mintSpike,
       reasons: [
         ...(opSpike ? ['HIGH_OPERATION_RATE'] : []),
-        ...(mintSpike ? ['HIGH_MINT_CONCENTRATION'] : []),
-      ],
+        ...(mintSpike ? ['HIGH_MINT_CONCENTRATION'] : [])],
     };
   },
 

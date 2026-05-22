@@ -29,10 +29,7 @@ function getReactionSortTime(row: any) {
 function buildReactionPermissions(userId: string, recipientIds: string[]) {
   return [
     Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-    ...recipientIds.map((participantId) => Permission.read(Role.user(participantId))),
-  ];
+    ...recipientIds.map((participantId) => Permission.read(Role.user(participantId)))];
 }
 
 function normalizeParticipantIds(row: any): string[] {
@@ -47,8 +44,7 @@ async function resolveConversationParticipants(databases: ReturnType<typeof crea
 
   const memberRows = await databases.listDocuments(CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
     Query.equal('conversationId', conversation.$id),
-    Query.limit(1000),
-  ]).catch(() => ({ documents: [] as any[] }));
+    Query.limit(1000)]).catch(() => ({ documents: [] as any[] }));
 
   return Array.from(new Set<string>(
     (memberRows.documents || [])
@@ -120,8 +116,7 @@ export async function POST(req: NextRequest) {
     const existing = await databases.listDocuments(CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
       Query.equal('userId', user.$id),
       Query.equal('messageId', messageId),
-      Query.limit(1000),
-    ]);
+      Query.limit(1000)]);
 
     let reaction;
     const existingRows = (existing.documents || []).slice().sort((left: any, right: any) => getReactionSortTime(right) - getReactionSortTime(left));
@@ -156,8 +151,7 @@ export async function POST(req: NextRequest) {
         const fallback = await databases.listDocuments(CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
           Query.equal('userId', user.$id),
           Query.equal('messageId', messageId),
-          Query.limit(1000),
-        ]);
+          Query.limit(1000)]);
         const fallbackRows = (fallback.documents || []).slice().sort((left: any, right: any) => getReactionSortTime(right) - getReactionSortTime(left));
         const fallbackPrimary = fallbackRows[0];
         if (!fallbackPrimary) {
@@ -209,8 +203,7 @@ export async function DELETE(req: NextRequest) {
     const existing = await databases.listDocuments(CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
       Query.equal('userId', user.$id),
       Query.equal('messageId', messageId),
-      Query.limit(1000),
-    ]);
+      Query.limit(1000)]);
     const rowsToDelete = (existing.documents || []).slice().sort((left: any, right: any) => getReactionSortTime(right) - getReactionSortTime(left));
     if (!rowsToDelete.length) {
       return NextResponse.json(

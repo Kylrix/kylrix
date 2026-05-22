@@ -217,7 +217,6 @@ export default async ({ req, res, log, error }) => {
             permissions.push(Permission.read(Role.user(targetId)));
             // For notes, we might want to add update if the grant implies it
             if (payload.permission === 'write' || payload.permission === 'admin') {
-                permissions.push(Permission.update(Role.user(targetId)));
             }
         } else if (operation === 'remove') {
             permissions = permissions.filter(p => !p.includes(`user:${targetId}`));

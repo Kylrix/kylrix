@@ -96,8 +96,7 @@ const categories: DocsCategory[] = [
   { id: 'getting-started', title: 'Getting Started', summary: 'Onboarding, architecture, and the first integration steps.', accent: '#6366F1', icon: Sparkles },
   { id: 'codebases', title: 'Codebases', summary: 'Living documentation for Note, Vault, Flow, and Connect.', accent: '#EC4899', icon: FolderGit2 },
   { id: 'security', title: 'Security & Trust', summary: 'Identity, encryption tiers, session model, and guardrails.', accent: '#10B981', icon: ShieldCheck },
-  { id: 'reference', title: 'Reference', summary: 'Product suites, integrations, and contribution workflows.', accent: '#F59E0B', icon: FileCode2 },
-];
+  { id: 'reference', title: 'Reference', summary: 'Product suites, integrations, and contribution workflows.', accent: '#F59E0B', icon: FileCode2 }];
 
 const articles: DocsArticle[] = [
   {
@@ -116,8 +115,7 @@ const articles: DocsArticle[] = [
               { title: 'Accounts', body: 'Root of trust, sessions, passkeys, and ecosystem identity.' },
               { title: 'Vault', body: 'Zero-knowledge state store for secrets, wallets, and MEK-backed data.' },
               { title: 'Flow', body: 'Action engine for work state, schedules, and orchestration.' },
-              { title: 'Connect', body: 'Real-time communication with read/unread integrity.' },
-            ].map((item) => (
+              { title: 'Connect', body: 'Real-time communication with read/unread integrity.' }].map((item) => (
               <Grid size={{ xs: 12, md: 6 }} key={item.title}>
                 <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
@@ -174,8 +172,7 @@ const articles: DocsArticle[] = [
               {[
                 { title: 'Pulse', body: 'Live, transient state that should move in realtime rather than sit in tables.' },
                 { title: 'Notification', body: 'Persistent pointers for noteworthy events that the UI evaluates on activity.' },
-                { title: 'Universal session', body: 'One authenticated session spans the ecosystem and powers cross-app access.' },
-              ].map((item) => (
+                { title: 'Universal session', body: 'One authenticated session spans the ecosystem and powers cross-app access.' }].map((item) => (
                 <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                   <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
@@ -222,8 +219,7 @@ const articles: DocsArticle[] = [
                 'Search and retrieval behavior',
                 'Ghost note isolation and link-only access',
                 'Sharing flows and collaborator rules',
-                'AI enrichment and content intelligence',
-              ].map((label) => (
+                'AI enrichment and content intelligence'].map((label) => (
                 <Box key={label} sx={{ px: 2, py: 1.5, borderRadius: 3, bgcolor: alpha('#fff', 0.04), border: '1px solid rgba(255,255,255,0.05)' }}>
                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
                     {label}
@@ -249,8 +245,7 @@ const articles: DocsArticle[] = [
             {[
               { title: 'Tier 2', body: 'Client-side decrypted state backed by the Master Encryption Key.' },
               { title: 'Reset impact', body: 'A master password reset invalidates old MEKs and wipes unreadable Tier 2 material.' },
-              { title: 'Passkeys', body: 'Wrapped to the old MEK and purged on reset to avoid stale access.' },
-            ].map((item) => (
+              { title: 'Passkeys', body: 'Wrapped to the old MEK and purged on reset to avoid stale access.' }].map((item) => (
               <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                 <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
@@ -290,8 +285,7 @@ const articles: DocsArticle[] = [
               {[
                 { title: 'Database encryption', body: 'Managed by the backend, decrypted before the UI sees it.' },
                 { title: 'Zero-knowledge', body: 'Vault and Connect DMs stay client-decrypted with the MEK.' },
-                { title: 'Documented boundaries', body: 'Every article should say what is allowed, what is link-only, and what gets wiped.' },
-              ].map((item) => (
+                { title: 'Documented boundaries', body: 'Every article should say what is allowed, what is link-only, and what gets wiped.' }].map((item) => (
                 <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                   <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
@@ -332,8 +326,7 @@ const articles: DocsArticle[] = [
             {[
               { title: 'Calls', body: 'Session setup, active call state, and why call history is a separate read model.' },
               { title: 'Messages', body: 'Encrypted DMs and the rules that protect unread/read integrity.' },
-              { title: 'Presence', body: 'Transient signals should use realtime rather than long-lived tables.' },
-            ].map((item) => (
+              { title: 'Presence', body: 'Transient signals should use realtime rather than long-lived tables.' }].map((item) => (
               <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                 <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
@@ -363,8 +356,7 @@ const articles: DocsArticle[] = [
             {[
               { title: 'Tasks', body: 'Explain task lifecycles, status transitions, and where source-of-truth state lives.' },
               { title: 'Calendar', body: 'Show how schedule views relate to work state rather than duplicating it.' },
-              { title: 'Automation', body: 'Document orchestration triggers and reusable action patterns.' },
-            ].map((item) => (
+              { title: 'Automation', body: 'Document orchestration triggers and reusable action patterns.' }].map((item) => (
               <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                 <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
@@ -395,8 +387,7 @@ const articles: DocsArticle[] = [
             {[
               { title: 'Suite ownership', body: 'Use Note, Vault, Flow, and Connect docs to determine where each object is authoritative.' },
               { title: 'Auth boundary', body: 'Route privileged operations through trusted account/session flows, never ad-hoc credentials.' },
-              { title: 'Operational safety', body: 'Document retry, idempotency, and failure behavior before shipping integrations.' },
-            ].map((item) => (
+              { title: 'Operational safety', body: 'Document retry, idempotency, and failure behavior before shipping integrations.' }].map((item) => (
               <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                 <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>
@@ -427,8 +418,7 @@ const articles: DocsArticle[] = [
             {[
               { title: 'Understand the suite first', body: 'Start from the relevant docs page (Note, Vault, Flow, Connect) before touching code.' },
               { title: 'Preserve trusted bridges', body: 'Reuse known working paths and references instead of rewriting foundations.' },
-              { title: 'Cross-surface consistency', body: 'When changing shared behavior, verify route, drawer, and topbar consistency across suites.' },
-            ].map((item) => (
+              { title: 'Cross-surface consistency', body: 'When changing shared behavior, verify route, drawer, and topbar consistency across suites.' }].map((item) => (
               <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                 <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                   <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
@@ -450,8 +440,7 @@ const articles: DocsArticle[] = [
         </Stack>
       </ArticleFrame>
     ),
-  },
-];
+  }];
 
 export const DOCS_CATEGORIES = categories;
 export const DOCS_ARTICLES = articles;

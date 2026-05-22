@@ -53,10 +53,7 @@ export async function createChatCallAction(input: {
 
   // Build strict per-participant permissions using System Client
   const permissions = [
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-    ...uniqueParticipants.map((pId) => Permission.read(Role.user(pId))),
-  ];
+    ...uniqueParticipants.map((pId) => Permission.read(Role.user(pId)))];
 
   const systemTables = createSystemTablesDB();
 

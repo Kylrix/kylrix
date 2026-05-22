@@ -26,8 +26,7 @@ const testimonials = [
     name: "Elena Rodriguez",
     role: "Digital Marketer",
     stars: 5,
-  },
-];
+  }];
 
 export default function Testimonials() {
   return (

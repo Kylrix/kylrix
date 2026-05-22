@@ -504,8 +504,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       effectivePinnedIds,
       pinNote,
       unpinNote,
-      isPinned,
-    ]
+      isPinned]
   );
 
   return (

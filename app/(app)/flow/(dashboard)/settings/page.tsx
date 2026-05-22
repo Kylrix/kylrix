@@ -43,7 +43,7 @@ export default function SettingsPage() {
     // Passkey state
     const [passkeySetupOpen, setPasskeySetupOpen] = useState(false);
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
-    const [, setLoadingPasskeys] = useState(true);
+    const [ setLoadingPasskeys] = useState(true);
 
     useEffect(() => {
         setIsPinSet(ecosystemSecurity.isPinSet());

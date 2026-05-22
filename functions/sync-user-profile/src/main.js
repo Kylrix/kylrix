@@ -416,9 +416,7 @@ export default async ({ req, res, log, error }) => {
                 profileData,
                 [
                     Permission.read(Role.any()), // Critical for discovery
-                    Permission.update(Role.user(user.$id)),
-                    Permission.delete(Role.user(user.$id))
-                ]
+                    ]
             );
             log(`Successfully created global profile for ${user.$id}`);
         } catch (profileErr) {

@@ -222,8 +222,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       tokenBalance,
       wallets,
       refreshEntitlement,
-      refreshBalances,
-    ],
+      refreshBalances],
   );
 
   return <SubscriptionContext.Provider value={value}>{children}</SubscriptionContext.Provider>;

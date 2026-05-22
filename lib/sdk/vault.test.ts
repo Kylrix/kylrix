@@ -5,8 +5,7 @@ describe('KylrixVault', () => {
   it('should successfully get credentials with standard queries', async () => {
     const mockDocuments = [
       { $id: 'cred-1', label: 'GitHub Personal Token' },
-      { $id: 'cred-2', label: 'Vercel API Key' },
-    ];
+      { $id: 'cred-2', label: 'Vercel API Key' }];
 
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
@@ -84,8 +83,7 @@ describe('KylrixVault', () => {
 
     expect(mockSdk.listRows).toHaveBeenCalledTimes(1);
     expect(mockSdk.listRows).toHaveBeenCalledWith('db-id', 'table-id', [
-      'equal("userId", "user-789")',
-    ]);
+      'equal("userId", "user-789")']);
     expect(result).toEqual(mockSettings);
   });
 

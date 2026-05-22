@@ -993,8 +993,7 @@ const renderMomentCard = async (
         { x: innerX + 82, draw: (ix: number, iy: number) => drawRepeatIcon(ctx, ix, iy, iconSize, 'rgba(255,255,255,0.55)') },
         { x: innerX + 160, draw: (ix: number, iy: number) => drawHeartIcon(ctx, ix, iy, iconSize, 'rgba(255,255,255,0.55)', false) },
         { x: innerX + 238, draw: (ix: number, iy: number) => drawLinkIcon(ctx, ix, iy, iconSize, 'rgba(255,255,255,0.55)') },
-        { x: innerX + 316, draw: (ix: number, iy: number) => drawSendIcon(ctx, ix, iy, iconSize, 'rgba(255,255,255,0.55)') },
-    ];
+        { x: innerX + 316, draw: (ix: number, iy: number) => drawSendIcon(ctx, ix, iy, iconSize, 'rgba(255,255,255,0.55)') }];
     actionSlots.forEach((slot) => slot.draw(slot.x, actionsY));
 
     return cardHeight;

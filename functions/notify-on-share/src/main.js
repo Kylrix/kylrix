@@ -51,10 +51,8 @@ export default async ({ req, res, log, error }) => {
                     currentPermissions.push(Permission.read(Role.user(targetUserId)));
                     
                     if (permissionLevel === 'write' || permissionLevel === 'admin') {
-                        currentPermissions.push(Permission.update(Role.user(targetUserId)));
                     }
                     if (permissionLevel === 'admin') {
-                        currentPermissions.push(Permission.delete(Role.user(targetUserId)));
                     }
                 }
 

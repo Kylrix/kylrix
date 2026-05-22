@@ -30,8 +30,7 @@ export async function reconcileStaleLiveCallPresenceForUser(
     Query.equal('userId', trimmed),
     Query.orderDesc('$updatedAt'),
     Query.limit(1),
-    Query.select(['$id', 'userId', 'status', 'customStatus', 'lastSeen']),
-  ]);
+    Query.select(['$id', 'userId', 'status', 'customStatus', 'lastSeen'])]);
   const row = rows.documents[0];
   if (!row) return { changed: false, reason: 'no_presence' };
 
@@ -94,8 +93,7 @@ export async function sweepStaleLiveCallPresenceBatch(limit = 100): Promise<{
     Query.equal('status', 'busy'),
     Query.orderDesc('$updatedAt'),
     Query.limit(Math.min(Math.max(limit, 1), 500)),
-    Query.select(['$id', 'userId']),
-  ]);
+    Query.select(['$id', 'userId'])]);
 
   let cleared = 0;
 

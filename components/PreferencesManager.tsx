@@ -39,8 +39,7 @@ const LANGUAGES = [
   { code: 'it', label: 'Italiano' },
   { code: 'pt', label: 'Português' },
   { code: 'ja', label: '日本語' },
-  { code: 'zh', label: '中文' },
-];
+  { code: 'zh', label: '中文' }];
 
 const TIMEZONES = [
   { value: 'UTC', label: 'UTC' },
@@ -54,8 +53,7 @@ const TIMEZONES = [
   { value: 'Asia/Tokyo', label: 'Tokyo' },
   { value: 'Asia/Singapore', label: 'Singapore' },
   { value: 'Asia/Dubai', label: 'Dubai' },
-  { value: 'Australia/Sydney', label: 'Sydney' },
-];
+  { value: 'Australia/Sydney', label: 'Sydney' }];
 
 export default function PreferencesManager({ onSave }: PreferencesManagerProps) {
   const { setTheme } = useTheme();

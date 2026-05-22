@@ -17,8 +17,7 @@ const KNOWN_TRANSPORTS = new Set([
   "usb",
   "nfc",
   "ble",
-  "hybrid",
-]);
+  "hybrid"]);
 
 /** Prefer transports saved at registration; fallback keeps phones on platform UX. */
 export function transportsForPasskeyEntry(entry: {

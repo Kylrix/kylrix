@@ -79,8 +79,7 @@ const FIELD_TYPES = [
   { value: 'number', label: 'Number', icon: <NumberIcon fontSize="small" /> },
   { value: 'select', label: 'Dropdown', icon: <ListIcon fontSize="small" /> },
   { value: 'radio', label: 'Single Choice (Radio)', icon: <RadioIcon fontSize="small" /> },
-  { value: 'checkbox', label: 'Multiple Choice (Checkbox)', icon: <CheckIcon fontSize="small" /> },
-];
+  { value: 'checkbox', label: 'Multiple Choice (Checkbox)', icon: <CheckIcon fontSize="small" /> }];
 
 function SortableField({ 
   field, 

@@ -90,8 +90,7 @@ export async function syncCurrentUserVerification(userId: string) {
   try {
     const [profile, hasMasterpass] = await Promise.all([
       UsersService.getProfileById(userId),
-      KeychainService.hasMasterpass(userId).catch(() => false),
-    ]);
+      KeychainService.hasMasterpass(userId).catch(() => false)]);
 
     const nextPrefs = mergeVerificationPreferences(profile?.preferences || null, {
       verified: hasMasterpass,

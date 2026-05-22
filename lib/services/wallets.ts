@@ -130,16 +130,10 @@ const PUBLIC_CHAIN_PRIORITY: SupportedWalletChain[] = ['sol', 'eth', 'usdc', 'bt
 const ownerIdForUser = (userId: string) => `user:${userId}`;
 
 const walletPermissions = (userId: string) => [
-    Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-];
+    Permission.read(Role.user(userId))];
 
 const walletMapPermissions = (userId: string) => [
-    Permission.read(Role.any()),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-];
+    Permission.read(Role.any())];
 
 const sortWallets = (wallets: any[]) =>
     [...wallets].sort((a, b) => {
@@ -266,8 +260,7 @@ const listWalletRows = async (userId: string) => {
     const response = await tablesDB.listRows(PASSWORD_MANAGER_DB, WALLETS_TABLE, [
         Query.equal('ownerId', ownerIdForUser(userId)),
         Query.equal('type', 'main'),
-        Query.limit(100),
-    ]);
+        Query.limit(100)]);
 
     return sortWallets(response.rows);
 };
@@ -316,8 +309,7 @@ const syncWalletMap = async (userId: string, wallets: any[]) => {
 
     const existing = await tablesDB.listRows(NOTE_DB, WALLET_MAP_TABLE, [
         Query.equal('userId', userId),
-        Query.limit(100),
-    ]);
+        Query.limit(100)]);
 
     for (const row of existing.rows) {
         if (!publicAddresses.includes(row.walletAddressLower)) {

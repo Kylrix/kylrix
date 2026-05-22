@@ -107,8 +107,7 @@ async function listUserEventsDescending(userId: string, limit: number) {
   const tables = ledgerTables();
   const base = [
     Query.equal('rowType', 'event'),
-    Query.equal('userId', userId),
-  ];
+    Query.equal('userId', userId)];
   try {
     const res = await tables.listRows({
       databaseId: DB_ID,
@@ -133,12 +132,10 @@ async function getLatestBalanceMicro(userId: string) {
     Query.equal('rowType', 'event'),
     Query.equal('userId', userId),
     Query.isNotNull('balanceAfterMicro'),
-    Query.limit(80),
-  ];
+    Query.limit(80)];
   const tries: string[][] = [
     [...withBal.slice(0, 3), Query.orderDesc('$createdAt'), withBal[3]],
-    [...withBal.slice(0, 3), Query.orderDesc('createdAt'), withBal[3]],
-  ];
+    [...withBal.slice(0, 3), Query.orderDesc('createdAt'), withBal[3]]];
   for (const queries of tries) {
     try {
       const res = await tables.listRows({
@@ -177,8 +174,7 @@ async function getUserDailyMinted(userId: string) {
       Query.equal('userId', userId),
       Query.equal('eventType', 'mint_activity'),
       Query.greaterThanEqual('createdAt', since.toISOString()),
-      Query.limit(5000),
-    ],
+      Query.limit(5000)],
   });
   return (rows ?? []).reduce((sum, doc: any) => sum + asMicro(doc.amountMicro), 0n);
 }
@@ -193,8 +189,7 @@ async function getRecentUserMintActivityCount(userId: string, windowHours = 24) 
       Query.equal('userId', userId),
       Query.equal('eventType', 'mint_activity'),
       Query.greaterThanEqual('createdAt', since),
-      Query.limit(200),
-    ],
+      Query.limit(200)],
   });
   return rows?.length ?? 0;
 }
@@ -233,8 +228,7 @@ async function getRecentSystemVolume(windowMinutes: number) {
     queries: [
       Query.equal('rowType', 'event'),
       Query.greaterThanEqual('createdAt', since),
-      Query.limit(5000),
-    ],
+      Query.limit(5000)],
   });
   return rows?.length ?? 0;
 }
@@ -246,8 +240,7 @@ async function ensureNoDuplicateIdempotency(idempotencyKey: string) {
     queries: [
       Query.equal('rowType', 'event'),
       Query.equal('idempotencyKey', idempotencyKey),
-      Query.limit(1),
-    ],
+      Query.limit(1)],
   });
   return rows?.[0] || null;
 }
@@ -389,8 +382,7 @@ export const InternalKylrixTokenService = {
     const [recentActivityCount, userBaseCount, thermalScore] = await Promise.all([
       getRecentUserMintActivityCount(input.userId, 24),
       getTotalUserCount(),
-      getUserThermalScore(input.userId),
-    ]);
+      getUserThermalScore(input.userId)]);
     
     const signal: KylrixActivitySignal = {
       activityType: input.activityType,
@@ -679,8 +671,7 @@ export const InternalKylrixTokenService = {
           Query.equal('rowType', 'event'),
           Query.equal('userId', userId),
           Query.orderDesc('$createdAt'),
-          Query.limit(capped),
-        ],
+          Query.limit(capped)],
       });
       return result.rows ?? [];
     } catch {
@@ -691,8 +682,7 @@ export const InternalKylrixTokenService = {
           Query.equal('rowType', 'event'),
           Query.equal('userId', userId),
           Query.orderDesc('createdAt'),
-          Query.limit(capped),
-        ],
+          Query.limit(capped)],
       });
       return result.rows ?? [];
     }

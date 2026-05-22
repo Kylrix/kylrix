@@ -70,16 +70,12 @@ export async function POST(req: NextRequest) {
     // Construct permissions
     // The creator gets full access
     const permissions = [
-      Permission.read(Role.user(creatorId)),
-      Permission.update(Role.user(creatorId)),
-      Permission.delete(Role.user(creatorId)),
-    ];
+      Permission.read(Role.user(creatorId))];
 
     // Other participants get read access (and maybe update if we want them to edit group name later)
     participants.forEach(p => {
       if (p !== creatorId) {
         permissions.push(Permission.read(Role.user(p)));
-        permissions.push(Permission.update(Role.user(p))); // Allow them to update lastMessageAt etc
       }
     });
 

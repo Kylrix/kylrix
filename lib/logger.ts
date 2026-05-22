@@ -24,8 +24,7 @@ class SecureLogger {
     'credential',
     'authorization',
     'cookie',
-    'session',
-  ]);
+    'session']);
 
   constructor() {
     this.isDevelopment = process.env.NODE_ENV === 'development';

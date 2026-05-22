@@ -49,8 +49,7 @@ const features = [
     icon: LockIcon,
     title: "Two-Factor Authentication",
     description: "Built-in TOTP code generator for added security.",
-  },
-];
+  }];
 
 export default function Features() {
   return (

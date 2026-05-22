@@ -16,8 +16,7 @@ export async function aggregateSystemPulse(): Promise<void> {
 
   const updates = [
     { metricKey: 'global_avg_velocity', metricValue: globalAvgVelocity, sampleCount: velocities.length },
-    { metricKey: 'median_interaction_ratio', metricValue: medianRatio, sampleCount: ratios.length },
-  ];
+    { metricKey: 'median_interaction_ratio', metricValue: medianRatio, sampleCount: ratios.length }];
 
   for (const update of updates) {
     await databases.updateDocument(

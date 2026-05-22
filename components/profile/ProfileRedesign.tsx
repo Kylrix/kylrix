@@ -559,8 +559,7 @@ export function ProfileRedesign({ username }: ProfileProps) {
         const [feedRes, followStats, followingStatus] = await Promise.all([
           SocialService.getFeed(currentUser?.$id, targetId),
           SocialService.getFollowStats(targetId),
-          currentUser ? SocialService.isFollowing(currentUser.$id, targetId) : Promise.resolve(false),
-        ]);
+          currentUser ? SocialService.isFollowing(currentUser.$id, targetId) : Promise.resolve(false)]);
 
         setMoments(feedRes.rows || []);
         setStats({

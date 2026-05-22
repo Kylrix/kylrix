@@ -108,8 +108,7 @@ interface GlobalSearchProps {
 const mockRecentSearches = [
   'Project Alpha',
   'Meeting notes',
-  'React components',
-];
+  'React components'];
 
 const mockSearchResults: SearchResult[] = [
   {
@@ -139,8 +138,7 @@ const mockSearchResults: SearchResult[] = [
     title: 'project-management',
     subtitle: '12 notes',
     icon: <TagIcon />,
-  },
-];
+  }];
 
 export default function GlobalSearch({
   onSearchResult,
@@ -278,8 +276,7 @@ export default function GlobalSearch({
   const filters = [
     { id: 'notes', label: 'Notes', icon: <NoteIcon /> },
     { id: 'people', label: 'People', icon: <PersonIcon /> },
-    { id: 'tags', label: 'Tags', icon: <TagIcon /> },
-  ];
+    { id: 'tags', label: 'Tags', icon: <TagIcon /> }];
 
   return (
     <Box sx={{ position: 'relative', width: '100%', maxWidth: 600 }}>

@@ -82,8 +82,7 @@ const LIFESPAN_OPTIONS = [
     { label: '12 Hours', value: 12 * 60 * 60 * 1000 },
     { label: '1 Day', value: 24 * 60 * 60 * 1000 },
     { label: '3 Days', value: 3 * 24 * 60 * 60 * 1000 },
-    { label: '7 Days', value: 7 * 24 * 60 * 60 * 1000 },
-];
+    { label: '7 Days', value: 7 * 24 * 60 * 60 * 1000 }];
 
 /**
  * A small circular countdown timer for ghost notes.

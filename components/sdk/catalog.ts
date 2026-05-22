@@ -128,8 +128,7 @@ export const SDK_SECTIONS: SdkSection[] = [
     sourceHref: `${githubBase}/extensions/index.ts`,
     snippet: `import { createExtensionManifest } from '@/lib/sdk/extensions';`,
     icon: Blocks,
-  },
-];
+  }];
 
 export function getSdkSection(id: string) {
   return SDK_SECTIONS.find((section) => section.id === id) || SDK_SECTIONS[0];

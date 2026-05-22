@@ -30,8 +30,7 @@ export const MeshProtocol = {
     { id: 'note', type: 'data', subdomain: 'note', version: '1.2.0', status: 'online', capabilities: ['knowledge_graph', 'ai_search'] },
     { id: 'vault', type: 'secure', subdomain: 'vault', version: '1.1.0', status: 'online', capabilities: ['vault', 'encryption', 'passkeys'] },
     { id: 'flow', type: 'logic', subdomain: 'flow', version: '1.0.5', status: 'online', capabilities: ['task_orchestration', 'events'] },
-    { id: 'connect', type: 'message', subdomain: 'connect', version: '1.0.0', status: 'online', capabilities: ['realtime_comm', 'p2p_relay'] },
-  ],
+    { id: 'connect', type: 'message', subdomain: 'connect', version: '1.0.0', status: 'online', capabilities: ['realtime_comm', 'p2p_relay'] }],
 
   /**
    * Returns a standardized, premium icon name for a given node ID.

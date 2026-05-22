@@ -176,8 +176,7 @@ export function createEcosystemPanelItems(currentApp: KylrixApp = 'note'): Topba
     { id: 'vault', app: 'vault', label: 'Vault', description: 'Passwords, 2FA, and keys.', selected: currentApp === 'vault' },
     { id: 'flow', app: 'flow', label: 'Flow', description: 'Goals, plans, and follow-through.', selected: currentApp === 'flow' },
     { id: 'connect', app: 'connect', label: 'Connect', description: 'Secure messages and sharing.', selected: currentApp === 'connect' },
-    { id: 'accounts', app: 'kylrix', label: 'Accounts', description: 'Your Kylrix account.', selected: currentApp === 'kylrix' },
-  ];
+    { id: 'accounts', app: 'kylrix', label: 'Accounts', description: 'Your Kylrix account.', selected: currentApp === 'kylrix' }];
 }
 
 export function createTopbarPanelMotion(): TopbarPanelMotion {
@@ -254,8 +253,7 @@ export function createTopbarSearchSurface(params: {
       href: resolveUrl('connect', '/chats'),
       accent: '#6366F1',
       terms: ['people', 'person', 'user', 'contact', 'chat'],
-    },
-  ];
+    }];
 
   const searchTargets: TopbarSearchCard[] = [
     {
@@ -311,8 +309,7 @@ export function createTopbarSearchSurface(params: {
       href: resolveUrl('kylrix', '/'),
       accent: '#F59E0B',
       terms: ['app', 'apps', 'note', 'flow', 'vault', 'connect'],
-    },
-  ];
+    }];
 
   const contextualHints = snippets.map((snippet) => ({
     id: snippet.id,

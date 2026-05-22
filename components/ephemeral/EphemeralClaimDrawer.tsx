@@ -224,10 +224,7 @@ export function EphemeralClaimDrawer({ open, onClose, target, onConsumed }: Prop
             updatedAt: now,
           },
           [
-            Permission.read(Role.user(user.$id)),
-            Permission.update(Role.user(user.$id)),
-            Permission.delete(Role.user(user.$id)),
-          ],
+            Permission.read(Role.user(user.$id))],
         );
       } else if (kind === 'password') {
         let payload: SendPasswordPayload;
@@ -298,8 +295,7 @@ export function EphemeralClaimDrawer({ open, onClose, target, onConsumed }: Prop
     openIDMWindow,
     handleClose,
     onConsumed,
-    openProUpgrade,
-  ]);
+    openProUpgrade]);
 
   const showMasterPassField = Boolean(user?.$id && !MasterPassCrypto.getInstance().isVaultUnlocked());
 

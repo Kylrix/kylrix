@@ -87,8 +87,7 @@ export default function ProjectsPage() {
       mainColor: '#6366F1',
       actions: [
         { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => setIsCreateModalOpen(true) },
-        { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note/notes') },
-      ]
+        { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note/notes') }]
     });
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, router]);

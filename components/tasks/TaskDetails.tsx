@@ -232,10 +232,8 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
         const res = await noteApi.list([
           Query.or([
             Query.search('searchTitle', noteQuery.trim()),
-            Query.search('content', noteQuery.trim()),
-          ]),
-          Query.limit(6),
-        ]);
+            Query.search('content', noteQuery.trim())]),
+          Query.limit(6)]);
         if (!active) return;
         setNoteResults(res.rows.filter((row: any) => row.$id !== task.id));
       } catch (error) {

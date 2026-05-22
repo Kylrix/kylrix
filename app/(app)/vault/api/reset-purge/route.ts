@@ -91,8 +91,7 @@ export async function POST(req: NextRequest) {
                 Query.or([
                     Query.equal('grantee', userId),
                     Query.contains('metadata', userId),
-                    Query.equal('resourceId', userId),
-                ])
+                    Query.equal('resourceId', userId)])
             ]
         );
         await Promise.all(keyMappings.documents.map(row => appwriteDatabases.deleteDocument(
@@ -113,8 +112,7 @@ export async function POST(req: NextRequest) {
                 appwriteDatabases.updateDocument(APPWRITE_CONFIG.DATABASES.NOTE, NOTE_USERS_TABLE, userId, {
                     publicKey: null,
                     updatedAt: new Date().toISOString()
-                }).catch(() => null),
-            ]);
+                }).catch(() => null)]);
             console.log(`[MasterPurge] Reset profile public keys for user: ${userId}`);
         } catch (e) {
             console.warn(`[MasterPurge] Could not reset profile keys (might not exist yet):`, e);

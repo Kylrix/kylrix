@@ -77,7 +77,7 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
         lastMessageAt: string;
     }>>({});
     const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
-    const [, startTransition] = useTransition();
+    const [ startTransition] = useTransition();
 
     useEffect(() => {
         rememberConversationRoster(conversations);

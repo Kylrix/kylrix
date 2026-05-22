@@ -311,8 +311,7 @@ export const CallActionModal = ({
             ).catch(() => undefined);
             const participants = Array.from(new Set([
                 user.$id,
-                ...(launchContext?.participantIds || []),
-            ]));
+                ...(launchContext?.participantIds || [])]));
             setLiveCallState({
                 callId: _link.$id,
                 title: instantTitle || launchContext?.title || 'Live Call',

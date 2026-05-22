@@ -232,8 +232,7 @@ export default function ConversationActionsSheet({
         Query.equal('resourceId', currentConversation.$id),
         Query.equal('status', 'pending'),
         Query.orderAsc('createdAt'),
-        Query.limit(100),
-      ]);
+        Query.limit(100)]);
 
       setPendingJoinRequests(rows || []);
 

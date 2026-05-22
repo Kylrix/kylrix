@@ -29,8 +29,7 @@ export async function listCouponsAction() {
   const result = await databases.listDocuments(CHAT_DB_ID, EVENTS_TABLE_ID, [
     Query.equal('type', 'coupon'),
     Query.orderDesc('$createdAt'),
-    Query.limit(100),
-  ]);
+    Query.limit(100)]);
   return result.documents;
 }
 

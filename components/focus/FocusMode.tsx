@@ -181,8 +181,7 @@ export default function FocusMode() {
     { label: '15m', value: 15 * 60 },
     { label: '25m', value: 25 * 60 },
     { label: '45m', value: 45 * 60 },
-    { label: '60m', value: 60 * 60 },
-  ];
+    { label: '60m', value: 60 * 60 }];
 
   return (
     <Box

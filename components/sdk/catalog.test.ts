@@ -14,8 +14,7 @@ describe('SDK catalog', () => {
       'messaging',
       'social',
       'huddles',
-      'extensions',
-    ]);
+      'extensions']);
   });
 
   it('returns the first section as a safe fallback', () => {

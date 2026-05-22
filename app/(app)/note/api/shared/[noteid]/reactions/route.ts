@@ -64,8 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ note
         Query.equal('targetType', targetType),
         Query.equal('targetId', targetId),
         Query.orderAsc('createdAt'),
-        Query.limit(500),
-      ]
+        Query.limit(500)]
     );
 
     return NextResponse.json({ documents: res.documents });

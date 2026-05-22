@@ -93,8 +93,7 @@ export async function getNoteRevisions(
       [
         Query.equal('noteId', noteId),
         Query.orderDesc('revision'),
-        Query.limit(effectiveLimit),
-      ] as any
+        Query.limit(effectiveLimit)] as any
     );
 
     return res.documents as unknown as NoteRevisions[];
@@ -120,8 +119,7 @@ export async function getNoteRevision(
       [
         Query.equal('noteId', noteId),
         Query.equal('revision', revisionNumber),
-        Query.limit(1),
-      ] as any
+        Query.limit(1)] as any
     );
 
     return (res.documents[0] as unknown as NoteRevisions) || null;
@@ -217,8 +215,7 @@ export async function createRevision(
         [
           Query.equal('noteId', noteId),
           Query.orderDesc('revision'),
-          Query.limit(1),
-        ] as any
+          Query.limit(1)] as any
       );
       if (existing.documents.length) {
         revisionNumber = (existing.documents[0] as any).revision + 1;

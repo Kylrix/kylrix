@@ -101,9 +101,7 @@ const permissionBuilder: PermissionBuilder = {
   read: (role) => Permission.read(role),
   write: (role) => Permission.write(role),
   create: (role) => Permission.create(role),
-  update: (role) => Permission.update(role),
-  delete: (role) => Permission.delete(role),
-};
+  update: (role) => delete: (role) => };
 
 const resolvePermissions = (callback?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]): string[] | undefined =>
   callback?.(permissionBuilder, roleBuilder);

@@ -50,8 +50,7 @@ export async function POST(req: NextRequest) {
       [
         Query.equal('$id', targetIds),
         Query.limit(targetIds.length),
-        Query.select(['$id', 'username', 'displayName', 'bio', 'avatar', 'walletAddress', 'publicKey']),
-      ]
+        Query.select(['$id', 'username', 'displayName', 'bio', 'avatar', 'walletAddress', 'publicKey'])]
     );
 
     // Filter sensitive fields if any (though Appwrite permissions should handle this, 

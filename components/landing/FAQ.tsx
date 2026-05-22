@@ -23,8 +23,7 @@ const faqs = [
     question: "Is Kylrix Vault free to use?",
     answer:
       "Kylrix Vault offers a free tier with essential features. Premium plans with advanced features start at $2.99/month.",
-  },
-];
+  }];
 
 export default function FAQ() {
   return (

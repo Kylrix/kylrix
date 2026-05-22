@@ -37,8 +37,7 @@ export default function TwoFactorReminderHost() {
       try {
         const [session, freshUser] = await Promise.all([
           account.getSession('current'),
-          account.get(),
-        ]);
+          account.get()]);
 
         if (!mounted) return;
         setLoginMethod(resolveLoginMethod((session as any)?.provider));

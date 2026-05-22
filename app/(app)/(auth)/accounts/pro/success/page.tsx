@@ -312,8 +312,7 @@ export default function ProSuccessPage() {
             {[
               { icon: <ShieldCheck />, title: 'Advanced Security', desc: 'Zero-knowledge DMs and vault isolation' },
               { icon: <Zap />, title: 'Intelligence', desc: 'Neural Knowledge Graph and AI expansion' },
-              { icon: <Globe />, title: 'Universal', desc: 'Active across all Kylrix applications' },
-            ].map((feature, i) => (
+              { icon: <Globe />, title: 'Universal', desc: 'Active across all Kylrix applications' }].map((feature, i) => (
               <Box key={i} sx={{ p: 3, borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.03)' }}>
                 <Box sx={{ color: '#6366F1', mb: 2 }}>{feature.icon}</Box>
                 <Typography sx={{ fontWeight: 800, mb: 1, fontSize: '0.9rem' }}>{feature.title}</Typography>

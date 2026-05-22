@@ -112,8 +112,7 @@ export const DESIGN_FLYERS: DesignFlyerDefinition[] = [
         </Box>
       </Box>
     ),
-  },
-];
+  }];
 
 export const DESIGN_DEFAULT_SLUG = 'happy-easter';
 

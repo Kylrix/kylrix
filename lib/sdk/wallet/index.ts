@@ -246,8 +246,7 @@ export function createWalletService(deps: WalletServiceDeps) {
     const response = await deps.tablesDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
       Query.equal('ownerId', ownerIdForUser(userId)),
       Query.equal('type', 'main'),
-      Query.limit(100),
-    ]);
+      Query.limit(100)]);
 
     return sortWallets(response.rows);
   };
@@ -295,8 +294,7 @@ export function createWalletService(deps: WalletServiceDeps) {
 
     const existing = await deps.tablesDB.listRows(deps.config.noteDbId, deps.config.walletMapTableId, [
       Query.equal('userId', userId),
-      Query.limit(100),
-    ]);
+      Query.limit(100)]);
 
     for (const row of existing.rows) {
       if (!publicAddresses.includes(row.walletAddressLower)) {
@@ -352,8 +350,7 @@ export function createWalletService(deps: WalletServiceDeps) {
     async listAllWallets(userId: string): Promise<WalletSummary[]> {
       const response = await deps.tablesDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
         Query.equal('ownerId', ownerIdForUser(userId)),
-        Query.limit(100),
-      ]);
+        Query.limit(100)]);
 
       return response.rows.map(toWalletSummary);
     },
@@ -445,8 +442,7 @@ export function createWalletService(deps: WalletServiceDeps) {
       const response = await deps.tablesDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
         Query.equal('ownerId', ownerIdForUser(userId)),
         Query.equal('type', 'main'),
-        Query.limit(1),
-      ]);
+        Query.limit(1)]);
 
       if (response.rows.length === 0) {
         throw new Error('No wallets found');

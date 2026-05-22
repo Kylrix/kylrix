@@ -17,8 +17,7 @@ export const ProjectsService = {
       PROJECTS_COLLECTION_ID,
       [
         Query.equal('ownerId', user.$id),
-        Query.orderDesc('updatedAt'),
-      ]
+        Query.orderDesc('updatedAt')]
     );
   },
 

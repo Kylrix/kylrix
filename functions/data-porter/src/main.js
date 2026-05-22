@@ -361,7 +361,7 @@ async function runImport(databases, userId, format, data, log) {
 
             const created = await databases.createDocument(
                 VAULT_DB, FOLDERS_TABLE, ID.unique(), cleanFolder,
-                [Permission.read(Role.user(userId)), Permission.update(Role.user(userId)), Permission.delete(Role.user(userId))]
+                [Permission.read(Role.user(userId))]
             );
 
             if (folder.$id) folderIdMapping.set(folder.$id, created.$id);
@@ -391,7 +391,7 @@ async function runImport(databases, userId, format, data, log) {
                 const cleaned = cleanCredential(cred, folderIdMapping, userId);
                 return databases.createDocument(
                     VAULT_DB, CREDENTIALS_TABLE, ID.unique(), cleaned,
-                    [Permission.read(Role.user(userId)), Permission.update(Role.user(userId)), Permission.delete(Role.user(userId))]
+                    [Permission.read(Role.user(userId))]
                 );
             })
         );
@@ -438,7 +438,7 @@ async function runImport(databases, userId, format, data, log) {
 
                 return databases.createDocument(
                     VAULT_DB, TOTP_TABLE, ID.unique(), cleaned,
-                    [Permission.read(Role.user(userId)), Permission.update(Role.user(userId)), Permission.delete(Role.user(userId))]
+                    [Permission.read(Role.user(userId))]
                 );
             })
         );

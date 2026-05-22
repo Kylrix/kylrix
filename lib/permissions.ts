@@ -18,19 +18,13 @@ export const permissions = {
    */
   publicRead: (userId: string) => [
     Permission.read(Role.any()),
-    Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-  ],
+    Permission.read(Role.user(userId))],
 
   /**
    * Get permissions array for a private resource (only owner)
    */
   privateOnly: (userId: string) => [
-    Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-  ],
+    Permission.read(Role.user(userId))],
 
   /**
    * Get permissions array for unlisted (anyone with link can read, but not discoverable)
@@ -38,10 +32,7 @@ export const permissions = {
    */
   unlistedRead: (userId: string) => [
     Permission.read(Role.any()),
-    Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-  ],
+    Permission.read(Role.user(userId))],
 
   /**
    * Get permissions based on visibility setting

@@ -7,8 +7,7 @@ describe('bottom bar helpers', () => {
       activeHref: '/shared',
       items: [
         { id: 'notes', label: 'Notes', href: '/notes' },
-        { id: 'shared', label: 'Shared', href: '/shared' },
-      ],
+        { id: 'shared', label: 'Shared', href: '/shared' }],
     });
 
     expect(surface.items[1].active).toBe(true);

@@ -22,8 +22,7 @@ export function generatePattern(seed: string): string {
     `linear-gradient(160deg, ${color1} 0%, ${color2} 50%, ${color3} 100%)`,
     `radial-gradient(ellipse at top left, ${color1}, ${color2} 70%)`,
     `linear-gradient(45deg, ${color1} 0%, ${color2} 50%, ${color1} 100%)`,
-    `radial-gradient(circle at 30% 70%, ${color1}, ${color2})`,
-  ];
+    `radial-gradient(circle at 30% 70%, ${color1}, ${color2})`];
 
   const patternIndex = Math.abs(hash) % patterns.length;
   

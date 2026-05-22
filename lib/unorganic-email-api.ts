@@ -146,8 +146,7 @@ function buildDeduplicationSeed(
     pickText(input.resourceId),
     pickText(input.resourceTitle),
     pickText(input.rightsLabel),
-    templateKey,
-  ].join('|');
+    templateKey].join('|');
 }
 
 function escapeHtml(value: string) {
@@ -353,8 +352,7 @@ async function getRecipientProfile(tablesDB: TablesDB, userId: string) {
   } catch {
     const result = await tablesDB.listRows(CHAT_DATABASE_ID, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
       TablesQuery.equal('userId', userId),
-      TablesQuery.limit(1),
-    ]);
+      TablesQuery.limit(1)]);
     return result.rows[0] || null;
   }
 }
@@ -462,8 +460,7 @@ async function getRecentSentCount(tablesDB: TablesDB, recipientId: string, now =
     TablesQuery.equal('status', 'sent'),
     TablesQuery.greaterThanEqual('sentAt', windowStart.toISOString()),
     TablesQuery.orderDesc('sentAt'),
-    TablesQuery.limit(MAX_UNORGANIC_EMAILS + 1),
-  ]);
+    TablesQuery.limit(MAX_UNORGANIC_EMAILS + 1)]);
 
   return response.rows.length;
 }

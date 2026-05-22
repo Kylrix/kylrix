@@ -152,8 +152,7 @@ export function UnifiedBottomBar() {
           key="projects"
           value="projects"
           icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />}
-        />,
-      ];
+        />];
     }
     if (appContext === 'vault') {
       return [
@@ -177,8 +176,7 @@ export function UnifiedBottomBar() {
           key="projects"
           value="projects"
           icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />}
-        />,
-      ];
+        />];
     }
     if (appContext === 'flow') {
       return [
@@ -201,8 +199,7 @@ export function UnifiedBottomBar() {
           key="projects"
           value="projects"
           icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />}
-        />,
-      ];
+        />];
     }
     if (appContext === 'connect') {
       return [
@@ -225,8 +222,7 @@ export function UnifiedBottomBar() {
           key="projects"
           value="projects"
           icon={<ProjectsIcon size={24} strokeWidth={1.5} className="lucide" />}
-        />,
-      ];
+        />];
     }
     return null;
   };

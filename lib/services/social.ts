@@ -56,8 +56,7 @@ const fetchRowsByIds = async (databaseId: string, tableId: string, ids: string[]
     try {
         const result = await tablesDB.listRows(databaseId, tableId, [
             Query.equal('$id', uniqueIds),
-            Query.limit(uniqueIds.length),
-        ]);
+            Query.limit(uniqueIds.length)]);
         return result.rows || [];
     } catch (_e) {
         return await Promise.all(uniqueIds.map((id) => tablesDB.getRow(databaseId, tableId, id).catch(() => null)))
@@ -402,8 +401,7 @@ export const SocialService = {
                     Query.orderDesc('$createdAt'),
                     Query.limit(200)
                 ]).then((res) => res.rows || []).catch(() => [])
-                : Promise.resolve([]),
-        ]);
+                : Promise.resolve([])]);
 
         const likesByMoment = new Map<string, number>();
         const likedMomentIds = new Set<string>();
@@ -513,8 +511,7 @@ export const SocialService = {
             fetchRowsByIds(DB_ID, MOMENTS_TABLE, sourceIds),
             fetchRowsByIds(APPWRITE_CONFIG.DATABASES.KYLRIXNOTE, APPWRITE_CONFIG.TABLES.KYLRIXNOTE.USERS === '67ff05c900247b5673d3' ? '67ff05f3002502ef239e' : 'notes', Array.from(attachmentGroups.note)),
             fetchRowsByIds(APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, 'events', Array.from(attachmentGroups.event)),
-            fetchRowsByIds(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS, Array.from(attachmentGroups.call)),
-        ]);
+            fetchRowsByIds(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS, Array.from(attachmentGroups.call))]);
 
         const sourceMomentMap = new Map<string, any>(sourceMoments.map((row: any) => [row.$id, row]));
         const noteMap = new Map<string, any>(noteRows.map((row: any) => [row.$id, row]));
@@ -603,10 +600,7 @@ export const SocialService = {
     /** When caption is empty, `fallbackSearchTitle` is used for indexing (e.g. attached note title). */
     async createMoment(creatorId: string, content: string, type: 'post' | 'reply' | 'pulse' | 'quote' = 'post', mediaIds: string[] = [], _visibility: 'public' | 'private' | 'followers' = 'public', noteId?: string, eventId?: string, sourceId?: string, callId?: string, fallbackSearchTitle?: string | null) {
         const permissions = [
-            `read("user:${creatorId}")`,
-            `update("user:${creatorId}")`,
-            `delete("user:${creatorId}")`,
-        ];
+            `read("user:${creatorId}")`];
 
         // Build Metadata-based fileId
         const metadata: MomentMetadata = { type };

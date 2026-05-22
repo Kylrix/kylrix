@@ -7,8 +7,7 @@ export type SystemRuntimeJobId = 'cleanup_expired_public_ghost_notes' | 'sweep_s
 
 const SYSTEM_JOB_IDS = new Set<SystemRuntimeJobId>([
   'cleanup_expired_public_ghost_notes',
-  'sweep_stale_live_call_presence',
-]);
+  'sweep_stale_live_call_presence']);
 
 export function isSystemRuntimeJobId(job: string): job is SystemRuntimeJobId {
   return SYSTEM_JOB_IDS.has(job as SystemRuntimeJobId);
@@ -25,8 +24,7 @@ async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) 
     Query.equal('isPublic', true),
     Query.orderDesc('$updatedAt'),
     Query.limit(cap),
-    Query.select(['$id', 'metadata', 'updatedAt']),
-  ]);
+    Query.select(['$id', 'metadata', 'updatedAt'])]);
 
   let deleted = 0;
   for (const doc of res.documents) {

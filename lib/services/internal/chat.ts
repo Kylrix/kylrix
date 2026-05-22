@@ -17,19 +17,13 @@ export function uniqueIds(ids: Array<string | null | undefined>) {
 export function buildMessagePermissions(senderId: string, recipientIds: string[]) {
   return [
     Permission.read(Role.user(senderId)),
-    Permission.update(Role.user(senderId)),
-    Permission.delete(Role.user(senderId)),
-    ...recipientIds.map((userId) => Permission.read(Role.user(userId))),
-  ];
+    ...recipientIds.map((userId) => Permission.read(Role.user(userId)))];
 }
 
 export function buildReactionPermissions(userId: string, recipientIds: string[]) {
   return [
     Permission.read(Role.user(userId)),
-    Permission.update(Role.user(userId)),
-    Permission.delete(Role.user(userId)),
-    ...recipientIds.map((participantId) => Permission.read(Role.user(participantId))),
-  ];
+    ...recipientIds.map((participantId) => Permission.read(Role.user(participantId)))];
 }
 
 export function buildReactionDocumentId(userId: string, messageId: string) {
@@ -51,8 +45,7 @@ export async function resolveConversationParticipants(databases: any, conversati
 
   const memberRows = await databases.listDocuments(CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
     Query.equal('conversationId', conversation.$id),
-    Query.limit(1000),
-  ]).catch(() => ({ documents: [] }));
+    Query.limit(1000)]).catch(() => ({ documents: [] }));
 
   return Array.from(new Set<string>(
     (memberRows.documents || [])
@@ -76,8 +69,7 @@ async function listAllDocuments(
     const response = await databases.listDocuments(databaseId, tableId, [
       ...queries,
       Query.limit(PAGE_SIZE),
-      Query.offset(offset),
-    ]);
+      Query.offset(offset)]);
 
     const page = response.documents || [];
     documents.push(...page);
@@ -143,14 +135,12 @@ async function deleteConversationArtifacts(databases: any, storage: any, convers
 
   const attachmentIds = messages.flatMap((message) => Array.isArray(message?.attachments) ? message.attachments : []);
   const reactionRows = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
-    Query.equal('conversationId', conversationId),
-  ]);
+    Query.equal('conversationId', conversationId)]);
   const reactionIds = reactionRows.map((row) => row.$id);
 
   await Promise.all([
     deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, messages.map((row) => row.$id)),
-    deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds),
-  ]);
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds)]);
 
   return {
     messagesDeleted: messages.length,
@@ -239,32 +229,27 @@ export async function clearConversationFootprintInternal(payload: {
 
   const ownedMessages = await listAllDocuments(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, [
     Query.equal('conversationId', payload.conversationId),
-    Query.equal('senderId', verifiedActorId),
-  ]);
+    Query.equal('senderId', verifiedActorId)]);
   const ownedMessageIds = ownedMessages.map((row) => row.$id);
 
   const reactionsByUser = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
     Query.equal('conversationId', payload.conversationId),
-    Query.equal('userId', verifiedActorId),
-  ]);
+    Query.equal('userId', verifiedActorId)]);
 
   const reactionsOnOwnedMessages = ownedMessageIds.length
     ? await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
         Query.equal('conversationId', payload.conversationId),
-        Query.equal('messageId', ownedMessageIds),
-      ])
+        Query.equal('messageId', ownedMessageIds)])
     : [];
 
   const reactionIds = Array.from(new Set([
     ...reactionsByUser.map((row) => row.$id),
-    ...reactionsOnOwnedMessages.map((row) => row.$id),
-  ]));
+    ...reactionsOnOwnedMessages.map((row) => row.$id)]));
 
   await deleteMessageFiles(storage, ownedMessages);
   await Promise.all([
     deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, reactionIds),
-    deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, ownedMessageIds),
-  ]);
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, ownedMessageIds)]);
 
   return {
     success: true,
@@ -295,17 +280,13 @@ export async function deleteConversationFullyInternal(payload: {
   }
 
   const messages = await listAllDocuments(databases, CHAT_DB_ID, MESSAGES_TABLE_ID, [
-    Query.equal('conversationId', payload.conversationId),
-  ]);
+    Query.equal('conversationId', payload.conversationId)]);
   const reactions = await listAllDocuments(databases, CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
-    Query.equal('conversationId', payload.conversationId),
-  ]);
+    Query.equal('conversationId', payload.conversationId)]);
   const members = await listAllDocuments(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
-    Query.equal('conversationId', payload.conversationId),
-  ]);
+    Query.equal('conversationId', payload.conversationId)]);
   const epochs = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, [
-    Query.equal('resourceId', payload.conversationId),
-  ]);
+    Query.equal('resourceId', payload.conversationId)]);
   const keyMappings = await listAllDocuments(
     databases,
     APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER,
@@ -313,8 +294,7 @@ export async function deleteConversationFullyInternal(payload: {
     [Query.equal('resourceId', payload.conversationId)],
   );
   const joinRequests = await listAllDocuments(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, [
-    Query.equal('resourceId', payload.conversationId),
-  ]);
+    Query.equal('resourceId', payload.conversationId)]);
 
   await deleteConversationArtifacts(databases, storage, payload.conversationId, messages);
 
@@ -328,8 +308,7 @@ export async function deleteConversationFullyInternal(payload: {
     deleteDocumentsInBatches(databases, CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, members.map((row) => row.$id)),
     deleteDocumentsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.EPOCHS, epochs.map((row) => row.$id)),
     deleteDocumentsInBatches(databases, APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, keyMappings.map((row) => row.$id)),
-    deleteDocumentsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row) => row.$id)),
-  ]);
+    deleteDocumentsInBatches(databases, CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.JOIN_REQUESTS, joinRequests.map((row) => row.$id))]);
 
   return {
     success: true,
@@ -399,8 +378,7 @@ export async function toggleReactionInternal(payload: {
     const existing = await databases.listDocuments(CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, [
       Query.equal('userId', verifiedActorId),
       Query.equal('messageId', payload.messageId),
-      Query.equal('emoji', payload.emoji),
-    ]);
+      Query.equal('emoji', payload.emoji)]);
 
     for (const row of existing.documents) {
       await databases.deleteDocument(CHAT_DB_ID, MESSAGE_REACTIONS_TABLE_ID, row.$id);
@@ -482,8 +460,7 @@ export async function repairConversationInternal(payload: {
   // 1. Repair Identity
   const profiles = await databases.listDocuments(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
     Query.equal('userId', targetUserId),
-    Query.limit(1),
-  ]);
+    Query.limit(1)]);
   const profile = profiles.documents[0] || null;
 
   const identities = await databases.listDocuments(
@@ -492,8 +469,7 @@ export async function repairConversationInternal(payload: {
     [
       Query.equal('userId', targetUserId),
       Query.equal('identityType', 'e2e_connect'),
-      Query.limit(100),
-    ],
+      Query.limit(100)],
   );
 
   const identityRows = identities.documents;
@@ -545,8 +521,7 @@ export async function repairConversationInternal(payload: {
       APPWRITE_CONFIG.TABLES.CHAT.EPOCHS,
       [
         Query.equal('resourceId', payload.conversationId),
-        Query.limit(100),
-      ],
+        Query.limit(100)],
     );
     const epochIds = epochRows.documents.map((row) => row.$id);
 
@@ -555,8 +530,7 @@ export async function repairConversationInternal(payload: {
       APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING,
       [
         Query.equal('grantee', targetUserId),
-        Query.limit(1000),
-      ],
+        Query.limit(1000)],
     );
 
     const relevantMappings = mappings.documents.filter((row: any) => {
@@ -593,8 +567,7 @@ export async function repairConversationInternal(payload: {
         try {
           const wrappedByProfiles = await databases.listDocuments(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
             Query.equal('userId', String(metadata.wrappedBy)),
-            Query.limit(1),
-          ]);
+            Query.limit(1)]);
           const wrappedByProfile = wrappedByProfiles.documents[0];
           if (wrappedByProfile?.publicKey) {
             metadata.senderPublicKey = wrappedByProfile.publicKey;
@@ -672,8 +645,7 @@ export async function joinRequestInternal(payload: {
       const memberRows = await databases.listDocuments(CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
         Query.equal('conversationId', payload.resourceId),
         Query.equal('userId', currentRequesterId),
-        Query.limit(1),
-      ]).catch(() => ({ documents: [] }));
+        Query.limit(1)]).catch(() => ({ documents: [] }));
       alreadyJoined = memberRows.documents.length > 0;
     }
 
@@ -683,8 +655,7 @@ export async function joinRequestInternal(payload: {
         Query.equal('resourceType', payload.resourceType),
         Query.equal('resourceId', payload.resourceId),
         Query.equal('requesterId', currentRequesterId),
-        Query.limit(1),
-      ]);
+        Query.limit(1)]);
       request = existing.documents[0] || null;
     }
 
@@ -715,10 +686,7 @@ export async function joinRequestInternal(payload: {
       },
       [
         Permission.read(Role.user(verifiedActorId!)),
-        Permission.update(Role.user(verifiedActorId!)),
-        Permission.delete(Role.user(verifiedActorId!)),
-        ...managers.map((id) => Permission.read(Role.user(id))),
-      ],
+        ...managers.map((id) => Permission.read(Role.user(id)))],
     );
 
     return JSON.parse(JSON.stringify(request));
@@ -735,8 +703,7 @@ export async function joinRequestInternal(payload: {
       Query.equal('resourceType', payload.resourceType),
       Query.equal('resourceId', payload.resourceId),
       Query.equal('requesterId', payload.requesterId),
-      Query.limit(1),
-    ]);
+      Query.limit(1)]);
     const request = existing.documents[0];
     if (!request) throw new Error('Not found');
 
@@ -783,8 +750,7 @@ export async function joinRequestInternal(payload: {
     const existing = await databases.listDocuments(CHAT_DB_ID, JOIN_REQUESTS_TABLE_ID, [
       Query.equal('resourceType', payload.resourceType),
       Query.equal('resourceId', payload.resourceId),
-      Query.equal('requesterId', verifiedActorId!),
-    ]);
+      Query.equal('requesterId', verifiedActorId!)]);
 
     for (const row of existing.documents) {
       await databases.deleteDocument(CHAT_DB_ID, JOIN_REQUESTS_TABLE_ID, row.$id);

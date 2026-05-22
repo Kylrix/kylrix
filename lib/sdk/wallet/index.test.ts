@@ -30,8 +30,7 @@ describe('wallet service helpers', () => {
   it('builds a stable public wallet payload', () => {
     const payload = service.buildPublicWalletPayload([
       { chain: 'sol', address: 'sol-address' },
-      { chain: 'eth', address: 'eth-address' },
-    ]);
+      { chain: 'eth', address: 'eth-address' }]);
 
     expect(payload).toBe('{"sol":"sol-address","eth":"eth-address"}');
   });

@@ -107,12 +107,10 @@ export const subscribeConversationRoster = (listener: (rows: any[]) => void) => 
 const getConversationMemberSnapshot = async (conversationId: string, fallbackParticipants: string[] = []) => {
     const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
         Query.equal('conversationId', conversationId),
-        Query.limit(1000),
-    ]).catch(() => ({ rows: [] as any[] }));
+        Query.limit(1000)]).catch(() => ({ rows: [] as any[] }));
 
     const participants = uniqueIds([
-        ...(memberRows.rows || []).map((row: any) => row.userId),
-    ]);
+        ...(memberRows.rows || []).map((row: any) => row.userId)]);
 
     if (participants.length > 0) {
         return participants;
@@ -137,8 +135,7 @@ async function notifyMessageStreak(conversation: any, senderId: string, conversa
     const recentMessages = await tablesDB.listRows(DB_ID, MSG_TABLE, [
         Query.equal('conversationId', conversationId),
         Query.orderDesc('createdAt'),
-        Query.limit(5),
-    ]);
+        Query.limit(5)]);
 
     if (recentMessages.rows.length < 5) return;
     if (!recentMessages.rows.every((row: any) => row.senderId === senderId)) return;
@@ -159,10 +156,7 @@ async function notifyMessageStreak(conversation: any, senderId: string, conversa
 
 const buildConversationMemberPermissions = (_participantIds: string[], creatorId: string) => {
     return [
-        Permission.read(Role.user(creatorId)),
-        Permission.update(Role.user(creatorId)),
-        Permission.delete(Role.user(creatorId)),
-    ];
+        Permission.read(Role.user(creatorId))];
 };
 
 const normalizeConversationRow = async (conversation: any) => {
@@ -346,8 +340,7 @@ async function fetchKeyMapping(resourceType: string, resourceId: string, grantee
             Query.equal('resourceType', resourceType),
             Query.equal('resourceId', resourceId),
             Query.equal('grantee', String(grantee || '').trim()),
-            Query.limit(1),
-        ]).catch(() => ({ rows: [] as any[] }));
+            Query.limit(1)]).catch(() => ({ rows: [] as any[] }));
 
         if (res.rows && res.rows.length > 0) return res.rows[0];
     } catch (e) {
@@ -403,8 +396,7 @@ async function fetchEpochKeyForConversation(conversationId: string, userId: stri
     const epochsRes = await tablesDB.listRows(APPWRITE_CONFIG.DATABASES.CHAT, EPOCHS_TABLE, [
         Query.equal('resourceId', conversationId),
         Query.orderDesc('epochNumber'),
-        Query.limit(50),
-    ]);
+        Query.limit(50)]);
 
     const epochs = epochsRes.rows || [];
     const messageTime = messageCreatedAt ? new Date(messageCreatedAt).getTime() : Number.NaN;
@@ -495,8 +487,7 @@ async function resolveConversationKey(
                     version: 't4',
                     repaired: true,
                 }),
-            },
-        ]);
+            }]);
 
         return rebuiltKey;
     }
@@ -642,8 +633,7 @@ export const ChatService = {
         try {
             const memberRows = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
                 Query.equal('conversationId', conversation.$id),
-                Query.limit(1000),
-            ]);
+                Query.limit(1000)]);
 
             const participants = Array.from(new Set(
                 memberRows.rows
@@ -1325,8 +1315,7 @@ export const ChatService = {
                 const epochsRes = await tablesDB.listRows(DB_ID, EPOCHS_TABLE, [
                     Query.equal('resourceId', conversationId),
                     Query.orderDesc('epochNumber'),
-                    Query.limit(1),
-                ]).catch(() => ({ rows: [] as any[] }));
+                    Query.limit(1)]).catch(() => ({ rows: [] as any[] }));
                 const nextEpochNumber = Number(epochsRes.rows?.[0]?.epochNumber || 0) + 1;
 
                 const creatorProfile = await UsersService.getProfileById(conv.creatorId);
@@ -1466,8 +1455,7 @@ export const ChatService = {
             Query.equal('resourceType', 'chat.conversation'),
             Query.equal('resourceId', conversationId),
             Query.equal('status', 'pending'),
-            Query.limit(1000),
-        ]);
+            Query.limit(1000)]);
 
         return rows;
     },
@@ -1484,8 +1472,7 @@ export const ChatService = {
         const existingParticipants = uniqueIds([
             ...(Array.isArray(current?.participants) ? current.participants : []),
             current?.creatorId,
-            ...(Array.isArray(current?.admins) ? current.admins : []),
-        ]);
+            ...(Array.isArray(current?.admins) ? current.admins : [])]);
 
         const uploaded = await storage.createFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, ID.unique(), file);
         try {

@@ -53,8 +53,7 @@ export default function AdminDashboard() {
     { label: 'Total Users', value: stats?.totalUsers || '0', icon: Users, color: '#6366F1', trend: stats?.growth || '+0%' },
     { label: 'Active Sessions', value: stats?.activeNow || '0', icon: Activity, color: '#10B981', trend: '+5%' },
     { label: 'API Requests', value: '48.2k', icon: Zap, color: '#F59E0B', trend: '+18%' },
-    { label: 'System Health', value: stats?.systemHealth || '99.9%', icon: Cpu, color: '#EC4899', trend: 'Stable' },
-  ];
+    { label: 'System Health', value: stats?.systemHealth || '99.9%', icon: Cpu, color: '#EC4899', trend: 'Stable' }];
 
   return (
     <AdminLayout>

@@ -107,8 +107,7 @@ export default function OverviewPage() {
             "password",
             "url",
             "notes",
-            "customFields",
-          ];
+            "customFields"];
           const fieldsPresent = fieldCandidates.filter((f) =>
             items.some((it) => {
               const val = (it as Record<string, unknown>)[f];
@@ -138,7 +137,7 @@ export default function OverviewPage() {
           }
 
           dupGroupsLocal = Array.from(groups.entries())
-            .filter(([, v]) => v.ids.length > 1)
+            .filter(([ v]) => v.ids.length > 1)
             .map(([k, v]) => ({
               key: k,
               count: v.ids.length,
@@ -195,8 +194,7 @@ export default function OverviewPage() {
   }, [
     user,
     locked,
-    fetchOptimized,
-  ]);
+    fetchOptimized]);
 
   if (!user) return null;
 

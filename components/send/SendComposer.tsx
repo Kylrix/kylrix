@@ -73,8 +73,7 @@ const KINDS: { id: SendKind; label: string; blurb: string; Icon: typeof FileText
   { id: 'password', label: 'Password', blurb: 'Credential snapshot', Icon: KeyRound },
   { id: 'task', label: 'Task', blurb: 'Action item', Icon: ListTodo },
   { id: 'totp', label: 'TOTP', blurb: 'Authenticator seed', Icon: Shield },
-  { id: 'file', label: 'File', blurb: 'Up to 7 days in bucket', Icon: Upload },
-];
+  { id: 'file', label: 'File', blurb: 'Up to 7 days in bucket', Icon: Upload }];
 
 function formatRemaining(ms: number): string {
   if (ms <= 0) return 'Expired';
@@ -316,8 +315,7 @@ export function SendComposer() {
         const uploadBlob = new Blob([cipherBytes.slice()], { type: 'application/octet-stream' });
         const uploadFile = new File([uploadBlob], 'send.enc', { type: 'application/octet-stream' });
         const uploaded = await storage.createFile(APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL, ID.unique(), uploadFile, [
-          Permission.read(Role.any()),
-        ]);
+          Permission.read(Role.any())]);
         sendObjectPayload = {
           kind: 'file',
           bucketId: APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL,
@@ -395,8 +393,7 @@ export function SendComposer() {
     totpSecret,
     sendFile,
     activeMaxBytes,
-    activeMaxLabel,
-  ]);
+    activeMaxLabel]);
 
   const handleCopy = useCallback(async () => {
     if (!createdUrl) return;

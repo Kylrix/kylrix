@@ -92,8 +92,7 @@ function LoginContent() {
     try {
       const [session, factors] = await Promise.all([
         account.getSession('current'),
-        account.listMfaFactors().catch(() => null),
-      ]);
+        account.listMfaFactors().catch(() => null)]);
       setMfaLoginMethod(resolveLoginMethod((session as any)?.provider));
 
       if (sessionNeedsTotpMfa({

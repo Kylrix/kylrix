@@ -94,8 +94,7 @@ function isSensitiveField(field: BitwardenCustomField): boolean {
     /ssn/i,
     /security/i,
     /private/i,
-    /confidential/i,
-  ];
+    /confidential/i];
 
   return sensitivePatterns.some((pattern) => pattern.test(field.name));
 }

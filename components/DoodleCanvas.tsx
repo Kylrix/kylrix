@@ -107,8 +107,7 @@ export default function DoodleCanvas({ initialData, onSave, onClose }: DoodleCan
     setIsDrawing(true);
     setStrokes((prev) => [
       ...prev,
-      { points: [[x, y]], color, size, opacity: 1 },
-    ]);
+      { points: [[x, y]], color, size, opacity: 1 }]);
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
