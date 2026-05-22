@@ -6,7 +6,11 @@ const { BUCKETS } = APPWRITE_CONFIG;
 
 // Generic Storage Helpers
 async function uploadFile(bucketId: string, file: File, fileId: string = ID.unique()) {
-    return await storage.createFile(bucketId, fileId, file);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('bucketId', bucketId);
+    formData.append('fileId', fileId);
+    return await secureUploadFile(formData);
 }
 
 function getFilePreview(bucketId: string, fileId: string) {

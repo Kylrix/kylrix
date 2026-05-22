@@ -1474,7 +1474,10 @@ export const ChatService = {
             current?.creatorId,
             ...(Array.isArray(current?.admins) ? current.admins : [])]);
 
-        const uploaded = await storage.createFile(APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS, ID.unique(), file);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('bucketId', APPWRITE_CONFIG.BUCKETS.GROUP_AVATARS);
+        const uploaded = await secureUploadFile(formData);
         try {
             await syncConversationAvatarAccess(uploaded.$id, existingParticipants, auth);
             return await this.updateConversation(conversationId, {

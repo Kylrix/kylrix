@@ -581,7 +581,10 @@ export const SocialService = {
 
     async uploadMedia(file: File) {
         try {
-            const uploaded = await storage.createFile(
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('bucketId', APPWRITE_CONFIG.BUCKETS.BLOG_MEDIA);
+            const uploaded = await secureUploadFile(formData); //
                 APPWRITE_CONFIG.BUCKETS.MESSAGES, // Using messages bucket as it exists and is likely generic
                 ID.unique(),
                 file

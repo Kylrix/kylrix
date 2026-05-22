@@ -39,6 +39,7 @@ import { SendSparkShelf } from '@/components/send/SendSparkShelf';
 import { AppwriteService } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { storage } from '@/lib/appwrite/client';
+import { secureUploadFile } from '@/lib/actions/client-ops';
 import { encryptGhostBinaryToBytes, encryptGhostData } from '@/lib/encryption/ghost-crypto';
 import { sha256HexUtf8 } from '@/lib/crypto/sha256-hex';
 import { clearEphemeralClaimResume, peekEphemeralClaimResume } from '@/lib/ephemeral/claim-session';
@@ -314,7 +315,10 @@ export function SendComposer() {
         const cipherBytes = encryptGhostBinaryToBytes(buf, noteKey);
         const uploadBlob = new Blob([cipherBytes.slice()], { type: 'application/octet-stream' });
         const uploadFile = new File([uploadBlob], 'send.enc', { type: 'application/octet-stream' });
-        const uploaded = await storage.createFile(APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL, ID.unique(), uploadFile, [
+        const formData = new FormData();
+        formData.append('file', uploadFile);
+        formData.append('bucketId', APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL);
+        const uploaded = await secureUploadFile(formData); //
           Permission.read(Role.any())]);
         sendObjectPayload = {
           kind: 'file',

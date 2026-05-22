@@ -1542,7 +1542,10 @@ export async function uploadFile(bucketId: string, file: File, userId?: string) 
     const permissions = [
       Permission.read(Role.user(user.$id))];
 
-    const result = await storage.createFile(bucketId, ID.unique(), file, permissions);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('bucketId', bucketId);
+    const result = await secureUploadFile(formData);
     return result;
   } catch (e: any) {
     console.error('[uploadFile] error', {

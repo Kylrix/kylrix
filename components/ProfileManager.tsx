@@ -225,7 +225,10 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
           }
           // Compress the selected image on the client before saving to storage
           const compressed = await compressImage(profilePic, 512, 512, 0.7);
-          const uploadedFile = await storage.createFile(AVATAR_BUCKET_ID, ID.unique(), compressed);
+          const formData = new FormData();
+          formData.append('file', compressed);
+          formData.append('bucketId', AVATAR_BUCKET_ID);
+          const uploadedFile = await secureUploadFile(formData);
           const oldId = currentPrefs.profilePicId;
           
           currentPrefs.profilePicId = uploadedFile.$id;

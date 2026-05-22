@@ -188,3 +188,9 @@ export async function runTokenOperation(body: any) {
 export async function trackEngagementView(input: any) {
   return trackEngagementViewSecure(input);
 }
+
+export async function secureUploadFile(formData: FormData) {
+  const { secureUploadFile: secureUploadFileServer } = await import('./secure-upload');
+  const jwt = await getJwt();
+  return secureUploadFileServer(formData, jwt);
+}

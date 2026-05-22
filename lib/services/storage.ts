@@ -1,4 +1,5 @@
 import { ID } from 'appwrite';
+import { secureUploadFile } from '../actions/client-ops';
 import { storage } from '../appwrite/client';
 
 const BUCKETS = {
@@ -10,7 +11,10 @@ const BUCKETS = {
 
 export const StorageService = {
     async uploadFile(file: File, bucketId: string = BUCKETS.MESSAGES) {
-        return await storage.createFile(bucketId, ID.unique(), file);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('bucketId', bucketId);
+        return await secureUploadFile(formData);
     },
 
     getFileView(fileId: string, bucketId: string = BUCKETS.MESSAGES) {
