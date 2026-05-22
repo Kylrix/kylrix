@@ -91,7 +91,9 @@ export function ShareNoteModal({ isOpen, onOpenChange, noteId, noteTitle }: Shar
   const [decryptionKey, setDecryptionKey] = useState<string | null>(null);
   const [publicShareUrl, setPublicShareUrl] = useState<string | null>(null);
   const { promptSudo } = useSudo();
-  const resolvedPublicLink = publicShareUrl || (decryptionKey && decryptionKey !== '********' ? getShareableUrl(noteId, decryptionKey) : null);
+  const resolvedPublicLink = publicShareUrl || 
+    (isPublic && decryptionKey !== '********' ? getShareableUrl(noteId) : 
+     (decryptionKey && decryptionKey !== '********' ? getShareableUrl(noteId, decryptionKey) : null));
 
   useEffect(() => {
     if (isOpen && noteId) {
@@ -715,7 +717,7 @@ export function ShareNoteModal({ isOpen, onOpenChange, noteId, noteTitle }: Shar
                     if (updated) {
                       setIsPublic(!!updated.isPublic);
                       setDecryptionKey(updated.decryptionKey || null);
-                      setPublicShareUrl(updated.isPublic && updated.decryptionKey ? getShareableUrl(noteId, updated.decryptionKey) : null);
+                      setPublicShareUrl(updated.isPublic ? getShareableUrl(noteId, updated.decryptionKey) : null);
                       setSuccessMsg(updated.isPublic ? 'Note is now Public' : 'Note is now Private');
                     }
                   } catch (err: any) {

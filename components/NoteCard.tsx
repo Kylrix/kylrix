@@ -152,10 +152,14 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         if (updated) {
           upsertNote(updated);
           showSuccess(updated.isPublic ? 'Note made public' : 'Note made private');
-          if (updated.isPublic && updated.decryptionKey) {
+          if (updated.isPublic) {
             const shareUrl = getShareableUrl(note.$id, updated.decryptionKey);
             navigator.clipboard.writeText(shareUrl);
-            showSuccess('Link Copied', 'Encrypted public link is on your clipboard.');
+            if (updated.decryptionKey) {
+              showSuccess('Link Copied', 'Encrypted public link is on your clipboard.');
+            } else {
+              showSuccess('Link Copied', 'Public link is on your clipboard.');
+            }
           }
         } else {
           throw new Error('Failed to update visibility');

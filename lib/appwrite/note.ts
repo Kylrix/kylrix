@@ -3154,39 +3154,52 @@ export async function toggleNoteVisibility(noteId: string): Promise<(Notes & { d
         id: note.$id
     };
 
+    const meta = (() => {
+      try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
+    })();
+
+    meta.isPublic = newIsPublic;
+
     if (newIsPublic) {
-        const prepared = await preparePublicNoteUpdate(note, ownerId, false);
-        decryptionKey = prepared.decryptionKey;
-        if (decryptionKey) cachePublicNoteDecryptionKey(noteId, decryptionKey);
-        Object.assign(updatePayload, prepared.updatePayload);
+        // Disable encrypting public note process!
+        // We do NOT encrypt the note. We keep title and content in plaintext.
+        delete meta.isEncrypted;
+        delete meta.encryptionVersion;
+        delete meta.encryptedTitle;
+        
+        updatePayload.metadata = JSON.stringify(meta);
+        if (note.title) updatePayload.title = note.title;
+        if (note.content) updatePayload.content = note.content;
     } else {
-        // Restore plaintext storage when moving back to private.
-        if (!ecosystemSecurity.status.isUnlocked) {
-            throw new Error('VAULT_LOCKED');
-        }
-
-        const meta = (() => {
-          try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
-        })();
-
+        // Toggle back to private
+        // If it was encrypted historically, try to decrypt it to restore plaintext.
         if (meta.isEncrypted || meta.encryptionVersion === 'T4') {
-          const symmetricKey = await loadT4NoteKey(note.$id, ownerId);
-          const plaintextTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || '', symmetricKey);
-          const plaintextContent = await ecosystemSecurity.decryptWithKey(note.content || '', symmetricKey);
+          try {
+            if (ecosystemSecurity.status.isUnlocked) {
+              const symmetricKey = await loadT4NoteKey(note.$id, ownerId);
+              const plaintextTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || '', symmetricKey);
+              const plaintextContent = await ecosystemSecurity.decryptWithKey(note.content || '', symmetricKey);
 
-          updatePayload.title = plaintextTitle;
-          updatePayload.content = plaintextContent;
+              updatePayload.title = plaintextTitle;
+              updatePayload.content = plaintextContent;
+            }
+          } catch (decErr) {
+            console.error('Historical decryption failed on making private:', decErr);
+          }
         }
 
-        updatePayload.metadata = stripT4Metadata(note.metadata);
+        meta.isPublic = false;
+        delete meta.isEncrypted;
+        delete meta.encryptionVersion;
+        delete meta.encryptedTitle;
+
+        updatePayload.metadata = JSON.stringify(meta);
     }
 
     const permissions = [
       Permission.read(Role.user(ownerId))];
     if (newIsPublic) {
       permissions.push(Permission.read(Role.any()));
-    }
-    if (allowAnyoneEdit) {
     }
 
     const updated = await databases.updateDocument(
@@ -3197,9 +3210,6 @@ export async function toggleNoteVisibility(noteId: string): Promise<(Notes & { d
       permissions
     );
     await syncNoteVisibilityChildren(noteId, ownerId, newIsPublic);
-    if (!newIsPublic) {
-      invalidatePublicNoteDecryptionKey(noteId);
-    }
     
     return { ...(updated as unknown as Notes), decryptionKey };
   } catch (error: any) {
@@ -3213,6 +3223,15 @@ export async function rotatePublicNoteLink(noteId: string): Promise<(Notes & { d
     const note = await getNote(noteId);
     if (!(await isNoteOwner(note))) throw new Error('Permission denied');
     if (!isNotePublic(note)) throw new Error('Note must be public before rotating its link');
+
+    const meta = (() => {
+      try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
+    })();
+
+    if (!(meta.isEncrypted || meta.encryptionVersion === 'T4')) {
+      // Plaintext public notes do not use E2E keys, link rotation is a no-op
+      return { ...(note as unknown as Notes) };
+    }
 
     const currentUser = await getCurrentUser();
     if (!currentUser) throw new Error('Not authenticated');
@@ -3245,14 +3264,22 @@ export async function getCurrentPublicNoteShareUrl(noteId: string, note?: Notes)
     const liveNote = note || await getNote(noteId);
     if (!isNotePublic(liveNote)) return null;
 
-    const currentUser = await getCurrentUser();
-    if (!currentUser) { return null; }
+    const meta = (() => {
+      try { return JSON.parse(liveNote.metadata || '{}'); } catch { return {}; }
+    })();
 
-    const ownerId = liveNote.userId || currentUser.$id;
-    const key = await loadT4NoteKey(liveNote.$id, ownerId);
-    const exportedKey = await exportUrlSafeCryptoKey(key);
-    
-    return getShareableUrl(liveNote.$id, exportedKey);
+    if (meta.isEncrypted || meta.encryptionVersion === 'T4') {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) { return null; }
+
+      const ownerId = liveNote.userId || currentUser.$id;
+      const key = await loadT4NoteKey(liveNote.$id, ownerId);
+      const exportedKey = await exportUrlSafeCryptoKey(key);
+      
+      return getShareableUrl(liveNote.$id, exportedKey);
+    }
+
+    return getShareableUrl(liveNote.$id);
   } catch (error) {
     console.error('getCurrentPublicNoteShareUrl error:', error);
     return null;
@@ -3266,7 +3293,17 @@ export async function getCurrentPublicNoteDecryptionKey(noteId: string): Promise
 
     const note = await getNote(noteId);
     if (!isNotePublic(note)) return null;
+
+    const meta = (() => {
+      try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
+    })();
+
+    if (!(meta.isEncrypted || meta.encryptionVersion === 'T4')) {
+      return null;
+    }
+
     const currentUser = await getCurrentUser();
+    if (!currentUser) { return null; }
     
     const ownerId = note.userId || currentUser.$id;
     const key = await loadT4NoteKey(noteId, ownerId);
