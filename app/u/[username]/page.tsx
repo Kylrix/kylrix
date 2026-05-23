@@ -1,14 +1,15 @@
 import { Profile } from '@/components/profile/ProfileRedesign';
 import { Box } from '@mui/material';
 
-export default function UserProfilePage({
+export default async function UserProfilePage({
   params,
 }: {
-  params: { username: string };
+  params: Promise<{ username: string }>;
 }) {
+  const resolvedParams = await params;
   return (
     <Box sx={{ width: '100%', pointerEvents: 'auto' }}>
-      <Profile username={params.username} />
+      <Profile username={resolvedParams.username} />
     </Box>
   );
 }

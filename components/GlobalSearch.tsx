@@ -19,6 +19,7 @@ import {
 import { Search as SearchIcon, NoteOutlined as NoteIcon, FolderOutlined as FolderIcon, LocalOfferOutlined as TagIcon, Close as CloseIcon } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { debounce } from 'lodash';
+import { useRouter } from 'next/navigation';
 
 type SearchResult = {
   id: string;
@@ -91,6 +92,7 @@ function SearchResultAvatar({ result }: { result: SearchResult }) {
 }
 
 export default function GlobalSearch() {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -116,16 +118,16 @@ export default function GlobalSearch() {
         }
       ].filter(r => r.title.toLowerCase().includes(term.toLowerCase()));
 
-      // Real Global User Search
-      const { searchGlobalUsers } = await import('@/lib/ecosystem/identity');
-      const globalUsers = await searchGlobalUsers(term);
-      const peopleResults = globalUsers.map(u => ({
-        id: u.id,
+      // Real Global User Search (Secure)
+      const { searchGlobalUsersSecure } = await import('@/lib/actions/secure-ops');
+      const globalUsers = await searchGlobalUsersSecure(term);
+      const peopleResults = globalUsers.map((u: any) => ({
+        id: u.username || u.userId || u.id,
         type: 'user' as const,
         title: u.title,
         excerpt: u.subtitle,
         avatar: u.avatar,
-        profilePicId: u.profilePicId
+        publicKey: u.publicKey
       }));
 
       setResults([...noteResults, ...peopleResults]);
@@ -136,9 +138,21 @@ export default function GlobalSearch() {
     }
   }, 300);
 
-  const clearSearch = () => {
-    setSearchTerm('');
-    setResults([]);
+  const handleResultClick = (result: SearchResult) => {
+    setIsOpen(false);
+    clearSearch();
+
+    if (result.type === 'user') {
+      router.push(`/u/${result.id}`); // For global search, id is likely the username or we should use title
+      return;
+    }
+
+    if (result.type === 'note') {
+      router.push(`/note/notes?openNoteId=${result.id}`);
+      return;
+    }
+
+    // Handle other types as needed
   };
 
   return (
@@ -230,6 +244,7 @@ export default function GlobalSearch() {
                   {results.map((result) => (
                     <ListItem
                       key={result.id}
+                      onClick={() => handleResultClick(result)}
                       sx={{
                         py: 1.5,
                         px: 2,

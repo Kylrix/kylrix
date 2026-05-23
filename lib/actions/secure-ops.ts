@@ -3081,13 +3081,83 @@ export async function deleteRowSecure(
     console.error('deleteRowSecure cascade cleanup failed:', err);
   }
 
-  const result = await tables.deleteRow({
-    databaseId,
-    tableId,
-    rowId,
-  });
-
   return JSON.parse(JSON.stringify(result));
+}
+
+export async function searchGlobalUsersSecure(query: string, limit = 10) {
+  const cleaned = String(query || '').trim().replace(/^@/, '');
+  if (!cleaned) return [];
+
+  const tables = createSystemTablesDB();
+  const databaseId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
+
+  try {
+    const res = await tables.listRows({
+      databaseId,
+      tableId,
+      queries: [
+        Query.or([
+          Query.startsWith('username', cleaned.toLowerCase()),
+          Query.startsWith('displayName', cleaned)
+        ]),
+        Query.limit(limit),
+        Query.select(['$id', 'userId', 'username', 'displayName', 'bio', 'avatar', 'walletAddress', 'publicKey'])
+      ] as any,
+    });
+
+    return JSON.parse(JSON.stringify(res.rows.map(doc => ({
+      id: doc.username || doc.userId || doc.$id, // Use username as ID for cleaner routing
+      type: 'user' as const,
+      title: doc.displayName || doc.username,
+      subtitle: `@${doc.username}`,
+      avatar: doc.avatar,
+      username: doc.username,
+      userId: doc.userId || doc.$id,
+      publicKey: doc.publicKey || null,
+    }))));
+  } catch (error: any) {
+    console.warn('[searchGlobalUsersSecure] Search failed:', error?.message);
+    return [];
+  }
+}
+
+export async function getProfileByUsernameSecure(username: string) {
+  const normalized = String(username || '').trim().toLowerCase().replace(/^@/, '');
+  if (!normalized) return null;
+
+  const tables = createSystemTablesDB();
+  const databaseId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
+
+  try {
+    const res = await tables.listRows({
+      databaseId,
+      tableId,
+      queries: [
+        Query.equal('username', normalized),
+        Query.limit(1)
+      ] as any,
+    });
+
+    const doc = res.rows[0];
+    if (!doc) return null;
+
+    return JSON.parse(JSON.stringify({
+      $id: doc.$id,
+      userId: doc.userId || doc.$id,
+      username: doc.username,
+      displayName: doc.displayName,
+      bio: doc.bio,
+      avatar: doc.avatar,
+      publicKey: doc.publicKey,
+      tier: doc.tier,
+      updatedAt: doc.updatedAt || doc.$updatedAt,
+    }));
+  } catch (error: any) {
+    console.warn('[getProfileByUsernameSecure] Failed:', error?.message);
+    return null;
+  }
 }
 
 
