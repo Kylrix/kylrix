@@ -469,7 +469,7 @@ export async function pinNote(noteId: string): Promise<string[]> {
   
   if (currentPins.includes(noteId)) return currentPins;
 
-  const newPins = [noteId, ...currentPins].slice(0, 100); // Increased limit to 100
+  const newPins = [noteId, ...currentPins]; // Removed artificial limits
   await account.updatePrefs({ ...user.prefs, pinnedNoteIds: newPins });
   return newPins;
 }

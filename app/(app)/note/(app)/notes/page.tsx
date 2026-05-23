@@ -88,6 +88,11 @@ export default function NotesPage() {
     pageSize: derivedPageSize
   }), [derivedPageSize]);
 
+  const regularSourceNotes = useMemo(() => {
+    if (hasSearchResults) return allNotes;
+    return allNotes.filter(n => !isPinned(n.$id));
+  }, [allNotes, isPinned, hasSearchResults]);
+
   // Use the search hook
   const {
     items: paginatedNotes,
@@ -105,7 +110,7 @@ export default function NotesPage() {
     previousPage,
     clearSearch
   } = useSearch({
-    data: allNotes,
+    data: regularSourceNotes,
     fetchDataAction: fetchNotesAction,
     searchConfig,
     paginationConfig
@@ -293,9 +298,8 @@ export default function NotesPage() {
   }, [allNotes, isPinned, hasSearchResults]);
 
   const regularNotes = useMemo(() => {
-    if (hasSearchResults) return paginatedNotes;
-    return currentPage === 1 ? paginatedNotes.filter(n => !isPinned(n.$id)) : paginatedNotes;
-  }, [paginatedNotes, isPinned, hasSearchResults, currentPage]);
+    return paginatedNotes;
+  }, [paginatedNotes]);
 
   return (
     <NotesErrorBoundary>
