@@ -36,7 +36,8 @@ import {
     RefreshCw,
     User,
     ChevronRight,
-    Key
+    Key,
+    Bot
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -45,7 +46,6 @@ import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { useSudo } from '@/context/SudoContext';
 import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
 import { toast } from 'react-hot-toast';
-import { BYOKManager } from '@/lib/ai/byok';
 import { TelegramDrawer } from '@/app/(app)/(auth)/accounts/components/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
 import TelegramIcon from '@mui/icons-material/Telegram';
@@ -76,51 +76,7 @@ export default function SettingsPage() {
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
     const [_loadingPasskeys, setLoadingPasskeys] = useState(true);
 
-    // BYOK state
-    const [byokKeyInput, setByokKeyInput] = useState('');
-    const [hasByok, setHasByok] = useState(false);
-    const [byokLoading, setByokLoading] = useState(true);
-    const [byokSaving, setByokSaving] = useState(false);
-    const [showByokInput, setShowByokInput] = useState(false);
 
-    const handleSaveByok = async () => {
-        if (!user?.$id) return;
-        if (!byokKeyInput.trim()) {
-            toast.error("Please enter a valid API Key.");
-            return;
-        }
-
-        setByokSaving(true);
-        try {
-            await BYOKManager.saveKey(user.$id, 'gemini', byokKeyInput.trim());
-            toast.success("Private AI key saved and encrypted successfully!");
-            setHasByok(true);
-            setByokKeyInput('');
-            setShowByokInput(false);
-        } catch (err: any) {
-            toast.error(err?.message || "Failed to encrypt and save private key.");
-        } finally {
-            setByokSaving(false);
-        }
-    };
-
-    const handleDeleteByok = async () => {
-        if (!user?.$id) return;
-        if (!window.confirm("Are you sure you want to remove your private AI key? Assistants will fall back to default keys.")) return;
-
-        setByokSaving(true);
-        try {
-            await BYOKManager.deleteKey(user.$id, 'gemini');
-            toast.success("Private AI key removed.");
-            setHasByok(false);
-            setByokKeyInput('');
-            setShowByokInput(false);
-        } catch (err: any) {
-            toast.error(err?.message || "Failed to remove private key.");
-        } finally {
-            setByokSaving(false);
-        }
-    };
 
     const handleManualMint = async () => {
         setMinting(true);
@@ -209,14 +165,7 @@ export default function SettingsPage() {
                 }
             })();
 
-            // Check BYOK presence
-            setByokLoading(true);
-            BYOKManager.hasKey(user.$id, 'gemini')
-                .then(present => {
-                    setHasByok(present);
-                    setByokLoading(false);
-                })
-                .catch(() => setByokLoading(false));
+
         }
 
         return unsubscribe;
@@ -338,6 +287,48 @@ export default function SettingsPage() {
                                     </Typography>
                                     <Typography sx={{ color: '#9B9691', fontSize: '0.85rem' }}>
                                         Manage your unified identity, WebAuthn passkeys, and connected apps.
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
+                        </Box>
+                    </ButtonBase>
+
+                    {/* Smart Assistants Card */}
+                    <ButtonBase 
+                        onClick={() => router.push('/settings/agents')}
+                        sx={{ 
+                            width: '100%', 
+                            textAlign: 'left', 
+                            borderRadius: '28px',
+                            display: 'block' 
+                        }}
+                    >
+                        <Box sx={{ 
+                            bgcolor: '#161412', 
+                            borderRadius: '28px', 
+                            p: 3, 
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                bgcolor: '#1C1A18',
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                transform: 'translateY(-2px)'
+                            }
+                        }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
+                                    <Bot size={24} />
+                                </Box>
+                                <Box>
+                                    <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
+                                        Smart Assistants
+                                    </Typography>
+                                    <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
+                                        Configure private AI keys, automated assistant systems, and active workspaces.
                                     </Typography>
                                 </Box>
                             </Box>
@@ -555,131 +546,7 @@ export default function SettingsPage() {
                                     </List>
                                 </Box>
 
-                                <Divider sx={{ opacity: 0.05 }} />
 
-                                {/* Private AI Key (BYOK) */}
-                                <Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                        <Box>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: 1, fontFamily: 'var(--font-clash)' }}>
-                                                <Key size={18} color="#6366F1" /> Private AI Key (BYOK)
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ color: '#9B9691', mt: 0.5, fontFamily: 'var(--font-satoshi)', fontSize: '0.85rem' }}>
-                                                Provide your own Google Gemini Key to power local intelligent flows.
-                                            </Typography>
-                                        </Box>
-                                        {hasByok && !showByokInput && (
-                                            <Button 
-                                                variant="outlined" 
-                                                color="error"
-                                                size="small" 
-                                                onClick={handleDeleteByok}
-                                                disabled={byokSaving}
-                                                sx={{ 
-                                                    borderRadius: '10px',
-                                                    textTransform: 'none',
-                                                    fontWeight: 700,
-                                                    fontFamily: 'var(--font-satoshi)',
-                                                    borderColor: 'rgba(239, 68, 68, 0.3)',
-                                                    color: '#EF4444',
-                                                    '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.05)', borderColor: '#EF4444' }
-                                                }}
-                                            >
-                                                Remove Key
-                                            </Button>
-                                        )}
-                                    </Box>
-
-                                    {byokLoading ? (
-                                        <Box sx={{ py: 2, display: 'flex', justifyContent: 'center' }}>
-                                            <CircularProgress size={20} sx={{ color: '#6366F1' }} />
-                                        </Box>
-                                    ) : !isUnlocked ? (
-                                        <Box sx={{ p: 2.5, borderRadius: '18px', bgcolor: '#0A0908', border: '1px solid #1C1A18', textAlign: 'center' }}>
-                                            <Typography variant="body2" sx={{ color: '#9B9691', fontFamily: 'var(--font-satoshi)', fontSize: '0.85rem' }}>
-                                                Unlock your security vault with MasterPass to configure or use private AI keys.
-                                            </Typography>
-                                        </Box>
-                                    ) : (
-                                        <Stack spacing={2}>
-                                            {hasByok && !showByokInput ? (
-                                                <Box sx={{ 
-                                                    p: 2, 
-                                                    borderRadius: '18px', 
-                                                    bgcolor: '#0A0908', 
-                                                    border: '1px solid #1C1A18', 
-                                                    display: 'flex', 
-                                                    justifyContent: 'space-between', 
-                                                    alignItems: 'center' 
-                                                }}>
-                                                    <Typography variant="body2" sx={{ fontFamily: 'var(--font-mono)', color: '#10B981', fontWeight: 700, fontSize: '0.85rem' }}>
-                                                        •••••••••••••••••••••••••••••••• (Encrypted with MasterPass)
-                                                    </Typography>
-                                                    <Button 
-                                                        variant="text" 
-                                                        size="small" 
-                                                        onClick={() => setShowByokInput(true)}
-                                                        sx={{ color: '#6366F1', fontWeight: 700, textTransform: 'none', fontFamily: 'var(--font-satoshi)' }}
-                                                    >
-                                                        Rotate Key
-                                                    </Button>
-                                                </Box>
-                                            ) : (
-                                                <Box sx={{ display: 'flex', gap: 2, width: '100%' }}>
-                                                    <TextField
-                                                        fullWidth
-                                                        type="password"
-                                                        placeholder="Enter Gemini API Key (AIzaSy...)"
-                                                        value={byokKeyInput}
-                                                        onChange={(e) => setByokKeyInput(e.target.value)}
-                                                        variant="filled"
-                                                        InputProps={{ 
-                                                            disableUnderline: true, 
-                                                            sx: { 
-                                                                borderRadius: '12px',
-                                                                bgcolor: '#0A0908',
-                                                                color: 'white',
-                                                                fontFamily: 'var(--font-mono)',
-                                                                border: '1px solid #1C1A18',
-                                                                '&:hover': { bgcolor: '#0A0908', borderColor: '#34322F' }
-                                                            } 
-                                                        }}
-                                                    />
-                                                    <Button
-                                                        variant="contained"
-                                                        onClick={handleSaveByok}
-                                                        disabled={byokSaving || !byokKeyInput.trim()}
-                                                        sx={{
-                                                            bgcolor: '#6366F1',
-                                                            color: 'white',
-                                                            borderRadius: '12px',
-                                                            px: 3,
-                                                            fontWeight: 700,
-                                                            textTransform: 'none',
-                                                            fontFamily: 'var(--font-satoshi)',
-                                                            minWidth: 96,
-                                                            '&:hover': { bgcolor: '#4F46E5' },
-                                                            '&.Mui-disabled': { bgcolor: '#1C1A18', color: '#34322F' }
-                                                        }}
-                                                    >
-                                                        {byokSaving ? <CircularProgress size={18} color="inherit" /> : "Save"}
-                                                    </Button>
-                                                    {hasByok && (
-                                                        <Button
-                                                            variant="text"
-                                                            onClick={() => setShowByokInput(false)}
-                                                            sx={{ color: '#9B9691', textTransform: 'none', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}
-                                                        >
-                                                            Cancel
-                                                        </Button>
-                                                    )}
-                                                </Box>
-                                            )}
-                                        </Stack>
-                                    )}
-                                </Box>
-
-                                <Divider sx={{ opacity: 0.05 }} />
 
                                 {/* App Preferences */}
                                 <Box>

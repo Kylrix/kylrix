@@ -2,6 +2,10 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AIRequestPayload, AIResponse } from "@/lib/ai/types";
+import { getActor } from "@/lib/actions/secure-ops";
+import { hasPaidKylrixPlan } from "@/lib/utils";
+import { createSystemTablesDB } from "@/lib/appwrite-admin";
+import { Query, ID } from "node-appwrite";
 
 const MODEL_NAME = process.env.GEMINI_MODEL_NAME || "gemini-2.0-flash";
 
@@ -9,6 +13,59 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
   const activeKey = payload.byokKey || process.env.GOOGLE_API_KEY;
   if (!activeKey) {
     return { success: false, error: "AI Service not configured. Please supply your own private API Key in Settings." };
+  }
+
+  let actor: any = null;
+  const isBYOK = Boolean(payload.byokKey);
+  let tables: any = null;
+  let balanceRow: any = null;
+
+  // Compute checking for ecosystem users (non-BYOK)
+  if (!isBYOK) {
+    actor = await getActor();
+    if (!actor) {
+      return { success: false, error: "Please log in to use ecosystem AI services." };
+    }
+
+    if (!hasPaidKylrixPlan(actor)) {
+      return { success: false, error: "Ecosystem AI is only available to Pro subscribers. Upgrade or supply your own private AI key in Settings." };
+    }
+
+    try {
+      tables = createSystemTablesDB();
+      const res = await tables.listRows({
+        databaseId: 'whisperrflow',
+        tableId: 'compute_balances',
+        queries: [
+          Query.equal('userId', actor.$id),
+          Query.limit(1)
+        ]
+      });
+
+      if (res.rows.length === 0) {
+        // Initialize Pro user compute profile
+        balanceRow = await tables.createRow({
+          databaseId: 'whisperrflow',
+          tableId: 'compute_balances',
+          rowId: ID.unique(),
+          data: {
+            userId: actor.$id,
+            tier: 'pro',
+            balance: 100000,
+            lastResetAt: new Date().toISOString()
+          }
+        });
+      } else {
+        balanceRow = res.rows[0];
+      }
+
+      if (balanceRow.balance <= 0) {
+        return { success: false, error: "You have exceeded your dynamic compute token allocation. Please configure your own private key in Settings or request a refill." };
+      }
+    } catch (err: any) {
+      console.error('[AI Billing Check Exception]', err);
+      // Fail-safe: log but do not block users if there's a transient database issue
+    }
   }
 
   try {
@@ -97,10 +154,42 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
     // Cleanup markdown if Gemini adds it despite instructions
     text = text.replace(/```json/g, "").replace(/```/g, "").trim();
 
+    // Debit tokens for ecosystem users (non-BYOK)
+    if (!isBYOK && tables && balanceRow) {
+      try {
+        const promptLength = prompt.length || 0;
+        const estimatedPromptTokens = Math.ceil(promptLength / 4) + 120;
+        const estimatedCompletionTokens = Math.ceil(text.length / 4);
+        const totalTokens = estimatedPromptTokens + estimatedCompletionTokens;
+
+        const newBalance = Math.max(0, balanceRow.balance - totalTokens);
+        await tables.updateRow({
+          databaseId: 'whisperrflow',
+          tableId: 'compute_balances',
+          rowId: balanceRow.$id,
+          data: {
+            balance: newBalance
+          }
+        });
+
+        await tables.createRow({
+          databaseId: 'whisperrflow',
+          tableId: 'compute_ledger',
+          rowId: ID.unique(),
+          data: {
+            userId: actor.$id,
+            tokensConsumed: totalTokens,
+            timestamp: new Date().toISOString()
+          }
+        });
+      } catch (err) {
+        console.error('[AI Billing Debit Exception]', err);
+      }
+    }
+
     return { success: true, data: text };
   } catch (error: unknown) {
     console.error("AI Generation Error:", error);
     return { success: false, error: "Failed to generate AI response" };
   }
 }
-
