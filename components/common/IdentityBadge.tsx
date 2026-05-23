@@ -30,6 +30,7 @@ export function computeIdentityFlags(signals: IdentitySignals) {
 }
 
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
+import { generatePattern } from '@/utils/patternGenerator';
 
 export function IdentityAvatar({
   src,
@@ -41,6 +42,7 @@ export function IdentityAvatar({
   size = 40,
   verifiedSize = 16,
   borderRadius = '50%',
+  seed,
 }: {
   src?: string | null;
   fileId?: string | null;
@@ -51,6 +53,7 @@ export function IdentityAvatar({
   size?: number;
   verifiedSize?: number;
   borderRadius?: string | number;
+  seed?: string;
 }) {
   const previewUrl = useCachedProfilePreview(fileId || src, size, size);
 
@@ -92,16 +95,17 @@ export function IdentityAvatar({
             width: '100%',
             height: '100%',
             borderRadius: `calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`,
-            bgcolor: alpha('#6366F1', 0.12),
-            color: '#6366F1',
+            background: generatePattern(seed || fallback || alt || 'default'),
+            color: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 900,
             fontSize: `${Math.max(11, size / 3)}px`,
+            textShadow: '0 2px 4px rgba(0,0,0,0.2)',
           }}
         >
-          {fallback || 'U'}
+          {fallback || alt?.charAt(0).toUpperCase() || 'U'}
         </Box>
       )}
       {verified && (

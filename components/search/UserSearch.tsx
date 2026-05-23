@@ -26,25 +26,29 @@ import toast from 'react-hot-toast';
 
 import { useSudo } from '@/context/SudoContext';
 import { getCachedIdentityById, getCachedIdentityByUsername, seedIdentityCache } from '@/lib/identity-cache';
+import { IdentityAvatar, computeIdentityFlags } from '@/components/common/IdentityBadge';
 
 const SearchResultAvatar = ({ u }: { u: any }) => {
-    const cachedById = getCachedIdentityById(u.userId || u.$id);
-    const cachedByUsername = getCachedIdentityByUsername(u.username);
-    const avatar = u.avatar || cachedById?.avatar || cachedByUsername?.avatar;
+    const flags = computeIdentityFlags({
+        createdAt: u.$createdAt,
+        lastUsernameEdit: u.last_username_edit,
+        profilePicId: u.avatar,
+        username: u.username,
+        bio: u.bio,
+        tier: u.tier,
+        publicKey: u.publicKey
+    });
 
     return (
-        <Avatar
-            src={avatar || undefined}
-            sx={{
-                bgcolor: '#0A0908',
-                border: '1px solid #34322F',
-                width: 44,
-                height: 44,
-                borderRadius: '12px'
-            }}
-        >
-            {!avatar && <PersonIcon sx={{ color: '#9B9691' }} />}
-        </Avatar>
+        <IdentityAvatar
+            fileId={u.avatar}
+            alt={u.displayName || u.username}
+            seed={u.username || u.$id}
+            size={44}
+            pro={flags.pro}
+            verified={flags.verified}
+            borderRadius="12px"
+        />
     );
 };
 

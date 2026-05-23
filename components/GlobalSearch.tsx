@@ -20,6 +20,9 @@ import { Search as SearchIcon, NoteOutlined as NoteIcon, FolderOutlined as Folde
 import { motion, AnimatePresence } from 'framer-motion';
 import { debounce } from 'lodash';
 import { useRouter } from 'next/navigation';
+import { generatePattern } from '@/utils/patternGenerator';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
 
 type SearchResult = {
   id: string;
@@ -30,44 +33,22 @@ type SearchResult = {
   tags?: string[];
   avatar?: string;
   profilePicId?: string;
+  publicKey?: string | null;
+  pro?: boolean;
+  verified?: boolean;
 };
 
 function SearchResultAvatar({ result }: { result: SearchResult }) {
-  const [url, setUrl] = useState<string | null>(result.avatar || null);
-
-  useEffect(() => {
-    if (result.type !== 'user' || !result.profilePicId || result.avatar) return;
-
-    let mounted = true;
-    const load = async () => {
-      try {
-        const { fetchProfilePreview } = await import('@/lib/profile-preview');
-        const previewUrl = await fetchProfilePreview(result.profilePicId, 48, 48);
-        if (mounted) setUrl(previewUrl);
-      } catch (err: any) {
-        console.error('Failed to load search result avatar', err);
-      }
-    };
-    load();
-    return () => { mounted = false; };
-  }, [result]);
-
   if (result.type === 'user') {
     return (
-      <Avatar
-        src={url || undefined}
-        sx={{
-          width: 32,
-          height: 32,
-          fontSize: '0.75rem',
-          bgcolor: '#A855F7',
-          color: '#fff',
-          fontWeight: 800,
-          fontFamily: 'inherit'
-        }}
-      >
-        {result.title.charAt(0).toUpperCase()}
-      </Avatar>
+      <IdentityAvatar
+        fileId={result.profilePicId || result.avatar || null}
+        alt={result.title}
+        seed={result.id}
+        size={32}
+        pro={result.pro}
+        verified={result.verified}
+      />
     );
   }
 
@@ -120,15 +101,30 @@ export default function GlobalSearch() {
 
       // Real Global User Search (Secure)
       const { searchGlobalUsersSecure } = await import('@/lib/actions/secure-ops');
+      const { computeIdentityFlags } = await import('@/components/common/IdentityBadge');
       const globalUsers = await searchGlobalUsersSecure(term);
-      const peopleResults = globalUsers.map((u: any) => ({
-        id: u.username || u.$id,
-        type: 'user' as const,
-        title: u.displayName || u.username,
-        excerpt: `@${u.username}`,
-        avatar: u.avatar,
-        publicKey: u.publicKey
-      }));
+      const peopleResults = globalUsers.map((u: any) => {
+        const flags = computeIdentityFlags({
+          createdAt: u.$createdAt,
+          lastUsernameEdit: u.last_username_edit,
+          profilePicId: u.avatar,
+          username: u.username,
+          bio: u.bio,
+          tier: u.tier,
+          publicKey: u.publicKey
+        });
+        return {
+          id: u.username || u.$id,
+          type: 'user' as const,
+          title: u.displayName || u.username,
+          excerpt: `@${u.username}`,
+          avatar: u.avatar,
+          profilePicId: u.avatar,
+          publicKey: u.publicKey,
+          pro: flags.pro,
+          verified: flags.verified
+        };
+      });
 
       setResults([...noteResults, ...peopleResults]);
     } catch (err: any) {

@@ -46,8 +46,12 @@ export async function fetchProfilePreview(fileId?: string | null, width: number 
   }
 
   try {
-    const url = await getProfilePicturePreview(fileId, width, height);
-    const str = url as unknown as string;
+    const { getFilePreviewSecure } = await import('@/lib/actions/secure-ops');
+    const { APPWRITE_CONFIG } = await import('@/lib/appwrite/config');
+    const url = await getFilePreviewSecure(APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES, fileId, width, height);
+    
+    if (!url) throw new Error('Failed to generate preview URL');
+    const str = url;
     
     // Background: Convert to Base64 and save to Pulse if it's the current user
     if (pulse?.profilePicId === fileId) {
