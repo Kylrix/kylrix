@@ -29,6 +29,9 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     profile_pictures: 1 * 1024 * 1024,   // 1 MB
     messages: 1 * 1024 * 1024,           // 1 MB
     notes_attachments: 5 * 1024 * 1024,   // 5 MB
+    vault_attachments: 5 * 1024 * 1024,   // 5 MB
+    form_media: 10 * 1024 * 1024,        // 10 MB
+    chat_uploads: 10 * 1024 * 1024,      // 10 MB
     default: 10 * 1024 * 1024,           // 10 MB Guideline ceiling
   };
 

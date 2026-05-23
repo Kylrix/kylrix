@@ -5,6 +5,8 @@ import AutorenewIcon from '@mui/icons-material/Autorenew';
 import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import SaveIcon from '@mui/icons-material/Save';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 import LanguageIcon from '@mui/icons-material/Language';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -24,7 +26,8 @@ import {
   useTheme,
   useMediaQuery,
   Stack,
-  Divider
+  Divider,
+  CircularProgress
 } from '@mui/material';
 import { createCredential, updateCredential } from '@/lib/appwrite';
 import type { Credentials, CredentialsCreate } from '@/lib/appwrite/types';
@@ -81,6 +84,9 @@ export default function CredentialDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+
   useEffect(() => {
     if (initial) {
       setForm({
@@ -99,6 +105,9 @@ export default function CredentialDialog({
       });
       setCustomFields(
         initial.customFields ? JSON.parse(initial.customFields) : [],
+      );
+      setAttachments(
+        initial.attachments ? JSON.parse(initial.attachments) : [],
       );
     } else {
       setForm({
@@ -141,6 +150,36 @@ export default function CredentialDialog({
 
   const removeCustomField = (id: string) => {
     setCustomFields(customFields.filter((cf) => cf.id !== id));
+  };
+
+  const handleUploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !initial?.$id) return;
+    setUploadingAttachment(true);
+    setError(null);
+    try {
+      const { addAttachmentToCredential } = await import('@/lib/appwrite/vault');
+      const updated = await addAttachmentToCredential(initial.$id, file);
+      setAttachments(updated.attachments ? JSON.parse(updated.attachments) : []);
+    } catch (err: any) {
+      console.error("Upload failed:", err);
+      setError(err.message || "Failed to upload attachment.");
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (fileId: string) => {
+    if (!initial?.$id) return;
+    setError(null);
+    try {
+      const { deleteCredentialAttachment } = await import('@/lib/appwrite/vault');
+      const updated = await deleteCredentialAttachment(initial.$id, fileId);
+      setAttachments(updated.attachments ? JSON.parse(updated.attachments) : []);
+    } catch (err: any) {
+      console.error("Delete failed:", err);
+      setError(err.message || "Failed to delete attachment.");
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -611,6 +650,84 @@ export default function CredentialDialog({
                   </IconButton>
                 </Box>
               ))}
+            </Grid>
+          </Grid>
+
+          {/* Secure Attachments Section */}
+          <Grid container spacing={2} sx={{ mt: 3 }}>
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                  Secure Attachments
+                </Typography>
+                
+                {initial && initial.$id && (
+                  <Button
+                    component="label"
+                    size="small"
+                    startIcon={uploadingAttachment ? <CircularProgress size={16} sx={{ color: VAULT_PRIMARY }} /> : <CloudUploadIcon sx={{ fontSize: 16 }} />}
+                    disabled={uploadingAttachment}
+                    sx={{ 
+                      borderRadius: '8px', 
+                      color: VAULT_PRIMARY,
+                      fontWeight: 700,
+                      '&:hover': { bgcolor: alpha(VAULT_PRIMARY, 0.05) }
+                    }}
+                  >
+                    {uploadingAttachment ? "Uploading..." : "Upload File"}
+                    <input
+                      type="file"
+                      hidden
+                      onChange={handleUploadAttachment}
+                    />
+                  </Button>
+                )}
+              </Box>
+
+              {initial && initial.$id ? (
+                attachments.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.35)', fontStyle: 'italic' }}>
+                    No attachments uploaded to this credential.
+                  </Typography>
+                ) : (
+                  <Stack spacing={1.5}>
+                    {attachments.map((att: any, idx: number) => (
+                      <Box 
+                        key={att.id || idx}
+                        sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          p: 1.5, 
+                          borderRadius: '10px', 
+                          bgcolor: SURFACE_COLOR, 
+                          border: '1px solid rgba(255, 255, 255, 0.03)' 
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 700, color: 'white', wordBreak: 'break-all' }}>
+                            {att.name}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)' }}>
+                            {(att.size / 1024).toFixed(1)} KB • {att.mime || 'application/octet-stream'}
+                          </Typography>
+                        </Box>
+                        <IconButton 
+                          onClick={() => handleDeleteAttachment(att.id)} 
+                          size="small" 
+                          sx={{ color: 'rgba(239, 68, 68, 0.6)', '&:hover': { color: '#ef4444', bgcolor: alpha('#ef4444', 0.1) } }}
+                        >
+                          <DeleteIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Box>
+                    ))}
+                  </Stack>
+                )
+              ) : (
+                <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.35)', fontStyle: 'italic' }}>
+                  Save this credential first to enable secure file attachments.
+                </Typography>
+              )}
             </Grid>
           </Grid>
 

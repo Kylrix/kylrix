@@ -1708,6 +1708,15 @@
                     "size": 255,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "attachments",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": true
                 }
             ],
             "indexes": [
@@ -7002,6 +7011,48 @@
             "name": "kylrix_send_ephemeral",
             "enabled": true,
             "maximumFileSize": 125829120,
+            "allowedFileExtensions": [],
+            "compression": "gzip",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "vault_attachments",
+            "$permissions": [
+                "read(\"users\")"
+            ],
+            "fileSecurity": true,
+            "name": "vault_attachments",
+            "enabled": true,
+            "maximumFileSize": 10485760,
+            "allowedFileExtensions": [],
+            "compression": "gzip",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "form_media",
+            "$permissions": [
+                "read(\"any\")"
+            ],
+            "fileSecurity": true,
+            "name": "form_media",
+            "enabled": true,
+            "maximumFileSize": 10485760,
+            "allowedFileExtensions": [],
+            "compression": "gzip",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "chat_uploads",
+            "$permissions": [
+                "read(\"users\")"
+            ],
+            "fileSecurity": true,
+            "name": "chat_uploads",
+            "enabled": true,
+            "maximumFileSize": 10485760,
             "allowedFileExtensions": [],
             "compression": "gzip",
             "encryption": true,

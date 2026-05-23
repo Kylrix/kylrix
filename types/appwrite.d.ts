@@ -274,6 +274,7 @@ export type Credentials = Models.Row & {
     updatedAt: string | null;
     username: string | null;
     sharedFrom: string | null;
+    attachments: string | null;
 }
 
 export type Identities = Models.Row & {

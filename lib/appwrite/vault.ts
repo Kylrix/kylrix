@@ -2672,3 +2672,108 @@ export async function syncAndValidateMfaStatus(userId: string): Promise<{
     };
   }
 }
+
+interface EmbeddedCredentialAttachmentMeta {
+  id: string;
+  name: string;
+  size: number;
+  mime: string | null;
+  createdAt: string;
+}
+
+function normalizeCredentialAttachmentsField(credential: any): EmbeddedCredentialAttachmentMeta[] {
+  const raw = credential.attachments;
+  if (!raw) return [];
+  try {
+    if (typeof raw === 'string') {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    }
+  } catch {}
+  return [];
+}
+
+export async function addAttachmentToCredential(credentialId: string, file: File) {
+  const credential = await VaultService.getCredential(credentialId);
+  if (!credential) throw new Error('Credential not found');
+
+  const existingMetas = normalizeCredentialAttachmentsField(credential);
+
+  // 1. Client-side Framework Gating & Compression
+  const { validateFileUploadLimit, compressImageToWebP, getFileTypeCategory } = await import('@/lib/storage/framework');
+
+  // Strict size limit check BEFORE compression
+  validateFileUploadLimit(file, 'vault_attachments');
+
+  let activeFile = file;
+  if (getFileTypeCategory(file.type, file.name) === 'image') {
+    try {
+      activeFile = await compressImageToWebP(file);
+    } catch (compressErr) {
+      console.warn('[vault-attachments] Client-side image compression failed, falling back to original:', compressErr);
+    }
+  }
+
+  // Upload file to vault_attachments bucket
+  let uploaded: any;
+  try {
+    const formData = new FormData();
+    formData.append('file', activeFile);
+    formData.append('bucketId', 'vault_attachments');
+    formData.append('fileId', ID.unique());
+    
+    const { secureUploadFile } = await import('@/lib/actions/client-ops');
+    uploaded = await secureUploadFile(formData);
+  } catch (err: any) {
+    console.error('[vault-attachments] Upload failed:', err);
+    throw new Error(err.message || 'Server upload failed');
+  }
+
+  const meta: EmbeddedCredentialAttachmentMeta = {
+    id: uploaded.$id,
+    name: activeFile.name || 'attachment',
+    size: activeFile.size,
+    mime: activeFile.type || 'application/octet-stream',
+    createdAt: new Date().toISOString()
+  };
+
+  // Add metadata object to attachments array
+  existingMetas.push(meta);
+  
+  // Encrypt & Update credential document
+  const updated = await VaultService.updateCredential(credentialId, {
+    attachments: JSON.stringify(existingMetas)
+  });
+
+  return updated;
+}
+
+export async function deleteCredentialAttachment(credentialId: string, fileId: string) {
+  const credential = await VaultService.getCredential(credentialId);
+  if (!credential) throw new Error('Credential not found');
+
+  const existingMetas = normalizeCredentialAttachmentsField(credential);
+  const updatedMetas = existingMetas.filter(m => m.id !== fileId);
+
+  // Delete from Appwrite Storage
+  try {
+    const { appwriteStorage } = await import('./client');
+    await appwriteStorage.deleteFile('vault_attachments', fileId);
+  } catch (err) {
+    console.warn('[vault-attachments] Failed to delete file from storage (might already be deleted):', err);
+  }
+
+  // Encrypt & Update credential document
+  const updated = await VaultService.updateCredential(credentialId, {
+    attachments: JSON.stringify(updatedMetas)
+  });
+
+  return updated;
+}
+
+export async function listCredentialAttachments(credentialId: string): Promise<EmbeddedCredentialAttachmentMeta[]> {
+  const credential = await VaultService.getCredential(credentialId);
+  if (!credential) return [];
+  return normalizeCredentialAttachmentsField(credential);
+}
+

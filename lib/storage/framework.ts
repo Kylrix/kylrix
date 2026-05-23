@@ -30,12 +30,26 @@ export const BUCKET_LIMITS: Record<string, StorageGatingConfig> = {
     maxSizeBytes: 5 * 1024 * 1024, // 5 MB
     compress: true,
   },
+  vault_attachments: {
+    maxSizeBytes: 5 * 1024 * 1024, // 5 MB
+    compress: true,
+  },
+  form_media: {
+    maxSizeBytes: 10 * 1024 * 1024, // 10 MB
+    compress: true,
+  },
+  chat_uploads: {
+    maxSizeBytes: 10 * 1024 * 1024, // 10 MB
+    compress: true,
+  },
   // Default fallback limit for any other discrete upload in the ecosystem
   default: {
     maxSizeBytes: 10 * 1024 * 1024, // 10 MB Guideline Upper Limit
     compress: false,
   },
 };
+
+
 
 /**
  * Classifies a file into a distinct FileTypeCategory based on its MIME type or extension.

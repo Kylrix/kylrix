@@ -57,6 +57,7 @@ export type CredentialsCreate = {
   updatedAt?: string | null;
   username?: string | null;
   sharedFrom?: string | null;
+  attachments?: string | null;
 };
 
 export type FoldersCreate = {

@@ -25,6 +25,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import FolderIcon from '@mui/icons-material/Folder';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { Credentials } from '@/lib/appwrite/types';
+import { storage } from '@/lib/appwrite';
 import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
 
@@ -83,6 +84,15 @@ export default function CredentialDetail({
     }
   } catch {
     customFields = [];
+  }
+
+  let attachments = [];
+  try {
+    if (credential.attachments) {
+      attachments = JSON.parse(credential.attachments);
+    }
+  } catch {
+    attachments = [];
   }
 
   const formatDate = (dateString: string) => {
@@ -360,6 +370,46 @@ export default function CredentialDetail({
                     <FieldValue>{field.value || "Empty"}</FieldValue>
                   </Box>
                 ))}
+              </Stack>
+            </Box>
+          )}
+
+          {/* Secure Attachments */}
+          {attachments.length > 0 && (
+            <Box>
+              <FieldLabel label="Secure Attachments" />
+              <Stack spacing={2.5}>
+                {attachments.map((att: any, index: number) => {
+                  let fileUrl = "";
+                  try {
+                    const res = storage.getFileView('vault_attachments', att.id);
+                    fileUrl = String(res);
+                  } catch (err) {
+                    console.error("Failed to generate preview URL:", err);
+                  }
+
+                  return (
+                    <Box key={att.id || index} sx={{ p: 2, borderRadius: 3, border: '1px solid rgba(255, 255, 255, 0.06)', bgcolor: 'rgba(255, 255, 255, 0.02)' }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700, color: 'white', wordBreak: 'break-all' }}>
+                          {att.name}
+                        </Typography>
+                        <IconButton 
+                          size="small" 
+                          component="a" 
+                          href={fileUrl} 
+                          target="_blank"
+                          sx={{ color: 'primary.main', p: 0.5, mt: -0.5 }}
+                        >
+                          <OpenInNewIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Box>
+                      <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', display: 'block' }}>
+                        {(att.size / 1024).toFixed(1)} KB • {att.mime || 'application/octet-stream'}
+                      </Typography>
+                    </Box>
+                  );
+                })}
               </Stack>
             </Box>
           )}

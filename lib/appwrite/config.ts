@@ -125,15 +125,18 @@ export const APPWRITE_CONFIG = {
         PROFILE_PICTURES: 'profile_pictures',
         GROUP_AVATARS: 'group_avatars',
         NOTES_ATTACHMENTS: 'notes_attachments',
-        BLOG_MEDIA: 'blog_media',
+        BLOG_MEDIA: 'event_covers',
         EXTENSION_ASSETS: 'extension_assets',
         BACKUPS: 'backups',
         TEMP_UPLOADS: 'temp_uploads',
         /** Ephemeral file payloads for Send by Kylrix (provision in Appwrite; TTL ~7d via cron/cleanup). */
         SEND_EPHEMERAL: 'kylrix_send',
         MESSAGES: 'messages',
+        VAULT_ATTACHMENTS: 'vault_attachments',
+        FORM_MEDIA: 'form_media',
+        CHAT_UPLOADS: 'chat_uploads',
         TASK_ATTACHMENTS: 'notes_attachments', // Alias
-        EVENT_COVERS: 'blog_media' // Alias
+        EVENT_COVERS: 'event_covers' // Alias
     },
     FUNCTIONS: {
         PERMISSION_UPDATER: 'permission-updater',
