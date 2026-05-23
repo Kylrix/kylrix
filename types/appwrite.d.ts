@@ -26,6 +26,31 @@ export enum SubscriptionsStatus {
     TRIALING = "trialing"
 }
 
+export enum BillingTransactionsStatus {
+    PENDING = "pending",
+    PROCESSING = "processing",
+    COMPLETED = "completed",
+    FAILED = "failed",
+    REFUNDED = "refunded"
+}
+
+export enum BillingTransactionsProvider {
+    BLOCKBEE = "blockbee",
+    STRIPE = "stripe",
+    MANUAL = "manual"
+}
+
+export enum BillingWebhookLogsProvider {
+    BLOCKBEE = "blockbee",
+    STRIPE = "stripe"
+}
+
+export enum BillingWebhookLogsStatus {
+    SUCCESS = "success",
+    SIGNATURE_FAILED = "signature_failed",
+    FAILED = "failed"
+}
+
 export enum MessagesType {
     TEXT = "text",
     IMAGE = "image",
@@ -233,6 +258,32 @@ export type Subscriptions = Models.Row & {
     seats: number | null;
     createdAt: string | null;
     updatedAt: string | null;
+}
+
+export type BillingTransactions = Models.Row & {
+    paymentId: string;
+    userId: string;
+    plan: string;
+    months: number;
+    amountCents: number;
+    amountUsd: string;
+    status: BillingTransactionsStatus;
+    provider: BillingTransactionsProvider;
+    couponId: string | null;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type BillingWebhookLogs = Models.Row & {
+    paymentId: string | null;
+    provider: BillingWebhookLogsProvider;
+    payload: string;
+    headers: string | null;
+    status: BillingWebhookLogsStatus;
+    errorMessage: string | null;
+    metadata: string | null;
+    createdAt: string | null;
 }
 
 export type SecurityLogs = Models.Row & {
@@ -754,4 +805,12 @@ export type Collaborators = Models.Row & {
     expiresAt: string | null;
     role: string | null;
     metadata: string | null;
+}
+
+export type UserKeys = Models.Row & {
+    userId: string;
+    provider: string;
+    encrypted_key: string;
+    iv: string;
+    config: string | null;
 }
