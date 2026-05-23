@@ -35,8 +35,7 @@ import {
     Trash2,
     RefreshCw,
     User,
-    ChevronRight,
-    MessageCircle
+    ChevronRight
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -47,6 +46,7 @@ import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySe
 import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/app/(app)/(auth)/accounts/components/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
+import TelegramIcon from '@mui/icons-material/Telegram';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -304,8 +304,8 @@ export default function SettingsPage() {
                         }
                     }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(0, 136, 204, 0.1)', color: '#0088cc' }}>
-                                <MessageCircle size={24} />
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(0, 136, 204, 0.1)', color: '#0088cc', display: 'flex' }}>
+                                <TelegramIcon sx={{ fontSize: 24 }} />
                             </Box>
                             <Box>
                                 <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>

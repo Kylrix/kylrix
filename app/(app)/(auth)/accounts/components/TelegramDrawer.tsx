@@ -12,7 +12,8 @@ import {
   Typography,
   alpha,
 } from '@mui/material';
-import { CheckCircle2, Copy, ExternalLink, MessageCircle, X } from 'lucide-react';
+import { CheckCircle2, Copy, ExternalLink, X } from 'lucide-react';
+import TelegramIcon from '@mui/icons-material/Telegram';
 import { initializeTelegramConnection, checkTelegramConnection } from '@/lib/actions/telegram';
 
 interface TelegramDrawerProps {
@@ -32,6 +33,21 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
+  const jwtRef = useRef<string | null>(null);
+
+  const getOrUpdateJWT = async () => {
+    if (jwtRef.current) return jwtRef.current;
+    try {
+      const { account } = await import('@/lib/appwrite/client');
+      const { jwt } = await account.createJWT();
+      jwtRef.current = jwt;
+      return jwt;
+    } catch (err) {
+      console.error('Failed to create JWT:', err);
+      return undefined;
+    }
+  };
+
   const stopPolling = () => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
@@ -42,7 +58,8 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
   const startPolling = () => {
     stopPolling();
     pollingRef.current = setInterval(async () => {
-      const res = await checkTelegramConnection();
+      const jwt = await getOrUpdateJWT();
+      const res = await checkTelegramConnection(jwt);
       if (res.success && res.isVerified) {
         stopPolling();
         setVerifiedUsername(res.tgUsername || 'User');
@@ -63,7 +80,8 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     setVerifiedUsername(null);
 
     try {
-      const res = await initializeTelegramConnection();
+      const jwt = await getOrUpdateJWT();
+      const res = await initializeTelegramConnection(jwt);
       if (res.success && res.pairCode && res.deepLink) {
         setPairCode(res.pairCode);
         setDeepLink(res.deepLink);
@@ -91,7 +109,8 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
   const handleManualCheck = async () => {
     setIsVerifying(true);
     setError(null);
-    const res = await checkTelegramConnection();
+    const jwt = await getOrUpdateJWT();
+    const res = await checkTelegramConnection(jwt);
     setIsVerifying(false);
     if (res.success && res.isVerified) {
       setVerifiedUsername(res.tgUsername || 'User');
@@ -114,16 +133,19 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
 
   return (
     <Drawer
-      anchor="right"
+      anchor="bottom"
       open={open}
       onClose={onClose}
       keepMounted={false}
       disablePortal={true}
       PaperProps={{
         sx: {
-          width: { xs: '100%', sm: 420 },
+          height: 'auto',
+          maxHeight: '60vh',
+          borderTopLeftRadius: '28px',
+          borderTopRightRadius: '28px',
           bgcolor: '#161412',
-          borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.06)',
           backgroundImage: 'none',
           color: 'white',
         },
@@ -131,9 +153,12 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     >
       {/* Header */}
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
-          Telegram Notifications
-        </Typography>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+            <TelegramIcon sx={{ color: '#0088cc', fontSize: 28 }} />
+            <Typography sx={{ fontSize: '1.25rem', fontWeight: 700, fontFamily: 'Outfit, sans-serif' }}>
+              Telegram Notifications
+            </Typography>
+        </Stack>
         <IconButton onClick={onClose} sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: 'white' } }}>
           <X size={20} />
         </IconButton>
@@ -217,7 +242,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
                     href={deepLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    startIcon={<MessageCircle size={18} />}
+                    startIcon={<TelegramIcon />}
                     endIcon={<ExternalLink size={14} />}
                     sx={{
                       bgcolor: '#0088cc',

@@ -9,9 +9,9 @@ import { Permission, Role } from 'node-appwrite';
  * Stage 1: Initial Connect
  * Generates a pairing code, creates a transient connection row, and returns the deep link.
  */
-export async function initializeTelegramConnection() {
+export async function initializeTelegramConnection(jwt?: string) {
   try {
-    const { account } = await createServerClient();
+    const { account } = await createServerClient(jwt);
     const actor = await account.get();
     if (!actor?.$id) {
       return { success: false, error: 'Unauthorized' };
@@ -83,9 +83,9 @@ export async function initializeTelegramConnection() {
  * Active status polling helper
  * Checks if the current user's Telegram connection is verified.
  */
-export async function checkTelegramConnection() {
+export async function checkTelegramConnection(jwt?: string) {
   try {
-    const { account } = await createServerClient();
+    const { account } = await createServerClient(jwt);
     const actor = await account.get();
     if (!actor?.$id) {
       return { success: false, error: 'Unauthorized' };
