@@ -20,7 +20,6 @@ import {
 import {
   ArrowRight,
   ArrowUp,
-  Github,
   FileText,
   Plus,
   Shield,
@@ -38,6 +37,7 @@ import Logo from '@/components/common/Logo';
 import { KylrixApp } from '@/lib/sdk/design';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/constants';
 import { useAuth } from '@/context/auth/AuthContext';
+import { AIHeroInput } from '@/components/AIHeroInput';
 
 const appOrder = ['note', 'vault', 'flow', 'connect'] as const;
 const LAST_ACTIVE_APP_KEY = 'kylrix_last_active_app';
@@ -598,77 +598,52 @@ export default function LandingPage() {
             </Typography>
           </Box>
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Button
-              component={NextLink}
-              href="/skill.md"
-              size="large"
-              variant="contained"
-              endIcon={<ArrowRight size={18} />}
-              sx={{
-                px: 4,
-                py: 1.6,
-                borderRadius: 2.25,
-                bgcolor: '#6366F1',
-                color: '#fff',
-                fontWeight: 800,
-                boxShadow: '0 16px 36px rgba(99,102,241,0.25)',
-                '&:hover': { bgcolor: '#5254E8' },
-              }}
-            >
-              Install Agent Skill
-            </Button>
+          <Paper
+            elevation={0}
+            sx={{
+              width: '100%',
+              maxWidth: 940,
+              p: { xs: 3, md: 6 },
+              borderRadius: '48px',
+              bgcolor: '#161514',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: surfaceShadow,
+              mt: 4,
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.2), transparent)',
+              }
+            }}
+          >
+            <AIHeroInput 
+              onPromptSelectAction={(prompt) => {
+                router.push(`${getEcosystemUrl('connect')}?compose=1&draftText=${encodeURIComponent(prompt)}`);
+              }} 
+            />
 
-            <Button
-              component="a"
-              href="https://github.com/kylrix"
-              target="_blank"
-              rel="noreferrer"
-              onClick={(event) => {
-                event.preventDefault();
-                window.open('https://github.com/kylrix', '_blank', 'noopener,noreferrer');
-              }}
-              size="large"
-              variant="outlined"
-              startIcon={<Github size={18} />}
-              sx={{
-                px: 4,
-                py: 1.6,
-                borderRadius: 2.25,
-                bgcolor: '#161514',
-                borderColor: 'rgba(255,255,255,0.12)',
-                color: '#fff',
-                fontWeight: 800,
-                boxShadow: surfaceShadow,
-                '&:hover': {
-                  bgcolor: '#1F1D1B',
-                  borderColor: 'rgba(255,255,255,0.2)',
-                },
-              }}
+            <Stack 
+              direction={{ xs: 'column', sm: 'row' }} 
+              spacing={4} 
+              justifyContent="center"
+              divider={<Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.06)', height: 24, alignSelf: 'center', display: { xs: 'none', sm: 'block' } }} />}
+              sx={{ mt: 5 }}
             >
-              Our GitHub
-            </Button>
-          </Stack>
-
-          <Grid container spacing={2.5} sx={{ width: '100%', maxWidth: 980, mt: 2 }}>
-            {heroMetrics.map((metric) => (
-              <Grid key={metric.label} item xs={12} sm={4}>
-                <Paper
-                  sx={{
-                    p: 2.5,
-                    borderRadius: 2.25,
-                    bgcolor: '#161514',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: surfaceShadow,
-                  }}
-                >
+              {heroMetrics.map((metric) => (
+                <Box key={metric.label} sx={{ textAlign: 'center' }}>
                   <Typography
-                    variant="h4"
+                    variant="h6"
                     sx={{
                       color: '#fff',
                       fontWeight: 900,
                       fontFamily: 'var(--font-mono)',
-                      fontVariantNumeric: 'tabular-nums',
+                      fontSize: '1.2rem',
                       lineHeight: 1,
                     }}
                   >
@@ -677,19 +652,21 @@ export default function LandingPage() {
                   <Typography
                     variant="caption"
                     sx={{
-                      mt: 1,
+                      mt: 0.5,
                       display: 'block',
-                      color: 'rgba(255,255,255,0.55)',
+                      color: 'rgba(255,255,255,0.4)',
                       letterSpacing: '0.12em',
                       textTransform: 'uppercase',
+                      fontSize: '0.65rem',
+                      fontWeight: 800
                     }}
                   >
                     {metric.label}
                   </Typography>
-                </Paper>
-              </Grid>
-            ))}
-          </Grid>
+                </Box>
+              ))}
+            </Stack>
+          </Paper>
         </Stack>
       </Container>
 

@@ -43,6 +43,7 @@ export const APPWRITE_TABLE_ID_COMMENTS = APPWRITE_CONFIG.TABLES.NOTE.COMMENTS;
 export const APPWRITE_TABLE_ID_EXTENSIONS = APPWRITE_CONFIG.TABLES.NOTE.EXTENSIONS;
 export const APPWRITE_TABLE_ID_REACTIONS = APPWRITE_CONFIG.TABLES.NOTE.REACTIONS;
 export const APPWRITE_TABLE_ID_COLLABORATORS = APPWRITE_CONFIG.TABLES.NOTE.COLLABORATORS;
+export const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 export const APPWRITE_TABLE_ID_ACTIVITYLOG = APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG;
 export const APPWRITE_TABLE_ID_SETTINGS = APPWRITE_CONFIG.TABLES.NOTE.SETTINGS;
 export const APPWRITE_TABLE_ID_SUBSCRIPTIONS = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
@@ -1367,19 +1368,20 @@ export async function deleteReactionsForTarget(targetType: TargetType, targetId:
 // --- COLLABORATORS CRUD ---
 
 export async function createCollaborator(data: Partial<Collaborators>) {
-  const noteId = data.noteId;
+  const noteId = data.noteId || data.resourceId;
   const userId = data.userId;
   const permission = (data.permission as NoteCollaboratorPermission | undefined) ?? 'read';
 
-  // Duplicate guard: unique per (noteId,userId)
+  // Duplicate guard: unique per (resourceId,userId)
   try {
     if (noteId && userId) {
       try {
         const existing = await databases.listDocuments(
-          APPWRITE_DATABASE_ID,
-          APPWRITE_TABLE_ID_COLLABORATORS,
+          FLOW_DATABASE_ID,
+          POLYMORPHIC_COLLABORATORS_TABLE,
           [
-            Query.equal('noteId', noteId),
+            Query.equal('resourceId', noteId),
+            Query.equal('resourceType', 'note'),
             Query.equal('userId', userId),
             Query.limit(1)
           ] as any
@@ -1389,8 +1391,8 @@ export async function createCollaborator(data: Partial<Collaborators>) {
           const existingPermission = existingCollaborator.permission as unknown as NoteCollaboratorPermission;
           if (existingPermission !== permission) {
             await databases.updateDocument(
-              APPWRITE_DATABASE_ID,
-              APPWRITE_TABLE_ID_COLLABORATORS,
+              FLOW_DATABASE_ID,
+              POLYMORPHIC_COLLABORATORS_TABLE,
               existingCollaborator.$id,
               { permission }
             );
@@ -1411,54 +1413,97 @@ export async function createCollaborator(data: Partial<Collaborators>) {
   } catch (guardErr) {
     console.error('createCollaborator duplicate guard failed', guardErr);
   }
-  const created = await databases.createDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COLLABORATORS, ID.unique(), cleanDocumentData(data));
+
+  const payload: any = {
+    ...data,
+    resourceId: noteId,
+    resourceType: 'note',
+    status: data.status || 'accepted',
+  };
+  delete payload.noteId;
+
+  const created = await databases.createDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, ID.unique(), cleanDocumentData(payload));
 
   if (noteId && userId) {
     try {
       await updateNoteAccessForUser(noteId, userId, permission, 'grant');
     } catch (error) {
-      await databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COLLABORATORS, created.$id);
+      await databases.deleteDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, created.$id);
       throw error;
     }
   }
 
-  return created;
+  return {
+    ...created,
+    noteId: created.resourceId,
+  } as unknown as Collaborators;
 }
 
 export async function getCollaborator(collaboratorId: string): Promise<Collaborators> {
-  return databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COLLABORATORS, collaboratorId) as unknown as Promise<Collaborators>;
+  const doc = await databases.getDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId);
+  return {
+    ...doc,
+    noteId: doc.resourceId,
+  } as unknown as Collaborators;
 }
 
 export async function updateCollaborator(collaboratorId: string, data: Partial<Collaborators>) {
   const current = await getCollaborator(collaboratorId);
-  const nextPermission = (data.permission as NoteCollaboratorPermission | undefined) ?? current.permission;
-  const updated = await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COLLABORATORS, collaboratorId, cleanDocumentData(data));
+  const nextPermission = (data.permission as NoteCollaboratorPermission | undefined) ?? (current.permission as NoteCollaboratorPermission);
 
-  if (current.noteId && current.userId) {
+  const payload: any = {
+    ...data,
+  };
+  if (payload.noteId) {
+    payload.resourceId = payload.noteId;
+    delete payload.noteId;
+  }
+
+  const updated = await databases.updateDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId, cleanDocumentData(payload));
+
+  const noteId = current.resourceId || current.noteId;
+  if (noteId && current.userId) {
     try {
-      await updateNoteAccessForUser(current.noteId, current.userId, nextPermission, 'grant');
+      await updateNoteAccessForUser(noteId, current.userId, nextPermission, 'grant');
     } catch (error) {
-      await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COLLABORATORS, collaboratorId, { permission: current.permission });
+      await databases.updateDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId, { permission: current.permission });
       throw error;
     }
   }
 
-  return updated;
+  return {
+    ...updated,
+    noteId: updated.resourceId,
+  } as unknown as Collaborators;
 }
 
 export async function deleteCollaborator(collaboratorId: string) {
   const current = await getCollaborator(collaboratorId);
 
-  if (current.noteId && current.userId) {
-    await updateNoteAccessForUser(current.noteId, current.userId, current.permission as NoteCollaboratorPermission, 'revoke');
+  const noteId = current.resourceId || current.noteId;
+  if (noteId && current.userId) {
+    await updateNoteAccessForUser(noteId, current.userId, current.permission as NoteCollaboratorPermission, 'revoke');
   }
 
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COLLABORATORS, collaboratorId);
+  return databases.deleteDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId);
 }
 
 export async function listCollaborators(noteId: string) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COLLABORATORS, [Query.equal('noteId', noteId)]);
+  const res = await databases.listDocuments(
+    FLOW_DATABASE_ID,
+    POLYMORPHIC_COLLABORATORS_TABLE,
+    [
+      Query.equal('resourceId', noteId),
+      Query.equal('resourceType', 'note')
+    ]
+  );
+  res.documents = res.documents.map((doc: any) => ({
+    ...doc,
+    noteId: doc.resourceId,
+  }));
+  return res;
 }
+
 
 // --- ACTIVITY LOG CRUD ---
 
@@ -2230,9 +2275,13 @@ export async function listNoteAttachments(noteId: string, currentUserId?: string
       if (note.userId !== currentUserId) {
         try {
           const collabRes: any = await databases.listDocuments(
-            APPWRITE_DATABASE_ID,
-            APPWRITE_TABLE_ID_COLLABORATORS,
-            [Query.equal('noteId', noteId), Query.equal('userId', currentUserId)] as any
+            FLOW_DATABASE_ID,
+            POLYMORPHIC_COLLABORATORS_TABLE,
+            [
+              Query.equal('resourceId', noteId),
+              Query.equal('resourceType', 'note'),
+              Query.equal('userId', currentUserId)
+            ] as any
           );
           const isCollab = Array.isArray(collabRes?.documents) && collabRes.documents.length > 0;
           if (!isCollab) return [];

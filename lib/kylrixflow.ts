@@ -10,7 +10,7 @@ const FLOW_DATABASE_ID = APPWRITE_CONFIG.FLOW_DATABASE_ID || APPWRITE_CONFIG.DAT
 const { TABLES } = APPWRITE_CONFIG;
 const TASK_COLLABORATOR_RESOURCE_PREFIX = 'task:';
 const TASK_COLLABORATOR_TABLE = TABLES.FLOW.COLLABORATORS;
-const TASK_COLLABORATOR_DATABASE = APPWRITE_CONFIG.NOTE_DATABASE_ID;
+const TASK_COLLABORATOR_DATABASE = FLOW_DATABASE_ID;
 
 export { realtime };
 
@@ -76,7 +76,7 @@ const mergePermissions = (...permissionGroups: string[][]) => {
 
 const normalizeCollaborator = (row: any): TaskCollaborator => ({
     id: row.$id,
-    taskId: String(row.noteId || '').replace(TASK_COLLABORATOR_RESOURCE_PREFIX, ''),
+    taskId: row.resourceId || String(row.noteId || '').replace(TASK_COLLABORATOR_RESOURCE_PREFIX, ''),
     userId: row.userId,
     permission: row.permission,
     invitedAt: row.invitedAt ? new Date(row.invitedAt) : null,
@@ -129,7 +129,9 @@ async function listTaskCollaborators(taskId: string): Promise<TaskCollaborator[]
         databaseId: TASK_COLLABORATOR_DATABASE,
         tableId: TASK_COLLABORATOR_TABLE,
         queries: [
-            Query.equal('noteId', taskResourceKey(taskId))],
+            Query.equal('resourceId', taskId),
+            Query.equal('resourceType', 'task'),
+        ],
     });
 
     return res.rows.map(normalizeCollaborator);
@@ -140,9 +142,11 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
         databaseId: TASK_COLLABORATOR_DATABASE,
         tableId: TASK_COLLABORATOR_TABLE,
         queries: [
-            Query.equal('noteId', taskResourceKey(taskId)),
+            Query.equal('resourceId', taskId),
+            Query.equal('resourceType', 'task'),
             Query.equal('userId', userId),
-            Query.limit(1)],
+            Query.limit(1)
+        ],
     });
 
     const nextPermissions = permissions ?? mergePermissions(
@@ -155,11 +159,13 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
             TASK_COLLABORATOR_TABLE,
             current.id,
             {
-                noteId: taskResourceKey(taskId),
+                resourceId: taskId,
+                resourceType: 'task',
                 userId,
                 permission,
                 invitedAt: current.invitedAt ? current.invitedAt.toISOString() : new Date().toISOString(),
                 accepted: true,
+                status: 'accepted',
             },
             nextPermissions,
             TASK_COLLABORATOR_DATABASE
@@ -170,11 +176,13 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
     const created = await createRow<any>(
         TASK_COLLABORATOR_TABLE,
         {
-            noteId: taskResourceKey(taskId),
+            resourceId: taskId,
+            resourceType: 'task',
             userId,
             permission,
             invitedAt: new Date().toISOString(),
             accepted: true,
+            status: 'accepted',
         },
         nextPermissions,
         ID.unique(),
@@ -195,7 +203,8 @@ async function updateTaskCollaborator(rowId: string, data: Partial<{ permission:
         rowId,
         {
             ...data,
-            noteId: taskResourceKey(taskId),
+            resourceId: taskId,
+            resourceType: 'task',
             userId: current.userId,
             permission: nextPermission,
         },

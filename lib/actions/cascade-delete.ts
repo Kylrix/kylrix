@@ -108,7 +108,7 @@ export async function executeCascadeDeleteSecure(
       console.error('[Cascade Delete] Note direct reactions cleanup failed:', err);
     }
 
-    // C. Delete Collaborators
+    // C. Delete Collaborators (Legacy and Polymorphic)
     try {
       const collaboratorsRes = await tables.listRows({
         databaseId,
@@ -126,7 +126,32 @@ export async function executeCascadeDeleteSecure(
         )
       );
     } catch (err) {
-      console.error('[Cascade Delete] Note collaborators cleanup failed:', err);
+      console.error('[Cascade Delete] Note legacy collaborators cleanup failed:', err);
+    }
+
+    try {
+      const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+      const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+      const polyCollabsRes = await tables.listRows({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', rowId),
+          Query.equal('resourceType', 'note'),
+          Query.limit(1000),
+        ] as any,
+      });
+      await Promise.all(
+        polyCollabsRes.rows.map((collab: any) =>
+          tables.deleteRow({
+            databaseId: FLOW_DATABASE_ID,
+            tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+            rowId: collab.$id,
+          })
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Note polymorphic collaborators cleanup failed:', err);
     }
 
     // D. Delete Note Tags Pivots & Decrement Tag usageCount
@@ -269,6 +294,30 @@ export async function executeCascadeDeleteSecure(
     } catch (err) {
       console.error('[Cascade Delete] Event guests cleanup failed:', err);
     }
+
+    try {
+      const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+      const polyCollabsRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', rowId),
+          Query.equal('resourceType', 'event'),
+          Query.limit(1000),
+        ] as any,
+      });
+      await Promise.all(
+        polyCollabsRes.rows.map((collab: any) =>
+          tables.deleteRow({
+            databaseId: FLOW_DB,
+            tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+            rowId: collab.$id,
+          })
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Polymorphic event collaborators cleanup failed:', err);
+    }
   }
 
   // --- 5. CASCADE FOR CALLS (HUDDLES) ---
@@ -296,6 +345,59 @@ export async function executeCascadeDeleteSecure(
       }
     } catch (err) {
       console.error('[Cascade Delete] Call ghost notes cleanup failed:', err);
+    }
+
+    try {
+      const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+      const polyCollabsRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', rowId),
+          Query.equal('resourceType', 'call'),
+          Query.limit(1000),
+        ] as any,
+      });
+      await Promise.all(
+        polyCollabsRes.rows.map((collab: any) =>
+          tables.deleteRow({
+            databaseId: FLOW_DB,
+            tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+            rowId: collab.$id,
+          })
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Polymorphic call cohosts cleanup failed:', err);
+    }
+  }
+
+  // --- 6. CASCADE FOR TASKS ---
+  else if (databaseId === FLOW_DB && tableId === APPWRITE_CONFIG.TABLES.FLOW.TASKS) {
+    console.log(`[Cascade Delete] Triggered task cascade cleanup for: ${rowId}`);
+
+    try {
+      const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+      const polyCollabsRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', rowId),
+          Query.equal('resourceType', 'task'),
+          Query.limit(1000),
+        ] as any,
+      });
+      await Promise.all(
+        polyCollabsRes.rows.map((collab: any) =>
+          tables.deleteRow({
+            databaseId: FLOW_DB,
+            tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+            rowId: collab.$id,
+          })
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Polymorphic task assignees cleanup failed:', err);
     }
   }
 }

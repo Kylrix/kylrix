@@ -18,8 +18,10 @@ interface AIHeroInputProps {
 }
 
 const PROMPT_SUGGESTIONS = [
-  "Brainstorm creative marketing ideas for a web3 startup",
-  "Summarize key insights from my research notes"
+  "Execute a product launch strategy",
+  "Summarize key insights from my research notes",
+  "Initialize a secure client handover",
+  "Analyze form responses for Q3 roadmap"
 ];
 
 export function AIHeroInput({ onPromptSelectAction }: AIHeroInputProps) {
@@ -28,6 +30,8 @@ export function AIHeroInput({ onPromptSelectAction }: AIHeroInputProps) {
   const [inputValue, setInputValue] = useState('');
   const [isActive, setIsActive] = useState(false);
   const _theme = useTheme();
+
+  const baseLine = "What do you want to do today?";
 
   // Auto-typing animation effect
   useEffect(() => {
@@ -95,7 +99,7 @@ export function AIHeroInput({ onPromptSelectAction }: AIHeroInputProps) {
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
-          placeholder={isActive || inputValue ? '' : displayText}
+          placeholder={isActive || inputValue ? baseLine : displayText || baseLine}
           variant="outlined"
           InputProps={{
             sx: {

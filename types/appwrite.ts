@@ -220,11 +220,18 @@ export type Reactions = Models.Row & {
 }
 
 export type Collaborators = Models.Row & {
-    noteId: string;
+    noteId?: string;
+    resourceId: string;
+    resourceType: string;
     userId: string;
-    permission: Permission;
-    invitedAt: string | null;
-    accepted: boolean | null;
+    permission: Permission | string;
+    inviterId?: string | null;
+    status?: string | null;
+    invitedAt?: string | null;
+    accepted?: boolean | null;
+    expiresAt?: string | null;
+    role?: string | null;
+    metadata?: string | null;
 }
 
 export type ActivityLog = Models.Row & {

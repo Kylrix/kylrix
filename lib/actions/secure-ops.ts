@@ -1924,6 +1924,36 @@ async function verifyEventPermission(eventId: string, actorId: string, minLevel:
     return true; // Owner has full permissions
   }
 
+  // A. Check polymorphic whisperrflow.Collaborators table
+  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+  try {
+    const collabsRes = await tables.listRows({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', eventId),
+        Query.equal('resourceType', 'event'),
+        Query.equal('userId', actorId),
+        Query.limit(1),
+      ] as any,
+    });
+    if (collabsRes.rows.length > 0) {
+      const collab = collabsRes.rows[0];
+      const p = collab.permission; // 'read' | 'write' | 'admin'
+      if (minLevel === 'viewer') {
+        if (['read', 'write', 'admin'].includes(p)) return true;
+      } else if (minLevel === 'editor') {
+        if (['write', 'admin'].includes(p)) return true;
+      } else if (minLevel === 'admin') {
+        if (p === 'admin') return true;
+      }
+    }
+  } catch (err) {
+    console.error('[verifyEventPermission] Polymorphic query failed:', err);
+  }
+
+  // B. Fallback to legacy guests table check
   const guestsRes = await tables.listRows({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.GUESTS,
@@ -2146,6 +2176,57 @@ export async function addEventManagerSecure(eventId: string, targetUserId: strin
     });
   }
 
+  // 3. Polyfill/Primary write to polymorphic whisperrflow.Collaborators table
+  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+  try {
+    const existingCollab = await tables.listRows({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', eventId),
+        Query.equal('resourceType', 'event'),
+        Query.equal('userId', targetUserId),
+        Query.limit(1),
+      ] as any,
+    });
+
+    const permission = permissionLevel === 'admin' ? 'admin' : (permissionLevel === 'editor' ? 'write' : 'read');
+
+    if (existingCollab.rows.length > 0) {
+      await tables.updateRow({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        rowId: existingCollab.rows[0].$id,
+        data: {
+          permission,
+          invitedAt: existingCollab.rows[0].invitedAt || new Date().toISOString(),
+          accepted: true,
+          status: 'accepted',
+          role: 'manager',
+        },
+      });
+    } else {
+      await tables.createRow({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        rowId: ID.unique(),
+        data: {
+          resourceId: eventId,
+          resourceType: 'event',
+          userId: targetUserId,
+          permission,
+          invitedAt: new Date().toISOString(),
+          accepted: true,
+          status: 'accepted',
+          role: 'manager',
+        },
+      });
+    }
+  } catch (err) {
+    console.error('[Event secure action] Polymorphic write failed:', err);
+  }
+
   return JSON.parse(JSON.stringify(guestDoc));
 }
 
@@ -2209,6 +2290,32 @@ export async function removeEventManagerSecure(eventId: string, targetUserId: st
     console.error('removeEventManagerSecure cleanup failed:', err);
   }
 
+  // 3. Remove entry from polymorphic whisperrflow.Collaborators table
+  try {
+    const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+    const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+    const collabsRes = await tables.listRows({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', eventId),
+        Query.equal('resourceType', 'event'),
+        Query.equal('userId', targetUserId),
+      ] as any,
+    });
+    await Promise.all(
+      collabsRes.rows.map((row: any) =>
+        tables.deleteRow({
+          databaseId: FLOW_DATABASE_ID,
+          tableId: COLLABORATORS_TABLE,
+          rowId: row.$id,
+        })
+      )
+    );
+  } catch (err) {
+    console.error('[Event secure action] Polymorphic delete failed:', err);
+  }
+
   return { success: true };
 }
 
@@ -2265,6 +2372,57 @@ export async function addCallCohostSecureAction(callId: string, cohostId: string
       permissions: Array.from(permissions),
     });
 
+  // Polyfill to polymorphic whisperrflow.Collaborators table
+  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+  try {
+    const existing = await tables.listRows({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', callId),
+        Query.equal('resourceType', 'call'),
+        Query.equal('userId', cohostId),
+        Query.limit(1),
+      ] as any,
+    });
+
+    const permission = allowEndCall ? 'admin' : 'write';
+
+    if (existing.rows.length > 0) {
+      await tables.updateRow({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        rowId: existing.rows[0].$id,
+        data: {
+          permission,
+          invitedAt: existing.rows[0].invitedAt || new Date().toISOString(),
+          accepted: true,
+          status: 'accepted',
+          role: 'cohost',
+        },
+      });
+    } else {
+      await tables.createRow({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        rowId: ID.unique(),
+        data: {
+          resourceId: callId,
+          resourceType: 'call',
+          userId: cohostId,
+          permission,
+          invitedAt: new Date().toISOString(),
+          accepted: true,
+          status: 'accepted',
+          role: 'cohost',
+        },
+      });
+    }
+  } catch (err) {
+    console.error('[Cohost secure action] Polymorphic write failed:', err);
+  }
+
   return JSON.parse(JSON.stringify(updatedCall));
 }
 
@@ -2284,6 +2442,33 @@ export async function endCallSecureAction(callId: string, jwt?: string) {
 
   const ownerId = String(call.userId || '').trim();
   let isAllowed = (ownerId === actor.$id);
+
+  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+  if (!isAllowed) {
+    // A. Check polymorphic Collaborators table
+    try {
+      const collabsRes = await tables.listRows({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', callId),
+          Query.equal('resourceType', 'call'),
+          Query.equal('userId', actor.$id),
+          Query.limit(1),
+        ] as any,
+      });
+      if (collabsRes.rows.length > 0) {
+        const collab = collabsRes.rows[0];
+        if (collab.permission === 'admin' && collab.role === 'cohost') {
+          isAllowed = true;
+        }
+      }
+    } catch (err) {
+      console.error('[endCallSecureAction] Polymorphic query failed:', err);
+    }
+  }
 
   if (!isAllowed) {
     let meta: any = {};
@@ -2337,6 +2522,29 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
   const ownerId = String(call.userId || '').trim();
   let isAllowed = (ownerId === actor.$id);
 
+  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+  if (!isAllowed) {
+    try {
+      const collabsRes = await tables.listRows({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', callId),
+          Query.equal('resourceType', 'call'),
+          Query.equal('userId', actor.$id),
+          Query.limit(1),
+        ] as any,
+      });
+      if (collabsRes.rows.length > 0 && collabsRes.rows[0].role === 'cohost') {
+        isAllowed = true;
+      }
+    } catch (err) {
+      console.error('[updateCallSecureAction] Polymorphic query failed:', err);
+    }
+  }
+
   if (!isAllowed) {
     let meta: any = {};
     try {
@@ -2363,6 +2571,7 @@ export async function updateCallMetadataSecureAction(callId: string, extraMetada
   };
 
   const updatedCall = await tables.updateRow({
+
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
       rowId: callId,
@@ -2599,7 +2808,7 @@ export async function createRowSecure(
 
   // 3. Security checks and payload preparation
   if (data && typeof data === 'object') {
-    const isSpecializedTable = getIsSpecializedTable(tableId);
+    const isSpecializedTable = await getIsSpecializedTable(tableId);
 
     if (!isSpecializedTable) {
       if (data.userId && data.userId !== actor.$id) {
@@ -2726,7 +2935,7 @@ export async function updateRowSecure(
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   let isAllowed = false;
-  const isSpecializedTable = getIsSpecializedTable(tableId);
+  const isSpecializedTable = await getIsSpecializedTable(tableId);
 
   if (isSpecializedTable) {
     const existingRow = await getRowCached({ databaseId, tableId, rowId });
@@ -2807,7 +3016,7 @@ export async function deleteRowSecure(
   if (!actor || !actor.$id) throw new Error('Unauthorized');
 
   let isAllowed = false;
-  const isSpecializedTable = getIsSpecializedTable(tableId);
+  const isSpecializedTable = await getIsSpecializedTable(tableId);
 
   if (isSpecializedTable) {
     const existingRow = await getRowCached({ databaseId, tableId, rowId });
