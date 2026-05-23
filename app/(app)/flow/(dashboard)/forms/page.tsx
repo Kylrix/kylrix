@@ -47,10 +47,13 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useDataNexus } from '@/context/DataNexusContext';
 
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+
 export default function FormsDashboard() {
     const { user } = useAuth();
     const router = useRouter();
     const { fetchOptimized, invalidate } = useDataNexus();
+    const { open: openDrawer } = useUnifiedDrawer();
     const [forms, setForms] = useState<Forms[]>([]);
     const [offlineDrafts, setOfflineDrafts] = useState<FormDraft[]>([]);
     const [loading, setLoading] = useState(true);
@@ -62,7 +65,6 @@ export default function FormsDashboard() {
     
     // UI States
     const [menuAnchor, setMenuAnchor] = useState<{ element: HTMLElement, form: Forms } | null>(null);
-    const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
     const formsLengthRef = useRef(forms.length);
     useEffect(() => {
@@ -124,27 +126,36 @@ export default function FormsDashboard() {
         setDialogOpen(true);
     };
 
-    const handleDelete = async (formId: string) => {
-        setDeleteConfirm(formId);
+    const handleDelete = async (form: Forms) => {
+        openDrawer('delete-confirm', {
+            title: `Purge "${form.title}"?`,
+            description: 'This will permanently erase all metadata, configurations, and associated telemetry for this form.',
+            resourceName: 'this form',
+            confirmLabel: 'Confirm Purge',
+            onConfirm: async () => {
+                if (!user) return;
+                try {
+                    await FormsService.deleteForm(form.$id);
+                    invalidate(`f_user_forms_${user.$id}`);
+                    fetchForms(false);
+                } catch (err) {
+                    console.error("Failed to delete form", err);
+                }
+            }
+        });
     };
 
-    const confirmDelete = async () => {
-        if (!deleteConfirm || !user) return;
-        try {
-            await FormsService.deleteForm(deleteConfirm);
-            invalidate(`f_user_forms_${user.$id}`);
-            fetchForms(false);
-            setDeleteConfirm(null);
-        } catch (err) {
-            console.error("Failed to delete form", err);
-        }
-    };
-
-    const handleDeleteDraft = (id: string) => {
-        if (confirm('Delete this local draft?')) {
-            DraftsService.clearDraft(id);
-            fetchForms(false);
-        }
+    const handleDeleteDraft = (draft: FormDraft) => {
+        openDrawer('delete-confirm', {
+            title: `Delete Local Draft?`,
+            description: `You are about to remove "${draft.title || 'Untitled Portal'}" from your local storage. This cannot be recovered.`,
+            resourceName: 'this draft',
+            confirmLabel: 'Delete Draft',
+            onConfirm: () => {
+                DraftsService.clearDraft(draft.id);
+                fetchForms(false);
+            }
+        });
     };
 
     const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, form: Forms) => {
@@ -342,7 +353,7 @@ export default function FormsDashboard() {
                                                                 size="small" 
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    handleDelete(form.$id);
+                                                                    handleDelete(form);
                                                                 }} 
                                                                 sx={{ color: '#D14343', opacity: 0.6 }}
                                                             >
@@ -404,7 +415,7 @@ export default function FormsDashboard() {
                                                                 Resume
                                                             </Button>
                                                             <Box sx={{ flexGrow: 1 }} />
-                                                            <IconButton size="small" onClick={() => handleDeleteDraft(draft.id)} sx={{ color: '#D14343', opacity: 0.6 }}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton>
+                                                            <IconButton size="small" onClick={() => handleDeleteDraft(draft)} sx={{ color: '#D14343', opacity: 0.6 }}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton>
                                                         </Box>
                                                     </CardContent>
                                                 </Card>
@@ -465,48 +476,10 @@ export default function FormsDashboard() {
                     <SettingsIcon fontSize="small" /> Settings
                 </MuiMenuItem>
                 <Divider sx={{ opacity: 0.05, my: 0.5 }} />
-                <MuiMenuItem onClick={() => { handleMenuClose(); handleDelete(menuAnchor!.form.$id); }} sx={{ color: '#D14343 !important' }}>
+                <MuiMenuItem onClick={() => { handleMenuClose(); handleDelete(menuAnchor!.form); }} sx={{ color: '#D14343 !important' }}>
                     <DeleteIcon fontSize="small" /> Delete Form
                 </MuiMenuItem>
             </Menu>
-
-            {/* DELETE CONFIRMATION */}
-            <ConfirmDialog 
-                open={Boolean(deleteConfirm)} 
-                onClose={() => setDeleteConfirm(null)}
-                PaperProps={{
-                    sx: {
-                        bgcolor: 'rgba(15, 15, 15, 0.95)',
-                        backdropFilter: 'blur(20px)',
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        borderRadius: 4,
-                        p: 1
-                    }
-                }}
-            >
-                <ConfirmTitle sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>Irreversible Action</ConfirmTitle>
-                <ConfirmContent>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                        Are you sure you want to purge this form? This will permanently erase all metadata and associated telemetry.
-                    </Typography>
-                </ConfirmContent>
-                <ConfirmActions sx={{ p: 3, gap: 1 }}>
-                    <Button onClick={() => setDeleteConfirm(null)} sx={{ fontWeight: 800, color: 'text.secondary' }}>Abort</Button>
-                    <Button 
-                        variant="contained" 
-                        onClick={confirmDelete}
-                        sx={{ 
-                            bgcolor: '#D14343', 
-                            color: 'white', 
-                            fontWeight: 900, 
-                            borderRadius: 2,
-                            '&:hover': { bgcolor: '#b13333' }
-                        }}
-                    >
-                        Confirm Purge
-                    </Button>
-                </ConfirmActions>
-            </ConfirmDialog>
         </Box>
     );
 }

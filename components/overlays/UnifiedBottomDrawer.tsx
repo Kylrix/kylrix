@@ -18,6 +18,7 @@ const NewChannelDrawer = dynamic(() => import('./NewChannelDrawer').then(mod => 
 const NewTagDrawer = dynamic(() => import('./NewTagDrawer').then(mod => mod.NewTagDrawer), { ssr: false });
 const NewProjectDrawer = dynamic(() => import('./NewProjectDrawer').then(mod => mod.NewProjectDrawer), { ssr: false });
 const SecureChatSetupDrawer = dynamic(() => import('./SecureChatSetupDrawer').then(mod => mod.SecureChatSetupDrawer), { ssr: false });
+const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(mod => mod.DeleteConfirmDrawer), { ssr: false });
 
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
@@ -56,6 +57,8 @@ export function UnifiedBottomDrawer() {
             return <NewChannelDrawer isOpen={true} onClose={close} />;
         case 'secure-chat-setup':
             return <SecureChatSetupDrawer />;
+        case 'delete-confirm':
+            return <DeleteConfirmDrawer />;
         default: return null;
     }
   };
@@ -64,7 +67,7 @@ export function UnifiedBottomDrawer() {
   if (!content) return null;
 
   // Some components handle their own Drawer wrapper, but for new simple ones we wrap them
-  if (['secure-chat-setup'].includes(activeContent)) {
+  if (['secure-chat-setup', 'delete-confirm'].includes(activeContent)) {
     return (
         <Drawer
             anchor="bottom"

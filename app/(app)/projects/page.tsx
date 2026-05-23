@@ -263,15 +263,21 @@ export default function ProjectsPage() {
     fetchProjects();
   }, [fetchProjects]);
 
-  const handleDeleteProject = async (projectId: string) => {
-    if (!confirm('Delete this project?')) return;
-    try {
-      await ProjectsService.deleteProject(projectId);
-      showSuccess('Project deleted');
-      setProjects(prev => prev.filter(p => p.$id !== projectId));
-    } catch (err: any) {
-      showError('Action failed', err.message);
-    }
+  const handleDeleteProject = async (project: Projects) => {
+    open('delete-confirm', {
+      title: `Delete "${project.name}"?`,
+      resourceName: 'this project',
+      confirmLabel: 'Delete Project',
+      onConfirm: async () => {
+        try {
+          await ProjectsService.deleteProject(project.$id);
+          showSuccess('Project deleted');
+          setProjects(prev => prev.filter(p => p.$id !== project.$id));
+        } catch (err: any) {
+          showError('Action failed', err.message);
+        }
+      }
+    });
   };
 
   const handleProjectClick = (projectId: string) => {
@@ -377,7 +383,7 @@ export default function ProjectsPage() {
                                 <ProjectCard 
                                     project={project} 
                                     onClick={handleProjectClick}
-                                    onDelete={handleDeleteProject}
+                                    onDelete={() => handleDeleteProject(project)}
                                 />
                             </Grid>
                         ))}

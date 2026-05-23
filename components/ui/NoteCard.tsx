@@ -57,7 +57,12 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   // Decouple from frequent state changes in UnifiedDrawerContext
   const unifiedDrawer = useUnifiedDrawer();
   const openShare = useCallback(() => unifiedDrawer.open('share-note', { noteId: note.$id, noteTitle: note.title }), [unifiedDrawer, note.$id, note.title]);
-  const openDelete = useCallback(() => unifiedDrawer.open('delete-note', { noteTitle: note.title, onConfirm: async () => onDelete?.(note.$id) }), [unifiedDrawer, note.title, note.$id, onDelete]);
+  const openDelete = useCallback(() => unifiedDrawer.open('delete-confirm', { 
+    title: `Delete "${note.title}"?`,
+    resourceName: 'this note',
+    confirmLabel: 'Delete Note',
+    onConfirm: async () => onDelete?.(note.$id) 
+  }), [unifiedDrawer, note.title, note.$id, onDelete]);
   
   const { promptSudo } = useSudo();
   const { openProUpgrade } = useProUpgrade();
