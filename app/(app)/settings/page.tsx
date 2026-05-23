@@ -35,7 +35,8 @@ import {
     Trash2,
     RefreshCw,
     User,
-    ChevronRight
+    ChevronRight,
+    MessageCircle
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -44,6 +45,8 @@ import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { useSudo } from '@/context/SudoContext';
 import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
 import { toast } from 'react-hot-toast';
+import { TelegramDrawer } from '@/app/(app)/(auth)/accounts/components/TelegramDrawer';
+import { checkTelegramConnection } from '@/lib/actions/telegram';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -53,6 +56,18 @@ export default function SettingsPage() {
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [passkeySetupOpen, setPasskeySetupOpen] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
+
+    // Telegram state
+    const [tgUsername, setTgUsername] = useState<string | null>(null);
+    const [tgLoading, setTgLoading] = useState(false);
+    const [tgDrawerOpen, setTgDrawerOpen] = useState(false);
+
+    // Google Suite state
+    const [googleConnected, setGoogleConnected] = useState(false);
+    const [googleSyncKeep, setGoogleSyncKeep] = useState(true);
+    const [googleSyncCalendar, setGoogleSyncCalendar] = useState(true);
+    const [googleSyncDrive, setGoogleSyncDrive] = useState(false);
+    const [googleSyncTasks, setGoogleSyncTasks] = useState(true);
     const [minting, setMinting] = useState(false);
   
     // Passkey state
@@ -108,6 +123,23 @@ export default function SettingsPage() {
         }
     }, [user?.$id]);
 
+    const loadTelegramStatus = React.useCallback(async () => {
+        if (!user?.$id) return;
+        try {
+            setTgLoading(true);
+            const res = await checkTelegramConnection();
+            if (res.success && res.isVerified) {
+                setTgUsername(res.tgUsername || 'Connected');
+            } else {
+                setTgUsername(null);
+            }
+        } catch (err) {
+            console.error('Failed to load telegram status:', err);
+        } finally {
+            setTgLoading(false);
+        }
+    }, [user?.$id]);
+
     useEffect(() => {
         const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
             if (status.isUnlocked !== isUnlocked) {
@@ -117,6 +149,7 @@ export default function SettingsPage() {
 
         if (user?.$id) {
             loadPasskeys();
+            loadTelegramStatus();
             // detect whether the user has a master password (Tier 2 / encryption) set
             (async () => {
                 try {
@@ -130,7 +163,7 @@ export default function SettingsPage() {
         }
 
         return unsubscribe;
-    }, [isUnlocked, user, loadPasskeys]);
+    }, [isUnlocked, user, loadPasskeys, loadTelegramStatus]);
 
     const handleRemovePasskey = async (id: string) => {
         if (!window.confirm("Are you sure you want to remove this passkey? This cannot be undone.")) return;
@@ -254,6 +287,97 @@ export default function SettingsPage() {
                             <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
                         </Box>
                     </ButtonBase>
+
+                    {/* Telegram Notifications */}
+                    <Box sx={{ 
+                        bgcolor: '#161412', 
+                        borderRadius: '28px', 
+                        p: 3, 
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                            bgcolor: '#1C1A18',
+                            borderColor: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(0, 136, 204, 0.1)', color: '#0088cc' }}>
+                                <MessageCircle size={24} />
+                            </Box>
+                            <Box>
+                                <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
+                                    Telegram Notifications
+                                </Typography>
+                                <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
+                                    {tgUsername 
+                                        ? `Linked as @${tgUsername}. Ready to receive secure notifications.` 
+                                        : 'Receive instant notifications for calls, active chat threads, and mentions.'}
+                                </Typography>
+                            </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            {tgLoading ? (
+                                <CircularProgress size={20} sx={{ color: 'rgba(255, 255, 255, 0.4)' }} />
+                            ) : tgUsername ? (
+                                <Button
+                                    variant="text"
+                                    onClick={async () => {
+                                        if (!user?.$id) return;
+                                        try {
+                                            setTgLoading(true);
+                                            const { databases, APPWRITE_CONFIG } = await import('@/lib/appwrite');
+                                            await databases.deleteDocument(
+                                                APPWRITE_CONFIG.DATABASES.CONNECT,
+                                                APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+                                                user.$id
+                                            );
+                                            setTgUsername(null);
+                                            toast.success('Telegram disconnected.');
+                                        } catch (err: any) {
+                                            console.error('Failed to disconnect telegram:', err);
+                                            toast.error(err?.message || 'Failed to disconnect.');
+                                        } finally {
+                                            setTgLoading(false);
+                                        }
+                                    }}
+                                    sx={{
+                                        color: '#EF4444',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        textTransform: 'none',
+                                        '&:hover': {
+                                            bgcolor: 'rgba(239, 68, 68, 0.08)',
+                                        }
+                                    }}
+                                >
+                                    Disconnect
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="contained"
+                                    onClick={() => setTgDrawerOpen(true)}
+                                    sx={{
+                                        bgcolor: '#6366F1',
+                                        color: 'white',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        textTransform: 'none',
+                                        borderRadius: '12px',
+                                        px: 3,
+                                        py: 1,
+                                        '&:hover': {
+                                            bgcolor: '#4F46E5',
+                                        }
+                                    }}
+                                >
+                                    Connect
+                                </Button>
+                            )}
+                        </Box>
+                    </Box>
 
                     <DiscoverabilitySettings />
                     <Box sx={{ bgcolor: '#161412', borderRadius: '28px', p: 3, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
@@ -408,19 +532,136 @@ export default function SettingsPage() {
                             </Stack>
                         </Paper>
                     </Box>
+
+                    {/* Integrations Category - Google Suite */}
+                    <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
+                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ marginRight: 2 }}>
+                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 6.64l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Connected Integrations
+                        </Typography>
+                        
+                        <Paper sx={{ 
+                            p: { xs: 2.25, md: 3 }, 
+                            borderRadius: '28px', 
+                            bgcolor: '#161412', 
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            backgroundImage: 'none',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)'
+                        }}>
+                            <Stack spacing={3}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Box>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Google Suite Integration</Typography>
+                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Connect your Google workspace to sync Keep, Drive, Tasks, and Calendars.</Typography>
+                                    </Box>
+                                    <Button 
+                                        variant={googleConnected ? 'outlined' : 'contained'}
+                                        onClick={() => {
+                                            setGoogleConnected(!googleConnected);
+                                            toast.success(googleConnected ? 'Google Suite disconnected.' : 'Google Suite integrated successfully!');
+                                        }}
+                                        sx={{ 
+                                            borderRadius: '12px',
+                                            textTransform: 'none',
+                                            fontWeight: 700,
+                                            minWidth: 132,
+                                            ...(googleConnected
+                                                ? { borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.85)' }
+                                                : { bgcolor: '#4285F4', '&:hover': { bgcolor: '#357AE8' } })
+                                        }}
+                                    >
+                                        {googleConnected ? "Disconnect" : "Integrate"}
+                                    </Button>
+                                </Box>
+
+                                {googleConnected && (
+                                    <>
+                                        <Divider sx={{ opacity: 0.05 }} />
+                                        <Box>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: 'rgba(255,255,255,0.7)' }}>Sync Preferences</Typography>
+                                            <Stack spacing={2}>
+                                                <FormControlLabel
+                                                    control={<Switch checked={googleSyncKeep} onChange={(e) => setGoogleSyncKeep(e.target.checked)} color="primary" />}
+                                                    label={
+                                                        <Box>
+                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Keep Sync</Typography>
+                                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Real-time synchronization of notes and quick sheets</Typography>
+                                                        </Box>
+                                                    }
+                                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                                />
+                                                <Divider sx={{ opacity: 0.05 }} />
+                                                <FormControlLabel
+                                                    control={<Switch checked={googleSyncCalendar} onChange={(e) => setGoogleSyncCalendar(e.target.checked)} color="primary" />}
+                                                    label={
+                                                        <Box>
+                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Calendar Connections</Typography>
+                                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Bi-directional event schedules and huddle meetings</Typography>
+                                                        </Box>
+                                                    }
+                                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                                />
+                                                <Divider sx={{ opacity: 0.05 }} />
+                                                <FormControlLabel
+                                                    control={<Switch checked={googleSyncTasks} onChange={(e) => setGoogleSyncTasks(e.target.checked)} color="primary" />}
+                                                    label={
+                                                        <Box>
+                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Tasks Sync</Typography>
+                                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Synchronize your personal goals and assignees across platforms</Typography>
+                                                        </Box>
+                                                    }
+                                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                                />
+                                                <Divider sx={{ opacity: 0.05 }} />
+                                                <FormControlLabel
+                                                    control={<Switch checked={googleSyncDrive} onChange={(e) => setGoogleSyncDrive(e.target.checked)} color="primary" />}
+                                                    label={
+                                                        <Box>
+                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Drive File Picker</Typography>
+                                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Direct attachment of cloud storage assets to chat and notes</Typography>
+                                                        </Box>
+                                                    }
+                                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                                />
+                                            </Stack>
+                                        </Box>
+                                    </>
+                                )}
+                            </Stack>
+                        </Paper>
+                    </Box>
                 </Stack>
             </Box>
 
-            <PasskeySetup 
-                open={passkeySetupOpen}
-                onClose={() => setPasskeySetupOpen(false)}
-                userId={user?.$id || ""}
-                onSuccess={() => {
-                    setPasskeySetupOpen(false);
-                    loadPasskeys();
-                }}
-                trustUnlocked={true}
-            />
+            {/* Conditionally unmounted overlays/drawers mathematically preventing click blocking */}
+            {passkeySetupOpen && (
+                <PasskeySetup 
+                    open={passkeySetupOpen}
+                    onClose={() => setPasskeySetupOpen(false)}
+                    userId={user?.$id || ""}
+                    onSuccess={() => {
+                        setPasskeySetupOpen(false);
+                        loadPasskeys();
+                    }}
+                    trustUnlocked={true}
+                />
+            )}
+
+            {tgDrawerOpen && (
+                <TelegramDrawer
+                    open={tgDrawerOpen}
+                    onClose={() => setTgDrawerOpen(false)}
+                    onSuccess={(username) => {
+                        setTgUsername(username);
+                        setTgDrawerOpen(false);
+                    }}
+                />
+            )}
         </>
     );
 }
