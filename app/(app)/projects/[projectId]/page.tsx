@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import {
   Box,
@@ -62,6 +62,7 @@ import { client } from '@/lib/appwrite/client';
 import { ChatService } from '@/lib/services/chat';
 import { createMessageAction } from '@/lib/actions/chat';
 import { Send, Clock, MessageSquare } from 'lucide-react';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -622,6 +623,7 @@ interface ProjectDiscussionTabProps {
 }
 
 export function ProjectDiscussionTab({ project, fetchProjectData, user }: ProjectDiscussionTabProps) {
+  const { showSuccess } = useToast();
   const [activeMode, setActiveMode] = useState<'huddle' | 'private'>('huddle');
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
@@ -913,7 +915,7 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
     setLoading(true);
     try {
       await promoteGhostThreadToStory(project.$id, chatNoteId);
-      toast.success('Discussion promoted to permanent Story note!');
+      showSuccess('Discussion promoted to permanent Story note!');
       fetchProjectData();
     } catch (err) {
       console.error('Failed to save huddle as Story:', err);
