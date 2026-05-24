@@ -1,8 +1,19 @@
 <svg viewBox="0 0 100 100" width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-  <!-- Left Hemisphere (White) -->
+  <!-- Heavy Outer Solid Black Contour -->
+  <polygon points="50,9 14,29 14,71 50,91 86,71 86,29" fill="none" stroke="#000000" strokeWidth="3" strokeLinejoin="round" />
+  <!-- Solid Base Left Hemisphere (White) -->
   <polygon points="50,10 15,30 15,70 50,90" fill="#FFFFFF" />
-  <!-- Right Hemisphere (Ecosystem Indigo) -->
+  <!-- Solid Base Right Hemisphere (Ecosystem Indigo) -->
   <polygon points="50,10 85,30 85,70 50,90" fill="#6366F1" />
-  <!-- Center Cutout (Diamond) -->
+  <!-- Recessed Dark Borders -->
+  <polyline points="50,10 15,30 15,70 50,90" fill="none" stroke="#9B9691" strokeWidth="1.8" strokeLinecap="round" />
+  <polyline points="50,10 85,30 85,70 50,90" fill="none" stroke="#3D3AA9" strokeWidth="1.8" strokeLinecap="round" />
+  <!-- Heavy Opaque Center Seam Split -->
+  <line x1="50" y1="10" x2="50" y2="90" stroke="#000000" strokeWidth="2.2" />
+  <!-- Hard tactile recess shadow -->
+  <polygon points="51,40 63,52 51,64 39,52" fill="#000000" />
+  <!-- Main Solid Cutout Diamond -->
   <polygon points="50,38 62,50 50,62 38,50" fill="#0A0908" />
+  <!-- Solid Dark Carved Cutout Border -->
+  <polygon points="50,38 62,50 50,62 38,50" fill="none" stroke="#000000" strokeWidth="1.8" />
 </svg>

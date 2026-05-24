@@ -107,7 +107,67 @@ const Logo: React.FC<LogoProps> = ({
     }
   };
 
-  const isNote = app === 'note';
+  const borderColors: Record<KylrixApp, { left: string; right: string }> = {
+    root: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
+    kylrix: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
+    accounts: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
+    vault: { left: "#065F46", right: "#3D3AA9" },
+    flow: { left: "#6B21A8", right: "#3D3AA9" },
+    note: { left: "#9A1D5A", right: "#3D3AA9" },
+    connect: { left: "#92400E", right: "#3D3AA9" },
+  };
+
+  const borders = borderColors[app] || borderColors.kylrix;
+
+  const renderCarvedCutout = () => {
+    const isDiamond = app === 'root' || app === 'accounts' || app === 'kylrix';
+    if (isDiamond) {
+      return (
+        <>
+          {/* Hard tactile recess shadow (offset diamond) */}
+          <polygon points="51,40 63,52 51,64 39,52" fill="#000000" />
+          {/* Main solid cutout diamond */}
+          <polygon points="50,38 62,50 50,62 38,50" fill={cutoutColor} />
+          {/* Solid dark carved border */}
+          <polygon points="50,38 62,50 50,62 38,50" fill="none" stroke="#000000" strokeWidth="1.8" />
+        </>
+      );
+    } else {
+      return (
+        <>
+          {/* Hard tactile recess shadow (offset rotated square) */}
+          <rect 
+            x="39" 
+            y="40" 
+            width="24" 
+            height="24" 
+            fill="#000000" 
+            transform="rotate(45 50 50)"
+          />
+          {/* Main solid cutout */}
+          <rect 
+            x="38" 
+            y="38" 
+            width="24" 
+            height="24" 
+            fill={cutoutColor} 
+            transform="rotate(45 50 50)"
+          />
+          {/* Solid dark carved border */}
+          <rect 
+            x="38" 
+            y="38" 
+            width="24" 
+            height="24" 
+            fill="none" 
+            stroke="#000000" 
+            strokeWidth="1.8" 
+            transform="rotate(45 50 50)"
+          />
+        </>
+      );
+    }
+  };
 
   const Hexagon = (
     <motion.svg
@@ -116,99 +176,51 @@ const Logo: React.FC<LogoProps> = ({
       height={size}
       animate={animate ? { rotate: 360 } : {}}
       transition={animate ? { repeat: Infinity, duration: 8, ease: "linear" } : {}}
-      style={{ filter: isNote ? 'drop-shadow(0 3px 5px rgba(0,0,0,0.35))' : 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+      style={{ filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.35))' }}
     >
-      {isNote ? (
-        <>
-          <defs>
-            <linearGradient id="noteLeftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#EC4899" />
-              <stop offset="35%" stopColor="#F472B6" />
-              <stop offset="100%" stopColor="#BE185D" />
-            </linearGradient>
-            <linearGradient id="noteRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#6366F1" />
-              <stop offset="35%" stopColor="#818CF8" />
-              <stop offset="100%" stopColor="#4338CA" />
-            </linearGradient>
-            <filter id="recessShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="2" stdDeviation="1.5" floodColor="#000000" floodOpacity="0.85" />
-            </filter>
-          </defs>
+      {/* Heavy Outer Solid Black Contour (Gives massive structural presence) */}
+      <polygon 
+        points="50,9 14,29 14,71 50,91 86,71 86,29" 
+        fill="none" 
+        stroke="#000000" 
+        strokeWidth="3" 
+        strokeLinejoin="round"
+      />
 
-          {/* Left Hemisphere */}
-          <polygon 
-            points="50,10 15,30 15,70 50,90" 
-            fill="url(#noteLeftGrad)" 
-            style={{ transition: 'fill 0.4s ease' }}
-          />
-          {/* Right Hemisphere */}
-          <polygon 
-            points="50,10 85,30 85,70 50,90" 
-            fill="url(#noteRightGrad)" 
-            style={{ transition: 'fill 0.4s ease' }}
-          />
+      {/* Solid Base Left Hemisphere */}
+      <polygon 
+        points="50,10 15,30 15,70 50,90" 
+        fill={leftColor} 
+        style={{ transition: 'fill 0.4s ease' }}
+      />
+      {/* Solid Base Right Hemisphere */}
+      <polygon 
+        points="50,10 85,30 85,70 50,90" 
+        fill={rightColor} 
+        style={{ transition: 'fill 0.4s ease' }}
+      />
 
-          {/* Specular Bevel Highlights */}
-          <polyline 
-            points="50,10 15,30 15,70 50,90" 
-            fill="none" 
-            stroke="#FFA6D9" 
-            strokeWidth="1.5" 
-            opacity="0.75" 
-            strokeLinecap="round" 
-          />
-          <polyline 
-            points="50,10 85,30 85,70 50,90" 
-            fill="none" 
-            stroke="#A5B4FC" 
-            strokeWidth="1.5" 
-            opacity="0.75" 
-            strokeLinecap="round" 
-          />
+      {/* Recessed Dark Borders (Pure Solid Depth Shadow Lines) */}
+      <polyline 
+        points="50,10 15,30 15,70 50,90" 
+        fill="none" 
+        stroke={borders.left} 
+        strokeWidth="1.8" 
+        strokeLinecap="round" 
+      />
+      <polyline 
+        points="50,10 85,30 85,70 50,90" 
+        fill="none" 
+        stroke={borders.right} 
+        strokeWidth="1.8" 
+        strokeLinecap="round" 
+      />
 
-          {/* Center Seam */}
-          <line x1="50" y1="10" x2="50" y2="90" stroke="rgba(0,0,0,0.3)" strokeWidth="1" />
+      {/* Heavy Opaque Center Seam Split */}
+      <line x1="50" y1="10" x2="50" y2="90" stroke="#000000" strokeWidth="2.2" />
 
-          {/* Cutout (Physical Recessed Opening) */}
-          <rect 
-            x="38" 
-            y="38" 
-            width="24" 
-            height="24" 
-            fill={cutoutColor} 
-            transform="rotate(45 50 50)"
-            filter="url(#recessShadow)"
-          />
-          <rect 
-            x="38" 
-            y="38" 
-            width="24" 
-            height="24" 
-            fill="none" 
-            stroke="rgba(255,255,255,0.18)" 
-            strokeWidth="1" 
-            transform="rotate(45 50 50)"
-          />
-        </>
-      ) : (
-        <>
-          {/* Left Hemisphere */}
-          <polygon 
-            points="50,10 15,30 15,70 50,90" 
-            fill={leftColor} 
-            style={{ transition: 'fill 0.4s ease' }}
-          />
-          {/* Right Hemisphere */}
-          <polygon 
-            points="50,10 85,30 85,70 50,90" 
-            fill={rightColor} 
-            style={{ transition: 'fill 0.4s ease' }}
-          />
-          {/* Center Cutout */}
-          {renderCutout()}
-        </>
-      )}
+      {/* Carved Cutout with hard offset shadow and black inner rim */}
+      {renderCarvedCutout()}
     </motion.svg>
   );
 

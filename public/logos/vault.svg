@@ -1,8 +1,19 @@
 <svg viewBox="0 0 100 100" width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-  <!-- Left Hemisphere (Vault Emerald) -->
+  <!-- Heavy Outer Solid Black Contour -->
+  <polygon points="50,9 14,29 14,71 50,91 86,71 86,29" fill="none" stroke="#000000" strokeWidth="3" strokeLinejoin="round" />
+  <!-- Solid Base Left Hemisphere (Vault Emerald) -->
   <polygon points="50,10 15,30 15,70 50,90" fill="#10B981" />
-  <!-- Right Hemisphere (Ecosystem Indigo) -->
+  <!-- Solid Base Right Hemisphere (Ecosystem Indigo) -->
   <polygon points="50,10 85,30 85,70 50,90" fill="#6366F1" />
-  <!-- Center Cutout (Slanted Square) -->
+  <!-- Recessed Dark Borders -->
+  <polyline points="50,10 15,30 15,70 50,90" fill="none" stroke="#065F46" strokeWidth="1.8" strokeLinecap="round" />
+  <polyline points="50,10 85,30 85,70 50,90" fill="none" stroke="#3D3AA9" strokeWidth="1.8" strokeLinecap="round" />
+  <!-- Heavy Opaque Center Seam Split -->
+  <line x1="50" y1="10" x2="50" y2="90" stroke="#000000" strokeWidth="2.2" />
+  <!-- Hard tactile recess shadow -->
+  <rect x="39" y="40" width="24" height="24" fill="#000000" transform="rotate(45 50 50)" />
+  <!-- Main Solid Cutout -->
   <rect x="38" y="38" width="24" height="24" fill="#0A0908" transform="rotate(45 50 50)" />
+  <!-- Solid Dark Carved Cutout Border -->
+  <rect x="38" y="38" width="24" height="24" fill="none" stroke="#000000" strokeWidth="1.8" transform="rotate(45 50 50)" />
 </svg>
