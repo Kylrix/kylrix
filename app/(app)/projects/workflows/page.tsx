@@ -112,6 +112,20 @@ export default function WorkflowsPage() {
 
   return (
     <Box sx={{ p: 4, bgcolor: '#0A0908', minHeight: '90vh', color: 'white', fontFamily: 'Satoshi, sans-serif' }}>
+      {/* Back Button */}
+      <IconButton
+        onClick={() => router.back()}
+        sx={{
+          mb: 3,
+          bgcolor: '#161412',
+          color: '#fff',
+          border: '1px solid rgba(255,255,255,0.06)',
+          '&:hover': { bgcolor: '#1C1A18' },
+        }}
+      >
+        <ArrowLeft size={18} />
+      </IconButton>
+
       {/* Header section */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
