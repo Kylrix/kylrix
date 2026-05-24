@@ -83,10 +83,10 @@ export function NewProjectDrawer() {
     try {
         if (template?.id === 'form-to-project' || template?.id === 'service-desk' || template?.id === 'event-command-center') {
             const res = await FormsService.listUserForms(user.$id);
-            setResources(res.rows);
+            setResources(res?.rows || []);
         } else if (template?.id === 'idea-to-execution' || template?.id === 'wiki-knowledge-hub' || template?.id === 'product-roadmap') {
             const res = await listNotesByUser(user.$id);
-            setResources(res);
+            setResources(res?.documents || []);
         }
     } catch (e) {
         console.error('Failed to fetch resources', e);
