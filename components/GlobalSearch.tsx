@@ -81,6 +81,11 @@ export default function GlobalSearch() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [_loading, setLoading] = useState(false);
 
+  const clearSearch = () => {
+    setSearchTerm('');
+    setResults([]);
+  };
+
   const handleSearch = debounce(async (term: string) => {
     if (!term || term.trim().length < 2) {
       setResults([]);
