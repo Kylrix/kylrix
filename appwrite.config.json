@@ -7380,6 +7380,109 @@
                 }
             ],
             "indexes": []
+        },
+        {
+            "$id": "workflows",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "whisperrflow",
+            "name": "workflows",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "workflowId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "name",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 128,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "description",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "niche",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isAnonymized",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "steps",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_workflowId",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "workflowId"
+                    ],
+                    "orders": []
+                },
+                {
+                    "key": "idx_isPublic",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isPublic"
+                    ],
+                    "orders": []
+                }
+            ]
         }
     ],
     "buckets": [

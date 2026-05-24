@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Typography, 
@@ -24,6 +24,11 @@ import {
 } from '@mui/icons-material';
 import { useLocalContext } from '@/lib/context-engine';
 import { anonymizeWorkflow, negateWorkflow, WorkflowChain } from '@/lib/workflow-engine';
+import { 
+  saveWorkflowAction, 
+  listWorkflowsAction, 
+  deleteWorkflowAction 
+} from '@/lib/actions/workflows';
 
 export default function WorkflowsPage() {
   const { 
@@ -37,19 +42,35 @@ export default function WorkflowsPage() {
 
   const [negationError, setNegationError] = useState<string | null>(null);
 
-  const handleTogglePrivacy = (id: string, wf: WorkflowChain) => {
-    updateWorkflow(id, {
+  // Sync workflows from Appwrite database on mount
+  useEffect(() => {
+    const syncDb = async () => {
+      const res = await listWorkflowsAction();
+      if (res.success && res.data) {
+        res.data.forEach(wf => {
+          updateWorkflow(wf.id, wf);
+        });
+      }
+    };
+    syncDb();
+  }, [updateWorkflow]);
+
+  const handleTogglePrivacy = async (id: string, wf: WorkflowChain) => {
+    const updated = {
       ...wf,
       isPublic: !wf.isPublic
-    });
+    };
+    updateWorkflow(id, updated);
+    await saveWorkflowAction(updated);
   };
 
-  const handleAnonymize = (id: string, wf: WorkflowChain) => {
+  const handleAnonymize = async (id: string, wf: WorkflowChain) => {
     const anon = anonymizeWorkflow(wf);
     updateWorkflow(id, anon);
+    await saveWorkflowAction(anon);
   };
 
-  const handleNegate = (id: string, wf: WorkflowChain) => {
+  const handleNegate = async (id: string, wf: WorkflowChain) => {
     setNegationError(null);
     const res = negateWorkflow(wf);
     if (!res.success || !res.workflow) {
@@ -57,18 +78,31 @@ export default function WorkflowsPage() {
       return;
     }
     updateWorkflow(res.workflow.id, res.workflow);
+    await saveWorkflowAction(res.workflow);
   };
 
-  const handleToggleStepDynamic = (wfId: string, wf: WorkflowChain, stepIndex: number) => {
+  const handleToggleStepDynamic = async (wfId: string, wf: WorkflowChain, stepIndex: number) => {
     const updatedSteps = [...wf.steps];
     updatedSteps[stepIndex] = {
       ...updatedSteps[stepIndex],
       isDynamic: !updatedSteps[stepIndex].isDynamic
     };
-    updateWorkflow(wfId, {
+    const updated = {
       ...wf,
       steps: updatedSteps
-    });
+    };
+    updateWorkflow(wfId, updated);
+    await saveWorkflowAction(updated);
+  };
+
+  const handleDeleteWorkflow = async (id: string) => {
+    await deleteWorkflowAction(id);
+    const nextSaved = { ...savedWorkflows };
+    delete nextSaved[id];
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kylrix_saved_workflows', JSON.stringify(nextSaved));
+    }
+    window.location.reload();
   };
 
   const workflowsList = Object.values(savedWorkflows);
@@ -242,6 +276,14 @@ export default function WorkflowsPage() {
                       sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: '#818CF8', bgcolor: 'rgba(99, 102, 241, 0.05)' } }}
                     >
                       <NegateIcon fontSize="small" />
+                    </IconButton>
+
+                    <IconButton 
+                      onClick={() => handleDeleteWorkflow(wf.id)}
+                      title="Delete Workflow"
+                      sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: '#EF4444', bgcolor: 'rgba(239, 68, 68, 0.05)' } }}
+                    >
+                      <DeleteIcon fontSize="small" />
                     </IconButton>
                   </Box>
                 </Box>
