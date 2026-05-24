@@ -1099,6 +1099,18 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         }
     };
 
+    const handleTogglePinMessage = async () => {
+        if (!messageAnchorEl?.msg) return;
+        const msg = messageAnchorEl.msg;
+        setMessageAnchorEl(null);
+        try {
+            await ChatService.updateMessage(msg.$id, { isPinned: !msg.isPinned } as any);
+            toast.success(msg.isPinned ? "Unpinned" : "Pinned message");
+        } catch (err) {
+            toast.error("Failed to pin message");
+        }
+    };
+
     const handleSend = async (text: string) => {
         if ((!text.trim() && !attachment) || !user || sending) return false;
 
