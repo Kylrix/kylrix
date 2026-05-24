@@ -101,7 +101,26 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const dismissSuggestion = useCallback((id: string) => {
-    setSuggestions(prev => prev.filter(s => s.id !== id));
+    setSuggestions(prev => {
+      const target = prev.find(s => s.id === id);
+      if (target && (target as any).metadata?.actionKey) {
+        const actionKey = (target as any).metadata.actionKey;
+        if (typeof window !== 'undefined') {
+          try {
+            const deIncentivizedStr = localStorage.getItem('kylrix_deincentivized_suggestions');
+            const deIncentivized: string[] = deIncentivizedStr ? JSON.parse(deIncentivizedStr) : [];
+            if (!deIncentivized.includes(actionKey)) {
+              deIncentivized.push(actionKey);
+              localStorage.setItem('kylrix_deincentivized_suggestions', JSON.stringify(deIncentivized));
+              console.log('[LocalContextEngine] De-incentivized suggestion pattern on this device:', actionKey);
+            }
+          } catch (err) {
+            console.error('Failed to save de-incentivized suggestions:', err);
+          }
+        }
+      }
+      return prev.filter(s => s.id !== id);
+    });
   }, []);
 
   const bufferEvent = useCallback((eventInput: Omit<LocalEvent, 'timestamp'>) => {
@@ -112,20 +131,87 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
 
     setEvents(prev => {
       const updated = [...prev, newEvent];
-      if (updated.length > MAX_EVENTS) {
-        return updated.slice(updated.length - MAX_EVENTS);
+      const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      const valid = updated.filter(e => now - new Date(e.timestamp).getTime() < ONE_WEEK);
+      
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('kylrix_action_cache_v1', JSON.stringify(valid));
       }
-      return updated;
+      return valid;
     });
 
     console.log('[LocalContextEngine] Buffered Event:', newEvent);
 
-    // Heuristics Engine (Client-side execution to prevent server queries/bloat)
+    // Heuristics & Confident Pattern Suggestion Engine
     setTimeout(() => {
       setEvents(currentEvents => {
         const now = new Date().getTime();
 
-        // Heuristic 1: Search Abandonment to Moments Transition
+        // 1. Confident Context Suggestion Engine (Repeated actions counts)
+        const actionCounts: Record<string, number> = {};
+        currentEvents.forEach(e => {
+          const key = `${e.niche}.${e.app}.${e.action}`;
+          actionCounts[key] = (actionCounts[key] || 0) + 1;
+        });
+
+        Object.entries(actionCounts).forEach(([actionKey, count]) => {
+          if (count >= 3) {
+            const deIncentivizedStr = typeof window !== 'undefined' ? localStorage.getItem('kylrix_deincentivized_suggestions') : null;
+            const deIncentivized: string[] = deIncentivizedStr ? JSON.parse(deIncentivizedStr) : [];
+            
+            if (deIncentivized.includes(actionKey)) return;
+
+            const parts = actionKey.split('.');
+            const niche = parts[0] as TelemetryNiche;
+            const app = parts[1];
+
+            let title = '';
+            let description = '';
+            let actionLabel = '';
+            let actionHref = '';
+
+            if (app === 'note') {
+              title = 'Quick Note Shortcut';
+              description = 'You frequently manage notes. Jump straight back to your workspace notes?';
+              actionLabel = 'Write note';
+              actionHref = '/note/notes';
+            } else if (app === 'projects') {
+              title = 'Workflow Hub Suggestion';
+              description = 'We notice you are actively working in Projects. Manage your recorded workflows to speed up task automation?';
+              actionLabel = 'Manage workflows';
+              actionHref = '/projects/workflows';
+            } else if (app === 'flow') {
+              title = 'Synergize Your Tasks';
+              description = 'You frequently update your tasks and flows. Review outstanding goals in the Productivity Center?';
+              actionLabel = 'Open flows';
+              actionHref = '/flow';
+            } else if (app === 'vault') {
+              title = 'Secure Password Manager';
+              description = 'You frequently access credentials. Review and audit vault item sharing rules?';
+              actionLabel = 'Manage secrets';
+              actionHref = '/vault/sharing';
+            } else if (app === 'connect') {
+              title = 'Connect Huddles & Channels';
+              description = 'You frequently connect with teammates. Start a persistent workspace call?';
+              actionLabel = 'Open connect';
+              actionHref = '/connect';
+            }
+
+            if (title) {
+              addSuggestion({
+                title,
+                description,
+                niche,
+                actionLabel,
+                actionHref,
+                metadata: { actionKey }
+              } as any);
+            }
+          }
+        });
+
+        // 2. Standard Heuristics (Heuristic 1: Search Abandonment to Moments Transition)
         if (newEvent.niche === 'connect' && (newEvent.app === 'connect' || newEvent.app === 'moments') && newEvent.action === 'page_view') {
           const recentSearch = currentEvents.find(e => 
             e.app === 'search' && 
@@ -194,7 +280,7 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
 
         return currentEvents;
       });
-    }, 50);
+    }, 100);
 
   }, [addSuggestion]);
 
@@ -278,6 +364,25 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
       metadata: { path: pathname }
     });
   }, [pathname, bufferEvent]);
+
+  // Load local action cache on mount and clean up old events
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('kylrix_action_cache_v1');
+        if (cached) {
+          const parsed = JSON.parse(cached) as LocalEvent[];
+          const ONE_WEEK = 7 * 24 * 60 * 60 * 1000;
+          const now = Date.now();
+          const valid = parsed.filter(e => now - new Date(e.timestamp).getTime() < ONE_WEEK);
+          setEvents(valid);
+          localStorage.setItem('kylrix_action_cache_v1', JSON.stringify(valid));
+        }
+      } catch (err) {
+        console.error('Failed to load action cache:', err);
+      }
+    }
+  }, []);
 
   // Load saved workflows
   useEffect(() => {

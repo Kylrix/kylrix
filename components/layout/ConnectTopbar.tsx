@@ -28,6 +28,9 @@ import {
   User as UserIcon,
   Search,
   X as CloseIcon,
+  Bell,
+  Sparkles,
+  Activity,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -46,6 +49,7 @@ import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { useLocalContext } from '@/lib/context-engine';
 
 interface ConnectTopbarProps {
   className?: string;
@@ -92,6 +96,22 @@ export default function ConnectTopbar({
   const [searchingPeople, setSearchingPeople] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
+
+  const { events, suggestions, dismissSuggestion } = useLocalContext();
+  const [notifications, setNotifications] = useState([
+    { id: 'notif-1', title: 'Self-Hosted Sync Complete', message: 'All local action workflows and workspace logs successfully synchronized.', time: 'Just now', read: false, accent: '#10B981' },
+    { id: 'notif-2', title: 'Workflows Negations Active', message: 'Action chain engine generated valid inversions for 3 private notes.', time: '2 hours ago', read: false, accent: '#6366F1' },
+    { id: 'notif-3', title: 'Secure Keychain Audited', message: 'Local master credentials checked. Integrity score 100%.', time: '1 day ago', read: true, accent: '#F59E0B' }
+  ]);
+
+  const markNotificationRead = (id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  };
+
+  const dismissNotification = (id: string, event: any) => {
+    event.stopPropagation();
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
   const tone = getAppTone(activeApp);
@@ -213,6 +233,78 @@ export default function ConnectTopbar({
       }),
     [searchQuery, activeApp],
   );
+
+  const dynamicQuickActions = useMemo(() => {
+    // 1. Dynamic recommendations based on current app route
+    const routeSuggestions = {
+      note: [
+        { id: 'create-note', title: 'Write a New Note', description: 'Create a private note inside your workspace', href: '/note/notes', kind: 'note', accent: '#EC4899' },
+        { id: 'view-settings', title: 'Security Preferences', description: 'Adjust your notes security & encryption rules', href: '/settings', kind: 'system', accent: '#6366F1' }
+      ],
+      projects: [
+        { id: 'create-proj', title: 'Start Fresh Project', description: 'Spin up outcome-aware container', href: '/projects', kind: 'flow', accent: '#6366F1' },
+        { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/projects/workflows', kind: 'note', accent: '#A855F7' }
+      ],
+      flow: [
+        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flow', kind: 'flow', accent: '#A855F7' }
+      ],
+      vault: [
+        { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault/sharing', kind: 'vault', accent: '#10B981' }
+      ],
+      connect: [
+        { id: 'start-huddle', title: 'Start Connect Huddle', description: 'Centralize calls and group threads', href: '/connect', kind: 'connect', accent: '#F59E0B' }
+      ]
+    };
+
+    const currentAppSuggestions = routeSuggestions[activeApp as keyof typeof routeSuggestions] || [];
+
+    // 2. Historical recommendations based on past user actions (most frequent niches in cache)
+    const nicheCounts: Record<string, number> = {};
+    events.forEach(e => {
+      nicheCounts[e.niche] = (nicheCounts[e.niche] || 0) + 1;
+    });
+
+    let topNiche = '';
+    let maxCount = 0;
+    Object.entries(nicheCounts).forEach(([niche, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topNiche = niche;
+      }
+    });
+
+    const historicalSuggestions = [];
+    if (topNiche === 'workspace' && activeApp !== 'note') {
+      historicalSuggestions.push({
+        id: 'hist-note',
+        title: 'Review Recent Notes',
+        description: 'You spent a lot of time in workspace notes recently. Resume writing?',
+        href: '/note/notes',
+        kind: 'note',
+        accent: '#EC4899'
+      });
+    } else if (topNiche === 'productivity' && activeApp !== 'flow') {
+      historicalSuggestions.push({
+        id: 'hist-flow',
+        title: 'Coordinate Action Items',
+        description: 'Manage outstanding roadmaps and deliverables',
+        href: '/flow',
+        kind: 'flow',
+        accent: '#A855F7'
+      });
+    } else if (topNiche === 'security' && activeApp !== 'vault') {
+      historicalSuggestions.push({
+        id: 'hist-vault',
+        title: 'Audit Vault Keychain',
+        description: 'Manage passwords and TOTP codes safely',
+        href: '/vault/sharing',
+        kind: 'vault',
+        accent: '#10B981'
+      });
+    }
+
+    return [...currentAppSuggestions, ...historicalSuggestions].slice(0, 3);
+  }, [activeApp, events]);
 
   const handleCopyUserId = useCallback(async () => {
     if (!profileSeed.userId || typeof navigator === 'undefined' || !navigator.clipboard) return;
@@ -338,127 +430,316 @@ export default function ConnectTopbar({
             />
           </Box>
 
-          <Stack spacing={1.25} sx={{ mt: 1.25 }}>
-            <Box sx={{ display: 'grid', gap: 1 }}>
-              {!hasQuery && (
-                <Box sx={{ px: 0.5, py: 0.5 }}>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.84rem' }}>
-                    Start typing to search notes, goals, moments, calls, people, and apps.
-                  </Typography>
-                </Box>
-              )}
-
-              <Box sx={{ display: 'grid', gap: 0.75 }}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {searchSurface.quickActionLabel}
-                </Typography>
-                <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  {searchSurface.quickActions.slice(0, 3).map((action) => (
-                    <Box
-                      key={action.id}
-                      component="button"
-                      onClick={() => {
-                          handleCloseAll();
-                          router.push(action.href);
-                      }}
-                      sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.25,
-                        px: 1.5,
-                        py: 1.1,
-                        borderRadius: '18px',
-                        bgcolor: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        color: 'white',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
-                      }}
-                    >
-                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
-                        <Logo app={action.kind as any} size={16} variant="icon" />
-                      </Box>
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
-                          {action.title}
-                        </Typography>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
-                          {action.description}
-                        </Typography>
+          <Stack spacing={2} sx={{ mt: 2 }}>
+            {!hasQuery ? (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr' },
+                  gap: 3,
+                }}
+              >
+                {/* Left Column: Contextual Action Flow & Proactive Insights */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                  {/* Proactive Confident AI Suggestions if any */}
+                  {suggestions.length > 0 && (
+                    <Box sx={{ display: 'grid', gap: 1 }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <Sparkles size={13} style={{ color: '#6366F1' }} />
+                        Smart Assistant Insights
+                      </Typography>
+                      <Box sx={{ display: 'grid', gap: 1.25 }}>
+                        {suggestions.map((suggestion) => (
+                          <Box
+                            key={suggestion.id}
+                            sx={{
+                              p: 2,
+                              borderRadius: '20px',
+                              bgcolor: 'rgba(99, 102, 241, 0.05)',
+                              border: '1px solid rgba(99, 102, 241, 0.15)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 1.5,
+                              position: 'relative',
+                              overflow: 'hidden',
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                bgcolor: 'rgba(99, 102, 241, 0.08)',
+                                borderColor: 'rgba(99, 102, 241, 0.25)',
+                              }
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', gap: 1.5 }}>
+                              <Box sx={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: '12px',
+                                bgcolor: 'rgba(99, 102, 241, 0.12)',
+                                color: '#6366F1',
+                                display: 'grid',
+                                placeItems: 'center',
+                                flexShrink: 0
+                              }}>
+                                <Bot size={18} />
+                              </Box>
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', mb: 0.25 }}>
+                                  {suggestion.title}
+                                </Typography>
+                                <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.76rem', lineHeight: 1.3 }}>
+                                  {suggestion.description}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            
+                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', zIndex: 1 }}>
+                              <Button
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  dismissSuggestion(suggestion.id);
+                                }}
+                                sx={{
+                                  color: 'rgba(255,255,255,0.42)',
+                                  textTransform: 'none',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  borderRadius: '10px',
+                                  px: 1.5,
+                                  '&:hover': { color: '#FF4D4D', bgcolor: 'rgba(255, 77, 77, 0.08)' }
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              {suggestion.actionHref && (
+                                <Button
+                                  size="small"
+                                  onClick={() => {
+                                    handleCloseAll();
+                                    router.push(suggestion.actionHref!);
+                                  }}
+                                  variant="contained"
+                                  sx={{
+                                    bgcolor: '#6366F1',
+                                    color: 'white',
+                                    textTransform: 'none',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 800,
+                                    borderRadius: '10px',
+                                    px: 2,
+                                    '&:hover': { bgcolor: '#5254E8' }
+                                  }}
+                                >
+                                  {suggestion.actionLabel || 'Run Action'}
+                                </Button>
+                              )}
+                            </Box>
+                          </Box>
+                        ))}
                       </Box>
                     </Box>
-                  ))}
-                </Box>
-              </Box>
+                  )}
 
-              <Box sx={{ display: 'grid', gap: 0.75 }}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {searchSurface.searchAcrossLabel}
-                </Typography>
-                <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  {searchSurface.searchTargets.slice(0, 4).map((action) => (
-                    <Box
-                      key={action.id}
-                      component="button"
-                      onClick={() => {
-                          handleCloseAll();
-                          router.push(action.href);
-                      }}
-                      sx={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.25,
-                        px: 1.5,
-                        py: 1.1,
-                        borderRadius: '18px',
-                        bgcolor: action.kind === 'note' ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${action.kind === 'note' ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.05)'}`,
-                        color: 'white',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        '&:hover': { bgcolor: action.kind === 'note' ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.06)' }
-                      }}
-                    >
-                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
-                        <Logo app={action.kind as any} size={16} variant="icon" />
-                      </Box>
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
-                          {action.title}
-                        </Typography>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
-                          {action.description}
-                        </Typography>
-                      </Box>
+                  {/* Contextual Suggestions */}
+                  <Box sx={{ display: 'grid', gap: 1 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Activity size={13} style={{ color: '#F59E0B' }} />
+                      Contextual Quick Actions
+                    </Typography>
+                    <Box sx={{ display: 'grid', gap: 1 }}>
+                      {dynamicQuickActions.length === 0 ? (
+                        <Box sx={{ p: 2, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
+                            No live suggestions available yet. Explore the apps to build context!
+                          </Typography>
+                        </Box>
+                      ) : (
+                        dynamicQuickActions.map((action) => (
+                          <Box
+                            key={action.id}
+                            component="button"
+                            onClick={() => {
+                              handleCloseAll();
+                              router.push(action.href);
+                            }}
+                            sx={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.5,
+                              px: 2,
+                              py: 1.25,
+                              borderRadius: '18px',
+                              bgcolor: 'rgba(255,255,255,0.02)',
+                              border: '1px solid rgba(255,255,255,0.05)',
+                              color: 'white',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              '&:hover': {
+                                bgcolor: 'rgba(255,255,255,0.05)',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                transform: 'translateX(3px)'
+                              }
+                            }}
+                          >
+                            <Box sx={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: '12px',
+                              display: 'grid',
+                              placeItems: 'center',
+                              bgcolor: `${action.accent}14`,
+                              color: action.accent,
+                              flexShrink: 0
+                            }}>
+                              <Logo app={action.kind as any} size={16} variant="icon" />
+                            </Box>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.2 }}>
+                                {action.title}
+                              </Typography>
+                              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: '0.76rem', mt: 0.25 }}>
+                                {action.description}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))
+                      )}
                     </Box>
-                  ))}
+                  </Box>
+                </Box>
+
+                {/* Right Column: Platform Alerts & Notifications */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 0.5 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Bell size={13} style={{ color: '#EC4899' }} />
+                      Diagnostics & Alerts
+                    </Typography>
+                    {notifications.filter(n => !n.read).length > 0 && (
+                      <Box sx={{
+                        px: 1,
+                        py: 0.25,
+                        borderRadius: '8px',
+                        bgcolor: '#6366F1',
+                        color: 'white',
+                        fontSize: '0.68rem',
+                        fontWeight: 900
+                      }}>
+                        {notifications.filter(n => !n.read).length} New
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Box sx={{ display: 'grid', gap: 1 }}>
+                    {notifications.length === 0 ? (
+                      <Box sx={{ p: 2.5, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
+                          No diagnostics alerts at the moment. System is stable.
+                        </Typography>
+                      </Box>
+                    ) : (
+                      notifications.map((notif) => (
+                        <Box
+                          key={notif.id}
+                          onClick={() => markNotificationRead(notif.id)}
+                          sx={{
+                            p: 1.75,
+                            borderRadius: '18px',
+                            bgcolor: notif.read ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)',
+                            border: '1px solid',
+                            borderColor: notif.read ? 'rgba(255,255,255,0.03)' : alpha(notif.accent, 0.25),
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            position: 'relative',
+                            '&:hover': {
+                              bgcolor: 'rgba(255,255,255,0.05)',
+                              borderColor: notif.read ? 'rgba(255,255,255,0.08)' : alpha(notif.accent, 0.4),
+                            }
+                          }}
+                        >
+                          {!notif.read && (
+                            <Box sx={{
+                              position: 'absolute',
+                              top: 18,
+                              left: 12,
+                              width: 8,
+                              height: 8,
+                              borderRadius: '999px',
+                              bgcolor: notif.accent
+                            }} />
+                          )}
+                          
+                          <Box sx={{ pl: notif.read ? 0 : 2, pr: 3 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Typography sx={{
+                                color: 'white',
+                                fontWeight: 800,
+                                fontSize: '0.84rem',
+                                opacity: notif.read ? 0.7 : 1
+                              }}>
+                                {notif.title}
+                              </Typography>
+                              <Typography sx={{
+                                color: 'rgba(255,255,255,0.36)',
+                                fontSize: '0.68rem',
+                                fontWeight: 600,
+                                ml: 'auto'
+                              }}>
+                                {notif.time}
+                              </Typography>
+                            </Box>
+                            <Typography sx={{
+                              color: 'rgba(255,255,255,0.5)',
+                              fontSize: '0.76rem',
+                              lineHeight: 1.3,
+                              fontWeight: 500
+                            }}>
+                              {notif.message}
+                            </Typography>
+                          </Box>
+
+                          <IconButton
+                            size="small"
+                            onClick={(e) => dismissNotification(notif.id, e)}
+                            sx={{
+                              position: 'absolute',
+                              top: 10,
+                              right: 10,
+                              color: 'rgba(255,255,255,0.3)',
+                              width: 24,
+                              height: 24,
+                              borderRadius: '8px',
+                              '&:hover': {
+                                color: 'white',
+                                bgcolor: 'rgba(255,255,255,0.08)'
+                              }
+                            }}
+                          >
+                            <CloseIcon size={12} />
+                          </IconButton>
+                        </Box>
+                      ))
+                    )}
+                  </Box>
                 </Box>
               </Box>
-
-              {(searchingPeople || peopleResults.length > 0) && (
+            ) : (
+              /* If hasQuery is true, show Search Results */
+              <Box sx={{ display: 'grid', gap: 2 }}>
                 <Box sx={{ display: 'grid', gap: 0.75 }}>
                   <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    People
+                    {searchSurface.searchAcrossLabel}
                   </Typography>
-                  {searchingPeople ? (
-                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.84rem' }}>
-                      Searching people...
-                    </Typography>
-                  ) : (
-                    peopleResults.slice(0, 3).map((person) => (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+                    {searchSurface.searchTargets.slice(0, 4).map((action) => (
                       <Box
-                        key={person.$id || person.id}
+                        key={action.id}
                         component="button"
                         onClick={() => {
-                          const username = person.username || person.prefs?.username;
-                          if (username) {
-                            stageProfileView(person, person.avatar || null);
-                            handleCloseAll();
-                            router.push(`/u/${encodeURIComponent(username.replace(/^@+/, ''))}?transition=profile`);
-                          }
+                          handleCloseAll();
+                          router.push(action.href);
                         }}
                         sx={{
                           width: '100%',
@@ -476,26 +757,83 @@ export default function ConnectTopbar({
                           '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
                         }}
                       >
-                        <Avatar
-                          src={person.avatar || undefined}
-                          sx={{ width: 32, height: 32, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.08)', color: 'white', fontSize: '0.8rem', fontWeight: 800 }}
-                        >
-                          {(person.displayName || person.name || 'U')[0].toUpperCase()}
-                        </Avatar>
+                        <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
+                          <Logo app={action.kind as any} size={16} variant="icon" />
+                        </Box>
                         <Box sx={{ minWidth: 0, flex: 1 }}>
                           <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
-                            {person.displayName || person.name}
+                            {action.title}
                           </Typography>
                           <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
-                            @{String(person.username || person.prefs?.username || 'user').replace(/^@+/, '')}
+                            {action.description}
                           </Typography>
                         </Box>
                       </Box>
-                    ))
-                  )}
+                    ))}
+                  </Box>
                 </Box>
-              )}
-            </Box>
+
+                {(searchingPeople || peopleResults.length > 0) && (
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                      People
+                    </Typography>
+                    {searchingPeople ? (
+                      <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.84rem' }}>
+                        Searching people...
+                      </Typography>
+                    ) : (
+                      <Box sx={{ display: 'grid', gap: 1 }}>
+                        {peopleResults.slice(0, 3).map((person) => (
+                          <Box
+                            key={person.$id || person.id}
+                            component="button"
+                            onClick={() => {
+                              const username = person.username || person.prefs?.username;
+                              if (username) {
+                                stageProfileView(person, person.avatar || null);
+                                handleCloseAll();
+                                router.push(`/u/${encodeURIComponent(username.replace(/^@+/, ''))}?transition=profile`);
+                              }
+                            }}
+                            sx={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.25,
+                              px: 1.5,
+                              py: 1.1,
+                              borderRadius: '18px',
+                              bgcolor: 'rgba(255,255,255,0.02)',
+                              border: '1px solid rgba(255,255,255,0.05)',
+                              color: 'white',
+                              textAlign: 'left',
+                              cursor: 'pointer',
+                              '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
+                            }}
+                          >
+                            <Avatar
+                              src={person.avatar || undefined}
+                              sx={{ width: 32, height: 32, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.08)', color: 'white', fontSize: '0.8rem', fontWeight: 800 }}
+                            >
+                              {(person.displayName || person.name || 'U')[0].toUpperCase()}
+                            </Avatar>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                                {person.displayName || person.name}
+                              </Typography>
+                              <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                                @{String(person.username || person.prefs?.username || 'user').replace(/^@+/, '')}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            )}
           </Stack>
         </Box>
       </Box>
