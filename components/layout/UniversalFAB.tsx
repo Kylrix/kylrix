@@ -25,9 +25,21 @@ export default function UniversalFAB() {
   // Landing page has different positioning
   const isLandingPage = pathname === '/';
 
-  if (!config.isVisible) return null;
+  const isAppRoute = pathname && (
+    pathname.startsWith('/projects') || 
+    pathname.startsWith('/note') || 
+    pathname.startsWith('/flow') || 
+    pathname.startsWith('/vault') ||
+    pathname.startsWith('/connect')
+  );
 
-  const { actions, mainIcon, mainColor, onMainClick } = config;
+  if (!config.isVisible && !isAppRoute) return null;
+
+  const actions = config.actions || [];
+  const mainIcon = config.mainIcon;
+  const mainColor = config.mainColor || '#6366F1';
+  const onMainClick = config.onMainClick;
+
   const { isRecording, startRecording, stopRecording, currentWorkflow } = useLocalContext();
 
   const workflowAction = isRecording ? {

@@ -46,6 +46,7 @@ import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useLocalContext } from '@/lib/context-engine';
 
 const projectTemplates = [
   { 
@@ -218,6 +219,7 @@ export default function ProjectsPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
   const { open } = useUnifiedDrawer();
+  const { savedWorkflows } = useLocalContext();
   
   const [projects, setProjects] = useState<Projects[]>([]);
   const [loading, setLoading] = useState(true);
@@ -254,6 +256,7 @@ export default function ProjectsPage() {
       mainColor: '#6366F1',
       actions: [
         { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => openCreateDrawer() },
+        { id: 'workflows-nav', label: 'ACTION WORKFLOWS', icon: <Workflow size={20} />, onClick: () => router.push('/projects/workflows') },
         { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note/notes') }]
     });
     return () => resetConfiguration();
@@ -343,6 +346,109 @@ export default function ProjectsPage() {
                 ))}
             </Grid>
         </Box>
+
+        {/* Workflows Control Card */}
+        <Paper
+          elevation={0}
+          onClick={() => router.push('/projects/workflows')}
+          sx={{
+            mb: 6,
+            p: 3,
+            borderRadius: '24px',
+            bgcolor: '#141312',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            cursor: 'pointer',
+            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+            position: 'relative',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: { xs: 'flex-start', md: 'center' },
+            justifyContent: 'space-between',
+            gap: 3,
+            '&:hover': {
+              bgcolor: '#1A1816',
+              borderColor: 'rgba(99, 102, 241, 0.3)',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
+            }
+          }}
+        >
+          {/* Accent glow line at top */}
+          <Box 
+            sx={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              height: '3px', 
+              background: 'linear-gradient(90deg, #6366F1 0%, #A855F7 100%)' 
+            }} 
+          />
+          
+          <Stack direction="row" spacing={2.5} alignItems="center">
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                borderRadius: '16px',
+                bgcolor: alpha('#6366F1', 0.08),
+                color: '#6366F1',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0
+              }}
+            >
+              <Workflow size={28} strokeWidth={2} />
+            </Box>
+            <Box>
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
+                <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', fontSize: '1.2rem', letterSpacing: '-0.02em' }}>
+                  Smart Action Workflows
+                </Typography>
+                <Chip
+                  label={`${Object.keys(savedWorkflows || {}).length} SAVED`}
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(99, 102, 241, 0.1)',
+                    color: '#818CF8',
+                    fontWeight: 900,
+                    fontSize: '0.65rem',
+                    fontFamily: 'var(--font-mono)',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                    height: 20
+                  }}
+                />
+              </Stack>
+              <Typography variant="body2" sx={{ mt: 0.5, color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: '0.875rem', maxWidth: 640 }}>
+                Record, share, and automate action sequences to boost execution speed. Perfect for repetitive workspace tasks and smart guidance.
+              </Typography>
+            </Box>
+          </Stack>
+          
+          <Button
+            variant="outlined"
+            onClick={(e) => { e.stopPropagation(); router.push('/projects/workflows'); }}
+            endIcon={<ArrowUpRight size={16} />}
+            sx={{
+              borderRadius: '12px',
+              borderColor: 'rgba(255,255,255,0.08)',
+              color: '#fff',
+              px: 3,
+              py: 1,
+              fontWeight: 800,
+              fontSize: '0.8rem',
+              textTransform: 'none',
+              bgcolor: 'rgba(255,255,255,0.02)',
+              '&:hover': {
+                borderColor: '#6366F1',
+                bgcolor: 'rgba(99, 102, 241, 0.05)'
+              }
+            }}
+          >
+            Manage Workflows
+          </Button>
+        </Paper>
 
         <Grid container spacing={4}>
             {/* Main Projects List */}

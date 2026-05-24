@@ -1009,6 +1009,47 @@ export default function LandingPage() {
         </Paper>
       </Container>
 
+      {/* Footer Links */}
+      <Container maxWidth="xl" sx={{ mt: 4, mb: 6 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} justifyContent="space-between" alignItems="center">
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>
+            &copy; {new Date().getFullYear()} Kylrix. All rights reserved.
+          </Typography>
+          <Stack direction="row" spacing={3}>
+            <NextLink href="/privacy-policy" passHref legacyBehavior>
+              <Typography
+                component="a"
+                variant="caption"
+                sx={{
+                  color: 'rgba(255,255,255,0.4)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  '&:hover': { color: '#6366F1' },
+                }}
+              >
+                Privacy Policy
+              </Typography>
+            </NextLink>
+            <NextLink href="/terms-of-service" passHref legacyBehavior>
+              <Typography
+                component="a"
+                variant="caption"
+                sx={{
+                  color: 'rgba(255,255,255,0.4)',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  '&:hover': { color: '#6366F1' },
+                }}
+              >
+                Terms of Service
+              </Typography>
+            </NextLink>
+          </Stack>
+        </Stack>
+      </Container>
+
       <AppSwitcherFab onOpenApp={openApp} />
     </Box>
   );
