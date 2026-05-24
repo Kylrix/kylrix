@@ -3,8 +3,12 @@
 import React, { useState } from 'react';
 import { Box, Container, Typography, Grid, Paper, Stack, InputBase, Button } from '@mui/material';
 import Logo from '@/components/common/Logo';
+import { ArrowLeft, Home } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function PrimaryComponentsPage() {
+  const router = useRouter();
   const [inputValue, setInputValue] = useState('Type your raw notes here in Space Grotesk...');
   const apps = ['root', 'note', 'vault', 'flow', 'connect'] as const;
 
@@ -12,6 +16,65 @@ export default function PrimaryComponentsPage() {
     <Box sx={{ minHeight: '100vh', bgcolor: '#000000', color: '#FFFFFF', py: 8, px: { xs: 2, md: 4 } }}>
       <Container maxWidth="xl">
         <Stack spacing={8}>
+          
+          {/* Navigation Bar */}
+          <Stack direction="row" spacing={2}>
+            <Button 
+              onClick={() => router.back()}
+              startIcon={<ArrowLeft size={16} />}
+              sx={{ 
+                fontFamily: 'var(--font-space-grotesk)', 
+                fontWeight: 700, 
+                color: '#9B9691', 
+                bgcolor: '#131110', 
+                border: '1px solid #23211F', 
+                borderRadius: '12px',
+                px: 3,
+                textTransform: 'none',
+                boxShadow: '2px 2px 0px #000000',
+                '&:hover': {
+                  bgcolor: '#1B1918',
+                  color: '#FFFFFF',
+                  transform: 'translate(-1px, -1px)',
+                  boxShadow: '3px 3px 0px #000000'
+                },
+                '&:active': {
+                  transform: 'translate(1px, 1px)',
+                  boxShadow: '1px 1px 0px #000000'
+                }
+              }}
+            >
+              Back
+            </Button>
+            <Link href="/kitchen" passHref legacyBehavior>
+              <Button 
+                component="a"
+                startIcon={<Home size={16} />}
+                sx={{ 
+                  fontFamily: 'var(--font-space-grotesk)', 
+                  fontWeight: 700, 
+                  color: '#FFFFFF', 
+                  bgcolor: '#6366F1', 
+                  border: '1px solid #000000', 
+                  borderRadius: '12px',
+                  px: 3,
+                  textTransform: 'none',
+                  boxShadow: '2px 2px 0px #000000',
+                  '&:hover': {
+                    bgcolor: '#4F46E5',
+                    transform: 'translate(-1px, -1px)',
+                    boxShadow: '3px 3px 0px #000000'
+                  },
+                  '&:active': {
+                    transform: 'translate(1px, 1px)',
+                    boxShadow: '1px 1px 0px #000000'
+                  }
+                }}
+              >
+                Kitchen Home
+              </Button>
+            </Link>
+          </Stack>
           
           {/* Section Header */}
           <Box sx={{ borderBottom: '1px solid #23211F', pb: 4 }}>

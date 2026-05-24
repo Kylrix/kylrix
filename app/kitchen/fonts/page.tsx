@@ -125,7 +125,7 @@ export default function KitchenFontsPage() {
             </Typography>
           </Box>
 
-          <Divider sx={{ borderColor: '#2E2A27' }} />
+          <Divider sx={{ borderColor: '#23211F' }} />
 
           {/* Grid of Fonts */}
           <Grid container spacing={4}>
@@ -135,7 +135,7 @@ export default function KitchenFontsPage() {
                   p: 4, 
                   bgcolor: '#141211', 
                   borderRadius: '24px', 
-                  border: '1px solid #2E2A27',
+                  border: '1px solid #23211F',
                   transition: 'transform 0.3s ease, border-color 0.3s ease',
                   '&:hover': {
                     transform: 'translateY(-2px)',
