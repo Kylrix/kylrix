@@ -996,7 +996,7 @@ export async function verifyResourcePermissionSecure(params: {
       databaseId: databaseId,
       tableId: collectionId,
       rowId: documentId,
-    });
+    }).catch(() => null);
   }
 
   if (!doc) {
@@ -1022,40 +1022,155 @@ export async function verifyResourcePermissionSecure(params: {
     return false;
   }
 
-  let meta: any = {};
-  try {
-    const rawMeta = doc[metadataField];
-    meta = typeof rawMeta === 'string' ? JSON.parse(rawMeta) : rawMeta || {};
-  } catch {}
+  // 1. Hierarchical Check of Umbrella Visibility Flags (Continuous Access Control)
+  // Umbrella flags strictly only grant 'read' access.
+  const isGuest = doc.isGuest === true || String(doc.isGuest) === 'true';
+  let isPublic = doc.isPublic === true || String(doc.isPublic) === 'true';
 
-  const collaborators = meta.collaborators || {};
-  const userRole = collaborators[actorId];
+  if (!isPublic) {
+    try {
+      const rawMeta = doc[metadataField];
+      const m = typeof rawMeta === 'string' ? JSON.parse(rawMeta) : rawMeta || {};
+      if (m.isPublic === true || String(m.isPublic) === 'true' || m.publicity === true || String(m.publicity) === 'true') {
+        isPublic = true;
+      }
+    } catch {}
+  }
 
+  let linkedToProjectGuest = false;
+  let linkedToProjectPublic = false;
+  let linkedToProjectGeneral = false;
+  let memberOfLinkedProject = false;
+
+  if (documentId) {
+    try {
+      const tables = createSystemTablesDB();
+      const objLinks = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: 'project_objects',
+        queries: [Query.equal('entityId', documentId)] as any
+      });
+      
+      for (const link of objLinks.rows) {
+        if (link.isGuest === true || String(link.isGuest) === 'true') {
+          linkedToProjectGuest = true;
+        }
+        if (link.isPublic === true || String(link.isPublic) === 'true') {
+          linkedToProjectPublic = true;
+        }
+        
+        // isGeneral defaults to true if not explicitly set to false
+        if (link.isGeneral !== false && String(link.isGeneral) !== 'false') {
+          linkedToProjectGeneral = true;
+          
+          if (actorId) {
+            // Fetch parent project to verify ownership/collaboration
+            const project = await tables.getRow({
+              databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+              tableId: 'projects',
+              rowId: link.projectId
+            }).catch(() => null);
+            
+            if (project) {
+              if (project.ownerId === actorId) {
+                memberOfLinkedProject = true;
+              } else {
+                const projectCollabs = await tables.listRows({
+                  databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+                  tableId: 'project_objects',
+                  queries: [
+                    Query.equal('projectId', link.projectId),
+                    Query.equal('entityKind', 'collaborator'),
+                    Query.equal('entityId', actorId)
+                  ] as any
+                }).catch(() => ({ rows: [] }));
+                
+                if (projectCollabs.rows.length > 0) {
+                  memberOfLinkedProject = true;
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[verifyResourcePermissionSecure] Project objects check failed:', err);
+    }
+  }
+
+  // Precedence Logic: isGuest -> isPublic -> isGeneral -> Collaborators lookup
   if (action === 'read') {
-    const isPublic = doc.isPublic === true || String(doc.isPublic) === 'true' ||
-                     (collectionId !== APPWRITE_CONFIG.TABLES.NOTE.NOTES && (
-                       meta.isPublic === true || String(meta.isPublic) === 'true' ||
-                       meta.publicity === true || String(meta.publicity) === 'true'
-                     ));
-    if (isPublic) {
+    if (isGuest || linkedToProjectGuest) {
       return true;
     }
+    if (isPublic || linkedToProjectPublic) {
+      return true;
+    }
+    if (linkedToProjectGeneral && memberOfLinkedProject) {
+      return true;
+    }
+  }
+
+  // 2. Discrete Access Control: Collaborators table / legacy metadata.collaborators
+  let matchedCollabRole: 'viewer' | 'editor' | 'admin' | null = null;
+
+  if (actorId && documentId) {
+    try {
+      const tables = createSystemTablesDB();
+      const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+      const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+      
+      const collabsRes = await tables.listRows({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', documentId),
+          Query.equal('userId', actorId)
+        ] as any
+      });
+      
+      if (collabsRes.rows.length > 0) {
+        const p = collabsRes.rows[0].permission; // 'read' | 'write' | 'admin'
+        if (p === 'admin') matchedCollabRole = 'admin';
+        else if (['write', 'editor'].includes(p)) matchedCollabRole = 'editor';
+        else if (['read', 'viewer'].includes(p)) matchedCollabRole = 'viewer';
+      }
+    } catch (err) {
+      console.error('[verifyResourcePermissionSecure] Polymorphic table check failed:', err);
+    }
+  }
+
+  // Legacy fallback to metadata.collaborators
+  if (!matchedCollabRole) {
+    let meta: any = {};
+    try {
+      const rawMeta = doc[metadataField];
+      meta = typeof rawMeta === 'string' ? JSON.parse(rawMeta) : rawMeta || {};
+    } catch {}
+    const collaborators = meta.collaborators || {};
+    const userRole = collaborators[actorId];
     if (userRole) {
-      return ['viewer', 'editor', 'admin'].includes(userRole);
+      matchedCollabRole = userRole;
+    }
+  }
+
+  if (action === 'read') {
+    if (matchedCollabRole) {
+      return ['viewer', 'editor', 'admin'].includes(matchedCollabRole);
     }
     return false;
   }
 
   if (action === 'update') {
-    if (userRole) {
-      return ['editor', 'admin'].includes(userRole);
+    if (matchedCollabRole) {
+      return ['editor', 'admin'].includes(matchedCollabRole);
     }
     return false;
   }
 
   if (action === 'delete') {
-    if (userRole) {
-      return userRole === 'admin';
+    if (matchedCollabRole) {
+      return matchedCollabRole === 'admin';
     }
     return false;
   }
