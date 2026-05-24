@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -250,21 +250,26 @@ export default function ProjectsPage() {
     });
   }, [open, handleCreated]);
 
+  const openCreateDrawerRef = useRef(openCreateDrawer);
+  useEffect(() => {
+    openCreateDrawerRef.current = openCreateDrawer;
+  }, [openCreateDrawer]);
+
   useEffect(() => {
     setConfiguration({
       isVisible: true,
       mainColor: '#6366F1',
       actions: [
-        { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => openCreateDrawer() },
+        { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => openCreateDrawerRef.current() },
         { id: 'workflows-nav', label: 'ACTION WORKFLOWS', icon: <Workflow size={20} />, onClick: () => router.push('/projects/workflows') },
         { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note/notes') }]
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, router, openCreateDrawer]);
+  }, [setConfiguration, resetConfiguration, router]);
 
   useEffect(() => {
     fetchProjects();
-  }, [fetchProjects]);
+  }, []);
 
   const handleDeleteProject = async (project: Projects) => {
     open('delete-confirm', {
@@ -288,6 +293,186 @@ export default function ProjectsPage() {
   };
 
   const displayedTemplates = showAllTemplates ? projectTemplates : projectTemplates.slice(0, 3);
+
+  const templatesElement = (
+    <Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', display: 'block' }}>
+          Quick Activate
+        </Typography>
+        <Button 
+          size="small"
+          onClick={() => setShowAllTemplates(!showAllTemplates)}
+          endIcon={showAllTemplates ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          sx={{ color: '#6366F1', fontWeight: 800, textTransform: 'none', fontSize: '0.75rem' }}
+        >
+          {showAllTemplates ? 'Show Less' : 'Show All Templates'}
+        </Button>
+      </Stack>
+      
+      <Grid container spacing={2}>
+        {displayedTemplates.map((template) => (
+          <Grid item xs={12} sm={6} md={4} key={template.title}>
+            <TemplateCard template={template} onSelect={openCreateDrawer} />
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+
+  const workflowsCardElement = (
+    <Paper
+      elevation={0}
+      onClick={() => router.push('/projects/workflows')}
+      sx={{
+        mb: 6,
+        p: 3,
+        borderRadius: '24px',
+        bgcolor: '#141312',
+        border: '1px solid rgba(255, 255, 255, 0.06)',
+        cursor: 'pointer',
+        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        position: 'relative',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        alignItems: { xs: 'flex-start', md: 'center' },
+        justifyContent: 'space-between',
+        gap: 3,
+        '&:hover': {
+          bgcolor: '#1A1816',
+          borderColor: 'rgba(99, 102, 241, 0.3)',
+          transform: 'translateY(-2px)',
+          boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
+        }
+      }}
+    >
+      {/* Accent glow line at top */}
+      <Box 
+        sx={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          height: '3px', 
+          background: 'linear-gradient(90deg, #6366F1 0%, #A855F7 100%)' 
+        }} 
+      />
+      
+      <Stack direction="row" spacing={2.5} alignItems="center">
+        <Box
+          sx={{
+            width: 56,
+            height: 56,
+            borderRadius: '16px',
+            bgcolor: alpha('#6366F1', 0.08),
+            color: '#6366F1',
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0
+          }}
+        >
+          <Workflow size={28} strokeWidth={2} />
+        </Box>
+        <Box>
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
+            <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', fontSize: '1.2rem', letterSpacing: '-0.02em' }}>
+              Smart Action Workflows
+            </Typography>
+            <Chip
+              label={`${Object.keys(savedWorkflows || {}).length} SAVED`}
+              size="small"
+              sx={{
+                bgcolor: 'rgba(99, 102, 241, 0.1)',
+                color: '#818CF8',
+                fontWeight: 900,
+                fontSize: '0.65rem',
+                fontFamily: 'var(--font-mono)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                height: 20
+              }}
+            />
+          </Stack>
+          <Typography variant="body2" sx={{ mt: 0.5, color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: '0.875rem', maxWidth: 640 }}>
+            Record, share, and automate action sequences to boost execution speed. Perfect for repetitive workspace tasks and smart guidance.
+          </Typography>
+        </Box>
+      </Stack>
+      
+      <Button
+        variant="outlined"
+        onClick={(e) => { e.stopPropagation(); router.push('/projects/workflows'); }}
+        endIcon={<ArrowUpRight size={16} />}
+        sx={{
+          borderRadius: '12px',
+          borderColor: 'rgba(255,255,255,0.08)',
+          color: '#fff',
+          px: 3,
+          py: 1,
+          fontWeight: 800,
+          fontSize: '0.8rem',
+          textTransform: 'none',
+          bgcolor: 'rgba(255,255,255,0.02)',
+          '&:hover': {
+            borderColor: '#6366F1',
+            bgcolor: 'rgba(99, 102, 241, 0.05)'
+          }
+        }}
+      >
+        Manage Workflows
+      </Button>
+    </Paper>
+  );
+
+  const projectsListElement = (
+    <Grid container spacing={4}>
+      {/* Main Projects List */}
+      <Grid item xs={12}>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', mb: 3, display: 'block' }}>
+          Projects ({projects.length})
+        </Typography>
+        
+        {loading ? (
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 10 }}>
+            <CircularProgress sx={{ color: '#6366F1' }} />
+          </Box>
+        ) : projects.length === 0 ? (
+          <Paper
+            elevation={0}
+            sx={{
+              bgcolor: '#161412',
+              border: '1px dashed rgba(255,255,255,0.08)',
+              borderRadius: '32px',
+              p: 8,
+              textAlign: 'center',
+              backgroundImage: 'none',
+            }}
+          >
+            <Box sx={{ width: 80, height: 80, borderRadius: '24px', bgcolor: alpha('#6366F1', 0.05), color: '#6366F1', display: 'grid', placeItems: 'center', mx: 'auto', mb: 3 }}>
+              <FolderKanban size={40} />
+            </Box>
+            <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 1 }}>No active projects</Typography>
+            <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 4, maxWidth: 360, mx: 'auto' }}>
+              Create a project to combine your context, communications, and secrets into one high-velocity workspace.
+            </Typography>
+            <Button variant="outlined" onClick={() => openCreateDrawer()} sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}>Start Fresh Project</Button>
+          </Paper>
+        ) : (
+          <Grid container spacing={2.5}>
+            {projects.map(project => (
+              <Grid item xs={12} sm={6} lg={4} key={project.$id}>
+                <ProjectCard 
+                  project={project} 
+                  onClick={handleProjectClick}
+                  onDelete={() => handleDeleteProject(project)}
+                />
+              </Grid>
+            ))}
+          </Grid>
+        )}
+      </Grid>
+    </Grid>
+  );
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff' }}>
@@ -322,181 +507,27 @@ export default function ProjectsPage() {
             </Box>
         </Stack>
 
-        {/* Project Templates Section */}
-        <Box sx={{ mb: 8 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', display: 'block' }}>
-                    Quick Activate
-                </Typography>
-                <Button 
-                    size="small"
-                    onClick={() => setShowAllTemplates(!showAllTemplates)}
-                    endIcon={showAllTemplates ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    sx={{ color: '#6366F1', fontWeight: 800, textTransform: 'none', fontSize: '0.75rem' }}
-                >
-                    {showAllTemplates ? 'Show Less' : 'Show All Templates'}
-                </Button>
-            </Stack>
-            
-            <Grid container spacing={2}>
-                {displayedTemplates.map((template) => (
-                    <Grid item xs={12} sm={6} md={4} key={template.title}>
-                        <TemplateCard template={template} onSelect={openCreateDrawer} />
-                    </Grid>
-                ))}
-            </Grid>
-        </Box>
-
-        {/* Workflows Control Card */}
-        <Paper
-          elevation={0}
-          onClick={() => router.push('/projects/workflows')}
-          sx={{
-            mb: 6,
-            p: 3,
-            borderRadius: '24px',
-            bgcolor: '#141312',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            cursor: 'pointer',
-            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-            position: 'relative',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: { xs: 'column', md: 'row' },
-            alignItems: { xs: 'flex-start', md: 'center' },
-            justifyContent: 'space-between',
-            gap: 3,
-            '&:hover': {
-              bgcolor: '#1A1816',
-              borderColor: 'rgba(99, 102, 241, 0.3)',
-              transform: 'translateY(-2px)',
-              boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
-            }
-          }}
-        >
-          {/* Accent glow line at top */}
-          <Box 
-            sx={{ 
-              position: 'absolute', 
-              top: 0, 
-              left: 0, 
-              right: 0, 
-              height: '3px', 
-              background: 'linear-gradient(90deg, #6366F1 0%, #A855F7 100%)' 
-            }} 
-          />
-          
-          <Stack direction="row" spacing={2.5} alignItems="center">
-            <Box
-              sx={{
-                width: 56,
-                height: 56,
-                borderRadius: '16px',
-                bgcolor: alpha('#6366F1', 0.08),
-                color: '#6366F1',
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0
-              }}
-            >
-              <Workflow size={28} strokeWidth={2} />
+        {projects.length === 0 ? (
+          <>
+            <Box sx={{ mb: 8 }}>
+              {templatesElement}
             </Box>
-            <Box>
-              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', fontSize: '1.2rem', letterSpacing: '-0.02em' }}>
-                  Smart Action Workflows
-                </Typography>
-                <Chip
-                  label={`${Object.keys(savedWorkflows || {}).length} SAVED`}
-                  size="small"
-                  sx={{
-                    bgcolor: 'rgba(99, 102, 241, 0.1)',
-                    color: '#818CF8',
-                    fontWeight: 900,
-                    fontSize: '0.65rem',
-                    fontFamily: 'var(--font-mono)',
-                    border: '1px solid rgba(99, 102, 241, 0.2)',
-                    height: 20
-                  }}
-                />
-              </Stack>
-              <Typography variant="body2" sx={{ mt: 0.5, color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: '0.875rem', maxWidth: 640 }}>
-                Record, share, and automate action sequences to boost execution speed. Perfect for repetitive workspace tasks and smart guidance.
-              </Typography>
+            <Box sx={{ mb: 6 }}>
+              {projectsListElement}
             </Box>
-          </Stack>
-          
-          <Button
-            variant="outlined"
-            onClick={(e) => { e.stopPropagation(); router.push('/projects/workflows'); }}
-            endIcon={<ArrowUpRight size={16} />}
-            sx={{
-              borderRadius: '12px',
-              borderColor: 'rgba(255,255,255,0.08)',
-              color: '#fff',
-              px: 3,
-              py: 1,
-              fontWeight: 800,
-              fontSize: '0.8rem',
-              textTransform: 'none',
-              bgcolor: 'rgba(255,255,255,0.02)',
-              '&:hover': {
-                borderColor: '#6366F1',
-                bgcolor: 'rgba(99, 102, 241, 0.05)'
-              }
-            }}
-          >
-            Manage Workflows
-          </Button>
-        </Paper>
-
-        <Grid container spacing={4}>
-            {/* Main Projects List */}
-            <Grid item xs={12}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', mb: 3, display: 'block' }}>
-                    Execution Containers ({projects.length})
-                </Typography>
-                
-                {loading ? (
-                    <Box sx={{ display: 'grid', placeItems: 'center', py: 10 }}>
-                        <CircularProgress sx={{ color: '#6366F1' }} />
-                    </Box>
-                ) : projects.length === 0 ? (
-                    <Paper
-                        elevation={0}
-                        sx={{
-                            bgcolor: '#161412',
-                            border: '1px dashed rgba(255,255,255,0.08)',
-                            borderRadius: '32px',
-                            p: 8,
-                            textAlign: 'center',
-                            backgroundImage: 'none',
-                        }}
-                    >
-                        <Box sx={{ width: 80, height: 80, borderRadius: '24px', bgcolor: alpha('#6366F1', 0.05), color: '#6366F1', display: 'grid', placeItems: 'center', mx: 'auto', mb: 3 }}>
-                            <FolderKanban size={40} />
-                        </Box>
-                        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 1 }}>No active containers</Typography>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 4, maxWidth: 360, mx: 'auto' }}>
-                            Activate a project to combine your context, communications, and secrets into one high-velocity workspace.
-                        </Typography>
-                        <Button variant="outlined" onClick={() => openCreateDrawer()} sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}>Start Fresh Project</Button>
-                    </Paper>
-                ) : (
-                    <Grid container spacing={2.5}>
-                        {projects.map(project => (
-                            <Grid item xs={12} sm={6} lg={4} key={project.$id}>
-                                <ProjectCard 
-                                    project={project} 
-                                    onClick={handleProjectClick}
-                                    onDelete={() => handleDeleteProject(project)}
-                                />
-                            </Grid>
-                        ))}
-                    </Grid>
-                )}
-            </Grid>
-        </Grid>
+            {workflowsCardElement}
+          </>
+        ) : (
+          <>
+            <Box sx={{ mb: 6 }}>
+              {projectsListElement}
+            </Box>
+            {workflowsCardElement}
+            <Box sx={{ mt: 8 }}>
+              {templatesElement}
+            </Box>
+          </>
+        )}
       </Container>
     </Box>
   );
