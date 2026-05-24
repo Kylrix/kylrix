@@ -232,6 +232,13 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -288,6 +295,19 @@
                     "columns": [
                         "isGhost",
                         "isThread"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_notes_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPinned"
                     ],
                     "orders": [
                         "ASC",
@@ -1366,6 +1386,13 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -1389,6 +1416,19 @@
                     "columns": [
                         "tagId",
                         "resourceType"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tags_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPinned"
                     ],
                     "orders": [
                         "ASC",
@@ -1809,6 +1849,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -1931,6 +1978,19 @@
                     "columns": [
                         "userId",
                         "isShared"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_credentials_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPinned"
                     ],
                     "orders": [
                         "ASC",
@@ -2614,6 +2674,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -2708,6 +2775,19 @@
                     "columns": [
                         "userId",
                         "isShared"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_totp_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPinned"
                     ],
                     "orders": [
                         "ASC",
@@ -3160,6 +3240,13 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -3209,6 +3296,19 @@
                     "orders": [
                         "asc",
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_messages_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "conversationId",
+                        "isPinned"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -6253,6 +6353,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -6313,6 +6420,19 @@
                     "columns": [
                         "ownerId",
                         "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId",
+                        "isPinned"
                     ],
                     "orders": [
                         "ASC",
@@ -6901,6 +7021,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -6946,6 +7073,19 @@
                     "columns": [
                         "userId",
                         "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_events_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPinned"
                     ],
                     "orders": [
                         "ASC",
@@ -7179,6 +7319,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7213,6 +7360,19 @@
                     "columns": [
                         "userId",
                         "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tasks_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPinned"
                     ],
                     "orders": [
                         "ASC",
@@ -7313,6 +7473,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7347,6 +7514,19 @@
                     "columns": [
                         "userId",
                         "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_forms_pinned",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPinned"
                     ],
                     "orders": [
                         "ASC",

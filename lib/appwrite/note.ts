@@ -493,22 +493,32 @@ export async function pinNote(noteId: string): Promise<string[]> {
   const user = await account.get();
   const currentPins = (user.prefs?.pinnedNoteIds || []) as string[];
   
-  if (currentPins.includes(noteId)) return currentPins;
+  if (!currentPins.includes(noteId)) {
+    const newPins = [noteId, ...currentPins];
+    await account.updatePrefs({ ...user.prefs, pinnedNoteIds: newPins });
+  }
 
-  const newPins = [noteId, ...currentPins]; // Removed artificial limits
-  await account.updatePrefs({ ...user.prefs, pinnedNoteIds: newPins });
-  return newPins;
+  // Persist to native column
+  await updateNote(noteId, { isPinned: true } as any);
+  
+  const refreshedUser = await account.get();
+  return (refreshedUser.prefs?.pinnedNoteIds || []) as string[];
 }
 
 export async function unpinNote(noteId: string): Promise<string[]> {
   const user = await account.get();
   const currentPins = (user.prefs?.pinnedNoteIds || []) as string[];
   
-  if (!currentPins.includes(noteId)) return currentPins;
+  if (currentPins.includes(noteId)) {
+    const newPins = currentPins.filter(id => id !== noteId);
+    await account.updatePrefs({ ...user.prefs, pinnedNoteIds: newPins });
+  }
 
-  const newPins = currentPins.filter(id => id !== noteId);
-  await account.updatePrefs({ ...user.prefs, pinnedNoteIds: newPins });
-  return newPins;
+  // Persist to native column
+  await updateNote(noteId, { isPinned: false } as any);
+
+  const refreshedUser = await account.get();
+  return (refreshedUser.prefs?.pinnedNoteIds || []) as string[];
 }
 
 export async function isNotePinned(noteId: string): Promise<boolean> {
