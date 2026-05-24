@@ -232,6 +232,29 @@ function cleanDocumentData<T>(data: Partial<T>): Record<string, unknown> {
 }
 
 /**
+ * Safe classification helper for identifying ghost notes.
+ * Supports direct column value, metadata fallback, and legacy userless fallback.
+ */
+export function isGhostNote(note: any): boolean {
+  if (!note) return false;
+  // 1. Direct Column Check
+  if (note.isGhost !== undefined && note.isGhost !== null) {
+    return !!note.isGhost;
+  }
+  // 2. Legacy Metadata Fallback
+  if (note.metadata) {
+    try {
+      const parsed = typeof note.metadata === 'string' ? JSON.parse(note.metadata) : note.metadata;
+      if (parsed && typeof parsed === 'object' && parsed.isGhost !== undefined) {
+        return !!parsed.isGhost;
+      }
+    } catch {}
+  }
+  // 3. Userless Fallback (Ghost notes used to use null/empty userId)
+  return !note.userId;
+}
+
+/**
  * Filter note data to only include keys supported by the Appwrite collection schema.
  * This prevents "invalid document structure" errors when sending extra client-side fields.
  * Matches the types in src/types/appwrite.d.ts
@@ -249,6 +272,8 @@ function hydrateVirtualAttributes(doc: any): any {
       }
     } catch { /* ignore */ }
   }
+  // Ensure isGhost is normalized (using direct, metadata, or legacy userId fallback)
+  doc.isGhost = isGhostNote(doc);
   return doc;
 }
 
@@ -272,7 +297,8 @@ function filterNoteData(data: Record<string, any>): Record<string, any> {
   const schemaKeys = [
     'id', 'createdAt', 'updatedAt', 'userId', 'isPublic', 'status', 
     'parentNoteId', 'title', 'content', 'tags', 'comments', 
-    'extensions', 'collaborators', 'metadata', 'attachments', 'format'
+    'extensions', 'collaborators', 'metadata', 'attachments', 'format',
+    'isGhost', 'isThread'
   ];
   
   const filtered: Record<string, any> = {};
@@ -923,7 +949,7 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
     filteredNotes = filteredNotes.filter(n => !(n as any).isStory);
   }
   if (!options.includeGhosts) {
-    filteredNotes = filteredNotes.filter(n => !(n as any).isGhost);
+    filteredNotes = filteredNotes.filter(n => !isGhostNote(n));
   }
 
   return { ...res, documents: filteredNotes };
@@ -2778,7 +2804,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     filteredNotes = filteredNotes.filter(n => !(n as any).isStory);
   }
   if (!includeGhosts) {
-    filteredNotes = filteredNotes.filter(n => !(n as any).isGhost);
+    filteredNotes = filteredNotes.filter(n => !isGhostNote(n));
   }
 
   const batchLength = filteredNotes.length;
@@ -2796,22 +2822,11 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
 // --- PERMISSIONS HELPERS ---
 
 export function isNotePublic(note: Notes): boolean {
-  // A note is public if the isPublic attribute is true
-  // OR if it has a read permission for "any" or "guests" or "role:all"
-  if (note.isPublic === true) return true;
-  
-  const permissions = (note as any).$permissions as string[] | undefined;
-  if (!permissions) return false;
-
-  return permissions.some(p => 
-    p.includes('read("any")') || 
-    p.includes('read("guests")') ||
-    p.includes('read("role:all")')
-  );
+  return note ? note.isPublic === true : false;
 }
 
 export function getNotePublicState(note: Notes): boolean {
-  return typeof note.isPublic === 'boolean' ? note.isPublic : isNotePublic(note);
+  return note ? note.isPublic === true : false;
 }
 
 export function isNoteEditableByAnyone(note: Notes): boolean {
