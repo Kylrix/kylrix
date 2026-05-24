@@ -154,7 +154,26 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
         return { success: false, error: "Invalid mode" };
     }
 
-    const result = await model.generateContent(prompt);
+    let finalPrompt = prompt;
+    if (payload.localContext) {
+      const lc = payload.localContext;
+      const activeNichesStr = Array.isArray(lc.activeNiches) ? lc.activeNiches.join(', ') : 'none';
+      const recentAppsStr = Array.isArray(lc.recentApps) ? lc.recentApps.join(', ') : 'none';
+      const flowTransitionsStr = Array.isArray(lc.flowTransitions) ? lc.flowTransitions.join(' -> ') : 'none';
+      const lastSearchStr = lc.lastSearchQuery ? `"${lc.lastSearchQuery}"` : 'none';
+
+      finalPrompt = `${prompt}
+
+[OFFLINE SYSTEM ENVIRONMENT CONTEXT]
+The following anonymized offline environment state has been compiled from the user's active session:
+- Active Functional Areas: ${activeNichesStr}
+- Recent App Switches: ${recentAppsStr}
+- Session Trajectory: ${flowTransitionsStr}
+- Last Search Attempt: ${lastSearchStr}
+Please utilize this contextual memory to optimize your recommendations and references if relevant, maintaining the layman-friendly, secure posture of the workspace.`;
+    }
+
+    const result = await model.generateContent(finalPrompt);
     const response = await result.response;
     let text = response.text();
     

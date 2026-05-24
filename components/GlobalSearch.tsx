@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useLocalContext } from '@/lib/context-engine';
 import {
   Box,
   TextField,
@@ -74,6 +75,7 @@ function SearchResultAvatar({ result }: { result: SearchResult }) {
 
 export default function GlobalSearch() {
   const router = useRouter();
+  const { bufferEvent } = useLocalContext();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -138,6 +140,13 @@ export default function GlobalSearch() {
     setIsOpen(false);
     clearSearch();
 
+    bufferEvent({
+      niche: 'workspace',
+      app: 'search',
+      action: 'search_clicked_result',
+      metadata: { type: result.type, id: result.id, title: result.title }
+    });
+
     if (result.type === 'user') {
       router.push(`/u/${result.id}`); // For global search, id is likely the username or we should use title
       return;
@@ -158,10 +167,24 @@ export default function GlobalSearch() {
         placeholder="Search notes, collections, and tags..."
         value={searchTerm}
         onChange={ (e) => {
-          setSearchTerm(e.target.value);
-          handleSearch(e.target.value);
+          const val = e.target.value;
+          setSearchTerm(val);
+          handleSearch(val);
+          bufferEvent({
+            niche: 'workspace',
+            app: 'search',
+            action: 'search_typing',
+            metadata: { query: val }
+          });
         }}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => {
+          setIsOpen(true);
+          bufferEvent({
+            niche: 'workspace',
+            app: 'search',
+            action: 'search_focused'
+          });
+        }}
         slotProps={{
           input: {
             startAdornment: (

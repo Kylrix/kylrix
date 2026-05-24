@@ -22,6 +22,7 @@ import { useSidebar as useSidebarContext } from '@/components/ui/SidebarContext'
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { FABProvider } from '@/context/FABContext';
 import UniversalFAB from '@/components/layout/UniversalFAB';
+import { SuggestionsDeck } from '@/components/ephemeral/SuggestionsDeck';
 
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
@@ -128,6 +129,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         <Box sx={{ display: 'none' }} />
       )}
       <UniversalFAB />
+      <SuggestionsDeck />
       </FABProvider>
 
       {/* --- LAYER 2: OVERLAYS (Strict Unmounting) --- */}

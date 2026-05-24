@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, ReactNode, useCallback } fr
 import { AnalysisMode } from '@/lib/ai/types';
 import { PrivacyFilter } from '@/lib/ai/sanitizer';
 import { generateAIContent } from '@/lib/actions/ai';
+import { useLocalContext } from '@/lib/context-engine';
 import dynamic from 'next/dynamic';
 
 const AIModal = dynamic(() => import("@/components/ai/AIModal").then(mod => mod.AIModal), {
@@ -39,6 +40,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [createModalHandler, setCreateModalHandler] = useState<((prefill?: { name?: string; url?: string; username?: string }) => void) | null>(null);
+  const { compileContextForAI } = useLocalContext();
 
   // Allow components to register themselves as the "Create Modal" handler
   const registerCreateModal = useCallback((handler: (prefill?: { name?: string; url?: string; username?: string }) => void) => {
@@ -63,6 +65,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
       const response = await generateAIContent({
         mode,
         data: sanitizedPayload,
+        localContext: compileContextForAI(),
       });
 
       if (!response.success) {
@@ -89,6 +92,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
       const response = await generateAIContent({
         mode: 'GENERAL_QUERY',
         prompt,
+        localContext: compileContextForAI(),
       });
 
       if (!response.success) {
@@ -110,6 +114,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
       const response = await generateAIContent({
         mode: 'COMMAND_INTENT',
         prompt,
+        localContext: compileContextForAI(),
       });
 
       if (!response.success) throw new Error(response.error);

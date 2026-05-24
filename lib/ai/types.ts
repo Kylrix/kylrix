@@ -10,6 +10,7 @@ export interface AIRequestPayload {
   data?: unknown; // Sanitized data
   prompt?: string; // Optional custom prompt
   byokKey?: string; // Optional user decrypted API key
+  localContext?: any; // Compiled browser context summary
 }
 
 export interface AIResponse {

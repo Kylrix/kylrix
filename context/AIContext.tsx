@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, React
 import { AnalysisMode } from '@/lib/ai/types';
 import { PrivacyFilter } from '@/lib/ai/sanitizer';
 import { generateAIContent } from '@/lib/actions/ai';
+import { useLocalContext } from '@/lib/context-engine';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/lib/auth';
 import { BYOKManager } from '@/lib/ai/byok';
@@ -41,6 +42,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
   const [createModalHandler, setCreateModalHandler] = useState<((prefill?: { name?: string; url?: string; username?: string }) => void) | null>(null);
+  const { compileContextForAI } = useLocalContext();
 
   const registerCreateModal = useCallback((handler: (prefill?: { name?: string; url?: string; username?: string }) => void) => {
     setCreateModalHandler(() => handler);
@@ -69,6 +71,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         mode,
         data: sanitizedPayload,
         byokKey,
+        localContext: compileContextForAI(),
       });
 
       if (!response.success) {
@@ -86,7 +89,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.$id]);
+  }, [user?.$id, compileContextForAI]);
 
   const askAI = useCallback(async (prompt: string) => {
     setIsLoading(true);
@@ -101,6 +104,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         mode: 'GENERAL_QUERY',
         prompt,
         byokKey,
+        localContext: compileContextForAI(),
       });
 
       if (!response.success) {
@@ -114,7 +118,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.$id]);
+  }, [user?.$id, compileContextForAI]);
 
   const sendCommand = useCallback(async (prompt: string) => {
     setIsLoading(true);
@@ -129,6 +133,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         mode: 'COMMAND_INTENT',
         prompt,
         byokKey,
+        localContext: compileContextForAI(),
       });
 
       if (!response.success) throw new Error(response.error);
@@ -144,7 +149,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
     } finally {
         setIsLoading(false);
     }
-  }, [user?.$id]);
+  }, [user?.$id, compileContextForAI]);
 
   const openAIModal = useCallback(() => setIsAIModalOpen(true), []);
   const closeAIModal = useCallback(() => setIsAIModalOpen(false), []);
