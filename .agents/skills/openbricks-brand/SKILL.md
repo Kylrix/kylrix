@@ -24,6 +24,7 @@ We construct depth purely with opaque solid blocks. No translucent fills, no bac
 - **Physical Feedback:** Micro-animations (bezier transitions) mimicking physical inertia.
 
 ## 3. Typography Refresh
-- **Display / Headers:** `Clash Display` or `Outfit` — highly opinionated geometric shapes.
-- **UI / Body:** `Satoshi` — clean, highly readable geometric sans.
-- **Technical / Metadata:** `Mono` — precise technical details.
+- **Display / Headers:** `Outfit` (`var(--font-outfit)`) or `Clash Display` — highly opinionated, premium, rounded geometric weights.
+- **Inputs & Interactive Focus:** `Space Grotesk` (`var(--font-space-grotesk)`) — high-character, brutalist geometric monoline curves that turn active typing fields into state-of-the-art interactive surfaces.
+- **UI / Body:** `Satoshi` (`var(--font-satoshi)`) — highly clean, readable geometric sans.
+- **Technical / Metadata:** `Mono` (`var(--font-mono)`) — premium, high-density technical monospaces (JetBrains Mono).

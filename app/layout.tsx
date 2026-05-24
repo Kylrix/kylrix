@@ -43,6 +43,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet" 
           crossOrigin="anonymous"
         />
+        <link 
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" 
+          rel="stylesheet" 
+          crossOrigin="anonymous"
+        />
       </head>
       <body className={mono.className}>
         <ThemeRegistry>
