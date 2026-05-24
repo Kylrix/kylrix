@@ -40,7 +40,9 @@ import {
   convertResponseToGoalSecure,
   createGhostNoteForProjectSecure,
   promoteGhostThreadToStorySecure,
-  createEncryptedGroupForProjectSecure
+  createEncryptedGroupForProjectSecure,
+  createGhostNoteForResourceSecure,
+  promoteGhostResourceThreadToStorySecure
 } from './secure-ops';
 
 // Helper to fetch JWT securely from client-side SDK
@@ -258,4 +260,19 @@ export async function createEncryptedGroupForProject(projectId: string) {
   const jwt = await getJwt();
   return createEncryptedGroupForProjectSecure(projectId, jwt);
 }
+
+export async function createGhostNoteForResource(
+  resourceId: string,
+  resourceType: 'task' | 'project' | 'tag' | 'event' | 'form',
+  title?: string
+) {
+  const jwt = await getJwt();
+  return createGhostNoteForResourceSecure(resourceId, resourceType, title, jwt);
+}
+
+export async function promoteGhostResourceThreadToStory(resourceId: string, resourceType: string) {
+  const jwt = await getJwt();
+  return promoteGhostResourceThreadToStorySecure(resourceId, resourceType, jwt);
+}
+
 

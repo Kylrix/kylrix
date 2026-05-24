@@ -3700,4 +3700,156 @@ export async function createEncryptedGroupForProjectSecure(projectId: string, jw
   return JSON.parse(JSON.stringify(updatedProject));
 }
 
+export async function createGhostNoteForResourceSecure(
+  resourceId: string,
+  resourceType: 'task' | 'project' | 'tag' | 'event' | 'form',
+  title?: string,
+  jwt?: string
+) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const metadata = JSON.stringify({
+    isGhost: true,
+    linkedResourceType: resourceType,
+    linkedResourceId: resourceId,
+    expiresAt: expiresAt,
+    version: 'v2',
+  });
+
+  const tables = createSystemTablesDB();
+  
+  // Try to delete any existing Ghost Note for this resource to avoid duplicates
+  try {
+    await tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+      rowId: resourceId
+    });
+  } catch {}
+
+  const result = await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: resourceId, // RowId matches the resourceId directly!
+    data: {
+      title: title || `Discussion Thread`,
+      content: '',
+      format: 'markdown',
+      isPublic: true,
+      userId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      metadata,
+    },
+    permissions: [`read("any")`],
+  });
+
+  return JSON.parse(JSON.stringify(result));
+}
+
+export async function promoteGhostResourceThreadToStorySecure(
+  resourceId: string,
+  resourceType: string,
+  jwt?: string
+) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const tables = createSystemTablesDB();
+
+  // 1. Fetch all comments linked to this resource's discussion note
+  const commentsList = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.COMMENTS,
+    queries: [
+      Query.equal('noteId', resourceId)
+    ] as any
+  }).catch(() => ({ rows: [] }));
+
+  // 2. Fetch the ghost note itself to see if it exists
+  const noteDoc = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: resourceId
+  }).catch(() => null);
+
+  const title = noteDoc?.title || `Discussion: ${resourceType} ${resourceId.slice(-8)}`;
+
+  // 3. Compile comments history into a clean markdown document
+  let markdownContent = `# Discussion History\n\n*Resource Type: ${resourceType}*\n*Date: ${new Date().toLocaleDateString()}*\n\n`;
+  if (commentsList.rows.length === 0) {
+    markdownContent += `*No comments were recorded in this thread.*`;
+  } else {
+    // Sort comments chronologically
+    const sorted = [...commentsList.rows].sort(
+      (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    for (const c of sorted) {
+      markdownContent += `### ${c.userId === actor.$id ? 'You' : 'Collaborator'} (${new Date(c.createdAt).toLocaleTimeString()})\n${c.content}\n\n`;
+    }
+  }
+
+  // 4. Provision a new permanent story note
+  const now = new Date().toISOString();
+  const storyNoteId = ID.unique();
+  const storyMeta = JSON.stringify({
+    isGhost: false,
+    isStory: true,
+    linkedResourceType: resourceType,
+    linkedResourceId: resourceId,
+    version: 'v2'
+  });
+
+  const storyNote = await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: storyNoteId,
+    data: {
+      title: `Story: ${title}`,
+      content: markdownContent,
+      format: 'markdown',
+      isPublic: true,
+      userId: actor.$id,
+      createdAt: now,
+      updatedAt: now,
+      metadata: storyMeta
+    },
+    permissions: [
+      Permission.read(Role.user(actor.$id)),
+      Permission.write(Role.user(actor.$id)),
+      Permission.update(Role.user(actor.$id)),
+      Permission.delete(Role.user(actor.$id))
+    ]
+  });
+
+  // 5. Cleanup the original ghost note comments
+  await Promise.all(
+    commentsList.rows.map(c => 
+      tables.deleteRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+        tableId: APPWRITE_CONFIG.TABLES.NOTE.COMMENTS,
+        rowId: c.$id
+      }).catch(() => null)
+    )
+  );
+
+  // 6. Delete the original ghost note
+  if (noteDoc) {
+    await tables.deleteRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+      rowId: resourceId
+    }).catch(() => null);
+  }
+
+  return JSON.parse(JSON.stringify(storyNote));
+}
+
+
 

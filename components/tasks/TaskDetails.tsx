@@ -22,6 +22,8 @@ import {
   InputLabel,
   alpha,
   CircularProgress,
+  Stack,
+  Paper,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -55,6 +57,13 @@ import { UsersService } from '@/lib/services/users';
 import { FolderKanban } from 'lucide-react';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { CollaboratorPermission, TaskCollaborator } from '@/types';
+import { createGhostNoteForResource, promoteGhostResourceThreadToStory } from '@/lib/actions/client-ops';
+import { createComment, listComments, getNote } from '@/lib/appwrite/note';
+import { client } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { useToast } from '@/components/ui/Toast';
+import { AppwriteService } from '@/lib/appwrite';
+import { Clock, FileText, Globe } from 'lucide-react';
 
 const priorityColors: Record<Priority, string> = {
   low: '#A1A1AA',
@@ -133,6 +142,178 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
   const [pendingCollaborators, setPendingCollaborators] = useState<any[]>([]);
   const [showProjectLinker, setShowProjectLinker] = useState(false);
   const [pendingCollaboratorPermission, setPendingCollaboratorPermission] = useState<CollaboratorPermission>('write');
+
+  // Huddle Discussion State & Effects
+  const { showSuccess, showError } = useToast();
+  const [huddleMessages, setHuddleMessages] = useState<any[]>([]);
+  const [huddleLoading, setHuddleLoading] = useState(false);
+  const [huddleSending, setHuddleSending] = useState(false);
+  const [isHuddleInit, setIsHuddleInit] = useState(false);
+  const [huddleTimeRemaining, setHuddleTimeRemaining] = useState('');
+  const huddleMessageEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Check if Huddle is initialized and set timer countdown
+  React.useEffect(() => {
+    if (!taskId) return;
+    let active = true;
+
+    const checkHuddle = async () => {
+      try {
+        const note = await getNote(taskId);
+        if (!active) return;
+        if (note && note.metadata) {
+          setIsHuddleInit(true);
+          const noteMeta = JSON.parse(note.metadata);
+          const expiresAt = new Date(noteMeta.expiresAt).getTime();
+          const updateTimer = () => {
+            const diff = expiresAt - Date.now();
+            if (diff <= 0) {
+              setHuddleTimeRemaining('Expired');
+            } else {
+              const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+              const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+              setHuddleTimeRemaining(`${days}d ${hours}h remaining`);
+            }
+          };
+          updateTimer();
+        }
+      } catch (err) {
+        if (active) setIsHuddleInit(false);
+      }
+    };
+
+    checkHuddle();
+
+    return () => { active = false; };
+  }, [taskId]);
+
+  // Load comments and subscribe to Appwrite comments
+  React.useEffect(() => {
+    if (!taskId || !isHuddleInit) return;
+    let active = true;
+    setHuddleLoading(true);
+
+    const loadHuddleComments = async () => {
+      try {
+        const res = await listComments(taskId);
+        if (!active) return;
+        const msgs = await Promise.all(
+          res.documents.map(async (doc: any) => {
+            let senderName = 'Collaborator';
+            if (user && doc.userId === user.$id) {
+              senderName = user.name || 'You';
+            } else {
+              try {
+                const profile = await AppwriteService.getProfile(doc.userId);
+                if (profile) senderName = profile.name || 'Collaborator';
+              } catch {}
+            }
+            return {
+              id: doc.$id,
+              senderId: doc.userId,
+              senderName,
+              content: doc.content,
+              timestamp: new Date(doc.createdAt).getTime(),
+            };
+          })
+        );
+        msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
+        setHuddleMessages(msgs);
+      } catch (err) {
+        console.error('Failed to load huddle comments:', err);
+      } finally {
+        if (active) setHuddleLoading(false);
+      }
+    };
+
+    loadHuddleComments();
+
+    const unsubscribe = client.subscribe(
+      `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.comments.documents`,
+      async (response: any) => {
+        if (!active) return;
+        const events = response.events;
+        const payload = response.payload;
+
+        if (events.some((e: string) => e.includes('.create')) && payload.noteId === taskId) {
+          let senderName = 'Collaborator';
+          if (user && payload.userId === user.$id) {
+            senderName = user.name || 'You';
+          } else {
+            try {
+              const profile = await AppwriteService.getProfile(payload.userId);
+              if (profile) senderName = profile.name || 'Collaborator';
+            } catch {}
+          }
+          const msg = {
+            id: payload.$id,
+            senderId: payload.userId,
+            senderName,
+            content: payload.content,
+            timestamp: new Date(payload.createdAt).getTime(),
+          };
+          setHuddleMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
+          });
+        }
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [taskId, isHuddleInit, user]);
+
+  React.useEffect(() => {
+    huddleMessageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [huddleMessages]);
+
+  const handleInitHuddle = async () => {
+    if (!task) return;
+    setHuddleLoading(true);
+    try {
+      await createGhostNoteForResource(taskId, 'task', `${task.title} Discussion`);
+      setIsHuddleInit(true);
+      showSuccess('Discussion huddle initialized!');
+    } catch (err) {
+      console.error('Failed to init huddle:', err);
+      showError('Failed to initialize huddle.');
+    } finally {
+      setHuddleLoading(false);
+    }
+  };
+
+  const handleSendHuddleMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || huddleSending) return;
+    setHuddleSending(true);
+    try {
+      await createComment(taskId, newComment.trim());
+      setNewComment('');
+    } catch (err) {
+      console.error('Failed to send comment:', err);
+      showError('Failed to send message.');
+    } finally {
+      setHuddleSending(false);
+    }
+  };
+
+  const handleSaveHuddleAsStory = async () => {
+    setHuddleLoading(true);
+    try {
+      await promoteGhostResourceThreadToStory(taskId, 'task');
+      showSuccess('Discussion promoted to a permanent Story note!');
+      setIsHuddleInit(false);
+      setHuddleMessages([]);
+    } catch (err) {
+      console.error('Failed to save story:', err);
+      showError('Failed to promote discussion.');
+    } finally {
+      setHuddleLoading(false);
+    }
+  };
 
   // AI Integration
   const { generate } = useAI();
@@ -952,66 +1133,125 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
           )}
         </Box>
 
-        {/* Comments Section */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="subtitle2" sx={{ mb: 3 }}>Collaboration ({task.comments.length})</Typography>
+        {/* Comments Section / Public Huddle Discussion */}
+        <Box sx={{ mb: 4, position: 'relative' }}>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>
+              Public Huddle Thread
+            </Typography>
+            {isHuddleInit && huddleTimeRemaining && (
+              <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: '#F59E0B' }}>
+                <Clock size={12} style={{ color: '#F59E0B' }} />
+                <Typography variant="caption" sx={{ fontWeight: 800 }}>{huddleTimeRemaining}</Typography>
+              </Stack>
+            )}
+          </Stack>
 
-          <List disablePadding sx={{ mb: 3 }}>
-            {task.comments.map((comment) => (
-              <ListItem
-                key={comment.id}
-                alignItems="flex-start"
-                disablePadding
-                sx={{ mb: 3 }}
+          {huddleLoading && (
+            <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: 'rgba(10,9,8,0.7)', zIndex: 2, borderRadius: 2 }}>
+              <CircularProgress size={24} sx={{ color: '#6366F1' }} />
+            </Box>
+          )}
+
+          {!isHuddleInit ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 3, textAlign: 'center', border: '1px solid rgba(255,255,255,0.04)', borderRadius: 3, bgcolor: 'rgba(255,255,255,0.01)' }}>
+              <Globe size={24} style={{ color: '#6366F1', marginBottom: 12 }} />
+              <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mb: 0.5 }}>Initialize Discussion Huddle</Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 300, lineHeight: 1.4, mb: 2 }}>
+                Spin up a real-time huddle discussion thread for this task. Anyone with task access can read and post. Ephemeral chat purges automatically in 7 days.
+              </Typography>
+              <Button 
+                size="small"
+                onClick={handleInitHuddle}
+                sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 800, py: 0.75, px: 2, borderRadius: '8px', textTransform: 'none', '&:hover': { bgcolor: '#575CF0' } }}
               >
-                <ListItemIcon sx={{ minWidth: 36, mt: 0.5 }}>
-                  <Avatar sx={{ width: 24, height: 24, fontSize: '0.7rem', fontWeight: 800, bgcolor: 'rgba(255, 255, 255, 0.1)', color: '#F2F2F2' }}>
-                    {comment.authorName.charAt(0)}
-                  </Avatar>
-                </ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                      <Typography variant="body2" fontWeight={800} sx={{ fontSize: '0.8rem' }}>
-                        {comment.authorName}
-                      </Typography>
-                      <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.4 }}>
-                        {format(new Date(comment.createdAt), 'MMM d, h:mm a')}
-                      </Typography>
-                    </Box>
-                  }
-                  secondary={comment.content}
-                  secondaryTypographyProps={{ sx: { color: 'text.secondary', fontSize: '0.875rem' } }}
-                />
-              </ListItem>
-            ))}
-          </List>
+                Start Huddle
+              </Button>
+            </Box>
+          ) : (
+            <>
+              {/* Messages Viewport */}
+              <Box sx={{ maxHeight: 300, overflowY: 'auto', p: 1, mb: 2.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {huddleMessages.length === 0 ? (
+                  <Box sx={{ py: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
+                    <Typography variant="caption" sx={{ fontStyle: 'italic' }}>No messages yet. Start the huddle discussion!</Typography>
+                  </Box>
+                ) : (
+                  huddleMessages.map((msg) => {
+                    const isSelf = msg.senderId === user?.$id;
+                    return (
+                      <Box key={msg.id} sx={{ alignSelf: isSelf ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, display: 'block', mb: 0.25, textAlign: isSelf ? 'right' : 'left' }}>
+                          {msg.senderName}
+                        </Typography>
+                        <Paper 
+                          elevation={0}
+                          sx={{
+                            p: 1.25,
+                            borderRadius: '12px',
+                            borderTopRightRadius: isSelf ? 0 : '12px',
+                            borderTopLeftRadius: isSelf ? '12px' : 0,
+                            bgcolor: isSelf ? '#6366F1' : 'rgba(255,255,255,0.03)',
+                            border: isSelf ? 'none' : '1px solid rgba(255,255,255,0.04)',
+                            color: '#fff',
+                            boxShadow: 'none',
+                            backgroundImage: 'none'
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.85rem', lineHeight: 1.4, wordBreak: 'break-word' }}>
+                            {msg.content}
+                          </Typography>
+                        </Paper>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.6rem', display: 'block', mt: 0.25, textAlign: isSelf ? 'right' : 'left' }}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Typography>
+                      </Box>
+                    );
+                  })
+                )}
+                <div ref={huddleMessageEndRef} />
+              </Box>
 
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', bgcolor: 'rgba(255,255,255,0.02)', p: 1.5, borderRadius: 2, border: '1px solid rgba(255,255,255,0.05)' }}>
-            <TextField
-              size="small"
-              fullWidth
-              placeholder="Write a comment..."
-              variant="standard"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleAddComment()}
-              multiline
-              maxRows={6}
-              InputProps={{ 
-                disableUnderline: true,
-                sx: { fontSize: '0.9rem' }
-              }}
-            />
-            <IconButton
-              size="small"
-              onClick={handleAddComment}
-              disabled={!newComment.trim()}
-              sx={{ color: '#6366F1', p: 0.5 }}
-            >
-              <SendIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Box>
+              {/* Message Input Panel */}
+              <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ display: 'flex', gap: 1, alignItems: 'center', bgcolor: 'rgba(255,255,255,0.02)', p: 1.25, borderRadius: 2, border: '1px solid rgba(255,255,255,0.05)', mb: 2 }}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  placeholder="Type huddle message..."
+                  variant="standard"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  disabled={huddleSending}
+                  InputProps={{ 
+                    disableUnderline: true,
+                    sx: { fontSize: '0.85rem', color: '#fff' }
+                  }}
+                />
+                <IconButton
+                  size="small"
+                  type="submit"
+                  disabled={!newComment.trim() || huddleSending}
+                  sx={{ color: '#6366F1', p: 0.5 }}
+                >
+                  <SendIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Box>
+
+              {/* Story Promotion Panel */}
+              <Button
+                fullWidth
+                size="small"
+                startIcon={<FileText size={14} />}
+                onClick={handleSaveHuddleAsStory}
+                sx={{
+                  bgcolor: 'rgba(236, 72, 153, 0.1)', color: '#EC4899', fontWeight: 800, py: 1, borderRadius: '8px', textTransform: 'none',
+                  '&:hover': { bgcolor: 'rgba(236, 72, 153, 0.15)' }
+                }}
+              >
+                Promote Discussion to Story Note
+              </Button>
+            </>
+          )}
         </Box>
       </Box>
 
