@@ -49,16 +49,46 @@ const Logo: React.FC<LogoProps> = ({
     : current.secondary;
   const rightColor = isEcosystemBrand ? ecosystemPrimary : current.primary;
   
-  // Center cutout color (punches through to background)
   const cutoutColor = isDarkMode ? "#0A0908" : "#FFFFFF";
 
-  // Malleability Framework: Define shapes for the center cutout
-  const renderCutout = () => {
-    switch (app) {
-      case 'note': // Slanted Square (Quadrilateral)
-      case 'vault':
-      case 'connect':
-        return (
+  const borderColors: Record<string, { left: string; right: string }> = {
+    root: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
+    kylrix: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
+    accounts: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
+    vault: { left: "#065F46", right: "#3D3AA9" },
+    flow: { left: "#6B21A8", right: "#3D3AA9" },
+    note: { left: "#9A1D5A", right: "#3D3AA9" },
+    connect: { left: "#92400E", right: "#3D3AA9" },
+  };
+
+  const borders = borderColors[app] || borderColors.accounts;
+
+  const renderCarvedCutout = () => {
+    const isDiamond = app === 'root' || app === 'accounts' || app === 'kylrix';
+    if (isDiamond) {
+      return (
+        <>
+          {/* Hard tactile recess shadow (offset diamond) */}
+          <polygon points="51,40 63,52 51,64 39,52" fill="#000000" />
+          {/* Main solid cutout diamond */}
+          <polygon points="50,38 62,50 50,62 38,50" fill={cutoutColor} />
+          {/* Solid dark carved border */}
+          <polygon points="50,38 62,50 50,62 38,50" fill="none" stroke="#000000" strokeWidth="1.8" />
+        </>
+      );
+    } else {
+      return (
+        <>
+          {/* Hard tactile recess shadow (offset rotated square) */}
+          <rect 
+            x="39" 
+            y="40" 
+            width="24" 
+            height="24" 
+            fill="#000000" 
+            transform="rotate(45 50 50)"
+          />
+          {/* Main solid cutout */}
           <rect 
             x="38" 
             y="38" 
@@ -67,23 +97,19 @@ const Logo: React.FC<LogoProps> = ({
             fill={cutoutColor} 
             transform="rotate(45 50 50)"
           />
-        );
-      case 'flow': // Slanted Square (Quadrilateral)
-        return (
+          {/* Solid dark carved border */}
           <rect 
             x="38" 
             y="38" 
             width="24" 
             height="24" 
-            fill={cutoutColor} 
+            fill="none" 
+            stroke="#000000" 
+            strokeWidth="1.8" 
             transform="rotate(45 50 50)"
           />
-        );
-      case 'accounts': // Diamond
-      case 'kylrix':
-      case 'root':
-      default:
-        return <polygon points="50,38 62,50 50,62 38,50" fill={cutoutColor} />;
+        </>
+      );
     }
   };
 
@@ -94,22 +120,51 @@ const Logo: React.FC<LogoProps> = ({
       height={size}
       animate={animate ? { rotate: 360 } : {}}
       transition={animate ? { repeat: Infinity, duration: 8, ease: "linear" } : {}}
-      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}
+      style={{ filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.35))' }}
     >
-      {/* Left Hemisphere */}
+      {/* Heavy Outer Solid Black Contour */}
+      <polygon 
+        points="50,9 14,29 14,71 50,91 86,71 86,29" 
+        fill="none" 
+        stroke="#000000" 
+        strokeWidth="3" 
+        strokeLinejoin="round"
+      />
+
+      {/* Solid Base Left Hemisphere */}
       <polygon 
         points="50,10 15,30 15,70 50,90" 
         fill={leftColor} 
         style={{ transition: 'fill 0.4s ease' }}
       />
-      {/* Right Hemisphere */}
+      {/* Solid Base Right Hemisphere */}
       <polygon 
         points="50,10 85,30 85,70 50,90" 
         fill={rightColor} 
         style={{ transition: 'fill 0.4s ease' }}
       />
-      {/* Center Cutout */}
-      {renderCutout()}
+
+      {/* Recessed Dark Borders */}
+      <polyline 
+        points="50,10 15,30 15,70 50,90" 
+        fill="none" 
+        stroke={borders.left} 
+        strokeWidth="1.8" 
+        strokeLinecap="round" 
+      />
+      <polyline 
+        points="50,10 85,30 85,70 50,90" 
+        fill="none" 
+        stroke={borders.right} 
+        strokeWidth="1.8" 
+        strokeLinecap="round" 
+      />
+
+      {/* Heavy Opaque Center Seam Split */}
+      <line x1="50" y1="10" x2="50" y2="90" stroke="#000000" strokeWidth="2.2" />
+
+      {/* Carved Cutout */}
+      {renderCarvedCutout()}
     </motion.svg>
   );
 
