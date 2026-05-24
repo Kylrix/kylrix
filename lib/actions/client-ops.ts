@@ -37,7 +37,10 @@ import {
   createRowSecure,
   updateRowSecure,
   deleteRowSecure,
-  convertResponseToGoalSecure
+  convertResponseToGoalSecure,
+  createGhostNoteForProjectSecure,
+  promoteGhostThreadToStorySecure,
+  createEncryptedGroupForProjectSecure
 } from './secure-ops';
 
 // Helper to fetch JWT securely from client-side SDK
@@ -239,5 +242,20 @@ export async function deleteRow(databaseId: string, tableId: string, rowId: stri
 export async function convertResponseToGoal(submissionId: string) {
   const jwt = await getJwt();
   return convertResponseToGoalSecure(submissionId, jwt);
+}
+
+export async function createGhostNoteForProject(projectId: string, title?: string) {
+  const jwt = await getJwt();
+  return createGhostNoteForProjectSecure(projectId, title, jwt);
+}
+
+export async function promoteGhostThreadToStory(projectId: string, noteId: string) {
+  const jwt = await getJwt();
+  return promoteGhostThreadToStorySecure(projectId, noteId, jwt);
+}
+
+export async function createEncryptedGroupForProject(projectId: string) {
+  const jwt = await getJwt();
+  return createEncryptedGroupForProjectSecure(projectId, jwt);
 }
 

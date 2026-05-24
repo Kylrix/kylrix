@@ -1740,6 +1740,33 @@ export async function removeProjectCollaboratorSecure(projectId: string, targetU
     console.error('removeProjectCollaboratorSecure objects cleanup failed:', err);
   }
 
+  // 3. E2E Private Chat Group Member Auto-Sync
+  if (metadata && metadata.encryptedGroupId) {
+    try {
+      const convId = metadata.encryptedGroupId;
+      const memberRows = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: 'conversationMembers',
+        queries: [
+          Query.equal('conversationId', convId),
+          Query.equal('userId', targetUserId)
+        ] as any
+      }).catch(() => ({ rows: [] }));
+
+      await Promise.all(
+        memberRows.rows.map((row) =>
+          tables.deleteRow({
+            databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+            tableId: 'conversationMembers',
+            rowId: row.$id
+          })
+        )
+      );
+    } catch (e) {
+      console.warn('[removeProjectCollaboratorSecure] Failed to sync from E2E project group:', e);
+    }
+  }
+
   return { success: true };
 }
 
@@ -3425,6 +3452,252 @@ export async function convertResponseToGoalSecure(submissionId: string, jwt?: st
   }
 
   return JSON.parse(JSON.stringify(task));
+}
+
+export async function createGhostNoteForProjectSecure(projectId: string, title?: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const metadata = JSON.stringify({
+    isGhost: true,
+    linkedResourceType: 'project',
+    linkedResourceId: projectId,
+    expiresAt: expiresAt,
+    version: 'v2',
+  });
+
+  const tables = createSystemTablesDB();
+  const result = await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: ID.unique(),
+    data: {
+      title: title || 'Project Discussion',
+      content: '',
+      format: 'markdown',
+      isPublic: true,
+      userId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      metadata,
+    },
+    permissions: [`read("any")`],
+  });
+
+  // Update parent project metadata with discussionNoteId
+  const project = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    rowId: projectId
+  }).catch(() => null);
+  
+  if (project) {
+    let projMeta: any = {};
+    try {
+      projMeta = JSON.parse(project.metadata || '{}');
+    } catch {}
+    projMeta.discussionNoteId = result.$id;
+    await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: projectId,
+      data: {
+        metadata: JSON.stringify(projMeta)
+      }
+    });
+  }
+
+  return JSON.parse(JSON.stringify(result));
+}
+
+export async function promoteGhostThreadToStorySecure(projectId: string, noteId: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const tables = createSystemTablesDB();
+  const noteDoc = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: noteId
+  });
+
+  if (!noteDoc) {
+    throw new Error('Note thread not found');
+  }
+
+  // Update note properties to be a permanent Story note
+  let meta: any = {};
+  try {
+    meta = JSON.parse(noteDoc.metadata || '{}');
+  } catch {}
+
+  meta.isGhost = false;
+  meta.isStory = true;
+  delete meta.expiresAt;
+
+  const updatedNote = await tables.updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: noteId,
+    data: {
+      userId: actor.$id, // Note now owned by user
+      metadata: JSON.stringify(meta),
+      updatedAt: new Date().toISOString()
+    },
+    permissions: [
+      Permission.read(Role.user(actor.$id)),
+      Permission.write(Role.user(actor.$id)),
+      Permission.update(Role.user(actor.$id)),
+      Permission.delete(Role.user(actor.$id))
+    ]
+  });
+
+  // Link note as permanent integrated note inside the project
+  const now = new Date().toISOString();
+  await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'project_objects',
+    rowId: ID.unique(),
+    data: {
+      projectId,
+      entityKind: 'note',
+      entityId: noteId,
+      role: 'member',
+      createdAt: now,
+      updatedAt: now,
+      isGeneral: true
+    },
+    permissions: [
+      Permission.read(Role.user(actor.$id))
+    ]
+  });
+
+  // Clear discussionNoteId from project metadata so a new huddle thread can be started
+  const project = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    rowId: projectId
+  }).catch(() => null);
+
+  if (project) {
+    let projMeta: any = {};
+    try {
+      projMeta = JSON.parse(project.metadata || '{}');
+    } catch {}
+    delete projMeta.discussionNoteId;
+    await tables.updateRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'projects',
+      rowId: projectId,
+      data: {
+        metadata: JSON.stringify(projMeta)
+      }
+    });
+  }
+
+  return JSON.parse(JSON.stringify(updatedNote));
+}
+
+export async function createEncryptedGroupForProjectSecure(projectId: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const tables = createSystemTablesDB();
+  const project = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    rowId: projectId
+  });
+
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  // 1. Gather all current project members (owner + collaborators)
+  const collaborators = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'project_objects',
+    queries: [
+      Query.equal('projectId', projectId),
+      Query.equal('entityKind', 'collaborator')
+    ] as any
+  }).catch(() => ({ rows: [] }));
+
+  const memberIds = [project.ownerId];
+  for (const collab of collaborators.rows) {
+    if (collab.entityId && !memberIds.includes(collab.entityId)) {
+      memberIds.push(collab.entityId);
+    }
+  }
+
+  const uniqueParticipants = Array.from(new Set(memberIds));
+
+  // 2. Create standard Connect conversation group
+  const now = new Date().toISOString();
+  const convId = ID.unique();
+  const permissions = uniqueParticipants.map(id => Permission.read(Role.user(id)));
+
+  const conversation = await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'conversations',
+    rowId: convId,
+    data: {
+      participants: uniqueParticipants,
+      participantCount: uniqueParticipants.length,
+      type: 'group',
+      name: project.title,
+      creatorId: actor.$id,
+      admins: [actor.$id],
+      isPinned: [],
+      isMuted: [],
+      isArchived: [],
+      tags: [],
+      isEncrypted: false,
+      encryptionVersion: '1.0',
+      createdAt: now,
+      updatedAt: now,
+    },
+    permissions
+  });
+
+  // 3. Create conversation memberships
+  for (const userId of uniqueParticipants) {
+    await tables.createRow({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'conversationMembers',
+      rowId: ID.unique(),
+      data: {
+        conversationId: convId,
+        userId
+      },
+      permissions
+    });
+  }
+
+  // 4. Update project metadata with encryptedGroupId
+  let projMeta: any = {};
+  try {
+    projMeta = JSON.parse(project.metadata || '{}');
+  } catch {}
+  projMeta.encryptedGroupId = convId;
+
+  const updatedProject = await tables.updateRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    rowId: projectId,
+    data: {
+      metadata: JSON.stringify(projMeta)
+    }
+  });
+
+  return JSON.parse(JSON.stringify(updatedProject));
 }
 
 
