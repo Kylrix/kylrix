@@ -345,7 +345,22 @@ export function LoginDrawer() {
         {renderStep()}
 
         <Typography sx={{ color: '#9B9691', fontSize: '0.75rem', textAlign: 'center', mt: 4, fontWeight: 500 }}>
-          By continuing, you agree to our Terms and Privacy Policy.
+          By continuing, you agree to our{' '}
+          <a
+            href="/terms-of-service"
+            onClick={handleClose}
+            style={{ color: '#FFFFFF', textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            Terms of Service
+          </a>{' '}
+          and{' '}
+          <a
+            href="/privacy-policy"
+            onClick={handleClose}
+            style={{ color: '#FFFFFF', textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            Privacy Policy
+          </a>.
         </Typography>
       </Box>
     </Drawer>
