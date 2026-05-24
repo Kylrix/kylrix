@@ -99,7 +99,7 @@ export default function ConnectTopbar({
 
   const { events, suggestions, dismissSuggestion } = useLocalContext();
   const [notifications, setNotifications] = useState([
-    { id: 'notif-1', title: 'Self-Hosted Sync Complete', message: 'All local action workflows and workspace logs successfully synchronized.', time: 'Just now', read: false, accent: '#10B981' },
+    { id: 'notif-1', title: 'Workspace Sync Complete', message: 'All local action workflows and workspace logs successfully synchronized.', time: 'Just now', read: false, accent: '#10B981' },
     { id: 'notif-2', title: 'Workflows Negations Active', message: 'Action chain engine generated valid inversions for 3 private notes.', time: '2 hours ago', read: false, accent: '#6366F1' },
     { id: 'notif-3', title: 'Secure Keychain Audited', message: 'Local master credentials checked. Integrity score 100%.', time: '1 day ago', read: true, accent: '#F59E0B' }
   ]);
@@ -816,7 +816,7 @@ export default function ConnectTopbar({
                               src={person.avatar || undefined}
                               sx={{ width: 32, height: 32, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.08)', color: 'white', fontSize: '0.8rem', fontWeight: 800 }}
                             >
-                              {(person.displayName || person.name || 'U')[0].toUpperCase()}
+                              {(person.displayName || person.name || String(person.username || person.prefs?.username || 'U').replace(/^@+/, '') || 'U')[0].toUpperCase()}
                             </Avatar>
                             <Box sx={{ minWidth: 0, flex: 1 }}>
                               <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
