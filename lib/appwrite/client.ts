@@ -156,20 +156,6 @@ export const tablesDB = new Proxy(originalTablesDB, {
                 }
             };
         }
-        if (prop === 'listRows') {
-            return async (...args: any[]) => {
-                const { databaseId, tableId, queries } = parseTablesDBListArgs(args);
-                const { listRowsSecure } = await import('@/lib/actions/secure-ops');
-                return await listRowsSecure(databaseId, tableId, queries);
-            };
-        }
-        if (prop === 'getRow') {
-            return async (...args: any[]) => {
-                const { databaseId, tableId, rowId } = parseTablesDBDeleteArgs(args);
-                const { getRowSecure } = await import('@/lib/actions/secure-ops');
-                return await getRowSecure(databaseId, tableId, rowId);
-            };
-        }
         const val = Reflect.get(target, prop, receiver);
         return typeof val === 'function' ? val.bind(target) : val;
     }

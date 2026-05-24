@@ -52,8 +52,9 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
         settings = JSON.parse(form.settings || '{}');
       } catch (_e) {}
       
-      setAllowAnonymousView(settings.allowAnonymousView ?? (form.status === 'published'));
-      setAllowAnonymousFill(settings.allowAnonymousFill ?? false);
+      // Migrate to the new direct column paradigms
+      setAllowAnonymousView(form.isPublic ?? (status === 'published'));
+      setAllowAnonymousFill(form.isGuest ?? settings.allowAnonymousFill ?? false);
       setExpiresAt(settings.expiresAt ? settings.expiresAt.slice(0, 16) : '');
     }
   }, [form, open]);
@@ -71,7 +72,9 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
       await FormsService.updateForm(form.$id, {
         status: status as FormsStatus,
         settings: JSON.stringify(settings),
-      });
+        isPublic: status === 'published',
+        isGuest: allowAnonymousFill,
+      } as any);
       
       onSaved();
       onClose();
