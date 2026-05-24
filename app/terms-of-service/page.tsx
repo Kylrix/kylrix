@@ -99,10 +99,10 @@ export default function TermsOfServicePage() {
               </Box>
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
-                  Hosted Platform Telemetry Requirement
+                  Hosted Platform Performance Signals Requirement
                 </Typography>
                 <Typography sx={{ mt: 1, color: 'rgba(255,255,255,0.5)', fontSize: '0.95rem', lineHeight: 1.6, mb: 2 }}>
-                  To ensure maximum speed, crash detection, and overall system stability, our hosted cloud platform enforces basic, completely anonymized system telemetry. This functional metric gathering is a non-optional requirement of the provided online service.
+                  To ensure maximum speed, crash detection, and overall system stability, our hosted cloud platform enforces basic, completely anonymized system stability and diagnostic metrics. This functional metric gathering is a non-optional requirement of the provided online service.
                 </Typography>
                 
                 <Box sx={{ bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', p: 2.5 }}>
@@ -113,13 +113,13 @@ export default function TermsOfServicePage() {
                     <Stack direction="row" spacing={1.5}>
                       <Terminal size={18} style={{ color: '#818CF8', flexShrink: 0, marginTop: 2 }} />
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-                        <strong>Hosted Environment:</strong> Ideal for fast setup, automated workflows, and global sync. Anonymized performance telemetry is required here so we can actively resolve crashes and support dynamic workflow loads. If this is not suitable for your setup, our hosted platform is not a fit.
+                        <strong>Hosted Environment:</strong> Ideal for fast setup, automated workflows, and global sync. Anonymized system stability signals are required here so we can actively resolve crashes and support dynamic workflow loads. If this is not suitable for your setup, our hosted platform is not a fit.
                       </Typography>
                     </Stack>
                     <Stack direction="row" spacing={1.5}>
                       <GitFork size={18} style={{ color: '#10B981', flexShrink: 0, marginTop: 2 }} />
                       <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', lineHeight: 1.5 }}>
-                        <strong>Self-Hosted Liberty:</strong> You have the absolute right to fork our open-source codebase, entirely disable any built-in telemetry, and host your own isolated instance. This completely removes external network dependencies and telemetry signals.
+                        <strong>Self-Hosted Liberty:</strong> You have the absolute right to fork our open-source codebase, entirely disable any built-in performance or tracking metrics, and host your own isolated instance. This completely removes external network dependencies and stability signals.
                       </Typography>
                     </Stack>
                   </Stack>
