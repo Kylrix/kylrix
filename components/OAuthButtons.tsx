@@ -36,15 +36,17 @@ const providers = [
 
 interface OAuthButtonsProps {
   disabled?: boolean;
+  lastUsed?: string | null;
 }
 
-export default function OAuthButtons({ disabled }: OAuthButtonsProps) {
+export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (provider: OAuthProvider) => {
     setLoading(true);
     setError(null);
+    localStorage.setItem('kylrix_last_auth_method', provider);
 
     try {
       const success = `${window.location.origin}/`;
@@ -71,39 +73,52 @@ export default function OAuthButtons({ disabled }: OAuthButtonsProps) {
       )}
 
       <Stack spacing={1.5}>
-        {providers.map((provider) => (
-          <Button
-            key={provider.id}
-            onClick={() => handleLogin(provider.id)}
-            disabled={disabled || loading}
-            fullWidth
-            startIcon={provider.icon}
-            sx={{
-              backgroundColor: provider.bgColor,
-              color: provider.textColor,
-              border: `1px solid ${provider.borderColor}`,
-              fontSize: '0.9rem',
-              fontWeight: 800,
-              textTransform: 'none',
-              height: 52,
-              borderRadius: '16px',
-              fontFamily: 'var(--font-satoshi)',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              '&:hover': {
+        {providers.map((provider) => {
+          const isLastUsed = lastUsed === provider.id;
+          return (
+            <Button
+              key={provider.id}
+              onClick={() => handleLogin(provider.id)}
+              disabled={disabled || loading}
+              fullWidth
+              startIcon={provider.icon}
+              sx={{
+                position: 'relative',
                 backgroundColor: provider.bgColor,
-                transform: 'translateY(-2px)',
-                boxShadow: `0 8px 24px rgba(0,0,0,0.4)`,
-                opacity: 0.9,
-              },
-              '&:disabled': {
-                opacity: 0.5,
-              },
-            }}
-          >
-            {loading ? <CircularProgress size={20} sx={{ mr: 1, color: 'inherit' }} /> : null}
-            Continue with {provider.name}
-          </Button>
-        ))}
+                color: provider.textColor,
+                border: `1px solid ${provider.borderColor}`,
+                fontSize: isLastUsed ? '0.95rem' : '0.9rem',
+                fontWeight: 800,
+                textTransform: 'none',
+                height: isLastUsed ? 60 : 52,
+                borderRadius: '16px',
+                fontFamily: 'var(--font-satoshi)',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                ...(isLastUsed && {
+                  boxShadow: `0 8px 24px rgba(255,255,255,0.05)`,
+                  borderColor: 'rgba(255,255,255,0.3)'
+                }),
+                '&:hover': {
+                  backgroundColor: provider.bgColor,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 8px 24px rgba(0,0,0,0.4)`,
+                  opacity: 0.9,
+                },
+                '&:disabled': {
+                  opacity: 0.5,
+                },
+              }}
+            >
+              {loading ? <CircularProgress size={20} sx={{ mr: 1, color: 'inherit' }} /> : null}
+              <Box sx={{ flexGrow: 1, textAlign: 'left', pl: 1 }}>Continue with {provider.name}</Box>
+              {isLastUsed && (
+                <Typography variant="caption" sx={{ position: 'absolute', right: 16, fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', color: provider.textColor, opacity: 0.6 }}>
+                  Last Used
+                </Typography>
+              )}
+            </Button>
+          );
+        })}
       </Stack>
     </Box>
   );

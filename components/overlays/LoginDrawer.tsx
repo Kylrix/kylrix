@@ -33,8 +33,15 @@ export function LoginDrawer() {
   const [mfaChallengeId, setMfaChallengeId] = useState('');
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(false);
+  const [lastUsedMethod, setLastUsedMethod] = useState<string | null>(null);
 
   const isOpen = activeContent === 'login';
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setLastUsedMethod(localStorage.getItem('kylrix_last_auth_method'));
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -67,6 +74,9 @@ export function LoginDrawer() {
     if (e) e.preventDefault();
     if (!email) return;
     setLoading(true);
+    localStorage.setItem('kylrix_last_auth_method', 'email');
+    setLastUsedMethod('email');
+
     try {
       const id = await loginWithEmailOTP(email);
       setUserId(id as any);
@@ -153,6 +163,7 @@ export function LoginDrawer() {
   const renderStep = () => {
     switch (step) {
       case 'initial':
+        const isEmailLastUsed = lastUsedMethod === 'email';
         return (
           <Stack spacing={2}>
             {checkingSession ? (
@@ -160,7 +171,7 @@ export function LoginDrawer() {
                 <CircularProgress size={20} />
               </Box>
             ) : (
-              <OAuthButtons disabled={loading || checkingSession} />
+              <OAuthButtons disabled={loading || checkingSession} lastUsed={lastUsedMethod} />
             )}
             <Button
               fullWidth
@@ -169,18 +180,29 @@ export function LoginDrawer() {
               disabled={checkingSession}
               startIcon={<Mail size={18} />}
               sx={{
+                position: 'relative',
                 bgcolor: 'rgba(255,255,255,0.03)',
                 color: 'white',
                 border: '1px solid #34322F',
-                height: 52,
+                height: isEmailLastUsed ? 60 : 52,
                 borderRadius: '16px',
                 fontWeight: 800,
                 textTransform: 'none',
+                fontSize: isEmailLastUsed ? '0.95rem' : '0.9rem',
                 fontFamily: 'var(--font-satoshi)',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)' }
+                ...(isEmailLastUsed && {
+                  boxShadow: `0 8px 24px rgba(255,255,255,0.05)`,
+                  borderColor: 'rgba(255,255,255,0.3)'
+                }),
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.2)', transform: isEmailLastUsed ? 'translateY(-2px)' : 'none' }
               }}
             >
-              Continue with Email
+              <Box sx={{ flexGrow: 1, textAlign: 'left', pl: 1 }}>Continue with Email</Box>
+              {isEmailLastUsed && (
+                <Typography variant="caption" sx={{ position: 'absolute', right: 16, fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'white', opacity: 0.6 }}>
+                  Last Used
+                </Typography>
+              )}
             </Button>
           </Stack>
         );

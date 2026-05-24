@@ -221,6 +221,9 @@ export default function FormsDashboard() {
                 <Tabs 
                     value={tabValue} 
                     onChange={(_, v) => setTabValue(v)}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    allowScrollButtonsMobile
                     sx={{
                         '& .MuiTab-root': { fontWeight: 800, fontSize: '0.85rem', color: 'text.secondary', px: 3 },
                         '& .Mui-selected': { color: 'var(--color-primary) !important' },
