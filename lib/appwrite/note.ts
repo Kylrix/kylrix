@@ -483,6 +483,27 @@ export async function getEmailVerificationStatus(): Promise<boolean> {
 export async function getPinnedNoteIds(): Promise<string[]> {
   try {
     const user = await account.get();
+    
+    // Primary: fetch from database using native column
+    try {
+        const res = await databases.listDocuments(
+            APPWRITE_DATABASE_ID,
+            APPWRITE_TABLE_ID_NOTES,
+            [
+                Query.equal('userId', user.$id),
+                Query.equal('isPinned', true),
+                Query.limit(100),
+                Query.select(['$id'])
+            ]
+        );
+        if (res.documents.length > 0) {
+            return res.documents.map(d => d.$id);
+        }
+    } catch (dbErr) {
+        console.warn('[getPinnedNoteIds] Native fetch failed, falling back to prefs:', dbErr);
+    }
+
+    // Fallback: use account preferences (legacy)
     return (user.prefs?.pinnedNoteIds || []) as string[];
   } catch {
     return [];
