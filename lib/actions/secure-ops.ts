@@ -1634,6 +1634,40 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     });
   }
 
+  // 3. E2E Private Chat Group Member Auto-Sync
+  if (metadata && metadata.encryptedGroupId) {
+    try {
+      const convId = metadata.encryptedGroupId;
+      const existingMembers = await tables.listRows({
+        databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+        tableId: 'conversationMembers',
+        queries: [
+          Query.equal('conversationId', convId),
+          Query.equal('userId', targetUserId)
+        ] as any
+      }).catch(() => ({ rows: [] }));
+
+      if (existingMembers.rows.length === 0) {
+        const memberPerms = [
+          Permission.read(Role.user(actor.$id)),
+          Permission.read(Role.user(targetUserId))
+        ];
+        await tables.createRow({
+          databaseId: APPWRITE_CONFIG.DATABASES.CONNECT,
+          tableId: 'conversationMembers',
+          rowId: ID.unique(),
+          data: {
+            conversationId: convId,
+            userId: targetUserId,
+          },
+          permissions: memberPerms
+        });
+      }
+    } catch (e) {
+      console.warn('[addProjectCollaboratorSecure] Failed to sync to E2E project group:', e);
+    }
+  }
+
   return JSON.parse(JSON.stringify(objLink));
 }
 
