@@ -15,6 +15,7 @@ import {
 import { Plus, X } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { usePathname } from 'next/navigation';
+import { useLocalContext } from '@/lib/context-engine';
 
 export default function UniversalFAB() {
   const { config } = useFAB();
@@ -27,6 +28,27 @@ export default function UniversalFAB() {
   if (!config.isVisible) return null;
 
   const { actions, mainIcon, mainColor, onMainClick } = config;
+  const { isRecording, startRecording, stopRecording, currentWorkflow } = useLocalContext();
+
+  const workflowAction = isRecording ? {
+    id: 'workflow_stop',
+    label: `Stop Recording (${currentWorkflow.length} Steps)`,
+    icon: <X size={20} style={{ color: '#EF4444' }} />,
+    onClick: () => {
+      const name = prompt("Name your workflow:") || "Custom Automated Workflow";
+      const desc = prompt("Workflow description:") || "Recorded chain of actions in Kylrix";
+      stopRecording(name, desc, 'workspace');
+    }
+  } : {
+    id: 'workflow_start',
+    label: 'Record Action Chain',
+    icon: <Plus size={20} style={{ color: '#10B981' }} />,
+    onClick: () => {
+      startRecording();
+    }
+  };
+
+  const speedDialActions = [...actions, workflowAction];
 
   // If we have a custom main click handler, don't use SpeedDial behavior
   if (onMainClick && actions.length === 0) {
@@ -125,7 +147,7 @@ export default function UniversalFAB() {
         open={isExpanded}
         direction="up"
       >
-        {actions.map((action) => (
+        {speedDialActions.map((action) => (
           <SpeedDialAction
             key={action.id}
             icon={action.icon}
