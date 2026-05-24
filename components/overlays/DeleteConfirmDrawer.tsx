@@ -42,7 +42,7 @@ export function DeleteConfirmDrawer() {
   };
 
   return (
-    <Box sx={{ p: { xs: 3, md: 4 }, bgcolor: '#0A0908', color: '#fff' }}>
+    <Box sx={{ p: { xs: 3, md: 4 }, bgcolor: 'transparent', color: '#fff' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: alpha('#EF4444', 0.1), color: '#EF4444' }}>

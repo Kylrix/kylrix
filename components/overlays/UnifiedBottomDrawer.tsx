@@ -75,7 +75,7 @@ export function UnifiedBottomDrawer() {
             onClose={close}
             PaperProps={{
                 sx: {
-                    bgcolor: '#0A0908',
+                    bgcolor: '#161412',
                     borderTop: '1px solid rgba(255,255,255,0.08)',
                     borderRadius: '32px 32px 0 0',
                     maxHeight: '90dvh',

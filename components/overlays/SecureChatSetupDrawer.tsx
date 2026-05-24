@@ -87,7 +87,7 @@ export function SecureChatSetupDrawer() {
   const isComplete = hasUsername && hasMasterpass && hasIdentity;
 
   return (
-    <Box sx={{ p: { xs: 3, md: 4 }, bgcolor: '#0A0908', color: '#fff', minHeight: '400px' }}>
+    <Box sx={{ p: { xs: 3, md: 4 }, bgcolor: 'transparent', color: '#fff', minHeight: '400px' }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
         <Stack direction="row" spacing={2} alignItems="center">
           <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B' }}>
