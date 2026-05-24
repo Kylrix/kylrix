@@ -36,7 +36,8 @@ import {
   createGhostNoteForCallSecure,
   createRowSecure,
   updateRowSecure,
-  deleteRowSecure
+  deleteRowSecure,
+  convertResponseToGoalSecure
 } from './secure-ops';
 
 // Helper to fetch JWT securely from client-side SDK
@@ -233,5 +234,10 @@ export async function updateRow(databaseId: string, tableId: string, rowId: stri
 export async function deleteRow(databaseId: string, tableId: string, rowId: string) {
   const jwt = await getJwt();
   return deleteRowSecure(databaseId, tableId, rowId, jwt);
+}
+
+export async function convertResponseToGoal(submissionId: string) {
+  const jwt = await getJwt();
+  return convertResponseToGoalSecure(submissionId, jwt);
 }
 

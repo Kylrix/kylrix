@@ -1,6 +1,4 @@
-'use client';
-
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -10,7 +8,8 @@ import {
   Divider,
   Chip,
   Paper,
-  alpha
+  alpha,
+  Button
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -20,6 +19,9 @@ import {
   Flag as FlagIcon,
   ContentPaste as DataIcon
 } from '@mui/icons-material';
+import { useToast } from '@/components/ui/Toast';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { convertResponseToGoal } from '@/lib/actions/client-ops';
 
 interface ResponseDetailSidebarProps {
   open: boolean;
@@ -29,7 +31,40 @@ interface ResponseDetailSidebarProps {
 }
 
 export default function ResponseDetailSidebar({ open, onClose, submission, schemaMap }: ResponseDetailSidebarProps) {
+  const { open: openDrawer } = useUnifiedDrawer();
+  const { showSuccess, showError } = useToast();
+  const [converting, setConverting] = useState(false);
+
   if (!submission) return null;
+
+  const handleConvertToProject = () => {
+    onClose();
+    openDrawer('new-project', {
+      template: {
+        id: 'form-to-project',
+        title: 'Project Discussion',
+        summary: `Discussion thread based on Response ${submission.$id.slice(-8)}`,
+        color: '#6366F1'
+      },
+      formId: submission.formId,
+      formTitle: `Discussion: Response ${submission.$id.slice(-8)}`,
+      formDescription: `Discussion thread spawned from form submission ID ${submission.$id.slice(-8)}`,
+      selectedResourceId: submission.formId
+    });
+  };
+
+  const handleConvertToGoal = async () => {
+    setConverting(true);
+    try {
+      await convertResponseToGoal(submission.$id);
+      showSuccess('Converted response to Execution Goal!');
+      onClose();
+    } catch (err: any) {
+      showError('Failed to convert response', err.message);
+    } finally {
+      setConverting(false);
+    }
+  };
 
   let data = {};
   try {
@@ -181,6 +216,49 @@ export default function ResponseDetailSidebar({ open, onClose, submission, schem
                   </Paper>
                 </Box>
               ))}
+            </Stack>
+          </Box>
+
+          {/* Workflow Actions */}
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 900, mb: 1.5, display: 'block', letterSpacing: '0.1em' }}>WORKFLOW ACTIONS</Typography>
+            <Stack spacing={1.5}>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleConvertToProject}
+                sx={{
+                  bgcolor: '#6366F1',
+                  color: '#fff',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  py: 1.25,
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  boxShadow: 'none',
+                  '&:hover': { bgcolor: '#575CF0' }
+                }}
+              >
+                Convert to Project Thread
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                disabled={converting}
+                onClick={handleConvertToGoal}
+                sx={{
+                  color: '#EC4899',
+                  borderColor: 'rgba(236, 72, 153, 0.3)',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  py: 1.25,
+                  borderRadius: 3,
+                  textTransform: 'none',
+                  '&:hover': { borderColor: '#EC4899', bgcolor: 'rgba(236, 72, 153, 0.05)' }
+                }}
+              >
+                {converting ? 'Converting...' : 'Convert to Execution Goal'}
+              </Button>
             </Stack>
           </Box>
         </Stack>

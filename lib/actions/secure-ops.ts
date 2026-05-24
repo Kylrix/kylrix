@@ -3307,4 +3307,90 @@ export async function getFilePreviewSecure(bucketId: string, fileId: string, wid
   }
 }
 
+export async function convertResponseToGoalSecure(submissionId: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const tables = createSystemTablesDB();
+  const submission = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: 'formSubmissions',
+    rowId: submissionId
+  });
+
+  if (!submission) {
+    throw new Error('Submission not found');
+  }
+
+  // Parse payload to build a nice description
+  let payload: any = {};
+  try {
+    payload = JSON.parse(submission.payload);
+  } catch {
+    payload = { data: submission.payload };
+  }
+
+  let desc = `Derived from Form Response ${submission.$id.slice(-8)} submitted by ${submission.submitterName || 'Anonymous'}.\n\n`;
+  for (const [k, v] of Object.entries(payload)) {
+    desc += `**${k.toUpperCase()}**: ${Array.isArray(v) ? v.join(', ') : String(v)}\n`;
+  }
+
+  const now = new Date().toISOString();
+  const permissions = [Permission.read(Role.user(actor.$id))];
+  
+  // Create task in whisperrflow
+  const task = await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: 'tasks',
+    rowId: ID.unique(),
+    data: {
+      title: `Action: Form Response ${submission.$id.slice(-8)}`,
+      description: desc,
+      status: 'todo',
+      priority: 'high',
+      userId: actor.$id,
+      createdAt: now,
+      updatedAt: now,
+      metadata: JSON.stringify({ origin: 'form_response', submissionId: submission.$id, formId: submission.formId })
+    },
+    permissions: permissions
+  });
+
+  // Link task to parent projects if the form is linked to any
+  try {
+    const parentLinks = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: 'project_objects',
+      queries: [
+        Query.equal('entityId', submission.formId),
+        Query.equal('entityKind', 'form')
+      ] as any
+    });
+
+    for (const link of parentLinks.rows) {
+      await tables.createRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: 'project_objects',
+        rowId: ID.unique(),
+        data: {
+          projectId: link.projectId,
+          entityKind: 'goal',
+          entityId: task.$id,
+          role: 'member',
+          createdAt: now,
+          updatedAt: now,
+          isGeneral: true // Default project internal eyes-on visibility flag
+        },
+        permissions: permissions
+      });
+    }
+  } catch (err) {
+    console.error('Failed to link converted goal to parent projects:', err);
+  }
+
+  return JSON.parse(JSON.stringify(task));
+}
+
 

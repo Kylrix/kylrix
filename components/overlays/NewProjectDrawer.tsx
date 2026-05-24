@@ -161,9 +161,10 @@ export function NewProjectDrawer() {
         title: title.trim(),
         summary: summary.trim(),
         visibility,
+        isPublic: visibility === 'public',
         status: 'active',
         metadata: JSON.stringify(metadata)
-      });
+      } as any);
 
       // 3. Post-Creation Magic (Under the hood)
       if (selectedResourceId) {
@@ -181,7 +182,7 @@ export function NewProjectDrawer() {
                   priority: 'high',
                   userId: user.$id,
                   metadata: JSON.stringify({ origin: 'template_automation', sourceId: selectedResourceId })
-              });
+              } as any);
           }
       }
 
