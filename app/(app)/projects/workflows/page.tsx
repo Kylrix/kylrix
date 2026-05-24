@@ -173,9 +173,9 @@ export default function WorkflowsPage() {
           </Button>
         </Paper>
       ) : (
-        <Grid container spacing={3}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {workflowsList.map((wf) => (
-            <Grid item xs={12} key={wf.id}>
+            <Box key={wf.id}>
               <Paper
                 elevation={0}
                 sx={{
@@ -298,9 +298,9 @@ export default function WorkflowsPage() {
                   ))}
                 </Box>
               </Paper>
-            </Grid>
+            </Box>
           ))}
-        </Grid>
+        </Box>
       )}
     </Box>
   );
