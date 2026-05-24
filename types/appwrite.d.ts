@@ -159,6 +159,17 @@ export enum CollaboratorsStatus {
     REVOKED = "revoked"
 }
 
+export enum ActionThreadsStatus {
+    RUNNING = "running",
+    COMPLETED = "completed",
+    FAILED = "failed"
+}
+
+export enum NotificationsType {
+    DIRECT = "direct",
+    SUGGESTED = "suggested"
+}
+
 export type Notes = Models.Row & {
     id: string | null;
     createdAt: string | null;
@@ -517,6 +528,8 @@ export type Moments = Models.Row & {
     momentKind: string | null;
     sourceId: string | null;
     searchTitle: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type Calls = Models.Row & {
@@ -528,6 +541,8 @@ export type Calls = Models.Row & {
     metadata: string | null;
     receiverId: string | null;
     conversationId: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type Epochs = Models.Row & {
@@ -551,6 +566,10 @@ export type Profiles = Models.Row & {
     status: string;
     preferences: string | null;
     userId: string;
+    isPublic: boolean;
+    isGuest: boolean;
+    isAvatar: boolean;
+    isContact: boolean;
 }
 
 export type MessageReactions = Models.Row & {
@@ -692,6 +711,8 @@ export type Projects = Models.Row & {
     metadata: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type ProjectObjects = Models.Row & {
@@ -703,6 +724,9 @@ export type ProjectObjects = Models.Row & {
     metadata: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    isGeneral: boolean | null;
 }
 
 export type TelegramConnections = Models.Row & {
@@ -719,6 +743,8 @@ export type FocusSessions = Models.Row & {
     endTime: string | null;
     duration: number;
     status: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type EventGuests = Models.Row & {
@@ -727,6 +753,8 @@ export type EventGuests = Models.Row & {
     email: string | null;
     status: string;
     role: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type Events = Models.Row & {
@@ -743,6 +771,8 @@ export type Events = Models.Row & {
     recurrenceRule: string | null;
     calendarId: string;
     userId: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type Calendars = Models.Row & {
@@ -750,6 +780,8 @@ export type Calendars = Models.Row & {
     color: string;
     isDefault: boolean;
     userId: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type Tasks = Models.Row & {
@@ -765,6 +797,8 @@ export type Tasks = Models.Row & {
     eventId: string | null;
     userId: string;
     parentId: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type Forms = Models.Row & {
@@ -775,6 +809,8 @@ export type Forms = Models.Row & {
     settings: string | null;
     status: FormsStatus;
     visibility: FormsVisibility;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type FormSubmissions = Models.Row & {
@@ -783,6 +819,8 @@ export type FormSubmissions = Models.Row & {
     payload: string;
     status: FormSubmissionsStatus;
     metadata: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type Agents = Models.Row & {
@@ -791,6 +829,8 @@ export type Agents = Models.Row & {
     publicKey: string;
     config: string;
     status: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
 }
 
 export type Collaborators = Models.Row & {
@@ -813,4 +853,65 @@ export type UserKeys = Models.Row & {
     encrypted_key: string;
     iv: string;
     config: string | null;
+}
+
+export type ComputeBalances = Models.Row & {
+    userId: string;
+    tier: string;
+    balance: number;
+    lastResetAt: string | null;
+}
+
+export type ComputeLedger = Models.Row & {
+    userId: string;
+    tokensConsumed: number;
+    timestamp: string;
+}
+
+export type ActionThreads = Models.Row & {
+    threadId: string;
+    parentThreadId: string | null;
+    niche: string;
+    app: string;
+    status: ActionThreadsStatus;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type AppActivityLogs = Models.Row & {
+    userId: string;
+    niche: string;
+    app: string;
+    action: string;
+    threadId: string | null;
+    metadata: string | null;
+}
+
+export type AnonymizedTelemetry = Models.Row & {
+    niche: string;
+    app: string;
+    action: string;
+    intent: string | null;
+    threadId: string | null;
+    metadata: string | null;
+}
+
+export type Notifications = Models.Row & {
+    originatorId: string;
+    targets: string[];
+    targetPointer: string | null;
+    type: NotificationsType;
+    metadata: string | null;
+}
+
+export type Workflows = Models.Row & {
+    workflowId: string;
+    name: string;
+    description: string | null;
+    niche: string;
+    isPublic: boolean;
+    isAnonymized: boolean;
+    steps: string;
+    metadata: string | null;
+    isGuest: boolean | null;
 }

@@ -85,6 +85,13 @@ tableIdMap["whisperrflow"]["formSubmissions"] = "formSubmissions";
 tableIdMap["whisperrflow"]["agents"] = "agents";
 tableIdMap["whisperrflow"]["Collaborators"] = "Collaborators";
 tableIdMap["whisperrflow"]["user_keys"] = "user_keys";
+tableIdMap["whisperrflow"]["compute_balances"] = "compute_balances";
+tableIdMap["whisperrflow"]["compute_ledger"] = "compute_ledger";
+tableIdMap["whisperrflow"]["action_threads"] = "action_threads";
+tableIdMap["whisperrflow"]["app_activity_logs"] = "app_activity_logs";
+tableIdMap["whisperrflow"]["anonymized_telemetry"] = "anonymized_telemetry";
+tableIdMap["whisperrflow"]["notifications"] = "notifications";
+tableIdMap["whisperrflow"]["workflows"] = "workflows";
 
 const tablesWithRelationships = new Set<string>();
 

@@ -3718,6 +3718,20 @@
                     "size": 1024,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -3787,6 +3801,32 @@
                     ],
                     "orders": [
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_moments_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_moments_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -3871,6 +3911,20 @@
                     "size": 255,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -3929,6 +3983,32 @@
                     ],
                     "orders": [
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_calls_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_calls_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -4149,6 +4229,34 @@
                     "size": 36,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "isAvatar",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "isContact",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
                 }
             ],
             "indexes": [
@@ -4194,6 +4302,58 @@
                     ],
                     "orders": [
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_profiles_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_profiles_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_profiles_avatar",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isAvatar"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_profiles_contact",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isContact"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -5768,6 +5928,20 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -5805,6 +5979,32 @@
                         "visibility"
                     ],
                     "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_projects_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
                         "ASC"
                     ]
                 }
@@ -5887,6 +6087,27 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGeneral",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -5927,6 +6148,45 @@
                     ],
                     "orders": [
                         "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_po_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "projectId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_po_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "projectId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_po_general",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "projectId",
+                        "isGeneral"
+                    ],
+                    "orders": [
                         "ASC",
                         "ASC"
                     ]
@@ -6039,9 +6299,50 @@
                     "size": 20,
                     "default": "completed",
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "idx_focusSessions_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_focusSessions_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "eventGuests",
@@ -6095,6 +6396,20 @@
                     "size": 20,
                     "default": "guest",
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -6109,6 +6424,32 @@
                     "orders": [
                         "asc",
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_eventGuests_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_eventGuests_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -6235,6 +6576,20 @@
                     "size": 36,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -6258,6 +6613,32 @@
                     ],
                     "orders": [
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_events_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_events_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -6303,6 +6684,20 @@
                     "size": 36,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -6315,6 +6710,32 @@
                     ],
                     "orders": [
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_calendars_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_calendars_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -6433,6 +6854,20 @@
                     "size": 36,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -6445,6 +6880,32 @@
                     ],
                     "orders": [
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_tasks_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tasks_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -6554,6 +7015,32 @@
                     "orders": [
                         "ASC"
                     ]
+                },
+                {
+                    "key": "idx_forms_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_forms_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
                 }
             ]
         },
@@ -6616,6 +7103,20 @@
                     "size": 65535,
                     "default": null,
                     "encrypt": true
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -6654,6 +7155,32 @@
                     "orders": [
                         "asc",
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_submissions_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "formId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_submissions_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "formId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
                     ]
                 }
             ]
@@ -6710,6 +7237,20 @@
                     "size": 20,
                     "default": "idle",
                     "encrypt": false
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -6732,6 +7273,32 @@
                         "parentId"
                     ],
                     "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_agents_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId",
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_agents_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "ownerId",
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC",
                         "ASC"
                     ]
                 }
@@ -7125,6 +7692,20 @@
                         "completed",
                         "failed"
                     ]
+                },
+                {
+                    "key": "isPublic",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7145,6 +7726,28 @@
                     "status": "available",
                     "columns": [
                         "parentThreadId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_action_threads_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_action_threads_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isGuest"
                     ],
                     "orders": [
                         "ASC"
@@ -7475,6 +8078,13 @@
                     "size": 65535,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isGuest",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7495,6 +8105,28 @@
                         "isPublic"
                     ],
                     "orders": []
+                },
+                {
+                    "key": "idx_workflows_public",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isPublic"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_workflows_guest",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isGuest"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
                 }
             ]
         }
