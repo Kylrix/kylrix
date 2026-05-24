@@ -6,6 +6,7 @@ import { getActor } from "@/lib/actions/secure-ops";
 import { hasPaidKylrixPlan } from "@/lib/utils";
 import { createSystemTablesDB } from "@/lib/appwrite-admin";
 import { Query, ID } from "node-appwrite";
+import { TelemetryService } from "@/lib/services/telemetry";
 
 const MODEL_NAME = process.env.GEMINI_MODEL_NAME || "gemini-2.0-flash";
 
@@ -20,9 +21,15 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
   let tables: any = null;
   let balanceRow: any = null;
 
+  // Resolve actor for logging and gating checks
+  try {
+    actor = await getActor();
+  } catch (e) {
+    console.error('[AI getActor Exception]', e);
+  }
+
   // Compute checking for ecosystem users (non-BYOK)
   if (!isBYOK) {
-    actor = await getActor();
     if (!actor) {
       return { success: false, error: "Please log in to use ecosystem AI services." };
     }
@@ -185,6 +192,38 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
       } catch (err) {
         console.error('[AI Billing Debit Exception]', err);
       }
+    }
+
+    // Record Telemetry and Activity Logs
+    try {
+      // 1. Anonymized Telemetry
+      await TelemetryService.recordTelemetry({
+        niche: 'intelligence',
+        app: 'gemini',
+        action: 'generate_content',
+        intent: payload.mode,
+        metadata: {
+          isBYOK,
+          promptLength: prompt.length,
+          responseLength: text.length
+        }
+      });
+
+      // 2. Identified User Activity
+      if (actor?.$id) {
+        await TelemetryService.recordActivity({
+          userId: actor.$id,
+          niche: 'intelligence',
+          app: 'gemini',
+          action: 'generate_content',
+          metadata: {
+            mode: payload.mode,
+            isBYOK
+          }
+        });
+      }
+    } catch (telemetryErr) {
+      console.error('[AI Telemetry Recording Exception]', telemetryErr);
     }
 
     return { success: true, data: text };
