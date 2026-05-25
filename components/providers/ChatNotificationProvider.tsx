@@ -216,7 +216,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         if (!user?.$id) return;
 
         // 1. Subscribe to NEW messages across all conversations
-        const chatChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${...}.documents`;
+        const chatChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.COLLECTIONS.CHAT.MESSAGES}.documents`;
         
         const unsubChat = realtime.subscribe([chatChannel], (response) => {
             if (response.events.some(e => e.includes('.create'))) {
