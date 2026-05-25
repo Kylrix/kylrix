@@ -2,6 +2,7 @@
 
 import { Box, Typography, alpha } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { UserPresenceState } from '@/lib/services/presence';
 
 const RING_COLORS = ['#6366F1', '#EC4899', '#10B981', '#A855F7', '#F59E0B'];
 const RING_GRADIENT = `conic-gradient(from 180deg, ${RING_COLORS.join(', ')}, #6366F1)`;
@@ -40,6 +41,7 @@ export function IdentityAvatar({
   verifiedSize = 16,
   borderRadius = '50%',
   isPreview = false,
+  status,
 }: {
   src?: string | null;
   alt?: string;
@@ -50,7 +52,16 @@ export function IdentityAvatar({
   verifiedSize?: number;
   borderRadius?: string | number;
   isPreview?: boolean;
+  status?: UserPresenceState;
 }) {
+  const getStatusColor = (s: UserPresenceState) => {
+      switch (s) {
+          case 'online': return '#10B981';
+          case 'away': return '#F59E0B';
+          case 'busy': return '#EC4899';
+          default: return 'transparent';
+      }
+  };
   const avatar = (
     <Box
       sx={{
@@ -107,7 +118,23 @@ export function IdentityAvatar({
           {fallback || 'U'}
         </Box>
       )}
+      {status && status !== 'offline' && (
+          <Box 
+              sx={{
+                  position: 'absolute',
+                  right: -1,
+                  bottom: -1,
+                  width: Math.max(10, size / 4),
+                  height: Math.max(10, size / 4),
+                  borderRadius: '50%',
+                  bgcolor: getStatusColor(status),
+                  border: '2px solid #161412',
+                  zIndex: 3
+              }}
+          />
+      )}
       {verified && (
+
         <Box
           sx={{
             position: 'absolute',

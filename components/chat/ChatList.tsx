@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { UsersService } from '@/lib/services/users';
 import { tablesDB, realtime  } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { usePresence } from '../providers/PresenceProvider';
 import {
     List,
     ListItem,
@@ -721,6 +722,7 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
                                                 fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U'}
                                                 size={48}
                                                 pro={conv.isSelf}
+                                                status={conv.type === 'direct' ? globalPresence[conv.otherUserId]?.state : undefined}
                                             />
                                         </Box>
                                     <ListItemText

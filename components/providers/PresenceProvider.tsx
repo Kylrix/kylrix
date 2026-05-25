@@ -1,91 +1,123 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useState, useRef } from 'react';
 import { useAuth } from '@/lib/auth';
-import { ActivityService } from '@/lib/services/activity';
-import { realtime } from '@/lib/appwrite/client';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { useDataNexus } from '@/context/DataNexusContext';
+import { PresenceService, UserPresenceState, PresencePayload } from '@/lib/services/presence';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
 
-const PresenceContext = createContext<{
-    getPresence: (userId: string) => Promise<any>;
-    presence: Record<string, any>;
-}>({
-    getPresence: async () => null,
-    presence: {}
-});
+interface PresenceContextType {
+    globalPresence: Record<string, PresencePayload>;
+    resourcePresence: Record<string, PresencePayload[]>;
+    joinResource: (databaseId: string, collectionId: string, documentId: string) => () => void;
+    setMyState: (state: UserPresenceState, activity?: string) => void;
+}
+
+const PresenceContext = createContext<PresenceContextType | undefined>(undefined);
 
 export const PresenceProvider = ({ children }: { children: React.ReactNode }) => {
     const { user } = useAuth();
-    const { fetchOptimized, setCachedData } = useDataNexus();
-    const [presence, setPresence] = React.useState<Record<string, any>>({});
+    const [globalPresence, setGlobalPresence] = useState<Record<string, PresencePayload>>({});
+    const [resourcePresence, setResourcePresence] = useState<Record<string, PresencePayload[]>>({});
+    
+    // Active subscriptions tracker to avoid redundant pings
+    const activeResourcesRef = useRef<Set<string>>(new Set());
 
+    const setMyState = useCallback(async (state: UserPresenceState, activity?: string) => {
+        if (!user?.$id) return;
+        
+        // Broadcast to global channel
+        await PresenceService.broadcastState('users', {
+            userId: user.$id,
+            state,
+            activity,
+            lastSeen: new Date().toISOString()
+        });
+
+        // Also broadcast to all active resources
+        for (const resourceKey of activeResourcesRef.current) {
+            await PresenceService.broadcastState(resourceKey, {
+                userId: user.$id,
+                state,
+                activity
+            });
+        }
+    }, [user?.$id]);
+
+    // Handle online/offline lifecycle
     useEffect(() => {
-        if (!user) return;
+        if (!user?.$id) return;
 
-        // Subscribe to presence updates
-        const unsub = (realtime as any).subscribe(
-            [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.rows`],
-            (response: any) => {
-                const payload = response.payload;
-                if (payload.userId) {
-                    setPresence(prev => ({
-                        ...prev,
-                        [payload.userId]: payload
-                    }));
-                    // Update cache as well to keep it fresh
-                    setCachedData(`presence_${payload.userId}`, payload, 1000 * 60 * 5);
-                }
-            }
-        );
+        // 1. Subscribe to global presence
+        const unsubGlobal = PresenceService.subscribeToPresence('users', (payload: PresencePayload) => {
+            setGlobalPresence(prev => ({
+                ...prev,
+                [payload.userId]: payload
+            }));
+        });
 
-        const updateStatus = (status: 'online' | 'offline' | 'away') => {
-            ActivityService.updatePresence(user.$id, status);
-        };
+        // 2. Initial state
+        setMyState('online');
 
-        // Mark as online
-        updateStatus('online');
-
-        // Periodically update lastSeen
-        const interval = setInterval(() => updateStatus('online'), 1000 * 60 * 2); // Every 2 mins
-
+        // 3. Handle visibility change (Away mode)
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                updateStatus('online');
-            } else {
-                updateStatus('away');
-            }
+            const state = document.visibilityState === 'visible' ? 'online' : 'away';
+            setMyState(state);
         };
 
         window.addEventListener('visibilitychange', handleVisibilityChange);
 
         return () => {
-            clearInterval(interval);
             window.removeEventListener('visibilitychange', handleVisibilityChange);
-            updateStatus('offline');
-            if (typeof unsub === 'function') (unsub)();
-            else (unsub)?.unsubscribe?.();
+            setMyState('offline');
+            if (typeof unsubGlobal === 'function') unsubGlobal();
+            else (unsubGlobal as any)?.unsubscribe?.();
         };
-    }, [user, setCachedData]);
+    }, [user?.$id, setMyState]);
 
-    const getPresence = useCallback(async (userId: string) => {
-        if (presence[userId]) return presence[userId];
+    const joinResource = useCallback((databaseId: string, collectionId: string, documentId: string) => {
+        if (!user?.$id) return () => {};
+
+        const channel = PresenceService.getResourceChannel(databaseId, collectionId, documentId);
         
-        // Use DataNexus to deduplicate and cache presence lookups
-        return await fetchOptimized(`presence_${userId}`, async () => {
-            const p = await ActivityService.getUserPresence(userId);
-            if (p) {
-                setPresence(prev => ({ ...prev, [userId]: p }));
-            }
-            return p;
-        }, 1000 * 60 * 5); // 5 minutes TTL for presence
-    }, [presence, fetchOptimized]);
+        // On-demand: only track if we haven't joined yet
+        activeResourcesRef.current.add(channel);
+        
+        const unsub = PresenceService.subscribeToPresence(channel, (payload: PresencePayload) => {
+            setResourcePresence(prev => {
+                const current = prev[documentId] || [];
+                const filtered = current.filter(p => p.userId !== payload.userId);
+                
+                if (payload.state === 'offline') {
+                    return { ...prev, [documentId]: filtered };
+                }
+
+                return {
+                    ...prev,
+                    [documentId]: [...filtered, payload]
+                };
+            });
+        });
+
+        // Announce myself to the resource
+        setMyState('online', `Viewing ${collectionId}`);
+
+        return () => {
+            activeResourcesRef.current.delete(channel);
+            setMyState('online'); // Reset to general online
+            if (typeof unsub === 'function') unsub();
+            else (unsub as any)?.unsubscribe?.();
+        };
+    }, [user?.$id, setMyState]);
 
     return (
-        <PresenceContext.Provider value={{ getPresence, presence }}>
+        <PresenceContext.Provider value={{ globalPresence, resourcePresence, joinResource, setMyState }}>
             {children}
         </PresenceContext.Provider>
     );
 };
 
-export const usePresence = () => useContext(PresenceContext);
+export const usePresence = () => {
+    const context = useContext(PresenceContext);
+    if (!context) throw new Error('usePresence must be used within a PresenceProvider');
+    return context;
+};

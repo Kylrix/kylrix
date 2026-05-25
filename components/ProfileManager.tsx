@@ -13,7 +13,9 @@ import {
   Alert,
   Stack,
   alpha,
-  IconButton
+  IconButton,
+  Switch,
+  FormControlLabel
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -99,6 +101,7 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
   const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
   const [isRemovingPic, setIsRemovingPic] = useState(false);
   const [profileRecord, setProfileRecord] = useState<any>(null);
+  const [isOnlineVisible, setIsOnlineVisible] = useState(true);
 
   useEffect(() => {
     loadUser();
@@ -112,6 +115,9 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
         const status = await AppwriteService.getGlobalProfileStatus(user.$id);
         if (!mounted) return;
         setProfileRecord(status?.profile || null);
+        if (status?.profile) {
+            setIsOnlineVisible(status.profile.isOnlineVisible !== false);
+        }
       } catch (_err) {
         // keep local render working if profile lookup fails
       }
@@ -279,6 +285,7 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
           displayName: name || updatedUser.name,
           bio: user.prefs?.bio || '',
           profilePicId: currentPrefs.profilePicId || null,
+          isOnlineVisible: isOnlineVisible,
         },
         metadata: {
           source: 'accounts.profile-manager',
@@ -509,11 +516,35 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
             )}
           </Box>
 
+          <Box>
+            <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 700, textTransform: 'uppercase', mb: 1, ml: 1, fontFamily: '"JetBrains Mono", monospace' }}>Privacy Settings</Typography>
+            <Paper sx={{ p: 2, bgcolor: 'rgba(255, 255, 255, 0.02)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <FormControlLabel
+                    control={
+                        <Switch 
+                            checked={isOnlineVisible}
+                            onChange={(e) => setIsOnlineVisible(e.target.checked)}
+                            sx={{
+                                '& .MuiSwitch-switchBase.Mui-checked': { color: brandIndigo },
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: brandIndigo },
+                            }}
+                        />
+                    }
+                    label={
+                        <Box>
+                            <Typography sx={{ color: 'white', fontWeight: 700, fontSize: '0.9rem' }}>Show Online Status</Typography>
+                            <Typography variant="caption" sx={{ color: '#9B9691', display: 'block' }}>Allow others to see when you are active in the ecosystem.</Typography>
+                        </Box>
+                    }
+                />
+            </Paper>
+          </Box>
+
           <Button
             variant="contained"
             startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
             onClick={handleSave}
-            disabled={saving || (name === user.name && username === (user.prefs?.username || '') && !profilePic)}
+            disabled={saving || (name === user.name && username === (user.prefs?.username || '') && isOnlineVisible === (profileRecord?.isOnlineVisible !== false) && !profilePic)}
             sx={{
               py: 2,
               borderRadius: '16px',

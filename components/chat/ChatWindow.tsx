@@ -7,6 +7,7 @@ import { ChatService } from '@/lib/services/chat';
 import { StorageService } from '@/lib/services/storage';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
+import { PresenceService } from '@/lib/services/presence';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { tablesDB, realtime } from '@/lib/appwrite/client';
@@ -307,13 +308,39 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
                 </IconButton>
 
                 <Box sx={{ flex: 1, position: 'relative' }}>
+                    {typingUsers.length > 0 && (
+                        <Box sx={{ position: 'absolute', top: -20, left: 16 }}>
+                            <Typography sx={{ fontSize: '0.65rem', fontWeight: 700, color: '#9B9691', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                {typingUsers.length === 1 ? 'someone' : `${typingUsers.length} people`} is typing...
+                            </Typography>
+                        </Box>
+                    )}
                     <TextField
+
                         fullWidth
                         multiline
                         maxRows={4}
                         placeholder="Encrypted payload..."
                         value={draft}
-                        onChange={(e) => setDraft(e.target.value)}
+                        onChange={(e) => {
+                            setDraft(e.target.value);
+                            
+                            // Broadcast typing status
+                            if (conversationId) {
+                                PresenceService.broadcastState(
+                                    PresenceService.getChatChannel(conversationId),
+                                    { state: 'online', activity: 'typing' }
+                                );
+
+                                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                                typingTimeoutRef.current = setTimeout(() => {
+                                    PresenceService.broadcastState(
+                                        PresenceService.getChatChannel(conversationId),
+                                        { state: 'online', activity: 'viewing' }
+                                    );
+                                }, 3000);
+                            }
+                        }}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault();
@@ -382,7 +409,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const { user } = useAuth();
     const { markConversationRead: markConversationReadInContext } = useChatNotifications();
     const { openCallLauncher } = useCallLauncher();
-    const { presence, getPresence } = usePresence() as any;
+    const { globalPresence, setMyState } = usePresence();
+    const [typingUsers, setTypingUsers] = useState<string[]>([]);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
     const [messages, setMessages] = useState<ChatMessage[]>([]);

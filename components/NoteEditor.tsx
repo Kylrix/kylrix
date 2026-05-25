@@ -18,12 +18,15 @@ import {
 import { Save as SaveIcon, Update as UpdateIcon } from '@mui/icons-material';
 import AttachmentsManager from '@/components/AttachmentsManager';
 import NoteContent from '@/components/NoteContent';
+import { IdentityAvatar } from './IdentityBadge';
 import { formatFileSize } from '@/lib/utils';
 import { getNote, getNotePublicState, toggleNoteVisibility } from '@/lib/appwrite';
 import { createNote, updateNote } from '@/lib/actions/client-ops';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { usePresence } from '@/components/providers/PresenceProvider';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 interface AttachmentMeta { id: string; name: string; size: number; mime: string | null; }
 
@@ -116,8 +119,20 @@ export default function NoteEditor({
   const effectiveNoteId = internalNoteId || externalNoteId;
   const { fetchOptimized, setCachedData, getCachedData } = useDataNexus();
   const { promptSudo } = useSudo();
+  const { joinResource, resourcePresence } = usePresence();
 
   useEffect(() => {
+      if (effectiveNoteId) {
+          return joinResource(
+              APPWRITE_CONFIG.DATABASES.NOTE,
+              APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+              effectiveNoteId
+          );
+      }
+  }, [effectiveNoteId, joinResource]);
+
+  useEffect(() => {
+
     if (externalNoteId && externalNoteId !== internalNoteId) {
       setInternalNoteId(externalNoteId);
 
@@ -331,10 +346,23 @@ export default function NoteEditor({
                 }}
               >
                 Public
-              </Button>
-            </Box>
-          </Box>
+                </Button>
+                </Box>
 
+                {/* Collaborator HUD */}
+                {effectiveNoteId && resourcePresence[effectiveNoteId]?.length > 0 && (
+                <Stack direction="row" spacing={-1} sx={{ ml: 2 }}>
+                    {resourcePresence[effectiveNoteId].map((p) => (
+                        <IdentityAvatar 
+                            key={p.userId}
+                            size={24}
+                            status={p.state}
+                            sx={{ border: '2px solid #161412' }}
+                        />
+                    ))}
+                </Stack>
+                )}
+                </Box>
           <Button
             variant="contained"
             onClick={handleSave}
