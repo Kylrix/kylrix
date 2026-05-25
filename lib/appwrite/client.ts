@@ -79,7 +79,7 @@ function parseTablesDBListArgs(args: any[]) {
 const databasesProxy = new Proxy(originalDatabases, {
     get(target: any, prop: string | symbol, receiver: any) {
         // Standardized method names (Primary)
-        if (prop === 'createRow' || prop === 'createRow') {
+        if (prop === 'createRow' || prop === 'createDocument') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
                 const payload = data ? { ...data } : {};
@@ -88,33 +88,28 @@ const databasesProxy = new Proxy(originalDatabases, {
                 return await createRowSecure(databaseId, tableId, payload, permissions);
             };
         }
-        if (prop === 'updateRow' || prop === 'updateRow') {
+        if (prop === 'updateRow' || prop === 'updateDocument') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
                 const { updateRowSecure } = await import('@/lib/actions/secure-ops');
                 return await updateRowSecure(databaseId, tableId, rowId, data, permissions);
             };
         }
-        if (prop === 'listRows' || prop === 'listRows') {
+        if (prop === 'listRows' || prop === 'listDocuments') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, queries } = parseTablesDBListArgs(args);
                 const { listRowsSecure } = await import('@/lib/actions/secure-ops');
-                const res = await listRowsSecure(databaseId, tableId, queries);
-                return { 
-                    total: res.total, 
-                    rows: res.rows,
-                    documents: res.rows 
-                };
+                return await listRowsSecure(databaseId, tableId, queries);
             };
         }
-        if (prop === 'getRow' || prop === 'getRow') {
+        if (prop === 'getRow' || prop === 'getDocument') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
                 const { getRowSecure } = await import('@/lib/actions/secure-ops');
                 return await getRowSecure(databaseId, tableId, rowId);
             };
         }
-        if (prop === 'deleteRow' || prop === 'deleteRow') {
+        if (prop === 'deleteRow' || prop === 'deleteDocument') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
                 const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
@@ -134,9 +129,7 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId, data, permissions } = parseTablesDBArgs(args);
                 const payload = data ? { ...data } : {};
-                if (rowId) {
-                    payload.$id = rowId;
-                }
+                if (rowId) payload.$id = rowId;
                 const { createRowSecure } = await import('@/lib/actions/secure-ops');
                 return await createRowSecure(databaseId, tableId, payload, permissions);
             };
