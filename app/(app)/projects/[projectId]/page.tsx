@@ -46,9 +46,11 @@ import {
 } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
+import { usePresence } from '@/components/providers/PresenceProvider';
+import { IdentityAvatar } from '@/components/IdentityBadge';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Projects, ProjectObjects, Notes, Tasks, Credentials, Users as UserType } from '@/types/appwrite';
 import { listNotes, listFlowTasks, listKeepCredentials, Query, AppwriteService } from '@/lib/appwrite';
-import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -62,7 +64,6 @@ import { client } from '@/lib/appwrite/client';
 import { ChatService } from '@/lib/services/chat';
 import { createMessageAction } from '@/lib/actions/chat';
 import { Send, Clock, MessageSquare } from 'lucide-react';
-import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -90,6 +91,17 @@ export default function ProjectDetailPage() {
   const { showSuccess, showError } = useToast();
   const { open: openUnified } = useUnifiedDrawer();
   const { user } = useAuth();
+  const { joinResource, resourcePresence } = usePresence();
+
+  useEffect(() => {
+      if (projectId) {
+          return joinResource(
+              APPWRITE_CONFIG.DATABASES.CHAT,
+              'projects',
+              projectId as string
+          );
+      }
+  }, [projectId, joinResource]);
 
   const [project, setProject] = useState<Projects | null>(null);
   const [projectObjects, setProjectObjects] = useState<ProjectObjects[]>([]);
@@ -271,7 +283,21 @@ export default function ProjectDetailPage() {
                 </Box>
             </Stack>
 
-            <Stack direction="row" spacing={1.5}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+                {/* Active Collaborators HUD */}
+                {projectId && resourcePresence[projectId as string]?.length > 0 && (
+                    <Stack direction="row" spacing={-1.5} sx={{ mr: 2 }}>
+                        {resourcePresence[projectId as string].map((p, idx) => (
+                            <IdentityAvatar 
+                                key={p.userId}
+                                size={32}
+                                status={p.state}
+                                sx={{ border: '3px solid #0A0908', zIndex: 10 - idx }}
+                            />
+                        ))}
+                    </Stack>
+                )}
+
                 <Button
                     variant="outlined"
                     startIcon={<SettingsIcon size={18} />}

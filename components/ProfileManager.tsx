@@ -263,9 +263,18 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
 
       // 3. Handle Username Update
       const cleanUsername = username.toLowerCase().trim().replace(/[^a-z0-9_-]/g, '');
+      let prefsUpdated = false;
+      
       if (cleanUsername !== (user.prefs?.username || '')) {
         currentPrefs.username = cleanUsername;
         currentPrefs.last_username_edit = new Date().toISOString();
+        prefsUpdated = true;
+      }
+      if (currentPrefs.isOnlineVisible !== isOnlineVisible) {
+        currentPrefs.isOnlineVisible = isOnlineVisible;
+        prefsUpdated = true;
+      }
+      if (prefsUpdated) {
         await account.updatePrefs(currentPrefs);
       }
 

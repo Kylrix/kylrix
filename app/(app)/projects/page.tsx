@@ -47,6 +47,8 @@ import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useLocalContext } from '@/lib/context-engine';
+import { useAuth } from '@/lib/auth';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 const projectTemplates = [
   { 
@@ -220,6 +222,7 @@ export default function ProjectsPage() {
   const { showSuccess, showError } = useToast();
   const { open } = useUnifiedDrawer();
   const { savedWorkflows } = useLocalContext();
+  const { user } = useAuth();
   
   const [projects, setProjects] = useState<Projects[]>([]);
   const [loading, setLoading] = useState(true);
@@ -261,11 +264,23 @@ export default function ProjectsPage() {
       mainColor: '#6366F1',
       actions: [
         { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => openCreateDrawerRef.current() },
+        { 
+            id: 'create-team', 
+            label: 'CREATE TEAM', 
+            icon: <Users size={20} />, 
+            onClick: () => {
+                if (!hasPaidKylrixPlan(user)) {
+                    open('pro-upgrade', {});
+                } else {
+                    showSuccess('Team creation environment is spinning up...');
+                }
+            } 
+        },
         { id: 'workflows-nav', label: 'ACTION WORKFLOWS', icon: <Workflow size={20} />, onClick: () => router.push('/projects/workflows') },
         { id: 'insights', label: 'AI INSIGHTS', icon: <Sparkles size={20} />, onClick: () => router.push('/note/notes') }]
     });
     return () => resetConfiguration();
-  }, [setConfiguration, resetConfiguration, router]);
+  }, [setConfiguration, resetConfiguration, router, user, open, showSuccess]);
 
   useEffect(() => {
     fetchProjects();

@@ -50,7 +50,6 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { notes as noteApi } from '@/lib/kylrixflow';
 import UserSearch from '@/components/UserSearch';
-import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
 import { account } from '@/lib/appwrite';
 import { UsersService } from '@/lib/services/users';
@@ -61,8 +60,10 @@ import { createGhostNoteForResource, promoteGhostResourceThreadToStory } from '@
 import { createComment, listComments, getNote } from '@/lib/appwrite/note';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { usePresence } from '@/components/providers/PresenceProvider';
 import { useToast } from '@/components/ui/Toast';
 import { AppwriteService } from '@/lib/appwrite';
+import { IdentityAvatar } from '@/components/IdentityBadge';
 import { Clock, FileText, Globe } from 'lucide-react';
 
 const priorityColors: Record<Priority, string> = {
@@ -90,6 +91,18 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
   const { user } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
   const { closeSecondarySidebar } = useLayout();
+  const { joinResource, resourcePresence } = usePresence();
+
+  useEffect(() => {
+      if (taskId) {
+          return joinResource(
+              APPWRITE_CONFIG.DATABASES.FLOW,
+              APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+              taskId
+          );
+      }
+  }, [taskId, joinResource]);
+
   const {
     tasks,
     updateTask,
@@ -596,6 +609,21 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
             }}
           />
         </Box>
+
+        {/* Collaborator HUD */}
+        {taskId && resourcePresence[taskId]?.length > 0 && (
+            <Stack direction="row" spacing={-1} sx={{ ml: 2, mr: 'auto' }}>
+                {resourcePresence[taskId].map((p, idx) => (
+                    <IdentityAvatar 
+                        key={p.userId}
+                        size={24}
+                        status={p.state}
+                        sx={{ border: '2px solid #161412' }}
+                    />
+                ))}
+            </Stack>
+        )}
+
         <Box sx={{ display: 'flex', gap: 1 }}>
           <IconButton 
             size="small" 

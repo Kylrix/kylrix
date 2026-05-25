@@ -25,15 +25,19 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
     const setMyState = useCallback(async (state: UserPresenceState, activity?: string) => {
         if (!user?.$id) return;
         
-        // Broadcast to global channel
-        await PresenceService.broadcastState('users', {
-            userId: user.$id,
-            state,
-            activity,
-            lastSeen: new Date().toISOString()
-        });
+        // Broadcast to global channel only if privacy settings allow
+        const isOnlineVisible = user.prefs?.isOnlineVisible !== false;
+        
+        if (isOnlineVisible) {
+            await PresenceService.broadcastState('users', {
+                userId: user.$id,
+                state,
+                activity,
+                lastSeen: new Date().toISOString()
+            });
+        }
 
-        // Also broadcast to all active resources
+        // Also broadcast to all active resources (local collaboration ignores global toggle)
         for (const resourceKey of activeResourcesRef.current) {
             await PresenceService.broadcastState(resourceKey, {
                 userId: user.$id,
