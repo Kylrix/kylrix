@@ -18,8 +18,10 @@ const initAppwrite = () => {
 initAppwrite();
 export const account = new Account(client);
 const originalDatabases = new Databases(client);
+const originalTablesDB = new TablesDB(client);
 
-// Helper parsers for databases parameters
+// --- HELPER PARSERS (Hoisted/Early Defined) ---
+
 function parseDatabasesArgs(args: any[]) {
     const [databaseId, collectionId, documentId, data, permissions] = args;
     return { databaseId, collectionId, documentId, data, permissions };
@@ -29,6 +31,50 @@ function parseDatabasesDeleteArgs(args: any[]) {
     const [databaseId, collectionId, documentId] = args;
     return { databaseId, collectionId, documentId };
 }
+
+function parseTablesDBArgs(args: any[]) {
+    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && ('databaseId' in args[0])) {
+        const obj = args[0];
+        return {
+            databaseId: obj.databaseId,
+            tableId: obj.tableId || obj.collectionId,
+            rowId: obj.rowId || obj.documentId,
+            data: obj.data,
+            permissions: obj.permissions
+        };
+    }
+    const [databaseId, tableId, rowId, data, permissions] = args;
+    return { databaseId, tableId, rowId, data, permissions };
+}
+
+function parseTablesDBDeleteArgs(args: any[]) {
+    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && ('databaseId' in args[0])) {
+        const obj = args[0];
+        return {
+            databaseId: obj.databaseId,
+            tableId: obj.tableId || obj.collectionId,
+            rowId: obj.rowId || obj.documentId
+        };
+    }
+    const [databaseId, tableId, rowId] = args;
+    return { databaseId, tableId, rowId };
+}
+
+function parseTablesDBListArgs(args: any[]) {
+    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && ('databaseId' in args[0])) {
+        const obj = args[0];
+        return {
+            databaseId: obj.databaseId,
+            tableId: obj.tableId || obj.collectionId,
+            collectionId: obj.collectionId || obj.tableId,
+            queries: obj.queries
+        };
+    }
+    const [databaseId, tableId, queries] = args;
+    return { databaseId, tableId, collectionId: tableId, queries };
+}
+
+// --- PROXIES ---
 
 const databasesProxy = new Proxy(originalDatabases, {
     get(target: any, prop: string | symbol, receiver: any) {
@@ -87,18 +133,6 @@ const databasesProxy = new Proxy(originalDatabases, {
 
 export const databases = typeof window !== 'undefined' ? (databasesProxy as unknown as Databases) : originalDatabases;
 
-export const storage = new Storage(client);
-export const avatars = new Avatars(client);
-export const teams = new Teams(client);
-export const functions = new Functions(client);
-export const locale = new Locale(client);
-export const realtime = new Realtime(client);
-
-// Aliases for compatibility
-export const appwriteAccount = account;
-export const appwriteDatabases = databases; // Standard Databases API
-const originalTablesDB = new TablesDB(client);
-
 const tablesDBProxy = new Proxy(originalTablesDB, {
     get(target: any, prop: string | symbol, receiver: any) {
         if (prop === 'createRow') {
@@ -154,6 +188,18 @@ const tablesDBProxy = new Proxy(originalTablesDB, {
 });
 
 export const tablesDB = typeof window !== 'undefined' ? (tablesDBProxy as unknown as TablesDB) : originalTablesDB;
+
+export const storage = new Storage(client);
+export const avatars = new Avatars(client);
+export const teams = new Teams(client);
+export const functions = new Functions(client);
+export const locale = new Locale(client);
+export const realtime = new Realtime(client);
+
+// Aliases for compatibility
+export const appwriteAccount = account;
+export const appwriteDatabases = databases; // Standard Databases API
+
 export const appwriteStorage = storage;
 export const appwriteAvatars = avatars;
 export const appwriteClient = client;
