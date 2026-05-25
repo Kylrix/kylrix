@@ -39,6 +39,7 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
+  Users,
 } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import ProjectCard from '@/components/projects/ProjectCard';
