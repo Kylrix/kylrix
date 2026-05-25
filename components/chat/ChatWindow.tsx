@@ -68,6 +68,7 @@ import {
 } from 'lucide-react';
 import { NoteSelectorModal } from './NoteSelectorModal';
 import { SecretSelectorModal } from './SecretSelectorModal';
+import { VoiceMessage } from './VoiceMessage';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import SudoModal from '../overlays/SudoModal';
 import { usePresence } from '../providers/PresenceProvider';
