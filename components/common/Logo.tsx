@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme, alpha } from '@mui/material';
 import { motion } from 'framer-motion';
 import { KylrixApp } from '@/lib/sdk';
 
@@ -27,200 +27,72 @@ const Logo: React.FC<LogoProps> = ({
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
 
-  // App Specific Colors (Muted V3 Palette)
-  const appColors: Record<KylrixApp, { primary: string; secondary: string; label: string }> = {
-    root: { primary: "#6366F1", secondary: "#6366F1", label: "KYLRIX" },
-    kylrix: { primary: "#6366F1", secondary: "#6366F1", label: "KYLRIX" },
-    accounts: { primary: "#6366F1", secondary: "#6366F1", label: "ACCOUNTS" },
-    vault: { primary: "#6366F1", secondary: "#10B981", label: "VAULT" }, // Left: Indigo, Right: Emerald
-    flow: { primary: "#6366F1", secondary: "#A855F7", label: "FLOW" },   // Left: Indigo, Right: Amethyst
-    note: { primary: "#6366F1", secondary: "#EC4899", label: "NOTE" },   // Left: Indigo, Right: Pink
-    connect: { primary: "#6366F1", secondary: "#F59E0B", label: "CONNECT" }, // Left: Indigo, Right: Amber
+  // App labels for full variant
+  const appLabels: Record<KylrixApp, string> = {
+    root: "KYLRIX",
+    kylrix: "KYLRIX",
+    accounts: "ACCOUNTS",
+    vault: "VAULT",
+    flow: "FLOW",
+    note: "NOTE",
+    connect: "CONNECT",
   };
 
-  const current = appColors[app] || appColors.kylrix;
+  const label = appLabels[app] || appLabels.kylrix;
 
-  // Ecosystem brand (root / accounts / kylrix): white or black left, indigo right.
-  // Satellite apps: app accent on left, ecosystem indigo on right.
-  const ecosystemPrimary = '#6366F1';
-  const isEcosystemBrand = app === 'root' || app === 'accounts' || app === 'kylrix';
-  const leftColor = isEcosystemBrand
-    ? (isDarkMode ? '#FFFFFF' : '#000000')
-    : current.secondary;
-  const rightColor = isEcosystemBrand ? ecosystemPrimary : current.primary;
+  // Unified Ecosystem Primary Color
+  const primaryColor = '#6366F1'; // Indigo
   
-  // Center cutout color (punches through to background)
-  const cutoutColor = isDarkMode ? "#0A0908" : "#FFFFFF";
-
-  // Malleability Framework: Define shapes for the center cutout
-  const renderCutout = () => {
-    switch (app) {
-      case 'note': // Slanted Square (Quadrilateral)
-        return (
-          <rect 
-            x="38" 
-            y="38" 
-            width="24" 
-            height="24" 
-            fill={cutoutColor} 
-            transform="rotate(45 50 50)"
-          />
-        );
-      case 'vault': // Slanted Square (Quadrilateral)
-        return (
-          <rect 
-            x="38" 
-            y="38" 
-            width="24" 
-            height="24" 
-            fill={cutoutColor} 
-            transform="rotate(45 50 50)"
-          />
-        );
-      case 'flow': // Slanted Square (Quadrilateral)
-        return (
-          <rect
-            x="38"
-            y="38"
-            width="24"
-            height="24"
-            fill={cutoutColor}
-            transform="rotate(45 50 50)"
-          />
-        );
-      case 'connect': // Slanted Square (Quadrilateral)
-        return (
-          <rect 
-            x="38" 
-            y="38" 
-            width="24" 
-            height="24" 
-            fill={cutoutColor} 
-            transform="rotate(45 50 50)"
-          />
-        );
-      case 'root': // Diamond
-      case 'accounts': // Diamond (same as KYLRIX mark)
-      case 'kylrix': // Diamond
-      default:
-        return <polygon points="50,38 62,50 50,62 38,50" fill={cutoutColor} />;
-    }
+  // Secondary Colors for Edges (Canonical Ecosystem Palette)
+  const colors = {
+    pink: '#EC4899',
+    emerald: '#10B981',
+    purple: '#A855F7',
+    amber: '#F59E0B',
+    indigo: '#6366F1'
   };
 
-  const borderColors: Record<KylrixApp, { left: string; right: string }> = {
-    root: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
-    kylrix: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
-    accounts: { left: isDarkMode ? "#9B9691" : "#1C1A18", right: "#3D3AA9" },
-    vault: { left: "#065F46", right: "#3D3AA9" },
-    flow: { left: "#6B21A8", right: "#3D3AA9" },
-    note: { left: "#9A1D5A", right: "#3D3AA9" },
-    connect: { left: "#92400E", right: "#3D3AA9" },
-  };
-
-  const borders = borderColors[app] || borderColors.kylrix;
-
-  const renderCarvedCutout = () => {
-    const isDiamond = app === 'root' || app === 'accounts' || app === 'kylrix';
-    if (isDiamond) {
-      return (
-        <>
-          {/* Hard tactile recess shadow (offset diamond) */}
-          <polygon points="51,40 63,52 51,64 39,52" fill="#000000" />
-          {/* Main solid cutout diamond */}
-          <polygon points="50,38 62,50 50,62 38,50" fill={cutoutColor} />
-          {/* Solid dark carved border */}
-          <polygon points="50,38 62,50 50,62 38,50" fill="none" stroke="#000000" strokeWidth="1.8" />
-        </>
-      );
-    } else {
-      return (
-        <>
-          {/* Hard tactile recess shadow (offset rotated square) */}
-          <rect 
-            x="39" 
-            y="40" 
-            width="24" 
-            height="24" 
-            fill="#000000" 
-            transform="rotate(45 50 50)"
-          />
-          {/* Main solid cutout */}
-          <rect 
-            x="38" 
-            y="38" 
-            width="24" 
-            height="24" 
-            fill={cutoutColor} 
-            transform="rotate(45 50 50)"
-          />
-          {/* Solid dark carved border */}
-          <rect 
-            x="38" 
-            y="38" 
-            width="24" 
-            height="24" 
-            fill="none" 
-            stroke="#000000" 
-            strokeWidth="1.8" 
-            transform="rotate(45 50 50)"
-          />
-        </>
-      );
-    }
-  };
-
-  const Hexagon = (
+  const WireframeCube = (
     <motion.svg
       viewBox="0 0 100 100"
       width={size}
       height={size}
       animate={animate ? { rotate: 360 } : {}}
-      transition={animate ? { repeat: Infinity, duration: 8, ease: "linear" } : {}}
-      style={{ filter: 'drop-shadow(0 3px 5px rgba(0,0,0,0.35))' }}
+      transition={animate ? { repeat: Infinity, duration: 20, ease: "linear" } : {}}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}
     >
-      {/* Heavy Outer Solid Black Contour (Gives massive structural presence) */}
-      <polygon 
-        points="50,9 14,29 14,71 50,91 86,71 86,29" 
-        fill="none" 
+      {/* Outer Boundary Edges (Stickly Skeleton) */}
+      <line x1="15" y1="30" x2="50" y2="10" stroke={colors.pink} strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="50" y1="10" x2="85" y2="30" stroke={colors.emerald} strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="85" y1="30" x2="85" y2="70" stroke={colors.pink} strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="85" y1="70" x2="50" y2="90" stroke={colors.purple} strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="50" y1="90" x2="15" y2="70" stroke={colors.pink} strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="15" y1="70" x2="15" y2="30" stroke={colors.amber} strokeWidth="3.5" strokeLinecap="round" />
+
+      {/* Inner Seam Edges */}
+      <line x1="50" y1="50" x2="15" y2="30" stroke={colors.purple} strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="50" y1="50" x2="85" y2="30" stroke={colors.amber} strokeWidth="3.5" strokeLinecap="round" />
+      <line x1="50" y1="50" x2="50" y2="90" stroke={colors.emerald} strokeWidth="3.5" strokeLinecap="round" />
+
+      {/* Vertices (Unified Ecosystem Color) */}
+      <circle cx="50" cy="10" r="4" fill={primaryColor} stroke="#000000" strokeWidth="1.5" />
+      <circle cx="15" cy="30" r="4" fill={primaryColor} stroke="#000000" strokeWidth="1.5" />
+      <circle cx="85" cy="30" r="4" fill={primaryColor} stroke="#000000" strokeWidth="1.5" />
+      <circle cx="15" cy="70" r="4" fill={primaryColor} stroke="#000000" strokeWidth="1.5" />
+      <circle cx="50" cy="90" r="4" fill={primaryColor} stroke="#000000" strokeWidth="1.5" />
+      <circle cx="85" cy="70" r="4" fill={primaryColor} stroke="#000000" strokeWidth="1.5" />
+
+      {/* Core Hub */}
+      <circle 
+        cx="50" 
+        cy="50" 
+        r="5.5" 
+        fill={primaryColor} 
         stroke="#000000" 
-        strokeWidth="3" 
-        strokeLinejoin="round"
+        strokeWidth={2}
       />
-
-      {/* Solid Base Left Hemisphere */}
-      <polygon 
-        points="50,10 15,30 15,70 50,90" 
-        fill={leftColor} 
-        style={{ transition: 'fill 0.4s ease' }}
-      />
-      {/* Solid Base Right Hemisphere */}
-      <polygon 
-        points="50,10 85,30 85,70 50,90" 
-        fill={rightColor} 
-        style={{ transition: 'fill 0.4s ease' }}
-      />
-
-      {/* Recessed Dark Borders (Pure Solid Depth Shadow Lines) */}
-      <polyline 
-        points="50,10 15,30 15,70 50,90" 
-        fill="none" 
-        stroke={borders.left} 
-        strokeWidth="1.8" 
-        strokeLinecap="round" 
-      />
-      <polyline 
-        points="50,10 85,30 85,70 50,90" 
-        fill="none" 
-        stroke={borders.right} 
-        strokeWidth="1.8" 
-        strokeLinecap="round" 
-      />
-
-      {/* Heavy Opaque Center Seam Split */}
-      <line x1="50" y1="10" x2="50" y2="90" stroke="#000000" strokeWidth="2.2" />
-
-      {/* Carved Cutout with hard offset shadow and black inner rim */}
-      {renderCarvedCutout()}
     </motion.svg>
   );
 
@@ -237,7 +109,7 @@ const Logo: React.FC<LogoProps> = ({
       component={component} 
       href={href}
     >
-      {Hexagon}
+      {WireframeCube}
       
       {variant === 'full' && (
         <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
@@ -250,7 +122,7 @@ const Logo: React.FC<LogoProps> = ({
             textTransform: 'uppercase', 
             fontFamily: 'var(--font-clash)' 
           }}>
-            {current.label}
+            {label}
           </Typography>
         </Box>
       )}
