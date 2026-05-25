@@ -12,15 +12,13 @@ export const ProjectsService = {
     const user = await getCurrentUser();
     if (!user) throw new Error('Not authenticated');
 
+    // Returns both owned and shared projects (via Role.team) automatically
     return databases.listDocuments<any>(
       DATABASE_ID,
       PROJECTS_COLLECTION_ID,
-      [
-        Query.equal('ownerId', user.$id),
-        Query.orderDesc('updatedAt')]
+      [Query.orderDesc('updatedAt')]
     );
   },
-
   async getProject(projectId: string) {
     return databases.getDocument<any>(
       DATABASE_ID,

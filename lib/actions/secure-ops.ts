@@ -565,7 +565,7 @@ export type PermissionLevel = 'viewer' | 'editor' | 'admin';
 export interface PermissionChangeInput {
   userId: string;
   resourceId: string;
-  resourceType: 'note' | 'task';
+  resourceType: 'note' | 'task' | 'project';
   resourceTitle: string;
   targetUserId: string;
   targetEmail?: string;
@@ -582,9 +582,29 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       throw new Error('Unauthorized');
   }
 
-  const { client, users } = createSystemClient();
-  const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW;
-  const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
+  const { client, users, teams } = createSystemClient();
+
+  // Handle Project Team synchronization
+  if (input.resourceType === 'project') {
+    try {
+        // Sync to native Appwrite Team for optimized read-access
+        await teams.createMembership(
+            input.resourceId, 
+            [input.permission], 
+            undefined, 
+            input.targetUserId
+        );
+    } catch (teamErr: any) {
+        console.warn('[grantPermissionSecure] Team membership sync skipped or failed:', teamErr?.message);
+    }
+  }
+
+  const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
+               input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
+               APPWRITE_CONFIG.DATABASES.FLOW;
+  const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
+                  input.resourceType === 'project' ? 'projects' :
+                  APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
   // 1. Grant physical READ permission only!
   await permissionsInternal('POST', {
@@ -660,15 +680,35 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
 
 export async function revokePermissionSecure(input: {
     resourceId: string;
-    resourceType: 'note' | 'task';
+    resourceType: 'note' | 'task' | 'project';
     targetUserId: string;
     jwt?: string;
 }) {
     const requester = await getActor(input.jwt);
     if (!requester) throw new Error('Unauthorized');
 
-    const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW;
-    const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
+    const { teams } = createSystemClient();
+
+    // Handle Project Team synchronization
+    if (input.resourceType === 'project') {
+      try {
+          // List memberships to find the one to delete
+          const memberships = await teams.listMemberships(input.resourceId);
+          const membership = memberships.memberships.find(m => m.userId === input.targetUserId);
+          if (membership) {
+              await teams.deleteMembership(input.resourceId, membership.$id);
+          }
+      } catch (teamErr: any) {
+          console.warn('[revokePermissionSecure] Team membership removal skipped or failed:', teamErr?.message);
+      }
+    }
+
+    const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
+                 input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
+                 APPWRITE_CONFIG.DATABASES.FLOW;
+    const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
+                    input.resourceType === 'project' ? 'projects' :
+                    APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
     // 1. Physically revoke from row
     await permissionsInternal('POST', {
@@ -1414,15 +1454,30 @@ export async function createProjectSecure(data: any, jwt?: string) {
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
+  const { databases, teams } = createSystemClient();
   const now = new Date().toISOString();
+  const projectId = ID.unique();
+
+  // 1. Create native Appwrite Team for high-performance read-access
+  try {
+      await teams.create(projectId, data.name || data.title || 'New Project');
+      // Add creator as owner
+      await teams.createMembership(projectId, ['owner'], undefined, actor.$id);
+  } catch (teamErr: any) {
+      console.warn('[createProjectSecure] Team creation skipped or failed:', teamErr?.message);
+  }
+
   const permissions = [
-    Permission.read(Role.user(actor.$id))];
+    Permission.read(Role.user(actor.$id)),
+    Permission.read(Role.team(projectId)),
+    Permission.update(Role.user(actor.$id)),
+    Permission.delete(Role.user(actor.$id)),
+  ];
 
   const project = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',
-      rowId: ID.unique(),
+      rowId: projectId,
       data: {
       ...data,
       ownerId: actor.$id,
@@ -1431,7 +1486,6 @@ export async function createProjectSecure(data: any, jwt?: string) {
     },
       permissions: permissions,
     });
-
   return JSON.parse(JSON.stringify(project));
 }
 
@@ -1506,9 +1560,21 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
+  const { databases, teams } = createSystemClient();
 
-  // 1. Fetch current project to update permissions
+  // 1. Sync to native Appwrite Team for optimized read-access
+  try {
+      await teams.createMembership(
+          projectId, 
+          [permissionLevel], 
+          undefined, 
+          targetUserId
+      );
+  } catch (teamErr: any) {
+      console.warn('[addProjectCollaboratorSecure] Team membership sync skipped or failed:', teamErr?.message);
+  }
+
+  // 2. Fetch current project to update permissions
   const project = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',
@@ -1518,7 +1584,8 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
   // Update physical permissions: add READ permission only
   const newPermissions = new Set(project.$permissions || []);
   newPermissions.add(`read("user:${targetUserId}")`);
-
+  // Ensure native team permission is present
+  newPermissions.add(`read("team:${projectId}")`);
   // Update virtual level in metadata
   let metadata: any = {};
   try {
@@ -1632,15 +1699,25 @@ export async function removeProjectCollaboratorSecure(projectId: string, targetU
   }
 
   const tables = createSystemTablesDB();
-  const { databases } = createSystemClient();
+  const { databases, teams } = createSystemClient();
 
-  // 1. Fetch current project to update permissions
+  // 1. Sync to native Appwrite Team for optimized read-access
+  try {
+      const memberships = await teams.listMemberships(projectId);
+      const membership = memberships.memberships.find(m => m.userId === targetUserId);
+      if (membership) {
+          await teams.deleteMembership(projectId, membership.$id);
+      }
+  } catch (teamErr: any) {
+      console.warn('[removeProjectCollaboratorSecure] Team membership removal skipped or failed:', teamErr?.message);
+  }
+
+  // 2. Fetch current project to update permissions
   const project = await tables.getRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',
       rowId: projectId,
     });
-
   // Remove physical read permission
   const rawPermissions = project.$permissions || [];
   const updatedPerms = rawPermissions.filter((p: string) => {
