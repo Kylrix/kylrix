@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
 import { ID, Permission, Query, Role, Databases } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite-server-only';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
