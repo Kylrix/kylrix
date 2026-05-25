@@ -68,15 +68,30 @@ async function isConversationMember(databases: ReturnType<typeof createSystemCli
 }
 
 export async function loadJoinRequestPreview(input: { resourceType: string; resourceId: string; requesterId?: string }) {
+  console.log('[loadJoinRequestPreview] Start:', input);
   const { databases } = createSystemClient();
   const resourceType = normalizeResourceType(input.resourceType);
   const resourceId = normalizeText(input.resourceId);
   const requesterId = normalizeText(input.requesterId);
-  const conversation = await getConversation(databases, resourceId);
-  if (!getConversationInviteEnabled(conversation)) throw new Error('Group does not exist');
-  const alreadyJoined = requesterId ? await isConversationMember(databases, conversation, requesterId) : false;
-  const request = requesterId ? await getJoinRequest(databases, resourceType, resourceId, requesterId) : null;
-  return { conversation, alreadyJoined, request };
+  
+  try {
+    const conversation = await getConversation(databases, resourceId);
+    console.log('[loadJoinRequestPreview] Conversation found:', conversation.$id, 'inviteLink:', conversation.inviteLink);
+    
+    if (!getConversationInviteEnabled(conversation)) {
+        console.warn('[loadJoinRequestPreview] Invite link disabled or mismatched for:', resourceId);
+        throw new Error('Group does not exist');
+    }
+    
+    const alreadyJoined = requesterId ? await isConversationMember(databases, conversation, requesterId) : false;
+    const request = requesterId ? await getJoinRequest(databases, resourceType, resourceId, requesterId) : null;
+    
+    console.log('[loadJoinRequestPreview] Success:', { alreadyJoined, requestId: request?.$id });
+    return { conversation, alreadyJoined, request };
+  } catch (error: any) {
+    console.error('[loadJoinRequestPreview] Failed:', error?.message);
+    throw error;
+  }
 }
 
 export async function createJoinRequest(input: { userId: string; resourceType: string; resourceId: string }) {

@@ -173,7 +173,8 @@ export async function getConversationsAction(payload: {
   const actor = await getActor(payload.jwt);
   
   if (!actor?.$id || actor.$id !== payload.userId) {
-    throw new Error('Unauthorized');
+    console.warn('[getConversationsAction] Actor mismatch or not found. Returning empty list.');
+    return { total: 0, rows: [] };
   }
 
   const tables = createSystemTablesDB();
