@@ -631,10 +631,18 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     try {
       meta = JSON.parse(noteDoc.metadata || '{}');
     } catch {}
+
+    // Enforce 8-collaborator limit for FREE tier
+    const currentCollaborators = meta.collaborators ? Object.keys(meta.collaborators) : [];
+    if (currentCollaborators.length >= 8 && !hasPaidKylrixPlan(requester)) {
+        throw new Error('Limit reached: Free plan is limited to 8 collaborators per note. Upgrade to PRO for unlimited sharing.');
+    }
+
     if (!meta.collaborators) {
       meta.collaborators = {};
     }
     meta.collaborators[input.targetUserId] = input.permission; // 'viewer' | 'editor' | 'admin'
+
     await tables.updateRow({
       databaseId: dbId,
       tableId: tableId,
@@ -1582,21 +1590,29 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
       rowId: projectId,
     });
 
+  // Enforce 8-collaborator limit for FREE tier
+  let metadata: any = {};
+  try {
+    metadata = JSON.parse(project.metadata || '{}');
+  } catch {}
+  const currentCollaborators = metadata.collaborators ? Object.keys(metadata.collaborators) : [];
+
+  // Fetch owner to check plan
+  const owner = await getActor(undefined); // Fallback to current session
+  if (currentCollaborators.length >= 8 && !hasPaidKylrixPlan(owner)) {
+      throw new Error('Limit reached: Free plan is limited to 8 collaborators. Upgrade to PRO for unlimited team members.');
+  }
+
   // Update physical permissions: add READ permission only
   const newPermissions = new Set(project.$permissions || []);
   newPermissions.add(`read("user:${targetUserId}")`);
   // Ensure native team permission is present
   newPermissions.add(`read("team:${projectId}")`);
-  // Update virtual level in metadata
-  let metadata: any = {};
-  try {
-    metadata = JSON.parse(project.metadata || '{}');
-  } catch {}
+
   if (!metadata.collaborators) {
     metadata.collaborators = {};
   }
   metadata.collaborators[targetUserId] = permissionLevel;
-
   await tables.updateRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',

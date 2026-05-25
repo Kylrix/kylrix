@@ -2,6 +2,7 @@ import { ID, Permission, Query, Role } from 'appwrite';
 import { account, storage, tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
 import { seedIdentityCache } from '@/lib/identity-cache';
@@ -779,6 +780,14 @@ export const ChatService = {
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
 
+        // GUARD: Enforce 16-member limit for hangouts (groups) on FREE tier
+        if (type === 'group' && uniqueParticipants.length > 16) {
+            const currentUser = await getCurrentUser();
+            if (!hasPaidKylrixPlan(currentUser)) {
+                throw new Error('Limit reached: Hangouts on free plan are limited to 16 members. Upgrade to PRO for unlimited group sizes.');
+            }
+        }
+
         // GUARD: Prevent duplicate direct chats by checking server-side first
         if (type === 'direct') {
             const creatorMemberships = await tablesDB.listRows(DB_ID, CONV_MEMBERS_TABLE, [
@@ -1263,6 +1272,14 @@ export const ChatService = {
     async addParticipant(conversationId: string, userId: string) {
         const conv = await this.getConversationById(conversationId);
         const participants = conv.participants || [];
+
+        // GUARD: Enforce 16-member limit for hangouts (groups) on FREE tier
+        if (conv.type === 'group' && participants.length >= 16) {
+            const currentUser = await getCurrentUser();
+            if (!hasPaidKylrixPlan(currentUser)) {
+                throw new Error('Limit reached: Hangouts on free plan are limited to 16 members. Upgrade to PRO for unlimited group sizes.');
+            }
+        }
         const requiresRotation = conv?.type === 'group' && String(conv?.encryptionVersion || '').toUpperCase() === 'T4';
         if (requiresRotation && (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.status.hasIdentity)) {
             throw new Error('Security vault is locked; cannot rotate group epoch');
