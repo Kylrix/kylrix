@@ -78,6 +78,8 @@ import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 
 import toast from 'react-hot-toast';
 
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
+
 const CACHE_KEY = 'kylrix_feed_cache';
 const profileRegistry = new Map<string, any>();
 const momentCardSx = {
@@ -694,6 +696,7 @@ function MobileComposerDock({
 }, ref) {
     const [open, setOpen] = useState(false);
     const { setChromeState, resetChromeState } = useAppChrome();
+    const { isDrawerOpen } = useDrawerState();
 
     useImperativeHandle(ref, () => ({
         open: () => setOpen(true),
@@ -723,7 +726,7 @@ function MobileComposerDock({
 
     return (
         <>
-            {isMobile && user && !open && (
+            {isMobile && user && !open && !isDrawerOpen && (
                 <Fab
                     color="primary"
                     disableRipple
