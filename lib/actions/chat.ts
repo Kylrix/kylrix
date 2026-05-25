@@ -48,8 +48,8 @@ export async function toggleReactionAction(payload: {
   action: 'POST' | 'DELETE';
   jwt?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const actor = await account.get();
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(payload.jwt);
   
   if (!actor?.$id) {
     throw new Error('Unauthorized');
@@ -67,8 +67,8 @@ export async function repairConversationAction(payload: {
   jwt?: string;
 }) {
   // Retrieve actor to ensure they can only repair their own profiles unless they are admin
-  const { account } = await createServerClient(payload.jwt);
-  const actor = await account.get();
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(payload.jwt);
   
   if (!actor?.$id) {
     throw new Error('Unauthorized');
@@ -91,8 +91,8 @@ export async function clearConversationFootprintAction(payload: {
   conversationId: string;
   jwt?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const actor = await account.get();
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(payload.jwt);
   
   if (!actor?.$id) {
     throw new Error('Unauthorized');
@@ -108,8 +108,8 @@ export async function nuclearWipeConversationAction(payload: {
   conversationId: string;
   jwt?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const actor = await account.get();
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(payload.jwt);
   
   if (!actor?.$id) {
     throw new Error('Unauthorized');
@@ -125,8 +125,8 @@ export async function deleteConversationFullyAction(payload: {
   conversationId: string;
   jwt?: string;
 }) {
-  const { account } = await createServerClient(payload.jwt);
-  const actor = await account.get();
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(payload.jwt);
   
   if (!actor?.$id) {
     throw new Error('Unauthorized');
@@ -147,8 +147,8 @@ export async function joinRequestAction(payload: {
   jwt?: string;
 }) {
   // Retrieve the authenticated actor securely on the server
-  const { account } = await createServerClient(payload.jwt);
-  const actor = await account.get().catch(() => null);
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(payload.jwt);
 
   const securedPayload = {
     ...payload,
