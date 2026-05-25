@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
-import { ID, Permission, Query, Role, Databases } from 'node-appwrite';
+import { ID, Permission, Query, Role, Databases, TablesDB } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
@@ -1467,22 +1467,25 @@ export async function createProjectSecure(data: any, jwt?: string) {
   const now = new Date().toISOString();
   const projectId = ID.unique();
 
-  // 1. Create native Appwrite Team for high-performance read-access
-  try {
-      await teams.create(projectId, data.name || data.title || 'New Project');
-      // Add creator as owner
-      await teams.createMembership(projectId, ['owner'], undefined, actor.$id);
-  } catch (teamErr: any) {
-      console.warn('[createProjectSecure] Team creation skipped or failed:', teamErr?.message);
-  }
-
+  const isPro = hasPaidKylrixPlan(actor);
   const permissions = [
     Permission.read(Role.user(actor.$id)),
-    Permission.read(Role.team(projectId)),
     Permission.update(Role.user(actor.$id)),
     Permission.delete(Role.user(actor.$id)),
   ];
 
+  // 1. Native Appwrite Team: Premium High-Performance Read-Access
+  if (isPro) {
+      try {
+          await teams.create(projectId, data.name || data.title || 'New Project');
+          // Add creator as owner
+          await teams.createMembership(projectId, ['owner'], undefined, actor.$id);
+          // Add high-performance team permission
+          permissions.push(Permission.read(Role.team(projectId)));
+      } catch (teamErr: any) {
+          console.warn('[createProjectSecure] Team creation skipped or failed:', teamErr?.message);
+      }
+  }
   const project = await collections.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',
@@ -3382,14 +3385,14 @@ export async function listRowsSecure(databaseId: string, tableId: string, querie
   
   // Use user-scoped client to respect Row Level Security
   const { client } = await createServerClient(jwt);
-  const databases = new Databases(client);
+  const tables = new TablesDB(client);
 
   try {
-    const res = await databases.listRows(
+    const res = await tables.listRows({
       databaseId,
       tableId,
-      queries as any,
-    );
+      queries: queries as any,
+    });
     console.log('[listRowsSecure] Success. Total:', res.total, 'Count:', res.rows?.length);
     return JSON.parse(JSON.stringify({
         total: res.total,
@@ -3406,14 +3409,14 @@ export async function getRowSecure(databaseId: string, tableId: string, rowId: s
   
   // Use user-scoped client to respect Row Level Security
   const { client } = await createServerClient(jwt);
-  const databases = new Databases(client);
+  const tables = new TablesDB(client);
 
   try {
-    const res = await databases.getRow(
+    const res = await tables.getRow({
       databaseId,
       tableId,
       rowId,
-    );
+    });
     return JSON.parse(JSON.stringify(res));
   } catch (error: any) {
     console.error('[getRowSecure] Failed:', error?.message);
