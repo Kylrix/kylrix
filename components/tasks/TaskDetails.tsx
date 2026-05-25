@@ -211,25 +211,26 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
         const res = await listComments(taskId);
         if (!active) return;
         const msgs = await Promise.all(
-          res.documents.map(async (doc: any) => {
+          res.rows.map(async (row: any) => {
             let senderName = 'Collaborator';
-            if (user && doc.userId === user.$id) {
+            if (user && row.userId === user.$id) {
               senderName = user.name || 'You';
             } else {
               try {
-                const profile = await AppwriteService.getProfile(doc.userId);
+                const profile = await AppwriteService.getProfile(row.userId);
                 if (profile) senderName = profile.name || 'Collaborator';
               } catch {}
             }
             return {
-              id: doc.$id,
-              senderId: doc.userId,
+              id: row.$id,
+              senderId: row.userId,
               senderName,
-              content: doc.content,
-              timestamp: new Date(doc.createdAt).getTime(),
+              content: row.content,
+              timestamp: new Date(row.createdAt).getTime(),
             };
           })
         );
+
         msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
         setHuddleMessages(msgs);
       } catch (err) {

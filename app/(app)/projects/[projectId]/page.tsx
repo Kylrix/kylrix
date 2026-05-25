@@ -143,19 +143,18 @@ export default function ProjectDetailPage() {
 
       if (noteIds.length) {
           const res = await listNotes([Query.equal('$id', noteIds)]);
-          setNotes(res.documents);
+          setNotes(res.rows);
       } else setNotes([]);
 
       if (taskIds.length) {
           const res = await listFlowTasks([Query.equal('$id', taskIds)]);
-          setTasks(res.documents);
+          setTasks(res.rows);
       } else setTasks([]);
 
       if (credentialIds.length) {
           const res = await listKeepCredentials([Query.equal('$id', credentialIds)]);
-          setCredentials(res.documents);
+          setCredentials(res.rows);
       } else setCredentials([]);
-
       if (collaboratorIds.length) {
           const res = await AppwriteService.getUsersByIds(collaboratorIds);
           setCollaborators(res);

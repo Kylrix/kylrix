@@ -86,7 +86,7 @@ export function NewProjectDrawer() {
             setResources(res?.rows || []);
         } else if (template?.id === 'idea-to-execution' || template?.id === 'wiki-knowledge-hub' || template?.id === 'product-roadmap') {
             const res = await listNotesByUser(user.$id);
-            setResources(res?.documents || []);
+            setResources(res?.rows || []);
         }
     } catch (e) {
         console.error('Failed to fetch resources', e);
