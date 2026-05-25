@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Drawer,
@@ -57,6 +57,9 @@ export function MasterPassModal({ isOpen, onClose }: MasterPassModalProps) {
 
   useEffect(() => {
     setIsDrawerOpen(isOpen);
+    if (!isOpen) {
+        passkeyTriggeredRef.current = false;
+    }
   }, [isOpen, setIsDrawerOpen]);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -71,6 +74,7 @@ export function MasterPassModal({ isOpen, onClose }: MasterPassModalProps) {
   const [hasPasskey, setHasPasskey] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
+  const passkeyTriggeredRef = useRef(false);
 
   const [mode, setMode] = useState<"passkey" | "password" | "pin" | "initialize" | null>(null);
   const [pin, setPin] = useState("");
@@ -184,7 +188,10 @@ export function MasterPassModal({ isOpen, onClose }: MasterPassModalProps) {
           setMode("initialize");
         } else if (effectivePasskeyPresent) {
           setMode("passkey");
-          handlePasskeyUnlock();
+          if (!passkeyTriggeredRef.current) {
+              passkeyTriggeredRef.current = true;
+              handlePasskeyUnlock();
+          }
         } else if (pinSet) {
           setMode("pin");
         } else {

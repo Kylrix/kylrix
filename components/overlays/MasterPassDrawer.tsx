@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Drawer,
@@ -56,6 +56,9 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
 
   useEffect(() => {
     setIsDrawerOpen(isOpen);
+    if (!isOpen) {
+        passkeyTriggeredRef.current = false;
+    }
   }, [isOpen, setIsDrawerOpen]);
 
   const [masterPassword, setMasterPassword] = useState("");
@@ -69,6 +72,7 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
   const [hasPasskey, setHasPasskey] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
+  const passkeyTriggeredRef = useRef(false);
 
   const [mode, setMode] = useState<"passkey" | "password" | "pin" | "initialize" | null>(null);
   const [pin, setPin] = useState("");
@@ -180,8 +184,12 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
           setMode("initialize");
         } else if (effectivePasskeyPresent) {
           setMode("passkey");
-          handlePasskeyUnlock();
+          if (!passkeyTriggeredRef.current) {
+              passkeyTriggeredRef.current = true;
+              handlePasskeyUnlock();
+          }
         } else if (pinSet) {
+
           setMode("pin");
         } else {
           setMode("password");
