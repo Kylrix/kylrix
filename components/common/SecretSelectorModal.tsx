@@ -48,7 +48,7 @@ export function SecretSelectorModal({ isOpen, onClose, onSelect }: SecretSelecto
         setLoading(true);
         try {
           const res = await secretsApi.list();
-          setSecrets((res.rows || (res as any).documents) as any[]);
+          setSecrets((res.rows || (res as any).rows) as any[]);
         } catch (error: unknown) {
           console.error('Failed to fetch secrets:', error);
         } finally {

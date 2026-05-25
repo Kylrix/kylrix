@@ -27,7 +27,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
     // Check if the record already exists
     let existingDoc = null;
     try {
-      existingDoc = await databases.getDocument(
+      existingDoc = await databases.getRow(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         userId
@@ -73,7 +73,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
     let updatedDoc;
     if (existingDoc) {
       // Overwrite/update if it exists, resetting pairing state
-      updatedDoc = await databases.updateDocument(
+      updatedDoc = await databases.updateRow(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         userId,
@@ -87,7 +87,7 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
     } else {
       // Create a new document with the document ID explicitly set to the user ID.
       // Set access control permissions: only read and delete for the resource owner.
-      updatedDoc = await databases.createDocument(
+      updatedDoc = await databases.createRow(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         userId,
@@ -144,7 +144,7 @@ export async function checkTelegramConnection(jwt?: string) {
     }
 
     try {
-      const doc = await databases.getDocument(
+      const doc = await databases.getRow(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         userId
@@ -191,7 +191,7 @@ export async function syncServerTelegramListener() {
 
   // Check if there are any active pending (unverified) connections
   try {
-    const listRes = await databases.listDocuments(
+    const listRes = await databases.listRows(
       APPWRITE_CONFIG.DATABASES.CONNECT,
       APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
       [Query.equal('is_verified', false)]
@@ -272,7 +272,7 @@ function runPollerLoop(botToken: string) {
               const [userId, pairCode] = parts;
 
               try {
-                const doc = await databases.getDocument(
+                const doc = await databases.getRow(
                   APPWRITE_CONFIG.DATABASES.CONNECT,
                   APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
                   userId
@@ -286,7 +286,7 @@ function runPollerLoop(botToken: string) {
                     const tgUsername = message.from.username || message.from.first_name || 'User';
                     const chatId = String(message.chat.id);
 
-                    await databases.updateDocument(
+                    await databases.updateRow(
                       APPWRITE_CONFIG.DATABASES.CONNECT,
                       APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
                       userId,
@@ -318,7 +318,7 @@ function runPollerLoop(botToken: string) {
       }
 
       const databasesInstance = createSystemClient().databases;
-      const listRes = await databasesInstance.listDocuments(
+      const listRes = await databasesInstance.listRows(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         [Query.equal('is_verified', false)]

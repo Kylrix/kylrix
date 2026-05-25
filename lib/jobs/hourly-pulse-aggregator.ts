@@ -2,7 +2,7 @@ import { databases } from '../appwrite/client';
 
 export async function aggregateSystemPulse(): Promise<void> {
   const oneHourAgo = Date.now() - 3600000;
-  const engagements = await databases.listDocuments(
+  const engagements = await databases.listRows(
     'chat',
     'engagement_views',
     [`greaterThan(createdAt, ${oneHourAgo})`]
@@ -19,7 +19,7 @@ export async function aggregateSystemPulse(): Promise<void> {
     { metricKey: 'median_interaction_ratio', metricValue: medianRatio, sampleCount: ratios.length }];
 
   for (const update of updates) {
-    await databases.updateDocument(
+    await databases.updateRow(
         'chat',
         'system_pulse',
         update.metricKey,

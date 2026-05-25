@@ -131,7 +131,7 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
     try {
       const res = await FormsService.listSubmissions(formId);
       // Filter out drafts (work-in-progress)
-      const nonDrafts = res.rows.filter(s => {
+      const nonDrafts = res.documents.filter(s => {
         try {
           const meta = JSON.parse(s.metadata || '{}');
           return !meta.isDraft;

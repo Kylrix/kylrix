@@ -70,26 +70,26 @@ function buildRequestPermissions(requesterId: string, managers: string[]) {
 }
 
 async function getConversation(databases: ReturnType<typeof createSystemClient>['databases'], conversationId: string) {
-  return databases.getDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, conversationId);
+  return databases.getRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, conversationId);
 }
 
 async function getJoinRequest(databases: ReturnType<typeof createSystemClient>['databases'], resourceType: string, resourceId: string, requesterId: string) {
-  const existing = await databases.listDocuments(CHAT_DB_ID, JOIN_REQUESTS_TABLE_ID, [
+  const existing = await databases.listRows(CHAT_DB_ID, JOIN_REQUESTS_TABLE_ID, [
     Query.equal('resourceType', resourceType),
     Query.equal('resourceId', resourceId),
     Query.equal('requesterId', requesterId),
     Query.limit(1)]);
-  return existing.documents[0] || null;
+  return existing.rows[0] || null;
 }
 
 async function isConversationMember(databases: ReturnType<typeof createSystemClient>['databases'], conversation: any, userId: string) {
   if (!userId) return false;
   if (Array.isArray(conversation?.participants) && uniqueIds(conversation.participants).includes(userId)) return true;
-  const memberRows = await databases.listDocuments(CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
+  const memberRows = await databases.listRows(CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
     Query.equal('conversationId', conversation.$id),
     Query.equal('userId', userId),
     Query.limit(1)]).catch(() => ({ documents: [] as any[] }));
-  return Boolean(memberRows.documents[0]);
+  return Boolean(memberRows.rows[0]);
 }
 
 export async function loadJoinRequestPreview(input: { resourceType: string; resourceId: string; requesterId?: string }) {
@@ -130,7 +130,7 @@ export async function createJoinRequest(input: { userId: string; resourceType: s
   if (existing) return { alreadyJoined: false, request: existing, conversation };
   const managers = getManagers(conversation);
   const requestId = hashJoinRequestId(resourceType, resourceId, input.userId);
-  const request = await databases.createDocument(
+  const request = await databases.createRow(
     CHAT_DB_ID,
     JOIN_REQUESTS_TABLE_ID,
     requestId,
@@ -155,7 +155,7 @@ export async function resolveJoinRequest(input: {
   if (!managers.includes(input.actorId)) throw new Error('Forbidden');
   const request = await getJoinRequest(databases, resourceType, input.resourceId, input.requesterId);
   if (!request) throw new Error('Join request not found');
-  const updated = await databases.updateDocument(
+  const updated = await databases.updateRow(
     CHAT_DB_ID,
     JOIN_REQUESTS_TABLE_ID,
     request.$id,
@@ -169,8 +169,8 @@ export async function resolveJoinRequest(input: {
       ...participants.flatMap((participantId) => [Permission.read(Role.user(participantId))]),
       ...managers.map((managerId) => Permission.read(Role.user(managerId)))];
     await Promise.all([
-      databases.updateDocument(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, conversation.$id, { participants, participantCount: participants.length, updatedAt: new Date().toISOString() }, permissions),
-      databases.createDocument(
+      databases.updateRow(CHAT_DB_ID, CONVERSATIONS_TABLE_ID, conversation.$id, { participants, participantCount: participants.length, updatedAt: new Date().toISOString() }, permissions),
+      databases.createRow(
         CHAT_DB_ID,
         CONVERSATION_MEMBERS_TABLE_ID,
         ID.unique(),
@@ -211,5 +211,5 @@ export async function cancelJoinRequest(input: { userId: string; resourceType: s
   const resourceType = normalizeResourceType(input.resourceType);
   const request = await getJoinRequest(databases, resourceType, input.resourceId, input.userId);
   if (!request) throw new Error('Join request not found');
-  await databases.deleteDocument(CHAT_DB_ID, JOIN_REQUESTS_TABLE_ID, request.$id);
+  await databases.deleteRow(CHAT_DB_ID, JOIN_REQUESTS_TABLE_ID, request.$id);
 }

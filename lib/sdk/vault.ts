@@ -33,6 +33,6 @@ export class KylrixVault {
     const results = await this.sdk.listRows<any>(databaseId, tableId, [
       `equal("userId", "${userId}")`
     ]);
-    return results.documents[0] || null;
+    return results.rows[0] || null;
   }
 }

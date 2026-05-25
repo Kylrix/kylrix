@@ -40,7 +40,7 @@ export const TelemetryService = {
       const tables = createSystemTablesDB();
       const threadId = ID.unique();
 
-      await tables.createRow({
+      await collections.createRow({
         databaseId: DATABASE_ID,
         tableId: TABLES.THREADS,
         rowId: threadId,
@@ -66,7 +66,7 @@ export const TelemetryService = {
   async completeThread(threadId: string): Promise<void> {
     try {
       const tables = createSystemTablesDB();
-      const res = await tables.listRows({
+      const res = await collections.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLES.THREADS,
         queries: [Query.equal('threadId', threadId), Query.limit(1)]
@@ -74,7 +74,7 @@ export const TelemetryService = {
 
       const row = res.rows[0];
       if (row) {
-        await tables.updateRow({
+        await collections.updateRow({
           databaseId: DATABASE_ID,
           tableId: TABLES.THREADS,
           rowId: row.$id,
@@ -92,7 +92,7 @@ export const TelemetryService = {
   async failThread(threadId: string): Promise<void> {
     try {
       const tables = createSystemTablesDB();
-      const res = await tables.listRows({
+      const res = await collections.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLES.THREADS,
         queries: [Query.equal('threadId', threadId), Query.limit(1)]
@@ -100,7 +100,7 @@ export const TelemetryService = {
 
       const row = res.rows[0];
       if (row) {
-        await tables.updateRow({
+        await collections.updateRow({
           databaseId: DATABASE_ID,
           tableId: TABLES.THREADS,
           rowId: row.$id,
@@ -126,7 +126,7 @@ export const TelemetryService = {
     try {
       const tables = createSystemTablesDB();
 
-      await tables.createRow({
+      await collections.createRow({
         databaseId: DATABASE_ID,
         tableId: TABLES.ACTIVITY,
         rowId: ID.unique(),
@@ -158,7 +158,7 @@ export const TelemetryService = {
     try {
       const tables = createSystemTablesDB();
 
-      await tables.createRow({
+      await collections.createRow({
         databaseId: DATABASE_ID,
         tableId: TABLES.TELEMETRY,
         rowId: ID.unique(),
@@ -190,7 +190,7 @@ export const TelemetryService = {
       const tables = createSystemTablesDB();
       const type = params.type || 'direct';
 
-      await tables.createRow({
+      await collections.createRow({
         databaseId: DATABASE_ID,
         tableId: TABLES.NOTIFICATIONS,
         rowId: ID.unique(),
@@ -215,7 +215,7 @@ export const TelemetryService = {
   async readNotification(notificationId: string, userId: string): Promise<void> {
     try {
       const tables = createSystemTablesDB();
-      const row = await tables.getRow<any>({
+      const row = await collections.getRow<any>({
         databaseId: DATABASE_ID,
         tableId: TABLES.NOTIFICATIONS,
         rowId: notificationId
@@ -227,14 +227,14 @@ export const TelemetryService = {
 
       if (remainingTargets.length === 0) {
         // Sole target read -> physically delete row
-        await tables.deleteRow({
+        await collections.deleteRow({
           databaseId: DATABASE_ID,
           tableId: TABLES.NOTIFICATIONS,
           rowId: notificationId
         });
       } else {
         // Multi-recipient -> remove current user from targets list
-        await tables.updateRow({
+        await collections.updateRow({
           databaseId: DATABASE_ID,
           tableId: TABLES.NOTIFICATIONS,
           rowId: notificationId,

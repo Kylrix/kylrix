@@ -19,7 +19,7 @@ export async function validateApiKey(key: string | null | undefined): Promise<AP
     const keyHash = hashApiKey(key);
 
     // Primary: lookup by keyHash attribute
-    let res = await databases.listDocuments(
+    let res = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_APIKEYS,
       [Query.equal('keyHash', keyHash), Query.limit(1)] as any
@@ -27,7 +27,7 @@ export async function validateApiKey(key: string | null | undefined): Promise<AP
 
     // Fallback: legacy lookup by raw key field if no hash match
     if (!res.documents.length) {
-      res = await databases.listDocuments(
+      res = await databases.listRows(
         APPWRITE_DATABASE_ID,
         APPWRITE_TABLE_ID_APIKEYS,
         [Query.equal('key', key), Query.limit(1)] as any
@@ -38,7 +38,7 @@ export async function validateApiKey(key: string | null | undefined): Promise<AP
       return { valid: false, reason: 'NOT_FOUND' };
     }
 
-    const doc: any = res.documents[0];
+    const doc: any = res.rows[0];
 
     // Soft checks (revocation / expiry / quota)
     if (doc.revokedAt) return { valid: false, reason: 'REVOKED', apiKeyId: doc.$id };
@@ -77,7 +77,7 @@ export async function createHashedApiKey(options: CreateApiKeyOptions = {}) {
   const keyHash = hashApiKey(key);
 
   const now = new Date().toISOString();
-  const doc = await databases.createDocument(
+  const doc = await databases.createRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_APIKEYS,
     (ID as any).unique(),

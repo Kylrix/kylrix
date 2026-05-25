@@ -13,7 +13,7 @@ export async function dispatchTelegramNotification(targetUserId: string, message
     // 1. Blind Lookup matching Target_UserID
     let doc = null;
     try {
-      doc = await databases.getDocument(
+      doc = await databases.getRow(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         targetUserId

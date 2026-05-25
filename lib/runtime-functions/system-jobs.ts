@@ -24,7 +24,7 @@ async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) 
   const NOTES_TABLE = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
   const cap = Math.min(Math.max(Number(payload?.batchSize) || 120, 1), 500);
 
-  const res = await databases.listDocuments(NOTE_DB, NOTES_TABLE, [
+  const res = await databases.listRows(NOTE_DB, NOTES_TABLE, [
     Query.isNull('userId'),
     Query.equal('isPublic', true),
     Query.orderDesc('$updatedAt'),
@@ -32,7 +32,7 @@ async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) 
     Query.select(['$id', 'metadata', 'updatedAt'])]);
 
   let deleted = 0;
-  for (const doc of res.documents) {
+  for (const doc of res.rows) {
     let meta: { isGhost?: boolean; expiresAt?: string };
     try {
       meta =
@@ -47,7 +47,7 @@ async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) 
     if (!Number.isFinite(exp) || exp > Date.now()) continue;
 
     try {
-      await databases.deleteDocument(NOTE_DB, NOTES_TABLE, doc.$id);
+      await databases.deleteRow(NOTE_DB, NOTES_TABLE, doc.$id);
       deleted += 1;
     } catch {
       continue;
@@ -67,16 +67,16 @@ async function sweepStaleActionThreads(payload?: { batchSize?: number }) {
   const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
   try {
-    const res = await databases.listDocuments(DATABASE_ID, THREADS_TABLE, [
+    const res = await databases.listRows(DATABASE_ID, THREADS_TABLE, [
       Query.equal('status', 'running'),
       Query.lessThan('$updatedAt', twoHoursAgo),
       Query.limit(cap)
     ]);
 
     let updated = 0;
-    for (const doc of res.documents) {
+    for (const doc of res.rows) {
       try {
-        await databases.updateDocument(DATABASE_ID, THREADS_TABLE, doc.$id, {
+        await databases.updateRow(DATABASE_ID, THREADS_TABLE, doc.$id, {
           status: 'failed'
         });
         updated += 1;

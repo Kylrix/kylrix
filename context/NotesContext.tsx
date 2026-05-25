@@ -114,7 +114,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         });
 
         if (res.documents.length > 0) {
-          const newDocs = res.documents as unknown as Notes[];
+          const newDocs = res.rows as unknown as Notes[];
           setNotes(prev => {
             const existingIds = new Set(prev.map(n => n.$id));
             const distinctNew = newDocs.filter(n => !existingIds.has(n.$id));
@@ -231,7 +231,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         res = optimizedRes;
         
         // Update other states based on this initial fetch
-        const batch = (res?.documents || []).map((note: Notes) => normalizeVisibility(note)) as Notes[];
+        const batch = (res?.rows || []).map((note: Notes) => normalizeVisibility(note)) as Notes[];
         setNotes(batch);
         setTotalNotes(res?.total || 0);
         setHasMore(!!res?.hasMore);
@@ -250,7 +250,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           userId: user?.$id,
         });
 
-        const batch = (res?.documents || []).map((note: Notes) => normalizeVisibility(note)) as Notes[];
+        const batch = (res?.rows || []).map((note: Notes) => normalizeVisibility(note)) as Notes[];
 
         setNotes(prev => {
           if (reset) return batch;

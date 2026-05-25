@@ -64,7 +64,7 @@ export class ExtensionManager {
   async loadExtensions() {
     try {
       const result = await listExtensions();
-      const extensions = result.documents as unknown as Extensions[];
+      const extensions = result.rows as unknown as Extensions[];
       
       this.extensions.clear();
       this.enabledExtensions = [];

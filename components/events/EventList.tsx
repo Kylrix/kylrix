@@ -53,7 +53,7 @@ export default function EventList() {
         queries.push(Query.select(['$id', 'title', 'description', 'startTime', 'endTime', 'location', 'visibility', 'status', 'coverImageId', 'userId', '$createdAt', '$updatedAt']));
 
         const list = await eventApi.list(queries);
-        const mapped = list.rows.map(doc => ({
+        const mapped = list.documents.map(doc => ({
           id: doc.$id,
           title: doc.title,
           description: doc.description,

@@ -237,7 +237,7 @@ export function NoteDetailSidebar({
       try {
         const resolved = await Promise.all(linkedTaskIds.map((id: string) => 
           getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'tasks', rowId: id },
-          () => listFlowTasks([Query.equal('$id', id)]).then(res => res.documents[0] || null))
+          () => listFlowTasks([Query.equal('$id', id)]).then(res => res.rows[0] || null))
         ));
         setLinkedTasks(resolved.filter(Boolean));
       } finally { setIsLoadingTasks(false); }
@@ -252,7 +252,7 @@ export function NoteDetailSidebar({
       try {
         const resolved = await Promise.all(linkedEventIds.map((id: string) => 
           getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events', rowId: id },
-          () => listFlowEvents([Query.equal('$id', id)]).then(res => res.documents[0] || null))
+          () => listFlowEvents([Query.equal('$id', id)]).then(res => res.rows[0] || null))
         ));
         setLinkedEvents(resolved.filter(Boolean));
       } finally { setIsLoadingEvents(false); }
@@ -267,7 +267,7 @@ export function NoteDetailSidebar({
       try {
         const resolved = await Promise.all(linkedCredentialIds.map((id: string) => 
           getTablesDbRowCached({ databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: 'credentials', rowId: id },
-          () => listKeepCredentials([Query.equal('$id', id)]).then(res => res.documents[0] || null))
+          () => listKeepCredentials([Query.equal('$id', id)]).then(res => res.rows[0] || null))
         ));
         setLinkedSecrets(resolved.filter(Boolean));
       } finally { setIsLoadingSecrets(false); }

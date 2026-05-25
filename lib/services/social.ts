@@ -73,7 +73,7 @@ export const SocialService = {
                 Query.limit(100)
             ]);
 
-            const likes = interactions.rows.filter((i: any) => i.emoji === 'like').length;
+            const likes = interactions.documents.filter((i: any) => i.emoji === 'like').length;
 
             const related = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
                 Query.equal('sourceId', momentId),
@@ -123,7 +123,7 @@ export const SocialService = {
                 Query.limit(100)
             ]);
             // return minimal footprint
-            return rows.rows.map((r: any) => ({ userId: r.userId, createdAt: r.createdAt || r.$createdAt }));
+            return rows.documents.map((r: any) => ({ userId: r.userId, createdAt: r.createdAt || r.$createdAt }));
         } catch (e) {
             console.error('_listInteractionsFor error', e);
             return [];
@@ -140,8 +140,8 @@ export const SocialService = {
                 Query.limit(100)
             ]);
 
-            if (moments.rows.length) {
-                return moments.rows.map((m: any) => ({ userId: m.userId || m.creatorId, createdAt: m.$createdAt || m.createdAt }));
+            if (moments.documents.length) {
+                return moments.documents.map((m: any) => ({ userId: m.userId || m.creatorId, createdAt: m.$createdAt || m.createdAt }));
             }
 
             const legacy = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
@@ -150,7 +150,7 @@ export const SocialService = {
                 Query.limit(200)
             ]);
 
-            return legacy.rows.filter((m: any) => {
+            return legacy.documents.filter((m: any) => {
                 const kind = getMomentKind(m);
                 const legacySourceId = getMomentSourceId(m);
                 return kind === 'pulse' && legacySourceId === sourceId;
@@ -358,7 +358,7 @@ export const SocialService = {
                     Query.limit(50)
                 ]);
                 // Re-sort to maintain rank
-                const rankedRows = moments.rows.sort((a, b) => rankedIds.indexOf(a.$id) - rankedIds.indexOf(b.$id));
+                const rankedRows = moments.documents.sort((a, b) => rankedIds.indexOf(a.$id) - rankedIds.indexOf(b.$id));
                 return { ...moments, rows: rankedRows };
             }
         }
@@ -894,7 +894,7 @@ export const SocialService = {
             ]);
 
             const profiles = await Promise.all(
-                result.rows.map(async (row: any) => {
+                result.documents.map(async (row: any) => {
                     const profile = await UsersService.getProfileById(row.followerId);
                     if (!profile) return null;
                     
@@ -924,7 +924,7 @@ export const SocialService = {
             ]);
 
             const profiles = await Promise.all(
-                result.rows.map(async (row: any) => {
+                result.documents.map(async (row: any) => {
                     const profile = await UsersService.getProfileById(row.followingId);
                     if (!profile) return null;
 
@@ -962,7 +962,7 @@ export const SocialService = {
             const moments = await tablesDB.listRows(DB_ID, MOMENTS_TABLE, queries);
             
             // Enrich search results
-            const enrichedRows = await Promise.all(moments.rows.map(async (moment: any) => {
+            const enrichedRows = await Promise.all(moments.documents.map(async (moment: any) => {
                 return this.enrichMoment(moment, userId);
             }));
 
@@ -998,8 +998,8 @@ export const SocialService = {
             Query.limit(100)
         ]).catch(() => ({ rows: [] as any[] }));
 
-        const replies = moments.rows.length
-            ? await Promise.all(moments.rows.map(m => this.enrichMoment(m, currentUserId)))
+        const replies = moments.documents.length
+            ? await Promise.all(moments.documents.map(m => this.enrichMoment(m, currentUserId)))
             : await Promise.all((await tablesDB.listRows(DB_ID, MOMENTS_TABLE, [
                 Query.select(MOMENT_LIST_SELECT),
                 Query.orderDesc('$createdAt'),

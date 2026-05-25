@@ -35,15 +35,15 @@ export const WorkflowDbService = {
       ] : undefined;
 
       // Check if document already exists
-      const existing = await tables.listRows({
+      const existing = await collections.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
         queries: [Query.equal('workflowId', wf.id), Query.limit(1)]
       });
 
-      if (existing.rows.length > 0) {
+      if (existing.documents.length > 0) {
         const row = existing.rows[0];
-        await tables.updateRow({
+        await collections.updateRow({
           databaseId: DATABASE_ID,
           tableId: TABLE_ID,
           rowId: row.$id,
@@ -52,7 +52,7 @@ export const WorkflowDbService = {
         });
         return wf.id;
       } else {
-        await tables.createRow({
+        await collections.createRow({
           databaseId: DATABASE_ID,
           tableId: TABLE_ID,
           rowId: ID.unique(),
@@ -73,13 +73,13 @@ export const WorkflowDbService = {
   async listWorkflows(): Promise<WorkflowChain[]> {
     try {
       const tables = createSystemTablesDB();
-      const res = await tables.listRows({
+      const res = await collections.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
         queries: [Query.orderDesc('$createdAt'), Query.limit(100)]
       });
 
-      return res.rows.map(row => {
+      return res.documents.map(row => {
         let steps = [];
         try {
           steps = typeof row.steps === 'string' ? JSON.parse(row.steps) : [];
@@ -110,7 +110,7 @@ export const WorkflowDbService = {
   async listPublicWorkflows(): Promise<WorkflowChain[]> {
     try {
       const tables = createSystemTablesDB();
-      const res = await tables.listRows({
+      const res = await collections.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
         queries: [
@@ -120,7 +120,7 @@ export const WorkflowDbService = {
         ]
       });
 
-      return res.rows.map(row => {
+      return res.documents.map(row => {
         let steps = [];
         try {
           steps = typeof row.steps === 'string' ? JSON.parse(row.steps) : [];
@@ -151,14 +151,14 @@ export const WorkflowDbService = {
   async deleteWorkflow(workflowId: string): Promise<void> {
     try {
       const tables = createSystemTablesDB();
-      const existing = await tables.listRows({
+      const existing = await collections.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLE_ID,
         queries: [Query.equal('workflowId', workflowId), Query.limit(1)]
       });
 
-      if (existing.rows.length > 0) {
-        await tables.deleteRow({
+      if (existing.documents.length > 0) {
+        await collections.deleteRow({
           databaseId: DATABASE_ID,
           tableId: TABLE_ID,
           rowId: existing.rows[0].$id

@@ -39,7 +39,7 @@ export async function executeCascadeDeleteSecure(
 
     // A. Delete Comments & Comment Reactions
     try {
-      const commentsRes = await tables.listRows({
+      const commentsRes = await collections.listRows({
         databaseId,
         tableId: COMMENTS_TABLE,
         queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any,
@@ -49,7 +49,7 @@ export async function executeCascadeDeleteSecure(
       if (commentIds.length > 0) {
         // Delete all reactions attached to these comments
         try {
-          const reactionsRes = await tables.listRows({
+          const reactionsRes = await collections.listRows({
             databaseId,
             tableId: REACTIONS_TABLE,
             queries: [
@@ -60,8 +60,8 @@ export async function executeCascadeDeleteSecure(
           });
 
           await Promise.all(
-            reactionsRes.rows.map((r: any) =>
-              tables.deleteRow({
+            reactionsRes.documents.map((r: any) =>
+              collections.deleteRow({
                 databaseId,
                 tableId: REACTIONS_TABLE,
                 rowId: r.$id,
@@ -75,7 +75,7 @@ export async function executeCascadeDeleteSecure(
         // Delete the comments themselves
         await Promise.all(
           commentIds.map((cid) =>
-            tables.deleteRow({
+            collections.deleteRow({
               databaseId,
               tableId: COMMENTS_TABLE,
               rowId: cid,
@@ -89,15 +89,15 @@ export async function executeCascadeDeleteSecure(
 
     // B. Delete Reactions on the Note itself
     try {
-      const reactionsRes = await tables.listRows({
+      const reactionsRes = await collections.listRows({
         databaseId,
         tableId: REACTIONS_TABLE,
         queries: [Query.equal('targetId', rowId), Query.limit(1000)] as any,
       });
 
       await Promise.all(
-        reactionsRes.rows.map((r: any) =>
-          tables.deleteRow({
+        reactionsRes.documents.map((r: any) =>
+          collections.deleteRow({
             databaseId,
             tableId: REACTIONS_TABLE,
             rowId: r.$id,
@@ -110,15 +110,15 @@ export async function executeCascadeDeleteSecure(
 
     // C. Delete Collaborators (Legacy and Polymorphic)
     try {
-      const collaboratorsRes = await tables.listRows({
+      const collaboratorsRes = await collections.listRows({
         databaseId,
         tableId: COLLABORATORS_TABLE,
         queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any,
       });
 
       await Promise.all(
-        collaboratorsRes.rows.map((collab: any) =>
-          tables.deleteRow({
+        collaboratorsRes.documents.map((collab: any) =>
+          collections.deleteRow({
             databaseId,
             tableId: COLLABORATORS_TABLE,
             rowId: collab.$id,
@@ -132,7 +132,7 @@ export async function executeCascadeDeleteSecure(
     try {
       const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
       const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-      const polyCollabsRes = await tables.listRows({
+      const polyCollabsRes = await collections.listRows({
         databaseId: FLOW_DATABASE_ID,
         tableId: POLYMORPHIC_COLLABORATORS_TABLE,
         queries: [
@@ -142,8 +142,8 @@ export async function executeCascadeDeleteSecure(
         ] as any,
       });
       await Promise.all(
-        polyCollabsRes.rows.map((collab: any) =>
-          tables.deleteRow({
+        polyCollabsRes.documents.map((collab: any) =>
+          collections.deleteRow({
             databaseId: FLOW_DATABASE_ID,
             tableId: POLYMORPHIC_COLLABORATORS_TABLE,
             rowId: collab.$id,
@@ -156,7 +156,7 @@ export async function executeCascadeDeleteSecure(
 
     // D. Delete Note Tags Pivots & Decrement Tag usageCount
     try {
-      const pivotsRes = await tables.listRows({
+      const pivotsRes = await collections.listRows({
         databaseId,
         tableId: NOTE_TAGS_TABLE,
         queries: [Query.equal('resourceId', rowId), Query.equal('resourceType', 'note'), Query.limit(1000)] as any,
@@ -165,16 +165,16 @@ export async function executeCascadeDeleteSecure(
       for (const pivot of pivotsRes.rows as any[]) {
         if (pivot.tag) {
           try {
-            const tagsRes = await tables.listRows({
+            const tagsRes = await collections.listRows({
               databaseId,
               tableId: TAGS_TABLE,
               queries: [Query.equal('name', pivot.tag), Query.limit(1)] as any,
             });
 
-            if (tagsRes.rows.length > 0) {
+            if (tagsRes.documents.length > 0) {
               const tagDoc = tagsRes.rows[0];
               const current = typeof tagDoc.usageCount === 'number' ? tagDoc.usageCount : 0;
-              await tables.updateRow({
+              await collections.updateRow({
                 databaseId,
                 tableId: TAGS_TABLE,
                 rowId: tagDoc.$id,
@@ -185,7 +185,7 @@ export async function executeCascadeDeleteSecure(
         }
 
         // Delete the pivot entry
-        await tables.deleteRow({
+        await collections.deleteRow({
           databaseId,
           tableId: NOTE_TAGS_TABLE,
           rowId: pivot.$id,
@@ -197,7 +197,7 @@ export async function executeCascadeDeleteSecure(
 
     // E. Delete Vault Key Mappings
     try {
-      const mappingsRes = await tables.listRows({
+      const mappingsRes = await collections.listRows({
         databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
         tableId: 'key_mapping',
         queries: [
@@ -208,8 +208,8 @@ export async function executeCascadeDeleteSecure(
       });
 
       await Promise.all(
-        mappingsRes.rows.map((m: any) =>
-          tables.deleteRow({
+        mappingsRes.documents.map((m: any) =>
+          collections.deleteRow({
             databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
             tableId: 'key_mapping',
             rowId: m.$id,
@@ -226,15 +226,15 @@ export async function executeCascadeDeleteSecure(
     console.log(`[Cascade Delete] Triggered project cascade cleanup for: ${rowId}`);
 
     try {
-      const objectsRes = await tables.listRows({
+      const objectsRes = await collections.listRows({
         databaseId,
         tableId: 'project_objects',
         queries: [Query.equal('projectId', rowId), Query.limit(1000)] as any,
       });
 
       await Promise.all(
-        objectsRes.rows.map((obj: any) =>
-          tables.deleteRow({
+        objectsRes.documents.map((obj: any) =>
+          collections.deleteRow({
             databaseId,
             tableId: 'project_objects',
             rowId: obj.$id,
@@ -251,15 +251,15 @@ export async function executeCascadeDeleteSecure(
     console.log(`[Cascade Delete] Triggered form cascade cleanup for: ${rowId}`);
 
     try {
-      const submissionsRes = await tables.listRows({
+      const submissionsRes = await collections.listRows({
         databaseId,
         tableId: 'formSubmissions',
         queries: [Query.equal('formId', rowId), Query.limit(1000)] as any,
       });
 
       await Promise.all(
-        submissionsRes.rows.map((sub: any) =>
-          tables.deleteRow({
+        submissionsRes.documents.map((sub: any) =>
+          collections.deleteRow({
             databaseId,
             tableId: 'formSubmissions',
             rowId: sub.$id,
@@ -276,15 +276,15 @@ export async function executeCascadeDeleteSecure(
     console.log(`[Cascade Delete] Triggered event cascade cleanup for: ${rowId}`);
 
     try {
-      const guestsRes = await tables.listRows({
+      const guestsRes = await collections.listRows({
         databaseId,
         tableId: GUESTS_TABLE,
         queries: [Query.equal('eventId', rowId), Query.limit(1000)] as any,
       });
 
       await Promise.all(
-        guestsRes.rows.map((guest: any) =>
-          tables.deleteRow({
+        guestsRes.documents.map((guest: any) =>
+          collections.deleteRow({
             databaseId,
             tableId: GUESTS_TABLE,
             rowId: guest.$id,
@@ -297,7 +297,7 @@ export async function executeCascadeDeleteSecure(
 
     try {
       const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-      const polyCollabsRes = await tables.listRows({
+      const polyCollabsRes = await collections.listRows({
         databaseId: FLOW_DB,
         tableId: POLYMORPHIC_COLLABORATORS_TABLE,
         queries: [
@@ -307,8 +307,8 @@ export async function executeCascadeDeleteSecure(
         ] as any,
       });
       await Promise.all(
-        polyCollabsRes.rows.map((collab: any) =>
-          tables.deleteRow({
+        polyCollabsRes.documents.map((collab: any) =>
+          collections.deleteRow({
             databaseId: FLOW_DB,
             tableId: POLYMORPHIC_COLLABORATORS_TABLE,
             rowId: collab.$id,
@@ -326,7 +326,7 @@ export async function executeCascadeDeleteSecure(
 
     try {
       // Find all ghost notes associated with this call
-      const ghostNotesRes = await tables.listRows({
+      const ghostNotesRes = await collections.listRows({
         databaseId: NOTE_DB,
         tableId: NOTE_TABLE,
         queries: [Query.contains('metadata', rowId), Query.limit(100)] as any,
@@ -337,7 +337,7 @@ export async function executeCascadeDeleteSecure(
         await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, ghost.$id);
 
         // Delete the ghost note itself
-        await tables.deleteRow({
+        await collections.deleteRow({
           databaseId: NOTE_DB,
           tableId: NOTE_TABLE,
           rowId: ghost.$id,
@@ -349,7 +349,7 @@ export async function executeCascadeDeleteSecure(
 
     try {
       const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-      const polyCollabsRes = await tables.listRows({
+      const polyCollabsRes = await collections.listRows({
         databaseId: FLOW_DB,
         tableId: POLYMORPHIC_COLLABORATORS_TABLE,
         queries: [
@@ -359,8 +359,8 @@ export async function executeCascadeDeleteSecure(
         ] as any,
       });
       await Promise.all(
-        polyCollabsRes.rows.map((collab: any) =>
-          tables.deleteRow({
+        polyCollabsRes.documents.map((collab: any) =>
+          collections.deleteRow({
             databaseId: FLOW_DB,
             tableId: POLYMORPHIC_COLLABORATORS_TABLE,
             rowId: collab.$id,
@@ -378,7 +378,7 @@ export async function executeCascadeDeleteSecure(
 
     try {
       const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-      const polyCollabsRes = await tables.listRows({
+      const polyCollabsRes = await collections.listRows({
         databaseId: FLOW_DB,
         tableId: POLYMORPHIC_COLLABORATORS_TABLE,
         queries: [
@@ -388,8 +388,8 @@ export async function executeCascadeDeleteSecure(
         ] as any,
       });
       await Promise.all(
-        polyCollabsRes.rows.map((collab: any) =>
-          tables.deleteRow({
+        polyCollabsRes.documents.map((collab: any) =>
+          collections.deleteRow({
             databaseId: FLOW_DB,
             tableId: POLYMORPHIC_COLLABORATORS_TABLE,
             rowId: collab.$id,

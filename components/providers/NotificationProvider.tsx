@@ -106,12 +106,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const res = await databases.listDocuments(
+      const res = await databases.listRows(
         APPWRITE_CONFIG.DATABASES.KYLRIXNOTE,
         APPWRITE_CONFIG.TABLES.KYLRIXNOTE.ACTIVITY_LOG,
         [Query.equal('userId', user.$id), Query.orderDesc('$createdAt'), Query.limit(50)]
       );
-      const logs = res.documents as unknown as ActivityLog[];
+      const logs = res.rows as unknown as ActivityLog[];
       setNotifications(logs);
       setUnreadCount(calculateUnread(logs));
       saveCachedNotifications(logs);
@@ -181,7 +181,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         saveCachedNotifications(next);
         return next;
       });
-      await databases.updateDocument(APPWRITE_CONFIG.DATABASES.KYLRIXNOTE, APPWRITE_CONFIG.TABLES.KYLRIXNOTE.ACTIVITY_LOG, id, {
+      await databases.updateRow(APPWRITE_CONFIG.DATABASES.KYLRIXNOTE, APPWRITE_CONFIG.TABLES.KYLRIXNOTE.ACTIVITY_LOG, id, {
         details: JSON.stringify(newMetadata)
       });
     } catch (error: unknown) {

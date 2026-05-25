@@ -1577,7 +1577,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
         try {
             // Find saved messages conversation
             const convs = await ChatService.getConversations(user.$id);
-            const savedChat = convs.rows.find((c: any) =>
+            const savedChat = convs.documents.find((c: any) =>
                 c.type === 'direct' && c.participants.length === 1 && c.participants[0] === user.$id
             );
 
@@ -1619,7 +1619,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
             ]);
 
             // Enrich User Results
-            const enrichedUsers = await Promise.all(userResult.rows.map(async (u: any) => {
+            const enrichedUsers = await Promise.all(userResult.documents.map(async (u: any) => {
                 let avatar = null;
                 const cachedIdentity = getCachedIdentityById(u.userId || u.$id);
                 const sourceAvatar = cachedIdentity?.avatar || u.avatar || null;
@@ -1634,7 +1634,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
             }));
 
             // Enrich Moment Results with Creator Info
-            const enrichedMoments = await Promise.all(momentResult.rows.map(async (m: any) => {
+            const enrichedMoments = await Promise.all(momentResult.documents.map(async (m: any) => {
                 const creatorId = m.userId || m.creatorId;
                 if (profileRegistry.has(creatorId)) {
                     return { ...m, creator: profileRegistry.get(creatorId) };

@@ -139,8 +139,8 @@ async function notifyMessageStreak(conversation: any, senderId: string, conversa
         Query.orderDesc('createdAt'),
         Query.limit(5)]);
 
-    if (recentMessages.rows.length < 5) return;
-    if (!recentMessages.rows.every((row: any) => row.senderId === senderId)) return;
+    if (recentMessages.documents.length < 5) return;
+    if (!recentMessages.documents.every((row: any) => row.senderId === senderId)) return;
 
     await sendKylrixEmailNotification({
         eventType: 'message_streak',
@@ -344,7 +344,7 @@ async function fetchKeyMapping(resourceType: string, resourceId: string, grantee
             Query.equal('grantee', String(grantee || '').trim()),
             Query.limit(1)]).catch(() => ({ rows: [] as any[] }));
 
-        if (res.rows && res.rows.length > 0) return res.rows[0];
+        if (res.rows && res.documents.length > 0) return res.rows[0];
     } catch (e) {
         console.warn('[ChatService] fetchKeyMapping lookup failed', e);
     }
@@ -702,7 +702,7 @@ export const ChatService = {
                 Query.limit(100)
             ]).catch(() => ({ rows: [] as any[] }));
             conversationRows = legacy.rows || [];
-            total = legacy.rows.length;
+            total = legacy.documents.length;
         }
 
         const memberRowsByConversation = new Map<string, string[]>();
@@ -1110,10 +1110,10 @@ export const ChatService = {
                 Query.offset(offset)
             ]);
 
-            console.log('[ChatService] listRows returned:', res.total, 'rows:', res.rows.length);
+            console.log('[ChatService] listRows returned:', res.total, 'rows:', res.documents.length);
 
             // Decrypt messages in parallel
-            res.rows = await Promise.all(res.rows.map(async (msg: any) => {
+            res.rows = await Promise.all(res.documents.map(async (msg: any) => {
                 const isEncrypted = ecosystemSecurity.status.isUnlocked && (
                     (msg.type === 'text' && msg.content && msg.content.length > 40) ||
                     (msg.metadata && msg.metadata.length > 40)
@@ -1152,7 +1152,7 @@ export const ChatService = {
                 return msg;
             }));
 
-            if (res.rows.length > 0) {
+            if (res.documents.length > 0) {
                 const latestMessage = res.rows[0];
                 setConversationPreviewCache(conversationId, {
                     lastMessageId: latestMessage.$id,
@@ -1291,7 +1291,7 @@ export const ChatService = {
                 Query.limit(1)
             ]).catch(() => ({ rows: [] as any[] }));
 
-            if (!memberRows.rows.length) {
+            if (!memberRows.documents.length) {
                 const memberRow = await tablesDB.createRow(DB_ID, CONV_MEMBERS_TABLE, ID.unique(), {
                     conversationId,
                     userId
@@ -1565,6 +1565,6 @@ export const ChatService = {
             Query.limit(100)
         ]);
 
-        return Promise.all(unreadMessages.rows.map(msg => this.markAsRead(msg.$id, userId)));
+        return Promise.all(unreadMessages.documents.map(msg => this.markAsRead(msg.$id, userId)));
     },
 };

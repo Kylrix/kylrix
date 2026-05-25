@@ -18,12 +18,12 @@ export async function calculateStackedSubscriptionCredit(
   let currentPeriodStart = now;
 
   try {
-    const existingSubs = await databases.listDocuments(NOTE_DB_ID, SUB_COLLECTION_ID, [
+    const existingSubs = await databases.listRows(NOTE_DB_ID, SUB_COLLECTION_ID, [
       Query.equal('userId', userId),
       Query.limit(100),
       Query.select(['$id', 'currentPeriodStart', 'currentPeriodEnd', 'createdAt', 'updatedAt', 'status', 'plan'])]);
 
-    const activeSubscriptions = (existingSubs.documents as SubscriptionRow[]).filter(
+    const activeSubscriptions = (existingSubs.rows as SubscriptionRow[]).filter(
       (row) => String(row.status || '').toLowerCase() === 'active',
     );
     const latestSubscription = pickLatestSubscription(activeSubscriptions);

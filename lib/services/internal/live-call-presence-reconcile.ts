@@ -14,7 +14,7 @@ async function patchPresenceSafe(
   rowId: string,
   patch: Partial<{ status: string; customStatus: string }>,
 ) {
-  await databases.updateDocument(CHAT_DB, APP_ACTIVITY, rowId, patch as Record<string, unknown>);
+  await databases.updateRow(CHAT_DB, APP_ACTIVITY, rowId, patch as Record<string, unknown>);
 }
 
 /** Clear malformed / legacy live payloads from presence.customStatus */
@@ -26,12 +26,12 @@ export async function reconcileStaleLiveCallPresenceForUser(
   const trimmed = String(targetUserId || '').trim();
   if (!trimmed) return { changed: false, reason: 'no_user' };
 
-  const rows = await db.listDocuments(CHAT_DB, APP_ACTIVITY, [
+  const rows = await db.listRows(CHAT_DB, APP_ACTIVITY, [
     Query.equal('userId', trimmed),
     Query.orderDesc('$updatedAt'),
     Query.limit(1),
     Query.select(['$id', 'userId', 'status', 'customStatus', 'lastSeen'])]);
-  const row = rows.documents[0];
+  const row = rows.rows[0];
   if (!row) return { changed: false, reason: 'no_presence' };
 
   const raw = String(row.customStatus || '').trim();
@@ -56,7 +56,7 @@ export async function reconcileStaleLiveCallPresenceForUser(
   }
 
   try {
-    const call = await db.getDocument(
+    const call = await db.getRow(
       APPWRITE_CONFIG.DATABASES.CHAT,
       APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
       callId,
@@ -89,7 +89,7 @@ export async function sweepStaleLiveCallPresenceBatch(limit = 100): Promise<{
   cleared: number;
 }> {
   const { databases } = createSystemClient();
-  const rows = await databases.listDocuments(CHAT_DB, APP_ACTIVITY, [
+  const rows = await databases.listRows(CHAT_DB, APP_ACTIVITY, [
     Query.equal('status', 'busy'),
     Query.orderDesc('$updatedAt'),
     Query.limit(Math.min(Math.max(limit, 1), 500)),
@@ -97,7 +97,7 @@ export async function sweepStaleLiveCallPresenceBatch(limit = 100): Promise<{
 
   let cleared = 0;
 
-  for (const doc of rows.documents) {
+  for (const doc of rows.rows) {
     const uid = String((doc as { userId?: string }).userId || '').trim();
     if (!uid) continue;
 

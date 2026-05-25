@@ -49,7 +49,7 @@ export async function ensureGlobalIdentity(user: any, force = false) {
         const { account } = await import('../appwrite');
         const [prefs, profile] = await Promise.all([
             account.getPrefs(),
-            databases.getDocument(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id).catch(() => null)
+            databases.getRow(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id).catch(() => null)
         ]);
 
         let username = user.username || prefs?.username || user.name || user.email?.split('@')[0];
@@ -73,7 +73,7 @@ export async function ensureGlobalIdentity(user: any, force = false) {
                     createdAt: new Date().toISOString()
                 };
 
-                await databases.createDocument(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id, payload, [
+                await databases.createRow(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id, payload, [
                     Permission.read(Role.any())]);
                 await syncProfileEvent({
                     type: 'username_change',
@@ -92,7 +92,7 @@ export async function ensureGlobalIdentity(user: any, force = false) {
             if (profile.username !== username || profile.avatar !== picId || profile.displayName !== profileData.displayName) {
                 try {
                     const payload = { ...profileData };
-                    await databases.updateDocument(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id, payload);
+                    await databases.updateRow(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id, payload);
                     await syncProfileEvent({
                         type: profile.username !== username ? 'username_change' : 'profile_sync',
                         userId: user.$id,
@@ -156,7 +156,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                 Query.select(['$id', 'username', 'displayName', 'bio', 'avatar', 'walletAddress', 'publicKey'])
             ];
 
-            const res = await databases.listDocuments(
+            const res = await databases.listRows(
                 CONNECT_DATABASE_ID,
                 CONNECT_COLLECTION_ID_USERS,
                 queries
@@ -180,7 +180,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
             console.warn('[Identity] Username search failed:', e);
             // Fallback for older Appwrite versions that don't support Query.or if needed
             if (e.message?.includes('Query.or')) {
-                const res = await databases.listDocuments(
+                const res = await databases.listRows(
                     CONNECT_DATABASE_ID,
                     CONNECT_COLLECTION_ID_USERS,
                     [
@@ -210,7 +210,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
         // 2. Secondary Fallback: Search by 'name' (Fulltext index in note table)
         if (results.length < 5) {
             try {
-                const noteRes = await databases.listDocuments(
+                const noteRes = await databases.listRows(
                     CONNECT_DATABASE_ID,
                     CONNECT_COLLECTION_ID_USERS,
                     [
@@ -219,7 +219,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
                     ]
                 );
 
-                for (const doc of noteRes.documents) {
+                for (const doc of noteRes.rows) {
                     if (!results.find(r => r.id === doc.$id)) {
                         results.push({
                             id: doc.$id,

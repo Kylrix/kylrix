@@ -29,7 +29,7 @@ export const BYOKManager = {
           Query.limit(1)
         ]
       });
-      return res.rows.length > 0;
+      return res.documents.length > 0;
     } catch (err) {
       console.error('Failed to check BYOK presence:', err);
       return false;

@@ -48,7 +48,7 @@ export function EventSelectorModal({ isOpen, onClose, onSelect }: EventSelectorM
         setLoading(true);
         try {
           const res = await listFlowEvents();
-          setEvents(res.documents as any[]);
+          setEvents(res.rows as any[]);
         } catch (err: any) {
           showError(err.message || 'Failed to fetch events from Kylrix Flow');
           onClose();

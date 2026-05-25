@@ -60,7 +60,7 @@ export function CredentialSelectorModal({ isOpen, onClose, onSelect }: Credentia
         setLoading(true);
         try {
           const res = await listKeepCredentials();
-          setCredentials(res.documents as any[]);
+          setCredentials(res.rows as any[]);
         } catch (err: any) {
           showError(err.message || 'Failed to fetch credentials from Kylrix Vault');
           onClose();

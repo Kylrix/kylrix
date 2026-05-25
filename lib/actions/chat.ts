@@ -183,7 +183,7 @@ export async function getConversationsAction(payload: {
   const CONV_MEMBERS_TABLE = 'conversationMembers';
 
   try {
-    const memberRows = await tables.listRows({
+    const memberRows = await collections.listRows({
       databaseId: DB_ID,
       tableId: CONV_MEMBERS_TABLE,
       queries: [Query.equal('userId', payload.userId), Query.limit(1000)]
@@ -199,7 +199,7 @@ export async function getConversationsAction(payload: {
         return { total: 0, rows: [] };
     }
 
-    const conversationsResult = await tables.listRows({
+    const conversationsResult = await collections.listRows({
         databaseId: DB_ID,
         tableId: CONV_TABLE,
         queries: [Query.equal('$id', conversationIds), Query.limit(conversationIds.length)]

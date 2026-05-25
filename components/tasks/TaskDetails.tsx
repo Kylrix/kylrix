@@ -211,7 +211,7 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
         const res = await listComments(taskId);
         if (!active) return;
         const msgs = await Promise.all(
-          res.rows.map(async (row: any) => {
+          res.documents.map(async (row: any) => {
             let senderName = 'Collaborator';
             if (user && row.userId === user.$id) {
               senderName = user.name || 'You';
@@ -430,7 +430,7 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
             Query.search('content', noteQuery.trim())]),
           Query.limit(6)]);
         if (!active) return;
-        setNoteResults(res.rows.filter((row: any) => row.$id !== task.id));
+        setNoteResults(res.documents.filter((row: any) => row.$id !== task.id));
       } catch (error) {
         console.error('Failed to search notes', error);
         if (active) setNoteResults([]);

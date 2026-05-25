@@ -38,7 +38,7 @@ export async function pruneRevisions(
     const revisionsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_REVISIONS || 'note_revisions';
 
     // Get all revisions for this note, ordered by revision DESC
-    const allRevisions = await databases.listDocuments(
+    const allRevisions = await databases.listRows(
       APPWRITE_DATABASE_ID,
       revisionsCollection,
       [
@@ -52,7 +52,7 @@ export async function pruneRevisions(
       return; // No pruning needed
     }
 
-    const docs = allRevisions.documents as any[];
+    const docs = allRevisions.rows as any[];
 
     // Keep the latest `limit` revisions
     const _toKeep = docs.slice(0, limit).map((d) => d.$id);
@@ -61,7 +61,7 @@ export async function pruneRevisions(
     // Delete old revisions
     for (const revisionId of toDelete) {
       try {
-        await databases.deleteDocument(
+        await databases.deleteRow(
           APPWRITE_DATABASE_ID,
           revisionsCollection,
           revisionId
@@ -87,7 +87,7 @@ export async function getNoteRevisions(
     const revisionsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_REVISIONS || 'note_revisions';
     const effectiveLimit = limit || (await getRevisionLimit());
 
-    const res = await databases.listDocuments(
+    const res = await databases.listRows(
       APPWRITE_DATABASE_ID,
       revisionsCollection,
       [
@@ -96,7 +96,7 @@ export async function getNoteRevisions(
         Query.limit(effectiveLimit)] as any
     );
 
-    return res.documents as unknown as NoteRevisions[];
+    return res.rows as unknown as NoteRevisions[];
   } catch (e: any) {
     console.error('getNoteRevisions failed:', e);
     return [];
@@ -113,7 +113,7 @@ export async function getNoteRevision(
   try {
     const revisionsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_REVISIONS || 'note_revisions';
 
-    const res = await databases.listDocuments(
+    const res = await databases.listRows(
       APPWRITE_DATABASE_ID,
       revisionsCollection,
       [
@@ -122,7 +122,7 @@ export async function getNoteRevision(
         Query.limit(1)] as any
     );
 
-    return (res.documents[0] as unknown as NoteRevisions) || null;
+    return (res.rows[0] as unknown as NoteRevisions) || null;
   } catch (e: any) {
     console.error('getNoteRevision failed:', e);
     return null;
@@ -209,7 +209,7 @@ export async function createRevision(
     // Determine next revision number
     let revisionNumber = 1;
     try {
-      const existing = await databases.listDocuments(
+      const existing = await databases.listRows(
         APPWRITE_DATABASE_ID,
         revisionsCollection,
         [
@@ -218,7 +218,7 @@ export async function createRevision(
           Query.limit(1)] as any
       );
       if (existing.documents.length) {
-        revisionNumber = (existing.documents[0] as any).revision + 1;
+        revisionNumber = (existing.rows[0] as any).revision + 1;
       }
     } catch {}
 
@@ -243,7 +243,7 @@ export async function createRevision(
     }
 
     // Create revision document
-    const revision = await databases.createDocument(
+    const revision = await databases.createRow(
       APPWRITE_DATABASE_ID,
       revisionsCollection,
       ID.unique(),

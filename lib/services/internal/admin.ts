@@ -39,7 +39,7 @@ export async function getAdminStats(actorEmail?: string) {
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   let activeNow = 0;
   try {
-    const activity = await databases.listDocuments(
+    const activity = await databases.listRows(
       APPWRITE_CONFIG.DATABASES.NOTE,
       APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG,
       [Query.greaterThanEqual('$createdAt', oneDayAgo), Query.limit(1), Query.select(['$createdAt'])]

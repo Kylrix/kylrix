@@ -48,7 +48,7 @@ async function requireUser() {
 
 async function getOwnedAgentOrThrow(agentId: string, ownerId: string) {
   const { databases } = createSystemClient();
-  const agent = (await databases.getDocument(
+  const agent = (await databases.getRow(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
     agentId,
@@ -61,12 +61,12 @@ async function getOwnedAgentOrThrow(agentId: string, ownerId: string) {
 export async function listMyAgents(): Promise<AgentRecord[]> {
   const user = await requireUser();
   const { databases } = createSystemClient();
-  const res = await databases.listDocuments(
+  const res = await databases.listRows(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
     [Query.equal('ownerId', user.$id), Query.orderDesc('$updatedAt'), Query.limit(100)],
   );
-  return (res.documents || []) as unknown as AgentRecord[];
+  return (res.rows || []) as unknown as AgentRecord[];
 }
 
 export async function createMyAgent(input: {
@@ -77,7 +77,7 @@ export async function createMyAgent(input: {
   const user = await requireUser();
   const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
   const { databases } = createSystemClient();
-  await databases.createDocument(
+  await databases.createRow(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
     ID.unique(),
@@ -99,7 +99,7 @@ export async function setMyAgentStatus(agentId: string, status: AgentStatus) {
   const user = await requireUser();
   await getOwnedAgentOrThrow(agentId, user.$id);
   const { databases } = createSystemClient();
-  await databases.updateDocument(
+  await databases.updateRow(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
     agentId,
@@ -113,7 +113,7 @@ export async function runMyAgent(agentId: string): Promise<{ summary: string }> 
   const config = parseAgentConfig(agent.config);
   const { databases } = createSystemClient();
 
-  await databases.updateDocument(
+  await databases.updateRow(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
     agentId,
@@ -121,13 +121,13 @@ export async function runMyAgent(agentId: string): Promise<{ summary: string }> 
   );
 
   try {
-    const tasksRes = await databases.listDocuments(
+    const tasksRes = await databases.listRows(
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.TASKS,
       [Query.equal('userId', user.$id), Query.orderDesc('$updatedAt'), Query.limit(20)],
     );
 
-    const tasks = (tasksRes.documents || []).map((t: any) => ({
+    const tasks = (tasksRes.rows || []).map((t: any) => ({
       id: t.$id,
       title: t.title || 'Untitled',
       status: t.status || 'todo',
@@ -163,7 +163,7 @@ export async function runMyAgent(agentId: string): Promise<{ summary: string }> 
       lastError: null,
     };
 
-    await databases.updateDocument(
+    await databases.updateRow(
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
       agentId,
@@ -181,7 +181,7 @@ export async function runMyAgent(agentId: string): Promise<{ summary: string }> 
       lastError: error instanceof Error ? error.message : 'Agent run failed.',
     };
 
-    await databases.updateDocument(
+    await databases.updateRow(
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
       agentId,

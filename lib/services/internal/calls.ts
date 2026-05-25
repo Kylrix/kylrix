@@ -16,7 +16,7 @@ export async function deleteCallIfExpired(
           APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
           normalizedId,
         )
-      : databases.getDocument(
+      : databases.getRow(
           APPWRITE_CONFIG.DATABASES.CHAT,
           APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
           normalizedId,
@@ -34,7 +34,7 @@ export async function deleteCallIfExpired(
         normalizedId,
       );
     } else {
-      await databases.deleteDocument(
+      await databases.deleteRow(
         APPWRITE_CONFIG.DATABASES.CHAT,
         APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS,
         normalizedId,

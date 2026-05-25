@@ -24,6 +24,6 @@ export function getEcosystemUrl(subdomain: keyof typeof ECOSYSTEM_CONFIG.SUBDOMA
 
 export const TABLE_DB = {
   getEventPath: (databaseId: string, tableId: string, rowId?: string) => {
-    return `databases.${databaseId}.tables.${tableId}${rowId ? `.rows.${rowId}` : '.rows'}`;
+    return `databases.${databaseId}.collections.${tableId}${rowId ? `.documents.${rowId}` : '.rows'}`;
   },
 };

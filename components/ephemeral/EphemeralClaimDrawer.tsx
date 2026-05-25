@@ -203,7 +203,7 @@ export function EphemeralClaimDrawer({ open, onClose, target, onConsumed }: Prop
           throw new Error('Invalid task payload.');
         }
         const now = new Date().toISOString();
-        await databases.createDocument(
+        await databases.createRow(
           APPWRITE_CONFIG.DATABASES.FLOW,
           APPWRITE_CONFIG.TABLES.FLOW.TASKS,
           ID.unique(),

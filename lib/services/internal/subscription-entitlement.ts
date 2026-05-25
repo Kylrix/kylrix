@@ -30,12 +30,12 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
   const now = new Date();
 
   try {
-    const res = await databases.listDocuments(NOTE_DB_ID, SUBSCRIPTIONS_TABLE_ID, [
+    const res = await databases.listRows(NOTE_DB_ID, SUBSCRIPTIONS_TABLE_ID, [
       Query.equal('userId', userId),
       Query.equal('status', 'active'),
       Query.limit(100),
       Query.select(['$id', 'userId', 'status', 'currentPeriodEnd', 'currentPeriodStart', 'createdAt', 'updatedAt', 'plan'])]);
-    const rows = (res.documents || []) as SubscriptionRow[];
+    const rows = (res.rows || []) as SubscriptionRow[];
     const unexpired = rows.filter((row) => {
       if (String(row.status || '').toLowerCase() !== 'active') return false;
       if (!row.currentPeriodEnd) return false;

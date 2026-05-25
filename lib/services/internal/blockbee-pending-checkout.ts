@@ -47,7 +47,7 @@ export async function registerBlockBeePendingCheckout(meta: Omit<BlockBeePending
   };
 
   try {
-    await databases.createDocument(
+    await databases.createRow(
       CHAT_DB_ID,
       EVENTS_TABLE_ID,
       docId,
@@ -74,7 +74,7 @@ export async function getBlockBeePendingCheckout(paymentId: string) {
   const { databases } = createSystemClient();
   const docId = blockBeePendingCheckoutDocId(paymentId);
   try {
-    const doc = await databases.getDocument(CHAT_DB_ID, EVENTS_TABLE_ID, docId);
+    const doc = await databases.getRow(CHAT_DB_ID, EVENTS_TABLE_ID, docId);
     if (String(doc.status || '').toLowerCase() !== 'pending') return null;
     const raw = doc.metadata;
     if (typeof raw !== 'string') return null;
@@ -90,9 +90,9 @@ export async function markBlockBeePendingCheckoutConsumed(paymentId: string) {
   const { databases } = createSystemClient();
   const docId = blockBeePendingCheckoutDocId(paymentId);
   try {
-    const doc = await databases.getDocument(CHAT_DB_ID, EVENTS_TABLE_ID, docId);
+    const doc = await databases.getRow(CHAT_DB_ID, EVENTS_TABLE_ID, docId);
     const meta = typeof doc.metadata === 'string' ? JSON.parse(doc.metadata) : {};
-    await databases.updateDocument(CHAT_DB_ID, EVENTS_TABLE_ID, docId, {
+    await databases.updateRow(CHAT_DB_ID, EVENTS_TABLE_ID, docId, {
       status: 'applied',
       metadata: JSON.stringify({
         ...meta,
@@ -109,7 +109,7 @@ export async function acquireBlockBeeIpnLock(paymentId: string, payerUserId: str
   const { databases } = createSystemClient();
   const receiptId = blockBeeIpnReceiptDocId(paymentId);
   try {
-    await databases.createDocument(CHAT_DB_ID, EVENTS_TABLE_ID, receiptId, {
+    await databases.createRow(CHAT_DB_ID, EVENTS_TABLE_ID, receiptId, {
       userId: payerUserId,
       type: 'billing_ipn_lock',
       actorId: 'blockbee',
@@ -124,7 +124,7 @@ export async function acquireBlockBeeIpnLock(paymentId: string, payerUserId: str
   } catch (e) {
     if (!isDuplicateDocumentError(e)) throw e;
     try {
-      const existing = await databases.getDocument(CHAT_DB_ID, EVENTS_TABLE_ID, receiptId);
+      const existing = await databases.getRow(CHAT_DB_ID, EVENTS_TABLE_ID, receiptId);
       const st = String(existing.status || '').toLowerCase();
       if (st === 'applied' || st === 'completed') return 'skip';
       return 'retry';
@@ -138,7 +138,7 @@ export async function releaseBlockBeeIpnLock(paymentId: string) {
   const { databases } = createSystemClient();
   const receiptId = blockBeeIpnReceiptDocId(paymentId);
   try {
-    await databases.deleteDocument(CHAT_DB_ID, EVENTS_TABLE_ID, receiptId);
+    await databases.deleteRow(CHAT_DB_ID, EVENTS_TABLE_ID, receiptId);
   } catch {
     /* ignore */
   }
@@ -147,7 +147,7 @@ export async function releaseBlockBeeIpnLock(paymentId: string) {
 export async function completeBlockBeeIpnLock(paymentId: string, payerUserId: string, snapshot: Record<string, unknown>) {
   const { databases } = createSystemClient();
   const receiptId = blockBeeIpnReceiptDocId(paymentId);
-  await databases.updateDocument(CHAT_DB_ID, EVENTS_TABLE_ID, receiptId, {
+  await databases.updateRow(CHAT_DB_ID, EVENTS_TABLE_ID, receiptId, {
     userId: payerUserId,
     relatedUserId: payerUserId,
     status: 'applied',

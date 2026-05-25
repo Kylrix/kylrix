@@ -10,7 +10,7 @@ export async function migrateDiscoveryEngine() {
 
   for (const metric of defaultMetrics) {
     try {
-      await databases.createDocument(
+      await databases.createRow(
         'chat',
         'system_pulse',
         metric.metricKey,

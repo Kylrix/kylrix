@@ -3,7 +3,7 @@ import { EngagementAnalyzer } from './engagement-analyzer';
 
 export class FeedRanker {
   static async rankMomentsForUser(userId: string, limit: number = 20): Promise<string[]> {
-    const moments = await databases.listDocuments(
+    const moments = await databases.listRows(
       'chat',
       'moments',
       [`limit(${limit * 3})`, 'orderDesc($createdAt)']

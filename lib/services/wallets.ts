@@ -317,7 +317,7 @@ const syncWalletMap = async (userId: string, wallets: any[]) => {
         }
     }
 
-    const existingAddresses = new Set(existing.rows.map((row: any) => row.walletAddressLower));
+    const existingAddresses = new Set(existing.documents.map((row: any) => row.walletAddressLower));
 
     for (const walletAddressLower of publicAddresses) {
         if (existingAddresses.has(walletAddressLower)) continue;

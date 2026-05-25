@@ -335,7 +335,7 @@ export const CallInterface = ({
                 if (!active) return;
 
                 const msgs: ChatMessage[] = [];
-                for (const doc of res.documents) {
+                for (const doc of res.rows) {
                     const name = await resolveUserName(doc.userId);
                     msgs.push({
                         id: doc.$id,
@@ -590,7 +590,7 @@ export const CallInterface = ({
         });
 
         const unsubscribe = client.subscribe(
-            `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.rows`,
+            `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.documents`,
             (response: any) => {
                 if (response.events.some((e: string) => e.includes('.update') || e.includes('.create'))) {
                     const activity = response.payload;

@@ -37,7 +37,7 @@ export function TaskSelectorModal({ isOpen, onClose, onSelect }: TaskSelectorMod
         setLoading(true);
         try {
           const res = await AppwriteService.listFlowTasks(user.$id);
-          setTasks(res.documents);
+          setTasks(res.rows);
         } catch (err: unknown) {
           console.error('Failed to fetch tasks:', err);
         } finally {

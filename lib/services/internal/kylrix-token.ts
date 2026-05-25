@@ -109,14 +109,14 @@ async function listUserEventsDescending(userId: string, limit: number) {
     Query.equal('rowType', 'event'),
     Query.equal('userId', userId)];
   try {
-    const res = await tables.listRows({
+    const res = await collections.listRows({
       databaseId: DB_ID,
       tableId: TABLE_ID,
       queries: [...base, Query.orderDesc('$createdAt'), Query.limit(limit)],
     });
     return res.rows ?? [];
   } catch {
-    const res = await tables.listRows({
+    const res = await collections.listRows({
       databaseId: DB_ID,
       tableId: TABLE_ID,
       queries: [...base, Query.orderDesc('createdAt'), Query.limit(limit)],
@@ -138,7 +138,7 @@ async function getLatestBalanceMicro(userId: string) {
     [...withBal.slice(0, 3), Query.orderDesc('createdAt'), withBal[3]]];
   for (const queries of tries) {
     try {
-      const res = await tables.listRows({
+      const res = await collections.listRows({
         databaseId: DB_ID,
         tableId: TABLE_ID,
         queries,
@@ -664,7 +664,7 @@ export const InternalKylrixTokenService = {
     const capped = Math.max(1, Math.min(limit, 250));
     const tables = ledgerTables();
     try {
-      const result = await tables.listRows({
+      const result = await collections.listRows({
         databaseId: DB_ID,
         tableId: TABLE_ID,
         queries: [
@@ -675,7 +675,7 @@ export const InternalKylrixTokenService = {
       });
       return result.rows ?? [];
     } catch {
-      const result = await tables.listRows({
+      const result = await collections.listRows({
         databaseId: DB_ID,
         tableId: TABLE_ID,
         queries: [

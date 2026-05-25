@@ -23,13 +23,13 @@ const originalTablesDB = new TablesDB(client);
 // --- HELPER PARSERS (Hoisted/Early Defined) ---
 
 function parseDatabasesArgs(args: any[]) {
-    const [databaseId, collectionId, documentId, data, permissions] = args;
-    return { databaseId, collectionId, documentId, data, permissions };
+    const [databaseId, tableId, rowId, data, permissions] = args;
+    return { databaseId, tableId, rowId, data, permissions };
 }
 
 function parseDatabasesDeleteArgs(args: any[]) {
-    const [databaseId, collectionId, documentId] = args;
-    return { databaseId, collectionId, documentId };
+    const [databaseId, tableId, rowId] = args;
+    return { databaseId, tableId, rowId };
 }
 
 function parseTablesDBArgs(args: any[]) {
@@ -37,8 +37,8 @@ function parseTablesDBArgs(args: any[]) {
         const obj = args[0];
         return {
             databaseId: obj.databaseId,
-            tableId: obj.tableId || obj.collectionId,
-            rowId: obj.rowId || obj.documentId,
+            tableId: obj.tableId || obj.tableId,
+            rowId: obj.rowId || obj.rowId,
             data: obj.data,
             permissions: obj.permissions
         };
@@ -52,8 +52,8 @@ function parseTablesDBDeleteArgs(args: any[]) {
         const obj = args[0];
         return {
             databaseId: obj.databaseId,
-            tableId: obj.tableId || obj.collectionId,
-            rowId: obj.rowId || obj.documentId
+            tableId: obj.tableId || obj.tableId,
+            rowId: obj.rowId || obj.rowId
         };
     }
     const [databaseId, tableId, rowId] = args;
@@ -65,43 +65,41 @@ function parseTablesDBListArgs(args: any[]) {
         const obj = args[0];
         return {
             databaseId: obj.databaseId,
-            tableId: obj.tableId || obj.collectionId,
-            collectionId: obj.collectionId || obj.tableId,
+            tableId: obj.tableId || obj.tableId,
+            tableId: obj.tableId || obj.tableId,
             queries: obj.queries
         };
     }
     const [databaseId, tableId, queries] = args;
-    return { databaseId, tableId, collectionId: tableId, queries };
+    return { databaseId, tableId, tableId: tableId, queries };
 }
 
 // --- PROXIES ---
 
 const databasesProxy = new Proxy(originalDatabases, {
     get(target: any, prop: string | symbol, receiver: any) {
-        if (prop === 'createDocument') {
+        // Standardized method names (Primary)
+        if (prop === 'createRow' || prop === 'createRow') {
             return async (...args: any[]) => {
-                const { databaseId, collectionId, documentId, data, permissions } = parseDatabasesArgs(args);
+                const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
                 const payload = data ? { ...data } : {};
-                if (documentId) {
-                    payload.$id = documentId;
-                }
+                if (rowId) payload.$id = rowId;
                 const { createRowSecure } = await import('@/lib/actions/secure-ops');
-                return await createRowSecure(databaseId, collectionId, payload, permissions);
+                return await createRowSecure(databaseId, tableId, payload, permissions);
             };
         }
-        if (prop === 'updateDocument') {
+        if (prop === 'updateRow' || prop === 'updateRow') {
             return async (...args: any[]) => {
-                const { databaseId, collectionId, documentId, data, permissions } = parseDatabasesArgs(args);
+                const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
                 const { updateRowSecure } = await import('@/lib/actions/secure-ops');
-                return await updateRowSecure(databaseId, collectionId, documentId, data, permissions);
+                return await updateRowSecure(databaseId, tableId, rowId, data, permissions);
             };
         }
-        if (prop === 'listDocuments') {
+        if (prop === 'listRows' || prop === 'listRows') {
             return async (...args: any[]) => {
-                const { databaseId, collectionId, queries } = parseTablesDBListArgs(args);
+                const { databaseId, tableId, queries } = parseTablesDBListArgs(args);
                 const { listRowsSecure } = await import('@/lib/actions/secure-ops');
-                const res = await listRowsSecure(databaseId, collectionId, queries);
-                // Unified response: 'rows' is now the primary key, 'documents' is legacy
+                const res = await listRowsSecure(databaseId, tableId, queries);
                 return { 
                     total: res.total, 
                     rows: res.rows,
@@ -109,18 +107,18 @@ const databasesProxy = new Proxy(originalDatabases, {
                 };
             };
         }
-        if (prop === 'getDocument') {
+        if (prop === 'getRow' || prop === 'getRow') {
             return async (...args: any[]) => {
-                const { databaseId, collectionId, documentId } = parseDatabasesDeleteArgs(args);
+                const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
                 const { getRowSecure } = await import('@/lib/actions/secure-ops');
-                return await getRowSecure(databaseId, collectionId, documentId);
+                return await getRowSecure(databaseId, tableId, rowId);
             };
         }
-        if (prop === 'deleteDocument') {
+        if (prop === 'deleteRow' || prop === 'deleteRow') {
             return async (...args: any[]) => {
-                const { databaseId, collectionId, documentId } = parseDatabasesDeleteArgs(args);
+                const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
                 const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
-                return await deleteRowSecure(databaseId, collectionId, documentId);
+                return await deleteRowSecure(databaseId, tableId, rowId);
             };
         }
         const val = Reflect.get(target, prop, receiver);

@@ -48,7 +48,7 @@ export function TaskSelectorModal({ isOpen, onClose, onSelect }: TaskSelectorMod
         setLoading(true);
         try {
           const res = await listFlowTasks();
-          setTasks(res.documents as any[]);
+          setTasks(res.rows as any[]);
         } catch (err: any) {
           showError(err.message || 'Failed to fetch tasks from Kylrix Flow');
           onClose();

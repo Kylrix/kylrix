@@ -43,7 +43,7 @@ export class SubscriptionService {
       updatedAt: new Date().toISOString(),
     };
 
-    await databases.createDocument(NOTE_DB_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
+    await databases.createRow(NOTE_DB_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
       Permission.read(Role.user(targetUserId))]);
 
     try {
@@ -54,11 +54,11 @@ export class SubscriptionService {
     }
 
     try {
-      const profileRes = await databases.listDocuments(CHAT_DB_ID, PROFILES_COLLECTION_ID, [
+      const profileRes = await databases.listRows(CHAT_DB_ID, PROFILES_COLLECTION_ID, [
         Query.equal('userId', targetUserId),
         Query.limit(2)]);
       if (profileRes.total > 0) {
-        await databases.updateDocument(CHAT_DB_ID, PROFILES_COLLECTION_ID, profileRes.documents[0].$id, {
+        await databases.updateRow(CHAT_DB_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
           tier: 'PRO',
         });
       }
@@ -104,7 +104,7 @@ export class SubscriptionService {
 
     const { databases } = createSystemClient();
     try {
-      await databases.createDocument(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
+      await databases.createRow(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
         userId: actorUserId,
         action: 'MANUAL_ENABLE_PRO',
         targetType: 'subscription',
@@ -151,7 +151,7 @@ export class SubscriptionService {
 
     const { databases } = createSystemClient();
     try {
-      await databases.createDocument(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
+      await databases.createRow(NOTE_DB_ID, ACTIVITY_LOG_COLLECTION_ID, ID.unique(), {
         userId: actorUserId,
         action: 'GRANT_CATEGORY_ACCESS',
         targetType: 'subscription_batch',

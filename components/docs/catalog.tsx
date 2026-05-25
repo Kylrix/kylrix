@@ -170,7 +170,7 @@ const articles: DocsArticle[] = [
           <Section title="Three layers of meaning">
             <Grid container spacing={2}>
               {[
-                { title: 'Pulse', body: 'Live, transient state that should move in realtime rather than sit in tables.' },
+                { title: 'Pulse', body: 'Live, transient state that should move in realtime rather than sit in collections.' },
                 { title: 'Notification', body: 'Persistent pointers for noteworthy events that the UI evaluates on activity.' },
                 { title: 'Universal session', body: 'One authenticated session spans the ecosystem and powers cross-app access.' }].map((item) => (
                 <Grid size={{ xs: 12, md: 4 }} key={item.title}>
@@ -326,7 +326,7 @@ const articles: DocsArticle[] = [
             {[
               { title: 'Calls', body: 'Session setup, active call state, and why call history is a separate read model.' },
               { title: 'Messages', body: 'Encrypted DMs and the rules that protect unread/read integrity.' },
-              { title: 'Presence', body: 'Transient signals should use realtime rather than long-lived tables.' }].map((item) => (
+              { title: 'Presence', body: 'Transient signals should use realtime rather than long-lived collections.' }].map((item) => (
               <Grid size={{ xs: 12, md: 4 }} key={item.title}>
                 <Paper sx={{ p: 2.5, height: '100%', bgcolor: alpha('#fff', 0.03), border: '1px solid rgba(255,255,255,0.06)' }}>
                   <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1 }}>

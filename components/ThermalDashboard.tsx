@@ -16,7 +16,7 @@ export function ThermalDashboard({ userId }: { userId: string }) {
       setRiskLevel(risk);
 
       try {
-        const doc = await databases.getDocument('chat', 'account_ledger', userId);
+        const doc = await databases.getRow('chat', 'account_ledger', userId);
         setLedger(doc as unknown as AccountLedger);
       } catch (e) {
         console.error('Failed to load ledger', e);

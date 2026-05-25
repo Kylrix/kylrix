@@ -133,7 +133,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   const handleDuplicate = async () => {
     try {
-      const { $id: _id, $createdAt: _ca, $updatedAt: _ua, $permissions: _p, $databaseId: _db, $collectionId: _coll, ...rest } = note as any;
+      const { $id: _id, $createdAt: _ca, $updatedAt: _ua, $permissions: _p, $databaseId: _db, $tableId: _coll, ...rest } = note as any;
       const duplicatedNote = await createNote({
         ...rest,
         title: `${note.title} (Copy)`,

@@ -18,7 +18,7 @@ export function subscribeToTable<T extends Models.Row>(
     tableId: string,
     callback: (event: { type: 'create' | 'update' | 'delete', payload: T }) => void
 ) {
-    const channel = `databases.${FLOW_DATABASE_ID}.tables.${tableId}.rows`;
+    const channel = `databases.${FLOW_DATABASE_ID}.collections.${tableId}.documents`;
 
     return realtime.subscribe(channel, (response) => {
         const payload = response.payload as T;
@@ -134,7 +134,7 @@ async function listTaskCollaborators(taskId: string): Promise<TaskCollaborator[]
         ],
     });
 
-    return res.rows.map(normalizeCollaborator);
+    return res.documents.map(normalizeCollaborator);
 }
 
 async function createTaskCollaborator(taskId: string, userId: string, permission: CollaboratorPermission, creatorId: string | null, permissions?: string[]) {
@@ -153,7 +153,7 @@ async function createTaskCollaborator(taskId: string, userId: string, permission
         creatorId && creatorId !== 'guest' ? taskPermissionForLevel('admin', creatorId) : [],
         taskPermissionForLevel(permission, userId)
     );
-    if (existing.rows.length > 0) {
+    if (existing.documents.length > 0) {
         const current = normalizeCollaborator(existing.rows[0]);
         const updated = await updateRow<any>(
             TASK_COLLABORATOR_TABLE,

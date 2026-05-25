@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { 
   realtime, 
   listActivityLogs, 
-  updateDocument,
+  updateRow,
   APPWRITE_DATABASE_ID, 
   APPWRITE_TABLE_ID_ACTIVITYLOG 
 } from '@/lib/appwrite';
@@ -69,7 +69,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const res = await listActivityLogs();
-      const logs = res.documents as unknown as ActivityLog[];
+      const logs = res.rows as unknown as ActivityLog[];
       setNotifications(logs);
       setUnreadCount(calculateUnread(logs));
     } catch (error: any) {
@@ -149,7 +149,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       // Pessimistic UI update for immediate feedback
       setNotifications(prev => prev.map(n => n.$id === id ? { ...n, details: JSON.stringify(newMetadata) } : n));
 
-      await updateDocument(APPWRITE_TABLE_ID_ACTIVITYLOG, id, {
+      await updateRow(APPWRITE_TABLE_ID_ACTIVITYLOG, id, {
         details: JSON.stringify(newMetadata)
       });
     } catch (error: any) {

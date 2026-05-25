@@ -13,14 +13,14 @@ export const ProjectsService = {
     if (!user) throw new Error('Not authenticated');
 
     // Returns both owned and shared projects (via Role.team) automatically
-    return databases.listDocuments<any>(
+    return databases.listRows<any>(
       DATABASE_ID,
       PROJECTS_COLLECTION_ID,
       [Query.orderDesc('updatedAt')]
     );
   },
   async getProject(projectId: string) {
-    return databases.getDocument<any>(
+    return databases.getRow<any>(
       DATABASE_ID,
       PROJECTS_COLLECTION_ID,
       projectId
@@ -37,7 +37,7 @@ export const ProjectsService = {
   },
 
   async listProjectCollaborators(projectId: string) {
-    return databases.listDocuments<any>(
+    return databases.listRows<any>(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
       [
@@ -84,7 +84,7 @@ export const ProjectsService = {
   },
 
   async listProjectObjects(projectId: string) {
-    return databases.listDocuments<any>(
+    return databases.listRows<any>(
       DATABASE_ID,
       PROJECT_OBJECTS_COLLECTION_ID,
       [Query.equal('projectId', projectId)]

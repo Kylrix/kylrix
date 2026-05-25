@@ -172,7 +172,7 @@ export const CallActionModal = ({
         setLoading(true);
         try {
             const res = await ChatService.getConversations(user.$id);
-            const filtered = res.rows.filter((c: any) => {
+            const filtered = res.documents.filter((c: any) => {
                 const isSelf = c.type === 'direct' && c.participants && 
                               (c.participants.length === 1 || 
                                (c.participants.length === 2 && c.participants.every((p: string) => p === user.$id)));

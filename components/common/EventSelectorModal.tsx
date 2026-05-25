@@ -37,7 +37,7 @@ export function EventSelectorModal({ isOpen, onClose, onSelect }: EventSelectorM
         setLoading(true);
         try {
           const res = await AppwriteService.listFlowEvents(user.$id);
-          setEvents(res.documents);
+          setEvents(res.rows);
         } catch (err: unknown) {
           console.error('Failed to fetch events:', err);
         } finally {

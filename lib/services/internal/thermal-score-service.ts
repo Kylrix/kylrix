@@ -4,7 +4,7 @@ import { AccountLedger, THERMAL_HALF_LIFE_MINUTES } from '../../types/discovery-
 export class ThermalScoreService {
   static async getThermalScore(userId: string): Promise<number> {
     try {
-      const ledger = await databases.getDocument(
+      const ledger = await databases.getRow(
         'chat',
         'account_ledger',
         userId
@@ -25,7 +25,7 @@ export class ThermalScoreService {
     const newScore = currentScore + tokensGenerated;
 
     try {
-        await databases.updateDocument(
+        await databases.updateRow(
             'chat',
             'account_ledger',
             userId,
@@ -37,7 +37,7 @@ export class ThermalScoreService {
         );
     } catch (e) {
         // Handle initial creation if ledger not exists
-        await databases.createDocument(
+        await databases.createRow(
             'chat',
             'account_ledger',
             userId,

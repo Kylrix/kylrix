@@ -40,10 +40,10 @@ const normalizeMonth = (iso: string) => iso.slice(0, 7);
 
 async function findEventByIdempotency(idempotencyKey: string) {
   const { databases } = createSystemClient();
-  const result = await databases.listDocuments(DB_ID, VIEWS_TABLE, [
+  const result = await databases.listRows(DB_ID, VIEWS_TABLE, [
     Query.equal('idempotencyKey', idempotencyKey),
     Query.limit(1)]);
-  return result.documents[0] || null;
+  return result.rows[0] || null;
 }
 
 async function upsertRollup(input: {
@@ -87,7 +87,7 @@ async function upsertRollup(input: {
   };
 
   try {
-    await databases.createDocument(DB_ID, ROLLUPS_TABLE, ID.unique(), createPayload);
+    await databases.createRow(DB_ID, ROLLUPS_TABLE, ID.unique(), createPayload);
     return;
   } catch (error: any) {
     if (Number(error?.code || 0) !== 409) {
@@ -95,13 +95,13 @@ async function upsertRollup(input: {
     }
   }
 
-  const existingResult = await databases.listDocuments(DB_ID, ROLLUPS_TABLE, [
+  const existingResult = await databases.listRows(DB_ID, ROLLUPS_TABLE, [
     Query.equal('rollupKey', input.rollupKey),
     Query.limit(1)]);
-  const existing = existingResult.documents[0] as any;
+  const existing = existingResult.rows[0] as any;
   if (!existing) return;
 
-  await databases.updateDocument(DB_ID, ROLLUPS_TABLE, existing.$id, {
+  await databases.updateRow(DB_ID, ROLLUPS_TABLE, existing.$id, {
     uniqueViewCount: Number(existing.uniqueViewCount || 0) + Math.max(0, input.incrementUnique),
     totalViewCount: Number(existing.totalViewCount || 0) + Math.max(0, input.incrementTotal),
     receiptCount: Number(existing.receiptCount || 0) + Math.max(0, input.incrementReceipts),
@@ -151,7 +151,7 @@ export async function trackEngagementView(input: TrackEngagementInput) {
   const uaHash = safe(input.userAgent) ? hashWithSalt(safe(input.userAgent)) : null;
   const isReceipt = Boolean(conversationId && messageId);
 
-  const event = await databases.createDocument(DB_ID, VIEWS_TABLE, ID.unique(), {
+  const event = await databases.createRow(DB_ID, VIEWS_TABLE, ID.unique(), {
     rowType: 'event',
     eventId,
     idempotencyKey,

@@ -2,7 +2,7 @@ import { databases } from '../appwrite/client';
 
 export async function redistributeAttention(): Promise<void> {
   const oneHourAgo = Date.now() - 3600000;
-  const nerfedMoments = await databases.listDocuments(
+  const nerfedMoments = await databases.listRows(
     'chat',
     'engagement_views',
     [
@@ -13,7 +13,7 @@ export async function redistributeAttention(): Promise<void> {
 
   const unusedTokens = nerfedMoments.documents.length * 100;
 
-  const lowVelocityMoments = await databases.listDocuments(
+  const lowVelocityMoments = await databases.listRows(
     'chat',
     'moments',
     [
@@ -22,9 +22,9 @@ export async function redistributeAttention(): Promise<void> {
     ]
   );
 
-  for (const moment of lowVelocityMoments.documents) {
+  for (const moment of lowVelocityMoments.rows) {
     const boost = (unusedTokens / Math.max(lowVelocityMoments.documents.length, 1)) * 0.5;
-    await databases.updateDocument(
+    await databases.updateRow(
         'chat',
         'moments',
         moment.$id,

@@ -78,9 +78,9 @@ export class AppwriteService {
       };
 
       if (!profile) {
-        await databases.createDocument(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, ID.unique(), baseData, [Permission.read(Role.any())]);
+        await databases.createRow(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, ID.unique(), baseData, [Permission.read(Role.any())]);
       } else if (profile.username !== derivedUsername || profile.tier !== baseData.tier) {
-        await databases.updateDocument(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, profile.$id, baseData);
+        await databases.updateRow(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, profile.$id, baseData);
       }
 
       localStorage.setItem(SYNC_CACHE_KEY, Date.now().toString());
@@ -94,12 +94,12 @@ export class AppwriteService {
 
   static async getGlobalProfileStatus(userId: string) {
     try {
-      const res = await databases.listDocuments(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, [
+      const res = await databases.listRows(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, [
         Query.equal('userId', userId),
         Query.limit(1)
       ]);
       if (res.total > 0) {
-        return { exists: true, profile: res.documents[0] };
+        return { exists: true, profile: res.rows[0] };
       }
       return { exists: false, error: 'Not Found' };
     } catch (e: unknown) {
@@ -130,12 +130,12 @@ export class AppwriteService {
 
   static async listKeychainEntries(userId: string): Promise<any[]> {
     try {
-      const response = await databases.listDocuments(
+      const response = await databases.listRows(
         VAULT_DATABASE_ID,
         VAULT_COLLECTION_ID_KEYCHAIN,
         [Query.equal("userId", userId)],
       );
-      return response.documents;
+      return response.rows;
     } catch (e: any) {
       console.error('listKeychainEntries error', e);
       return [];
@@ -143,7 +143,7 @@ export class AppwriteService {
   }
 
   static async createKeychainEntry(data: any): Promise<any> {
-    return await databases.createDocument(
+    return await databases.createRow(
       VAULT_DATABASE_ID,
       VAULT_COLLECTION_ID_KEYCHAIN,
       ID.unique(),
@@ -152,7 +152,7 @@ export class AppwriteService {
   }
 
   static async deleteKeychainEntry(id: string): Promise<void> {
-    await databases.deleteDocument(
+    await databases.deleteRow(
       VAULT_DATABASE_ID,
       VAULT_COLLECTION_ID_KEYCHAIN,
       id
@@ -338,7 +338,7 @@ export class AppwriteService {
 
   /**
    * Resiliently logs profile events (such as name or username updates)
-   * into the activity logging tables.
+   * into the activity logging collections.
    */
   static async recordProfileEvent(data: {
     type: string;
@@ -350,9 +350,9 @@ export class AppwriteService {
     try {
       console.log('[AppwriteService.recordProfileEvent] Event details:', data);
       
-      // Safe write to the central activity logs collection
+      // Safe write to the central activity logs table
       if (databases && APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG) {
-        await databases.createDocument(
+        await databases.createRow(
           APPWRITE_CONFIG.DATABASES.NOTE,
           APPWRITE_CONFIG.TABLES.NOTE.ACTIVITY_LOG,
           ID.unique(),

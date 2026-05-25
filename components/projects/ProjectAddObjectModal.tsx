@@ -64,7 +64,7 @@ export default function ProjectAddObjectModal({ open, onClose, projectId, onAdde
       else if (tab === 1) res = await listFlowTasks(queries);
       else res = await listKeepCredentials(queries);
 
-      setResults(res.documents || res.rows || []);
+      setResults(res.rows || res.rows || []);
     } catch (err) {
       console.error('Search failed', err);
       setResults([]);

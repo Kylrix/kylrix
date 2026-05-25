@@ -40,7 +40,7 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
 
     try {
       tables = createSystemTablesDB();
-      const res = await tables.listRows({
+      const res = await collections.listRows({
         databaseId: 'whisperrflow',
         tableId: 'compute_balances',
         queries: [
@@ -49,9 +49,9 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
         ]
       });
 
-      if (res.rows.length === 0) {
+      if (res.documents.length === 0) {
         // Initialize Pro user compute profile
-        balanceRow = await tables.createRow({
+        balanceRow = await collections.createRow({
           databaseId: 'whisperrflow',
           tableId: 'compute_balances',
           rowId: ID.unique(),
@@ -195,7 +195,7 @@ Please utilize this contextual memory to optimize your recommendations if releva
         const totalTokens = estimatedPromptTokens + estimatedCompletionTokens;
 
         const newBalance = Math.max(0, balanceRow.balance - totalTokens);
-        await tables.updateRow({
+        await collections.updateRow({
           databaseId: 'whisperrflow',
           tableId: 'compute_balances',
           rowId: balanceRow.$id,
@@ -204,7 +204,7 @@ Please utilize this contextual memory to optimize your recommendations if releva
           }
         });
 
-        await tables.createRow({
+        await collections.createRow({
           databaseId: 'whisperrflow',
           tableId: 'compute_ledger',
           rowId: ID.unique(),

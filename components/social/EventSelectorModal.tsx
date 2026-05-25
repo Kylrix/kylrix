@@ -50,7 +50,7 @@ export const EventSelectorModal = ({ open, onClose, onSelect }: EventSelectorMod
         try {
             const response = await EcosystemService.listEvents(user.$id);
             // Smart filter: ONLY public events from Kylrix Flow
-            const publicEvents = response.rows.filter((e: any) => e.visibility === 'public');
+            const publicEvents = response.documents.filter((e: any) => e.visibility === 'public');
             setEvents(publicEvents);
         } catch (error: unknown) {
             console.error('Failed to load events:', error);

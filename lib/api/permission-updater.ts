@@ -148,7 +148,7 @@ async function upsertKeyMapping(databases: Databases, actorId: string, mapping: 
     throw new Error('resourceId, resourceType, grantee, and wrappedKey are required');
   }
 
-  const documentId = makeKeyMappingDocumentId(normalized.resourceType, normalized.resourceId, normalized.grantee);
+  const rowId = makeKeyMappingDocumentId(normalized.resourceType, normalized.resourceId, normalized.grantee);
 
   const payload = {
     resourceId: normalized.resourceId,
@@ -162,10 +162,10 @@ async function upsertKeyMapping(databases: Databases, actorId: string, mapping: 
     Permission.read(Role.user(normalized.grantee))];
 
   try {
-    return await databases.createDocument(
+    return await databases.createRow(
       PASSWORD_MANAGER_DB,
       KEY_MAPPING_TABLE,
-      documentId,
+      rowId,
       payload,
       permissions,
     );
@@ -174,10 +174,10 @@ async function upsertKeyMapping(databases: Databases, actorId: string, mapping: 
       throw error;
     }
 
-    return await databases.updateDocument(
+    return await databases.updateRow(
       PASSWORD_MANAGER_DB,
       KEY_MAPPING_TABLE,
-      documentId,
+      rowId,
       payload,
       permissions,
     );
@@ -199,14 +199,14 @@ async function deleteKeyMappings(
     queries.push(Query.equal('grantee', normalizedGrantees));
   }
 
-  const existing = await databases.listDocuments(PASSWORD_MANAGER_DB, KEY_MAPPING_TABLE, [...queries, Query.limit(1000)]);
+  const existing = await databases.listRows(PASSWORD_MANAGER_DB, KEY_MAPPING_TABLE, [...queries, Query.limit(1000)]);
   if (existing.documents.length === 0) return [];
 
   await Promise.all(
-    existing.documents.map((row) => databases.deleteDocument(PASSWORD_MANAGER_DB, KEY_MAPPING_TABLE, row.$id)),
+    existing.documents.map((row) => databases.deleteRow(PASSWORD_MANAGER_DB, KEY_MAPPING_TABLE, row.$id)),
   );
 
-  return existing.documents;
+  return existing.rows;
 }
 
 async function createEpoch(
@@ -221,7 +221,7 @@ async function createEpoch(
     Permission.read(Role.user(actorId)),
     ...uniqueParticipants.map((participantId) => Permission.read(Role.user(participantId)))];
 
-  return await databases.createDocument(
+  return await databases.createRow(
     CHAT_DB,
     EPOCHS_TABLE,
     ID.unique(),
@@ -235,12 +235,12 @@ async function createEpoch(
 }
 
 export async function resolveNextEpochNumber(databases: Databases, resourceId: string) {
-  const existing = await databases.listDocuments(CHAT_DB, EPOCHS_TABLE, [
+  const existing = await databases.listRows(CHAT_DB, EPOCHS_TABLE, [
     Query.equal('resourceId', resourceId),
     Query.orderDesc('epochNumber'),
     Query.limit(1)]);
 
-  const latest = existing.documents[0];
+  const latest = existing.rows[0];
   const latestNumber = Number(latest?.epochNumber || 0);
   return Number.isFinite(latestNumber) && latestNumber > 0 ? latestNumber + 1 : 1;
 }
@@ -314,7 +314,7 @@ export async function mutateRowPermissions(
   }
 
   // Fetch current state to ensure we merge instead of overwrite
-  const currentDoc = await databases.getDocument(input.databaseId, input.tableId, input.rowId);
+  const currentDoc = await databases.getRow(input.databaseId, input.tableId, input.rowId);
   const currentPermissions = Array.isArray(currentDoc?.$permissions) ? currentDoc.$permissions : [];
   
   // Start with current permissions, then add or remove based on action
@@ -334,7 +334,7 @@ export async function mutateRowPermissions(
 
   const dedupedPermissions = Array.from(new Set(nextPermissions));
 
-  const updated = await databases.updateDocument(
+  const updated = await databases.updateRow(
     input.databaseId,
     input.tableId,
     input.rowId,

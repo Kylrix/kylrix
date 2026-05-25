@@ -46,7 +46,7 @@ export default function ProjectLinker({ open, onClose, entityId, entityKind, onL
     setLoading(true);
     try {
       const res = await ProjectsService.listProjects();
-      setProjects(res.documents);
+      setProjects(res.rows);
     } catch (err: any) {
       console.error('Failed to load projects', err);
     } finally {

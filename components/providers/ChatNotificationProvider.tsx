@@ -112,7 +112,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
                         const history = await ChatService.getMessages(message.conversationId, 50, 0, user.$id, {
                             prefetchedConversation: conversation,
                         });
-                        hasReplied = history.rows.some((row: any) => row.senderId === user.$id);
+                        hasReplied = history.documents.some((row: any) => row.senderId === user.$id);
                     } else {
                         hasReplied = true;
                     }
@@ -173,7 +173,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
 
             const unread = new Set<string>();
             
-            res.rows.forEach((conv: any) => {
+            res.documents.forEach((conv: any) => {
                 if (conv.lastMessageAt && (!conv.lastReadAt || new Date(conv.lastMessageAt) > new Date(conv.lastReadAt))) {
                     if (conv.lastMessageSenderId !== user.$id) {
                         unread.add(conv.$id);
@@ -216,7 +216,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         if (!user?.$id) return;
 
         // 1. Subscribe to NEW messages across all conversations
-        const chatChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.rows`;
+        const chatChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`;
         
         const unsubChat = realtime.subscribe([chatChannel], (response) => {
             if (response.events.some(e => e.includes('.create'))) {
@@ -236,7 +236,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         });
 
         // 2. Subscribe to Call Signals via Activity Table
-        const activityChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.rows`;
+        const activityChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.documents`;
 
         const unsubActivity = realtime.subscribe([activityChannel], (response) => {
             if (response.events.some(e => e.includes('.update') || e.includes('.create'))) {

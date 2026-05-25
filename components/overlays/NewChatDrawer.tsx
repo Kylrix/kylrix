@@ -70,7 +70,7 @@ export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: (
         // Try to find existing first
         try {
             const existing = await ChatService.getConversations(user.$id);
-            const found = existing.rows.find((c: any) =>
+            const found = existing.documents.find((c: any) =>
                 c.type === 'direct' && c.participants.includes(targetUserId)
             );
             if (found) {

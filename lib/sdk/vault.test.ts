@@ -22,7 +22,7 @@ describe('KylrixVault', () => {
 
     expect(mockSdk.listRows).toHaveBeenCalledTimes(1);
     expect(mockSdk.listRows).toHaveBeenCalledWith('db-id', 'table-id', queries);
-    expect(result.documents).toEqual(mockDocuments);
+    expect(result.rows).toEqual(mockDocuments);
     expect(result.total).toBe(2);
   });
 

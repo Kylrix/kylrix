@@ -177,15 +177,15 @@ export function invalidateNoteRowClientCache(noteId?: string | null) {
 }
 
 async function loadNoteRowFromOrigin(noteId: string): Promise<Notes> {
-  const doc = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId) as any;
+  const doc = await databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId) as any;
 
   hydrateVirtualAttributes(doc);
 
   try {
-    const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-    const pivot = await databases.listDocuments(
+    const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+    const pivot = await databases.listRows(
       APPWRITE_DATABASE_ID,
-      noteTagsCollection,
+      noteTagsTable,
       [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any
     );
     if (pivot.documents.length) {
@@ -218,7 +218,7 @@ if (typeof window === 'undefined') {
   }, 10 * 60 * 1000);
 }
 
-function cleanDocumentData<T>(data: Partial<T>): Record<string, unknown> {
+function cleanRowData<T>(data: Partial<T>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data as any)) {
     if (key.startsWith('$')) continue;
@@ -255,8 +255,8 @@ export function isGhostNote(note: any): boolean {
 }
 
 /**
- * Filter note data to only include keys supported by the Appwrite collection schema.
- * This prevents "invalid document structure" errors when sending extra client-side fields.
+ * Filter note data to only include keys supported by the Appwrite table schema.
+ * This prevents "invalid row structure" errors when sending extra client-side fields.
  * Matches the types in src/types/appwrite.d.ts
  */
 function hydrateVirtualAttributes(doc: any): any {
@@ -333,8 +333,8 @@ function filterNoteData(data: Record<string, any>): Record<string, any> {
 }
 
 /**
- * Helper to extract user IDs from Appwrite document permissions.
- * Useful for identifying collaborators directly from document metadata.
+ * Helper to extract user IDs from Appwrite row permissions.
+ * Useful for identifying collaborators directly from row metadata.
  */
 export function extractUserIdsFromPermissions(permissions: string[]): string[] {
   const userIds = new Set<string>();
@@ -353,11 +353,11 @@ export function extractUserIdsFromPermissions(permissions: string[]): string[] {
 
 export async function createUser(data: Partial<Users>) {
   const userData = {
-    ...cleanDocumentData(data),
+    ...cleanRowData(data),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
-  return databases.createDocument(
+  return databases.createRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_USERS,
     data.id || ID.unique(),
@@ -366,7 +366,7 @@ export async function createUser(data: Partial<Users>) {
 }
 
 export async function getUser(userId: string): Promise<Users> {
-  return databases.getDocument(
+  return databases.getRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_USERS,
     userId
@@ -374,16 +374,16 @@ export async function getUser(userId: string): Promise<Users> {
 }
 
 export async function updateUser(userId: string, data: Partial<Users>) {
-  return databases.updateDocument(
+  return databases.updateRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_USERS,
     userId,
-    cleanDocumentData(data)
+    cleanRowData(data)
   );
 }
 
 export async function deleteUser(userId: string) {
-  return databases.deleteDocument(
+  return databases.deleteRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_USERS,
     userId
@@ -391,31 +391,31 @@ export async function deleteUser(userId: string) {
 }
 
 export async function listUsers(queries: any[] = []) {
-  const res = await databases.listDocuments(
+  const res = await databases.listRows(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_USERS,
     queries
   );
-  return { ...res, documents: res.documents };
+  return { ...res, rows: res.rows };
 }
 
 export async function getUserByUsername(username: string): Promise<Users | null> {
-  const res = await databases.listDocuments(
+  const res = await databases.listRows(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_USERS,
     [Query.equal('username', username), Query.limit(1)]
   );
-  return (res.documents[0] as unknown as Users) || null;
+  return (res.rows[0] as unknown as Users) || null;
 }
 
 export async function getUsersByIds(userIds: string[]): Promise<Users[]> {
   if (userIds.length === 0) return [];
-  const res = await databases.listDocuments(
+  const res = await databases.listRows(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_USERS,
     [Query.equal('$id', userIds)]
   );
-  return res.documents as unknown as Users[];
+  return res.rows as unknown as Users[];
 }
 
 // Search users by partial name or email with privacy constraints
@@ -437,7 +437,7 @@ export async function searchUsers(query: string, limit: number = 5) {
       queries.push(Query.equal('publicProfile', true));
     }
 
-    const res = await databases.listDocuments(
+    const res = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_USERS,
       queries
@@ -486,7 +486,7 @@ export async function getPinnedNoteIds(): Promise<string[]> {
     
     // Primary: fetch from database using native column
     try {
-        const res = await databases.listDocuments(
+        const res = await databases.listRows(
             APPWRITE_DATABASE_ID,
             APPWRITE_TABLE_ID_NOTES,
             [
@@ -561,19 +561,19 @@ export async function completePasswordReset(userId: string, secret: string, pass
 
 async function syncTagsForCreatedNote(noteId: string, rawTags: string[], userId: string, now: string) {
   try {
-    const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-    const tagsCollection = APPWRITE_TABLE_ID_TAGS;
+    const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+    const tagsTable = APPWRITE_TABLE_ID_TAGS;
     const unique = Array.from(new Set(rawTags.map((tag) => tag.trim()))).filter(Boolean);
     if (!unique.length) return;
 
     const existingTagDocs: Record<string, any> = {};
     try {
-      const existingTagsRes = await databases.listDocuments(
+      const existingTagsRes = await databases.listRows(
         APPWRITE_DATABASE_ID,
-        tagsCollection,
+        tagsTable,
         [Query.equal('userId', userId), Query.equal('nameLower', unique.map((tag) => tag.toLowerCase())), Query.limit(unique.length)] as any
       );
-      for (const td of existingTagsRes.documents as any[]) {
+      for (const td of existingTagsRes.rows as any[]) {
         if (td.nameLower) existingTagDocs[td.nameLower] = td;
       }
     } catch (tagListErr) {
@@ -584,29 +584,29 @@ async function syncTagsForCreatedNote(noteId: string, rawTags: string[], userId:
       const key = tagName.toLowerCase();
       if (!existingTagDocs[key]) {
         try {
-          const created = await databases.createDocument(
+          const created = await databases.createRow(
             APPWRITE_DATABASE_ID,
-            tagsCollection,
+            tagsTable,
             ID.unique(),
             { name: tagName, nameLower: key, userId, createdAt: now, usageCount: 0 }
           );
           existingTagDocs[key] = created;
         } catch (createTagErr: any) {
           try {
-            const retry = await databases.listDocuments(
+            const retry = await databases.listRows(
               APPWRITE_DATABASE_ID,
-              tagsCollection,
+              tagsTable,
               [Query.equal('userId', userId), Query.equal('nameLower', key), Query.limit(1)] as any
             );
-            if (retry.documents.length) existingTagDocs[key] = retry.documents[0];
+            if (retry.documents.length) existingTagDocs[key] = retry.rows[0];
           } catch {}
         }
       }
     }
 
-    const existingPivot = await databases.listDocuments(
+    const existingPivot = await databases.listRows(
       APPWRITE_DATABASE_ID,
-      noteTagsCollection,
+      noteTagsTable,
       [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(500)] as any
     );
     const existingPairs = new Set(existingPivot.documents.map((p: any) => `${p.tagId || ''}::${p.tag || ''}`));
@@ -619,9 +619,9 @@ async function syncTagsForCreatedNote(noteId: string, rawTags: string[], userId:
       adjustTagUsage(userId, tagName, 1);
       if (existingPairs.has(pairKey)) continue;
       try {
-        await databases.createDocument(
+        await databases.createRow(
           APPWRITE_DATABASE_ID,
-          noteTagsCollection,
+          noteTagsTable,
           ID.unique(),
           { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId, createdAt: now }
         );
@@ -639,18 +639,18 @@ const noteCreationService = createNoteCreationService({
   tableId: APPWRITE_TABLE_ID_NOTES,
   getCurrentUser,
   createRow: async (databaseId, tableId, data, rowId, permissions) => {
-    return databases.createDocument(databaseId, tableId, rowId || ID.unique(), data as any, permissions) as any;
+    return databases.createRow(databaseId, tableId, rowId || ID.unique(), data as any, permissions) as any;
   },
   getNote,
   getNotePermissions,
-  cleanDocumentData,
+  cleanRowData,
   filterNoteData,
   syncTags: async ({ noteId, rawTags, userId, now }) => {
     await syncTagsForCreatedNote(noteId, rawTags, userId, now);
   },
 });
 
-export { createNoteCreationService, cleanDocumentData, filterNoteData, getNotePermissions };
+export { createNoteCreationService, cleanRowData, filterNoteData, getNotePermissions };
 export default AppwriteService;
 
 export async function createNote(data: Partial<Notes>, jwt?: string) {
@@ -710,7 +710,7 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
 }
 
 export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<Notes>, jwt?: string) {
-  const cleanData = cleanDocumentData(data);
+  const cleanData = cleanRowData(data);
   const updatedAt = new Date().toISOString();
   const updatedData = filterNoteData({ ...cleanData, updatedAt: updatedAt });
 
@@ -722,28 +722,28 @@ export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<N
     permissions = getNotePermissions(user.$id, !!data.isPublic);
   }
 
-  const doc = await databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId, updatedData, permissions) as any;
+  const doc = await databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId, updatedData, permissions) as any;
   
   // Handle tags if provided
   try {
     if (Array.isArray((data as any).tags)) {
-      const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-      const tagsCollection = APPWRITE_TABLE_ID_TAGS;
+      const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+      const tagsTable = APPWRITE_TABLE_ID_TAGS;
       const incomingRaw: string[] = (data as any).tags.filter(Boolean).map((t: string) => t.trim());
       const normalizedIncoming = Array.from(new Set(incomingRaw)).filter(Boolean);
       const incomingSet = new Set(normalizedIncoming);
       const currentUser = await getCurrentUser();
 
-      // Preload or create tag documents for all incoming
+      // Preload or create tag rows for all incoming
       const tagDocs: Record<string, any> = {};
       if (normalizedIncoming.length && currentUser?.$id) {
         try {
-          const existingTagsRes = await databases.listDocuments(
+          const existingTagsRes = await databases.listRows(
             APPWRITE_DATABASE_ID,
-            tagsCollection,
+            tagsTable,
             [Query.equal('userId', currentUser.$id), Query.equal('nameLower', normalizedIncoming.map(t => t.toLowerCase())), Query.limit(normalizedIncoming.length)] as any
           );
-          for (const td of existingTagsRes.documents as any[]) {
+          for (const td of existingTagsRes.rows as any[]) {
             if (td.nameLower) tagDocs[td.nameLower] = td;
           }
         } catch (preErr) {
@@ -753,9 +753,9 @@ export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<N
           const key = tagName.toLowerCase();
           if (!tagDocs[key]) {
             try {
-              const created = await databases.createDocument(
+              const created = await databases.createRow(
                 APPWRITE_DATABASE_ID,
-                tagsCollection,
+                tagsTable,
                 ID.unique(),
                 { name: tagName, nameLower: key, userId: currentUser?.$id, createdAt: updatedAt, usageCount: 0 }
               );
@@ -763,12 +763,12 @@ export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<N
             } catch (createErr) {
               // Race: re-fetch
               try {
-                const retry = await databases.listDocuments(
+                const retry = await databases.listRows(
                   APPWRITE_DATABASE_ID,
-                  tagsCollection,
+                  tagsTable,
                   [Query.equal('userId', currentUser?.$id), Query.equal('nameLower', key), Query.limit(1)] as any
                 );
-                if (retry.documents.length) tagDocs[key] = retry.documents[0];
+                if (retry.documents.length) tagDocs[key] = retry.rows[0];
               } catch {}
             }
           }
@@ -776,14 +776,14 @@ export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<N
       }
 
       // Fetch existing pivot rows
-      const existingPivot = await databases.listDocuments(
+      const existingPivot = await databases.listRows(
         APPWRITE_DATABASE_ID,
-        noteTagsCollection,
+        noteTagsTable,
         [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(500)] as any
       );
       const existingByTag: Record<string, any> = {};
       const existingPairs = new Set<string>();
-      for (const p of existingPivot.documents as any[]) {
+      for (const p of existingPivot.rows as any[]) {
         if (p.tag) existingByTag[p.tag] = p;
         if (p.tagId && p.tag) existingPairs.add(`${p.tagId}::${p.tag}`);
       }
@@ -799,9 +799,9 @@ export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<N
         // Increment usage for new association only if not already there
         adjustTagUsage(currentUser?.$id, tagName, 1);
         try {
-          await databases.createDocument(
+          await databases.createRow(
             APPWRITE_DATABASE_ID,
-            noteTagsCollection,
+            noteTagsTable,
             ID.unique(),
             { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId: currentUser?.$id || null, createdAt: updatedAt }
           );
@@ -817,9 +817,9 @@ export async function updateNoteIsomorphicLegacy(noteId: string, data: Partial<N
           // Decrement usage
           adjustTagUsage(currentUser?.$id, tagName, -1);
           try {
-            await databases.deleteDocument(
+            await databases.deleteRow(
               APPWRITE_DATABASE_ID,
-              noteTagsCollection,
+              noteTagsTable,
               (pivotDoc as any).$id
             );
           } catch (de) {
@@ -856,7 +856,7 @@ export async function deleteNoteIsomorphicLegacy(noteId: string, jwt?: string) {
 
     // Remove any note key mappings / decryption caches tied to this note
     try {
-      const mappingsQuery = databases.listDocuments(
+      const mappingsQuery = databases.listRows(
         APPWRITE_CONFIG.DATABASES.VAULT,
         'key_mapping',
         [
@@ -866,10 +866,10 @@ export async function deleteNoteIsomorphicLegacy(noteId: string, jwt?: string) {
       );
       const mappingsRes = await Promise.race([
         mappingsQuery,
-        new Promise<{ documents: any[] }>((resolve) => setTimeout(() => resolve({ documents: [] }), 2500))]);
+        new Promise<{ rows: any[] }>((resolve) => setTimeout(() => resolve({ rows: [] }), 2500))]);
       await Promise.all(
-        (mappingsRes.documents as any[]).map((mapping) =>
-          databases.deleteDocument(APPWRITE_CONFIG.DATABASES.VAULT, 'key_mapping', mapping.$id)
+        (mappingsRes.rows as any[]).map((mapping) =>
+          databases.deleteRow(APPWRITE_CONFIG.DATABASES.VAULT, 'key_mapping', mapping.$id)
         )
       );
     } catch (err) {
@@ -878,23 +878,23 @@ export async function deleteNoteIsomorphicLegacy(noteId: string, jwt?: string) {
     invalidatePublicNoteDecryptionKey(noteId);
 
     // Remove comments and their reactions
-    const commentsRes = await databases.listDocuments(
+    const commentsRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_COMMENTS,
       [Query.equal('noteId', noteId), Query.limit(1000)] as any
     );
-    const commentIds = (commentsRes.documents as any[]).map((c) => c.$id).filter(Boolean);
+    const commentIds = (commentsRes.rows as any[]).map((c) => c.$id).filter(Boolean);
     if (commentIds.length) {
       await deleteReactionsForTarget(TargetType.COMMENT, commentIds);
       await Promise.all(
-        commentIds.map((id) => databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, id))
+        commentIds.map((id) => databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, id))
       );
     }
   } catch (err: any) {
     console.error('deleteNote cascade cleanup failed:', err);
   }
   try {
-    return await databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId);
+    return await databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId);
   } finally {
     invalidateNoteRowClientCache(noteId);
   }
@@ -905,7 +905,7 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
   if (!queries.length) {
     const user = await getCurrentUser();
     if (!user || !user.$id) {
-      return { documents: [], total: 0 };
+      return { rows: [], total: 0 };
     }
     queries = [
       Query.equal('userId', user.$id)
@@ -918,23 +918,23 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
     Query.orderDesc('$createdAt')
   ];
 
-  const res = await databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, finalQueries);
-  const notes = (res.documents as any[]).map(doc => hydrateVirtualAttributes(doc)) as unknown as Notes[];
+  const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, finalQueries);
+  const notes = (res.rows as any[]).map(doc => hydrateVirtualAttributes(doc)) as unknown as Notes[];
 
-  // Hydrate tags from pivot collection in batch (best-effort)
+  // Hydrate tags from pivot table in batch (best-effort)
   try {
     if (notes.length) {
-      const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+      const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
       const noteIds = notes.map((n: any) => n.$id || (n as any).id).filter(Boolean);
       if (noteIds.length) {
         // Appwrite supports passing array to Query.equal for multiple values
-        const pivotRes = await databases.listDocuments(
+        const pivotRes = await databases.listRows(
           APPWRITE_DATABASE_ID,
-          noteTagsCollection,
+          noteTagsTable,
           [Query.equal('resourceId', noteIds), Query.equal('resourceType', 'note'), Query.limit(Math.min(1000, noteIds.length * 10))] as any
         );
         const tagMap: Record<string, Set<string>> = {};
-        for (const p of pivotRes.documents as any[]) {
+        for (const p of pivotRes.rows as any[]) {
           if (!p.resourceId || !p.tag) continue;
             if (!tagMap[p.resourceId]) tagMap[p.resourceId] = new Set();
           tagMap[p.resourceId].add(p.tag);
@@ -962,25 +962,25 @@ export async function listNotes(queries: any[] = [], limit: number = 100, option
     filteredNotes = filteredNotes.filter(n => !isGhostNote(n));
   }
 
-  return { ...res, documents: filteredNotes };
+  return { ...res, rows: filteredNotes };
 }
 
 // New function to get all notes with cursor pagination (memory efficient)
-export async function getAllNotes(): Promise<{ documents: Notes[], total: number }> {
+export async function getAllNotes(): Promise<{ rows: Notes[], total: number }> {
   try {
     const currentUser = await getCurrentUser();
-    if (!currentUser) return { documents: [], total: 0 };
+    if (!currentUser) return { rows: [], total: 0 };
 
-    const notesRes = await databases.listDocuments(
+    const notesRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_NOTES,
       [Query.equal('userId', currentUser.$id), Query.limit(1000)]
     );
 
-    return { documents: notesRes.documents as unknown as Notes[], total: notesRes.total };
+    return { rows: notesRes.rows as unknown as Notes[], total: notesRes.total };
   } catch (error: any) {
     console.error('getAllNotes error:', error);
-    return { documents: [], total: 0 };
+    return { rows: [], total: 0 };
   }
 }
 
@@ -993,8 +993,8 @@ export async function createTag(data: Partial<Tags>) {
   
   // Create tag with proper timestamps
   const now = new Date().toISOString();
-  const cleanData = cleanDocumentData(data);
-  const doc = await databases.createDocument(
+  const cleanData = cleanRowData(data);
+  const doc = await databases.createRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_TAGS,
     ID.unique(),
@@ -1007,29 +1007,29 @@ export async function createTag(data: Partial<Tags>) {
   );
   
   // Patch the tag to set id = $id (Appwrite does not set this automatically)
-  await databases.updateDocument(
+  await databases.updateRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_TAGS,
     doc.$id,
     { id: doc.$id }
   );
   
-  // Return the updated document as Tags type
+  // Return the updated row as Tags type
   return await getTag(doc.$id);
 }
 
 export async function getTag(tagId: string): Promise<Tags> {
-  return databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId) as unknown as Promise<Tags>;
+  return databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId) as unknown as Promise<Tags>;
 }
 
 export async function updateTag(tagId: string, data: Partial<Tags>) {
   // Do not allow updating id or userId directly
   const { id, userId, ...rest } = data;
-  return databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId, cleanDocumentData(rest));
+  return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId, cleanRowData(rest));
 }
 
 export async function deleteTag(tagId: string) {
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId);
+  return databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId);
 }
 
 export async function listTags(queries: any[] = [], limit: number = 100) {
@@ -1039,7 +1039,7 @@ export async function listTags(queries: any[] = [], limit: number = 100) {
     if (!user || !user.$id) {
       // Return empty result instead of throwing error for unauthenticated users
       return { 
-        documents: [], 
+        rows: [], 
         total: 0 
       };
     }
@@ -1053,16 +1053,16 @@ export async function listTags(queries: any[] = [], limit: number = 100) {
     Query.orderDesc("$createdAt")
   ];
   
-  // Cast documents to Tags[]
-  const res = await databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, finalQueries);
-  return { ...res, documents: res.documents as unknown as Tags[] };
+  // Cast rows to Tags[]
+  const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, finalQueries);
+  return { ...res, rows: res.rows as unknown as Tags[] };
 }
 
 // New function to get all tags with cursor pagination
-export async function getAllTags(): Promise<{ documents: Tags[], total: number }> {
+export async function getAllTags(): Promise<{ rows: Tags[], total: number }> {
   const user = await getCurrentUser();
   if (!user || !user.$id) {
-    return { documents: [], total: 0 };
+    return { rows: [], total: 0 };
   }
 
   let allTags: Tags[] = [];
@@ -1080,8 +1080,8 @@ export async function getAllTags(): Promise<{ documents: Tags[], total: number }
       queries.push(Query.cursorAfter(cursor));
     }
     
-    const res = await databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, queries);
-    const tags = res.documents as unknown as Tags[];
+    const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, queries);
+    const tags = res.rows as unknown as Tags[];
     
     allTags = [...allTags, ...tags];
     
@@ -1093,31 +1093,31 @@ export async function getAllTags(): Promise<{ documents: Tags[], total: number }
   }
   
   return {
-    documents: allTags,
+    rows: allTags,
     total: allTags.length
   };
 }
 
 export async function listTagsByUser(userId: string) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, [Query.equal('userId', userId)]);
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, [Query.equal('userId', userId)]);
 }
 
 // Internal helper: adjust tag usage count (best-effort, non-atomic)
 async function adjustTagUsage(userId: string | null | undefined, tagName: string, delta: number) {
   try {
     if (!userId || !tagName) return;
-    const res = await databases.listDocuments(
+    const res = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_TAGS,
       [Query.equal('userId', userId), Query.equal('name', tagName), Query.limit(1)] as any
     );
     if (res.documents.length) {
-      const doc: any = res.documents[0];
+      const doc: any = res.rows[0];
       const current = typeof doc.usageCount === 'number' && !isNaN(doc.usageCount) ? doc.usageCount : 0;
       const next = current + delta;
       if (next >= 0 && next !== current) {
         try {
-          await databases.updateDocument(
+          await databases.updateRow(
             APPWRITE_DATABASE_ID,
             APPWRITE_TABLE_ID_TAGS,
             doc.$id,
@@ -1136,23 +1136,23 @@ async function adjustTagUsage(userId: string | null | undefined, tagName: string
 // --- APIKEYS CRUD ---
 
 export async function createApiKey(data: Partial<ApiKeys>) {
-  return databases.createDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, ID.unique(), cleanDocumentData(data));
+  return databases.createRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, ID.unique(), cleanRowData(data));
 }
 
 export async function getApiKey(apiKeyId: string): Promise<ApiKeys> {
-  return databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, apiKeyId) as unknown as Promise<ApiKeys>;
+  return databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, apiKeyId) as unknown as Promise<ApiKeys>;
 }
 
 export async function updateApiKey(apiKeyId: string, data: Partial<ApiKeys>) {
-  return databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, apiKeyId, cleanDocumentData(data));
+  return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, apiKeyId, cleanRowData(data));
 }
 
 export async function deleteApiKey(apiKeyId: string) {
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, apiKeyId);
+  return databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, apiKeyId);
 }
 
 export async function listApiKeys(queries: any[] = []) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, queries);
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_APIKEYS, queries);
 }
 
 // --- COMMENTS CRUD ---
@@ -1185,24 +1185,24 @@ export async function createComment(noteId: string, content: string, parentComme
     permissions.push(Permission.read(Role.any()));
   }
 
-  return databases.createDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, ID.unique(), data, permissions);
+  return databases.createRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, ID.unique(), data, permissions);
 }
 
 export async function getComment(commentId: string): Promise<Comments> {
-  return databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, commentId) as unknown as Promise<Comments>;
+  return databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, commentId) as unknown as Promise<Comments>;
 }
 
 export async function updateComment(commentId: string, data: Partial<Comments>) {
-  return databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, commentId, cleanDocumentData(data));
+  return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, commentId, cleanRowData(data));
 }
 
 export async function deleteComment(commentId: string) {
   await deleteReactionsForTarget(TargetType.COMMENT, commentId);
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, commentId);
+  return databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, commentId);
 }
 
 export async function listComments(noteId: string) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, [Query.equal('noteId', noteId)]);
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_COMMENTS, [Query.equal('noteId', noteId)]);
 }
 
 // --- EXTENSIONS CRUD ---
@@ -1214,13 +1214,13 @@ export async function createExtension(data: Partial<Extensions>) {
   
   // Create extension with proper timestamps
   const now = new Date().toISOString();
-  const cleanData = cleanDocumentData(data);
+  const cleanData = cleanRowData(data);
   
   // Set initial permissions - private by default (only owner can access)
   const initialPermissions = [
     Permission.read(Role.user(user.$id))];
   
-  const doc = await databases.createDocument(
+  const doc = await databases.createRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_EXTENSIONS,
     ID.unique(),
@@ -1236,24 +1236,24 @@ export async function createExtension(data: Partial<Extensions>) {
   );
   
   // Patch the extension to set id = $id (Appwrite does not set this automatically)
-  await databases.updateDocument(
+  await databases.updateRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_EXTENSIONS,
     doc.$id,
     { id: doc.$id }
   );
   
-  // Return the updated document as Extensions type
+  // Return the updated row as Extensions type
   return await getExtension(doc.$id);
 }
 
 export async function getExtension(extensionId: string): Promise<Extensions> {
-  return databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_EXTENSIONS, extensionId) as unknown as Promise<Extensions>;
+  return databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_EXTENSIONS, extensionId) as unknown as Promise<Extensions>;
 }
 
 export async function updateExtension(extensionId: string, data: Partial<Extensions>) {
-  // Use cleanDocumentData to remove Appwrite system fields and id/authorId
-  const cleanData = cleanDocumentData(data);
+  // Use cleanRowData to remove Appwrite system fields and id/authorId
+  const cleanData = cleanRowData(data);
   const { id, authorId, ...rest } = cleanData;
   
   // Add updatedAt timestamp
@@ -1262,15 +1262,15 @@ export async function updateExtension(extensionId: string, data: Partial<Extensi
     updatedAt: new Date().toISOString()
   };
   
-  return databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_EXTENSIONS, extensionId, updatedData) as unknown as Promise<Extensions>;
+  return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_EXTENSIONS, extensionId, updatedData) as unknown as Promise<Extensions>;
 }
 
 export async function deleteExtension(extensionId: string) {
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_EXTENSIONS, extensionId);
+  return databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_EXTENSIONS, extensionId);
 }
 
 export async function listExtensions(queries: any[] = []) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_EXTENSIONS, queries);
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_EXTENSIONS, queries);
 }
 
 // --- REACTIONS CRUD ---
@@ -1284,7 +1284,7 @@ export async function createReaction(data: Partial<Reactions>) {
       const emoji = (data as any).emoji;
       const targetType = (data as any).targetType;
       try {
-        const existing = await databases.listDocuments(
+        const existing = await databases.listRows(
           APPWRITE_DATABASE_ID,
           APPWRITE_TABLE_ID_REACTIONS,
           [
@@ -1296,8 +1296,8 @@ export async function createReaction(data: Partial<Reactions>) {
           ] as any
         );
         if (existing.documents.length) {
-          // Idempotent return existing document
-            return existing.documents[0] as any;
+          // Idempotent return existing row
+            return existing.rows[0] as any;
         }
       } catch (listErr) {
         console.error('createReaction duplicate guard list failed', listErr);
@@ -1342,36 +1342,36 @@ export async function createReaction(data: Partial<Reactions>) {
     ? [
         Permission.read(isTargetPublic ? Role.any() : Role.user(userId))]
     : [Permission.read(Role.any())];
-  return databases.createDocument(
+  return databases.createRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_REACTIONS,
     ID.unique(),
-    cleanDocumentData(data),
+    cleanRowData(data),
     permissions
   );
 }
 
 export async function getReaction(reactionId: string): Promise<Reactions> {
-  return databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, reactionId) as unknown as Promise<Reactions>;
+  return databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, reactionId) as unknown as Promise<Reactions>;
 }
 
 export async function updateReaction(reactionId: string, data: Partial<Reactions>) {
-  return databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, reactionId, cleanDocumentData(data));
+  return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, reactionId, cleanRowData(data));
 }
 
 export async function deleteReaction(reactionId: string) {
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, reactionId);
+  return databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, reactionId);
 }
 
 export async function listReactions(queries: any[] = []) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, queries);
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, queries);
 }
 
 export async function deleteReactionsForTarget(targetType: TargetType, targetId: string | string[]) {
   const ids = Array.isArray(targetId) ? targetId.filter(Boolean) : [targetId];
   if (!ids.length) return;
   try {
-    const query = databases.listDocuments(
+    const query = databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_REACTIONS,
       [
@@ -1380,13 +1380,13 @@ export async function deleteReactionsForTarget(targetType: TargetType, targetId:
         Query.limit(Math.min(1000, Math.max(50, ids.length * 10)))
       ] as any
     );
-    const timeout = new Promise<{ documents: any[] }>((resolve) =>
-      setTimeout(() => resolve({ documents: [] }), 2500)
+    const timeout = new Promise<{ rows: any[] }>((resolve) =>
+      setTimeout(() => resolve({ rows: [] }), 2500)
     );
     const res = await Promise.race([query, timeout]);
     await Promise.all(
-      (res.documents as any[]).map((doc) =>
-        databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, doc.$id)
+      (res.rows as any[]).map((doc) =>
+        databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, doc.$id)
       )
     );
   } catch (err: any) {
@@ -1405,7 +1405,7 @@ export async function createCollaborator(data: Partial<Collaborators>) {
   try {
     if (noteId && userId) {
       try {
-        const existing = await databases.listDocuments(
+        const existing = await databases.listRows(
           FLOW_DATABASE_ID,
           POLYMORPHIC_COLLABORATORS_TABLE,
           [
@@ -1416,10 +1416,10 @@ export async function createCollaborator(data: Partial<Collaborators>) {
           ] as any
         );
         if (existing.documents.length) {
-          const existingCollaborator = existing.documents[0] as unknown as Collaborators;
+          const existingCollaborator = existing.rows[0] as unknown as Collaborators;
           const existingPermission = existingCollaborator.permission as unknown as NoteCollaboratorPermission;
           if (existingPermission !== permission) {
-            await databases.updateDocument(
+            await databases.updateRow(
               FLOW_DATABASE_ID,
               POLYMORPHIC_COLLABORATORS_TABLE,
               existingCollaborator.$id,
@@ -1451,13 +1451,13 @@ export async function createCollaborator(data: Partial<Collaborators>) {
   };
   delete payload.noteId;
 
-  const created = await databases.createDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, ID.unique(), cleanDocumentData(payload));
+  const created = await databases.createRow(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, ID.unique(), cleanRowData(payload));
 
   if (noteId && userId) {
     try {
       await updateNoteAccessForUser(noteId, userId, permission, 'grant');
     } catch (error) {
-      await databases.deleteDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, created.$id);
+      await databases.deleteRow(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, created.$id);
       throw error;
     }
   }
@@ -1469,7 +1469,7 @@ export async function createCollaborator(data: Partial<Collaborators>) {
 }
 
 export async function getCollaborator(collaboratorId: string): Promise<Collaborators> {
-  const doc = await databases.getDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId);
+  const doc = await databases.getRow(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId);
   return {
     ...doc,
     noteId: doc.resourceId,
@@ -1488,14 +1488,14 @@ export async function updateCollaborator(collaboratorId: string, data: Partial<C
     delete payload.noteId;
   }
 
-  const updated = await databases.updateDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId, cleanDocumentData(payload));
+  const updated = await databases.updateRow(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId, cleanRowData(payload));
 
   const noteId = current.resourceId || current.noteId;
   if (noteId && current.userId) {
     try {
       await updateNoteAccessForUser(noteId, current.userId, nextPermission, 'grant');
     } catch (error) {
-      await databases.updateDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId, { permission: current.permission });
+      await databases.updateRow(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId, { permission: current.permission });
       throw error;
     }
   }
@@ -1514,11 +1514,11 @@ export async function deleteCollaborator(collaboratorId: string) {
     await updateNoteAccessForUser(noteId, current.userId, current.permission as NoteCollaboratorPermission, 'revoke');
   }
 
-  return databases.deleteDocument(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId);
+  return databases.deleteRow(FLOW_DATABASE_ID, POLYMORPHIC_COLLABORATORS_TABLE, collaboratorId);
 }
 
 export async function listCollaborators(noteId: string) {
-  const res = await databases.listDocuments(
+  const res = await databases.listRows(
     FLOW_DATABASE_ID,
     POLYMORPHIC_COLLABORATORS_TABLE,
     [
@@ -1526,7 +1526,7 @@ export async function listCollaborators(noteId: string) {
       Query.equal('resourceType', 'note')
     ]
   );
-  res.documents = res.documents.map((doc: any) => ({
+  res.rows = res.documents.map((doc: any) => ({
     ...doc,
     noteId: doc.resourceId,
   }));
@@ -1537,48 +1537,48 @@ export async function listCollaborators(noteId: string) {
 // --- ACTIVITY LOG CRUD ---
 
 export async function createActivityLog(data: Partial<ActivityLog>) {
-  return databases.createDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, ID.unique(), cleanDocumentData(data));
+  return databases.createRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, ID.unique(), cleanRowData(data));
 }
 
 export async function getActivityLog(activityLogId: string): Promise<ActivityLog> {
-  return databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, activityLogId) as unknown as Promise<ActivityLog>;
+  return databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, activityLogId) as unknown as Promise<ActivityLog>;
 }
 
 export async function updateActivityLog(activityLogId: string, data: Partial<ActivityLog>) {
-  return databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, activityLogId, cleanDocumentData(data));
+  return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, activityLogId, cleanRowData(data));
 }
 
 export async function deleteActivityLog(activityLogId: string) {
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, activityLogId);
+  return databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, activityLogId);
 }
 
 export async function listActivityLogs() {
   const user = await getCurrentUser();
   if (!user || !user.$id) throw new Error("User not authenticated");
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, [Query.equal('userId', user.$id)]);
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, [Query.equal('userId', user.$id)]);
 }
 
 // --- SETTINGS CRUD ---
 
 export async function createSettings(data: Pick<Settings, 'userId' | 'settings'> & { mode?: string }) {
   if (!data.userId) throw new Error("userId is required to create settings");
-  return databases.createDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, data.userId, data);
+  return databases.createRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, data.userId, data);
 }
 
 export async function getSettings(settingsId: string): Promise<Settings> {
-  return databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, settingsId) as unknown as Promise<Settings>;
+  return databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, settingsId) as unknown as Promise<Settings>;
 }
 
 export async function updateSettings(settingsId: string, data: any) {
-  return databases.updateDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, settingsId, data);
+  return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, settingsId, data);
 }
 
 export async function deleteSettings(settingsId: string) {
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, settingsId);
+  return databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, settingsId);
 }
 
 export async function listSettings(queries: any[] = []) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, queries);
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_SETTINGS, queries);
 }
 
 // AI Mode specific functions
@@ -1666,9 +1666,9 @@ export async function createTaskFromNote(note: Notes) {
   const taskId = ID.unique();
   const now = new Date().toISOString();
 
-  // Create document in Kylrix Flow tasks collection
-  // Collection schema: title, description, status, priority, userId, parentId, etc.
-  const taskDoc = await databases.createDocument(
+  // Create row in Kylrix Flow tasks table
+  // Table schema: title, description, status, priority, userId, parentId, etc.
+  const taskDoc = await databases.createRow(
     FLOW_DATABASE_ID,
     FLOW_COLLECTION_ID_TASKS,
     taskId,
@@ -1680,7 +1680,7 @@ export async function createTaskFromNote(note: Notes) {
       tags: buildSourceNoteTags([note.$id]),
       createdAt: now,
       updatedAt: now,
-      // No metadata column in tasks collection, using description to reference note
+      // No metadata column in tasks table, using description to reference note
       description: `${note.content || ''}\n\n--- Origin: Kylrix Note (${note.$id}) ---`
     }
   );
@@ -1696,20 +1696,20 @@ export async function createTaskFromNote(note: Notes) {
 
 // --- UTILITY ---
 
-export async function listDocuments(collectionId: string, queries: any[] = []) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, collectionId, queries);
+export async function listRows(tableId: string, queries: any[] = []) {
+  return databases.listRows(APPWRITE_DATABASE_ID, tableId, queries);
 }
 
-export async function getDocument(collectionId: string, documentId: string) {
-  return databases.getDocument(APPWRITE_DATABASE_ID, collectionId, documentId);
+export async function getRow(tableId: string, rowId: string) {
+  return databases.getRow(APPWRITE_DATABASE_ID, tableId, rowId);
 }
 
-export async function updateDocument(collectionId: string, documentId: string, data: any) {
-  return databases.updateDocument(APPWRITE_DATABASE_ID, collectionId, documentId, data);
+export async function updateRow(tableId: string, rowId: string, data: any) {
+  return databases.updateRow(APPWRITE_DATABASE_ID, tableId, rowId, data);
 }
 
-export async function deleteDocument(collectionId: string, documentId: string) {
-  return databases.deleteDocument(APPWRITE_DATABASE_ID, collectionId, documentId);
+export async function deleteRow(tableId: string, rowId: string) {
+  return databases.deleteRow(APPWRITE_DATABASE_ID, tableId, rowId);
 }
 
 // --- SUBSCRIPTIONS ---
@@ -1719,7 +1719,7 @@ export async function deleteDocument(collectionId: string, documentId: string) {
 // --- ADVANCED/SEARCH ---
 
 export async function searchNotesByTitle(title: string) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, [Query.search('title', title)]);
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, [Query.search('title', title)]);
 }
 
 export async function searchNotesByTag(tagId: string) {
@@ -1733,10 +1733,10 @@ export async function getNotesByTag(tagId: string): Promise<Notes[]> {
       return [];
     }
 
-    const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-    const pivotRes = await databases.listDocuments(
+    const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+    const pivotRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
-      noteTagsCollection,
+      noteTagsTable,
       [Query.equal('tagId', tagId), Query.equal('resourceType', 'note'), Query.limit(1000)] as any
     );
 
@@ -1745,7 +1745,7 @@ export async function getNotesByTag(tagId: string): Promise<Notes[]> {
       return [];
     }
 
-    const notesRes = await databases.listDocuments(
+    const notesRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_NOTES,
       [
@@ -1755,13 +1755,13 @@ export async function getNotesByTag(tagId: string): Promise<Notes[]> {
       ] as any
     );
 
-    const notes = notesRes.documents as unknown as Notes[];
+    const notes = notesRes.rows as unknown as Notes[];
 
     try {
       if (notes.length) {
-        const pivotResForHydration = await databases.listDocuments(
+        const pivotResForHydration = await databases.listRows(
           APPWRITE_DATABASE_ID,
-          noteTagsCollection,
+          noteTagsTable,
           [Query.equal('noteId', notes.map((n: any) => n.$id || (n as any).id).filter(Boolean)), Query.limit(Math.min(1000, notes.length * 10))] as any
         );
         const tagsByNoteId: { [noteId: string]: Set<string> } = {};
@@ -1795,14 +1795,14 @@ export async function getNotesByTag(tagId: string): Promise<Notes[]> {
 }
 
 export async function listNotesByUser(userId: string) {
-  return databases.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, [
+  return databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, [
     Query.equal('userId', userId)
   ]);
 }
 
 
 export async function listPublicNotesByUser(userId: string) {
-  return databases.listDocuments(
+  return databases.listRows(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_NOTES,
     [
@@ -1825,8 +1825,8 @@ export async function shareNoteWithUser(noteId: string, email: string, permissio
       throw new Error("Only note owner can share notes");
     }
 
-    // Find user by email (check in Users collection)
-    const usersList = await databases.listDocuments(
+    // Find user by email (check in Users table)
+    const usersList = await databases.listRows(
       APPWRITE_DATABASE_ID, 
       APPWRITE_TABLE_ID_USERS, 
       [Query.equal('email', email)]
@@ -1836,7 +1836,7 @@ export async function shareNoteWithUser(noteId: string, email: string, permissio
       throw new Error(`No user found with email: ${email}`);
     }
 
-    const targetUserId = usersList.documents[0].id || usersList.documents[0].$id;
+    const targetUserId = usersList.rows[0].id || usersList.rows[0].$id;
     if (!targetUserId) throw new Error(`Invalid user data for email: ${email}`);
 
     return await shareNoteWithUserId(noteId, targetUserId, permission, email);
@@ -1901,7 +1901,7 @@ export async function getSharedUsers(noteId: string) {
       return [];
     }
 
-    // Extract user IDs and permissions from the document's $permissions array
+    // Extract user IDs and permissions from the row's $permissions array
     const sharedUsers: any[] = [];
     const targetUserIds = extractUserIdsFromPermissions(note.$permissions)
       .filter(id => id !== note.userId); // Exclude the owner
@@ -1916,13 +1916,13 @@ export async function getSharedUsers(noteId: string) {
     for (let i = 0; i < targetUserIds.length; i += batchSize) {
       const batch = targetUserIds.slice(i, i + batchSize);
       try {
-        const usersRes = await databases.listDocuments(
+        const usersRes = await databases.listRows(
           APPWRITE_DATABASE_ID,
           APPWRITE_TABLE_ID_USERS,
           [Query.equal('$id', batch), Query.limit(batch.length)] as any
         );
 
-        for (const user of usersRes.documents as any[]) {
+        for (const user of usersRes.rows as any[]) {
           const profilePicId = (user?.prefs && user.prefs.profilePicId)
             ? user.prefs.profilePicId
             : (user?.avatar || null);
@@ -1983,14 +1983,14 @@ export async function removeNoteSharing(noteId: string, targetUserId: string) {
   }
 }
 
-export async function getSharedNotes(): Promise<{ documents: Notes[], total: number }> {
+export async function getSharedNotes(): Promise<{ rows: Notes[], total: number }> {
   try {
     const currentUser = await getCurrentUser();
-    if (!currentUser) return { documents: [], total: 0 };
+    if (!currentUser) return { rows: [], total: 0 };
 
-    // 1. Fetch all documents where I am NOT the owner but have access.
-    // Appwrite automatically filters to documents I have READ access to.
-    const notesRes = await databases.listDocuments(
+    // 1. Fetch all rows where I am NOT the owner but have access.
+    // Appwrite automatically filters to rows I have READ access to.
+    const notesRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_NOTES,
       [
@@ -2003,7 +2003,7 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
 
     const sharedNotes: Notes[] = [];
     
-    for (const doc of notesRes.documents as any[]) {
+    for (const doc of notesRes.rows as any[]) {
       const note = doc as any;
       
       // 2. STRICT VALIDATION: 
@@ -2031,12 +2031,12 @@ export async function getSharedNotes(): Promise<{ documents: Notes[], total: num
     }
 
     return {
-      documents: sharedNotes,
+      rows: sharedNotes,
       total: sharedNotes.length
     };
   } catch (error: any) {
     console.error('getSharedNotes error:', error);
-    return { documents: [], total: 0 };
+    return { rows: [], total: 0 };
   }
 }
 
@@ -2056,7 +2056,7 @@ export async function getNoteWithSharing(noteId: string): Promise<(Notes & { isS
     if (isSharedWithUser && note.userId) {
       // Get details about who shared this note
       try {
-        sharedBy = await databases.getDocument(
+        sharedBy = await databases.getRow(
           APPWRITE_DATABASE_ID,
           APPWRITE_TABLE_ID_USERS,
           note.userId
@@ -2086,7 +2086,7 @@ export async function getNoteWithSharing(noteId: string): Promise<(Notes & { isS
 
 export async function getPublicNote(noteId: string): Promise<Notes | null> {
   try {
-    const note = await databases.getDocument(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId) as unknown as Notes;
+    const note = await databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, noteId) as unknown as Notes;
     
     // Only return note if it's public
     if (note.isPublic) {
@@ -2113,7 +2113,7 @@ export async function deleteProfilePicture(fileId: string) {
   return deleteFile(APPWRITE_BUCKET_PROFILE_PICTURES, fileId);
 }
 
-// --- NOTES ATTACHMENTS HELPERS (Legacy embedded + new collection) ---
+// --- NOTES ATTACHMENTS HELPERS (Legacy embedded + new table) ---
 
 // Basic upload wrapper (raw file upload only)
 export async function uploadNoteAttachment(file: File, userId?: string) {
@@ -2319,7 +2319,7 @@ export async function addAttachmentToNote(noteId: string, file: File, userId?: s
 
   // Persist to note
   await updateNote(noteId, { attachments: serialized } as any);
-  // Dual-write to attachments collection if enabled (best-effort)
+  // Dual-write to attachments table if enabled (best-effort)
   try {
     await createAttachmentRecord({
       noteId,
@@ -2342,7 +2342,7 @@ export async function listNoteAttachments(noteId: string, currentUserId?: string
       const note = await getNote(noteId) as any;
       if (note.userId !== currentUserId) {
         try {
-          const collabRes: any = await databases.listDocuments(
+          const collabRes: any = await databases.listRows(
             FLOW_DATABASE_ID,
             POLYMORPHIC_COLLABORATORS_TABLE,
             [
@@ -2351,7 +2351,7 @@ export async function listNoteAttachments(noteId: string, currentUserId?: string
               Query.equal('userId', currentUserId)
             ] as any
           );
-          const isCollab = Array.isArray(collabRes?.documents) && collabRes.documents.length > 0;
+          const isCollab = Array.isArray(collabRes?.rows) && collabRes.documents.length > 0;
           if (!isCollab) return [];
         } catch {
           return [];
@@ -2363,14 +2363,14 @@ export async function listNoteAttachments(noteId: string, currentUserId?: string
   }
   const note = await getNote(noteId) as any;
   const embedded = normalizeNoteAttachmentsField(note);
-  // If collection enabled, merge records (favor collection metadata if conflicts by fileId)
+  // If table enabled, merge records (favor table metadata if conflicts by fileId)
   if (APPWRITE_TABLE_ID_ATTACHMENTS) {
     try {
-      const collectionRecords = await listAttachmentsForNote(noteId);
-      if (collectionRecords.length) {
+      const tableRecords = await listAttachmentsForNote(noteId);
+      if (tableRecords.length) {
         const byId: Record<string, EmbeddedAttachmentMeta> = {};
         for (const m of embedded) byId[m.id] = m;
-        for (const rec of collectionRecords) {
+        for (const rec of tableRecords) {
           const existing = byId[rec.fileId];
           const merged: EmbeddedAttachmentMeta = {
             id: rec.fileId,
@@ -2408,7 +2408,7 @@ export async function removeAttachmentFromNote(noteId: string, attachmentId: str
 
 // --- NEW ATTACHMENTS COLLECTION MODEL ---
 // Progressive enhancement: supports richer metadata beyond embedded JSON strings.
-// If NEXT_PUBLIC_APPWRITE_TABLE_ID_ATTACHMENTS is set, we will dual-write to that collection.
+// If NEXT_PUBLIC_APPWRITE_TABLE_ID_ATTACHMENTS is set, we will dual-write to that table.
 
 export const APPWRITE_TABLE_ID_ATTACHMENTS = process.env.NEXT_PUBLIC_APPWRITE_TABLE_ID_ATTACHMENTS || undefined;
 
@@ -2428,7 +2428,7 @@ async function createAttachmentRecord(meta: { noteId: string; ownerId: string; f
   if (!APPWRITE_TABLE_ID_ATTACHMENTS) return null;
   try {
     const now = new Date().toISOString();
-    const doc: any = await databases.createDocument(
+    const doc: any = await databases.createRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_ATTACHMENTS,
       ID.unique(),
@@ -2443,7 +2443,7 @@ async function createAttachmentRecord(meta: { noteId: string; ownerId: string; f
         id: null,
       }
     );
-    await databases.updateDocument(
+    await databases.updateRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_ATTACHMENTS,
       doc.$id,
@@ -2468,12 +2468,12 @@ async function createAttachmentRecord(meta: { noteId: string; ownerId: string; f
 export async function listAttachmentsForNote(noteId: string): Promise<AttachmentRecord[]> {
   if (!APPWRITE_TABLE_ID_ATTACHMENTS) return [];
   try {
-    const res: any = await databases.listDocuments(
+    const res: any = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_ATTACHMENTS,
       [Query.equal('noteId', noteId), Query.limit(200), Query.orderDesc('$createdAt')] as any
     );
-    return res.documents as unknown as AttachmentRecord[];
+    return res.rows as unknown as AttachmentRecord[];
   } catch (e: any) {
     console.error('listAttachmentsForNote failed', e);
     return [];
@@ -2483,7 +2483,7 @@ export async function listAttachmentsForNote(noteId: string): Promise<Attachment
 export async function deleteAttachmentRecord(attachmentId: string) {
   if (!APPWRITE_TABLE_ID_ATTACHMENTS) return;
   try {
-    await databases.deleteDocument(
+    await databases.deleteRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_ATTACHMENTS,
       attachmentId
@@ -2553,35 +2553,35 @@ export async function backfillNoteTagPivots(userId?: string) {
   try {
     const currentUser = userId ? { $id: userId } as any : await getCurrentUser();
     if (!currentUser?.$id) throw new Error('User not authenticated');
-    const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-    const tagsCollection = APPWRITE_TABLE_ID_TAGS;
+    const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+    const tagsTable = APPWRITE_TABLE_ID_TAGS;
     // Fetch tag docs for user
-    const tagDocsRes = await databases.listDocuments(
+    const tagDocsRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
-      tagsCollection,
+      tagsTable,
       [Query.equal('userId', currentUser.$id), Query.limit(500)] as any
     );
     const byNameLower: Record<string, any> = {};
-    for (const td of tagDocsRes.documents as any[]) {
+    for (const td of tagDocsRes.rows as any[]) {
       if (td.nameLower) byNameLower[td.nameLower] = td;
       else if (td.name) byNameLower[String(td.name).toLowerCase()] = td;
     }
     // Fetch pivots missing tagId
-    const pivotsRes = await databases.listDocuments(
+    const pivotsRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
-      noteTagsCollection,
+      noteTagsTable,
       [Query.equal('userId', currentUser.$id), Query.isNull('tagId'), Query.limit(1000)] as any
     );
     let patched = 0;
-    for (const p of pivotsRes.documents as any[]) {
+    for (const p of pivotsRes.rows as any[]) {
       if (!p.tag || p.tagId) continue;
       const key = String(p.tag).toLowerCase();
       const tagDoc = byNameLower[key];
       if (tagDoc) {
         try {
-          await databases.updateDocument(
+          await databases.updateRow(
             APPWRITE_DATABASE_ID,
-            noteTagsCollection,
+            noteTagsTable,
             p.$id,
             { tagId: tagDoc.$id || tagDoc.id }
           );
@@ -2603,25 +2603,25 @@ export async function reconcileTagUsage(userId?: string) {
   try {
     const currentUser = userId ? { $id: userId } as any : await getCurrentUser();
     if (!currentUser?.$id) throw new Error('User not authenticated');
-    const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-    const tagsCollection = APPWRITE_TABLE_ID_TAGS;
+    const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+    const tagsTable = APPWRITE_TABLE_ID_TAGS;
     // Fetch all user tag docs
-    const tagDocsRes = await databases.listDocuments(
+    const tagDocsRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
-      tagsCollection,
+      tagsTable,
       [Query.equal('userId', currentUser.$id), Query.limit(500)] as any
     );
-    const tagDocs = tagDocsRes.documents as any[];
+    const tagDocs = tagDocsRes.rows as any[];
     const tagIdToDoc: Record<string, any> = {};
     for (const td of tagDocs) tagIdToDoc[td.$id || td.id] = td;
     // Fetch all pivots for user
-    const pivotsRes = await databases.listDocuments(
+    const pivotsRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
-      noteTagsCollection,
+      noteTagsTable,
       [Query.equal('userId', currentUser.$id), Query.limit(5000)] as any
     );
     const counts: Record<string, number> = {};
-    for (const p of pivotsRes.documents as any[]) {
+    for (const p of pivotsRes.rows as any[]) {
       const tId = p.tagId;
       if (!tId) continue;
       counts[tId] = (counts[tId] || 0) + 1;
@@ -2632,9 +2632,9 @@ export async function reconcileTagUsage(userId?: string) {
       const current = typeof td.usageCount === 'number' ? td.usageCount : 0;
       if (desired !== current) {
         try {
-          await databases.updateDocument(
+          await databases.updateRow(
             APPWRITE_DATABASE_ID,
-            tagsCollection,
+            tagsTable,
             td.$id,
             { usageCount: desired }
           );
@@ -2658,15 +2658,15 @@ export async function auditNoteTagPivots(userId?: string) {
   try {
     const currentUser = userId ? { $id: userId } as any : await getCurrentUser();
     if (!currentUser?.$id) throw new Error('User not authenticated');
-    const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+    const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
 
     // Fetch pivots (bounded)
-    const pivotsRes = await databases.listDocuments(
+    const pivotsRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
-      noteTagsCollection,
+      noteTagsTable,
       [Query.equal('userId', currentUser.$id), Query.limit(5000)] as any
     );
-    const pivots = pivotsRes.documents as any[];
+    const pivots = pivotsRes.rows as any[];
 
     let missingTagId = 0;
     const sampleMissing: string[] = [];
@@ -2715,7 +2715,7 @@ export async function auditNoteTagPivots(userId?: string) {
 /**
  * --- PAGINATED NOTES LISTING ---
  * Cursor-based pagination for notes with optional tag hydration.
- * Returns: { documents, total, nextCursor, hasMore }
+ * Returns: { rows, total, nextCursor, hasMore }
  *
  * Example:
  *   const page1 = await listNotesPaginated({ limit: 50 });
@@ -2759,7 +2759,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     }
 
     if (!effectiveUserId) {
-      return { documents: [], total: 0, nextCursor: null, hasMore: false };
+      return { rows: [], total: 0, nextCursor: null, hasMore: false };
     }
     
     baseQueries = [
@@ -2773,25 +2773,25 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
     Query.orderDesc('$createdAt')];
   if (cursor) finalQueries.push(Query.cursorAfter(cursor));
 
-  const res: any = await databases.listDocuments(
+  const res: any = await databases.listRows(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_NOTES,
     finalQueries
   );
-  const notes = (res.documents as any[]).map(doc => hydrateVirtualAttributes(doc)) as unknown as Notes[];
+  const notes = (res.rows as any[]).map(doc => hydrateVirtualAttributes(doc)) as unknown as Notes[];
 
   if (hydrateTags && notes.length) {
     try {
-      const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+      const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
       const noteIds = notes.map((n: any) => n.$id || (n as any).id).filter(Boolean);
       if (noteIds.length) {
-        const pivotRes = await databases.listDocuments(
+        const pivotRes = await databases.listRows(
           APPWRITE_DATABASE_ID,
-          noteTagsCollection,
+          noteTagsTable,
           [Query.equal('resourceId', noteIds), Query.equal('resourceType', 'note'), Query.limit(Math.min(1000, noteIds.length * 10))] as any
         );
         const tagMap: Record<string, Set<string>> = {};
-        for (const p of pivotRes.documents as any[]) {
+        for (const p of pivotRes.rows as any[]) {
           if (!p.resourceId || !p.tag) continue;
           if (!tagMap[p.resourceId]) tagMap[p.resourceId] = new Set();
           tagMap[p.resourceId].add(p.tag);
@@ -2822,7 +2822,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
   const nextCursor = hasMore && batchLength ? (filteredNotes[batchLength - 1] as any).$id || null : null;
 
   return {
-    documents: filteredNotes,
+    rows: filteredNotes,
     total: typeof res.total === 'number' ? res.total : filteredNotes.length,
     nextCursor,
     hasMore,
@@ -2917,7 +2917,7 @@ async function exportUrlSafeCryptoKey(key: CryptoKey): Promise<string> {
 }
 
 async function getT4NoteKeyMapping(noteId: string, ownerId: string) {
-  return await databases.listDocuments(
+  return await databases.listRows(
     APPWRITE_CONFIG.DATABASES.VAULT,
     'key_mapping',
     [
@@ -2931,7 +2931,7 @@ async function getT4NoteKeyMapping(noteId: string, ownerId: string) {
 async function loadT4NoteKey(noteId: string, ownerId: string): Promise<CryptoKey> {
   const keyMappingRes = await getT4NoteKeyMapping(noteId, ownerId);
 
-  const mapping = keyMappingRes.documents[0] as any;
+  const mapping = keyMappingRes.rows[0] as any;
   if (!mapping?.wrappedKey) {
     throw new Error('Missing encryption key mapping for this note');
   }
@@ -2981,7 +2981,7 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
                   const currentUser = await getCurrentUser();
                   if (currentUser && (note.userId === currentUser.$id || (note as any).owner_id === currentUser.$id)) {
                       const keyMappingRes = await getT4NoteKeyMapping(note.$id, currentUser.$id);
-                      const mapping = keyMappingRes.documents[0] as any;
+                      const mapping = keyMappingRes.rows[0] as any;
                       if (mapping?.wrappedKey) {
                           const rawKey = await ecosystemSecurity.decryptBinaryWithKey(mapping.wrappedKey, mek, true);
                           return await exportUrlSafeCryptoKey(await crypto.subtle.importKey('raw', rawKey as any, { name: 'AES-GCM', length: 256 }, true, ['decrypt']));
@@ -3060,7 +3060,7 @@ async function preparePublicNoteUpdate(
   let decryptionKey: string;
 
   if (!rotateLink && hasExistingKey) {
-    const mapping = existingMappings.documents[0] as any;
+    const mapping = existingMappings.rows[0] as any;
     symmetricKey = await ecosystemSecurity.unwrapKeyWithECDH(mapping.wrappedKey, ownerPublicKey);
     decryptionKey = await exportUrlSafeCryptoKey(symmetricKey);
   } else {
@@ -3089,15 +3089,15 @@ async function preparePublicNoteUpdate(
       Permission.read(Role.user(ownerId))];
 
     if (hasExistingKey) {
-      await databases.updateDocument(
+      await databases.updateRow(
         APPWRITE_CONFIG.DATABASES.VAULT,
         'key_mapping',
-        (existingMappings.documents[0] as any).$id,
+        (existingMappings.rows[0] as any).$id,
         mappingData,
         mappingPermissions
       );
     } else {
-      await databases.createDocument(
+      await databases.createRow(
         APPWRITE_CONFIG.DATABASES.VAULT,
         'key_mapping',
         ID.unique(),
@@ -3147,12 +3147,12 @@ async function preparePublicNoteUpdate(
 
 async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPublic: boolean) {
   try {
-    const commentsRes = await databases.listDocuments(
+    const commentsRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_COMMENTS,
       [Query.equal('noteId', noteId), Query.limit(1000)] as any
     );
-    const commentDocs = commentsRes.documents as any[];
+    const commentDocs = commentsRes.rows as any[];
     const commentIds = commentDocs.map((c) => c.$id).filter(Boolean);
 
     await Promise.all(
@@ -3162,7 +3162,7 @@ async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPub
           Permission.read(Role.user(ownerId)),
           ...(isPublic ? [Permission.read(Role.any())] : [])];
         try {
-          await databases.updateDocument(
+          await databases.updateRow(
             APPWRITE_DATABASE_ID,
             APPWRITE_TABLE_ID_COMMENTS,
             comment.$id,
@@ -3175,7 +3175,7 @@ async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPub
       })
     );
 
-    const noteReactionsRes = await databases.listDocuments(
+    const noteReactionsRes = await databases.listRows(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_REACTIONS,
       [
@@ -3186,13 +3186,13 @@ async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPub
     );
 
     await Promise.all(
-      (noteReactionsRes.documents as any[]).map(async (reaction) => {
+      (noteReactionsRes.rows as any[]).map(async (reaction) => {
         const reactionUserId = reaction.userId || ownerId;
         const permissions = [
           Permission.read(Role.user(ownerId)),
           ...(isPublic ? [Permission.read(Role.any())] : [])];
         try {
-          await databases.updateDocument(
+          await databases.updateRow(
             APPWRITE_DATABASE_ID,
             APPWRITE_TABLE_ID_REACTIONS,
             reaction.$id,
@@ -3206,7 +3206,7 @@ async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPub
     );
 
     if (commentIds.length) {
-      const commentReactionsRes = await databases.listDocuments(
+      const commentReactionsRes = await databases.listRows(
         APPWRITE_DATABASE_ID,
         APPWRITE_TABLE_ID_REACTIONS,
         [
@@ -3217,13 +3217,13 @@ async function syncNoteVisibilityChildren(noteId: string, ownerId: string, isPub
       );
 
       await Promise.all(
-        (commentReactionsRes.documents as any[]).map(async (reaction) => {
+        (commentReactionsRes.rows as any[]).map(async (reaction) => {
           const reactionUserId = reaction.userId || ownerId;
           const permissions = [
             Permission.read(Role.user(ownerId)),
             ...(isPublic ? [Permission.read(Role.any())] : [])];
           try {
-            await databases.updateDocument(
+            await databases.updateRow(
               APPWRITE_DATABASE_ID,
               APPWRITE_TABLE_ID_REACTIONS,
               reaction.$id,
@@ -3303,7 +3303,7 @@ export async function toggleNoteVisibility(noteId: string): Promise<(Notes & { d
       permissions.push(Permission.read(Role.any()));
     }
 
-    const updated = await databases.updateDocument(
+    const updated = await databases.updateRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_NOTES,
       noteId,
@@ -3344,7 +3344,7 @@ export async function rotatePublicNoteLink(noteId: string): Promise<(Notes & { d
       Permission.read(Role.any())
     ];
 
-    const updated = await databases.updateDocument(
+    const updated = await databases.updateRow(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_NOTES,
       noteId,
@@ -3423,7 +3423,7 @@ export async function validatePublicNoteAccess(noteId: string): Promise<Notes | 
       const { createSystemClient } = await import('@/lib/appwrite-admin');
       const { databases } = createSystemClient();
       
-      const doc = await databases.getDocument(
+      const doc = await databases.getRow(
         APPWRITE_DATABASE_ID,
         APPWRITE_TABLE_ID_NOTES,
         noteId
@@ -3433,10 +3433,10 @@ export async function validatePublicNoteAccess(noteId: string): Promise<Notes | 
       if (doc && doc.isPublic === true) {
         hydrateVirtualAttributes(doc);
         try {
-          const noteTagsCollection = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-          const pivot = await databases.listDocuments(
+          const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+          const pivot = await databases.listRows(
             APPWRITE_DATABASE_ID,
-            noteTagsCollection,
+            noteTagsTable,
             [Query.equal('resourceId', noteId), Query.equal('resourceType', 'note'), Query.limit(200)] as any
           );
           if (pivot.documents.length) {
@@ -3480,7 +3480,7 @@ export async function setAnyoneCanEdit(noteId: string, enabled: boolean): Promis
     permissions.add(Permission.read(Role.any()));
   }
 
-  const updated = await databases.updateDocument(
+  const updated = await databases.updateRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_NOTES,
     noteId,
@@ -3494,13 +3494,13 @@ export async function setAnyoneCanEdit(noteId: string, enabled: boolean): Promis
 
 // Ecosystem Helpers
 export async function listFlowTasks(queries: any[] = []) {
-  return databases.listDocuments(FLOW_DATABASE_ID, FLOW_COLLECTION_ID_TASKS, queries);
+  return databases.listRows(FLOW_DATABASE_ID, FLOW_COLLECTION_ID_TASKS, queries);
 }
 
 export async function listFlowEvents(queries: any[] = []) {
-  return databases.listDocuments(FLOW_DATABASE_ID, FLOW_COLLECTION_ID_EVENTS, queries);
+  return databases.listRows(FLOW_DATABASE_ID, FLOW_COLLECTION_ID_EVENTS, queries);
 }
 
 export async function listKeepCredentials(queries: any[] = []) {
-  return databases.listDocuments(KEEP_DATABASE_ID, KEEP_COLLECTION_ID_CREDENTIALS, queries);
+  return databases.listRows(KEEP_DATABASE_ID, KEEP_COLLECTION_ID_CREDENTIALS, queries);
 }

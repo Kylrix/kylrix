@@ -102,13 +102,13 @@ export const UserSearch = () => {
             const existing = await ChatService.getConversations(user.$id);
             let found;
             if (targetUserId === user.$id) {
-                found = existing.rows.find((c: any) =>
+                found = existing.documents.find((c: any) =>
                     c.type === 'direct' &&
                     c.participants.length === 1 &&
                     c.participants[0] === user.$id
                 );
             } else {
-                found = existing.rows.find((c: any) =>
+                found = existing.documents.find((c: any) =>
                     c.type === 'direct' &&
                     c.participants.includes(targetUserId) &&
                     c.participants.length > 1

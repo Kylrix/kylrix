@@ -462,7 +462,7 @@ async function getRecentSentCount(tablesDB: TablesDB, recipientId: string, now =
     TablesQuery.orderDesc('sentAt'),
     TablesQuery.limit(MAX_UNORGANIC_EMAILS + 1)]);
 
-  return response.rows.length;
+  return response.documents.length;
 }
 
 async function getQueueRowById(tablesDB: TablesDB, rowId: string) {

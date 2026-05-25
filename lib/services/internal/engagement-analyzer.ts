@@ -57,7 +57,7 @@ export class EngagementAnalyzer {
   }
   private static async getSystemPulse() {
     try {
-        const docs = await databases.listDocuments(
+        const docs = await databases.listRows(
             'chat',
             'system_pulse',
             []

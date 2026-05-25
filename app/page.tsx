@@ -463,7 +463,7 @@ function LiveSurfaceCard({
               </Typography>
 
               <Stack spacing={1}>
-                {panel.rows.map((row) => (
+                {panel.documents.map((row) => (
                   <Box
                     key={row.title}
                     sx={{

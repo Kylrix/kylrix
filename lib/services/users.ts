@@ -100,7 +100,7 @@ async function processProfileBatch() {
         ]);
 
         const found = new Map<string, any>();
-        res.rows.forEach((row: any) => {
+        res.documents.forEach((row: any) => {
             found.set(row.userId, row);
             found.set(row.$id, row);
             rememberProfileRow(row, row.userId);
@@ -260,7 +260,7 @@ export const UsersService = {
                     Query.limit(1)
                 ]
             });
-            return res.rows.length === 0;
+            return res.documents.length === 0;
         } catch (_e) {
             return false;
         }
