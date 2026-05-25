@@ -1,6 +1,7 @@
 import { logDebug, logError } from '@/lib/logger';
 import { markSudoActive, resetSudo } from '@/lib/sudo-mode';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { argon2id } from 'hash-wasm';
 
 // Enhanced crypto configuration for maximum security with optimal performance
 export class MasterPassCrypto {
@@ -22,8 +23,37 @@ export class MasterPassCrypto {
   private static readonly IV_SIZE = 16; // 128-bit IV for AES-GCM
   private static readonly KEY_SIZE = 256; // 256-bit key for AES-256
 
-  // Derive key from master password using PBKDF2
-  private async deriveKey(
+  // Argon2id Parameters
+  private static readonly ARGON2_MEMORY = 65536; // 64 MB
+  private static readonly ARGON2_ITERATIONS = 3;
+  private static readonly ARGON2_PARALLELISM = 4;
+
+  // Derive key from master password using Argon2id (Primary)
+  private async deriveKeyWithArgon2id(
+    password: string,
+    salt: Uint8Array,
+  ): Promise<CryptoKey> {
+    const hash = await argon2id({
+      password,
+      salt,
+      parallelism: MasterPassCrypto.ARGON2_PARALLELISM,
+      iterations: MasterPassCrypto.ARGON2_ITERATIONS,
+      memorySize: MasterPassCrypto.ARGON2_MEMORY,
+      hashLength: 32, // 256 bits
+      outputType: 'binary',
+    });
+
+    return crypto.subtle.importKey(
+      "raw",
+      hash,
+      { name: "AES-GCM", length: MasterPassCrypto.KEY_SIZE },
+      true,
+      ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
+    );
+  }
+
+  // Derive key from master password using PBKDF2 (Legacy)
+  private async deriveKeyPBKDF2(
     password: string,
     salt: Uint8Array,
   ): Promise<CryptoKey> {
@@ -48,6 +78,17 @@ export class MasterPassCrypto {
       true, // Make extractable for passkey functionality
       ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
     );
+  }
+
+  private async deriveKey(
+    password: string,
+    salt: Uint8Array,
+    useArgon = true
+  ): Promise<CryptoKey> {
+    if (useArgon) {
+        return this.deriveKeyWithArgon2id(password, salt);
+    }
+    return this.deriveKeyPBKDF2(password, salt);
   }
 
   // Getter for the master key, needed for passkey logic
