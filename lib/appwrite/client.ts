@@ -60,6 +60,25 @@ export const databases = new Proxy(originalDatabases, {
                 }
             };
         }
+        if (prop === 'listDocuments') {
+            return async (...args: any[]) => {
+                const { databaseId, collectionId, queries } = parseTablesDBListArgs(args);
+                if (typeof window !== 'undefined') {
+                    try {
+                        return await originalDatabases.listDocuments(databaseId, collectionId, queries);
+                    } catch (e: any) {
+                        const { listRowsSecure } = await import('@/lib/actions/secure-ops');
+                        const res = await listRowsSecure(databaseId, collectionId, queries);
+                        // Map TablesDB response back to Databases response format (rows -> documents)
+                        return { total: res.total, documents: res.rows };
+                    }
+                } else {
+                    const { listRowsSecure } = await import('@/lib/actions/secure-ops');
+                    const res = await listRowsSecure(databaseId, collectionId, queries);
+                    return { total: res.total, documents: res.rows };
+                }
+            };
+        }
         if (prop === 'deleteDocument') {
             return async (...args: any[]) => {
                 const { databaseId, collectionId, documentId } = parseDatabasesDeleteArgs(args);
@@ -141,6 +160,23 @@ export const tablesDB = new Proxy(originalTablesDB, {
                 } else {
                     const { updateRowSecure } = await import('@/lib/actions/secure-ops');
                     return await updateRowSecure(databaseId, tableId, rowId, data, permissions);
+                }
+            };
+        }
+        if (prop === 'listRows') {
+            return async (...args: any[]) => {
+                const { databaseId, tableId, queries } = parseTablesDBListArgs(args);
+                if (typeof window !== 'undefined') {
+                    // Try client-side first for speed, fallback to secure action for restricted tables
+                    try {
+                        return await originalTablesDB.listRows(databaseId, tableId, queries);
+                    } catch (e: any) {
+                        const { listRowsSecure } = await import('@/lib/actions/secure-ops');
+                        return await listRowsSecure(databaseId, tableId, queries);
+                    }
+                } else {
+                    const { listRowsSecure } = await import('@/lib/actions/secure-ops');
+                    return await listRowsSecure(databaseId, tableId, queries);
                 }
             };
         }
