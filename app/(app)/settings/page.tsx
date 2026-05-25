@@ -44,6 +44,7 @@ import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';
 import { useSudo } from '@/context/SudoContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
 import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/app/(app)/(auth)/accounts/components/TelegramDrawer';
@@ -55,6 +56,7 @@ export default function SettingsPage() {
     const router = useRouter();
     const _muiTheme = useTheme();
     const { requestSudo } = useSudo();
+    const { open: openDrawer } = useUnifiedDrawer();
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [passkeySetupOpen, setPasskeySetupOpen] = useState(false);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
@@ -374,24 +376,32 @@ export default function SettingsPage() {
                             ) : tgUsername ? (
                                 <Button
                                     variant="text"
-                                    onClick={async () => {
+                                    onClick={() => {
                                         if (!user?.$id) return;
-                                        try {
-                                            setTgLoading(true);
-                                            const { databases, APPWRITE_CONFIG } = await import('@/lib/appwrite');
-                                            await databases.deleteDocument(
-                                                APPWRITE_CONFIG.DATABASES.CONNECT,
-                                                APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-                                                user.$id
-                                            );
-                                            setTgUsername(null);
-                                            toast.success('Telegram disconnected.');
-                                        } catch (err: any) {
-                                            console.error('Failed to disconnect telegram:', err);
-                                            toast.error(err?.message || 'Failed to disconnect.');
-                                        } finally {
-                                            setTgLoading(false);
-                                        }
+                                        openDrawer('delete-confirm', {
+                                            title: `Disconnect @${tgUsername}?`,
+                                            description: `Are you sure you want to unlink your Telegram account? You will stop receiving secure notifications for calls, active chat threads, and mentions on this device.`,
+                                            confirmLabel: 'Disconnect Telegram',
+                                            resourceName: 'this connection',
+                                            onConfirm: async () => {
+                                                try {
+                                                    setTgLoading(true);
+                                                    const { databases, APPWRITE_CONFIG } = await import('@/lib/appwrite');
+                                                    await databases.deleteDocument(
+                                                        APPWRITE_CONFIG.DATABASES.CONNECT,
+                                                        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
+                                                        user.$id
+                                                    );
+                                                    setTgUsername(null);
+                                                    toast.success('Telegram disconnected.');
+                                                } catch (err: any) {
+                                                    console.error('Failed to disconnect telegram:', err);
+                                                    toast.error(err?.message || 'Failed to disconnect.');
+                                                } finally {
+                                                    setTgLoading(false);
+                                                }
+                                            }
+                                        });
                                     }}
                                     sx={{
                                         color: '#EF4444',
