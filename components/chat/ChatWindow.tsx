@@ -600,16 +600,21 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     }, [conversationId, startTransition]);
 
     const loadMessages = React.useCallback(async () => {
+        if (!conversationId) return;
         setLoading(true);
+        console.log('[ChatWindow] loadMessages start for:', conversationId);
         try {
             startTransition(() => setMessageReactions({}));
             if (user?.$id && ecosystemSecurity.status.isUnlocked) {
                 await UsersService.forceSyncProfileWithIdentity(user);
             }
             const conv = await ChatService.getConversationById(conversationId, user?.$id);
+            console.log('[ChatWindow] loadMessages: conversation fetched:', conv?.$id);
+
             const response = await ChatService.getMessages(conversationId, 50, 0, user?.$id, {
                 prefetchedConversation: conv,
             });
+            console.log('[ChatWindow] loadMessages: getMessages returned rows:', response.rows?.length);
 
             // Filter by clearedAt if exists in settings
             let displayMessages = response.rows;
@@ -619,7 +624,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                     const settings = JSON.parse(decryptedSettings);
                     const myClearedAt = settings.clearedAt?.[user.$id];
                     if (myClearedAt) {
-                        displayMessages = displayMessages.filter((m: any) => new Date(m.$createdAt) > new Date(myClearedAt));
+                        displayMessages = displayMessages.filter((m: any) => new Date(m.createdAt || m.$createdAt) > new Date(myClearedAt));
+                        console.log('[ChatWindow] loadMessages: Filtered by clearedAt. Remaining:', displayMessages.length);
                     }
                 } catch (_e: unknown) { }
             }
@@ -630,7 +636,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
             });
             void loadReactions();
         } catch (error: unknown) {
-            console.error('Failed to load messages:', error);
+            console.error('[ChatWindow] loadMessages failed:', error);
         } finally {
             setLoading(false);
         }
