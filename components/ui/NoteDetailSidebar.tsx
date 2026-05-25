@@ -308,7 +308,7 @@ export function NoteDetailSidebar({
       return;
     }
 
-    const channel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${...}.documents.${liveNote.$id}`;
+    const channel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.COLLECTIONS.NOTE.NOTES}.documents.${liveNote.$id}`;
     const unsubscribe = realtime.subscribe(channel, (response) => {
       const payload = response.payload as Notes;
       if (!payload?.$id) return;

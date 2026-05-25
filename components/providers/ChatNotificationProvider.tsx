@@ -216,7 +216,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         if (!user?.$id) return;
 
         // 1. Subscribe to NEW messages across all conversations
-        const chatChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.COLLECTIONS.CHAT.MESSAGES}.documents`;
+        const chatChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.CONNECT.MESSAGES}.documents`;
         
         const unsubChat = realtime.subscribe([chatChannel], (response) => {
             if (response.events.some(e => e.includes('.create'))) {
@@ -236,7 +236,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
         });
 
         // 2. Subscribe to Call Signals via Activity Table
-        const activityChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.COLLECTIONS.CHAT.APP_ACTIVITY}.documents`;
+        const activityChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.CONNECT.APP_ACTIVITY}.documents`;
 
         const unsubActivity = realtime.subscribe([activityChannel], (response) => {
             if (response.events.some(e => e.includes('.update') || e.includes('.create'))) {

@@ -42,7 +42,7 @@ export const PresenceService = {
      * Helper to build a table-scoped presence channel.
      */
     getResourceChannel: (databaseId: string, tableId: string, rowId: string) => {
-        return `databases.${databaseId}.collections.${...}.documents.${rowId}`;
+        return `databases.${databaseId}.collections.${tableId}.documents.${rowId}`;
     },
 
     /**
