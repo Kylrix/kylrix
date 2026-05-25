@@ -189,6 +189,7 @@ export type Notes = Models.Row & {
     format: string | null;
     isGhost: boolean;
     isThread: boolean;
+    isPinned: boolean | null;
 }
 
 export type Comments = Models.Row & {
@@ -297,6 +298,7 @@ export type ResourceTags = Models.Row & {
     metadata: string | null;
     isPublic: boolean;
     isGuest: boolean;
+    isPinned: boolean | null;
 }
 
 export type SecurityLogs = Models.Row & {
@@ -342,6 +344,7 @@ export type Credentials = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isShared: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type Identities = Models.Row & {
@@ -375,6 +378,7 @@ export type User = Models.Row & {
     lastPasswordChangeAt: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    passkey_reminder_at: string | null;
 }
 
 export type Folders = Models.Row & {
@@ -414,6 +418,7 @@ export type TotpSecrets = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isShared: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type Keychain = Models.Row & {
@@ -426,6 +431,7 @@ export type Keychain = Models.Row & {
     isBackup: boolean;
     createdAt: string | null;
     updatedAt: string | null;
+    isArgon: boolean;
 }
 
 export type KeyMapping = Models.Row & {
@@ -457,6 +463,7 @@ export type Messages = Models.Row & {
     attachments: string[] | null;
     replyTo: string | null;
     readBy: string[] | null;
+    isPinned: boolean | null;
 }
 
 export type Conversations = Models.Row & {
@@ -727,6 +734,7 @@ export type Projects = Models.Row & {
     updatedAt: string | null;
     isPublic: boolean | null;
     isGuest: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type ProjectObjects = Models.Row & {
@@ -787,6 +795,7 @@ export type Events = Models.Row & {
     userId: string;
     isPublic: boolean | null;
     isGuest: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type Calendars = Models.Row & {
@@ -813,6 +822,7 @@ export type Tasks = Models.Row & {
     parentId: string | null;
     isPublic: boolean | null;
     isGuest: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type Forms = Models.Row & {
@@ -825,6 +835,7 @@ export type Forms = Models.Row & {
     visibility: FormsVisibility;
     isPublic: boolean | null;
     isGuest: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type FormSubmissions = Models.Row & {

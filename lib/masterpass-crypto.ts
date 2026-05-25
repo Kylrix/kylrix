@@ -27,6 +27,14 @@ export class MasterPassCrypto {
   private static readonly ARGON2_MEMORY = 65536; // 64 MB
   private static readonly ARGON2_ITERATIONS = 3;
   private static readonly ARGON2_PARALLELISM = 4;
+  
+  private onMigrationStart?: () => void;
+  private onMigrationEnd?: (success: boolean) => void;
+
+  setMigrationCallbacks(start: () => void, end: (success: boolean) => void) {
+      this.onMigrationStart = start;
+      this.onMigrationEnd = end;
+  }
 
   // Derive key from master password using Argon2id (Primary)
   private async deriveKeyWithArgon2id(
@@ -266,10 +274,16 @@ export class MasterPassCrypto {
         // --- SEAMLESS MIGRATION: PBKDF2 -> Argon2id ---
         if (!isArgon) {
             logDebug("[Migration] Legacy PBKDF2 detected. Upgrading to Argon2id on-the-fly...");
-            // Non-blocking upgrade to keep login fast
-            this.createKeychainEntry(this.masterKey, password, userId, true).catch(err => {
-                logError("[Migration] Failed to upgrade keychain to Argon2id", err);
-            });
+            this.onMigrationStart?.();
+            this.createKeychainEntry(this.masterKey, password, userId, true)
+                .then(() => {
+                    logDebug("[Migration] Successfully upgraded to Argon2id");
+                    this.onMigrationEnd?.(true);
+                })
+                .catch(err => {
+                    logError("[Migration] Failed to upgrade keychain to Argon2id", err);
+                    this.onMigrationEnd?.(false);
+                });
         }
 
         return true;

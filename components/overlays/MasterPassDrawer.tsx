@@ -74,7 +74,26 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
   const [showPasskeyIncentive, setShowPasskeyIncentive] = useState(false);
   const passkeyTriggeredRef = useRef(false);
 
-  const [mode, setMode] = useState<"passkey" | "password" | "pin" | "initialize" | null>(null);
+  const [passkeyIncentiveDone, setPasskeyIncentiveDone] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<'idle' | 'upgrading' | 'success' | 'error'>('idle');
+
+  const [mode, setMode] = useState<"passkey" | "password" | "pin" | "initialize" | "migrating" | null>(null);
+
+  useEffect(() => {
+      masterPassCrypto.setMigrationCallbacks(
+          () => {
+              setMode("migrating");
+              setMigrationStatus('upgrading');
+          },
+          (success) => {
+              setMigrationStatus(success ? 'success' : 'error');
+              setTimeout(() => {
+                  if (isOpen) onSuccess();
+              }, 1500);
+          }
+      );
+      return () => masterPassCrypto.setMigrationCallbacks(() => {}, () => {});
+  }, [onSuccess, isOpen]);
   const [pin, setPin] = useState("");
   const [hasPin, setHasPin] = useState(false);
 
@@ -367,6 +386,45 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
       {/* Content */}
       <Box sx={{ flex: 1, overflowY: 'auto', mb: 3 }}>
         <Stack spacing={3} component="form" onSubmit={handleSubmit}>
+          {mode === "migrating" && (
+            <Box sx={{ 
+                py: 6, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                textAlign: 'center',
+                gap: 3 
+            }}>
+                <Box sx={{ position: 'relative', display: 'grid', placeItems: 'center' }}>
+                    <CircularProgress 
+                        size={64} 
+                        thickness={2} 
+                        sx={{ color: '#6366F1' }} 
+                        variant={migrationStatus === 'upgrading' ? 'indeterminate' : 'determinate'}
+                        value={100}
+                    />
+                    <Box sx={{ position: 'absolute' }}>
+                        {migrationStatus === 'upgrading' && <ShieldIcon sx={{ fontSize: 24, color: '#6366F1' }} />}
+                        {migrationStatus === 'success' && <ShieldIcon sx={{ fontSize: 24, color: '#10B981' }} />}
+                        {migrationStatus === 'error' && <ErrorOutlineIcon sx={{ fontSize: 24, color: '#EF4444' }} />}
+                    </Box>
+                </Box>
+                <Box>
+                    <Typography sx={{ fontWeight: 900, color: 'white', mb: 1, fontFamily: 'var(--font-clash)', fontSize: '1.25rem' }}>
+                        {migrationStatus === 'upgrading' && 'Hardening Security...'}
+                        {migrationStatus === 'success' && 'Upgrade Complete'}
+                        {migrationStatus === 'error' && 'Upgrade Deferred'}
+                    </Typography>
+                    <Typography variant="body2" sx={{ color: '#9B9691', maxWidth: '280px', mx: 'auto' }}>
+                        {migrationStatus === 'upgrading' && 'Upgrading your vault to memory-hard Argon2id protection.'}
+                        {migrationStatus === 'success' && 'Your identity is now protected with elite architectural standards.'}
+                        {migrationStatus === 'error' && 'Failed to upgrade on-the-fly. We will try again next time.'}
+                    </Typography>
+                </Box>
+            </Box>
+          )}
+
           {mode === "pin" && (
             <>
               <TextField
