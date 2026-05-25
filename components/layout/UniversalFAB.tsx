@@ -31,7 +31,7 @@ export default function UniversalFAB() {
     pathname.startsWith('/note') || 
     pathname.startsWith('/flow') || 
     pathname.startsWith('/vault') ||
-    pathname.startsWith('/connect')
+    (pathname.startsWith('/connect') && !pathname.includes('/invite/'))
   );
 
   if (!config.isVisible && !isAppRoute) return null;
