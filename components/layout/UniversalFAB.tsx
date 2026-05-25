@@ -16,9 +16,11 @@ import { Plus, X } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { usePathname } from 'next/navigation';
 import { useLocalContext } from '@/lib/context-engine';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 export default function UniversalFAB() {
   const { config } = useFAB();
+  const { isDrawerOpen } = useDrawerState();
   const pathname = usePathname();
   const [isExpanded, setIsExpanded] = useState(false);
   const { isRecording, startRecording, stopRecording, currentWorkflow } = useLocalContext();
@@ -34,6 +36,7 @@ export default function UniversalFAB() {
     (pathname.startsWith('/connect') && pathname !== '/connect' && !pathname.includes('/invite/') && !pathname.startsWith('/connect/chat/'))
   );
 
+  if (isDrawerOpen) return null;
   if (!config.isVisible && !isAppRoute) return null;
 
   const actions = config.actions || [];
