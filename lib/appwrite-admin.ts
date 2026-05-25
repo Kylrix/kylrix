@@ -1,4 +1,4 @@
-import { Client, Account, Databases, Messaging, Storage, Users, TablesDB } from 'node-appwrite';
+import { Client, Account, Databases, Messaging, Storage, Users, TablesDB, Teams } from 'node-appwrite';
 import { PROJECT_ID, ENDPOINT } from '../generated/appwrite/constants';
 
 let cachedSystemClient: {
@@ -8,6 +8,7 @@ let cachedSystemClient: {
   messaging: Messaging;
   storage: Storage;
   users: Users;
+  teams: Teams;
 } | null = null;
 
 export function createSystemClient() {
@@ -34,6 +35,7 @@ export function createSystemClient() {
     messaging: new Messaging(client),
     storage: new Storage(client),
     users: new Users(client),
+    teams: new Teams(client),
   };
 
   return cachedSystemClient;
@@ -101,6 +103,7 @@ export function createAdminClient(actorEmail?: string | null) {
     messaging: new Messaging(client),
     storage: new Storage(client),
     users: new Users(client),
+    teams: new Teams(client),
   };
 }
 
