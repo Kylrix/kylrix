@@ -406,7 +406,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
     const [reactionPopoverAnchorEl, setReactionPopoverAnchorEl] = useState<HTMLElement | null>(null);
     const [reactionPopoverMessageId, setReactionPopoverMessageId] = useState<string | null>(null);
     const initialLoadRef = useRef<string | null>(null);
-    const [ startTransition] = useTransition();
+    const [isPending, startTransition] = useTransition();
     const isProPlan = hasPaidKylrixPlan(user);
     const { openWalletWithIntent } = useWalletOverlay();
 

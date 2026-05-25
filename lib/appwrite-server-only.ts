@@ -14,9 +14,9 @@ import { cache } from 'react';
 export const createServerClient = cache(async (jwt?: string) => {
   const client = new Client();
   
-  // Canonical Cloud endpoint is more reliable for server-side session/JWT validation
-  // than custom CNAMEs in certain network environments.
-  client.setEndpoint('https://fra.cloud.appwrite.io/v1');
+  // Use the primary ecosystem endpoint for session/JWT validation.
+  // This ensures compatibility with custom domains and self-hosted instances.
+  client.setEndpoint(APPWRITE_CONFIG.ENDPOINT);
   client.setProject(APPWRITE_CONFIG.PROJECT_ID);
 
   if (jwt && jwt.length > 32) {
