@@ -79,6 +79,7 @@ import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 import toast from 'react-hot-toast';
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useFAB } from '@/context/FABContext';
 
 const CACHE_KEY = 'kylrix_feed_cache';
 const profileRegistry = new Map<string, any>();
@@ -725,87 +726,36 @@ function MobileComposerDock({
     }, [onCancel]);
 
     return (
-        <>
-            {isMobile && user && !open && !isDrawerOpen && (
-                <Fab
-                    color="primary"
-                    disableRipple
-                    disableFocusRipple
-                    sx={{
-                        position: 'fixed',
-                        bottom: 'calc(132px + env(safe-area-inset-bottom))',
-                        right: 24,
-                        width: 64,
-                        height: 64,
-                        border: '1px solid rgba(255, 255, 255, 0.12)',
-                        bgcolor: '#161412',
-                        color: '#F59E0B',
-                        backgroundImage: 'none',
-                        boxShadow: '0 18px 44px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(245, 158, 11, 0.18), 0 0 28px rgba(245, 158, 11, 0.24)',
-                        transform: 'translateZ(0)',
-                        transition: 'transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease',
-                        WebkitTapHighlightColor: 'transparent',
-                        touchAction: 'manipulation',
-                        zIndex: 1400,
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            inset: 6,
-                            borderRadius: '50%',
-                            background: 'none',
-                            pointerEvents: 'none',
-                        },
-                        '&:hover': {
-                        bgcolor: '#161412',
-                            color: '#F59E0B',
-                            transform: 'translateY(-2px) scale(1.04)',
-                            boxShadow: '0 22px 50px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(245, 158, 11, 0.22), 0 0 34px rgba(245, 158, 11, 0.3)',
-                        },
-                        '&:active': {
-                            transform: 'translateY(0) scale(0.98)',
-                        },
-                    }}
-                    onPointerDown={(event) => {
-                        if ((event).button !== 0) return;
-                        setOpen(true);
-                    }}
-                    onClick={() => setOpen(true)}
-                >
-                    <Plus size={26} strokeWidth={2.1} />
-                </Fab>
-            )}
-
-            <PostComposer
-                key={composerKey}
-                composerKey={composerKey}
-                isMobile={isMobile}
-                isOpen={!isMobile || open}
-                user={user}
-                userAvatarUrl={userAvatarUrl}
-                editingMoment={editingMoment}
-                selectedNote={selectedNote}
-                selectedEvent={selectedEvent}
-                selectedCall={selectedCall}
-                pulseTarget={pulseTarget}
-                selectedFiles={selectedFiles}
-                posting={posting}
-                onCancel={handleCancel}
-                onSubmit={onSubmit}
-                onSelectFiles={onSelectFiles}
-                onOpenNote={onOpenNote}
-                onPreviewSelectedNote={onPreviewSelectedNote}
-                onOpenEvent={onOpenEvent}
-                onOpenCall={onOpenCall}
-                onClearNote={onClearNote}
-                onClearEvent={onClearEvent}
-                onClearCall={onClearCall}
-                onClearPulseTarget={onClearPulseTarget}
-                onRemoveFile={onRemoveFile}
-                draftInputRef={draftInputRef}
-                hasDraftText={hasDraftText}
-                setHasDraftText={setHasDraftText}
-            />
-        </>
+        <PostComposer
+            key={composerKey}
+            composerKey={composerKey}
+            isMobile={isMobile}
+            isOpen={!isMobile || open}
+            user={user}
+            userAvatarUrl={userAvatarUrl}
+            editingMoment={editingMoment}
+            selectedNote={selectedNote}
+            selectedEvent={selectedEvent}
+            selectedCall={selectedCall}
+            pulseTarget={pulseTarget}
+            selectedFiles={selectedFiles}
+            posting={posting}
+            onCancel={handleCancel}
+            onSubmit={onSubmit}
+            onSelectFiles={onSelectFiles}
+            onOpenNote={onOpenNote}
+            onPreviewSelectedNote={onPreviewSelectedNote}
+            onOpenEvent={onOpenEvent}
+            onOpenCall={onOpenCall}
+            onClearNote={onClearNote}
+            onClearEvent={onClearEvent}
+            onClearCall={onClearCall}
+            onClearPulseTarget={onClearPulseTarget}
+            onRemoveFile={onRemoveFile}
+            draftInputRef={draftInputRef}
+            hasDraftText={hasDraftText}
+            setHasDraftText={setHasDraftText}
+        />
     );
 }));
 
@@ -880,6 +830,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
     const { profile: myProfile } = useProfile();
     const router = useRouter();
     const { openSidebar } = useDynamicSidebar();
+    const { setConfiguration, resetConfiguration } = useFAB();
     const initialFeedCache = getInitialFeedCache(view);
     const [moments, setMoments] = useState<any[]>(() => initialFeedCache?.rows || []);
     const [loading, setLoading] = useState<boolean>(() => !initialFeedCache);
@@ -926,6 +877,18 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'), { noSsr: true });
+
+    useEffect(() => {
+        if (isMobile) {
+            setConfiguration({
+                isVisible: true,
+                mainColor: '#F59E0B',
+                mainIcon: <Plus size={32} strokeWidth={2} />,
+                onMainClick: () => mobileComposerDockRef.current?.open()
+            });
+            return () => resetConfiguration();
+        }
+    }, [isMobile, setConfiguration, resetConfiguration]);
 
     useEffect(() => {
         if (!composeIntent?.noteId) return;

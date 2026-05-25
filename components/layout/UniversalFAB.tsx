@@ -44,6 +44,42 @@ export default function UniversalFAB() {
   const mainColor = config.mainColor || '#6366F1';
   const onMainClick = config.onMainClick;
 
+  // If we have a custom main click handler, it's a high-velocity direct action button
+  if (onMainClick) {
+    return (
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: isLandingPage ? 32 : { xs: 'calc(104px + env(safe-area-inset-bottom))', md: 32 },
+          right: { xs: 16, md: 32 },
+          zIndex: 1400,
+        }}
+      >
+        <Zoom in={true}>
+          <Fab
+            onClick={onMainClick}
+            sx={{
+              width: 64,
+              height: 64,
+              bgcolor: mainColor,
+              color: '#000',
+              borderRadius: '20px',
+              boxShadow: `0 8px 32px ${alpha(mainColor, 0.4)}`,
+              transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              '&:hover': {
+                bgcolor: mainColor,
+                transform: 'translateY(-4px)',
+                boxShadow: `0 12px 40px ${alpha(mainColor, 0.5)}`,
+              }
+            }}
+          >
+            {mainIcon || <Plus size={32} strokeWidth={2} />}
+          </Fab>
+        </Zoom>
+      </Box>
+    );
+  }
+
   const workflowAction = isRecording ? {
     id: 'workflow_stop',
     label: `Stop Recording (${currentWorkflow.length} Steps)`,
@@ -63,40 +99,6 @@ export default function UniversalFAB() {
   };
 
   const speedDialActions = [...actions, workflowAction];
-
-  // If we have a custom main click handler, don't use SpeedDial behavior
-  if (onMainClick && actions.length === 0) {
-    return (
-      <Box
-        sx={{
-          position: 'fixed',
-          bottom: isLandingPage ? 32 : { xs: 104, md: 32 },
-          right: { xs: 16, md: 32 },
-          zIndex: 1400,
-        }}
-      >
-        <Zoom in={true}>
-          <Fab
-            onClick={onMainClick}
-            sx={{
-              width: 64,
-              height: 64,
-              bgcolor: mainColor || '#6366F1',
-              color: '#000',
-              borderRadius: '20px',
-              boxShadow: `0 8px 32px ${alpha(mainColor || '#6366F1', 0.4)}`,
-              '&:hover': {
-                bgcolor: mainColor || '#6366F1',
-                transform: 'translateY(-4px)',
-              }
-            }}
-          >
-            {mainIcon || <Plus size={32} strokeWidth={2} />}
-          </Fab>
-        </Zoom>
-      </Box>
-    );
-  }
 
   return (
     <>

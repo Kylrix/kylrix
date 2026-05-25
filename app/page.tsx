@@ -38,6 +38,7 @@ import { KylrixApp } from '@/lib/sdk/design';
 import { ECOSYSTEM_APPS, getEcosystemUrl } from '@/lib/constants';
 import { useAuth } from '@/context/auth/AuthContext';
 import { AIHeroInput } from '@/components/AIHeroInput';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 const appOrder = ['note', 'vault', 'flow', 'connect'] as const;
 const LAST_ACTIVE_APP_KEY = 'kylrix_last_active_app';
@@ -160,9 +161,12 @@ const infraPanels = [
   }];
 
 const AppSwitcherFab = React.memo(function AppSwitcherFab({ onOpenApp }: { onOpenApp: (subdomain: string) => void }) {
+  const { isDrawerOpen } = useDrawerState();
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
   const theme = useTheme();
+
+  if (isDrawerOpen) return null;
 
   const items = useMemo(
     () =>
