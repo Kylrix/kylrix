@@ -17,6 +17,7 @@ import { Users, ShieldCheck, ArrowRight } from 'lucide-react';
 
 import { account } from '@/lib/appwrite/client';
 import { useAuth } from '@/lib/auth';
+import { useFAB } from '@/context/FABContext';
 
 type InvitePreview = {
   resourceType: string;
@@ -33,10 +34,17 @@ export default function HangoutInvitePage() {
   const router = useRouter();
   const conversationId = params.conversationId as string;
   const { user, isLoading } = useAuth();
+  const { setConfiguration, resetConfiguration } = useFAB();
 
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   const [requestState, setRequestState] = useState<'idle' | 'loading' | 'pending' | 'joined' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Hide FAB on invite page
+    setConfiguration({ isVisible: false });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration]);
 
   const buildAuthHeaders = async () => {
     const headers: Record<string, string> = {};
