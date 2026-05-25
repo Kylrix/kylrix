@@ -28,6 +28,7 @@ import { SuggestionsDeck } from '@/components/ephemeral/SuggestionsDeck';
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
 const ProUpgradeDrawer = dynamic(() => import('./overlays/ProUpgradeDrawer').then(m => m.ProUpgradeDrawer), { ssr: false });
 const TaskDialog = dynamic(() => import('@/components/tasks/TaskDialog'), { ssr: false });
+const PasskeyReminderDrawer = dynamic(() => import('./overlays/PasskeyReminderDrawer').then(m => ({ default: m.PasskeyReminderDrawer })), { ssr: false });
 const Overlay = dynamic(() => import('@/components/ui/Overlay'), { ssr: false });
 const DynamicSidebar = dynamic(() => import('./ui/DynamicSidebarPanel').then(m => m.DynamicSidebar), { ssr: false });
 const RightSidebar = dynamic(() => import('./layout/RightSidebar'), { ssr: false });
@@ -140,6 +141,10 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {isDynamicSidebarOpen && <DynamicSidebar />}
       {secondarySidebar.isOpen && <RightSidebar />}
       {isAgenticDrawerOpen && <AgenticDrawer />}
+    <Suspense fallback={null}>
+      <PasskeyReminderDrawer />
+    </Suspense>
     </Box>
-  );
-}
+    );
+    };
+

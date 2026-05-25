@@ -26,7 +26,8 @@ export class EcosystemSecurity {
   private hasMasterpassState: boolean | null = null;
   private hasPasskeyState: boolean | null = null;
   private hasRecoveryCodesState: boolean | null = null;
-  private statusListeners: Set<(status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean; hasMasterpass: boolean | null; hasPasskey: boolean | null; hasRecoveryCodes: boolean | null }) => void> = new Set();
+  private passkeyReminderAtState: string | null = null;
+  private statusListeners: Set<(status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean; hasMasterpass: boolean | null; hasPasskey: boolean | null; hasRecoveryCodes: boolean | null; passkeyReminderAt: string | null }) => void> = new Set();
   // SECURITY: Tab-specific secret (RAM-only) to protect against XSS
   private tabSessionSecret: Uint8Array | null = null;
 
@@ -81,7 +82,7 @@ export class EcosystemSecurity {
     });
   }
 
-  onStatusChange(listener: (status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean; hasMasterpass: boolean | null; hasPasskey: boolean | null; hasRecoveryCodes: boolean | null }) => void) {
+  onStatusChange(listener: (status: { isUnlocked: boolean; hasKey: boolean; hasIdentity: boolean; hasMasterpass: boolean | null; hasPasskey: boolean | null; hasRecoveryCodes: boolean | null; passkeyReminderAt: string | null }) => void) {
     this.statusListeners.add(listener);
     listener(this.status);
 
@@ -116,6 +117,7 @@ export class EcosystemSecurity {
       this.hasRecoveryCodesState = Array.isArray(userDoc?.backupCodes)
         ? userDoc.backupCodes.length > 0
         : Boolean(userDoc?.backupCodes);
+      this.passkeyReminderAtState = userDoc?.passkey_reminder_at || null;
 
       this.emitStatusChange();
       return this.status;
@@ -853,6 +855,33 @@ export class EcosystemSecurity {
     this.emitStatusChange();
   }
 
+  async setPasskeyReminder(userId: string, date: Date | null) {
+    const tableId = APPWRITE_CONFIG.TABLES.VAULT.USER;
+    const existing = await tablesDB.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId,
+      queries: [
+        Query.equal('userId', userId),
+        Query.limit(1)],
+    });
+
+    const reminderAt = date ? date.toISOString() : null;
+
+    if (existing.rows[0]) {
+      await tablesDB.updateRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, existing.rows[0].$id, {
+        passkey_reminder_at: reminderAt,
+      });
+    } else {
+      await tablesDB.createRow(APPWRITE_CONFIG.DATABASES.VAULT, tableId, ID.unique(), {
+        userId,
+        passkey_reminder_at: reminderAt,
+      });
+    }
+    
+    this.passkeyReminderAtState = reminderAt;
+    this.emitStatusChange();
+  }
+
   get status() {
     return {
       isUnlocked: this.isUnlocked,
@@ -860,7 +889,8 @@ export class EcosystemSecurity {
       hasIdentity: !!this.identityKeyPair,
       hasMasterpass: this.hasMasterpassState,
       hasPasskey: this.hasPasskeyState,
-      hasRecoveryCodes: this.hasRecoveryCodesState
+      hasRecoveryCodes: this.hasRecoveryCodesState,
+      passkeyReminderAt: this.passkeyReminderAtState
     };
   }
 }
