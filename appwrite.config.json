@@ -2292,6 +2292,14 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "passkey_reminder_at",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
                 }
             ],
             "indexes": [
@@ -2880,6 +2888,13 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "isArgon",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -3627,6 +3642,28 @@
                     ],
                     "orders": [
                         "asc"
+                    ]
+                },
+                {
+                    "key": "idx_lastMessageAt",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "lastMessageAt"
+                    ],
+                    "orders": [
+                        "DESC"
+                    ]
+                },
+                {
+                    "key": "idx_creatorId",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "creatorId"
+                    ],
+                    "orders": [
+                        "ASC"
                     ]
                 }
             ]
