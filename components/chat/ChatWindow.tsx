@@ -1730,10 +1730,9 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                 );
             case 'audio':
                 return (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <audio src={viewUrl} controls style={{ height: 40 }} />
-                    </Box>
+                    <VoiceMessage url={viewUrl} />
                 );
+
             default:
                 return (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, bgcolor: '#161514', borderRadius: 1, border: '1px solid rgba(255,255,255,0.05)' }}>
