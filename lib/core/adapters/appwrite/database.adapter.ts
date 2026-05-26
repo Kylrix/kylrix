@@ -102,11 +102,12 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     permissions?: string[],
     options?: { jwt?: string }
   ): Promise<T> {
+    const { ID } = await import('node-appwrite');
     const tables = await this.getClientTables(options?.jwt);
     const res = await tables.createRow({
       databaseId,
       tableId,
-      rowId: rowId || undefined,
+      rowId: rowId || ID.unique(),
       data: data as any,
       permissions,
     });
