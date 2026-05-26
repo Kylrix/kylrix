@@ -434,15 +434,20 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
 
   return (
     <Box sx={{ 
+      bgcolor: '#0A0908', 
+      position: 'fixed',
+      top: '88px', // Start below GlobalShell topbar
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 1200,
+      overflow: 'hidden',
       display: 'flex', 
       flexDirection: 'column', 
-      height: '100%', 
-      bgcolor: '#0A0908', 
-      position: 'relative',
-      overflow: 'hidden'
     }}>
-      
+
       {/* Dynamic Header */}
+
       <Stack 
         direction="row" 
         justifyContent="space-between" 
@@ -532,7 +537,8 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
             display: activeThreadParent ? { xs: 'none', md: 'flex' } : 'flex',
             flexDirection: 'column', 
             minHeight: 0,
-            borderRight: activeThreadParent ? '1px solid rgba(255,255,255,0.06)' : 'none'
+            borderRight: activeThreadParent ? '1px solid rgba(255,255,255,0.06)' : 'none',
+            position: 'relative' // relative context for input bar
           }}>
             <Box sx={{ 
               flex: 1, 
@@ -541,7 +547,9 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
               display: 'flex', 
               flexDirection: 'column', 
               gap: 1.75,
+              pb: 'calc(80px + env(safe-area-inset-bottom))', // Prevent overlapping content
               '&::-webkit-scrollbar': { width: '6px' },
+
               '&::-webkit-scrollbar-track': { background: 'transparent' },
               '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.06)', borderRadius: '10px' },
               '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(255,255,255,0.12)' }
@@ -685,11 +693,13 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                 borderTop: '1px solid rgba(255,255,255,0.05)', 
                 bgcolor: 'rgba(10, 9, 8, 0.95)',
                 backdropFilter: 'blur(12px)',
-                position: 'relative',
-                zIndex: 2
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 20
               }}
-            >
-              <Stack direction="row" spacing={1.5} alignItems="center">
+            >              <Stack direction="row" spacing={1.5} alignItems="center">
                 <IconButton
                   onClick={toggleRecording}
                   disabled={sending}
@@ -841,13 +851,12 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                 display: 'flex', 
                 flexDirection: 'column', 
                 gap: 2,
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                pb: 'calc(100px + env(safe-area-inset-bottom))',
                 '&::-webkit-scrollbar': { width: '4px' },
                 '&::-webkit-scrollbar-track': { background: 'transparent' },
                 '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.06)', borderRadius: '10px' }
               }}>
-                <Box sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', pb: 2, mb: 1 }}>
-                  <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <Box sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', pb: 2, mb: 1 }}>                  <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 900, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     Thread initialized by {activeThreadParent.senderName}
                   </Typography>
                   
@@ -1045,10 +1054,14 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                 sx={{ 
                   p: 1.5, 
                   borderTop: '1px solid rgba(255,255,255,0.05)', 
-                  bgcolor: 'rgba(10, 9, 8, 0.95)' 
+                  bgcolor: 'rgba(10, 9, 8, 0.95)',
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  zIndex: 20
                 }}
-              >
-                <Stack spacing={1}>
+              >                <Stack spacing={1}>
                   <Stack direction="row" spacing={1} alignItems="center">
                     <TextField
                       fullWidth
