@@ -6,6 +6,7 @@ import { ID, Permission, Query, Role, Databases, TablesDB } from 'node-appwrite'
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
+import { Registry } from '@/lib/core/di/registry';
 import { createServerClient } from '@/lib/appwrite-server-only';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
 import { trackEngagementView, type TrackEngagementInput } from '@/lib/services/internal/engagement-views';
@@ -28,8 +29,8 @@ export async function getRowCached(params: { databaseId: string; tableId: string
   if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
     return cached.row;
   }
-  const tables = createSystemTablesDB();
-  const row = await tables.getRow(params);
+  const db = Registry.getDatabase();
+  const row = await db.getRow<any>(params.databaseId, params.tableId, params.rowId);
   if (row) {
     // Prune expired entries to keep memory low
     if (rowCache.size > 100) {
@@ -50,15 +51,11 @@ export async function getRowCached(params: { databaseId: string; tableId: string
  */
 export async function getActor(jwt?: string) {
   try {
-    const { account } = await createServerClient(jwt);
-    const actor = await account.get().catch(err => {
-      console.warn('[secure-ops] Auth failure in account.get():', err?.message);
-      return null;
-    });
+    const actor = await Registry.getAuth().getActor(jwt);
     if (actor) {
-        console.log('[secure-ops] Actor established:', actor.$id, actor.email);
+        console.log('[secure-ops] Actor established via AuthPort:', actor.$id, actor.email);
     } else {
-        console.warn('[secure-ops] Actor discovery returned null');
+        console.warn('[secure-ops] Actor discovery via AuthPort returned null');
     }
     return actor;
   } catch (err) {
@@ -3161,13 +3158,14 @@ export async function createRowSecure(
     delete dataCopy.$id;
   }
 
-  const result = await tables.createRow({
+  const result = await Registry.getDatabase().createRow<any>(
     databaseId,
     tableId,
-    rowId: customRowId,
-    data: dataCopy,
-    permissions: perms,
-  });
+    customRowId,
+    dataCopy,
+    perms,
+    { jwt }
+  );
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -3243,14 +3241,14 @@ export async function updateRowSecure(
 
   if (!isAllowed) throw new Error('Forbidden');
 
-  const tables = createSystemTablesDB();
-  const result = await tables.updateRow({
+  const result = await Registry.getDatabase().updateRow<any>(
     databaseId,
     tableId,
     rowId,
     data,
     permissions,
-  });
+    { jwt }
+  );
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -3323,18 +3321,14 @@ export async function deleteRowSecure(
 
   if (!isAllowed) throw new Error('Forbidden');
 
-  const tables = createSystemTablesDB();
   try {
     await executeCascadeDeleteSecure(databaseId, tableId, rowId);
   } catch (err: any) {
     console.error('deleteRowSecure cascade cleanup failed:', err);
   }
 
-  const result = await tables.deleteRow({
-    databaseId,
-    tableId,
-    rowId,
-  });
+  await Registry.getDatabase().deleteRow(databaseId, tableId, rowId, { jwt });
+  const result = { success: true };
 
   return JSON.parse(JSON.stringify(result));
 }
@@ -3397,17 +3391,9 @@ export async function getProfileByUsernameSecure(username: string) {
 export async function listRowsSecure(databaseId: string, tableId: string, queries: string[] = [], jwt?: string) {
   console.log('[listRowsSecure] Request:', { databaseId, tableId, queries });
   
-  // Use user-scoped client to respect Row Level Security
-  const { client } = await createServerClient(jwt);
-  const tables = new TablesDB(client);
-
   try {
-    const res = await tables.listRows({
-      databaseId,
-      tableId,
-      queries: queries as any,
-    });
-    console.log('[listRowsSecure] Success. Total:', res.total, 'Count:', res.rows?.length);
+    const res = await Registry.getDatabase().listRows<any>(databaseId, tableId, queries, { jwt });
+    console.log('[listRowsSecure] Success via DatabasePort. Total:', res.total, 'Count:', res.rows?.length);
     // Unified response: 'rows' is now the primary key, 'documents' is legacy
     return JSON.parse(JSON.stringify({
         total: res.total,
@@ -3423,16 +3409,8 @@ export async function listRowsSecure(databaseId: string, tableId: string, querie
 export async function getRowSecure(databaseId: string, tableId: string, rowId: string, jwt?: string) {
   console.log('[getRowSecure] Request:', { databaseId, tableId, rowId });
   
-  // Use user-scoped client to respect Row Level Security
-  const { client } = await createServerClient(jwt);
-  const tables = new TablesDB(client);
-
   try {
-    const res = await tables.getRow({
-      databaseId,
-      tableId,
-      rowId,
-    });
+    const res = await Registry.getDatabase().getRow<any>(databaseId, tableId, rowId, { jwt });
     return JSON.parse(JSON.stringify(res));
   } catch (error: any) {
     console.warn('[getRowSecure] User-scoped fetch failed, checking admin fallback for RLS bypass:', error?.message);

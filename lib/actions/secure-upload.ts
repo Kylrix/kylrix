@@ -5,6 +5,7 @@ import { getActor } from './secure-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { ID } from 'node-appwrite';
+import { Registry } from '@/lib/core/di/registry';
 import { InputFile } from 'node-appwrite/file';
 
 /**
@@ -55,23 +56,16 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
   }
 
   try {
-    const { storage } = createSystemClient();
-    
-    // We need to convert the Web File API object to something node-appwrite accepts
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    
-    // Use InputFile from node-appwrite
-    const inputFile = InputFile.fromBuffer(buffer, file.name);
 
-    // 2. We do NOT pass permissions here, as the user instructed:
-    // "every other thing is updated by server side... the max permission ever for anything is read"
-    // Wait, storage files don't use document-level permissions in the same way, but 
-    // Appwrite storage uses Bucket-level permissions. We let the server executor create it securely.
+    const uploadedFile = await Registry.getStorage().uploadFile(bucketId, fileId, {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      buffer,
+    });
     
-    const uploadedFile = await storage.createFile(bucketId, fileId, inputFile);
-    
-    // Convert to plain object to return to client
     return JSON.parse(JSON.stringify(uploadedFile));
   } catch (error: any) {
     console.error('[secureUploadFile] Error:', error);

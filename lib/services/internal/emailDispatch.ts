@@ -1,4 +1,5 @@
-import { dispatchUnorganicEmails, type UnorganicEmailEventType, type UnorganicEmailSource } from '@/lib/unorganic-email-api';
+import { Registry } from '@/lib/core/di/registry';
+import { type UnorganicEmailEventType, type UnorganicEmailSource } from '@/lib/unorganic-email-api';
 
 type EmailDispatchPayload = {
   eventType?: UnorganicEmailEventType | string;
@@ -20,9 +21,9 @@ type EmailDispatchPayload = {
 };
 
 export async function dispatchEmail(payload: EmailDispatchPayload) {
-  return dispatchUnorganicEmails({
-    eventType: String(payload.eventType || '').trim() as UnorganicEmailEventType,
-    sourceApp: String(payload.sourceApp || '').trim() as UnorganicEmailSource,
+  return Registry.getMessaging().dispatchUnorganicEmail({
+    eventType: String(payload.eventType || '').trim(),
+    sourceApp: String(payload.sourceApp || '').trim(),
     actorName: payload.actorName || null,
     actorId: payload.actorId || null,
     recipientIds: payload.recipientIds || [],
