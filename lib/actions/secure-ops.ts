@@ -2954,6 +2954,9 @@ export async function createSendGhostObjectSecure(data: {
 }
 
 export async function createGhostNoteForCallSecure(callId: string, title?: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) throw new Error('Unauthorized');
+
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
   const metadata = JSON.stringify({
     isGhost: true,
@@ -2972,8 +2975,11 @@ export async function createGhostNoteForCallSecure(callId: string, title?: strin
       title: title || 'Call Chat',
       content: '',
       format: 'markdown',
-      isPublic: true,
-      userId: null,
+      isPublic: false,
+      userId: actor.$id,
+      creatorId: actor.$id,
+      resourceId: callId,
+      resourceType: 'call',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       metadata,
@@ -3647,6 +3653,9 @@ export async function createGhostNoteForProjectSecure(projectId: string, title?:
       format: 'markdown',
       isPublic: false,
       userId: project.ownerId,
+      creatorId: project.ownerId,
+      resourceId: projectId,
+      resourceType: 'project',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       metadata,
@@ -3900,10 +3909,13 @@ export async function createGhostNoteForResourceSecure(
       title: title || `Discussion Thread`,
       content: '',
       format: 'markdown',
-      isPublic: true,
-      userId: null,
+      isPublic: false,
+      userId: actor.$id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      creatorId: actor.$id,
+      resourceId: resourceId,
+      resourceType: resourceType,
       metadata,
       isGhost: true,
       isThread: true,
@@ -4265,6 +4277,8 @@ export async function createGhostNoteChatSecure(data: {
       format: 'markdown',
       isPublic: false,
       userId: actor.$id,
+      creatorId: actor.$id,
+      resourceType: 'chat',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       metadata,
@@ -4309,18 +4323,47 @@ export async function listGhostNoteChatsSecure(jwt?: string) {
     throw new Error('Unauthorized');
   }
 
-  // Use the secure user-scoped list proxy to respect native document permissions
-  const res = await listRowsSecure(
-    APPWRITE_CONFIG.DATABASES.NOTE,
-    APPWRITE_CONFIG.TABLES.NOTE.NOTES,
-    [
+  const tables = createSystemTablesDB();
+  const actorId = actor.$id;
+
+  // 1. Fetch resources the user is a collaborator for
+  const collaboratorsRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+      tableId: 'Collaborators',
+      queries: [
+          Query.equal('userId', actorId),
+          Query.limit(500)
+      ] as any
+  }).catch(() => ({ rows: [] }));
+
+  const collabResourceIds = collaboratorsRes.rows.map(r => r.resourceId).filter(Boolean);
+
+  // 2. Build Authorization Filter: (Owned by me) OR (Linked to resource I collaborate on)
+  const authOrFilters = [
+      Query.equal('creatorId', actorId),
+      Query.equal('userId', actorId) // Fallback for rows before the tracking column update
+  ];
+
+  if (collabResourceIds.length > 0) {
+      // Chunk into groups of 100 to respect Appwrite Query.equal array limits if needed
+      // but for simplicity here we assume < 100 for now.
+      authOrFilters.push(Query.equal('resourceId', collabResourceIds.slice(0, 100)));
+  }
+
+  // Use the system client to manually enforce our visibility logic
+  const res = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    queries: [
       Query.equal('isThread', true),
+      Query.or(authOrFilters),
       Query.limit(100)
-    ],
-    jwt
-  ).catch(() => ({ rows: [] }));
+    ] as any
+  }).catch(() => ({ rows: [] }));
+
   // Sort by updatedAt descending
   const rows = [...(res.rows || [])];
+
 
   rows.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime());
 
@@ -4339,22 +4382,29 @@ export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
     const thread = await getRowCached({ databaseId: dbId, tableId, rowId: threadId });
     if (!thread) throw new Error('Thread not found');
 
-    const isOwner = thread.userId === actor.$id;
-    // Check if actor is a collaborator
-    let isCollaborator = false;
-    try {
-        const collabsRes = await tables.listRows({
-            databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
-            tableId: 'Collaborators',
-            queries: [
-                Query.equal('resourceId', threadId),
-                Query.equal('userId', actor.$id)
-            ] as any
-        });
-        isCollaborator = collabsRes.rows.length > 0;
-    } catch {}
+    const isCreator = thread.creatorId === actor.$id || thread.userId === actor.$id;
+    
+    let isAuthorized = isCreator;
 
-    if (!isOwner && !isCollaborator) {
+    if (!isAuthorized) {
+        // Check if actor is a collaborator on the thread itself OR the parent resource
+        const resourceId = thread.resourceId || threadId;
+        try {
+            const collabsRes = await tables.listRows({
+                databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+                tableId: 'Collaborators',
+                queries: [
+                    Query.equal('resourceId', resourceId),
+                    Query.equal('userId', actor.$id)
+                ] as any
+            });
+            if (collabsRes.rows.length > 0) {
+                isAuthorized = true;
+            }
+        } catch {}
+    }
+
+    if (!isAuthorized) {
         throw new Error('Forbidden: Insufficient permissions to delete this thread');
     }
 
