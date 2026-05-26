@@ -220,6 +220,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
     onUpgradeRequested,
     onSend,
     onToggleRecording,
+    typingUsers,
 }: {
     attachment: File | null;
     sending: boolean;
@@ -231,6 +232,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
     onUpgradeRequested: () => void;
     onSend: (text: string) => Promise<boolean>;
     onToggleRecording: () => void;
+    typingUsers: string[];
 }) {
     const [draft, setDraft] = useState('');
     const [mentionAnchorEl, setMentionAnchorEl] = useState<null | HTMLElement>(null);
@@ -2430,10 +2432,12 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         mentionTargets={groupMentionTargets}
                         onAttach={(e) => setAttachAnchorEl(e.currentTarget)}
                         onUpgradeRequested={() => showUpgradeIsland('attach files/images/videos')}
-                        onSend={handleSend}
-                        onToggleRecording={toggleRecording}
-                    />
-                </Box>
+                        onSend={onSend}
+                        onToggleRecording={onToggleRecording}
+                        typingUsers={typingUsers}
+                        />
+                        </Box>
+
             </Box>
 
             <NoteSelectorModal
