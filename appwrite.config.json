@@ -2895,6 +2895,13 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "isPending",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -4701,6 +4708,13 @@
                 },
                 {
                     "key": "isContact",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "isOnlineVisible",
                     "type": "boolean",
                     "required": false,
                     "array": false,

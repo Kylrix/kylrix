@@ -435,13 +435,38 @@ export function MasterPassDrawer({ isOpen, onClose }: MasterPassDrawerProps) {
                     <Typography sx={{ fontWeight: 900, color: 'white', mb: 1, fontFamily: 'var(--font-clash)', fontSize: '1.25rem' }}>
                         {migrationStatus === 'upgrading' && 'Hardening Security...'}
                         {migrationStatus === 'success' && 'Upgrade Complete'}
-                        {migrationStatus === 'error' && 'Upgrade Deferred'}
+                        {migrationStatus === 'error' && 'Critical Update Interrupted'}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#9B9691', maxWidth: '280px', mx: 'auto' }}>
+                    <Typography variant="body2" sx={{ color: '#9B9691', maxWidth: '320px', mx: 'auto', mb: 3 }}>
                         {migrationStatus === 'upgrading' && 'Upgrading your vault to memory-hard Argon2id protection.'}
                         {migrationStatus === 'success' && 'Your identity is now protected with elite architectural standards.'}
-                        {migrationStatus === 'error' && 'Failed to upgrade on-the-fly. We will try again next time.'}
+                        {migrationStatus === 'error' && (
+                            <Box sx={{ color: '#F59E0B', fontWeight: 800 }}>
+                                DO NOT REFRESH THIS TAB. <br/>
+                                <span style={{ fontWeight: 500, fontSize: '0.85rem' }}>Your encryption key is currently resident in RAM. We are stabilizing your secure perimeter.</span>
+                            </Box>
+                        )}
                     </Typography>
+
+                    {isCriticalError && (
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                // Manual retry of the migration using the resident key
+                                masterPassCrypto.unlock(masterPassword, user?.$id || "", false).catch(() => {});
+                            }}
+                            sx={{
+                                bgcolor: '#F59E0B',
+                                color: '#000',
+                                fontWeight: 900,
+                                borderRadius: '12px',
+                                px: 4,
+                                '&:hover': { bgcolor: '#D97706' }
+                            }}
+                        >
+                            Retry Stabilization
+                        </Button>
+                    )}
                 </Box>
             </Box>
           )}

@@ -432,6 +432,7 @@ export type Keychain = Models.Row & {
     createdAt: string | null;
     updatedAt: string | null;
     isArgon: boolean;
+    isPending: boolean;
 }
 
 export type KeyMapping = Models.Row & {
@@ -591,6 +592,7 @@ export type Profiles = Models.Row & {
     isGuest: boolean;
     isAvatar: boolean;
     isContact: boolean;
+    isOnlineVisible: boolean;
 }
 
 export type MessageReactions = Models.Row & {

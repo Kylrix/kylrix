@@ -289,9 +289,24 @@ export class MasterPassCrypto {
         if (!isArgon) {
             logDebug("[Migration] Legacy PBKDF2 detected. Initializing Double-Lock upgrade...");
             this.onMigrationStart?.();
+            
+            // Failsafe: Store encrypted RAM backup
+            const backupId = `kylrix_mek_backup_${userId}`;
+            const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
+            const backupSecret = crypto.getRandomValues(new Uint8Array(32));
+            
             try {
+                // Encrypt backup for sessionStorage
+                const backupIv = crypto.getRandomValues(new Uint8Array(16));
+                const backupKey = await crypto.subtle.importKey("raw", backupSecret, { name: "AES-GCM" }, false, ["encrypt"]);
+                const encryptedBackup = await crypto.subtle.encrypt({ name: "AES-GCM", iv: backupIv }, backupKey, rawMek);
+                const combinedBackup = new Uint8Array(backupIv.length + encryptedBackup.byteLength);
+                combinedBackup.set(backupIv);
+                combinedBackup.set(new Uint8Array(encryptedBackup), backupIv.length);
+                
+                sessionStorage.setItem(backupId, btoa(String.fromCharCode(...combinedBackup)));
+                
                 // 1. Write new elite entry (marked as PENDING)
-                // We keep the old entry alive until the new one is confirmed.
                 const { AppwriteService } = await import("./appwrite");
                 const newEntry = await this.createKeychainEntry(this.masterKey, password, userId, true, true);
                 
@@ -304,12 +319,11 @@ export class MasterPassCrypto {
                 await AppwriteService.updateKeychainEntry(newEntry.$id, { isPending: false });
 
                 logDebug("[Migration] Successfully upgraded to Argon2id via Double-Lock.");
+                sessionStorage.removeItem(backupId); // Purge backup immediately
                 this.onMigrationEnd?.(true);
             } catch (err) {
                 logError("[Migration] Critical failure during Double-Lock upgrade", err as Error);
                 this.onMigrationEnd?.(false);
-                // Return true anyway because the user IS unlocked in memory, 
-                // but the UI will show the "Do Not Refresh" critical warning via onMigrationEnd.
             }
         }
 
