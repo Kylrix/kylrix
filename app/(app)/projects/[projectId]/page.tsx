@@ -305,6 +305,14 @@ export default function ProjectDetailPage() {
   };
 
   const handleAddCollaborator = () => {
+      // Check limit of 8 collaborators (7 + owner) for free plans
+      const isPaid = hasPaidKylrixPlan(user);
+      if (!isPaid && collaborators.length >= 7) {
+          showError('Free plan is limited to 8 total collaborators. Upgrade to Pro to add more!');
+          openUnified('pro-upgrade', {});
+          return;
+      }
+
       openUnified('share-note', {
           resourceId: projectId as string,
           resourceType: 'project',
@@ -454,6 +462,29 @@ export default function ProjectDetailPage() {
                     <SettingsIcon size={18} />
                     <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' }, ml: 1 }}>
                         Settings
+                    </Box>
+                </Button>
+                <Button
+                    variant="outlined"
+                    onClick={handleAddCollaborator}
+                    sx={{
+                        borderRadius: '14px',
+                        borderColor: 'rgba(255,255,255,0.06)',
+                        color: 'rgba(255,255,255,0.6)',
+                        fontWeight: 800,
+                        textTransform: 'none',
+                        px: { xs: 1.5, sm: 2.5 },
+                        minWidth: { xs: '44px', sm: 'auto' },
+                        height: 44,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        '&:hover': { borderColor: 'rgba(255,255,255,0.2)', bgcolor: alpha('#fff', 0.02) }
+                    }}
+                >
+                    <Users size={18} />
+                    <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' }, ml: 1 }}>
+                        Collaborator
                     </Box>
                 </Button>
                 <Button
