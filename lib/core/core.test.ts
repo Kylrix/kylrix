@@ -45,43 +45,43 @@ describe('Kylrix Clean Architecture & Federation Test Suite', () => {
   // SECTION 2: Cryptographic Node Key Service
   // ==========================================
   describe('Node Cryptography & Handshakes', () => {
-    it('should generate secure and valid Ed25519 key-pairs', () => {
-      const keys = NodeKeyService.generateNodeKeypair();
+    it('should generate secure and valid Ed25519 key-pairs', async () => {
+      const keys = await NodeKeyService.generateNodeKeypair();
       expect(keys.publicKey).toBeDefined();
       expect(keys.privateKey).toBeDefined();
-      expect(keys.publicKey).toContain('PUBLIC KEY');
-      expect(keys.privateKey).toContain('PRIVATE KEY');
+      expect(keys.publicKey.type).toBe('public');
+      expect(keys.privateKey.type).toBe('private');
     });
 
-    it('should successfully sign payload and verify authentic signature', () => {
-      const keys = NodeKeyService.generateNodeKeypair();
+    it('should successfully sign payload and verify authentic signature', async () => {
+      const keys = await NodeKeyService.generateNodeKeypair();
       const payload = 'challenge-nonce-12345';
-      const signature = NodeKeyService.signPayload(payload, keys.privateKey);
+      const signature = await NodeKeyService.signPayload(payload, keys.privateKey);
 
       expect(signature).toBeDefined();
       expect(typeof signature).toBe('string');
 
-      const isVerified = NodeKeyService.verifySignature(payload, signature, keys.publicKey);
+      const isVerified = await NodeKeyService.verifySignature(payload, signature, keys.publicKey);
       expect(isVerified).toBe(true);
     });
 
-    it('should reject verified signature if payload has been mutated', () => {
-      const keys = NodeKeyService.generateNodeKeypair();
+    it('should reject verified signature if payload has been mutated', async () => {
+      const keys = await NodeKeyService.generateNodeKeypair();
       const payload = 'challenge-nonce-12345';
       const mutatedPayload = 'challenge-nonce-12345-hacked';
-      const signature = NodeKeyService.signPayload(payload, keys.privateKey);
+      const signature = await NodeKeyService.signPayload(payload, keys.privateKey);
 
-      const isVerified = NodeKeyService.verifySignature(mutatedPayload, signature, keys.publicKey);
+      const isVerified = await NodeKeyService.verifySignature(mutatedPayload, signature, keys.publicKey);
       expect(isVerified).toBe(false);
     });
 
-    it('should reject verified signature if public key is mismatch', () => {
-      const keysA = NodeKeyService.generateNodeKeypair();
-      const keysB = NodeKeyService.generateNodeKeypair();
+    it('should reject verified signature if public key is mismatch', async () => {
+      const keysA = await NodeKeyService.generateNodeKeypair();
+      const keysB = await NodeKeyService.generateNodeKeypair();
       const payload = 'challenge-nonce-12345';
-      const signature = NodeKeyService.signPayload(payload, keysA.privateKey);
+      const signature = await NodeKeyService.signPayload(payload, keysA.privateKey);
 
-      const isVerified = NodeKeyService.verifySignature(payload, signature, keysB.publicKey);
+      const isVerified = await NodeKeyService.verifySignature(payload, signature, keysB.publicKey);
       expect(isVerified).toBe(false);
     });
   });

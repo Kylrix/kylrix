@@ -189,8 +189,11 @@ export type Notes = Models.Row & {
     format: string | null;
     isGhost: boolean;
     isThread: boolean;
-    isChat?: boolean;
     isPinned: boolean | null;
+    isChat: boolean;
+    creatorId: string | null;
+    resourceId: string | null;
+    resourceType: string | null;
 }
 
 export type Comments = Models.Row & {
@@ -201,6 +204,8 @@ export type Comments = Models.Row & {
     parentCommentId: string | null;
     isPublic: boolean | null;
     isGuest: boolean | null;
+    isVoice: boolean;
+    metadata: string | null;
 }
 
 export type Extensions = Models.Row & {
@@ -466,6 +471,8 @@ export type Messages = Models.Row & {
     replyTo: string | null;
     readBy: string[] | null;
     isPinned: boolean | null;
+    isVoice: boolean;
+    metadata: string | null;
 }
 
 export type Conversations = Models.Row & {
