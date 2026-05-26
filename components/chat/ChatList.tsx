@@ -265,7 +265,7 @@ export const ChatList = ({
                 const participants = note.collaborators || metadataObj.participants || [];
                 const otherId = participants.find((p: string) => p !== user.$id);
                 
-                let otherName = 'Public Huddle';
+                let otherName = 'Huddle';
                 let avatarUrl = null;
                 
                 if (otherId) {
@@ -299,7 +299,7 @@ export const ChatList = ({
                     name: otherName,
                     avatarUrl,
                     isGhostChat: true,
-                    lastMessageText: note.content || 'Public huddle discussion initialized',
+                    lastMessageText: note.content || 'Huddle discussion initialized',
                     lastMessageAt: note.updatedAt || note.$createdAt,
                 };
             }));
@@ -385,7 +385,7 @@ export const ChatList = ({
         if (!user) return;
         const targetUserId = targetUser.userId || targetUser.$id;
 
-        // If E2EE is locked, OR the target user has no publicKey, OR we are in the Public Huddles tab, start a Public Huddle chat
+        // If E2EE is locked, OR the target user has no publicKey, OR we are in the Threads tab, start a huddle thread
         if (!isUnlocked || !targetUser.publicKey || activeTab === 'public') {
             try {
                 toast.loading('Initializing huddle...', { id: 'ghost-init' });
@@ -405,9 +405,9 @@ export const ChatList = ({
                     return;
                 }
 
-                const title = targetUser.displayName || targetUser.username || 'Public Huddle';
+                const title = targetUser.displayName || targetUser.username || 'Huddle';
                 const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
-                toast.success('Huddle channel ready!', { id: 'ghost-init' });
+                toast.success('Huddle thread ready!', { id: 'ghost-init' });
                 router.push(`/connect/chat/${newGhost.$id}`);
             } catch (error: any) {
                 console.error('Failed to create huddle:', error);
@@ -1197,7 +1197,7 @@ export const ChatList = ({
                     ) : filteredGhostConversations.length === 0 && !showGlobalResults ? (
                         <Box sx={{ p: 6, textAlign: 'center' }}>
                             <Typography sx={{ fontWeight: 900, color: '#fff', fontSize: '1.1rem', mb: 1, fontFamily: 'var(--font-clash)' }}>Quiet Airwaves</Typography>
-                            <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500 }}>No public huddle discussions active matching your query.</Typography>
+                            <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500 }}>No huddle threads active matching your query.</Typography>
                         </Box>
                     ) : (
                         <List sx={{ pt: 0 }}>

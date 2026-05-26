@@ -159,7 +159,7 @@ export default function Home() {
     }
   }, [isUnlocked]);
 
-  // Removed aggressive auto-prompt to allow browsing public huddles frictionless
+  // Removed aggressive auto-prompt to allow browsing huddle threads frictionless
   useEffect(() => {
     // No automatic prompt on load
   }, []);

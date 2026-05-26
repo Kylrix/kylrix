@@ -84,9 +84,9 @@ export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: (
                     return;
                 }
 
-                const title = targetUser.displayName || targetUser.username || targetUser.title || 'Public Huddle';
+                const title = targetUser.displayName || targetUser.username || targetUser.title || 'Huddle';
                 const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
-                toast.success('Huddle channel ready!', { id: 'ghost-init' });
+                toast.success('Huddle thread ready!', { id: 'ghost-init' });
                 router.push(`/connect/chat/${newGhost.$id}`);
                 onClose();
             } catch (error: any) {
@@ -144,7 +144,7 @@ export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: (
                         <Box sx={{ p: 1, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B' }}>
                             <MessageSquare size={20} />
                         </Box>
-                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>New Chat</Typography>
+                        <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>New Thread</Typography>
                     </Stack>
                     <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)' }}><X size={20} /></IconButton>
                 </Box>
@@ -152,19 +152,20 @@ export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: (
                 <Box sx={{ flex: 1 }}>
                     <UserSearch 
                         label="SEARCH GLOBAL DIRECTORY"
-                        placeholder="Search by name or @username"
+                        placeholder="Search by name, @username, or User ID"
                         selectedUsers={selectedUsers}
                         onSelect={(u) => setSelectedUsers([u])}
                         onRemove={() => setSelectedUsers([])}
                         multiple={false}
                         excludeIds={user?.$id ? [user.$id] : []}
+                        inlineResults={true}
                     />
                     
                     {!selectedUsers.length && (
                         <Box sx={{ textAlign: 'center', py: 6, opacity: 0.5 }}>
                             <ShieldCheck size={40} strokeWidth={1} style={{ marginBottom: 12 }} />
                             <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>
-                                Only verified users with published keys are surfacing here.
+                                Search for any user by name, username, or User ID to start a huddle thread immediately.
                             </Typography>
                         </Box>
                     )}

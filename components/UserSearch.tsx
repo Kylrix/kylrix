@@ -10,7 +10,6 @@ import {
   ListItemAvatar,
   ListItemText,
   CircularProgress,
-  Paper,
   alpha,
   IconButton,
   Chip
@@ -29,6 +28,8 @@ interface User {
   subtitle: string;
   avatar?: string | null;
   profilePicId?: string | null;
+  displayName?: string;
+  username?: string;
 }
 
 interface UserSearchProps {
@@ -39,6 +40,7 @@ interface UserSearchProps {
   onRemove: (userId: string) => void;
   excludeIds?: string[];
   multiple?: boolean;
+  inlineResults?: boolean;
 }
 
 export default function UserSearch({
@@ -48,7 +50,8 @@ export default function UserSearch({
   onSelect,
   onRemove,
   excludeIds = [],
-  multiple: _multiple = true
+  multiple: _multiple = true,
+  inlineResults = false
 }: UserSearchProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<User[]>([]);
@@ -66,7 +69,7 @@ export default function UserSearch({
       const normalized = users.map((u: any) => ({
         id: u.userId || u.$id,
         title: u.displayName || u.username || 'Kylrix User',
-        subtitle: u.username ? `@${u.username}` : u.email || '',
+        subtitle: u.username ? `@${u.username}` : u.userId || u.$id || '',
         avatar: u.avatar || null,
         profilePicId: u.avatar || null,
         ...u // Preserve original for identity flags
@@ -173,7 +176,7 @@ export default function UserSearch({
               </Box>
             ),
             endAdornment: isSearching ? (
-              <CircularProgress size={16} sx={{ color: '#6366F1' }} />
+              <CircularProgress size={16} sx={{ color: '#F59E0B' }} />
             ) : query ? (
               <IconButton size="small" onClick={() => setQuery('')} sx={{ color: 'rgba(255, 255, 255, 0.2)' }}>
                 <CloseIcon fontSize="small" />
@@ -194,17 +197,23 @@ export default function UserSearch({
               },
               '&.Mui-focused': {
                 bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: alpha('#6366F1', 0.5),
-                boxShadow: `0 0 0 2px ${alpha('#6366F1', 0.1)}`,
+                borderColor: alpha('#F59E0B', 0.5),
+                boxShadow: `0 0 0 2px ${alpha('#F59E0B', 0.1)}`,
               }
             }
           }}
         />
 
         {query.length >= 2 && results.length > 0 && (
-          <Paper
-            elevation={0}
-            sx={{
+          <Box
+            sx={inlineResults ? {
+              mt: 1,
+              bgcolor: 'rgba(22, 20, 18, 0.98)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              maxHeight: 240,
+              overflow: 'auto'
+            } : {
               position: 'absolute',
               top: 'calc(100% + 8px)',
               left: 0,
@@ -274,13 +283,19 @@ export default function UserSearch({
                 </ListItem>
               ))}
             </List>
-          </Paper>
+          </Box>
         )}
 
         {query.length >= 2 && results.length === 0 && !isSearching && (
-          <Paper
-            elevation={0}
-            sx={{
+          <Box
+            sx={inlineResults ? {
+              mt: 1,
+              bgcolor: 'rgba(22, 20, 18, 0.98)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              p: 3,
+              textAlign: 'center'
+            } : {
               position: 'absolute',
               top: 'calc(100% + 8px)',
               left: 0,
@@ -297,7 +312,7 @@ export default function UserSearch({
             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500 }}>
               No entities matching &quot;{query}&quot; found
             </Typography>
-          </Paper>
+          </Box>
         )}
       </Box>
     </Box>
