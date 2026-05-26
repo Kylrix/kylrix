@@ -29,7 +29,7 @@ export class FederationSyncService {
       const remoteRow = remoteRows.find((r) => r.$id === rowId);
       if (remoteRow) {
         // Strip appwrite metadata fields before insertion
-        const cleanData = { ...remoteRow };
+        const cleanData = { ...remoteRow } as any;
         delete cleanData.$id;
         delete cleanData.$createdAt;
         delete cleanData.$updatedAt;
@@ -47,7 +47,7 @@ export class FederationSyncService {
     for (const rowId of diff.outdatedLocally) {
       const remoteRow = remoteRows.find((r) => r.$id === rowId);
       if (remoteRow) {
-        const cleanData = { ...remoteRow };
+        const cleanData = { ...remoteRow } as any;
         delete cleanData.$id;
         delete cleanData.$createdAt;
         delete cleanData.$updatedAt;
