@@ -63,8 +63,6 @@ export default function SettingsPage() {
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
 
     // Telegram state
-    const [tgUsername, setTgUsername] = useState<string | null>(null);
-    const [tgLoading, setTgLoading] = useState(false);
     const [tgDrawerOpen, setTgDrawerOpen] = useState(false);
 
     // Google Suite state
@@ -130,25 +128,6 @@ export default function SettingsPage() {
         }
     }, [user?.$id]);
 
-    const loadTelegramStatus = React.useCallback(async () => {
-        if (!user?.$id) return;
-        try {
-            setTgLoading(true);
-            const { account } = await import('@/lib/appwrite');
-            const { jwt } = await account.createJWT();
-            const res = await checkTelegramConnection(jwt);
-            if (res.success && res.isVerified) {
-                setTgUsername(res.tgUsername || 'Connected');
-            } else {
-                setTgUsername(null);
-            }
-        } catch (err) {
-            console.error('Failed to load telegram status:', err);
-        } finally {
-            setTgLoading(false);
-        }
-    }, [user?.$id]);
-
     useEffect(() => {
         const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
             if (status.isUnlocked !== isUnlocked) {
@@ -161,7 +140,6 @@ export default function SettingsPage() {
 
         if (user?.$id) {
             loadPasskeys();
-            loadTelegramStatus();
             // detect whether the user has a master password (Tier 2 / encryption) set
             (async () => {
                 try {
@@ -177,7 +155,7 @@ export default function SettingsPage() {
         }
 
         return unsubscribe;
-    }, [isUnlocked, user, loadPasskeys, loadTelegramStatus]);
+    }, [isUnlocked, user, loadPasskeys]);
 
     const handleRemovePasskey = async (id: string) => {
         if (!window.confirm("Are you sure you want to remove this passkey? This cannot be undone.")) return;
@@ -368,78 +346,30 @@ export default function SettingsPage() {
                                     Telegram Notifications
                                 </Typography>
                                 <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
-                                    {tgUsername 
-                                        ? `Linked as @${tgUsername}. Ready to receive secure notifications.` 
-                                        : 'Receive instant notifications for calls, active chat threads, and mentions.'}
+                                    Receive instant secure push notifications for calls, active chat threads, and mentions.
                                 </Typography>
                             </Box>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            {tgLoading ? (
-                                <CircularProgress size={20} sx={{ color: 'rgba(255, 255, 255, 0.4)' }} />
-                            ) : tgUsername ? (
-                                <Button
-                                    variant="text"
-                                    onClick={() => {
-                                        if (!user?.$id) return;
-                                        openDrawer('delete-confirm', {
-                                            title: `Disconnect @${tgUsername}?`,
-                                            description: `Are you sure you want to unlink your Telegram account? You will stop receiving secure notifications for calls, active chat threads, and mentions on this device.`,
-                                            confirmLabel: 'Disconnect Telegram',
-                                            resourceName: 'this connection',
-                                            onConfirm: async () => {
-                                                try {
-                                                    setTgLoading(true);
-                                                    const { databases, APPWRITE_CONFIG } = await import('@/lib/appwrite');
-                                                    await databases.deleteDocument(
-                                                        APPWRITE_CONFIG.DATABASES.CONNECT,
-                                                        APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
-                                                        user.$id
-                                                    );
-                                                    setTgUsername(null);
-                                                    toast.success('Telegram disconnected.');
-                                                } catch (err: any) {
-                                                    console.error('Failed to disconnect telegram:', err);
-                                                    toast.error(err?.message || 'Failed to disconnect.');
-                                                } finally {
-                                                    setTgLoading(false);
-                                                }
-                                            }
-                                        });
-                                    }}
-                                    sx={{
-                                        color: '#EF4444',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 700,
-                                        textTransform: 'none',
-                                        '&:hover': {
-                                            bgcolor: 'rgba(239, 68, 68, 0.08)',
-                                        }
-                                    }}
-                                >
-                                    Disconnect
-                                </Button>
-                            ) : (
-                                <Button
-                                    variant="contained"
-                                    onClick={() => setTgDrawerOpen(true)}
-                                    sx={{
-                                        bgcolor: '#6366F1',
-                                        color: 'white',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 700,
-                                        textTransform: 'none',
-                                        borderRadius: '12px',
-                                        px: 3,
-                                        py: 1,
-                                        '&:hover': {
-                                            bgcolor: '#4F46E5',
-                                        }
-                                    }}
-                                >
-                                    Connect
-                                </Button>
-                            )}
+                            <Button
+                                variant="contained"
+                                onClick={() => setTgDrawerOpen(true)}
+                                sx={{
+                                    bgcolor: '#6366F1',
+                                    color: 'white',
+                                    fontSize: '0.85rem',
+                                    fontWeight: 700,
+                                    textTransform: 'none',
+                                    borderRadius: '12px',
+                                    px: 3,
+                                    py: 1,
+                                    '&:hover': {
+                                        bgcolor: '#4F46E5',
+                                    }
+                                }}
+                            >
+                                Manage
+                            </Button>
                         </Box>
                     </Box>
 
@@ -737,8 +667,7 @@ export default function SettingsPage() {
                 <TelegramDrawer
                     open={tgDrawerOpen}
                     onClose={() => setTgDrawerOpen(false)}
-                    onSuccess={(username) => {
-                        setTgUsername(username);
+                    onSuccess={() => {
                         setTgDrawerOpen(false);
                     }}
                 />

@@ -1,6 +1,6 @@
 'use server';
 
-import { createSystemClient } from '@/lib/appwrite-admin';
+import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite-server-only';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Permission, Role, Query } from 'node-appwrite';
@@ -21,8 +21,8 @@ export async function initializeTelegramConnection(jwt?: string, forceRegenerate
     // Generate secure 6-digit pairing code
     const pairCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Create the system client to write with specific row permissions
-    const { databases } = createSystemClient();
+    // Create the system tables client to write with proper terminology rows methods
+    const databases = createSystemTablesDB();
 
     // Check if the record already exists
     let existingDoc = null;
@@ -135,7 +135,7 @@ export async function checkTelegramConnection(jwt?: string) {
     }
     const userId = actor.$id;
 
-    const { databases } = createSystemClient();
+    const databases = createSystemTablesDB();
 
     if (process.env.TELEGRAM_BOT_API) {
       syncServerTelegramListener().catch(err =>
@@ -187,7 +187,7 @@ export async function syncServerTelegramListener() {
     return;
   }
 
-  const { databases } = createSystemClient();
+  const databases = createSystemTablesDB();
 
   // Check if there are any active pending (unverified) connections
   try {
@@ -256,7 +256,7 @@ function runPollerLoop(botToken: string) {
 
       const data = await res.json();
       if (data.ok && data.result.length > 0) {
-        const { databases } = createSystemClient();
+        const databases = createSystemTablesDB();
 
         for (const update of data.result) {
           lastTelegramUpdateOffset = Math.max(lastTelegramUpdateOffset, update.update_id + 1);
@@ -317,7 +317,7 @@ function runPollerLoop(botToken: string) {
         }
       }
 
-      const databasesInstance = createSystemClient().databases;
+      const databasesInstance = createSystemTablesDB();
       const listRes = await databasesInstance.listRows(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
