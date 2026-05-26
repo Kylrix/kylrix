@@ -62,9 +62,9 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                     <AgenticDrawerProvider>
                                       <AIProvider>
                                         <OverlayProvider>
-                                          <ContextMenuProvider>
-                                            <GlobalContextMenu />
-                                            <ToastProvider>
+                                          <ToastProvider>
+                                            <ContextMenuProvider>
+                                              <GlobalContextMenu />
                                               <PotatoProvider>
                                                 <AppChromeProvider>
                                                   <TokenOpsProvider>
