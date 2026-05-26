@@ -2432,8 +2432,8 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
                         mentionTargets={groupMentionTargets}
                         onAttach={(e) => setAttachAnchorEl(e.currentTarget)}
                         onUpgradeRequested={() => showUpgradeIsland('attach files/images/videos')}
-                        onSend={onSend}
-                        onToggleRecording={onToggleRecording}
+                        onSend={handleSend}
+                        onToggleRecording={toggleRecording}
                         typingUsers={typingUsers}
                         />
                         </Box>
