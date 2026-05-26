@@ -53,6 +53,10 @@ import { Projects, ProjectObjects, Notes, Tasks, Credentials, Users as UserType 
 import { listNotes, listFlowTasks, listKeepCredentials, Query, AppwriteService } from '@/lib/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
+import ProjectExtractGoalsModal from '@/components/projects/ProjectExtractGoalsModal';
+import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjectModal';
+import { databases } from '@/lib/appwrite/client';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import { 
   createGhostNoteForProject, 
@@ -108,12 +112,16 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
+  const [extractGoalsNote, setExtractGoalsNote] = useState<Notes | null>(null);
+  const [isAddSubProjectModalOpen, setIsAddSubProjectModalOpen] = useState(false);
 
   // Resolved entities
   const [notes, setNotes] = useState<Notes[]>([]);
   const [tasks, setTasks] = useState<any[]>([]);
   const [credentials, setCredentials] = useState<Credentials[]>([]);
   const [collaborators, setCollaborators] = useState<any[]>([]);
+  const [subProjects, setSubProjects] = useState<Projects[]>([]);
   const [resolving, setResolving] = useState(false);
 
   const fetchProjectData = useCallback(async () => {
@@ -140,6 +148,7 @@ export default function ProjectDetailPage() {
       const taskIds = objects.filter(o => o.entityKind === 'goal' || o.entityKind === 'task').map(o => o.entityId);
       const credentialIds = objects.filter(o => o.entityKind === 'password' || o.entityKind === 'credential').map(o => o.entityId);
       const collaboratorIds = objects.filter(o => o.entityKind === 'collaborator').map(o => o.entityId);
+      const subProjectIds = objects.filter(o => o.entityKind === 'project').map(o => o.entityId);
 
       if (noteIds.length) {
           const res = await listNotes([Query.equal('$id', noteIds)]);
@@ -160,6 +169,15 @@ export default function ProjectDetailPage() {
           setCollaborators(res);
       } else setCollaborators([]);
 
+      if (subProjectIds.length) {
+          const res = await databases.listRows<any>(
+              APPWRITE_CONFIG.DATABASES.CHAT,
+              'projects',
+              [Query.equal('$id', subProjectIds)]
+          );
+          setSubProjects(res.rows);
+      } else setSubProjects([]);
+
     } catch (err) {
       console.error('Failed to resolve entities', err);
     } finally {
@@ -178,6 +196,7 @@ export default function ProjectDetailPage() {
       const entityName = notes.find(n => n.$id === entityId)?.title || 
                          tasks.find(t => t.$id === entityId)?.title || 
                          credentials.find(c => c.$id === entityId)?.name || 
+                         subProjects.find(p => p.$id === entityId)?.title || 
                          collaborators.find(u => u.$id === entityId)?.name || 
                          'this object';
 
@@ -194,6 +213,7 @@ export default function ProjectDetailPage() {
                   setNotes(prev => prev.filter(n => n.$id !== entityId));
                   setTasks(prev => prev.filter(t => t.$id !== entityId));
                   setCredentials(prev => prev.filter(c => c.$id !== entityId));
+                  setSubProjects(prev => prev.filter(p => p.$id !== entityId));
                   setCollaborators(prev => prev.filter(u => u.$id !== entityId));
               } catch (err: any) {
                   showError('Failed to unlink item', err.message);
@@ -366,6 +386,7 @@ export default function ProjectDetailPage() {
                             <Tab label="Integrated Notes" icon={<FileText size={18} />} iconPosition="start" />
                             <Tab label="Execution Goals" icon={<CheckSquare size={18} />} iconPosition="start" />
                             <Tab label="Vault Assets" icon={<Lock size={18} />} iconPosition="start" />
+                            <Tab label="Sub-Projects" icon={<FolderKanban size={18} />} iconPosition="start" />
                             <Tab label="Project Discussion" icon={<MessageCircle size={18} />} iconPosition="start" />
                         </Tabs>
                     </Box>
@@ -382,6 +403,10 @@ export default function ProjectDetailPage() {
                                                 metadata={note.tags?.slice(0, 3).join(' • ') || 'No tags'}
                                                 onOpen={() => router.push(`/note/notes/${note.$id}`)}
                                                 onUnlink={() => handleRemoveObject(note.$id)}
+                                                onExtractGoals={() => {
+                                                    setExtractGoalsNote(note);
+                                                    setIsExtractModalOpen(true);
+                                                }}
                                             />
                                         </Grid>
                                     ))}
@@ -426,6 +451,51 @@ export default function ProjectDetailPage() {
                         </CustomTabPanel>
 
                         <CustomTabPanel value={tabValue} index={3}>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+                                <Button
+                                    variant="outlined"
+                                    startIcon={<Plus size={16} />}
+                                    onClick={() => {
+                                        if (!hasPaidKylrixPlan(user)) {
+                                            openUnified('pro-upgrade', {});
+                                        } else {
+                                            setIsAddSubProjectModalOpen(true);
+                                        }
+                                    }}
+                                    sx={{
+                                        borderRadius: '12px',
+                                        borderColor: 'rgba(255,255,255,0.08)',
+                                        color: '#fff',
+                                        fontWeight: 800,
+                                        textTransform: 'none',
+                                        fontSize: '0.8rem',
+                                        '&:hover': {
+                                            borderColor: '#6366F1',
+                                            bgcolor: 'rgba(99, 102, 241, 0.05)'
+                                        }
+                                    }}
+                                >
+                                    Integrate Sub-Project
+                                </Button>
+                            </Box>
+                            {resolving ? <LoadingPlaceholder /> : subProjects.length === 0 ? <EmptyState kind="sub-project" /> : (
+                                <Grid container spacing={2}>
+                                    {subProjects.map(sub => (
+                                        <Grid item xs={12} key={sub.$id}>
+                                            <ResourceItem 
+                                                title={sub.title || sub.name || 'Untitled Project'} 
+                                                kind="project"
+                                                metadata={sub.summary || 'Private Container'}
+                                                onOpen={() => router.push(`/projects/${sub.$id}`)}
+                                                onUnlink={() => handleRemoveObject(sub.$id)}
+                                            />
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            )}
+                        </CustomTabPanel>
+
+                        <CustomTabPanel value={tabValue} index={4}>
                             <ProjectDiscussionTab 
                                 project={project} 
                                 fetchProjectData={fetchProjectData}
@@ -553,12 +623,37 @@ export default function ProjectDetailPage() {
         </Grid>
       </Box>
 
-      <ProjectAddObjectModal 
-        open={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
-        projectId={projectId as string} 
-        onAdded={fetchProjectData} 
-      />
+      {isAddModalOpen && (
+        <ProjectAddObjectModal 
+          open={isAddModalOpen} 
+          onClose={() => setIsAddModalOpen(false)} 
+          projectId={projectId as string} 
+          onAdded={fetchProjectData} 
+        />
+      )}
+
+      {isExtractModalOpen && extractGoalsNote && (
+        <ProjectExtractGoalsModal
+          open={isExtractModalOpen}
+          onClose={() => {
+            setIsExtractModalOpen(false);
+            setExtractGoalsNote(null);
+          }}
+          projectId={projectId as string}
+          noteTitle={extractGoalsNote.title || 'Untitled Note'}
+          noteContent={extractGoalsNote.content || ''}
+          onExtracted={fetchProjectData}
+        />
+      )}
+
+      {isAddSubProjectModalOpen && (
+        <ProjectAddSubProjectModal
+          open={isAddSubProjectModalOpen}
+          onClose={() => setIsAddSubProjectModalOpen(false)}
+          projectId={projectId as string}
+          onAdded={fetchProjectData}
+        />
+      )}
     </Box>
   );
 }
@@ -572,7 +667,7 @@ function LoadingPlaceholder() {
 }
 
 function EmptyState({ kind }: { kind: string }) {
-    const icon = kind === 'note' ? <FileText size={32} /> : kind === 'goal' ? <CheckSquare size={32} /> : <Lock size={32} />;
+    const icon = kind === 'note' ? <FileText size={32} /> : kind === 'goal' ? <CheckSquare size={32} /> : kind === 'sub-project' ? <FolderKanban size={32} /> : <Lock size={32} />;
     return (
         <Box sx={{ textAlign: 'center', py: 6, opacity: 0.4 }}>
             <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>{icon}</Box>
@@ -581,9 +676,23 @@ function EmptyState({ kind }: { kind: string }) {
     );
 }
 
-function ResourceItem({ title, kind, metadata, onOpen, onUnlink }: { title: string, kind: string, metadata: string, onOpen: () => void, onUnlink: () => void }) {
-    const icon = kind === 'note' ? <FileText size={20} /> : kind === 'goal' ? <CheckSquare size={20} /> : <Lock size={20} />;
-    const accent = kind === 'note' ? '#EC4899' : kind === 'goal' ? '#A855F7' : '#10B981';
+function ResourceItem({ 
+    title, 
+    kind, 
+    metadata, 
+    onOpen, 
+    onUnlink,
+    onExtractGoals
+}: { 
+    title: string, 
+    kind: string, 
+    metadata: string, 
+    onOpen: () => void, 
+    onUnlink: () => void,
+    onExtractGoals?: () => void
+}) {
+    const icon = kind === 'note' ? <FileText size={20} /> : kind === 'goal' ? <CheckSquare size={20} /> : kind === 'project' ? <FolderKanban size={20} /> : <Lock size={20} />;
+    const accent = kind === 'note' ? '#EC4899' : kind === 'goal' ? '#A855F7' : kind === 'project' ? '#6366F1' : '#10B981';
 
     return (
         <Paper
@@ -624,6 +733,16 @@ function ResourceItem({ title, kind, metadata, onOpen, onUnlink }: { title: stri
                 </Box>
             </Stack>
             <Stack direction="row" spacing={1}>
+                {onExtractGoals && (
+                    <Button
+                        size="small"
+                        startIcon={<Sparkles size={14} />}
+                        onClick={onExtractGoals}
+                        sx={{ color: '#818CF8', fontWeight: 800, textTransform: 'none', '&:hover': { color: '#A5B4FC' } }}
+                    >
+                        Extract Goals
+                    </Button>
+                )}
                 <Button
                     size="small"
                     startIcon={<ExternalLink size={14} />}
