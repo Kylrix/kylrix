@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box,
   TextField,
@@ -54,12 +54,19 @@ export default function UserSearch({
   inlineResults = false
 }: UserSearchProps) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<User[]>([]);
+  const [rawResults, setRawResults] = useState<User[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  const results = useMemo(() => {
+    return rawResults.filter((u: any) => 
+      !selectedUsers.some(s => s.id === u.id) && 
+      !excludeIds.includes(u.id)
+    );
+  }, [rawResults, selectedUsers, excludeIds]);
 
   const debouncedSearch = useCallback(async (searchQuery: string) => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
-      setResults([]);
+      setRawResults([]);
       return;
     }
 
@@ -74,18 +81,14 @@ export default function UserSearch({
         profilePicId: u.avatar || null,
         ...u // Preserve original for identity flags
       }));
-      const filtered = normalized.filter((u: any) => 
-        !selectedUsers.some(s => s.id === u.id) && 
-        !excludeIds.includes(u.id)
-      );
-      setResults(filtered as User[]);
+      setRawResults(normalized as User[]);
     } catch (err) {
       console.error('User search failed:', err);
-      setResults([]);
+      setRawResults([]);
     } finally {
       setIsSearching(false);
     }
-  }, [selectedUsers, excludeIds]);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -97,7 +100,7 @@ export default function UserSearch({
   const handleSelect = (user: User) => {
     onSelect(user);
     setQuery('');
-    setResults([]);
+    setRawResults([]);
   };
 
   return (

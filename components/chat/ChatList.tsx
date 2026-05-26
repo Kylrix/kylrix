@@ -268,6 +268,10 @@ export const ChatList = ({
                     metadataObj = {};
                 }
 
+                const linkedResourceType = metadataObj.linkedResourceType || null;
+                const linkedResourceId = metadataObj.linkedResourceId || null;
+                const linkedResourceName = metadataObj.linkedResourceName || null;
+
                 const isChat = !!(note.isChat || metadataObj.isChat || linkedResourceType === 'chat');
                 const cleanLinkedResourceType = isChat ? null : (linkedResourceType || null);
 
