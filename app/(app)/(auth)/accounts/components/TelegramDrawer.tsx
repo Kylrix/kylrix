@@ -46,8 +46,15 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
   const [timeLeft, setTimeLeft] = useState<string>('03:00');
 
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
-
   const jwtRef = useRef<string | null>(null);
+
+  const onSuccessRef = useRef(onSuccess);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onCloseRef.current = onClose;
+  }, [onSuccess, onClose]);
 
   const getOrUpdateJWT = React.useCallback(async () => {
     if (jwtRef.current) return jwtRef.current;
@@ -80,12 +87,12 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
         setVerifiedUsername(res.tgUsername || 'User');
         setIsVerifying(false);
         setTimeout(() => {
-          onSuccess(res.tgUsername || 'User');
-          onClose();
+          onSuccessRef.current(res.tgUsername || 'User');
+          onCloseRef.current();
         }, 2000);
       }
     }, 10000);
-  }, [getOrUpdateJWT, stopPolling, onSuccess, onClose]);
+  }, [getOrUpdateJWT, stopPolling]);
 
   const handleInitialize = React.useCallback(async (force = false) => {
     setLoading(true);
@@ -150,6 +157,11 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     }
   }, [getOrUpdateJWT, startPolling]);
 
+  const handleInitializeRef = useRef(handleInitialize);
+  useEffect(() => {
+    handleInitializeRef.current = handleInitialize;
+  }, [handleInitialize]);
+
   // Real-time Event Subscription (Zero-Database-Read Verification)
   useEffect(() => {
     if (!open || !pairCode || verifiedUsername || !userId) return;
@@ -173,8 +185,8 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
             setVerifiedUsername(payload.tg_username || 'User');
             setIsVerifying(false);
             setTimeout(() => {
-              onSuccess(payload.tg_username || 'User');
-              onClose();
+              onSuccessRef.current(payload.tg_username || 'User');
+              onCloseRef.current();
             }, 2000);
           }
         });
@@ -199,7 +211,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
         unsubscribeFn();
       }
     };
-  }, [open, pairCode, verifiedUsername, userId, stopPolling, onSuccess, onClose]);
+  }, [open, pairCode, verifiedUsername, userId, stopPolling]);
 
   // Live Expiration Timer Countdown
   useEffect(() => {
@@ -217,7 +229,7 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
       if (totalTimeLeft <= 0) {
         clearInterval(timer);
         setTimeLeft('Expired');
-        handleInitialize(true);
+        handleInitializeRef.current(true);
       } else {
         const minutes = Math.floor(totalTimeLeft / 1000 / 60);
         const seconds = Math.floor((totalTimeLeft / 1000) % 60);
@@ -229,17 +241,17 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
     const timer = setInterval(updateTimer, 1000);
 
     return () => clearInterval(timer);
-  }, [createdAt, pairCode, verifiedUsername, handleInitialize]);
+  }, [createdAt, pairCode, verifiedUsername]);
 
   // Initialize pairing code on mount
   useEffect(() => {
     if (open) {
-      handleInitialize();
+      handleInitializeRef.current();
     }
     return () => {
       stopPolling();
     };
-  }, [open, handleInitialize, stopPolling]);
+  }, [open, stopPolling]);
 
   const handleManualCheck = async () => {
     setIsVerifying(true);

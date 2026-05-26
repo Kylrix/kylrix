@@ -54,6 +54,10 @@ import { useSudo } from '@/context/SudoContext';
 import { getConversationReadAt } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import ConversationActionsSheet from './ConversationActionsSheet';
+import { useContextMenu } from '@/components/ui/ContextMenuContext';
+import LaunchIcon from '@mui/icons-material/Launch';
+import LinkIcon from '@mui/icons-material/Link';
+import TuneIcon from '@mui/icons-material/Tune';
 
 const GlobalSearchAvatar = ({ u }: { u: any }) => {
     const userId = u.userId || u.$id;
@@ -83,6 +87,7 @@ export const ChatList = ({
     const { globalPresence } = usePresence();
     const router = useRouter();
     const { requestSudo } = useSudo();
+    const { openMenu } = useContextMenu();
     const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -131,6 +136,71 @@ export const ChatList = ({
             });
         }
     }, [isInitializing]);
+
+    const handleConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openMenu({
+            x: event.clientX,
+            y: event.clientY,
+            appType: 'connect',
+            items: [
+                {
+                    label: 'Open Secure Chat',
+                    icon: <LaunchIcon sx={{ fontSize: 18 }} />,
+                    onClick: () => router.push(`/connect/chat/${conv.$id}`)
+                },
+                {
+                    label: 'Copy Connection Link',
+                    icon: <LinkIcon sx={{ fontSize: 18 }} />,
+                    onClick: () => {
+                        const link = `${window.location.origin}/connect/chat/${conv.$id}`;
+                        navigator.clipboard.writeText(link);
+                        toast.success('Connection link copied');
+                    }
+                },
+                {
+                    label: 'Manage Discussion',
+                    icon: <TuneIcon sx={{ fontSize: 18 }} />,
+                    onClick: () => setSelectedConversation(conv)
+                }
+            ]
+        });
+    }, [openMenu, router]);
+
+    const handleGhostConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
+        event.preventDefault();
+        event.stopPropagation();
+        openMenu({
+            x: event.clientX,
+            y: event.clientY,
+            appType: 'connect',
+            items: [
+                {
+                    label: 'Open Discussion Thread',
+                    icon: <LaunchIcon sx={{ fontSize: 18 }} />,
+                    onClick: () => router.push(`/connect/chat/${conv.$id}`)
+                },
+                {
+                    label: 'Copy Thread ID',
+                    icon: <LinkIcon sx={{ fontSize: 18 }} />,
+                    onClick: () => {
+                        navigator.clipboard.writeText(conv.$id);
+                        toast.success('Thread ID copied');
+                    }
+                },
+                {
+                    label: 'Copy Discussion Link',
+                    icon: <LinkIcon sx={{ fontSize: 18 }} />,
+                    onClick: () => {
+                        const link = `${window.location.origin}/connect/chat/${conv.$id}`;
+                        navigator.clipboard.writeText(link);
+                        toast.success('Discussion link copied');
+                    }
+                }
+            ]
+        });
+    }, [openMenu, router]);
 
     const handleCancelRedirect = useCallback(() => {
         setShowCountdownDrawer(false);
@@ -1070,6 +1140,7 @@ export const ChatList = ({
                                         component={Link}
                                         href={`/connect/chat/${conv.$id}`}
                                         onClick={handleItemClick}
+                                        onContextMenu={(e) => handleConversationRightClick(e, conv)}
                                     sx={{
                                             borderRadius: '24px',
                                             py: 2.5,
@@ -1237,6 +1308,7 @@ export const ChatList = ({
                                         component={Link}
                                         href={`/connect/chat/${conv.$id}`}
                                         onClick={handleItemClick}
+                                        onContextMenu={(e) => handleGhostConversationRightClick(e, conv)}
                                         sx={{
                                             borderRadius: '24px',
                                             py: 2.5,
