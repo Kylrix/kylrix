@@ -3351,7 +3351,7 @@ export async function searchGlobalUsersSecure(query: string, limit = 10) {
           Query.startsWith('displayName', cleaned),
           Query.startsWith('userId', cleaned)
         ]),
-        Query.equal('isPublic', true),
+        Query.notEqual('isPublic', false),
         Query.limit(limit)
       ] as any,
     });

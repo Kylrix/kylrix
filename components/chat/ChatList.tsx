@@ -28,8 +28,10 @@ import {
     Tabs,
     Tab,
     Button,
+    Drawer,
 } from '@mui/material';
 import ShieldCheckIcon from '@mui/icons-material/ShieldOutlined';
+import { showIslandNotification } from '@/lib/island-notification';
 import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
 import GroupIcon from '@mui/icons-material/GroupWorkOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
@@ -97,18 +99,136 @@ export const ChatList = ({
         return propActiveTab || (ecosystemSecurity.status.isUnlocked ? 'secure' : 'public');
     });
 
+    const [ghostConversations, setGhostConversations] = useState<any[]>([]);
+    const [loadingGhost, setLoadingGhost] = useState(false);
+
+    const [isInitializing, setIsInitializing] = useState(false);
+    const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
+    const [showCountdownDrawer, setShowCountdownDrawer] = useState(false);
+
     const setActiveTab = useCallback((tab: 'secure' | 'public') => {
         setActiveTabState(tab);
         if (onTabChange) onTabChange(tab);
     }, [onTabChange]);
+
+    const handleItemClick = useCallback((event: React.MouseEvent) => {
+        if (isInitializing) {
+            event.preventDefault();
+            event.stopPropagation();
+            showIslandNotification({
+                type: 'warning',
+                title: 'Initializing Encryption',
+                message: 'Securing connection channels...',
+                app: 'connect',
+                majestic: false,
+                duration: 4000
+            });
+        }
+    }, [isInitializing]);
+
+    const handleCancelRedirect = useCallback(() => {
+        setShowCountdownDrawer(false);
+        setActiveTab('public');
+    }, [setActiveTab]);
+
+    // Load cached lists from localStorage on mount & check implicit intent
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            try {
+                const storedTab = localStorage.getItem('kylrix_connect_active_tab');
+                if (storedTab === 'secure' || storedTab === 'public') {
+                    localStorage.removeItem('kylrix_connect_active_tab');
+                    setActiveTabState(storedTab);
+                    if (onTabChange) onTabChange(storedTab);
+                }
+
+                const cachedSec = localStorage.getItem('kylrix_connect_cached_secure_v1');
+                if (cachedSec) {
+                    const parsed = JSON.parse(cachedSec);
+                    setConversations(parsed);
+                    conversationsRef.current = parsed;
+                }
+                const cachedThr = localStorage.getItem('kylrix_connect_cached_threads_v1');
+                if (cachedThr) {
+                    setGhostConversations(JSON.parse(cachedThr));
+                }
+            } catch (e) {
+                console.warn('[ChatList] Failed to parse cached conversations:', e);
+            }
+        }
+    }, [onTabChange]);
+
+    // Query MasterPass status when user is loaded
+    useEffect(() => {
+        if (user?.$id) {
+            import('@/lib/appwrite/keychain')
+                .then(({ KeychainService }) => KeychainService.hasMasterpass(user.$id))
+                .then(setHasMasterpass)
+                .catch(() => setHasMasterpass(false));
+        }
+    }, [user?.$id]);
+
+    // Secure tab setup redirection countdown trigger
+    useEffect(() => {
+        if (activeTab === 'secure' && hasMasterpass === false) {
+            setShowCountdownDrawer(true);
+        } else {
+            setShowCountdownDrawer(false);
+        }
+    }, [activeTab, hasMasterpass]);
+
+    // Active secure query 800ms grace timeout to show cache
+    useEffect(() => {
+        if (!loading) return;
+        const timer = setTimeout(() => {
+            if (loading) {
+                try {
+                    const cachedSec = localStorage.getItem('kylrix_connect_cached_secure_v1');
+                    if (cachedSec) {
+                        const parsed = JSON.parse(cachedSec);
+                        if (parsed.length > 0) {
+                            setConversations(parsed);
+                            conversationsRef.current = parsed;
+                            setIsInitializing(true);
+                            setLoading(false);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[ChatList] Secure caching fallback error:', e);
+                }
+            }
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [loading]);
+
+    // Active threads query 800ms grace timeout to show cache
+    useEffect(() => {
+        if (!loadingGhost) return;
+        const timer = setTimeout(() => {
+            if (loadingGhost) {
+                try {
+                    const cachedThr = localStorage.getItem('kylrix_connect_cached_threads_v1');
+                    if (cachedThr) {
+                        const parsed = JSON.parse(cachedThr);
+                        if (parsed.length > 0) {
+                            setGhostConversations(parsed);
+                            setIsInitializing(true);
+                            setLoadingGhost(false);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[ChatList] Thread caching fallback error:', e);
+                }
+            }
+        }, 800);
+        return () => clearTimeout(timer);
+    }, [loadingGhost]);
 
     useEffect(() => {
         if (propActiveTab) {
             setActiveTabState(propActiveTab);
         }
     }, [propActiveTab]);
-    const [ghostConversations, setGhostConversations] = useState<any[]>([]);
-    const [loadingGhost, setLoadingGhost] = useState(false);
 
     useEffect(() => {
         if (isUnlocked) {
@@ -186,9 +306,13 @@ export const ChatList = ({
 
             mapped.sort((a: any, b: any) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
             
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('kylrix_connect_cached_threads_v1', JSON.stringify(mapped));
+            }
             startTransition(() => {
                 setGhostConversations(mapped);
             });
+            setIsInitializing(false);
         } catch (error) {
             console.error('Failed to load ghost huddles:', error);
         } finally {
@@ -497,10 +621,14 @@ export const ChatList = ({
             });
 
             console.log('[ChatList] Base conversations count:', sorted.length);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('kylrix_connect_cached_secure_v1', JSON.stringify(sorted));
+            }
             startTransition(() => {
                 setConversations(sorted);
                 conversationsRef.current = sorted;
             });
+            setIsInitializing(false);
             setLoading(false);
 
             void (async () => {
@@ -560,10 +688,14 @@ export const ChatList = ({
                     const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
                     return timeB - timeA;
                 });
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('kylrix_connect_cached_secure_v1', JSON.stringify(next));
+                }
                 startTransition(() => {
                     setConversations(next);
                     conversationsRef.current = next;
                 });
+                setIsInitializing(false);
             })();
         } catch (error: unknown) {
             console.error('Failed to load chats:', error);
@@ -907,6 +1039,7 @@ export const ChatList = ({
                                     <ListItemButton
                                         component={Link}
                                         href={`/connect/chat/${conv.$id}`}
+                                        onClick={handleItemClick}
                                     sx={{
                                             borderRadius: '24px',
                                             py: 2.5,
@@ -935,12 +1068,34 @@ export const ChatList = ({
                                                 onClick={(event) => {
                                                     event.preventDefault();
                                                     event.stopPropagation();
+                                                    if (isInitializing) {
+                                                        showIslandNotification({
+                                                            type: 'warning',
+                                                            title: 'Initializing Encryption',
+                                                            message: 'Securing connection channels...',
+                                                            app: 'connect',
+                                                            majestic: false,
+                                                            duration: 4000
+                                                        });
+                                                        return;
+                                                    }
                                                     setSelectedConversation(conv);
                                                 }}
                                                 onKeyDown={(event) => {
                                                     if (event.key !== 'Enter' && event.key !== ' ') return;
                                                     event.preventDefault();
                                                     event.stopPropagation();
+                                                    if (isInitializing) {
+                                                        showIslandNotification({
+                                                            type: 'warning',
+                                                            title: 'Initializing Encryption',
+                                                            message: 'Securing connection channels...',
+                                                            app: 'connect',
+                                                            majestic: false,
+                                                            duration: 4000
+                                                        });
+                                                        return;
+                                                    }
                                                     setSelectedConversation(conv);
                                                 }}
                                                 sx={{
@@ -1051,6 +1206,7 @@ export const ChatList = ({
                                     <ListItemButton
                                         component={Link}
                                         href={`/connect/chat/${conv.$id}`}
+                                        onClick={handleItemClick}
                                         sx={{
                                             borderRadius: '24px',
                                             py: 2.5,
@@ -1115,6 +1271,105 @@ export const ChatList = ({
                 onConversationDeleted={handleConversationDeleted}
             />
 
+            {showCountdownDrawer && (
+                <SetupCountdownDrawer 
+                    onCancel={handleCancelRedirect}
+                    callbackUrl="/connect/chats"
+                />
+            )}
+
         </Box>
+    );
+};
+
+const SetupCountdownDrawer = ({ 
+    onCancel, 
+    callbackUrl 
+}: { 
+    onCancel: () => void; 
+    callbackUrl: string; 
+}) => {
+    const router = useRouter();
+    const [secondsLeft, setSecondsLeft] = useState(5);
+    const [isCancelled, setIsCancelled] = useState(false);
+
+    useEffect(() => {
+        if (isCancelled || secondsLeft <= 0) {
+            if (secondsLeft === 0 && !isCancelled) {
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('kylrix_connect_active_tab', 'secure');
+                }
+                router.replace(`/vault/masterpass?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+            }
+            return;
+        }
+
+        const timer = setInterval(() => {
+            setSecondsLeft(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [secondsLeft, isCancelled, router, callbackUrl]);
+
+    return (
+        <Drawer
+            anchor="bottom"
+            open={true}
+            onClose={() => {
+                setIsCancelled(true);
+                onCancel();
+            }}
+            PaperProps={{
+                sx: {
+                    bgcolor: '#161412',
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '24px 24px 0 0',
+                    maxWidth: 600,
+                    mx: 'auto',
+                    width: '100%',
+                }
+            }}
+            ModalProps={{
+                keepMounted: false,
+                disablePortal: true
+            }}
+        >
+            <Box sx={{ p: 4, textAlign: 'center', color: '#fff' }}>
+                <Stack spacing={3} alignItems="center">
+                    <Box sx={{ p: 2, borderRadius: '50%', bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B' }}>
+                        <ShieldCheckIcon sx={{ fontSize: 36 }} />
+                    </Box>
+                    <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>
+                        Secure Chat Requires Setup
+                    </Typography>
+                    <Typography sx={{ color: '#9B9691', fontSize: '0.9rem', maxWidth: 400, lineHeight: 1.5 }}>
+                        End-to-End Encryption requires setting up an Ecosystem MasterPass to secure your local cryptographic keys.
+                    </Typography>
+                    <Typography variant="h5" sx={{ fontWeight: 900, color: '#F59E0B', fontFamily: 'var(--font-mono)' }}>
+                        Navigating to setup in {secondsLeft}...
+                    </Typography>
+                    <Button
+                        variant="outlined"
+                        onClick={() => {
+                            setIsCancelled(true);
+                            onCancel();
+                        }}
+                        sx={{
+                            borderRadius: '12px',
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            color: '#fff',
+                            textTransform: 'none',
+                            px: 4,
+                            '&:hover': {
+                                bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                borderColor: 'rgba(255, 255, 255, 0.2)'
+                            }
+                        }}
+                    >
+                        Cancel Redirect
+                    </Button>
+                </Stack>
+            </Box>
+        </Drawer>
     );
 };
