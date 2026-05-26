@@ -14,8 +14,8 @@ export function PinnedNotesSidebar() {
   const { closeSidebar } = useDynamicSidebar();
 
   const pinnedNotes = useMemo(() => {
-    return allNotes.filter((n) => pinnedIds.includes(n.$id));
-  }, [allNotes, pinnedIds]);
+    return allNotes.filter((n) => !!n.isPinned);
+  }, [allNotes]);
 
   const handleNoteUpdated = (updatedNote: Notes) => {
     upsertNote(updatedNote);

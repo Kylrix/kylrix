@@ -460,6 +460,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       const newPins = await appwritePinNote(noteId);
       setPinnedIds(newPins);
       if (PINNED_CACHE_KEY) setCachedData(PINNED_CACHE_KEY, newPins);
+      setNotes(prev => prev.map(n => n.$id === noteId ? { ...n, isPinned: true } : n));
     } catch (err: any) {
       throw err;
     }
@@ -470,24 +471,27 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       const newPins = await appwriteUnpinNote(noteId);
       setPinnedIds(newPins);
       if (PINNED_CACHE_KEY) setCachedData(PINNED_CACHE_KEY, newPins);
+      setNotes(prev => prev.map(n => n.$id === noteId ? { ...n, isPinned: false } : n));
     } catch (err: any) {
       throw err;
     }
   }, [PINNED_CACHE_KEY, setCachedData]);
 
   const isPinned = useCallback((noteId: string) => {
+    const note = notes.find(n => n.$id === noteId);
+    if (note) return !!note.isPinned;
     return effectivePinnedIds.includes(noteId);
-  }, [effectivePinnedIds]);
+  }, [notes, effectivePinnedIds]);
 
   const sortedNotes = useMemo(() => {
     return [...notes].sort((a, b) => {
-      const aPinned = effectivePinnedIds.includes(a.$id);
-      const bPinned = effectivePinnedIds.includes(b.$id);
+      const aPinned = !!a.isPinned;
+      const bPinned = !!b.isPinned;
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  }, [notes, effectivePinnedIds]);
+  }, [notes]);
 
   /**
    * Memoize the context value so consumers (note list, sidebar, search, etc.) don't

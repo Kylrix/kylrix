@@ -113,8 +113,8 @@ export default function NotesPage() {
 
   const regularSourceNotes = useMemo(() => {
     if (hasSearchResults) return allNotes;
-    return allNotes.filter(n => !isPinned(n.$id));
-  }, [allNotes, isPinned, hasSearchResults]);
+    return allNotes.filter(n => !n.isPinned);
+  }, [allNotes, hasSearchResults]);
 
   const handleNoteCreated = useCallback((newNote: Notes) => {
     upsertNote(newNote);
@@ -294,8 +294,8 @@ export default function NotesPage() {
 
   const pinnedNotes = useMemo(() => {
     if (hasSearchResults) return [];
-    return allNotes.filter(n => isPinned(n.$id));
-  }, [allNotes, isPinned, hasSearchResults]);
+    return allNotes.filter(n => !!n.isPinned);
+  }, [allNotes, hasSearchResults]);
 
   const regularNotes = useMemo(() => {
     return paginatedNotes;
