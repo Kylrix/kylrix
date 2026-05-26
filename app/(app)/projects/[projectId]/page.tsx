@@ -79,7 +79,7 @@ import { TargetType } from '@/types/appwrite';
 import { client } from '@/lib/appwrite/client';
 import { ChatService } from '@/lib/services/chat';
 import { createMessageAction } from '@/lib/actions/chat';
-import { Send, Clock, Mic, Square, Tag, ShieldCheck, Camera, PhoneCall, FileSpreadsheet, X, MessageSquare, Copy, ChevronLeft } from 'lucide-react';
+import { Send, Clock, Mic, Square, Tag, ShieldCheck, Camera, PhoneCall, FileSpreadsheet, X, Copy, ChevronLeft } from 'lucide-react';
 import MuralPattern from '@/components/chat/MuralPattern';
 import { VoiceMessage } from '@/components/chat/VoiceMessage';
 import { StorageService } from '@/lib/services/storage';
