@@ -2,7 +2,7 @@
 
 import { ChatList } from '@/components/chat/ChatList';
 import { useFAB } from '@/context/FABContext';
-import { MessageSquare, Phone } from 'lucide-react';
+import { MessageSquare, Phone, Hash } from 'lucide-react';
 import { Box, IconButton, Typography, Stack, Button } from '@mui/material';
 import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -98,31 +98,46 @@ export default function Home() {
   const router = useRouter();
   const { requestSudo } = useSudo();
   const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
+  const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() => {
+    return ecosystemSecurity.status.isUnlocked ? 'secure' : 'public';
+  });
 
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open: openUnified } = useUnifiedDrawer();
 
   useEffect(() => {
-    if (isUnlocked) {
+    if (activeTab === 'public') {
+      // Threads tab active
       setConfiguration({
         isVisible: true,
         mainColor: '#F59E0B',
         actions: [
-          { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat') },
-          { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },
-          { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') }]
-      });
-    } else {
-      setConfiguration({
-        isVisible: true,
-        mainColor: '#F59E0B',
-        actions: [
-          { id: 'huddle', label: 'NEW HUDDLE', icon: <Phone size={20} />, onClick: () => openUnified('new-chat') }
+          { id: 'huddle', label: 'NEW THREAD', icon: <Hash size={20} />, onClick: () => openUnified('new-chat') }
         ]
       });
+    } else {
+      // Secure tab active
+      if (isUnlocked) {
+        setConfiguration({
+          isVisible: true,
+          mainColor: '#F59E0B',
+          actions: [
+            { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat') },
+            { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },
+            { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') }]
+        });
+      } else {
+        setConfiguration({
+          isVisible: true,
+          mainColor: '#F59E0B',
+          actions: [
+            { id: 'huddle', label: 'NEW HUDDLE', icon: <Phone size={20} />, onClick: () => openUnified('new-chat') }
+          ]
+        });
+      }
     }
     return () => resetConfiguration();
-  }, [isUnlocked, setConfiguration, resetConfiguration, router, openUnified]);
+  }, [isUnlocked, activeTab, setConfiguration, resetConfiguration, router, openUnified]);
 
   useEffect(() => {
     const unsubscribe = ecosystemSecurity.onStatusChange((status) => {
@@ -168,7 +183,7 @@ export default function Home() {
             </Typography>
           </Stack>
 
-          <ChatList />
+          <ChatList activeTab={activeTab} onTabChange={setActiveTab} />
         </Box>
     </Box>
   );

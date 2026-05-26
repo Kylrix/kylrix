@@ -61,7 +61,15 @@ const GlobalSearchAvatar = ({ u }: { u: any }) => {
     );
 };
 
-export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => {
+export const ChatList = ({ 
+    externalQuery = '',
+    activeTab: propActiveTab,
+    onTabChange
+}: { 
+    externalQuery?: string;
+    activeTab?: 'secure' | 'public';
+    onTabChange?: (tab: 'secure' | 'public') => void;
+}) => {
     const { user } = useAuth();
     const { unreadConversations } = useChatNotifications();
     const { globalPresence } = usePresence();
@@ -85,9 +93,20 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
     }>>({});
     const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
-    const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() => {
-        return ecosystemSecurity.status.isUnlocked ? 'secure' : 'public';
+    const [activeTab, setActiveTabState] = useState<'secure' | 'public'>(() => {
+        return propActiveTab || (ecosystemSecurity.status.isUnlocked ? 'secure' : 'public');
     });
+
+    const setActiveTab = useCallback((tab: 'secure' | 'public') => {
+        setActiveTabState(tab);
+        if (onTabChange) onTabChange(tab);
+    }, [onTabChange]);
+
+    useEffect(() => {
+        if (propActiveTab) {
+            setActiveTabState(propActiveTab);
+        }
+    }, [propActiveTab]);
     const [ghostConversations, setGhostConversations] = useState<any[]>([]);
     const [loadingGhost, setLoadingGhost] = useState(false);
 
