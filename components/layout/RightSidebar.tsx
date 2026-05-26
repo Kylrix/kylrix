@@ -5,6 +5,7 @@ import { Drawer, Box, IconButton, useTheme, useMediaQuery, alpha } from '@mui/ma
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useLayout } from '@/context/LayoutContext';
 import TaskDetails from '@/components/tasks/TaskDetails';
+import EventDetails from '@/components/events/EventDetails';
 
 export default function RightSidebar() {
   const { secondarySidebar, closeSecondarySidebar } = useLayout();
@@ -15,6 +16,8 @@ export default function RightSidebar() {
     switch (secondarySidebar.type) {
       case 'task':
         return <TaskDetails taskId={secondarySidebar.itemId || ''} />;
+      case 'event':
+        return <EventDetails eventId={secondarySidebar.itemId || ''} initialData={secondarySidebar.data} />;
       // Add other cases (event, focus) as they are implemented
       default:
         return null;
