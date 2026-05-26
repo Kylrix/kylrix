@@ -26,6 +26,10 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Menu,
+  Popover,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Plus,
@@ -70,11 +74,12 @@ import {
   promoteGhostThreadToStory, 
   createEncryptedGroupForProject 
 } from '@/lib/actions/client-ops';
-import { createComment, listComments } from '@/lib/appwrite/note';
+import { createComment, listComments, createReaction, deleteReaction, listReactions } from '@/lib/appwrite/note';
+import { TargetType } from '@/types/appwrite';
 import { client } from '@/lib/appwrite/client';
 import { ChatService } from '@/lib/services/chat';
 import { createMessageAction } from '@/lib/actions/chat';
-import { Send, Clock, Mic, Square, Tag, ShieldCheck, Camera, PhoneCall, FileSpreadsheet, X } from 'lucide-react';
+import { Send, Clock, Mic, Square, Tag, ShieldCheck, Camera, PhoneCall, FileSpreadsheet, X, MessageSquare, Copy, ChevronLeft } from 'lucide-react';
 import MuralPattern from '@/components/chat/MuralPattern';
 import { VoiceMessage } from '@/components/chat/VoiceMessage';
 import { StorageService } from '@/lib/services/storage';
@@ -1343,21 +1348,19 @@ function ResourceItem({
             </Stack>
         </Paper>
     );
-}
-
-interface ProjectDiscussionTabProps {
-  project: Projects;
-  fetchProjectData: () => void;
-  user: any;
-}
-
 export function ProjectDiscussionTab({ project, fetchProjectData, user }: ProjectDiscussionTabProps) {
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
   const [activeMode, setActiveMode] = useState<'huddle' | 'private'>('huddle');
   const [messages, setMessages] = useState<any[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+
+  // Thread and Reactions states
+  const [activeThreadParent, setActiveThreadParent] = useState<any | null>(null);
+  const [threadInputText, setThreadInputText] = useState('');
+  const [sendToGeneralChecked, setSendToGeneralChecked] = useState(true);
+  const [messageAnchorEl, setMessageAnchorEl] = useState<{ el: HTMLElement, msg: any } | null>(null);
 
   // Voice recording states and refs
   const [isRecording, setIsRecording] = useState(false);
@@ -1378,11 +1381,16 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
   const chatNoteId = metadata.discussionNoteId;
   const encryptedGroupId = metadata.encryptedGroupId;
   const messageEndRef = useRef<HTMLDivElement>(null);
+  const threadEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, activeThreadParent]);
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [activeThreadParent]);
 
   // Clean up timers on component unmount
   useEffect(() => {
@@ -1400,6 +1408,265 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m}:${s < 10 ? '0' : ''}${s}`;
+  };
+
+  // Safe JSON parser helper
+  const parseMessageContent = React.useCallback((rawContent: string) => {
+    if (rawContent?.startsWith('{') && rawContent?.endsWith('}')) {
+      try {
+        const json = JSON.parse(rawContent);
+        return {
+          text: json.text || '',
+          type: json.type || 'text',
+          voiceFileId: json.voiceFileId || null,
+          sendToGeneral: json.sendToGeneral !== false
+        };
+      } catch {}
+    }
+    if (rawContent?.startsWith('__voice_note__:')) {
+      return {
+        text: 'Voice Note',
+        type: 'voice',
+        voiceFileId: rawContent.substring('__voice_note__:'.length),
+        sendToGeneral: true
+      };
+    }
+    return {
+      text: rawContent || '',
+      type: 'text',
+      voiceFileId: null,
+      sendToGeneral: true
+    };
+  }, []);
+
+  // Load and Subscribe to Huddle Thread (Ghost Note)
+  const loadHuddleMessages = async () => {
+    if (!chatNoteId) return;
+    try {
+      const res = await listComments(chatNoteId);
+      
+      // Load reactions for comments parallelly
+      let commentReactions: Record<string, any[]> = {};
+      try {
+        const commentIds = res.rows.map((r: any) => r.$id);
+        if (commentIds.length > 0) {
+          const reactionsRes = await listReactions([
+            Query.equal('targetType', 'comment'),
+            Query.equal('targetId', commentIds),
+            Query.limit(500)
+          ]);
+          reactionsRes.rows.forEach((react: any) => {
+            if (!commentReactions[react.targetId]) commentReactions[react.targetId] = [];
+            commentReactions[react.targetId].push(react);
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to load reactions:', e);
+      }
+
+      const msgs = await Promise.all(
+        res.rows.map(async (doc: any) => {
+          let senderName = 'Collaborator';
+          if (doc.userId === user?.$id) {
+            senderName = user.name || 'You';
+          } else {
+            try {
+              const profile = await AppwriteService.getProfile(doc.userId);
+              if (profile) senderName = profile.name || 'Collaborator';
+            } catch {}
+          }
+          return {
+            id: doc.$id,
+            senderId: doc.userId,
+            senderName,
+            content: doc.content,
+            timestamp: new Date(doc.createdAt).getTime(),
+            parentCommentId: doc.parentCommentId || null,
+            reactions: commentReactions[doc.$id] || []
+          };
+        })
+      );
+      msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
+      setMessages(msgs);
+    } catch (err) {
+      console.error('Failed to load huddle comments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeMode !== 'huddle' || !chatNoteId) return;
+
+    let active = true;
+    setLoading(true);
+
+    loadHuddleMessages();
+
+    // Subscribe to comments and reactions
+    const unsubscribe = client.subscribe(
+      [
+        `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.comments.documents`,
+        `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.reactions.documents`
+      ],
+      async () => {
+        if (!active) return;
+        loadHuddleMessages();
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [activeMode, chatNoteId, user]);
+
+  // Load and Subscribe to Private E2E Huddle (Connect Group)
+  useEffect(() => {
+    if (activeMode !== 'private' || !encryptedGroupId) return;
+
+    let active = true;
+    setLoading(true);
+
+    const loadPrivateMessages = async () => {
+      try {
+        const res = await ChatService.getMessages(encryptedGroupId, 50, 0, user?.$id);
+        if (!active) return;
+        
+        const msgs = await Promise.all(
+          (res.rows || []).map(async (doc: any) => {
+            let senderName = 'Secure Partner';
+            if (doc.senderId === user?.$id) {
+              senderName = user.name || 'You';
+            } else {
+              try {
+                const profile = await AppwriteService.getProfile(doc.senderId);
+                if (profile) senderName = profile.name || 'Secure Partner';
+              } catch {}
+            }
+            return {
+              id: doc.$id,
+              senderId: doc.senderId,
+              senderName,
+              content: doc.content,
+              timestamp: new Date(doc.createdAt).getTime(),
+              parentCommentId: null,
+              reactions: []
+            };
+          })
+        );
+        msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
+        setMessages(msgs);
+      } catch (err) {
+        console.error('Failed to load private messages:', err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    loadPrivateMessages();
+
+    // Subscribe to messages in Connect
+    const unsubscribe = client.subscribe(
+      `databases.chat.collections.messages.documents`,
+      async (response: any) => {
+        if (!active) return;
+        const events = response.events;
+        const payload = response.payload;
+
+        if (events.some((e: string) => e.includes('.create'))) {
+          if (payload.conversationId === encryptedGroupId) {
+            let senderName = 'Secure Partner';
+            if (payload.senderId === user?.$id) {
+              senderName = user.name || 'You';
+            } else {
+              try {
+                const profile = await AppwriteService.getProfile(payload.senderId);
+                if (profile) senderName = profile.name || 'Secure Partner';
+              } catch {}
+            }
+
+            const msg = {
+              id: payload.$id,
+              senderId: payload.senderId,
+              senderName,
+              content: payload.content,
+              timestamp: new Date(payload.createdAt).getTime(),
+              parentCommentId: null,
+              reactions: []
+            };
+
+            setMessages(prev => {
+              if (prev.some(m => m.id === msg.id)) return prev;
+              return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
+            });
+          }
+        }
+      }
+    );
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [activeMode, encryptedGroupId, user]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || sending) return;
+    setSending(true);
+
+    try {
+      if (activeMode === 'huddle' && chatNoteId) {
+        // Publish comments in standardized JSON format
+        await createComment(chatNoteId, JSON.stringify({
+          text: inputText.trim(),
+          type: 'text',
+          sendToGeneral: true
+        }));
+      } else if (activeMode === 'private' && encryptedGroupId) {
+        const { account: clientAcc } = await import('@/lib/appwrite/client');
+        const { jwt } = await clientAcc.createJWT();
+        await createMessageAction({
+          conversationId: encryptedGroupId,
+          senderId: user?.$id || '',
+          content: inputText.trim(),
+          type: 'text',
+          jwt
+        });
+      }
+      setInputText('');
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  // Toggle reaction in database
+  const handleReact = async (msgId: string, emoji: string) => {
+    if (!user) return;
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    try {
+      const existingReaction = msg.reactions?.find(
+        (r: any) => r.userId === user.$id && r.emoji === emoji
+      );
+      if (existingReaction) {
+        await deleteReaction(existingReaction.$id);
+      } else {
+        await createReaction({
+          userId: user.$id,
+          targetId: msgId,
+          targetType: TargetType.COMMENT,
+          emoji: emoji
+        });
+      }
+      loadHuddleMessages();
+    } catch (e) {
+      console.error('Failed to toggle reaction:', e);
+    }
   };
 
   // Voice note toggle logic (start/stop)
@@ -1460,7 +1727,12 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
           try {
             const uploaded = await StorageService.uploadFile(audioFile, 'voice');
             if (chatNoteId) {
-              await createComment(chatNoteId, `__voice_note__:${uploaded.$id}`);
+              await createComment(chatNoteId, JSON.stringify({
+                text: 'Voice Note',
+                type: 'voice',
+                voiceFileId: uploaded.$id,
+                sendToGeneral: true
+              }));
             }
           } catch (error) {
             console.error('Failed to send voice note comment:', error);
@@ -1492,204 +1764,6 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
     }
   };
 
-  // Load and Subscribe to Huddle Thread (Ghost Note)
-  useEffect(() => {
-    if (activeMode !== 'huddle' || !chatNoteId) return;
-
-    let active = true;
-    setLoading(true);
-
-    const loadHuddleMessages = async () => {
-      try {
-        const res = await listComments(chatNoteId);
-        if (!active) return;
-        const msgs = await Promise.all(
-          res.rows.map(async (doc: any) => {
-            let senderName = 'Collaborator';
-            if (doc.userId === user?.$id) {
-              senderName = user.name || 'You';
-            } else {
-              try {
-                const profile = await AppwriteService.getProfile(doc.userId);
-                if (profile) senderName = profile.name || 'Collaborator';
-              } catch {}
-            }
-            return {
-              id: doc.$id,
-              senderId: doc.userId,
-              senderName,
-              content: doc.content,
-              timestamp: new Date(doc.createdAt).getTime(),
-            };
-          })
-        );
-        msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
-        setMessages(msgs);
-      } catch (err) {
-        console.error('Failed to load huddle comments:', err);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    loadHuddleMessages();
-
-    // Subscribe to comments
-    const unsubscribe = client.subscribe(
-      `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.comments.documents`,
-      async (response: any) => {
-        if (!active) return;
-        const events = response.events;
-        const payload = response.payload;
-
-        if (events.some((e: string) => e.includes('.create'))) {
-          if (payload.noteId === chatNoteId) {
-            let senderName = 'Collaborator';
-            if (payload.userId === user?.$id) {
-              senderName = user.name || 'You';
-            } else {
-              try {
-                const profile = await AppwriteService.getProfile(payload.userId);
-                if (profile) senderName = profile.name || 'Collaborator';
-              } catch {}
-            }
-
-            const msg = {
-              id: payload.$id,
-              senderId: payload.userId,
-              senderName,
-              content: payload.content,
-              timestamp: new Date(payload.createdAt).getTime(),
-            };
-
-            setMessages(prev => {
-              if (prev.some(m => m.id === msg.id)) return prev;
-              return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
-            });
-          }
-        }
-      }
-    );
-
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [activeMode, chatNoteId, user]);
-
-  // Load and Subscribe to Private E2E Huddle (Connect Group)
-  useEffect(() => {
-    if (activeMode !== 'private' || !encryptedGroupId) return;
-
-    let active = true;
-    setLoading(true);
-
-    const loadPrivateMessages = async () => {
-      try {
-        const res = await ChatService.getMessages(encryptedGroupId, 50, 0, user?.$id);
-        if (!active) return;
-        
-        const msgs = await Promise.all(
-          (res.rows || []).map(async (doc: any) => {
-            let senderName = 'Secure Partner';
-            if (doc.senderId === user?.$id) {
-              senderName = user.name || 'You';
-            } else {
-              try {
-                const profile = await AppwriteService.getProfile(doc.senderId);
-                if (profile) senderName = profile.name || 'Secure Partner';
-              } catch {}
-            }
-            return {
-              id: doc.$id,
-              senderId: doc.senderId,
-              senderName,
-              content: doc.content,
-              timestamp: new Date(doc.createdAt).getTime(),
-            };
-          })
-        );
-        msgs.sort((a: any, b: any) => a.timestamp - b.timestamp);
-        setMessages(msgs);
-      } catch (err) {
-        console.error('Failed to load private messages:', err);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-
-    loadPrivateMessages();
-
-    // Subscribe to messages in Connect
-    const unsubscribe = client.subscribe(
-      `databases.chat.collections.messages.documents`,
-      async (response: any) => {
-        if (!active) return;
-        const events = response.events;
-        const payload = response.payload;
-
-        if (events.some((e: string) => e.includes('.create'))) {
-          if (payload.conversationId === encryptedGroupId) {
-            let senderName = 'Secure Partner';
-            if (payload.senderId === user?.$id) {
-              senderName = user.name || 'You';
-            } else {
-              try {
-                const profile = await AppwriteService.getProfile(payload.senderId);
-                if (profile) senderName = profile.name || 'Secure Partner';
-              } catch {}
-            }
-
-            const msg = {
-              id: payload.$id,
-              senderId: payload.senderId,
-              senderName,
-              content: payload.content,
-              timestamp: new Date(payload.createdAt).getTime(),
-            };
-
-            setMessages(prev => {
-              if (prev.some(m => m.id === msg.id)) return prev;
-              return [...prev, msg].sort((a, b) => a.timestamp - b.timestamp);
-            });
-          }
-        }
-      }
-    );
-
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, [activeMode, encryptedGroupId, user]);
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim() || sending) return;
-    setSending(true);
-
-    try {
-      if (activeMode === 'huddle' && chatNoteId) {
-        await createComment(chatNoteId, inputText.trim());
-      } else if (activeMode === 'private' && encryptedGroupId) {
-        const { account: clientAcc } = await import('@/lib/appwrite/client');
-        const { jwt } = await clientAcc.createJWT();
-        await createMessageAction({
-          conversationId: encryptedGroupId,
-          senderId: user?.$id || '',
-          content: inputText.trim(),
-          type: 'text',
-          jwt
-        });
-      }
-      setInputText('');
-    } catch (err) {
-      console.error('Failed to send message:', err);
-    } finally {
-      setSending(false);
-    }
-  };
-
   const handleInitHuddle = async () => {
     setLoading(true);
     try {
@@ -1702,33 +1776,32 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
     }
   };
 
-  const handleInitPrivate = async () => {
-    setLoading(true);
-    try {
-      await createEncryptedGroupForProject(project.$id);
-      fetchProjectData();
-    } catch (err) {
-      console.error('Failed to initialize encrypted group:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSaveAsStory = async () => {
-    if (!chatNoteId) return;
-    setLoading(true);
-    try {
-      await promoteGhostThreadToStory(project.$id, chatNoteId);
-      showSuccess('Discussion promoted to permanent Story note!');
-      fetchProjectData();
-    } catch (err) {
-      console.error('Failed to save huddle as Story:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const hasChat = activeMode === 'huddle' ? !!chatNoteId : !!encryptedGroupId;
+
+  // Split messages into general huddle list vs thread huddle replies
+  const generalMessages = useMemo(() => {
+    return messages.filter(m => {
+      if (!m.parentCommentId) return true;
+      const parsed = parseMessageContent(m.content);
+      return parsed.sendToGeneral !== false;
+    });
+  }, [messages, parseMessageContent]);
+
+  const threadReplies = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    messages.forEach(m => {
+      if (m.parentCommentId) {
+        if (!groups[m.parentCommentId]) groups[m.parentCommentId] = [];
+        groups[m.parentCommentId].push(m);
+      }
+    });
+    return groups;
+  }, [messages]);
+
+  const threadMessages = useMemo(() => {
+    if (!activeThreadParent) return [];
+    return messages.filter(m => m.parentCommentId === activeThreadParent.id);
+  }, [messages, activeThreadParent]);
 
   return (
     <Box sx={{ 
@@ -1794,9 +1867,8 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
         m: 1.5,
         borderRadius: '16px',
         border: '1px solid rgba(255,255,255,0.05)',
-        bgcolor: '#080706' // Deep black console chat viewport
+        bgcolor: '#080706' 
       }}>
-        {/* Decorative Grid Patterns matching chat background */}
         <MuralPattern />
 
         {loading && (
@@ -1806,7 +1878,6 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
         )}
 
         {!hasChat ? (
-          /* Empty / Uninitialized State */
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center', position: 'relative', zIndex: 1 }}>
             {activeMode === 'huddle' ? (
               <>
@@ -1827,219 +1898,657 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
             ) : null}
           </Box>
         ) : (
-          /* Active Chat Viewport */
-          <>
+          /* Active Chat Viewport (Split Thread Layout) */
+          <Box sx={{ 
+            flex: 1, 
+            display: 'flex', 
+            flexDirection: 'row', 
+            minHeight: 0, 
+            position: 'relative', 
+            zIndex: 1,
+            overflow: 'hidden'
+          }}>
+            {/* Left Side: General Huddle Chat List */}
             <Box sx={{ 
-              flex: 1, 
-              overflowY: 'auto', 
-              p: 2, 
-              display: 'flex', 
+              flex: activeThreadParent ? { xs: 0, md: 0.6 } : 1, 
+              display: activeThreadParent ? { xs: 'none', md: 'flex' } : 'flex',
               flexDirection: 'column', 
-              gap: 1.75,
-              position: 'relative',
-              zIndex: 1,
-              '&::-webkit-scrollbar': {
-                width: '6px'
-              },
-              '&::-webkit-scrollbar-track': {
-                background: 'transparent'
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: 'rgba(255,255,255,0.06)',
-                borderRadius: '10px'
-              },
-              '&::-webkit-scrollbar-thumb:hover': {
-                background: 'rgba(255,255,255,0.12)'
-              }
+              minHeight: 0,
+              borderRight: activeThreadParent ? '1px solid rgba(255,255,255,0.06)' : 'none'
             }}>
-              {messages.length === 0 ? (
-                <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
-                  <Typography variant="caption" sx={{ fontStyle: 'italic', fontWeight: 700 }}>No messages yet. Start the discussion!</Typography>
-                </Box>
-              ) : (
-                messages.map((msg) => {
-                  const isSelf = msg.senderId === user?.$id;
-                  const isVoice = msg.content?.startsWith('__voice_note__:');
-                  const voiceFileId = isVoice ? msg.content.substring('__voice_note__:'.length) : null;
-                  const voiceUrl = voiceFileId ? StorageService.getFileView(voiceFileId, 'voice') : null;
+              <Box sx={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                p: 2, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                gap: 1.75,
+                '&::-webkit-scrollbar': { width: '6px' },
+                '&::-webkit-scrollbar-track': { background: 'transparent' },
+                '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.06)', borderRadius: '10px' },
+                '&::-webkit-scrollbar-thumb:hover': { background: 'rgba(255,255,255,0.12)' }
+              }}>
+                {generalMessages.length === 0 ? (
+                  <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
+                    <Typography variant="caption" sx={{ fontStyle: 'italic', fontWeight: 700 }}>No messages yet. Start the discussion!</Typography>
+                  </Box>
+                ) : (
+                  generalMessages.map((msg) => {
+                    const isSelf = msg.senderId === user?.$id;
+                    const parsed = parseMessageContent(msg.content);
+                    const replyCount = threadReplies[msg.id]?.length || 0;
 
-                  return (
-                    <Box key={msg.id} sx={{ alignSelf: isSelf ? 'flex-end' : 'flex-start', maxWidth: '80%', display: 'flex', flexDirection: 'column' }}>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, display: 'block', mb: 0.75, textAlign: isSelf ? 'right' : 'left' }}>
-                        {msg.senderName}
-                      </Typography>
-                      <Paper 
-                        elevation={0}
-                        sx={{
-                          p: isVoice ? 1.25 : 1.75,
-                          borderRadius: isSelf ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
-                          bgcolor: isSelf ? '#1C1A18' : '#161412', // Lifted vs Base
-                          backgroundImage: 'none',
-                          border: '1px solid #23211F',
-                          borderRight: isSelf ? '3px solid #6366F1' : '1px solid #23211F',
-                          borderLeft: !isSelf ? '3px solid #34322F' : '1px solid #23211F',
-                          color: isSelf ? '#FFFFFF' : '#F5F2ED',
-                          boxShadow: '0 4px 12px -4px rgba(0,0,0,0.8)',
-                          position: 'relative',
-                          zIndex: 2,
-                          transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                          '&:hover': {
-                              transform: 'translateY(-1px)',
-                              boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)',
-                          }
-                        }}
-                      >
-                        {isVoice && voiceUrl ? (
-                          <VoiceMessage url={voiceUrl} />
-                        ) : (
-                          <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word' }}>
-                            {msg.content}
-                          </Typography>
+                    return (
+                      <Box key={msg.id} sx={{ alignSelf: isSelf ? 'flex-end' : 'flex-start', maxWidth: '80%', display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, display: 'block', mb: 0.75, textAlign: isSelf ? 'right' : 'left' }}>
+                          {msg.senderName} {msg.parentCommentId && '• Thread Reply'}
+                        </Typography>
+                        <Paper 
+                          elevation={0}
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            setMessageAnchorEl({ el: e.currentTarget, msg });
+                          }}
+                          onClick={(e) => {
+                            setMessageAnchorEl({ el: e.currentTarget, msg });
+                          }}
+                          sx={{
+                            p: parsed.type === 'voice' ? 1.25 : 1.75,
+                            borderRadius: isSelf ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
+                            bgcolor: isSelf ? '#1C1A18' : '#161412', 
+                            backgroundImage: 'none',
+                            border: '1px solid #23211F',
+                            borderRight: isSelf ? '3px solid #6366F1' : '1px solid #23211F',
+                            borderLeft: !isSelf ? '3px solid #34322F' : '1px solid #23211F',
+                            color: isSelf ? '#FFFFFF' : '#F5F2ED',
+                            boxShadow: '0 4px 12px -4px rgba(0,0,0,0.8)',
+                            position: 'relative',
+                            zIndex: 2,
+                            cursor: 'context-menu',
+                            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                            '&:hover': {
+                                transform: 'translateY(-1px)',
+                                boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)',
+                            }
+                          }}
+                        >
+                          {parsed.type === 'voice' && parsed.voiceFileId ? (
+                            <VoiceMessage url={StorageService.getFileView(parsed.voiceFileId, 'voice')} />
+                          ) : (
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word' }}>
+                              {parsed.text}
+                            </Typography>
+                          )}
+                        </Paper>
+
+                        {/* Message Reactions Badge Group */}
+                        {msg.reactions && msg.reactions.length > 0 && (
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75, alignSelf: isSelf ? 'flex-end' : 'flex-start' }}>
+                            {Object.entries(
+                              msg.reactions.reduce((acc: Record<string, string[]>, r: any) => {
+                                if (!acc[r.emoji]) acc[r.emoji] = [];
+                                acc[r.emoji].push(r.userId);
+                                return acc;
+                              }, {})
+                            ).map(([emoji, userIds]) => {
+                              const hasReacted = userIds.includes(user?.$id);
+                              return (
+                                <Chip
+                                  key={emoji}
+                                  label={`${emoji} ${userIds.length}`}
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleReact(msg.id, emoji);
+                                  }}
+                                  sx={{
+                                    bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.03)',
+                                    color: hasReacted ? '#818CF8' : 'rgba(255,255,255,0.5)',
+                                    border: `1px solid ${hasReacted ? alpha('#818CF8', 0.3) : 'rgba(255,255,255,0.05)'}`,
+                                    height: 20,
+                                    fontSize: '0.7rem',
+                                    fontWeight: 800,
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                      bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255,255,255,0.08)'
+                                    }
+                                  }}
+                                />
+                              );
+                            })}
+                          </Box>
                         )}
-                      </Paper>
-                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left', fontWeight: 700 }}>
-                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </Typography>
-                    </Box>
-                  );
-                })
-              )}
-              <div ref={messageEndRef} />
-            </Box>
 
-            {/* Input Form */}
-            <Box 
-              component="form" 
-              onSubmit={handleSendMessage} 
-              sx={{ 
-                p: { xs: 1.25, sm: 1.5 }, 
-                borderTop: '1px solid rgba(255,255,255,0.05)', 
-                bgcolor: 'rgba(10, 9, 8, 0.95)',
-                backdropFilter: 'blur(12px)',
-                position: 'relative',
-                zIndex: 2
-              }}
-            >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                {/* Microphone / Record Button */}
-                {activeMode === 'huddle' && chatNoteId && (
-                  <IconButton
-                    onClick={toggleRecording}
-                    disabled={sending}
+                        {/* Thread Replies Button */}
+                        {replyCount > 0 && (
+                          <Button
+                            size="small"
+                            startIcon={<MessageSquare size={12} />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveThreadParent(msg);
+                            }}
+                            sx={{
+                              alignSelf: isSelf ? 'flex-end' : 'flex-start',
+                              mt: 0.75,
+                              color: '#818CF8',
+                              fontWeight: 800,
+                              textTransform: 'none',
+                              fontSize: '0.75rem',
+                              bgcolor: 'rgba(99,102,241,0.04)',
+                              px: 1.5,
+                              borderRadius: '8px',
+                              border: '1px solid rgba(99,102,241,0.1)',
+                              '&:hover': { bgcolor: 'rgba(99,102,241,0.08)', borderColor: '#818CF8' }
+                            }}
+                          >
+                            {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+                          </Button>
+                        )}
+
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left', fontWeight: 700 }}>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Typography>
+                      </Box>
+                    );
+                  })
+                )}
+                <div ref={messageEndRef} />
+              </Box>
+
+              {/* Input Form */}
+              <Box 
+                component="form" 
+                onSubmit={handleSendMessage} 
+                sx={{ 
+                  p: { xs: 1.25, sm: 1.5 }, 
+                  borderTop: '1px solid rgba(255,255,255,0.05)', 
+                  bgcolor: 'rgba(10, 9, 8, 0.95)',
+                  backdropFilter: 'blur(12px)',
+                  position: 'relative',
+                  zIndex: 2
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  {activeMode === 'huddle' && chatNoteId && (
+                    <IconButton
+                      onClick={toggleRecording}
+                      disabled={sending}
+                      sx={{
+                        color: isRecording ? '#ff4d4d' : 'rgba(255,255,255,0.4)',
+                        width: 44,
+                        height: 44,
+                        flexShrink: 0,
+                        bgcolor: '#161412',
+                        border: `1px solid ${isRecording ? '#ff4d4d' : 'rgba(255,255,255,0.05)'}`,
+                        borderRadius: '12px',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          bgcolor: '#1C1A18',
+                          borderColor: isRecording ? '#ff4d4d' : '#6366F1',
+                          color: '#fff',
+                        },
+                      }}
+                    >
+                      {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} strokeWidth={2} />}
+                    </IconButton>
+                  )}
+
+                  <Box sx={{ flexGrow: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    {isRecording && (
+                      <Box sx={{
+                        position: 'absolute',
+                        inset: 0,
+                        bgcolor: '#0A0908',
+                        borderRadius: '12px',
+                        border: '1px solid #ff4d4d',
+                        display: 'flex',
+                        alignItems: 'center',
+                        px: 2,
+                        gap: 2,
+                        zIndex: 2,
+                        animation: 'pulse 2s infinite ease-in-out',
+                        '@keyframes pulse': {
+                          '0%, 100%': { borderColor: 'rgba(255,77,77,0.3)', boxShadow: '0 0 4px rgba(255,77,77,0.1)' },
+                          '50%': { borderColor: 'rgba(255,77,77,1)', boxShadow: '0 0 12px rgba(255,77,77,0.2)' }
+                        }
+                      }}>
+                        <Box sx={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: '50%',
+                          bgcolor: '#ff4d4d',
+                          animation: 'blink 1s infinite',
+                          '@keyframes blink': {
+                            '0%, 100%': { opacity: 0.3 },
+                            '50%': { opacity: 1 }
+                          }
+                        }} />
+                        <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', fontWeight: 800, flexGrow: 1 }}>
+                          Recording audio note... click square to send
+                        </Typography>
+                        <Typography sx={{ color: '#ff4d4d', fontSize: '0.85rem', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+                          {formatRecordingTime(recordingSeconds)}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    <TextField
+                      fullWidth
+                      size="small"
+                      value={inputText}
+                      disabled={isRecording}
+                      onChange={(e) => setInputText(e.target.value)}
+                      placeholder={
+                        isRecording 
+                          ? "Recording in progress..." 
+                          : activeMode === 'huddle' 
+                            ? "Type huddle message..." 
+                            : "Type cryptographically secure message..."
+                      }
+                      variant="standard"
+                      InputProps={{
+                        disableUnderline: true,
+                        sx: {
+                          bgcolor: '#161412',
+                          borderRadius: '12px',
+                          color: 'white',
+                          px: 2,
+                          py: 1.25,
+                          fontWeight: 600,
+                          fontSize: '0.85rem',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          transition: 'all 0.2s ease',
+                          '&:hover': { borderColor: 'rgba(255,255,255,0.1)' },
+                          '&.Mui-focused': { borderColor: '#6366F1' }
+                        }
+                      }}
+                    />
+                  </Box>
+                  
+                  <IconButton 
+                    type="submit"
+                    disabled={!inputText.trim() || sending || isRecording}
                     sx={{
-                      color: isRecording ? '#ff4d4d' : 'rgba(255,255,255,0.4)',
+                      bgcolor: '#6366F1',
+                      color: '#fff',
+                      borderRadius: '12px',
                       width: 44,
                       height: 44,
                       flexShrink: 0,
-                      bgcolor: '#161412',
-                      border: `1px solid ${isRecording ? '#ff4d4d' : 'rgba(255,255,255,0.05)'}`,
-                      borderRadius: '12px',
                       transition: 'all 0.2s ease',
-                      '&:hover': {
-                        bgcolor: '#1C1A18',
-                        borderColor: isRecording ? '#ff4d4d' : '#6366F1',
-                        color: '#fff',
-                      },
+                      '&:hover': { bgcolor: '#575CF0' },
+                      '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.1)' }
                     }}
                   >
-                    {isRecording ? <Square size={18} fill="#ff4d4d" /> : <Mic size={20} strokeWidth={2} />}
+                    <Send size={18} />
                   </IconButton>
-                )}
+                </Stack>
+              </Box>
+            </Box>
 
-                <Box sx={{ flexGrow: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  {isRecording && (
-                    <Box sx={{
-                      position: 'absolute',
-                      inset: 0,
-                      bgcolor: '#0A0908',
-                      borderRadius: '12px',
-                      border: '1px solid #ff4d4d',
-                      display: 'flex',
-                      alignItems: 'center',
-                      px: 2,
-                      gap: 2,
-                      zIndex: 2,
-                      animation: 'pulse 2s infinite ease-in-out',
-                      '@keyframes pulse': {
-                        '0%, 100%': { borderColor: 'rgba(255,77,77,0.3)', boxShadow: '0 0 4px rgba(255,77,77,0.1)' },
-                        '50%': { borderColor: 'rgba(255,77,77,1)', boxShadow: '0 0 12px rgba(255,77,77,0.2)' }
-                      }
-                    }}>
-                      <Box sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        bgcolor: '#ff4d4d',
-                        animation: 'blink 1s infinite',
-                        '@keyframes blink': {
-                          '0%, 100%': { opacity: 0.3 },
-                          '50%': { opacity: 1 }
-                        }
-                      }} />
-                      <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', fontWeight: 800, flexGrow: 1 }}>
-                        Recording audio note... click square to send
-                      </Typography>
-                      <Typography sx={{ color: '#ff4d4d', fontSize: '0.85rem', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
-                        {formatRecordingTime(recordingSeconds)}
-                      </Typography>
-                    </Box>
-                  )}
-
-                  <TextField
-                    fullWidth
-                    size="small"
-                    value={inputText}
-                    disabled={isRecording}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder={
-                      isRecording 
-                        ? "Recording in progress..." 
-                        : activeMode === 'huddle' 
-                          ? "Type huddle message..." 
-                          : "Type cryptographically secure message..."
-                    }
-                    variant="standard"
-                    InputProps={{
-                      disableUnderline: true,
-                      sx: {
-                        bgcolor: '#161412',
-                        borderRadius: '12px',
-                        color: 'white',
-                        px: 2,
-                        py: 1.25,
-                        fontWeight: 600,
-                        fontSize: '0.85rem',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        transition: 'all 0.2s ease',
-                        '&:hover': { borderColor: 'rgba(255,255,255,0.1)' },
-                        '&.Mui-focused': { borderColor: '#6366F1' }
-                      }
-                    }}
-                  />
-                </Box>
-                
-                <IconButton 
-                  type="submit"
-                  disabled={!inputText.trim() || sending || isRecording}
-                  sx={{
-                    bgcolor: '#6366F1',
-                    color: '#fff',
-                    borderRadius: '12px',
-                    width: 44,
-                    height: 44,
-                    flexShrink: 0,
-                    transition: 'all 0.2s ease',
-                    '&:hover': { bgcolor: '#575CF0' },
-                    '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.1)' }
+            {/* Right Side: Active Thread Panel */}
+            {activeThreadParent && (
+              <Box sx={{ 
+                flex: { xs: 1, md: 0.4 }, 
+                display: 'flex', 
+                flexDirection: 'column', 
+                minHeight: 0,
+                bgcolor: '#0E0C0A', 
+                borderLeft: '1px solid rgba(255,255,255,0.06)',
+                position: 'relative',
+                zIndex: 2
+              }}>
+                <Stack 
+                  direction="row" 
+                  justifyContent="space-between" 
+                  alignItems="center" 
+                  sx={{ 
+                    p: 1.5, 
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    bgcolor: 'rgba(10, 9, 8, 0.5)' 
                   }}
                 >
-                  <Send size={18} />
-                </IconButton>
-              </Stack>
-            </Box>
-          </>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <IconButton 
+                      size="small" 
+                      onClick={() => setActiveThreadParent(null)} 
+                      sx={{ color: 'rgba(255,255,255,0.5)', '&:hover': { color: '#fff' } }}
+                    >
+                      <ChevronLeft size={16} />
+                    </IconButton>
+                    <Typography variant="body2" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>
+                      Thread replies
+                    </Typography>
+                  </Stack>
+                  <IconButton 
+                    size="small" 
+                    onClick={() => setActiveThreadParent(null)} 
+                    sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#fff' } }}
+                  >
+                    <X size={16} />
+                  </IconButton>
+                </Stack>
+
+                <Box sx={{ 
+                  flex: 1, 
+                  overflowY: 'auto', 
+                  p: 2, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 2,
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  '&::-webkit-scrollbar': { width: '4px' },
+                  '&::-webkit-scrollbar-track': { background: 'transparent' },
+                  '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.06)', borderRadius: '10px' }
+                }}>
+                  <Box sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', pb: 2, mb: 1 }}>
+                    <Typography variant="caption" sx={{ color: '#818CF8', fontWeight: 900, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Thread initialized by {activeThreadParent.senderName}
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: '4px 20px 20px 20px',
+                          bgcolor: '#161412',
+                          border: '1px solid #23211F',
+                          borderLeft: '3px solid #818CF8',
+                          color: '#F5F2ED',
+                        }}
+                      >
+                        {(() => {
+                          const parsedParent = parseMessageContent(activeThreadParent.content);
+                          if (parsedParent.type === 'voice' && parsedParent.voiceFileId) {
+                            return <VoiceMessage url={StorageService.getFileView(parsedParent.voiceFileId, 'voice')} />;
+                          }
+                          return (
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word' }}>
+                              {parsedParent.text}
+                            </Typography>
+                          );
+                        })()}
+                      </Paper>
+                    </Box>
+                  </Box>
+
+                  {threadMessages.length === 0 ? (
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35, py: 4 }}>
+                      <Typography variant="caption" sx={{ fontStyle: 'italic', fontWeight: 700 }}>No replies yet. Send a reply below!</Typography>
+                    </Box>
+                  ) : (
+                    threadMessages.map(reply => {
+                      const isSelfReply = reply.senderId === user?.$id;
+                      const parsedReply = parseMessageContent(reply.content);
+                      return (
+                        <Box key={reply.id} sx={{ alignSelf: isSelfReply ? 'flex-end' : 'flex-start', maxWidth: '85%', display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, display: 'block', mb: 0.5, textAlign: isSelfReply ? 'right' : 'left' }}>
+                            {reply.senderName}
+                          </Typography>
+                          <Paper
+                            elevation={0}
+                            sx={{
+                              p: parsedReply.type === 'voice' ? 1.25 : 1.75,
+                              borderRadius: isSelfReply ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
+                              bgcolor: isSelfReply ? '#1C1A18' : '#161412',
+                              border: '1px solid #23211F',
+                              borderRight: isSelfReply ? '3px solid #6366F1' : '1px solid #23211F',
+                              borderLeft: !isSelfReply ? '3px solid #34322F' : '1px solid #23211F',
+                              color: isSelfReply ? '#FFFFFF' : '#F5F2ED',
+                              zIndex: 2
+                            }}
+                          >
+                            {parsedReply.type === 'voice' && parsedReply.voiceFileId ? (
+                              <VoiceMessage url={StorageService.getFileView(parsedReply.voiceFileId, 'voice')} />
+                            ) : (
+                              <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word' }}>
+                                {parsedReply.text}
+                              </Typography>
+                            )}
+                          </Paper>
+                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelfReply ? 'right' : 'left', fontWeight: 700 }}>
+                            {new Date(reply.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </Typography>
+                        </Box>
+                      );
+                    })
+                  )}
+                  <div ref={threadEndRef} />
+                </Box>
+
+                <Box 
+                  component="form" 
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!threadInputText.trim() || sending) return;
+                    setSending(true);
+                    try {
+                      await createComment(chatNoteId, JSON.stringify({
+                        text: threadInputText.trim(),
+                        type: 'text',
+                        sendToGeneral: sendToGeneralChecked
+                      }), activeThreadParent.id);
+                      setThreadInputText('');
+                      loadHuddleMessages();
+                    } catch (err) {
+                      console.error('Failed to send thread reply:', err);
+                    } finally {
+                      setSending(false);
+                    }
+                  }}
+                  sx={{ 
+                    p: 1.5, 
+                    borderTop: '1px solid rgba(255,255,255,0.05)', 
+                    bgcolor: 'rgba(10, 9, 8, 0.95)' 
+                  }}
+                >
+                  <Stack spacing={1}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <TextField
+                        fullWidth
+                        size="small"
+                        value={threadInputText}
+                        onChange={(e) => setThreadInputText(e.target.value)}
+                        placeholder="Reply in thread..."
+                        variant="standard"
+                        InputProps={{
+                          disableUnderline: true,
+                          sx: {
+                            bgcolor: '#161412',
+                            borderRadius: '8px',
+                            color: 'white',
+                            px: 1.5,
+                            py: 1,
+                            fontWeight: 600,
+                            fontSize: '0.8rem',
+                            border: '1px solid rgba(255,255,255,0.05)'
+                          }
+                        }}
+                      />
+                      <IconButton 
+                        type="submit"
+                        disabled={!threadInputText.trim() || sending}
+                        sx={{
+                          bgcolor: '#6366F1',
+                          color: '#fff',
+                          borderRadius: '8px',
+                          width: 36,
+                          height: 36,
+                          '&:hover': { bgcolor: '#575CF0' }
+                        }}
+                      >
+                        <Send size={14} />
+                      </IconButton>
+                    </Stack>
+
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          size="small"
+                          checked={sendToGeneralChecked}
+                          onChange={(e) => setSendToGeneralChecked(e.target.checked)}
+                          sx={{
+                            color: 'rgba(255,255,255,0.3)',
+                            p: 0.5,
+                            '&.Mui-focused': { color: '#6366F1' },
+                            '&.Mui-checked': { color: '#6366F1' }
+                          }}
+                        />
+                      }
+                      label="Also send to general huddle"
+                      componentsProps={{
+                        typography: {
+                          sx: {
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            color: 'rgba(255,255,255,0.5)',
+                            userSelect: 'none'
+                          }
+                        }
+                      }}
+                    />
+                  </Stack>
+                </Box>
+              </Box>
+            )}
+          </Box>
         )}
       </Box>
+
+      {/* Message Options / Reactions Popover Menu */}
+      <Popover
+        open={Boolean(messageAnchorEl)}
+        anchorEl={messageAnchorEl?.el}
+        onClose={() => setMessageAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+        PaperProps={{
+          sx: {
+            bgcolor: '#13110F',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '16px',
+            p: 1.5,
+            color: '#fff',
+            backgroundImage: 'none',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.5)'
+          }
+        }}
+      >
+        <Stack spacing={1.5}>
+          {/* Reaction Quick Picker */}
+          <Stack direction="row" spacing={1} sx={{ borderBottom: '1px solid rgba(255,255,255,0.06)', pb: 1 }}>
+            {['👍', '❤️', '🔥', '😂', '🙌', '😮'].map(emoji => (
+              <IconButton
+                key={emoji}
+                size="small"
+                onClick={() => {
+                  if (messageAnchorEl?.msg) {
+                    handleReact(messageAnchorEl.msg.id, emoji);
+                    setMessageAnchorEl(null);
+                  }
+                }}
+                sx={{ 
+                  fontSize: '1.25rem',
+                  p: 0.5,
+                  borderRadius: '8px',
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', transform: 'scale(1.15)' },
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {emoji}
+              </IconButton>
+            ))}
+          </Stack>
+
+          {/* Action Items */}
+          <Stack spacing={0.5}>
+            <Button
+              size="small"
+              startIcon={<MessageSquare size={14} />}
+              onClick={() => {
+                if (messageAnchorEl?.msg) {
+                  setActiveThreadParent(messageAnchorEl.msg);
+                  setMessageAnchorEl(null);
+                }
+              }}
+              sx={{ 
+                justifyContent: 'flex-start', 
+                color: 'rgba(255,255,255,0.7)', 
+                textTransform: 'none', 
+                fontWeight: 700,
+                px: 1.5,
+                py: 0.75,
+                borderRadius: '8px',
+                '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.04)' }
+              }}
+            >
+              Reply in Thread
+            </Button>
+            <Button
+              size="small"
+              startIcon={<Copy size={14} />}
+              onClick={() => {
+                if (messageAnchorEl?.msg) {
+                  const content = parseMessageContent(messageAnchorEl.msg.content);
+                  navigator.clipboard.writeText(content.text);
+                  showSuccess('Message copied to clipboard');
+                  setMessageAnchorEl(null);
+                }
+              }}
+              sx={{ 
+                justifyContent: 'flex-start', 
+                color: 'rgba(255,255,255,0.7)', 
+                textTransform: 'none', 
+                fontWeight: 700,
+                px: 1.5,
+                py: 0.75,
+                borderRadius: '8px',
+                '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.04)' }
+              }}
+            >
+              Copy Text
+            </Button>
+            {messageAnchorEl?.msg?.senderId === user?.$id && (
+              <Button
+                size="small"
+                startIcon={<Trash2 size={14} />}
+                onClick={async () => {
+                  if (messageAnchorEl?.msg) {
+                    try {
+                      await databases.deleteRow(APPWRITE_CONFIG.DATABASES.NOTE, 'comments', messageAnchorEl.msg.id);
+                      showSuccess('Message deleted');
+                      loadHuddleMessages();
+                    } catch (e) {
+                      console.error('Delete message failed:', e);
+                    }
+                    setMessageAnchorEl(null);
+                  }
+                }}
+                sx={{ 
+                  justifyContent: 'flex-start', 
+                  color: '#FF453A', 
+                  textTransform: 'none', 
+                  fontWeight: 700,
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: '8px',
+                  '&:hover': { bgcolor: alpha('#FF453A', 0.08) }
+                }}
+              >
+                Delete Message
+              </Button>
+            )}
+          </Stack>
+        </Stack>
+      </Popover>
     </Box>
   );
 }
