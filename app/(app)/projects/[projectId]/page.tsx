@@ -68,7 +68,7 @@ import { createComment, listComments } from '@/lib/appwrite/note';
 import { client } from '@/lib/appwrite/client';
 import { ChatService } from '@/lib/services/chat';
 import { createMessageAction } from '@/lib/actions/chat';
-import { Send, Clock, MessageSquare } from 'lucide-react';
+import { Send, Clock } from 'lucide-react';
 
 interface TabPanelProps {
   children?: React.ReactNode;
