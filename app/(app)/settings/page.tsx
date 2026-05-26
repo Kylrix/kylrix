@@ -517,47 +517,6 @@ export default function SettingsPage() {
                                     </Button>
                                 </Box>
 
-                                {isUnlocked && isArgon === false && hasMasterpass === true && (
-                                    <>
-                                        <Box sx={{ 
-                                            p: 2, 
-                                            bgcolor: alpha('#F59E0B', 0.05), 
-                                            borderRadius: '16px', 
-                                            border: '1px solid rgba(245, 158, 11, 0.15)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between'
-                                        }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                <Box sx={{ p: 1, borderRadius: '8px', bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }}>
-                                                    <RefreshCw size={18} />
-                                                </Box>
-                                                <Box>
-                                                    <Typography sx={{ fontWeight: 800, color: '#fff', fontSize: '0.9rem' }}>Pending T5 Core Upgrade</Typography>
-                                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Hardens your encryption with Argon2id protection.</Typography>
-                                                </Box>
-                                            </Box>
-                                            <Button 
-                                                variant="contained"
-                                                size="small"
-                                                onClick={() => requestSudo({ 
-                                                    onSuccess: () => {}, 
-                                                    intent: 'upgrade' 
-                                                })}
-                                                sx={{ 
-                                                    bgcolor: '#F59E0B', 
-                                                    color: '#000', 
-                                                    fontWeight: 900, 
-                                                    borderRadius: '10px',
-                                                    '&:hover': { bgcolor: '#D97706' }
-                                                }}
-                                            >
-                                                Upgrade Now
-                                            </Button>
-                                        </Box>
-                                    </>
-                                )}
-
                                 <Divider sx={{ opacity: 0.05 }} />
 
                                 {/* Passkey Section */}

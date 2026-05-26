@@ -316,15 +316,13 @@ export class EcosystemSecurity {
     try {
       if (!keyChainEntry) return false;
 
-      const salt = new Uint8Array(
-        atob(keyChainEntry.salt).split("").map(c => c.charCodeAt(0))
-      );
+      const isArgon = !!keyChainEntry.isArgon || (typeof keyChainEntry.params === 'string' ? keyChainEntry.params.includes("Argon2id") : keyChainEntry.params?.algo === 'Argon2id');
 
-      const isArgon = !!keyChainEntry.isArgon || (keyChainEntry.params && keyChainEntry.params.includes("Argon2id"));
+      // Derive AuthKey using the stored salt
+      const salt = this.decodeBase64(keyChainEntry.salt);
       const authKey = await this.deriveKey(password, salt, isArgon);
-      const wrappedKeyBytes = new Uint8Array(
-        atob(keyChainEntry.wrappedKey).split("").map(c => c.charCodeAt(0))
-      );
+
+      const wrappedKeyBytes = this.decodeBase64(keyChainEntry.wrappedKey);
 
       const iv = wrappedKeyBytes.slice(0, EcosystemSecurity.IV_SIZE);
       const ciphertext = wrappedKeyBytes.slice(EcosystemSecurity.IV_SIZE);
@@ -334,7 +332,6 @@ export class EcosystemSecurity {
         authKey,
         ciphertext
       );
-
       this.masterKey = await crypto.subtle.importKey(
         "raw",
         mekBytes,
