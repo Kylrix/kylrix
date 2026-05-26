@@ -170,7 +170,7 @@ export default function ProjectDetailPage() {
       } else setCollaborators([]);
 
       if (subProjectIds.length) {
-          const res = await databases.listRows<any>(
+          const res = await (databases as any).listRows(
               APPWRITE_CONFIG.DATABASES.CHAT,
               'projects',
               [Query.equal('$id', subProjectIds)]

@@ -22,6 +22,9 @@ import {
     Fingerprint,
     Eye,
     EyeOff,
+    AlertTriangle,
+    CheckCircle,
+    Shield
 } from "lucide-react";
 import Logo from "@/components/common/Logo";
 import { ecosystemSecurity } from "@/lib/ecosystem/security";
@@ -81,6 +84,70 @@ export default function SudoModal({
     const isKylrixDomain =
         typeof window !== "undefined" &&
         (window.location.hostname === "kylrix.space" || window.location.hostname.endsWith(".kylrix.space"));
+
+    // Migration state
+    const [migrationStatus, setMigrationStatus] = useState<'idle' | 'upgrading' | 'success' | 'error'>('idle');
+    const [migrationProgress, setMigrationProgress] = useState(0);
+    const [isCriticalError, setIsCriticalError] = useState(false);
+    const isMigratingRef = useRef(false);
+    const onSuccessRef = useRef(onSuccess);
+
+    // Keep onSuccessRef updated without triggering useEffect re-runs
+    useEffect(() => {
+        onSuccessRef.current = onSuccess;
+    }, [onSuccess]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        masterPassCrypto.setMigrationCallbacks(
+            () => {
+                isMigratingRef.current = true;
+                setMode("migrating");
+                setMigrationStatus('upgrading');
+                setIsCriticalError(false);
+            },
+            (success) => {
+                setMigrationStatus(success ? 'success' : 'error');
+                if (!success) {
+                    setIsCriticalError(true);
+                    return;
+                }
+                setTimeout(() => {
+                    if (isOpen) {
+                        onSuccessRef.current();
+                        isMigratingRef.current = false;
+                    }
+                }, 1500);
+            }
+        );
+        
+        return () => {
+            if (!isMigratingRef.current) {
+                masterPassCrypto.setMigrationCallbacks(() => {}, () => {});
+            }
+        };
+    }, [isOpen]);
+
+    useEffect(() => {
+        if (migrationStatus !== 'upgrading') {
+            if (migrationStatus === 'success') setMigrationProgress(100);
+            return;
+        }
+        
+        setMigrationProgress(0);
+        const interval = setInterval(() => {
+            setMigrationProgress(prev => {
+                if (prev >= 95) {
+                    clearInterval(interval);
+                    return prev;
+                }
+                return prev + Math.random() * 15;
+            });
+        }, 350);
+        
+        return () => clearInterval(interval);
+    }, [migrationStatus]);
 
     const handleSuccessWithSync = useCallback(async () => {
         if (user?.$id) {

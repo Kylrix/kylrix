@@ -18,6 +18,7 @@ import {
   CircularProgress,
   alpha,
   useTheme,
+  Stack,
 } from '@mui/material';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 import { ID } from 'appwrite';
@@ -107,7 +108,7 @@ export default function ProjectExtractGoalsModal({
       for (const task of selectedTasks) {
         // 1. Create a Flow Task in WhisperrFlow DB
         const taskId = ID.unique();
-        await databases.createRow(
+        await (databases as any).createRow(
           APPWRITE_CONFIG.DATABASES.FLOW,
           APPWRITE_CONFIG.TABLES.FLOW.TASKS,
           taskId,
@@ -143,8 +144,6 @@ export default function ProjectExtractGoalsModal({
       onClose={onClose}
       fullWidth
       maxWidth="sm"
-      keepMounted={false}
-      disablePortal={true}
       PaperProps={{
         sx: {
           bgcolor: '#161412',
