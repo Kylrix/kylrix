@@ -4249,7 +4249,7 @@ export async function createGhostNoteChatSecure(data: {
       title: data.title,
       content: '',
       format: 'markdown',
-      isPublic: true,
+      isPublic: false,
       userId: actor.$id,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -4259,7 +4259,7 @@ export async function createGhostNoteChatSecure(data: {
       isChat: true,
       collaborators: data.participants,
     },
-    permissions: [`read("any")`],
+    permissions: data.participants.map(id => Permission.read(Role.user(id))),
   });
 
   // Create polymorphic Collaborators rows for each participant
@@ -4279,7 +4279,7 @@ export async function createGhostNoteChatSecure(data: {
           invitedAt: new Date().toISOString(),
           accepted: true,
         },
-        permissions: [`read("any")`],
+        permissions: data.participants.map(id => Permission.read(Role.user(id))),
       });
     } catch (e) {
       console.error('[createGhostNoteChat] Failed to add collaborator row:', e);
