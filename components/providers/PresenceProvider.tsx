@@ -44,7 +44,7 @@ export const PresenceProvider = ({ children }: { children: React.ReactNode }) =>
                 activity
             });
         }
-    }, [user?.$id]);
+    }, [user]);
 
     // Handle online/offline lifecycle
     useEffect(() => {

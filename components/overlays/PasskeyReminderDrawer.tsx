@@ -50,7 +50,7 @@ export const PasskeyReminderDrawer: React.FC = () => {
             // Delay slightly to not overwhelm on load
             setTimeout(() => setIsOpen(true), 2500);
         }
-    }, [user?.$id]);
+    }, [user]);
 
     useEffect(() => {
         if (user?.$id) {
