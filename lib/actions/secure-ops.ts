@@ -4329,6 +4329,54 @@ export async function listGhostNoteChatsSecure(jwt?: string) {
   return JSON.parse(JSON.stringify(rows));
 }
 
+export async function deleteGhostThreadSecure(threadId: string, jwt?: string) {
+    const actor = await getActor(jwt);
+    if (!actor || !actor.$id) throw new Error('Unauthorized');
+
+    const tables = createSystemTablesDB();
+    const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
+    const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+
+    // 1. Fetch thread to verify ownership or collaboration
+    const thread = await getRowCached({ databaseId: dbId, tableId, rowId: threadId });
+    if (!thread) throw new Error('Thread not found');
+
+    const isOwner = thread.userId === actor.$id;
+    // Check if actor is a collaborator
+    let isCollaborator = false;
+    try {
+        const collabsRes = await tables.listRows({
+            databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+            tableId: 'Collaborators',
+            queries: [
+                Query.equal('resourceId', threadId),
+                Query.equal('userId', actor.$id)
+            ] as any
+        });
+        isCollaborator = collabsRes.rows.length > 0;
+    } catch {}
+
+    if (!isOwner && !isCollaborator) {
+        throw new Error('Forbidden: Insufficient permissions to delete this thread');
+    }
+
+    // 2. Cascade delete children (comments, reactions, voice files)
+    try {
+        await executeCascadeDeleteSecure(dbId, tableId, threadId);
+    } catch (err) {
+        console.error('[deleteGhostThreadSecure] Cascade cleanup failed:', err);
+    }
+
+    // 3. Delete the thread row itself
+    const result = await tables.deleteRow({
+        databaseId: dbId,
+        tableId: tableId,
+        rowId: threadId,
+    });
+
+    return { success: true, result: JSON.parse(JSON.stringify(result)) };
+}
+
 
 
 

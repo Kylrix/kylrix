@@ -2,11 +2,11 @@
 
 import { Query } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { createSystemTablesDB } from '@/lib/appwrite-admin';
+import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 
 /**
  * Centrally and recursively deletes all connected, linked, or owned child resources
- * when a parent document is deleted, minimizing database roundtrips by using pagination
+ * when a parent row is deleted, minimizing database roundtrips by using pagination
  * and parallel execution.
  */
 export async function executeCascadeDeleteSecure(
@@ -15,6 +15,7 @@ export async function executeCascadeDeleteSecure(
   rowId: string
 ): Promise<void> {
   const tables = createSystemTablesDB();
+  const { storage } = createSystemClient();
   const now = Date.now();
 
   const NOTE_DB = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -33,11 +34,13 @@ export async function executeCascadeDeleteSecure(
   const EVENTS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.EVENTS;
   const GUESTS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.GUESTS;
 
+  const VOICE_BUCKET = APPWRITE_CONFIG.BUCKETS.VOICE || 'voice';
+
   // --- 1. CASCADE FOR NOTES ---
   if (databaseId === NOTE_DB && tableId === NOTE_TABLE) {
     console.log(`[Cascade Delete] Triggered note cascade cleanup for: ${rowId}`);
 
-    // A. Delete Comments & Comment Reactions
+    // A. Delete Comments & Comment Reactions & Voice Files
     try {
       const commentsRes = await tables.listRows({
         databaseId,
@@ -45,9 +48,47 @@ export async function executeCascadeDeleteSecure(
         queries: [Query.equal('noteId', rowId), Query.limit(1000)] as any,
       });
 
-      const commentIds = (commentsRes.rows as any[]).map((c) => c.$id).filter(Boolean);
+      const rows = (commentsRes.rows as any[]) || [];
+      const commentIds = rows.map((c) => c.$id).filter(Boolean);
+
       if (commentIds.length > 0) {
-        // Delete all reactions attached to these comments
+        // --- 1.1 Handle Voice Note Cleanup ---
+        const voiceFileIds: string[] = [];
+        for (const row of rows) {
+            let voiceFileId = null;
+            if (row.isVoice === true) {
+                // If it has the new flag, extract from metadata or content
+                try {
+                    const meta = JSON.parse(row.metadata || '{}');
+                    voiceFileId = meta.voiceFileId;
+                } catch {}
+                if (!voiceFileId && row.content?.startsWith('__voice_note__:')) {
+                    voiceFileId = row.content.substring('__voice_note__:'.length);
+                }
+            } else {
+                // Legacy check
+                try {
+                    const meta = JSON.parse(row.metadata || '{}');
+                    if (meta.type === 'voice') voiceFileId = meta.voiceFileId;
+                } catch {}
+                if (!voiceFileId && row.content?.startsWith('__voice_note__:')) {
+                    voiceFileId = row.content.substring('__voice_note__:'.length);
+                }
+            }
+
+            if (voiceFileId) voiceFileIds.push(voiceFileId);
+        }
+
+        if (voiceFileIds.length > 0) {
+            console.log(`[Cascade Delete] Purging ${voiceFileIds.length} voice notes...`);
+            await Promise.all(voiceFileIds.map(fid => 
+                storage.deleteFile(VOICE_BUCKET, fid).catch(err => {
+                    console.warn(`[Cascade Delete] Failed to delete voice file ${fid}:`, err?.message);
+                })
+            ));
+        }
+
+        // --- 1.2 Delete Reactions attached to these comments ---
         try {
           const reactionsRes = await tables.listRows({
             databaseId,
