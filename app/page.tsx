@@ -166,8 +166,6 @@ const AppSwitcherFab = React.memo(function AppSwitcherFab({ onOpenApp }: { onOpe
   const reduceMotion = useReducedMotion();
   const theme = useTheme();
 
-  if (isDrawerOpen) return null;
-
   const items = useMemo(
     () =>
       appOrder
@@ -175,6 +173,8 @@ const AppSwitcherFab = React.memo(function AppSwitcherFab({ onOpenApp }: { onOpe
         .filter((app): app is (typeof ECOSYSTEM_APPS)[number] => Boolean(app)),
     [],
   );
+
+  if (isDrawerOpen) return null;
 
   return (
     <Box

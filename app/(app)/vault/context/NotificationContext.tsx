@@ -82,7 +82,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user?.$id) return;
 
-    const channel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${...}.documents`;
+    const channel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.app_activity.documents`;
     
     const unsub = realtime.subscribe(channel, (response) => {
       const payload = response.payload as ActivityLog;

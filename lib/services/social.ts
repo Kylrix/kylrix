@@ -544,8 +544,8 @@ export const SocialService = {
     },
 
     subscribeToFeed(callback: (event: { type: 'create' | 'update' | 'delete', payload: any }) => void) {
-        const momentsChannel = `databases.${DB_ID}.collections.${...}.documents`;
-        const interactionsChannel = `databases.${DB_ID}.collections.${...}.documents`;
+        const momentsChannel = `databases.${DB_ID}.collections.${MOMENTS_TABLE}.documents`;
+        const interactionsChannel = `databases.${DB_ID}.collections.${INTERACTIONS_TABLE}.documents`;
 
         const unsubMomentsPromise = realtime.subscribe(momentsChannel, (response) => {
             const payload = response.payload;

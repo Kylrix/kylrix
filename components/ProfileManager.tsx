@@ -15,7 +15,8 @@ import {
   alpha,
   IconButton,
   Switch,
-  FormControlLabel
+  FormControlLabel,
+  Paper
 } from '@mui/material';
 import {
   Delete as DeleteIcon,

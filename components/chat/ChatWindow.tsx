@@ -884,7 +884,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         let unsub: any;
         const initRealtime = async () => {
             unsub = await realtime.subscribe(
-                [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${...}.documents`],
+                [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`],
                 async (response) => {
                     const payload = response.payload as ChatMessage;
                     if (payload.conversationId === conversationId) {
@@ -968,7 +968,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         let unsub: any;
         const initRealtime = async () => {
             unsub = await realtime.subscribe(
-                [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${...}.documents`],
+                [`databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`],
                 async (response) => {
                     const payload = response.payload as Partial<ChatReaction>;
                     if (payload?.conversationId !== conversationId) return;
