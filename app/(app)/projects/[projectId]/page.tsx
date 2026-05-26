@@ -1348,6 +1348,8 @@ function ResourceItem({
             </Stack>
         </Paper>
     );
+}
+
 export function ProjectDiscussionTab({ project, fetchProjectData, user }: ProjectDiscussionTabProps) {
   const { showSuccess, showError } = useToast();
   const [activeMode, setActiveMode] = useState<'huddle' | 'private'>('huddle');
@@ -1397,11 +1399,71 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
     return () => {
       if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
       if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
     };
   }, []);
+
+  // Touch long press state/refs
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = React.useCallback((e: React.TouchEvent, msg: any) => {
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    const currentTarget = e.currentTarget as HTMLElement;
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      setMessageAnchorEl({ el: currentTarget, msg });
+      if (navigator.vibrate) navigator.vibrate(10);
+    }, 600);
+  }, []);
+
+  const handleTouchMove = React.useCallback((e: React.TouchEvent) => {
+    if (!touchStartPosRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartPosRef.current.x;
+    const dy = touch.clientY - touchStartPosRef.current.y;
+    if (Math.sqrt(dx * dx + dy * dy) > 10) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      touchStartPosRef.current = null;
+    }
+  }, []);
+
+  const handleTouchEnd = React.useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    touchStartPosRef.current = null;
+  }, []);
+
+  const handleMessageClick = React.useCallback((e: React.MouseEvent, msg: any) => {
+    e.stopPropagation();
+    if (msg.parentCommentId) {
+      const parent = messages.find(m => m.id === msg.parentCommentId);
+      if (parent) {
+        setActiveThreadParent(parent);
+      }
+    } else {
+      setActiveThreadParent(msg);
+    }
+  }, [messages]);
+
+  // Keep activeThreadParent fresh in real-time when messages change
+  useEffect(() => {
+    if (activeThreadParent) {
+      const freshParent = messages.find(m => m.id === activeThreadParent.id);
+      if (freshParent) {
+        setActiveThreadParent(freshParent);
+      }
+    }
+  }, [messages, activeThreadParent]);
 
   // Format voice recording seconds into beautiful MM:SS string
   const formatRecordingTime = (secs: number) => {
@@ -1949,9 +2011,10 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                             e.preventDefault();
                             setMessageAnchorEl({ el: e.currentTarget, msg });
                           }}
-                          onClick={(e) => {
-                            setMessageAnchorEl({ el: e.currentTarget, msg });
-                          }}
+                          onClick={(e) => handleMessageClick(e, msg)}
+                          onTouchStart={(e) => handleTouchStart(e, msg)}
+                          onTouchMove={handleTouchMove}
+                          onTouchEnd={handleTouchEnd}
                           sx={{
                             p: parsed.type === 'voice' ? 1.25 : 1.75,
                             borderRadius: isSelf ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
@@ -2250,6 +2313,13 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                       <Paper
                         elevation={0}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setMessageAnchorEl({ el: e.currentTarget, msg: activeThreadParent });
+                        }}
+                        onTouchStart={(e) => handleTouchStart(e, activeThreadParent)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
                         sx={{
                           p: 1.5,
                           borderRadius: '4px 20px 20px 20px',
@@ -2257,6 +2327,11 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                           border: '1px solid #23211F',
                           borderLeft: '3px solid #818CF8',
                           color: '#F5F2ED',
+                          cursor: 'context-menu',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: '#1C1A18'
+                          }
                         }}
                       >
                         {(() => {
@@ -2271,6 +2346,44 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                           );
                         })()}
                       </Paper>
+
+                      {/* Parent message Reactions Badge Group */}
+                      {activeThreadParent.reactions && activeThreadParent.reactions.length > 0 && (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75, alignSelf: 'flex-start' }}>
+                          {Object.entries(
+                            activeThreadParent.reactions.reduce((acc: Record<string, string[]>, r: any) => {
+                              if (!acc[r.emoji]) acc[r.emoji] = [];
+                              acc[r.emoji].push(r.userId);
+                              return acc;
+                            }, {})
+                          ).map(([emoji, userIds]) => {
+                            const hasReacted = userIds.includes(user?.$id);
+                            return (
+                              <Chip
+                                key={emoji}
+                                label={`${emoji} ${userIds.length}`}
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleReact(activeThreadParent.id, emoji);
+                                }}
+                                sx={{
+                                  bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.03)',
+                                  color: hasReacted ? '#818CF8' : 'rgba(255,255,255,0.5)',
+                                  border: `1px solid ${hasReacted ? alpha('#818CF8', 0.3) : 'rgba(255,255,255,0.05)'}`,
+                                  height: 20,
+                                  fontSize: '0.7rem',
+                                  fontWeight: 800,
+                                  cursor: 'pointer',
+                                  '&:hover': {
+                                    bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255,255,255,0.08)'
+                                  }
+                                }}
+                              />
+                            );
+                          })}
+                        </Box>
+                      )}
                     </Box>
                   </Box>
 
@@ -2289,6 +2402,13 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                           </Typography>
                           <Paper
                             elevation={0}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              setMessageAnchorEl({ el: e.currentTarget, msg: reply });
+                            }}
+                            onTouchStart={(e) => handleTouchStart(e, reply)}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
                             sx={{
                               p: parsedReply.type === 'voice' ? 1.25 : 1.75,
                               borderRadius: isSelfReply ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
@@ -2297,7 +2417,13 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                               borderRight: isSelfReply ? '3px solid #6366F1' : '1px solid #23211F',
                               borderLeft: !isSelfReply ? '3px solid #34322F' : '1px solid #23211F',
                               color: isSelfReply ? '#FFFFFF' : '#F5F2ED',
-                              zIndex: 2
+                              cursor: 'context-menu',
+                              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                              zIndex: 2,
+                              '&:hover': {
+                                  transform: 'translateY(-1px)',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                              }
                             }}
                           >
                             {parsedReply.type === 'voice' && parsedReply.voiceFileId ? (
@@ -2308,6 +2434,45 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                               </Typography>
                             )}
                           </Paper>
+
+                          {/* Reply Reactions Badge Group */}
+                          {reply.reactions && reply.reactions.length > 0 && (
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75, alignSelf: isSelfReply ? 'flex-end' : 'flex-start' }}>
+                              {Object.entries(
+                                reply.reactions.reduce((acc: Record<string, string[]>, r: any) => {
+                                  if (!acc[r.emoji]) acc[r.emoji] = [];
+                                  acc[r.emoji].push(r.userId);
+                                  return acc;
+                                }, {})
+                              ).map(([emoji, userIds]) => {
+                                const hasReacted = userIds.includes(user?.$id);
+                                return (
+                                  <Chip
+                                    key={emoji}
+                                    label={`${emoji} ${userIds.length}`}
+                                    size="small"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleReact(reply.id, emoji);
+                                    }}
+                                    sx={{
+                                      bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.03)',
+                                      color: hasReacted ? '#818CF8' : 'rgba(255,255,255,0.5)',
+                                      border: `1px solid ${hasReacted ? alpha('#818CF8', 0.3) : 'rgba(255,255,255,0.05)'}`,
+                                      height: 20,
+                                      fontSize: '0.7rem',
+                                      fontWeight: 800,
+                                      cursor: 'pointer',
+                                      '&:hover': {
+                                        bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255,255,255,0.08)'
+                                      }
+                                    }}
+                                  />
+                                );
+                              })}
+                            </Box>
+                          )}
+
                           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelfReply ? 'right' : 'left', fontWeight: 700 }}>
                             {new Date(reply.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </Typography>
@@ -2475,7 +2640,15 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
               startIcon={<MessageSquare size={14} />}
               onClick={() => {
                 if (messageAnchorEl?.msg) {
-                  setActiveThreadParent(messageAnchorEl.msg);
+                  const msg = messageAnchorEl.msg;
+                  if (msg.parentCommentId) {
+                    const parent = messages.find(m => m.id === msg.parentCommentId);
+                    if (parent) {
+                      setActiveThreadParent(parent);
+                    }
+                  } else {
+                    setActiveThreadParent(msg);
+                  }
                   setMessageAnchorEl(null);
                 }
               }}
