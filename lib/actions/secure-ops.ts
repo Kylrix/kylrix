@@ -3428,7 +3428,75 @@ export async function getRowSecure(databaseId: string, tableId: string, rowId: s
     });
     return JSON.parse(JSON.stringify(res));
   } catch (error: any) {
-    console.error('[getRowSecure] Failed:', error?.message);
+    console.warn('[getRowSecure] User-scoped fetch failed, checking admin fallback for RLS bypass:', error?.message);
+    
+    // Attempt dynamic admin fallback for Chat Conversations or Notes
+    const isChatConv = databaseId === APPWRITE_CONFIG.DATABASES.CHAT && tableId === APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
+    const isNote = databaseId === APPWRITE_CONFIG.DATABASES.NOTE && tableId === APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+    
+    if (isChatConv || isNote) {
+      try {
+        const actor = await getActor(jwt);
+        if (actor?.$id) {
+          const adminTables = createSystemTablesDB();
+          const adminRes = await adminTables.getRow({
+            databaseId,
+            tableId,
+            rowId,
+          });
+          
+          if (adminRes) {
+            let isAuthorized = false;
+            
+            if (isChatConv) {
+              const participants = adminRes.participants || [];
+              if (participants.includes(actor.$id)) {
+                isAuthorized = true;
+              } else {
+                const memberRows = await adminTables.listRows({
+                  databaseId: databaseId,
+                  tableId: 'conversationMembers',
+                  queries: [
+                    Query.equal('conversationId', rowId),
+                    Query.equal('userId', actor.$id),
+                    Query.limit(1)
+                  ]
+                }).catch(() => ({ total: 0, rows: [] }));
+                if (memberRows.total > 0) {
+                  isAuthorized = true;
+                }
+              }
+            } else if (isNote) {
+              const collaborators = adminRes.collaborators || [];
+              if (adminRes.userId === actor.$id || collaborators.includes(actor.$id)) {
+                isAuthorized = true;
+              } else {
+                const collabRows = await adminTables.listRows({
+                  databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+                  tableId: 'Collaborators',
+                  queries: [
+                    Query.equal('resourceId', rowId),
+                    Query.equal('userId', actor.$id),
+                    Query.limit(1)
+                  ]
+                }).catch(() => ({ total: 0, rows: [] }));
+                if (collabRows.total > 0) {
+                  isAuthorized = true;
+                }
+              }
+            }
+            
+            if (isAuthorized) {
+              console.log('[getRowSecure] Admin RLS bypass authorized successfully for user:', actor.$id);
+              return JSON.parse(JSON.stringify(adminRes));
+            }
+          }
+        }
+      } catch (adminErr) {
+        console.error('[getRowSecure] Admin fallback exception:', adminErr);
+      }
+    }
+    
     throw error;
   }
 }

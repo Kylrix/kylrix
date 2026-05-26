@@ -703,12 +703,7 @@ export const ChatWindow = ({ conversationId }: { conversationId: string }) => {
         return () => unsubscribe();
     }, [loadConversation, loadMessages, isUnlocked]);
 
-    useEffect(() => {
-        if (conversationId && conversation?.type === 'direct' && !isSelf) {
-            const otherId = conversation.participants.find((p: string) => p !== user?.$id);
-            if (otherId) getPresence(otherId);
-        }
-    }, [conversationId, conversation, isSelf, user, getPresence]);
+
 
     useEffect(() => {
         if (!messageSenderIds.length) return;
