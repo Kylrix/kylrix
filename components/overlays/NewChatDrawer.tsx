@@ -29,6 +29,7 @@ import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
+import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
 
 const DRAWER_SX = {
     borderTopLeftRadius: '26px',
@@ -62,8 +63,36 @@ export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: (
         if (!user) return;
         const targetUserId = targetUser.id || targetUser.$id;
 
-        if (!isValidPublicKey(targetUser.publicKey)) {
-            toast.error("User hasn't set up secure chatting yet (invalid key).");
+        // Bypassing E2EE if ecosystem is locked OR target user has no valid publicKey
+        if (!ecosystemSecurity.status.isUnlocked || !isValidPublicKey(targetUser.publicKey)) {
+            try {
+                toast.loading('Initializing huddle...', { id: 'ghost-init' });
+                const existingGhosts = await listGhostNoteChats();
+                const foundGhost = existingGhosts.find((c: any) => {
+                    let metadataObj: any = {};
+                    try {
+                        metadataObj = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
+                    } catch {}
+                    const participants = c.collaborators || metadataObj.participants || [];
+                    return participants.includes(targetUserId);
+                });
+
+                if (foundGhost) {
+                    toast.dismiss('ghost-init');
+                    router.push(`/connect/chat/${foundGhost.$id}`);
+                    onClose();
+                    return;
+                }
+
+                const title = targetUser.displayName || targetUser.username || targetUser.title || 'Public Huddle';
+                const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
+                toast.success('Huddle channel ready!', { id: 'ghost-init' });
+                router.push(`/connect/chat/${newGhost.$id}`);
+                onClose();
+            } catch (error: any) {
+                console.error('Failed to create ghost huddle:', error);
+                toast.error(`Failed to create huddle: ${error?.message || 'Unknown error'}`, { id: 'ghost-init' });
+            }
             return;
         }
 
@@ -128,7 +157,7 @@ export function NewChatDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: (
                         onSelect={(u) => setSelectedUsers([u])}
                         onRemove={() => setSelectedUsers([])}
                         multiple={false}
-                        excludeIds={[user?.$id].filter(Boolean)}
+                        excludeIds={user?.$id ? [user.$id] : []}
                     />
                     
                     {!selectedUsers.length && (

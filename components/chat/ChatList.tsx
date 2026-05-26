@@ -25,7 +25,12 @@ import {
     ListItemAvatar,
     Divider,
     Stack,
+    Tabs,
+    Tab,
+    Button,
 } from '@mui/material';
+import ShieldCheckIcon from '@mui/icons-material/ShieldOutlined';
+import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
 import GroupIcon from '@mui/icons-material/GroupWorkOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import BookmarkIcon from '@mui/icons-material/BookmarkOutlined';
@@ -59,7 +64,7 @@ const GlobalSearchAvatar = ({ u }: { u: any }) => {
 export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => {
     const { user } = useAuth();
     const { unreadConversations } = useChatNotifications();
-    const { presence: globalPresence } = usePresence();
+    const { globalPresence } = usePresence();
     const router = useRouter();
     const { requestSudo } = useSudo();
     const [conversations, setConversations] = useState<any[]>([]);
@@ -80,6 +85,19 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
     }>>({});
     const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
+    const [activeTab, setActiveTab] = useState<'secure' | 'public'>(() => {
+        return ecosystemSecurity.status.isUnlocked ? 'secure' : 'public';
+    });
+    const [ghostConversations, setGhostConversations] = useState<any[]>([]);
+    const [loadingGhost, setLoadingGhost] = useState(false);
+
+    useEffect(() => {
+        if (isUnlocked) {
+            setActiveTab('secure');
+        } else {
+            setActiveTab('public');
+        }
+    }, [isUnlocked]);
 
     useEffect(() => {
         rememberConversationRoster(conversations);
@@ -88,6 +106,82 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
     useEffect(() => () => {
         rememberConversationRoster([]);
     }, []);
+
+    const loadGhostConversations = React.useCallback(async () => {
+        if (!user) return;
+        setLoadingGhost(true);
+        try {
+            console.log('[ChatList] Loading ghost huddle chats...');
+            const results = await listGhostNoteChats();
+            console.log('[ChatList] Loaded ghost huddle chats count:', results.length);
+            
+            const mapped = await Promise.all(results.map(async (note: any) => {
+                let metadataObj: any = {};
+                try {
+                    metadataObj = typeof note.metadata === 'string' ? JSON.parse(note.metadata) : (note.metadata || {});
+                } catch (e) {
+                    metadataObj = {};
+                }
+
+                const participants = note.collaborators || metadataObj.participants || [];
+                const otherId = participants.find((p: string) => p !== user.$id);
+                
+                let otherName = 'Public Huddle';
+                let avatarUrl = null;
+                
+                if (otherId) {
+                    const cachedOther = getCachedIdentityById(otherId);
+                    if (cachedOther) {
+                        otherName = cachedOther.displayName || cachedOther.username || `@${otherId.slice(0, 7)}`;
+                        avatarUrl = cachedOther.avatar || null;
+                    } else {
+                        try {
+                            const profile = await UsersService.getProfileById(otherId);
+                            if (profile) {
+                                if (profile.avatar?.startsWith?.('http')) {
+                                    avatarUrl = profile.avatar;
+                                } else if (profile.avatar) {
+                                    try {
+                                        avatarUrl = await fetchProfilePreview(profile.avatar, 64, 64) as unknown as string;
+                                    } catch (_e) {}
+                                }
+                                seedIdentityCache({ ...profile, avatar: profile.avatar || avatarUrl });
+                                otherName = profile.displayName || profile.username || `@${otherId.slice(0, 7)}`;
+                            }
+                        } catch (err) {
+                            console.warn('[ChatList] Failed to resolve huddle other identity:', err);
+                        }
+                    }
+                }
+
+                return {
+                    ...note,
+                    otherUserId: otherId,
+                    name: otherName,
+                    avatarUrl,
+                    isGhostChat: true,
+                    lastMessageText: note.content || 'Public huddle discussion initialized',
+                    lastMessageAt: note.updatedAt || note.$createdAt,
+                };
+            }));
+
+            mapped.sort((a: any, b: any) => new Date(b.lastMessageAt || 0).getTime() - new Date(a.lastMessageAt || 0).getTime());
+            
+            startTransition(() => {
+                setGhostConversations(mapped);
+            });
+        } catch (error) {
+            console.error('Failed to load ghost huddles:', error);
+        } finally {
+            setLoadingGhost(false);
+        }
+    }, [user, startTransition]);
+
+    useEffect(() => {
+        if (activeTab === 'public') {
+            loadGhostConversations();
+        }
+    }, [activeTab, loadGhostConversations]);
 
     // Sync external query to local search
     useEffect(() => {
@@ -148,8 +242,34 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
         if (!user) return;
         const targetUserId = targetUser.userId || targetUser.$id;
 
-        if (!targetUser.publicKey) {
-            toast.error(`${targetUser.displayName || targetUser.username} hasn't set up their account for secure chatting yet.`);
+        // If E2EE is locked, OR the target user has no publicKey, OR we are in the Public Huddles tab, start a Public Huddle chat
+        if (!isUnlocked || !targetUser.publicKey || activeTab === 'public') {
+            try {
+                toast.loading('Initializing huddle...', { id: 'ghost-init' });
+                const existingGhosts = await listGhostNoteChats();
+                const foundGhost = existingGhosts.find((c: any) => {
+                    let metadataObj: any = {};
+                    try {
+                        metadataObj = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {});
+                    } catch {}
+                    const participants = c.collaborators || metadataObj.participants || [];
+                    return participants.includes(targetUserId);
+                });
+
+                if (foundGhost) {
+                    toast.dismiss('ghost-init');
+                    router.push(`/connect/chat/${foundGhost.$id}`);
+                    return;
+                }
+
+                const title = targetUser.displayName || targetUser.username || 'Public Huddle';
+                const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
+                toast.success('Huddle channel ready!', { id: 'ghost-init' });
+                router.push(`/connect/chat/${newGhost.$id}`);
+            } catch (error: any) {
+                console.error('Failed to create huddle:', error);
+                toast.error(`Failed: ${error?.message || 'Unknown error'}`, { id: 'ghost-init' });
+            }
             return;
         }
 
@@ -463,11 +583,19 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
         if (!user) return;
 
         loadConversations();
+        if (activeTab === 'public') {
+            loadGhostConversations();
+        }
 
         const conversationChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS}.documents`;
         const messageChannel = `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.MESSAGES}.documents`;
+        const noteChannel = `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.${APPWRITE_CONFIG.TABLES.NOTE.NOTES}.documents`;
 
-        const subscription: any = realtime.subscribe([conversationChannel, messageChannel], async (response) => {
+        const subscription: any = realtime.subscribe([conversationChannel, messageChannel, noteChannel], async (response) => {
+            if (response.channels.some(ch => ch.includes(APPWRITE_CONFIG.TABLES.NOTE.NOTES))) {
+                loadGhostConversations();
+                return;
+            }
             const payload = response.payload;
             const isConversationEvent = Array.isArray(payload?.participants);
             const relatedConversationId = isConversationEvent ? payload?.$id : payload?.conversationId;
@@ -604,11 +732,57 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
         c.name?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const hasNoConversations = filteredConversations.length === 0;
+    const filteredGhostConversations = ghostConversations.filter(c =>
+        c.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     const showGlobalResults = searchQuery.length >= 2 && searchResults.length > 0;
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            {/* Elegant Pill Tab Switcher */}
+            <Box sx={{ 
+                bgcolor: '#161412',
+                borderRadius: '16px', 
+                p: 0.5,
+                width: 'fit-content',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                mb: 4
+            }}>
+                <Tabs 
+                    value={activeTab} 
+                    onChange={(_, v) => setActiveTab(v)}
+                    aria-label="chat type tabs"
+                    sx={{
+                        minHeight: 40,
+                        '& .MuiTabs-indicator': {
+                            display: 'none',
+                        },
+                        '& .MuiTab-root': {
+                            minHeight: 40,
+                            borderRadius: '12px',
+                            textTransform: 'none',
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            px: 3,
+                            transition: 'all 0.2s ease',
+                            '&.Mui-selected': {
+                                color: 'white',
+                                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                            },
+                            '&:hover': {
+                                color: 'white',
+                                bgcolor: 'rgba(255, 255, 255, 0.04)',
+                            }
+                        }
+                    }}
+                >
+                    <Tab value="secure" label="Secure Chat (E2EE)" />
+                    <Tab value="public" label="Public Huddles" />
+                </Tabs>
+            </Box>
+
             <Box sx={{ flex: 1 }}>
                 {showGlobalResults && (
                     <Box sx={{ mb: 4 }}>
@@ -618,7 +792,14 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
                         <List sx={{ pt: 0 }}>
                             {searchResults.map((u) => {
                                 const targetId = u.userId || u.$id;
-                                const hasChat = conversations.some(c => c.type === 'direct' && c.participants?.includes(targetId));
+                                const hasChat = activeTab === 'secure' 
+                                    ? conversations.some(c => c.type === 'direct' && c.participants?.includes(targetId))
+                                    : ghostConversations.some(c => {
+                                        let metaObj: any = {};
+                                        try { metaObj = typeof c.metadata === 'string' ? JSON.parse(c.metadata) : (c.metadata || {}); } catch {}
+                                        const participants = c.collaborators || metaObj.participants || [];
+                                        return participants.includes(targetId);
+                                    });
                                 return (
                                     <ListItem key={u.$id} disablePadding sx={{ mb: 1 }}>
                                         <ListItemButton
@@ -663,135 +844,247 @@ export const ChatList = ({ externalQuery = '' }: { externalQuery?: string }) => 
                     </Box>
                 )}
 
-                {hasNoConversations && !showGlobalResults ? (
-                    <Box sx={{ p: 6, textAlign: 'center' }}>
-                        <Typography sx={{ fontWeight: 900, color: '#fff', fontSize: '1.1rem', mb: 1, fontFamily: 'var(--font-clash)' }}>Quiet Frequency</Typography>
-                        <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500 }}>No encrypted channels found matching your query.</Typography>
-                    </Box>
-                ) : (
-                    <List sx={{ pt: 0 }}>
-                        {filteredConversations.map((conv) => (
-                            <ListItem key={conv.$id} disablePadding sx={{ mb: 1 }}>
-                                <ListItemButton
-                                    component={Link}
-                                    href={`/connect/chat/${conv.$id}`}
-                                sx={{
-                                        borderRadius: '24px',
-                                        py: 2.5,
-                                        mb: 1.5,
-                                        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                                        bgcolor: '#161412',
-                                        border: '1px solid #1C1A18',
-                                        boxShadow: `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px ${alpha('#252321', 0.9)}`,
-                                        ...(activePreviewConversationId === conv.$id ? {
-                                            borderColor: '#F59E0B',
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px ${alpha('#252321', 1.0)}`,
-                                        } : {}),
-                                        '&:hover': {
-                                            bgcolor: '#1C1A18',
-                                            borderColor: alpha('#F59E0B', 0.2),
-                                            transform: 'translateY(-2px)',
-                                            boxShadow: `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px ${alpha('#252321', 1.0)}`,
-                                        }
+                {activeTab === 'secure' ? (
+                    !isUnlocked ? (
+                        <Box sx={{ minHeight: '50vh', display: 'grid', placeItems: 'center', px: 3, py: 4 }}>
+                            <Stack spacing={3} alignItems="center" sx={{ maxWidth: 420, textAlign: 'center' }}>
+                                <Box sx={{ p: 2, borderRadius: '24px', bgcolor: '#161412', color: '#F59E0B', border: '1px solid #1C1A18', mb: 1 }}>
+                                    <ShieldCheckIcon sx={{ fontSize: 48 }} />
+                                </Box>
+                                <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>Vault Secured</Typography>
+                                <Typography sx={{ color: '#9B9691', fontWeight: 500, lineHeight: 1.6, fontSize: '0.9rem' }}>
+                                    Unlock your decentralized node to initialize secure communication channels and identity resolution.
+                                </Typography>
+                                <Button 
+                                    variant="contained" 
+                                    onClick={() => requestSudo({ onSuccess: () => setIsUnlocked(true) })}
+                                    sx={{ 
+                                        borderRadius: '16px', 
+                                        px: 4, 
+                                        py: 1.8, 
+                                        fontWeight: 900,
+                                        bgcolor: '#F59E0B',
+                                        color: '#000',
+                                        textTransform: 'none',
+                                        fontSize: '0.95rem',
+                                        boxShadow: '0 12px 24px rgba(245, 158, 11, 0.15)',
+                                        '&:hover': { bgcolor: '#eab308', transform: 'translateY(-2px)' },
+                                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                                     }}
                                 >
-                                        <Box
-                                            component="span"
-                                            role="button"
-                                            tabIndex={0}
-                                            onClick={(event) => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                setSelectedConversation(conv);
+                                    Unlock Node
+                                </Button>
+                            </Stack>
+                        </Box>
+                    ) : filteredConversations.length === 0 && !showGlobalResults ? (
+                        <Box sx={{ p: 6, textAlign: 'center' }}>
+                            <Typography sx={{ fontWeight: 900, color: '#fff', fontSize: '1.1rem', mb: 1, fontFamily: 'var(--font-clash)' }}>Quiet Frequency</Typography>
+                            <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500 }}>No encrypted channels found matching your query.</Typography>
+                        </Box>
+                    ) : (
+                        <List sx={{ pt: 0 }}>
+                            {filteredConversations.map((conv) => (
+                                <ListItem key={conv.$id} disablePadding sx={{ mb: 1 }}>
+                                    <ListItemButton
+                                        component={Link}
+                                        href={`/connect/chat/${conv.$id}`}
+                                    sx={{
+                                            borderRadius: '24px',
+                                            py: 2.5,
+                                            mb: 1.5,
+                                            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                                            bgcolor: '#161412',
+                                            border: '1px solid #1C1A18',
+                                            boxShadow: `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px ${alpha('#252321', 0.9)}`,
+                                            ...(activePreviewConversationId === conv.$id ? {
+                                                borderColor: '#F59E0B',
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px ${alpha('#252321', 1.0)}`,
+                                            } : {}),
+                                            '&:hover': {
+                                                bgcolor: '#1C1A18',
+                                                borderColor: alpha('#F59E0B', 0.2),
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px ${alpha('#252321', 1.0)}`,
+                                            }
+                                        }}
+                                    >
+                                            <Box
+                                                component="span"
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(event) => {
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    setSelectedConversation(conv);
+                                                }}
+                                                onKeyDown={(event) => {
+                                                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                                                    event.preventDefault();
+                                                    event.stopPropagation();
+                                                    setSelectedConversation(conv);
+                                                }}
+                                                sx={{
+                                                    mr: 2,
+                                                    display: 'inline-flex',
+                                                    cursor: 'pointer',
+                                                }}
+                                            >
+                                                <IdentityAvatar
+                                                    src={conv.avatarUrl || conv.avatar || null}
+                                                    alt={conv.name}
+                                                    fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U'}
+                                                    size={48}
+                                                    pro={conv.isSelf}
+                                                    status={conv.type === 'direct' && conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
+                                                />
+                                            </Box>
+                                        <ListItemText
+                                            primary={conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Group Chat')}
+                                            secondary={
+                                                (() => {
+                                                    const memoryPreview = ChatService.getConversationPreviewSnapshot(conv.$id);
+                                                    const memoryAt = memoryPreview?.lastMessageAt ? new Date(memoryPreview.lastMessageAt).getTime() : -1;
+                                                    const rowAt = conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : -1;
+                                                    const memoryText = memoryPreview && (memoryAt >= rowAt || !conv.lastMessageText)
+                                                        ? memoryPreview.lastMessageText
+                                                        : null;
+                                                    const resolvedPreview = livePreviewByConversation[conv.$id]?.lastMessageText || memoryText || conv.lastMessageText || 'No messages yet';
+
+                                                    return (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(resolvedPreview)) ? (
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                        <LockIcon sx={{ fontSize: 12, color: '#9B9691' }} />
+                                                        <span>Secured Payload</span>
+                                                    </Box>
+                                                    ) : resolvedPreview;
+                                                })()
+                                            }
+                                            primaryTypographyProps={{
+                                                fontWeight: 800,
+                                                fontSize: '1rem',
+                                                color: conv.isSelf ? '#F59E0B' : '#fff',
+                                                fontFamily: 'var(--font-clash)',
+                                                letterSpacing: '-0.01em'
                                             }}
-                                            onKeyDown={(event) => {
-                                                if (event.key !== 'Enter' && event.key !== ' ') return;
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                setSelectedConversation(conv);
+                                            secondaryTypographyProps={{
+                                                noWrap: true,
+                                                fontSize: '0.85rem',
+                                                sx: { color: '#9B9691', mt: 0.5, fontWeight: 500 }
                                             }}
-                                            sx={{
-                                                mr: 2,
-                                                display: 'inline-flex',
-                                                cursor: 'pointer',
-                                            }}
-                                        >
+                                        />
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1.5, ml: 1 }}>
+                                            {conv.lastMessageAt && (
+                                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#9B9691', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
+                                                    {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                </Typography>
+                                            )}
+                                            {conv.lastMessageAt && conv.lastMessageId && !conv.isSelf && (() => {
+                                                const readAt = getConversationReadAt(user?.$id, conv.$id);
+                                                const isUnread = unreadConversations.has(conv.$id) || (
+                                                    conv.lastMessageSenderId !== user?.$id &&
+                                                    new Date(conv.lastMessageAt).getTime() > readAt
+                                                );
+                                                return isUnread ? (
+                                                    <Badge 
+                                                        variant="dot" 
+                                                        sx={{ 
+                                                            '& .MuiBadge-badge': { 
+                                                                bgcolor: '#F59E0B',
+                                                                boxShadow: '0 0 12px rgba(245, 158, 11, 0.4)',
+                                                                width: 10,
+                                                                height: 10,
+                                                                borderRadius: '50%'
+                                                            } 
+                                                        }} 
+                                                    />
+                                                ) : null;
+                                            })()}
+                                        </Box>
+                                    </ListItemButton>
+                                </ListItem>
+                            ))}
+                        </List>
+                    )
+                ) : (
+                    loadingGhost && filteredGhostConversations.length === 0 ? (
+                        <Box sx={{ p: 2 }}>
+                            <Stack spacing={1.5}>
+                                {[1, 2, 3].map((i) => (
+                                    <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1 }}>
+                                        <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                                        <Box sx={{ flex: 1 }}>
+                                            <Skeleton width="55%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                                            <Skeleton width="35%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                                        </Box>
+                                    </Box>
+                                ))}
+                            </Stack>
+                        </Box>
+                    ) : filteredGhostConversations.length === 0 && !showGlobalResults ? (
+                        <Box sx={{ p: 6, textAlign: 'center' }}>
+                            <Typography sx={{ fontWeight: 900, color: '#fff', fontSize: '1.1rem', mb: 1, fontFamily: 'var(--font-clash)' }}>Quiet Airwaves</Typography>
+                            <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 500 }}>No public huddle discussions active matching your query.</Typography>
+                        </Box>
+                    ) : (
+                        <List sx={{ pt: 0 }}>
+                            {filteredGhostConversations.map((conv) => (
+                                <ListItem key={conv.$id} disablePadding sx={{ mb: 1 }}>
+                                    <ListItemButton
+                                        component={Link}
+                                        href={`/connect/chat/${conv.$id}`}
+                                        sx={{
+                                            borderRadius: '24px',
+                                            py: 2.5,
+                                            mb: 1.5,
+                                            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                                            bgcolor: '#161412',
+                                            border: '1px solid #1C1A18',
+                                            boxShadow: `0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px ${alpha('#252321', 0.9)}`,
+                                            '&:hover': {
+                                                bgcolor: '#1C1A18',
+                                                borderColor: alpha('#F59E0B', 0.2),
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: `0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px ${alpha('#252321', 1.0)}`,
+                                            }
+                                        }}
+                                    >
+                                        <Box sx={{ mr: 2, display: 'inline-flex' }}>
                                             <IdentityAvatar
-                                                src={conv.avatarUrl || conv.avatar || null}
+                                                src={conv.avatarUrl}
                                                 alt={conv.name}
-                                                fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'U'}
+                                                fallback={conv.name?.replace(/^@/, '').charAt(0).toUpperCase() || 'H'}
                                                 size={48}
-                                                pro={conv.isSelf}
-                                                status={conv.type === 'direct' && conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
+                                                status={conv.otherUserId ? globalPresence?.[conv.otherUserId]?.state : undefined}
                                             />
                                         </Box>
-                                    <ListItemText
-                                        primary={conv.name || (conv.type === 'direct' ? conv.otherUserId : 'Group Chat')}
-                                        secondary={
-                                            (() => {
-                                                const memoryPreview = ChatService.getConversationPreviewSnapshot(conv.$id);
-                                                const memoryAt = memoryPreview?.lastMessageAt ? new Date(memoryPreview.lastMessageAt).getTime() : -1;
-                                                const rowAt = conv.lastMessageAt ? new Date(conv.lastMessageAt).getTime() : -1;
-                                                const memoryText = memoryPreview && (memoryAt >= rowAt || !conv.lastMessageText)
-                                                    ? memoryPreview.lastMessageText
-                                                    : null;
-                                                const resolvedPreview = livePreviewByConversation[conv.$id]?.lastMessageText || memoryText || conv.lastMessageText || 'No messages yet';
-
-                                                return (conv.isEncrypted && !isUnlocked && isLikelyEncrypted(resolvedPreview)) ? (
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                    <LockIcon sx={{ fontSize: 12, color: '#9B9691' }} />
-                                                    <span>Secured Payload</span>
-                                                </Box>
-                                                ) : resolvedPreview;
-                                            })()
-                                        }
-                                        primaryTypographyProps={{
-                                            fontWeight: 800,
-                                            fontSize: '1rem',
-                                            color: conv.isSelf ? '#F59E0B' : '#fff',
-                                            fontFamily: 'var(--font-clash)',
-                                            letterSpacing: '-0.01em'
-                                        }}
-                                        secondaryTypographyProps={{
-                                            noWrap: true,
-                                            fontSize: '0.85rem',
-                                            sx: { color: '#9B9691', mt: 0.5, fontWeight: 500 }
-                                        }}
-                                    />
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1.5, ml: 1 }}>
-                                        {conv.lastMessageAt && (
-                                            <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#9B9691', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
-                                                {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                                            </Typography>
-                                        )}
-                                        {/* Show unread only when the conversation has not been locally marked read */}
-                                        {conv.lastMessageAt && conv.lastMessageId && !conv.isSelf && (() => {
-                                            const readAt = getConversationReadAt(user?.$id, conv.$id);
-                                            const isUnread = unreadConversations.has(conv.$id) || (
-                                                conv.lastMessageSenderId !== user?.$id &&
-                                                new Date(conv.lastMessageAt).getTime() > readAt
-                                            );
-                                            return isUnread ? (
-                                                <Badge 
-                                                    variant="dot" 
-                                                    sx={{ 
-                                                        '& .MuiBadge-badge': { 
-                                                            bgcolor: '#F59E0B',
-                                                            boxShadow: '0 0 12px rgba(245, 158, 11, 0.4)',
-                                                            width: 10,
-                                                            height: 10,
-                                                            borderRadius: '50%'
-                                                        } 
-                                                    }} 
-                                                />
-                                            ) : null;
-                                        })()}
-                                    </Box>
-                                </ListItemButton>
-                            </ListItem>
-                        ))}
-                    </List>
+                                        <ListItemText
+                                            primary={conv.name}
+                                            secondary={conv.lastMessageText}
+                                            primaryTypographyProps={{
+                                                fontWeight: 800,
+                                                fontSize: '1rem',
+                                                color: '#fff',
+                                                fontFamily: 'var(--font-clash)',
+                                                letterSpacing: '-0.01em'
+                                            }}
+                                            secondaryTypographyProps={{
+                                                noWrap: true,
+                                                fontSize: '0.85rem',
+                                                sx: { color: '#9B9691', mt: 0.5, fontWeight: 500 }
+                                            }}
+                                        />
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1.5, ml: 1 }}>
+                                            {conv.lastMessageAt && (
+                                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: '#9B9691', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
+                                                    {new Date(conv.lastMessageAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    </ListItemButton>
+                                </ListItem>
+                            ))}
+                        </List>
+                    )
                 )}
             </Box>
 

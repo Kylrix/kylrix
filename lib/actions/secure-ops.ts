@@ -4151,6 +4151,137 @@ export async function getResourceTagsSecure(
   return JSON.parse(JSON.stringify(pivotRes.rows));
 }
 
+export async function createGhostNoteChatSecure(data: {
+  title: string;
+  participants: string[];
+  jwt?: string;
+}) {
+  const actor = await getActor(data.jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const expiresAt = new Date(Date.now() + 100 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 100 years
+  const metadata = JSON.stringify({
+    isGhost: true,
+    version: 'v2',
+    isChat: true,
+    expiresAt: expiresAt,
+    linkedResourceType: 'chat',
+    participants: data.participants,
+  });
+
+  const tables = createSystemTablesDB();
+  const result = await tables.createRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    rowId: ID.unique(),
+    data: {
+      title: data.title,
+      content: '',
+      format: 'markdown',
+      isPublic: true,
+      userId: actor.$id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      metadata,
+      isGhost: true,
+      isThread: true,
+      isChat: true,
+      collaborators: data.participants,
+    },
+    permissions: [`read("any")`],
+  });
+
+  // Create polymorphic Collaborators rows for each participant
+  for (const participantId of data.participants) {
+    if (participantId === actor.$id) continue;
+    try {
+      await tables.createRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+        tableId: 'Collaborators',
+        rowId: ID.unique(),
+        data: {
+          resourceId: result.$id,
+          resourceType: 'note',
+          userId: participantId,
+          permission: 'write',
+          status: 'accepted',
+          invitedAt: new Date().toISOString(),
+          accepted: true,
+        },
+        permissions: [`read("any")`],
+      });
+    } catch (e) {
+      console.error('[createGhostNoteChat] Failed to add collaborator row:', e);
+    }
+  }
+
+  return JSON.parse(JSON.stringify(result));
+}
+
+export async function listGhostNoteChatsSecure(jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const tables = createSystemTablesDB();
+  
+  // 1. Fetch notes created by the current user
+  const ownedRes = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+    tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+    queries: [
+      Query.equal('isGhost', true),
+      Query.equal('isChat', true),
+      Query.equal('userId', actor.$id),
+      Query.limit(100)
+    ]
+  }).catch(() => ({ rows: [] }));
+
+  // 2. Fetch notes where the user is a collaborator
+  const collabRes = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: 'Collaborators',
+    queries: [
+      Query.equal('resourceType', 'note'),
+      Query.equal('userId', actor.$id),
+      Query.limit(200)
+    ]
+  }).catch(() => ({ rows: [] }));
+
+  const sharedNoteIds = collabRes.rows.map((c: any) => c.resourceId);
+  let sharedNotes: any[] = [];
+  
+  if (sharedNoteIds.length > 0) {
+    const sharedRes = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.NOTE,
+      tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES,
+      queries: [
+        Query.equal('$id', sharedNoteIds),
+        Query.equal('isGhost', true),
+        Query.equal('isChat', true),
+        Query.limit(100)
+      ]
+    }).catch(() => ({ rows: [] }));
+    sharedNotes = sharedRes.rows;
+  }
+
+  // Combine and deduplicate
+  const allNotes = [...ownedRes.rows, ...sharedNotes];
+  const uniqueNotesMap = new Map();
+  for (const note of allNotes) {
+    uniqueNotesMap.set(note.$id, note);
+  }
+  
+  const uniqueNotes = Array.from(uniqueNotesMap.values());
+  // Sort by updatedAt descending
+  uniqueNotes.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+
+  return JSON.parse(JSON.stringify(uniqueNotes));
+}
+
 
 
 

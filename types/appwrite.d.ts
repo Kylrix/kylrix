@@ -189,6 +189,7 @@ export type Notes = Models.Row & {
     format: string | null;
     isGhost: boolean;
     isThread: boolean;
+    isChat?: boolean;
     isPinned: boolean | null;
 }
 

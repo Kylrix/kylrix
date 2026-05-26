@@ -45,7 +45,9 @@ import {
   promoteGhostResourceThreadToStorySecure,
   tagResourceSecure,
   untagResourceSecure,
-  getResourceTagsSecure
+  getResourceTagsSecure,
+  createGhostNoteChatSecure,
+  listGhostNoteChatsSecure
 } from './secure-ops';
 
 // Helper to fetch JWT securely from client-side SDK
@@ -304,6 +306,16 @@ export async function getResourceTags(
 ) {
   const jwt = await getJwt();
   return getResourceTagsSecure(resourceId, resourceType, jwt);
+}
+
+export async function createGhostNoteChat(title: string, participants: string[]) {
+  const jwt = await getJwt();
+  return createGhostNoteChatSecure({ title, participants, jwt });
+}
+
+export async function listGhostNoteChats() {
+  const jwt = await getJwt();
+  return listGhostNoteChatsSecure(jwt);
 }
 
 

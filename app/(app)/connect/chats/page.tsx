@@ -113,7 +113,13 @@ export default function Home() {
           { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') }]
       });
     } else {
-      setConfiguration({ isVisible: false });
+      setConfiguration({
+        isVisible: true,
+        mainColor: '#F59E0B',
+        actions: [
+          { id: 'huddle', label: 'NEW HUDDLE', icon: <Phone size={20} />, onClick: () => openUnified('new-chat') }
+        ]
+      });
     }
     return () => resetConfiguration();
   }, [isUnlocked, setConfiguration, resetConfiguration, router, openUnified]);
@@ -125,11 +131,10 @@ export default function Home() {
     return unsubscribe;
   }, []);
 
+  // Removed aggressive auto-prompt to allow browsing public huddles frictionless
   useEffect(() => {
-    if (!isUnlocked) {
-      requestSudo({ onSuccess: () => setIsUnlocked(true) });
-    }
-  }, [isUnlocked, requestSudo]);
+    // No automatic prompt on load
+  }, []);
 
   return (
     <Box sx={{ 
@@ -145,59 +150,26 @@ export default function Home() {
           <ChatHandler />
         </Suspense>
         
-        {isUnlocked ? (
-          <Box sx={{ px: { xs: 2, md: 6 } }}>
-            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
-              <IconButton 
-                onClick={() => router.back()} 
-                sx={{ 
-                  color: '#fff', 
-                  bgcolor: '#161412',
-                  border: '1px solid #1C1A18',
-                  '&:hover': { bgcolor: '#1C1A18' }
-                }}
-              >
-                <ArrowLeft size={20} />
-              </IconButton>
-              <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
-                Chats
-              </Typography>
-            </Stack>
+        <Box sx={{ px: { xs: 2, md: 6 } }}>
+          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
+            <IconButton 
+              onClick={() => router.back()} 
+              sx={{ 
+                color: '#fff', 
+                bgcolor: '#161412',
+                border: '1px solid #1C1A18',
+                '&:hover': { bgcolor: '#1C1A18' }
+              }}
+            >
+              <ArrowLeft size={20} />
+            </IconButton>
+            <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+              Connect Chats
+            </Typography>
+          </Stack>
 
-            <ChatList />
-          </Box>
-        ) : (
-          <Box sx={{ minHeight: '80vh', display: 'grid', placeItems: 'center', px: 3 }}>
-            <Stack spacing={3} alignItems="center" sx={{ maxWidth: 420, textAlign: 'center' }}>
-                <Box sx={{ p: 2, borderRadius: '24px', bgcolor: '#161412', color: '#F59E0B', border: '1px solid #1C1A18', mb: 1 }}>
-                    <ShieldCheck size={48} strokeWidth={1.5} />
-                </Box>
-              <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>Vault Secured</Typography>
-              <Typography sx={{ color: '#9B9691', fontWeight: 500, lineHeight: 1.6 }}>
-                Unlock your decentralized node to initialize secure communication channels and identity resolution.
-              </Typography>
-              <Button 
-                variant="contained" 
-                onClick={() => requestSudo({ onSuccess: () => setIsUnlocked(true) })}
-                sx={{ 
-                  borderRadius: '16px', 
-                  px: 4, 
-                  py: 1.8, 
-                  fontWeight: 900,
-                  bgcolor: '#F59E0B',
-                  color: '#000',
-                  textTransform: 'none',
-                  fontSize: '1rem',
-                  boxShadow: '0 12px 24px rgba(245, 158, 11, 0.15)',
-                  '&:hover': { bgcolor: '#eab308', transform: 'translateY(-2px)' },
-                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-                }}
-              >
-                Unlock Node
-              </Button>
-            </Stack>
-          </Box>
-        )}
+          <ChatList />
+        </Box>
     </Box>
   );
 }
