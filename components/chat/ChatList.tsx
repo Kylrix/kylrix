@@ -32,7 +32,9 @@ import {
 } from '@mui/material';
 import ShieldCheckIcon from '@mui/icons-material/ShieldOutlined';
 import { showIslandNotification } from '@/lib/island-notification';
-import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
+import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { Trash2 } from 'lucide-react';
 import GroupIcon from '@mui/icons-material/GroupWorkOutlined';
 import PersonIcon from '@mui/icons-material/PersonOutlined';
 import BookmarkIcon from '@mui/icons-material/BookmarkOutlined';
@@ -88,6 +90,7 @@ export const ChatList = ({
     const router = useRouter();
     const { requestSudo } = useSudo();
     const { openMenu } = useContextMenu();
+    const { open: openUnified } = useUnifiedDrawer();
     const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -163,10 +166,34 @@ export const ChatList = ({
                     label: 'Manage Discussion',
                     icon: <TuneIcon sx={{ fontSize: 18 }} />,
                     onClick: () => setSelectedConversation(conv)
+                },
+                {
+                    label: 'Wipe Conversation',
+                    icon: <Trash2 size={18} style={{ color: '#EF4444' }} />,
+                    onClick: () => {
+                        openUnified('delete-confirm', {
+                            title: `WIPE [ ${conv.name || 'CHAT'} ]`,
+                            description: 'This will permanently destroy all messages, reactions, and associated assets. This action cannot be reversed.',
+                            confirmLabel: 'Destroy Conversation',
+                            onConfirm: async () => {
+                                try {
+                                    // For normal chats, we need a slightly different wipe logic
+                                    // but if it's a ghost note thread (which many of these are),
+                                    // deleteGhostThread works perfectly.
+                                    await deleteGhostThread(conv.$id);
+                                    toast.success('Conversation wiped');
+                                    // Refresh the list
+                                    setConversations(prev => prev.filter(c => c.$id !== conv.$id));
+                                } catch (err: any) {
+                                    toast.error(`Wipe failed: ${err.message}`);
+                                }
+                            }
+                        });
+                    }
                 }
             ]
         });
-    }, [openMenu, router]);
+    }, [openMenu, router, openUnified]);
 
     const handleGhostConversationRightClick = useCallback((event: React.MouseEvent, conv: any) => {
         event.preventDefault();
@@ -197,10 +224,31 @@ export const ChatList = ({
                         navigator.clipboard.writeText(link);
                         toast.success('Discussion link copied');
                     }
+                },
+                {
+                    label: 'Wipe Conversation',
+                    icon: <Trash2 size={18} style={{ color: '#EF4444' }} />,
+                    onClick: () => {
+                        openUnified('delete-confirm', {
+                            title: `WIPE [ ${conv.name || 'THREAD'} ]`,
+                            description: 'This will permanently destroy the ghost note, all messages, reactions, and any associated voice note files. This action cannot be reversed.',
+                            confirmLabel: 'Destroy Conversation',
+                            onConfirm: async () => {
+                                try {
+                                    await deleteGhostThread(conv.$id);
+                                    toast.success('Conversation wiped');
+                                    // Refresh the list
+                                    setConversations(prev => prev.filter(c => c.$id !== conv.$id));
+                                } catch (err: any) {
+                                    toast.error(`Wipe failed: ${err.message}`);
+                                }
+                            }
+                        });
+                    }
                 }
             ]
         });
-    }, [openMenu, router]);
+    }, [openMenu, router, openUnified]);
 
     const handleCancelRedirect = useCallback(() => {
         setShowCountdownDrawer(false);

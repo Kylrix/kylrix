@@ -318,4 +318,10 @@ export async function listGhostNoteChats() {
   return listGhostNoteChatsSecure(jwt);
 }
 
+export async function deleteGhostThread(threadId: string) {
+    const jwt = await getJwt();
+    const { deleteGhostThreadSecure } = await import('./secure-ops');
+    return deleteGhostThreadSecure(threadId, jwt);
+}
+
 
