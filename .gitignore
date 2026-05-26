@@ -32,6 +32,13 @@ yarn-error.log*
 # vercel
 .vercel
 
+# security & data
+.data/
+*.txt
+*.py
+keychain_debug.txt
+all_keychains.txt
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
