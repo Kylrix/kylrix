@@ -2,6 +2,7 @@ import { Query } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { sweepStaleLiveCallPresenceBatch } from '@/lib/services/internal/live-call-presence-reconcile';
+import { executeCascadeDeleteSecure } from '@/lib/actions/cascade-delete';
 
 export type SystemRuntimeJobId = 
   | 'cleanup_expired_public_ghost_notes' 
@@ -47,6 +48,10 @@ async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) 
     if (!Number.isFinite(exp) || exp > Date.now()) continue;
 
     try {
+      // 1. Recursive cleanup for storage files, comments, reactions, etc.
+      await executeCascadeDeleteSecure(NOTE_DB, NOTES_TABLE, doc.$id);
+
+      // 2. Delete the ghost note itself
       await databases.deleteRow(NOTE_DB, NOTES_TABLE, doc.$id);
       deleted += 1;
     } catch {

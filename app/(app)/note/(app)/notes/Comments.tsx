@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback, type ChangeEvent, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react';
 import { Box, Typography, TextField, Button, List, ListItem, ListItemText, Divider, IconButton, Collapse, Avatar, Link, Popover, Tooltip, ListItemAvatar, ListItemButton, CircularProgress, alpha } from '@mui/material';
 import { Reply as ReplyIcon, ExpandMore, ExpandLess, Edit as EditIcon, Delete as DeleteIcon, MoreVert as MoreIcon, Block as BlockIcon, EmojiEmotionsOutlined } from '@mui/icons-material';
-import { listComments, createComment, getUsersByIds, updateComment, deleteComment, deleteReactionsForTarget } from '@/lib/appwrite';
+import { listComments, createComment, getUsersByIds, updateComment, deleteComment, deleteReactionsForTarget, getNote } from '@/lib/appwrite';
 import type { Comments, Users } from '@/types/appwrite';
 import { getEffectiveDisplayName, getEffectiveUsername, getUserProfilePicId } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -15,9 +15,11 @@ import { TargetType } from '@/types/appwrite';
 import { fetchProfilePreview, getCachedProfilePreview } from '@/lib/profile-preview';
 import { getCachedCommentIdentity, getCachedCommentIdentities, upsertCommentIdentity, upsertCommentIdentities } from '@/lib/commentIdentityCache';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
+import { encryptGhostData, decryptGhostData } from '@/lib/encryption/ghost-crypto';
 
 interface CommentsProps {
   noteId: string;
+  decryptionKey?: string;
 }
 
 interface CommentWithChildren extends Comments {
@@ -407,12 +409,34 @@ interface CommentItemProps {
   noteId: string;
 }
 
-function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap, noteId }: CommentItemProps) {
+function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap, noteId, decryptionKey }: CommentItemProps & { decryptionKey?: string }) {
   const { user } = useAuth();
   const [isReplying, setIsReplying] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [editContent, setEditContent] = useState(comment.content);
+  const [plainContent, setPlainContent] = useState(comment.content);
+  const [isDecrypting, setIsDecrypting] = useState(false);
+
+  useEffect(() => {
+    if (comment.isEncrypted && decryptionKey) {
+        setIsDecrypting(true);
+        decryptGhostData(comment.content, decryptionKey)
+            .then(plain => {
+                setPlainContent(plain);
+                setEditContent(plain);
+            })
+            .catch(err => {
+                console.error("Comment decryption failed", err);
+                setPlainContent("[Decryption Failed]");
+            })
+            .finally(() => setIsDecrypting(false));
+    } else {
+        setPlainContent(comment.content);
+        setEditContent(comment.content);
+    }
+  }, [comment.content, comment.isEncrypted, decryptionKey]);
+
   const [showChildren, setShowChildren] = useState(true);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [reactionAnchorEl, setReactionAnchorEl] = useState<null | HTMLElement>(null);
@@ -571,6 +595,11 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
                   <Button size="small" onClick={() => setIsEditing(false)}>Cancel</Button>
                 </Box>
               </Box>
+            ) : isDecrypting ? (
+              <Box sx={{ py: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={14} sx={{ color: 'primary.main' }} />
+                <Typography variant="body2" color="text.secondary">Decrypting...</Typography>
+              </Box>
             ) : isDeleted ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.5 }}>
                 <BlockIcon sx={{ fontSize: 16, color: 'text.disabled' }} />
@@ -584,7 +613,7 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
                 </Typography>
               </Box>
             ) : (
-              renderCommentText(comment.content)
+              renderCommentText(plainContent)
             )
           }
           secondary={
@@ -681,6 +710,7 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
               depth={depth + 1}
               userMap={userMap}
               noteId={noteId}
+              decryptionKey={decryptionKey}
             />
           ))}
         </Box>
