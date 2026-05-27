@@ -1,0 +1,10 @@
+{
+  "name": "@kylrix/flow-agent-orchestrator",
+  "version": "1.0.0",
+  "description": "Secure, event-triggered Agentic AI task orchestrator for Flow.",
+  "main": "src/main.js",
+  "type": "module",
+  "dependencies": {
+    "node-appwrite": "^19.1.0"
+  }
+}

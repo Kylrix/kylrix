@@ -1,0 +1,10 @@
+{
+  "name": "@kylrix/ecosystem-context-aggregator",
+  "version": "1.0.0",
+  "description": "Secure, private context aggregator for Kylrix Agentic AI ecosystem.",
+  "main": "src/main.js",
+  "type": "module",
+  "dependencies": {
+    "node-appwrite": "^19.1.0"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@kylrix/agent-action-guardrail",
+  "version": "1.0.0",
+  "description": "Secure, private execution safety guardrail that validates proposed agent actions.",
+  "main": "src/main.js",
+  "type": "module",
+  "dependencies": {
+    "node-appwrite": "^19.1.0"
+  }
+}
