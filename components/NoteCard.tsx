@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, Typography, Box, IconButton, Chip, alpha } from '@mui/material';
-import { useContextMenu } from './ContextMenuContext';
-import { useDynamicSidebar } from './DynamicSidebar';
-import { NoteDetailSidebar } from './NoteDetailSidebar';
+import { useContextMenu } from './ui/ContextMenuContext';
+import { useDynamicSidebar } from './ui/DynamicSidebar';
+import { NoteDetailSidebar } from './ui/NoteDetailSidebar';
 import { useNotes } from '@/context/NotesContext';
 import type { Notes } from '@/types/appwrite';
 import { DoodleStroke } from '@/types/notes';
@@ -26,12 +26,12 @@ import {
   Spellcheck as GrammarIcon,
 } from '@mui/icons-material';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
-import { ShareNoteDrawer } from '../overlays/ShareNoteDrawer';
-import { DeleteNoteDrawer } from '../overlays/DeleteNoteDrawer';
+import { ShareNoteDrawer } from './overlays/ShareNoteDrawer';
+import { DeleteNoteDrawer } from './overlays/DeleteNoteDrawer';
 
 import { toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl, getNotePublicState } from '@/lib/appwrite';
 import { createNote, updateNote } from '@/lib/actions/client-ops';
-import { useToast } from './Toast';
+import { useToast } from './ui/Toast';
 import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useAuth } from '@/context/auth/AuthContext';

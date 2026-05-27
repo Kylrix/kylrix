@@ -73,6 +73,7 @@ export default function OverviewPage() {
               totpResp as {
                 total?: number;
                 documents: Array<Record<string, unknown>>;
+                rows: Array<Record<string, unknown>>;
               }
             ).total ?? totpResp.rows.length;
         } catch {
@@ -81,6 +82,7 @@ export default function OverviewPage() {
         const credsTyped = credsResp as {
           total?: number;
           documents?: Array<Record<string, unknown>>;
+          rows?: Array<Record<string, unknown>>;
         };
         const totalCreds = credsTyped.total ?? credsTyped.rows?.length ?? 0;
 
@@ -98,10 +100,12 @@ export default function OverviewPage() {
               windowSize,
               0,
               [Query.orderDesc("$updatedAt")],
-            )
-          );
-          const recentWindowTyped = recentWindow as { documents?: any[] };
-          const items = recentWindowTyped.rows || [];
+            const recentWindowTyped = recentWindow as {
+              documents?: any[];
+              rows?: any[];
+            };
+            const items = recentWindowTyped.rows || [];
+
           const fieldCandidates = [
             "username",
             "password",
@@ -137,7 +141,7 @@ export default function OverviewPage() {
           }
 
           dupGroupsLocal = Array.from(groups.entries())
-            .filter(([ v]) => v.ids.length > 1)
+            .filter(([, v]) => v.ids.length > 1)
             .map(([k, v]) => ({
               key: k,
               count: v.ids.length,
@@ -162,7 +166,7 @@ export default function OverviewPage() {
             username: d.username as string | undefined,
           }));
         } catch {
-          const credsTyped2 = credsResp as { documents?: any[] };
+          const credsTyped2 = credsResp as { documents?: any[], rows?: any[] };
           recentItems = (credsTyped2.rows || [])
             .slice(0, 5)
             .map((d) => ({

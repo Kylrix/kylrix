@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
         createdAt: now,
         updatedAt: now,
       },
-      buildMessagePermissions(senderId, recipientIds),
+      buildMessagePermissions(senderId, recipientIds as string[]),
     );
 
     return NextResponse.json(message, { headers: corsHeaders });

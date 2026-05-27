@@ -53,7 +53,7 @@ export default function ImportPage() {
     try {
       const result = await porterExport(user.$id);
       downloadExportAsFile(result.data);
-      toast.success(`Exported ${result.data.credentials.length} credentials, ${result.data.totpSecrets.length} TOTP secrets`);
+      toast.success(`Exported ${result.data?.credentials?.length || 0} credentials, ${result.data?.totpSecrets?.length || 0} TOTP secrets`);
     } catch (err: unknown) {
       console.error('Export failed:', err);
       toast.error('Export failed: ' + ((err as Error).message || 'Unknown error'));
