@@ -463,7 +463,7 @@ export default function ProjectsPage() {
   const projectsListElement = (
     <Grid container spacing={4}>
       {/* Main Projects List */}
-      <Grid item xs={12}>
+      <Grid xs={12}>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', mb: 3, display: 'block' }}>
           Projects ({projects.length})
         </Typography>

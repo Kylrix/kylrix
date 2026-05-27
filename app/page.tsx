@@ -817,7 +817,7 @@ export default function LandingPage() {
 
         <Grid container spacing={2.5}>
           {integrationCards.map((item) => (
-            <Grid key={item.id} item xs={12} md={6}>
+            <Grid key={item.id} xs={12} md={6}>
               <Paper
                 sx={{
                   p: 2.5,

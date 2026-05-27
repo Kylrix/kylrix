@@ -1044,12 +1044,12 @@ export default function ProjectDetailPage() {
                     '&.Mui-focused': { borderColor: '#6366F1' }
                   }
                 }}
-              />
-            </Stack>
-          </Grid>
+              </TextField>
+              </Stack>
+              </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Stack spacing={2.5} sx={{ height: '100%', justifyContent: 'space-between' }}>
+              <Grid xs={12} md={4}>
+              <Stack spacing={2.5} sx={{ height: '100%', justifyContent: 'space-between' }}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel id="project-status-label" sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-focused': { color: '#6366F1' } }}>Status</InputLabel>
                 <Select
