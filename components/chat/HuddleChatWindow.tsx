@@ -633,7 +633,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                               if (!acc[r.emoji]) acc[r.emoji] = [];
                               acc[r.emoji].push(r.userId);
                               return acc;
-                            }, {})
+                            }, {} as Record<string, string[]>)
                           ).map(([emoji, userIds]) => {
                             const hasReacted = (userIds as any[]).includes(user?.$id);
                             return (
@@ -813,7 +813,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                             if (!acc[r.emoji]) acc[r.emoji] = [];
                             acc[r.emoji].push(r.userId);
                             return acc;
-                          }, {})
+                          }, {} as Record<string, string[]>)
                         ).map(([emoji, userIds]) => {
                           const hasReacted = (userIds as any[]).includes(user?.$id);
                           return (
@@ -901,7 +901,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                                 if (!acc[r.emoji]) acc[r.emoji] = [];
                                 acc[r.emoji].push(r.userId);
                                 return acc;
-                              }, {})
+                              }, {} as Record<string, string[]>)
                             ).map(([emoji, userIds]) => {
                               const hasReacted = (userIds as any[]).includes(user?.$id);
                               return (
