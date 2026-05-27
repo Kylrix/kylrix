@@ -15,6 +15,8 @@ import type { NextRequest } from 'next/server';
 const RELOAD_COOKIE = 'k_rld';
 const REDIRECT_DEPTH_PARAM = '_rd';
 const APPWRITE_PROJECT_ID = '67fe9627001d97e37ef3';
+
+// Appwrite session cookie follows the pattern: a_session_[projectid_lowercase]
 const SESSION_COOKIE_NAME = `a_session_${APPWRITE_PROJECT_ID.toLowerCase()}`;
 
 // Thresholds
@@ -48,22 +50,18 @@ export function middleware(request: NextRequest) {
 
   // ─── AUTHENTICATION REDIRECT ──────────────────────────────────────────
   const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
-  const hasSession = request.cookies.has(SESSION_COOKIE_NAME) || request.cookies.has(`${SESSION_COOKIE_NAME}_legacy`);
+  
+  // Appwrite uses both standard and legacy session cookies
+  const hasSession = request.cookies.has(SESSION_COOKIE_NAME) || 
+                     request.cookies.has(`${SESSION_COOKIE_NAME}_legacy`);
 
   // Exempt public shared note pages, public shared APIs, and public OpenGraph previews
   const isPublicExempt = 
     pathname.startsWith('/note/shared') || 
     pathname.startsWith('/note/api/shared') ||
-    pathname.startsWith('/note/api/og');
-
-  // Immediate redirect for /note
-  if ((pathname === '/note' || pathname === '/note/') && !isPublicExempt) {
-    if (hasSession) {
-      return NextResponse.redirect(new URL('/note/notes', request.url));
-    } else {
-      return NextResponse.redirect(new URL('/send', request.url));
-    }
-  }
+    pathname.startsWith('/note/api/og') ||
+    pathname.startsWith('/send/') || // Send receiver pages
+    pathname === '/send'; // Send composer itself
 
   if (isProtected && !hasSession && !isPublicExempt) {
     const loginUrl = new URL('/send', request.url);
