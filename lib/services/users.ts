@@ -384,6 +384,11 @@ export const UsersService = {
                 Query.limit(1)],
         });
         return res.rows[0] || null;
+    },
+
+    async getUsersByIds(ids: string[]): Promise<any[]> {
+        if (!ids?.length) return [];
+        return Promise.all(ids.map(id => this.getProfileById(id))).then(results => results.filter(Boolean));
     }
 
 };

@@ -1,6 +1,7 @@
 'use client';
 
 import { account } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import {
   createNoteSecure,
   updateNoteSecure,
@@ -258,7 +259,7 @@ export async function createGhostNoteForProject(projectId: string, title?: strin
 
 export async function deleteGhostNoteForProject(noteId: string) {
   const jwt = await getJwt();
-  return deleteRow(APPWRITE_CONFIG.DATABASES.NOTE, APPWRITE_CONFIG.TABLES.NOTE.NOTES, noteId);
+  return deleteRowSecure(APPWRITE_CONFIG.DATABASES.NOTE, APPWRITE_CONFIG.TABLES.NOTE.NOTES, noteId, jwt);
 }
 
 export async function promoteGhostThreadToStory(projectId: string, noteId: string) {

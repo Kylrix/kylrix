@@ -9,16 +9,17 @@ export * from './projects';
 import { AppwriteService as SharedService } from './auth';
 import { VaultService } from './vault';
 import { ProjectsService } from './projects';
+import { UsersService } from '../services/users';
 
 // Merge AppwriteService methods from all domains into a robust unified interface
 export const AppwriteService = {
   // --- Global Identity & Profiles ---
   ensureGlobalProfile: SharedService.ensureGlobalProfile,
   getGlobalProfileStatus: SharedService.getGlobalProfileStatus,
-  getProfile: SharedService.getProfile,
-  getProfileByUsername: SharedService.getProfileByUsername,
+  getProfile: UsersService.getProfileById,
+  getProfileByUsername: UsersService.getProfile,
   searchGlobalProfiles: SharedService.searchGlobalProfiles,
-  getUsersByIds: SharedService.getUsersByIds,
+  getUsersByIds: UsersService.getUsersByIds,
   recordProfileEvent: SharedService.recordProfileEvent,
 
   // --- Security & Keychain ---

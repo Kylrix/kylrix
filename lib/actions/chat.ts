@@ -73,14 +73,14 @@ export async function repairConversationAction(payload: {
     throw new Error('Unauthorized');
   }
 
-  const isAdmin = Array.isArray(actor.labels) && actor.labels.includes('admin');
+  const isAdmin = actor.isAdmin;
   const targetUserId = payload.userId && isAdmin ? payload.userId : actor.$id;
 
   const securedPayload = {
     ...payload,
     userId: targetUserId,
     actorId: actor.$id,
-    actorLabels: actor.labels || [],
+    actorLabels: isAdmin ? ['admin'] : [],
   };
 
   return await repairConversationInternal(securedPayload);

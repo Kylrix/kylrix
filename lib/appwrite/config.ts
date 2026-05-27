@@ -43,13 +43,15 @@ export const APPWRITE_CONFIG = {
             SUBSCRIPTIONS: 'subscriptions',
             NOTE_TAGS: 'resource_tags',
             BLOGPOSTS: '67ff065a003e2bb950f7',
-            WALLET_MAP: 'walletMap'
+            WALLET_MAP: 'walletMap',
+            NOTE_REVISIONS: 'note_revisions'
         },
         KYLRIXNOTE: {
             PROFILES: 'profiles',
             USERS: '67ff05c900247b5673d3',
             ACTIVITY_LOG: 'activityLog',
-            WALLET_MAP: 'walletMap'
+            WALLET_MAP: 'walletMap',
+            NOTE_REVISIONS: 'note_revisions'
         },
         VAULT: {
             CREDENTIALS: 'credentials',
@@ -136,7 +138,8 @@ export const APPWRITE_CONFIG = {
         FORM_MEDIA: 'form_media',
         CHAT_UPLOADS: 'chat_uploads',
         TASK_ATTACHMENTS: 'notes_attachments', // Alias
-        EVENT_COVERS: 'event_covers' // Alias
+        EVENT_COVERS: 'event_covers', // Alias
+        VOICE: 'voice'
     },
     FUNCTIONS: {
         PERMISSION_UPDATER: 'permission-updater',

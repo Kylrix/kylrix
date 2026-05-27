@@ -716,8 +716,7 @@ export default function LandingPage() {
           />
 
           <Grid container spacing={4} sx={{ position: 'relative' }} alignItems="start">
-            <Grid 
- xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <Stack spacing={2} sx={{ position: { xs: 'relative', md: 'sticky' }, top: { md: 118 } }}>
                 <Typography
                   variant="caption"
@@ -768,8 +767,7 @@ export default function LandingPage() {
               </Stack>
             </Grid>
 
-            <Grid 
- xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <Stack spacing={2.25}>
                 {livePanels.map((panel, index) => (
                   <LiveSurfaceCard
@@ -819,7 +817,7 @@ export default function LandingPage() {
 
         <Grid container spacing={2.5}>
           {integrationCards.map((item) => (
-            <Grid key={item.id} xs={12} md={6}>
+            <Grid key={item.id} size={{ xs: 12, md: 6 }}>
               <Paper
                 sx={{
                   p: 2.5,
@@ -911,7 +909,7 @@ export default function LandingPage() {
 
         <Grid container spacing={2.5}>
           {infraPanels.map((panel) => (
-            <Grid key={panel.title} item xs={12} md={4}>
+            <Grid key={panel.title} size={{ xs: 12, md: 4 }}>
               <Paper
                 sx={{
                   height: '100%',

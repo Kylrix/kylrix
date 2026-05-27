@@ -76,13 +76,12 @@ function parseTablesDBListArgs(args: any[]) {
         const obj = args[0];
         return {
             databaseId: obj.databaseId,
-            tableId: obj.tableId || obj.tableId,
-            tableId: obj.tableId || obj.tableId,
+            tableId: obj.tableId,
             queries: obj.queries
         };
     }
     const [databaseId, tableId, queries] = args;
-    return { databaseId, tableId, tableId: tableId, queries };
+    return { databaseId, tableId, queries };
 }
 
 // --- PROXIES ---

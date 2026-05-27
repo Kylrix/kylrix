@@ -243,7 +243,7 @@ const ensureUnlocked = (security: WalletSecurityAdapter) => {
 
 export function createWalletService(deps: WalletServiceDeps) {
   const listWalletRows = async (userId: string) => {
-    const response = await deps.collectionsDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
+    const response = await deps.tablesDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
       Query.equal('ownerId', ownerIdForUser(userId)),
       Query.equal('type', 'main'),
       Query.limit(100)]);
@@ -262,7 +262,7 @@ export function createWalletService(deps: WalletServiceDeps) {
     const walletId = `main-${chain}-${userId}`;
 
     try {
-      return await deps.collectionsDB.createRow(
+      return await deps.tablesDB.createRow(
         deps.config.passwordManagerDbId,
         deps.config.walletsTableId,
         walletId,
@@ -277,7 +277,7 @@ export function createWalletService(deps: WalletServiceDeps) {
       );
     } catch (error: any) {
       if (error?.code === 409) {
-        return await deps.collectionsDB.getRow(deps.config.passwordManagerDbId, deps.config.walletsTableId, walletId);
+        return await deps.tablesDB.getRow(deps.config.passwordManagerDbId, deps.config.walletsTableId, walletId);
       }
       throw error;
     }
@@ -292,13 +292,13 @@ export function createWalletService(deps: WalletServiceDeps) {
       )
     );
 
-    const existing = await deps.collectionsDB.listRows(deps.config.noteDbId, deps.config.walletMapTableId, [
+    const existing = await deps.tablesDB.listRows(deps.config.noteDbId, deps.config.walletMapTableId, [
       Query.equal('userId', userId),
       Query.limit(100)]);
 
     for (const row of existing.rows) {
       if (!publicAddresses.includes(row.walletAddressLower)) {
-        await deps.collectionsDB.deleteRow(deps.config.noteDbId, deps.config.walletMapTableId, row.$id);
+        await deps.tablesDB.deleteRow(deps.config.noteDbId, deps.config.walletMapTableId, row.$id);
       }
     }
 
@@ -308,7 +308,7 @@ export function createWalletService(deps: WalletServiceDeps) {
       if (existingAddresses.has(walletAddressLower)) continue;
 
       try {
-        await deps.collectionsDB.createRow(
+        await deps.tablesDB.createRow(
           deps.config.noteDbId,
           deps.config.walletMapTableId,
           crypto.randomUUID(),
@@ -348,7 +348,7 @@ export function createWalletService(deps: WalletServiceDeps) {
     },
 
     async listAllWallets(userId: string): Promise<WalletSummary[]> {
-      const response = await deps.collectionsDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
+      const response = await deps.tablesDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
         Query.equal('ownerId', ownerIdForUser(userId)),
         Query.limit(100)]);
 
@@ -367,7 +367,7 @@ export function createWalletService(deps: WalletServiceDeps) {
         const encryptedSecret = await deps.security.encrypt(JSON.stringify(root));
         const walletId = `burner-${root.walletId.slice(0, 8)}-${chain}-${userId}`;
 
-        const created = await deps.collectionsDB.createRow(
+        const created = await deps.tablesDB.createRow(
           deps.config.passwordManagerDbId,
           deps.config.walletsTableId,
           walletId,
@@ -439,7 +439,7 @@ export function createWalletService(deps: WalletServiceDeps) {
     async getWalletSecret(userId: string): Promise<string> {
       ensureUnlocked(deps.security);
 
-      const response = await deps.collectionsDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
+      const response = await deps.tablesDB.listRows(deps.config.passwordManagerDbId, deps.config.walletsTableId, [
         Query.equal('ownerId', ownerIdForUser(userId)),
         Query.equal('type', 'main'),
         Query.limit(1)]);

@@ -1525,11 +1525,11 @@ export class VaultService {
     const newPinned = !existing.isPinned;
     await appwriteDatabases.updateRow(
         APPWRITE_DATABASE_ID,
-        APPWRITE_COLLECTION_TOTP_SECRETS_ID,
+        APPWRITE_COLLECTION_TOTPSECRETS_ID,
         id,
         { isPinned: newPinned }
     );
-    this.clearTOTPCache(existing.userId);
+    this.clearCredentialCache(existing.userId);
     return newPinned;
   }
 

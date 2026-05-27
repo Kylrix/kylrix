@@ -289,7 +289,7 @@ export default function ProjectsPage() {
 
   const handleDeleteProject = async (project: Projects) => {
     open('delete-confirm', {
-      title: `Delete "${project.name}"?`,
+      title: `Delete "${project.title}"?`,
       resourceName: 'this project',
       confirmLabel: 'Delete Project',
       onConfirm: async () => {

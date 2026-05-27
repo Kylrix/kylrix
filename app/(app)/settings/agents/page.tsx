@@ -50,7 +50,7 @@ const BRAND_TRANSITION = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
 export default function AssistantSettingsPage() {
     const { user } = useAuth();
     const router = useRouter();
-    const { requestSudo } = useSudo();
+    const { promptSudo } = useSudo();
     
     // Unified vault state
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
@@ -70,7 +70,7 @@ export default function AssistantSettingsPage() {
     };
 
     const handleUnlockVault = async () => {
-        const success = await requestSudo();
+        const success = await promptSudo('unlock');
         if (success) {
             toast.success("Security vault unlocked successfully!");
         }

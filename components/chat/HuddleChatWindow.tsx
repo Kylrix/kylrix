@@ -619,7 +619,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                               return acc;
                             }, {})
                           ).map(([emoji, userIds]) => {
-                            const hasReacted = userIds.includes(user?.$id);
+                            const hasReacted = (userIds as any[]).includes(user?.$id);
                             return (
                               <Chip
                                 key={emoji}
@@ -905,7 +905,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                             return acc;
                           }, {})
                         ).map(([emoji, userIds]) => {
-                          const hasReacted = userIds.includes(user?.$id);
+                          const hasReacted = (userIds as any[]).includes(user?.$id);
                           return (
                             <Chip
                               key={emoji}
@@ -993,7 +993,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                                 return acc;
                               }, {})
                             ).map(([emoji, userIds]) => {
-                              const hasReacted = userIds.includes(user?.$id);
+                              const hasReacted = (userIds as any[]).includes(user?.$id);
                               return (
                                 <Chip
                                   key={emoji}

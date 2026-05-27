@@ -7,7 +7,7 @@ export interface NoteCreationContext<NoteRow = any> {
   createRow: <T = unknown>(databaseId: string, tableId: string, data: T, rowId?: string, permissions?: string[]) => Promise<NoteRow>;
   getNote: (noteId: string) => Promise<NoteRow>;
   getNotePermissions: (userId: string, isPublic: boolean) => string[];
-  cleanDocumentData: <T>(data: Partial<T>) => Record<string, unknown>;
+  cleanRowData: <T>(data: Partial<T>) => Record<string, unknown>;
   filterNoteData: (data: Record<string, unknown>) => Record<string, unknown>;
   syncTags?: (params: { noteId: string; rawTags: string[]; userId: string; now: string }) => Promise<void>;
   generateId?: () => string;
@@ -34,7 +34,7 @@ export function createNoteCreationService<NoteRow = any>(deps: NoteCreationConte
 
       const now = new Date().toISOString();
       const docId = deps.generateId ? deps.generateId() : Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const cleanData = deps.cleanDocumentData(data);
+      const cleanData = deps.cleanRowData(data);
       const noteData = { ...cleanData } as Record<string, unknown>;
       delete noteData.attachments;
 

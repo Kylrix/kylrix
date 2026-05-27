@@ -129,7 +129,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
       <DialogContent sx={{ p: 0 }}>
         <Grid container>
             {/* Suggested Patterns */}
-            <Grid xs={12} md={5} sx={{ p: 3, borderRight: { md: '1px solid rgba(255,255,255,0.06)' }, bgcolor: alpha('#fff', 0.01) }}>
+            <Grid size={{ xs: 12, md: 5 }} sx={{ p: 3, borderRight: { md: '1px solid rgba(255,255,255,0.06)' }, bgcolor: alpha('#fff', 0.01) }}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 2, display: 'block' }}>
                     Quick Start
                 </Typography>
@@ -165,7 +165,7 @@ export default function CreateProjectModal({ open, onClose, onCreated }: CreateP
             </Grid>
 
             {/* Custom Configuration */}
-            <Grid xs={12} md={7} sx={{ p: 3 }}>
+            <Grid size={{ xs: 12, md: 7 }} sx={{ p: 3 }}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', mb: 2, display: 'block' }}>
                     Details
                 </Typography>

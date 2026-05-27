@@ -544,8 +544,7 @@ export default function ProjectDetailPage() {
 
         <Grid container spacing={4}>
             {/* Left Content Column */}
-            <Grid 
- xs={12} lg={8.5}>
+            <Grid size={{ xs: 12, lg: 8.5 }}>
                 <Paper
                     elevation={0}
                     sx={{
@@ -595,8 +594,7 @@ export default function ProjectDetailPage() {
                             {resolving ? <LoadingPlaceholder /> : notes.length === 0 ? <EmptyState kind="note" /> : (
                                 <Grid container spacing={2}>
                                     {notes.map(note => (
-                                        <Grid 
- xs={12} key={note.$id}>
+                                        <Grid size={{ xs: 12 }} key={note.$id}>
                                             <ResourceItem 
                                                 title={note.title || 'Untitled Note'} 
                                                 kind="note"
@@ -626,8 +624,7 @@ export default function ProjectDetailPage() {
                             {resolving ? <LoadingPlaceholder /> : tasks.length === 0 ? <EmptyState kind="goal" /> : (
                                 <Grid container spacing={2}>
                                     {tasks.map(task => (
-                                        <Grid 
- xs={12} key={task.$id}>
+                                        <Grid size={{ xs: 12 }} key={task.$id}>
                                             <ResourceItem 
                                                 title={task.title} 
                                                 kind="goal"
@@ -646,8 +643,7 @@ export default function ProjectDetailPage() {
                             {resolving ? <LoadingPlaceholder /> : (credentials.length === 0 && totps.length === 0) ? <EmptyState kind="password" /> : (
                                 <Grid container spacing={2}>
                                     {credentials.map(cred => (
-                                        <Grid 
- xs={12} key={cred.$id}>
+                                        <Grid size={{ xs: 12 }} key={cred.$id}>
                                             <ResourceItem 
                                                 title={cred.name} 
                                                 kind="password"
@@ -665,8 +661,7 @@ export default function ProjectDetailPage() {
                                         </Grid>
                                     ))}
                                     {totps.map(totp => (
-                                        <Grid 
- xs={12} key={totp.$id}>
+                                        <Grid size={{ xs: 12 }} key={totp.$id}>
                                             <ResourceItem 
                                                 title={totp.issuer || totp.name || 'Smart Code'} 
                                                 kind="totp"
@@ -721,8 +716,7 @@ export default function ProjectDetailPage() {
                             {resolving ? <LoadingPlaceholder /> : subProjects.length === 0 ? <EmptyState kind="sub-project" /> : (
                                 <Grid container spacing={2}>
                                     {subProjects.map(sub => (
-                                        <Grid 
- xs={12} key={sub.$id}>
+                                        <Grid size={{ xs: 12 }} key={sub.$id}>
                                             <ResourceItem 
                                                 title={sub.title || sub.name || 'Untitled Project'} 
                                                 kind="project"
@@ -741,8 +735,7 @@ export default function ProjectDetailPage() {
                             {resolving ? <LoadingPlaceholder /> : (events.length === 0 && calls.length === 0) ? <EmptyState kind="event" /> : (
                                 <Grid container spacing={2}>
                                     {events.map(event => (
-                                        <Grid 
- xs={12} key={event.$id}>
+                                        <Grid size={{ xs: 12 }} key={event.$id}>
                                             <ResourceItem 
                                                 title={event.title} 
                                                 kind="event"
@@ -753,8 +746,7 @@ export default function ProjectDetailPage() {
                                         </Grid>
                                     ))}
                                     {calls.map(call => (
-                                        <Grid 
- xs={12} key={call.$id}>
+                                        <Grid size={{ xs: 12 }} key={call.$id}>
                                             <ResourceItem 
                                                 title={call.title || 'Call Link'} 
                                                 kind="call"
@@ -781,8 +773,7 @@ export default function ProjectDetailPage() {
                             {resolving ? <LoadingPlaceholder /> : (forms.length === 0 && tags.length === 0 && moments.length === 0) ? <EmptyState kind="flow" /> : (
                                 <Grid container spacing={2}>
                                     {forms.map(form => (
-                                        <Grid 
- xs={12} key={form.$id}>
+                                        <Grid size={{ xs: 12 }} key={form.$id}>
                                             <ResourceItem 
                                                 title={form.title || 'Untitled Form'} 
                                                 kind="form"
@@ -800,8 +791,7 @@ export default function ProjectDetailPage() {
                                         </Grid>
                                     ))}
                                     {tags.map(tag => (
-                                        <Grid 
- xs={12} key={tag.$id}>
+                                        <Grid size={{ xs: 12 }} key={tag.$id}>
                                             <ResourceItem 
                                                 title={`# ${tag.name}`} 
                                                 kind="tag"
@@ -812,8 +802,7 @@ export default function ProjectDetailPage() {
                                         </Grid>
                                     ))}
                                     {moments.map(moment => (
-                                        <Grid 
- xs={12} key={moment.$id}>
+                                        <Grid size={{ xs: 12 }} key={moment.$id}>
                                             <ResourceItem 
                                                 title={moment.caption || 'Integrated Moment'} 
                                                 kind="moment"
@@ -849,8 +838,7 @@ export default function ProjectDetailPage() {
                             { title: 'Sprint Planning', icon: CheckSquare, color: '#A855F7', desc: 'Initialize a goal to track execution.' },
                             { title: 'Access Hardening', icon: Lock, color: '#10B981', desc: 'Store new secrets for the team.' }
                         ].map(wf => (
-                            <Grid 
- xs={12} md={4} key={wf.title}>
+                            <Grid size={{ xs: 12, md: 4 }} key={wf.title}>
                                 <Paper elevation={0} sx={{ p: 2.5, borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.06)', transition: 'all 0.2s ease', cursor: 'pointer', '&:hover': { borderColor: alpha(wf.color, 0.3), transform: 'translateY(-2px)' } }}>
                                     <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
                                         <Box sx={{ color: wf.color }}><wf.icon size={18} /></Box>
@@ -865,8 +853,7 @@ export default function ProjectDetailPage() {
             </Grid>
 
             {/* Right Sidebar Column */}
-            <Grid 
- xs={12} lg={3.5}>
+            <Grid size={{ xs: 12, lg: 3.5 }}>
                 <Stack spacing={4}>
                     {/* Participants */}
                     <Paper
@@ -1018,8 +1005,7 @@ export default function ProjectDetailPage() {
         </Stack>
 
         <Grid container spacing={3}>
-          <Grid 
- xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <Stack spacing={2.5}>
               <TextField
                 fullWidth
@@ -1062,7 +1048,7 @@ export default function ProjectDetailPage() {
             </Stack>
           </Grid>
 
-          <Grid xs={12} md={4}>
+          <Grid size={{ xs: 12, md: 4 }}>
               <Stack spacing={2.5} sx={{ height: '100%', justifyContent: 'space-between' }}>
               <FormControl fullWidth variant="outlined">
                 <InputLabel id="project-status-label" sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-focused': { color: '#6366F1' } }}>Status</InputLabel>
@@ -1392,6 +1378,12 @@ function ResourceItem({
             </Stack>
         </Paper>
     );
+}
+
+interface ProjectDiscussionTabProps {
+  project: Projects;
+  fetchProjectData: () => void;
+  user: any;
 }
 
 export function ProjectDiscussionTab({ project, fetchProjectData, user }: ProjectDiscussionTabProps) {
@@ -2098,7 +2090,7 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                                 return acc;
                               }, {})
                             ).map(([emoji, userIds]) => {
-                              const hasReacted = userIds.includes(user?.$id);
+                              const hasReacted = (userIds as any[]).includes(user?.$id);
                               return (
                                 <Chip
                                   key={emoji}
@@ -2401,7 +2393,7 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                               return acc;
                             }, {})
                           ).map(([emoji, userIds]) => {
-                            const hasReacted = userIds.includes(user?.$id);
+                            const hasReacted = (userIds as any[]).includes(user?.$id);
                             return (
                               <Chip
                                 key={emoji}
@@ -2489,7 +2481,7 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
                                   return acc;
                                 }, {})
                               ).map(([emoji, userIds]) => {
-                                const hasReacted = userIds.includes(user?.$id);
+                                const hasReacted = (userIds as any[]).includes(user?.$id);
                                 return (
                                   <Chip
                                     key={emoji}
