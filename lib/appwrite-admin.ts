@@ -31,7 +31,7 @@ export function createSystemClient() {
   cachedSystemClient = {
     client,
     account: new Account(client),
-    databases: new Databases(client),
+    databases: createProxiedDatabases(client),
     messaging: new Messaging(client),
     storage: new Storage(client),
     users: new Users(client),
@@ -39,6 +39,58 @@ export function createSystemClient() {
   };
 
   return cachedSystemClient;
+}
+
+function createProxiedDatabases(client: Client) {
+  const original = new Databases(client);
+  return new Proxy(original, {
+    get(target, prop, receiver) {
+      if (prop === 'listRows') {
+        return async (databaseId: string, tableId: string, queries?: any[]) => {
+          const res = await target.listDocuments(databaseId, tableId, queries);
+          return {
+            ...res,
+            rows: res.documents
+          };
+        };
+      }
+      if (prop === 'getRow') {
+        return (databaseId: string, tableId: string, rowId: string, queries?: any[]) => {
+          return target.getDocument(databaseId, tableId, rowId, queries);
+        };
+      }
+      if (prop === 'createRow') {
+        return (databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[]) => {
+          return target.createDocument(databaseId, tableId, rowId, data, permissions);
+        };
+      }
+      if (prop === 'updateRow') {
+        return (databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[]) => {
+          return target.updateDocument(databaseId, tableId, rowId, data, permissions);
+        };
+      }
+      if (prop === 'deleteRow') {
+        return (databaseId: string, tableId: string, rowId: string) => {
+          return target.deleteDocument(databaseId, tableId, rowId);
+        };
+      }
+      if (prop === 'listDocuments' || prop === 'getDocument' || prop === 'createDocument' || prop === 'updateDocument' || prop === 'deleteDocument') {
+        const originalMethod = (target as any)[prop];
+        return async (...args: any[]) => {
+          const res = await originalMethod.apply(target, args);
+          if (prop === 'listDocuments' && res && typeof res === 'object') {
+            return {
+              ...res,
+              rows: res.documents
+            };
+          }
+          return res;
+        };
+      }
+      const val = Reflect.get(target, prop, receiver);
+      return typeof val === 'function' ? val.bind(target) : val;
+    }
+  }) as unknown as Databases;
 }
 
 let cachedSystemTablesDB: TablesDB | null = null;
@@ -99,7 +151,7 @@ export function createAdminClient(actorEmail?: string | null) {
   return {
     client,
     account: new Account(client),
-    databases: new Databases(client),
+    databases: createProxiedDatabases(client),
     messaging: new Messaging(client),
     storage: new Storage(client),
     users: new Users(client),

@@ -1,5 +1,5 @@
 import { ID, Permission, Query, Role } from 'appwrite';
-import { account, storage, tablesDB } from '../appwrite/client';
+import { account, storage, tablesDB, getCurrentUser } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
 import { hasPaidKylrixPlan } from '@/lib/utils';
