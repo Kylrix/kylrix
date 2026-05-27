@@ -1,5 +1,4 @@
 import { Client, Account } from 'node-appwrite';
-import { cookies } from 'next/headers';
 import { APPWRITE_CONFIG } from './config';
 import { cache } from 'react';
 
@@ -15,7 +14,6 @@ export const createServerClient = cache(async (jwt?: string) => {
   const client = new Client();
   
   // Use the primary ecosystem endpoint for session/JWT validation.
-  // This ensures compatibility with custom domains and self-hosted instances.
   client.setEndpoint(APPWRITE_CONFIG.ENDPOINT);
   client.setProject(APPWRITE_CONFIG.PROJECT_ID);
 
@@ -25,6 +23,7 @@ export const createServerClient = cache(async (jwt?: string) => {
   }
 
   try {
+    const { cookies } = await import('next/headers');
     const cookieStore = await cookies();
     const projectId = APPWRITE_CONFIG.PROJECT_ID;
     
