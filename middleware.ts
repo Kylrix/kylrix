@@ -36,104 +36,55 @@ const PROTECTED_ROUTES = [
 ];
 
 export function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+  const { pathname } = request.nextUrl;
 
-  // Skip static assets, API routes, and Next.js internals entirely — zero overhead
+  // 1. Skip static assets and Next.js internals
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
     pathname.startsWith('/favicon') ||
-    pathname.includes('.') // static files like .css, .js, .png
+    pathname.includes('.')
   ) {
     return NextResponse.next();
   }
 
-  // ─── AUTHENTICATION REDIRECT ──────────────────────────────────────────
-  const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
-  
-  // Appwrite uses both standard and legacy session cookies
-  const hasSession = request.cookies.has(SESSION_COOKIE_NAME) || 
-                     request.cookies.has(`${SESSION_COOKIE_NAME}_legacy`);
-
-  // Exempt public shared note pages, public shared APIs, and public OpenGraph previews
-  const isPublicExempt = 
-    pathname.startsWith('/note/shared') || 
-    pathname.startsWith('/note/api/shared') ||
-    pathname.startsWith('/note/api/og') ||
-    pathname.startsWith('/send/') || // Send receiver pages
-    pathname === '/send'; // Send composer itself
-
-  if (isProtected && !hasSession && !isPublicExempt) {
-    const loginUrl = new URL('/send', request.url);
-    return NextResponse.redirect(loginUrl);
+  // 2. EXEMPT ALL API ROUTES - Internal and External
+  // This is critical. Redirecting an API fetch to /send (HTML) causes "Unexpected token <"
+  if (pathname.includes('/api/')) {
+    return NextResponse.next();
   }
 
-  // ─── REDIRECT LOOP DEFENSE ────────────────────────────────────────────
-  const redirectDepth = parseInt(searchParams.get(REDIRECT_DEPTH_PARAM) || '0', 10);
-  if (redirectDepth >= MAX_REDIRECT_DEPTH) {
-    // Circuit breaker: stop the redirect chain, serve the page as-is
-    const cleanUrl = request.nextUrl.clone();
-    cleanUrl.searchParams.delete(REDIRECT_DEPTH_PARAM);
-    const response = NextResponse.rewrite(cleanUrl);
-    // Clear the counter so future navigation starts fresh
-    return response;
-  }
+  // 3. Session Detection
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME) || request.cookies.get(`${SESSION_COOKIE_NAME}_legacy`);
+  const hasSession = !!sessionCookie;
 
-  // ─── RAPID RELOAD STORM DEFENSE ───────────────────────────────────────
-  const now = Date.now();
-  const reloadCookie = request.cookies.get(RELOAD_COOKIE)?.value;
-  let reloadData: { count: number; windowStart: number } = { count: 0, windowStart: now };
-
-  if (reloadCookie) {
-    try {
-      reloadData = JSON.parse(reloadCookie);
-    } catch {
-      // Corrupted cookie — reset
-      reloadData = { count: 0, windowStart: now };
-    }
-  }
-
-  // Check if we're still in the active window
-  if (now - reloadData.windowStart < RELOAD_WINDOW_MS) {
-    reloadData.count++;
+  // Debug: Log all cookie names if session not found to identify the correct key
+  if (!hasSession) {
+    const allCookies = Array.from(request.cookies.getAll()).map(c => c.name).join(', ');
+    console.log(`[Middleware] Path: ${pathname} | No Session Found. Available Cookies: [${allCookies}]`);
   } else {
-    // Window expired — start a new one
-    reloadData = { count: 1, windowStart: now };
+    console.log(`[Middleware] Path: ${pathname} | Session Active`);
   }
 
-  if (reloadData.count > MAX_RAPID_RELOADS) {
-    // Throttle: return a 429 with a brief cooldown message
-    return new NextResponse(
-      `<html>
-        <head><meta charset="utf-8"><title>Slow Down</title></head>
-        <body style="display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0a0a0a;color:#fff;font-family:system-ui">
-          <div style="text-align:center">
-            <h1 style="font-size:1.5rem;font-weight:800;margin-bottom:0.5rem">Too many requests</h1>
-            <p style="opacity:0.5;font-size:0.9rem">Please wait a moment before refreshing.</p>
-            <script>setTimeout(()=>location.reload(),3000)</script>
-          </div>
-        </body>
-      </html>`,
-      {
-        status: 429,
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Retry-After': '3',
-        },
-      }
-    );
+  // 4. Public Path Exemptions
+  if (
+    pathname === '/send' ||
+    pathname.startsWith('/send/') || 
+    pathname.startsWith('/note/shared') ||
+    pathname === '/' ||
+    pathname.startsWith('/i/') ||
+    pathname.startsWith('/p/') // Potential for public projects
+  ) {
+    return NextResponse.next();
   }
 
-  // Proceed normally, updating the reload tracking cookie
-  const response = NextResponse.next();
-  response.cookies.set(RELOAD_COOKIE, JSON.stringify(reloadData), {
-    path: '/',
-    maxAge: Math.ceil(RELOAD_WINDOW_MS / 1000),
-    httpOnly: true,
-    sameSite: 'lax',
-  });
+  const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
 
-  return response;
+  if (isProtected && !hasSession) {
+    console.log(`[Middleware] REDIRECT -> /send (Reason: Protected & No Session)`);
+    return NextResponse.redirect(new URL('/send', request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
