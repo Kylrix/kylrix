@@ -719,7 +719,7 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
   );
 }
 
-export default function CommentsSection({ noteId }: CommentsProps) {
+export default function CommentsSection({ noteId, decryptionKey }: CommentsProps) {
   const { user } = useAuth();
   const { fetchOptimized } = useDataNexus();
   const [comments, setComments] = useState<Comments[]>([]);

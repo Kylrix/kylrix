@@ -50,7 +50,13 @@ export function middleware(request: NextRequest) {
   const isProtected = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
   const hasSession = request.cookies.has(SESSION_COOKIE_NAME) || request.cookies.has(`${SESSION_COOKIE_NAME}_legacy`);
 
-  if (isProtected && !hasSession) {
+  // Exempt public shared note pages, public shared APIs, and public OpenGraph previews
+  const isPublicExempt = 
+    pathname.startsWith('/note/shared') || 
+    pathname.startsWith('/note/api/shared') ||
+    pathname.startsWith('/note/api/og');
+
+  if (isProtected && !hasSession && !isPublicExempt) {
     const loginUrl = new URL('/send', request.url);
     return NextResponse.redirect(loginUrl);
   }
