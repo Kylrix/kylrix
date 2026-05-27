@@ -429,6 +429,8 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
         title={plainTitle || 'Discussion Huddle'}
         standalone={true}
         onBack={() => router.push('/send')}
+        expiresAt={meta.expiresAt}
+        shareLink={typeof window !== 'undefined' ? window.location.href : ''}
       />
     );
   }

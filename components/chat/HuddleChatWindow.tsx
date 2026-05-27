@@ -49,9 +49,11 @@ interface HuddleChatWindowProps {
   participants?: any[];
   onBack?: () => void;
   standalone?: boolean;
+  expiresAt?: string;
+  shareLink?: string;
 }
 
-export function HuddleChatWindow({ chatNoteId, user, title, participants = [], onBack, standalone = false }: HuddleChatWindowProps) {
+export function HuddleChatWindow({ chatNoteId, user, title, participants = [], onBack, standalone = false, expiresAt, shareLink }: HuddleChatWindowProps) {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
   const [messages, setMessages] = useState<any[]>([]);
@@ -539,7 +541,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
       flexDirection: 'column', 
     }}>
 
-      {/* Dynamic Header */}
+      {/* Dynamic Pinned Header */}
 
       <Stack 
         direction="row" 
@@ -548,9 +550,13 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
         sx={{ 
           p: { xs: 1.5, sm: 2 }, 
           borderBottom: '1px solid rgba(255,255,255,0.06)', 
-          bgcolor: 'rgba(10, 9, 8, 0.85)',
-          backdropFilter: 'blur(12px)',
-          zIndex: 2 
+          bgcolor: '#0E0C0A',
+          zIndex: 10,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '72px'
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center">
@@ -575,23 +581,50 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
               <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Standard Huddle Chat
               </Typography>
+              {expiresAt && (
+                <>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem' }}>•</Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700, fontSize: '0.65rem' }}>
+                    Vanishes: {new Date(expiresAt).toLocaleDateString()}
+                  </Typography>
+                </>
+              )}
             </Stack>
           </Box>
         </Stack>
 
-        {participants.length > 0 && (
-          <Stack direction="row" spacing={-1} sx={{ display: { xs: 'none', sm: 'flex' } }}>
-            {participants.map((p, idx) => (
-              <IdentityAvatar 
-                key={p.$id || p.userId}
-                size={32}
-                src={p.profilePicId || p.avatar}
-                fallback={p.name?.[0].toUpperCase() || 'U'}
-                sx={{ border: '2px solid #0A0908', zIndex: 10 - idx }}
-              />
-            ))}
-          </Stack>
-        )}
+        <Stack direction="row" spacing={1} alignItems="center">
+          {shareLink && (
+            <IconButton
+              onClick={() => {
+                navigator.clipboard.writeText(shareLink);
+                showSuccess('Share link copied');
+              }}
+              sx={{
+                color: 'rgba(255,255,255,0.6)',
+                bgcolor: '#161412',
+                border: '1px solid #1C1A18',
+                '&:hover': { color: '#fff', bgcolor: '#1C1A18' }
+              }}
+            >
+              <Copy size={16} />
+            </IconButton>
+          )}
+
+          {participants.length > 0 && (
+            <Stack direction="row" spacing={-1} sx={{ display: { xs: 'none', sm: 'flex' } }}>
+              {participants.map((p, idx) => (
+                <IdentityAvatar 
+                  key={p.$id || p.userId}
+                  size={32}
+                  src={p.profilePicId || p.avatar}
+                  fallback={p.name?.[0].toUpperCase() || 'U'}
+                  sx={{ border: '2px solid #0A0908', zIndex: 10 - idx }}
+                />
+              ))}
+            </Stack>
+          )}
+        </Stack>
       </Stack>
 
       {/* Main Viewport Container */}
@@ -605,7 +638,8 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
         m: { xs: 1, sm: 2 },
         borderRadius: '24px',
         border: '1px solid rgba(255,255,255,0.05)',
-        bgcolor: '#080706' 
+        bgcolor: '#080706',
+        pt: '72px'
       }}>
         <MuralPattern />
 
@@ -784,15 +818,18 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                 component="form" 
                 onSubmit={handleSaveEdit} 
                 sx={{ 
-                  p: { xs: 1.25, sm: 1.5 }, 
-                  borderTop: '1px solid rgba(255,255,255,0.05)', 
-                  bgcolor: 'rgba(10, 9, 8, 0.95)',
-                  backdropFilter: 'blur(12px)',
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  zIndex: 20
+                  position: 'absolute', 
+                  bottom: 0, 
+                  left: 0, 
+                  right: 0, 
+                  px: { xs: 1.5, md: 2 },
+                  pb: 'max(1rem, env(safe-area-inset-bottom))', 
+                  pt: 1.5,
+                  bgcolor: '#161412', 
+                  borderTop: '1px solid #1C1A18',
+                  borderRadius: '24px 24px 0 0',
+                  boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
+                  zIndex: 20 
                 }}
               >
                 <Stack spacing={1}>
@@ -1298,15 +1335,18 @@ function HuddleMainInput({
       component="form" 
       onSubmit={handleSubmit} 
       sx={{ 
-        p: { xs: 1.25, sm: 1.5 }, 
-        borderTop: '1px solid rgba(255,255,255,0.05)', 
-        bgcolor: 'rgba(10, 9, 8, 0.95)',
-        backdropFilter: 'blur(12px)',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 20
+        position: 'absolute', 
+        bottom: 0, 
+        left: 0, 
+        right: 0, 
+        px: { xs: 1.5, md: 2 },
+        pb: 'max(1rem, env(safe-area-inset-bottom))', 
+        pt: 1.5,
+        bgcolor: '#161412', 
+        borderTop: '1px solid #1C1A18',
+        borderRadius: '24px 24px 0 0',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
+        zIndex: 20 
       }}
     >
       <Stack direction="row" spacing={1.5} alignItems="center">
