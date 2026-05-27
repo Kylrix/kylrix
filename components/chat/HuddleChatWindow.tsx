@@ -1056,7 +1056,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                               return (
                                 <Chip
                                   key={emoji}
-                                  label={`${emoji} ${userIds.length}`}
+                                  label={`${emoji} ${(userIds as any[]).length}`}
                                   size="small"
                                   onClick={(e) => {
                                     e.stopPropagation();
