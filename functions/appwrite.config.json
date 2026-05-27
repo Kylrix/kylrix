@@ -36,7 +36,7 @@
             "events": [],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [
                 "users.read"
             ],
@@ -58,7 +58,7 @@
             ],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [
                 "users.read",
                 "databases.write",
@@ -116,7 +116,7 @@
             ],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [
                 "users.read",
                 "databases.read",
@@ -144,7 +144,7 @@
             ],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [
                 "databases.read",
                 "tables.read",
@@ -173,7 +173,7 @@
             ],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [
                 "databases.write",
                 "tables.write",
@@ -200,7 +200,7 @@
             ],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [
                 "users.read",
                 "users.write",
@@ -228,7 +228,7 @@
             ],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [
                 "users.read",
                 "databases.read",
@@ -260,7 +260,7 @@
             ],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [
                 "databases.write",
                 "tables.write",
@@ -286,7 +286,7 @@
             "events": [],
             "schedule": "",
             "timeout": 15,
-            "commands": "pnpm install;pnpm build",
+            "commands": "npm install",
             "scopes": [],
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
