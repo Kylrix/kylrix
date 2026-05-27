@@ -66,7 +66,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import ProjectExtractGoalsModal from '@/components/projects/ProjectExtractGoalsModal';
 import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjectModal';
-import { databases } from '@/lib/appwrite/client';
+import { databases, storage } from '@/lib/appwrite/client';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
 import {
@@ -463,12 +463,6 @@ export default function ProjectDetailPage() {
                 {/* Instant Discussion Huddle Spin-up Button */}
                 <IconButton
                     onClick={handleDiscussionClick}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      if (metadata.discussionNoteId) {
-                        setDiscussionMenuAnchor(e.currentTarget);
-                      }
-                    }}
                     disabled={initializingHuddle}
                     sx={{
                         width: 44,
@@ -500,27 +494,6 @@ export default function ProjectDetailPage() {
                         }} />
                     )}
                 </IconButton>
-                <Menu
-                    anchorEl={discussionMenuAnchor}
-                    open={Boolean(discussionMenuAnchor)}
-                    onClose={() => setDiscussionMenuAnchor(null)}
-                >
-                    <MenuItem onClick={async () => {
-                      setDiscussionMenuAnchor(null);
-                      if (metadata.discussionNoteId) {
-                        try {
-                          await deleteGhostNoteForProject(metadata.discussionNoteId);
-                          showSuccess('Discussion deleted successfully');
-                          // Update local metadata to remove reference
-                          await fetchProjectData();
-                        } catch (err: any) {
-                          showError('Failed to delete discussion', err.message);
-                        }
-                      }
-                    }} sx={{ color: '#FF4D4D', fontWeight: 600 }}>
-                      <Trash2 size={16} style={{ marginRight: 8 }} /> Delete Discussion
-                    </MenuItem>
-                </Menu>
 
                 <Button
                     variant="outlined"
@@ -624,13 +597,69 @@ export default function ProjectDetailPage() {
                                 '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' }
                             }}
                         >
-                            <Tab label="Integrated Notes" icon={<FileText size={18} />} iconPosition="start" />
-                            <Tab label="Execution Goals" icon={<CheckSquare size={18} />} iconPosition="start" />
-                            <Tab label="Vault Assets" icon={<Lock size={18} />} iconPosition="start" />
-                            <Tab label="Sub-Projects" icon={<FolderKanban size={18} />} iconPosition="start" />
-                            <Tab label="Events & Calls" icon={<Calendar size={18} />} iconPosition="start" />
-                            <Tab label="Interconnected Flow" icon={<Workflow size={18} />} iconPosition="start" />
-                            <Tab label="Project Discussion" icon={<MessageCircle size={18} />} iconPosition="start" />
+                             <Tab 
+                                label="Integrated Notes" 
+                                icon={<FileText size={18} />} 
+                                iconPosition="start" 
+                                onContextMenu={(e) => handleTabContextMenu(e, 0)}
+                                onTouchStart={(e) => handleTabTouchStart(e, 0)}
+                                onTouchMove={handleTabTouchMove}
+                                onTouchEnd={handleTabTouchEnd}
+                             />
+                             <Tab 
+                                label="Execution Goals" 
+                                icon={<CheckSquare size={18} />} 
+                                iconPosition="start" 
+                                onContextMenu={(e) => handleTabContextMenu(e, 1)}
+                                onTouchStart={(e) => handleTabTouchStart(e, 1)}
+                                onTouchMove={handleTabTouchMove}
+                                onTouchEnd={handleTabTouchEnd}
+                             />
+                             <Tab 
+                                label="Vault Assets" 
+                                icon={<Lock size={18} />} 
+                                iconPosition="start" 
+                                onContextMenu={(e) => handleTabContextMenu(e, 2)}
+                                onTouchStart={(e) => handleTabTouchStart(e, 2)}
+                                onTouchMove={handleTabTouchMove}
+                                onTouchEnd={handleTabTouchEnd}
+                             />
+                             <Tab 
+                                label="Sub-Projects" 
+                                icon={<FolderKanban size={18} />} 
+                                iconPosition="start" 
+                                onContextMenu={(e) => handleTabContextMenu(e, 3)}
+                                onTouchStart={(e) => handleTabTouchStart(e, 3)}
+                                onTouchMove={handleTabTouchMove}
+                                onTouchEnd={handleTabTouchEnd}
+                             />
+                             <Tab 
+                                label="Events & Calls" 
+                                icon={<Calendar size={18} />} 
+                                iconPosition="start" 
+                                onContextMenu={(e) => handleTabContextMenu(e, 4)}
+                                onTouchStart={(e) => handleTabTouchStart(e, 4)}
+                                onTouchMove={handleTabTouchMove}
+                                onTouchEnd={handleTabTouchEnd}
+                             />
+                             <Tab 
+                                label="Interconnected Flow" 
+                                icon={<Workflow size={18} />} 
+                                iconPosition="start" 
+                                onContextMenu={(e) => handleTabContextMenu(e, 5)}
+                                onTouchStart={(e) => handleTabTouchStart(e, 5)}
+                                onTouchMove={handleTabTouchMove}
+                                onTouchEnd={handleTabTouchEnd}
+                             />
+                             <Tab 
+                                label="Project Discussion" 
+                                icon={<MessageCircle size={18} />} 
+                                iconPosition="start" 
+                                onContextMenu={(e) => handleTabContextMenu(e, 6)}
+                                onTouchStart={(e) => handleTabTouchStart(e, 6)}
+                                onTouchMove={handleTabTouchMove}
+                                onTouchEnd={handleTabTouchEnd}
+                             />
                         </Tabs>
                     </Box>
 
@@ -1184,6 +1213,176 @@ export default function ProjectDetailPage() {
           onAdded={fetchProjectData}
         />
       )}
+
+      {/* Custom Tabs Context Menu */}
+      <Menu
+        open={Boolean(tabMenuAnchorEl)}
+        onClose={() => { setTabMenuAnchorEl(null); setActiveTabMenuIndex(null); }}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          tabMenuAnchorEl ? { top: tabMenuAnchorEl.y, left: tabMenuAnchorEl.x } : undefined
+        }
+        PaperProps={{
+          sx: {
+            bgcolor: '#13110F',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '16px',
+            p: 1,
+            color: '#fff',
+            backgroundImage: 'none',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.5)',
+            minWidth: 180
+          }
+        }}
+      >
+        {activeTabMenuIndex === 0 && (
+          <MenuItem 
+            onClick={() => {
+              setTabMenuAnchorEl(null);
+              setIsAddModalOpen(true);
+            }}
+            sx={{ fontWeight: 700, borderRadius: '8px', color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', color: '#fff' } }}
+          >
+            <FileText size={16} style={{ marginRight: 10 }} /> Integrate Note
+          </MenuItem>
+        )}
+        {activeTabMenuIndex === 1 && (
+          <MenuItem 
+            onClick={() => {
+              setTabMenuAnchorEl(null);
+              setIsAddModalOpen(true);
+            }}
+            sx={{ fontWeight: 700, borderRadius: '8px', color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', color: '#fff' } }}
+          >
+            <CheckSquare size={16} style={{ marginRight: 10 }} /> Integrate Goal
+          </MenuItem>
+        )}
+        {activeTabMenuIndex === 2 && (
+          <MenuItem 
+            onClick={() => {
+              setTabMenuAnchorEl(null);
+              setIsAddModalOpen(true);
+            }}
+            sx={{ fontWeight: 700, borderRadius: '8px', color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', color: '#fff' } }}
+          >
+            <Lock size={16} style={{ marginRight: 10 }} /> Integrate Asset
+          </MenuItem>
+        )}
+        {activeTabMenuIndex === 3 && (
+          <MenuItem 
+            onClick={() => {
+              setTabMenuAnchorEl(null);
+              setIsAddSubProjectModalOpen(true);
+            }}
+            sx={{ fontWeight: 700, borderRadius: '8px', color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', color: '#fff' } }}
+          >
+            <FolderKanban size={16} style={{ marginRight: 10 }} /> Add Sub-Project
+          </MenuItem>
+        )}
+        {activeTabMenuIndex === 4 && (
+          <MenuItem 
+            onClick={() => {
+              setTabMenuAnchorEl(null);
+              setIsAddModalOpen(true);
+            }}
+            sx={{ fontWeight: 700, borderRadius: '8px', color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', color: '#fff' } }}
+          >
+            <Calendar size={16} style={{ marginRight: 10 }} /> Integrate Event/Call
+          </MenuItem>
+        )}
+        {activeTabMenuIndex === 5 && (
+          <MenuItem 
+            onClick={() => {
+              setTabMenuAnchorEl(null);
+              showSuccess('Interconnected flow nodes re-synchronized');
+            }}
+            sx={{ fontWeight: 700, borderRadius: '8px', color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', color: '#fff' } }}
+          >
+            <Workflow size={16} style={{ marginRight: 10 }} /> Re-sync Flow Nodes
+          </MenuItem>
+        )}
+        {activeTabMenuIndex === 6 && (
+          <MenuItem 
+            disabled={!metadata.discussionNoteId}
+            onClick={async () => {
+              setTabMenuAnchorEl(null);
+              if (metadata.discussionNoteId) {
+                if (window.confirm("Are you sure you want to wipe this entire discussion? All messages and replies will be permanently deleted.")) {
+                  setInitializingHuddle(true);
+                  try {
+                    // Fetch all comment rows for this discussion note's table representation
+                    const commentsRes = await databases.listRows(
+                      APPWRITE_CONFIG.DATABASES.NOTE,
+                      'comments',
+                      [Query.equal('noteId', metadata.discussionNoteId), Query.limit(1000)]
+                    );
+                    
+                    const commentIds = (commentsRes.rows as any[]).map((c) => c.$id).filter(Boolean);
+                    if (commentIds.length > 0) {
+                      // Delete reactions associated with comment rows
+                      try {
+                        await deleteReactionsForTarget(TargetType.COMMENT, commentIds);
+                      } catch (e) {
+                        console.warn('Failed to delete reactions during discussion wipe:', e);
+                      }
+                      
+                      // Delete associated voice note storage files recursively from storage bucket
+                      await Promise.all(
+                        commentsRes.rows.map(async (comment: any) => {
+                          let voiceFileId = null;
+                          const rawContent = comment.content;
+                          if (rawContent?.startsWith('{') && rawContent?.endsWith('}')) {
+                            try {
+                              const json = JSON.parse(rawContent);
+                              voiceFileId = json.voiceFileId || null;
+                            } catch {}
+                          } else if (rawContent?.startsWith('__voice_note__:')) {
+                            voiceFileId = rawContent.substring('__voice_note__:'.length);
+                          }
+                          
+                          if (voiceFileId) {
+                            try {
+                              await storage.deleteFile('voice', voiceFileId);
+                            } catch (err) {
+                              console.warn(`Failed to delete voice note file ${voiceFileId}:`, err);
+                            }
+                          }
+                        })
+                      );
+                      
+                      // Delete comment rows from comments table
+                      await Promise.all(
+                        commentIds.map((id) => databases.deleteRow(APPWRITE_CONFIG.DATABASES.NOTE, 'comments', id))
+                      );
+                    }
+                    
+                    // Delete actual note row (the discussion note / ghost note itself!) from notes table
+                    await deleteGhostNoteForProject(metadata.discussionNoteId);
+                    
+                    // Reload project data to uninitialize discussion thread
+                    await fetchProjectData();
+                    showSuccess('Discussion thread wiped successfully');
+                  } catch (err: any) {
+                    console.error('Failed to wipe discussion:', err);
+                    showError('Failed to wipe discussion', err.message);
+                  } finally {
+                    setInitializingHuddle(false);
+                  }
+                }
+              }
+            }}
+            sx={{ 
+              fontWeight: 700, 
+              borderRadius: '8px', 
+              color: '#FF4D4D', 
+              '&:hover': { bgcolor: alpha('#FF4D4D', 0.08) },
+              '&.Mui-disabled': { color: 'rgba(255,255,255,0.2)' }
+            }}
+          >
+            <Trash2 size={16} style={{ marginRight: 10 }} /> Wipe Thread
+          </MenuItem>
+        )}
+      </Menu>
     </Box>
   );
 }
