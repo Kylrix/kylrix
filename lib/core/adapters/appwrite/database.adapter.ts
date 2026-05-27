@@ -39,7 +39,11 @@ export function mapQueryExpressions(expressions: QueryExpression[]): string[] {
 }
 
 export class AppwriteDatabaseAdapter implements DatabasePort {
-  private async getClientTables(jwt?: string): Promise<TablesDB> {
+  private async getClientTables(jwt?: string, forceSystem?: boolean): Promise<TablesDB> {
+    if (forceSystem) {
+      return createSystemTablesDB();
+    }
+    
     if (jwt || typeof window === 'undefined') {
       try {
         const { client } = await createServerClient(jwt);
@@ -55,9 +59,9 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     databaseId: string,
     tableId: string,
     rowId: string,
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<T> {
-    const tables = await this.getClientTables(options?.jwt);
+    const tables = await this.getClientTables(options?.jwt, options?.forceSystem);
     const res = await tables.getRow({
       databaseId,
       tableId,
@@ -70,9 +74,9 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     databaseId: string,
     tableId: string,
     queries?: QueryExpression[] | string[],
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<ListRowsResult<T>> {
-    const tables = await this.getClientTables(options?.jwt);
+    const tables = await this.getClientTables(options?.jwt, options?.forceSystem);
     let mappedQueries: string[] = [];
     if (queries) {
       if (queries.length > 0 && typeof queries[0] === 'string') {
@@ -100,10 +104,10 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     rowId: string | null,
     data: Partial<T>,
     permissions?: string[],
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<T> {
     const { ID } = await import('node-appwrite');
-    const tables = await this.getClientTables(options?.jwt);
+    const tables = await this.getClientTables(options?.jwt, options?.forceSystem);
     const res = await tables.createRow({
       databaseId,
       tableId,
@@ -120,9 +124,9 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     rowId: string,
     data: Partial<T>,
     permissions?: string[],
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<T> {
-    const tables = await this.getClientTables(options?.jwt);
+    const tables = await this.getClientTables(options?.jwt, options?.forceSystem);
     const res = await tables.updateRow({
       databaseId,
       tableId,
@@ -137,9 +141,9 @@ export class AppwriteDatabaseAdapter implements DatabasePort {
     databaseId: string,
     tableId: string,
     rowId: string,
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<void> {
-    const tables = await this.getClientTables(options?.jwt);
+    const tables = await this.getClientTables(options?.jwt, options?.forceSystem);
     await tables.deleteRow({
       databaseId,
       tableId,

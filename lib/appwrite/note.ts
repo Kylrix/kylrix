@@ -1373,22 +1373,23 @@ export async function deleteReactionsForTarget(targetType: TargetType, targetId:
   const ids = Array.isArray(targetId) ? targetId.filter(Boolean) : [targetId];
   if (!ids.length) return;
   try {
-    const query = databases.listRows(
+    const { Registry } = await import('@/lib/core/di/registry');
+    const db = Registry.getDatabase();
+    
+    const res = await db.listRows<any>(
       APPWRITE_DATABASE_ID,
       APPWRITE_TABLE_ID_REACTIONS,
       [
         Query.equal('targetType', targetType),
         Query.equal('targetId', ids),
         Query.limit(Math.min(1000, Math.max(50, ids.length * 10)))
-      ] as any
+      ] as any,
+      { forceSystem: true }
     );
-    const timeout = new Promise<{ rows: any[] }>((resolve) =>
-      setTimeout(() => resolve({ rows: [] }), 2500)
-    );
-    const res = await Promise.race([query, timeout]);
+    
     await Promise.all(
-      (res.rows as any[]).map((doc) =>
-        databases.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, doc.$id)
+      (res.rows || []).map((doc: any) =>
+        db.deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_REACTIONS, doc.$id, { forceSystem: true })
       )
     );
   } catch (err: any) {

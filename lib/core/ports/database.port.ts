@@ -27,14 +27,14 @@ export interface DatabasePort {
     databaseId: string,
     tableId: string,
     rowId: string,
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<T>;
   
   listRows<T>(
     databaseId: string,
     tableId: string,
     queries?: QueryExpression[] | string[],
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<ListRowsResult<T>>;
 
   createRow<T>(
@@ -43,7 +43,7 @@ export interface DatabasePort {
     rowId: string | null,
     data: Partial<T>,
     permissions?: string[],
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<T>;
 
   updateRow<T>(
@@ -52,13 +52,13 @@ export interface DatabasePort {
     rowId: string,
     data: Partial<T>,
     permissions?: string[],
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<T>;
 
   deleteRow(
     databaseId: string,
     tableId: string,
     rowId: string,
-    options?: { jwt?: string }
+    options?: { jwt?: string; forceSystem?: boolean }
   ): Promise<void>;
 }

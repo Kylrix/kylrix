@@ -3163,7 +3163,8 @@ export async function createRowSecure(
     tableId,
     customRowId,
     dataCopy,
-    perms
+    perms,
+    { forceSystem: true }
   );
 
   return JSON.parse(JSON.stringify(result));
@@ -3245,7 +3246,8 @@ export async function updateRowSecure(
     tableId,
     rowId,
     data,
-    permissions
+    permissions,
+    { forceSystem: true }
   );
 
   return JSON.parse(JSON.stringify(result));
@@ -3325,7 +3327,7 @@ export async function deleteRowSecure(
     console.error('deleteRowSecure cascade cleanup failed:', err);
   }
 
-  await Registry.getDatabase().deleteRow(databaseId, tableId, rowId);
+  await Registry.getDatabase().deleteRow(databaseId, tableId, rowId, { forceSystem: true });
   const result = { success: true };
 
   return JSON.parse(JSON.stringify(result));
