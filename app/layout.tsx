@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { JetBrains_Mono } from 'next/font/google';
+import { JetBrains_Mono, Outfit, Space_Grotesk } from 'next/font/google';
 import './globals.css';
 import ThemeRegistry from '@/theme/ThemeProvider';
 import { DataNexusProvider } from '@/context/DataNexusContext';
@@ -10,6 +10,18 @@ const mono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-outfit',
+  display: 'swap',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-space-grotesk',
+  display: 'swap',
 });
 
 import GlobalShell from '@/components/GlobalShell';
@@ -55,7 +67,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={mono.variable}>
+    <html lang="en" suppressHydrationWarning className={`${mono.variable} ${outfit.variable} ${spaceGrotesk.variable}`}>
       <head>
         <link rel="preconnect" href="https://api.kylrix.space" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://api.kylrix.space" />
@@ -66,7 +78,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               var match = document.cookie.match(new RegExp('(^| )kylrix_pulse_v2=([^;]+)'));
               if (match) {
                 var d = JSON.parse(decodeURIComponent(match[2]));
-                d.avatarBase64 = localStorage.getItem('kylrix_avatar_pulse_v2_' + d.$id);
+                var storage = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage : null;
+                d.avatarBase64 = storage ? storage.getItem('kylrix_avatar_pulse_v2_' + d.$id) : null;
                 window.__KYLRIX_PULSE__ = d;
                 document.documentElement.setAttribute('data-kylrix-pulse', 'true');
                 var s = document.createElement('style');
@@ -79,11 +92,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         
         <link 
           href="https://api.fontshare.com/v2/css?f[]=clash-display@200,300,400,500,600,700&f[]=satoshi@300,400,500,700,900&display=swap" 
-          rel="stylesheet" 
-          crossOrigin="anonymous"
-        />
-        <link 
-          href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" 
           rel="stylesheet" 
           crossOrigin="anonymous"
         />

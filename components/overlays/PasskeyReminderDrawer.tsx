@@ -81,6 +81,7 @@ export const PasskeyReminderDrawer: React.FC = () => {
     };
 
     if (!user) return null;
+    if (!isOpen && !showSetup) return null;
 
     return (
         <>

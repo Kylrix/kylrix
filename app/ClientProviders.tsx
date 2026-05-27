@@ -38,74 +38,84 @@ import GlobalShortcuts from '@/components/GlobalShortcuts';
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 const PresenceProvider = dynamic(() => import('@/components/providers/PresenceProvider').then(m => m.PresenceProvider), { ssr: false });
 
+// Helper wrappers for nested elements inside the provider tree
+function ContextMenuWrapper({ children }: { children: ReactNode }) {
+  return (
+    <ContextMenuProvider>
+      <GlobalContextMenu />
+      {children}
+    </ContextMenuProvider>
+  );
+}
+
+function PresenceWrapper({ children }: { children: ReactNode }) {
+  return (
+    <PresenceProvider>
+      <GlobalShortcuts />
+      {children}
+    </PresenceProvider>
+  );
+}
+
+interface ComposeProvidersProps {
+  providers: Array<React.ComponentType<{ children: ReactNode }>>;
+  children: ReactNode;
+}
+
+/**
+ * Dynamic composition helper to flatten deeply-nested React Contexts
+ */
+function ComposeProviders({ providers, children }: ComposeProvidersProps) {
+  return (
+    <>
+      {providers.reduceRight((acc, Provider) => {
+        return <Provider>{acc}</Provider>;
+      }, children)}
+    </>
+  );
+}
+
+const providersList: Array<React.ComponentType<{ children: ReactNode }>> = [
+  AuthProvider,
+  AppwriteProvider,
+  ThemeProvider,
+  DocsProvider,
+  SubscriptionProvider,
+  NotesProvider,
+  ProfileProvider,
+  TaskProvider,
+  BackgroundTaskProvider,
+  NotificationProvider,
+  SourceProvider,
+  LocalContextProvider,
+  DrawerStateProvider,
+  SudoProvider,
+  UnifiedDrawerProvider,
+  NoteDrawerProvider,
+  SidebarProvider,
+  DynamicSidebarProvider,
+  ProUpgradeProvider,
+  AgenticDrawerProvider,
+  AIProvider,
+  OverlayProvider,
+  ToastProvider,
+  ContextMenuWrapper,
+  PotatoProvider,
+  AppChromeProvider,
+  TokenOpsProvider,
+  WalletOverlayProvider,
+  ChatNotificationProvider,
+  CallLauncherProvider,
+  PresenceWrapper,
+];
+
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
     <>
-    <AuthProvider>
-      <AppwriteProvider>
-        <ThemeProvider>
-        <DocsProvider>
-          <SubscriptionProvider>
-            <NotesProvider>
-              <ProfileProvider>
-              <TaskProvider>
-                <BackgroundTaskProvider>
-                  <NotificationProvider>
-                    <SourceProvider>
-                      <LocalContextProvider>
-                        <DrawerStateProvider>
-                        <SudoProvider>
-                          <UnifiedDrawerProvider>
-                            <NoteDrawerProvider>
-                              <SidebarProvider>
-                                <DynamicSidebarProvider>
-                                  <ProUpgradeProvider>
-                                    <AgenticDrawerProvider>
-                                      <AIProvider>
-                                        <OverlayProvider>
-                                          <ToastProvider>
-                                            <ContextMenuProvider>
-                                              <GlobalContextMenu />
-                                              <PotatoProvider>
-                                                <AppChromeProvider>
-                                                  <TokenOpsProvider>
-                                                    <WalletOverlayProvider>
-                                                      <ChatNotificationProvider>
-                                                        <CallLauncherProvider>
-                                                          <PresenceProvider>
-                                                            <GlobalShortcuts />
-                                                            {children}
-                                                          </PresenceProvider>
-                                                        </CallLauncherProvider>
-                                                      </ChatNotificationProvider>
-                                                    </WalletOverlayProvider>
-                                                  </TokenOpsProvider>
-                                                </AppChromeProvider>
-                                              </PotatoProvider>
-                                            </ContextMenuProvider>
-                                          </ToastProvider>                                        </OverlayProvider>
-                                      </AIProvider>
-                                    </AgenticDrawerProvider>
-                                  </ProUpgradeProvider>
-                                </DynamicSidebarProvider>
-                              </SidebarProvider>
-                            </NoteDrawerProvider>
-                          </UnifiedDrawerProvider>
-                        </SudoProvider>
-                      </DrawerStateProvider>
-                    </LocalContextProvider>
-                  </SourceProvider>
-                  </NotificationProvider>
-                </BackgroundTaskProvider>
-              </TaskProvider>
-              </ProfileProvider>
-            </NotesProvider>
-          </SubscriptionProvider>
-        </DocsProvider>
-        </ThemeProvider>
-      </AppwriteProvider>
-    </AuthProvider>
-    <ClientToaster />
+      <ComposeProviders providers={providersList}>
+        {children}
+      </ComposeProviders>
+      <ClientToaster />
     </>
   );
 }
