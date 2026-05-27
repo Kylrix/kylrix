@@ -486,6 +486,7 @@ export function SendComposer() {
       toast.error(e instanceof Error ? e.message : 'Could not create send link');
     } finally {
       setIsCreating(false);
+    }
   }, [
     kind,
     effectiveSecureMode,
