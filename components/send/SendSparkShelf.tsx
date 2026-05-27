@@ -231,7 +231,7 @@ export function SendSparkShelf({ sparks, onSaveSparks, onClaim }: Props) {
             letterSpacing: '-0.02em',
           }}
         >
-          Your sends on this device
+          Stash
         </Typography>
       </Stack>
 

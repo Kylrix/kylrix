@@ -20,6 +20,10 @@ import {
   Typography,
   Switch,
   FormControlLabel,
+  Drawer,
+  ListItemButton,
+  ListItemText,
+  ListItemIcon,
 } from '@mui/material';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -35,7 +39,17 @@ import {
   Lock,
   Unlock,
   Users as UsersIcon,
+  Share2,
+  Paperclip,
+  Mic,
+  Send as SendIcon,
+  ChevronDown,
+  Calendar,
+  Flag,
 } from 'lucide-react';
+
+import MuralPattern from '@/components/chat/MuralPattern';
+import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 
 import { ID, Permission, Role } from 'appwrite';
 
@@ -120,15 +134,37 @@ export function SendComposer() {
   const [expiryMs, setExpiryMs] = useState(SEND_EXPIRY_PRESETS[2].ms);
   const [isSecureMode, setIsSecureMode] = useState(false);
 
-  // Mandatory Secure Types: Credentials and Files
+  // Mandatory Secure Types: Credentials, Files, and Discussions
   const isMandatorySecure = useMemo(() => {
-    return kind === 'password' || kind === 'totp' || kind === 'file';
+    return kind === 'password' || kind === 'totp' || kind === 'file' || kind === 'discussion';
   }, [kind]);
 
   const effectiveSecureMode = useMemo(() => {
     if (isMandatorySecure) return true;
     return isSecureMode;
   }, [isMandatorySecure, isSecureMode]);
+
+  const [taskPriority, setTaskPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [taskDuePreset, setTaskDuePreset] = useState<'none' | 'today' | 'tomorrow' | 'week'>('none');
+  const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [kindDrawerOpen, setKindDrawerOpen] = useState(false);
+  const [securityDrawerOpen, setSecurityDrawerOpen] = useState(false);
+
+  // Load persistent security preferences per format
+  useEffect(() => {
+    const saved = localStorage.getItem(`send_sec_pref_${kind}`);
+    if (saved !== null) {
+      setIsSecureMode(saved === 'true');
+    } else {
+      setIsSecureMode(false); // default is unencrypted
+    }
+  }, [kind]);
+
+  const handleSelectSecureMode = (val: boolean) => {
+    setIsSecureMode(val);
+    localStorage.setItem(`send_sec_pref_${kind}`, String(val));
+  };
 
   const [noteTitle, setNoteTitle] = useState('');
   const [noteBody, setNoteBody] = useState('');
@@ -238,15 +274,34 @@ export function SendComposer() {
     }
   };
 
+  // Reset title edit state on format change
+  useEffect(() => {
+    setIsTitleManuallyEdited(false);
+  }, [kind]);
+
+  // Seamless auto-title logic
+  useEffect(() => {
+    if (isTitleManuallyEdited) return;
+
+    const generatedTitle = buildAutoTitleFromContent(noteBody);
+    if (noteBody.trim()) {
+      if (generatedTitle !== noteTitle) {
+        setNoteTitle(generatedTitle);
+      }
+    } else {
+      setNoteTitle('');
+    }
+  }, [noteBody, isTitleManuallyEdited, noteTitle]);
+
   const draftValid = useMemo(() => {
     if (kind === 'note') return noteBody.trim().length > 0;
     if (kind === 'password') return password.trim().length > 0;
     if (kind === 'task') return taskTitle.trim().length > 0;
     if (kind === 'totp') return totpSecret.trim().length > 0;
     if (kind === 'file') return !!sendFile;
-    if (kind === 'discussion') return noteTitle.trim().length > 0;
+    if (kind === 'discussion') return noteBody.trim().length > 0;
     return false;
-  }, [kind, noteBody, password, taskTitle, totpSecret, sendFile, noteTitle]);
+  }, [kind, noteBody, password, taskTitle, totpSecret, sendFile]);
 
   const handleCreateLink = useCallback(async () => {
     setIsCreating(true);
@@ -292,9 +347,21 @@ export function SendComposer() {
         outContent = c;
         format = 'json';
       } else if (kind === 'task') {
-        const bundle: SendTaskPayload = {
+        let calculatedDueAt: string | undefined = undefined;
+        if (taskDuePreset === 'today') {
+          calculatedDueAt = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+        } else if (taskDuePreset === 'tomorrow') {
+          calculatedDueAt = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
+        } else if (taskDuePreset === 'week') {
+          calculatedDueAt = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
+        }
+
+        const priorityHeader = `[Priority: ${taskPriority.toUpperCase()}]\n\n`;
+        const bundle: SendTaskPayload & { priority?: string } = {
           title: taskTitle.trim(),
-          detail: taskDetail.trim() || undefined,
+          detail: priorityHeader + (taskDetail.trim() || ''),
+          dueAt: calculatedDueAt,
+          priority: taskPriority
         };
         sparkTitle = bundle.title;
         const { t, c } = await processData(bundle.title, JSON.stringify(bundle));
@@ -419,7 +486,6 @@ export function SendComposer() {
       toast.error(e instanceof Error ? e.message : 'Could not create send link');
     } finally {
       setIsCreating(false);
-    }
   }, [
     kind,
     effectiveSecureMode,
@@ -434,9 +500,12 @@ export function SendComposer() {
     totpIssuer,
     totpSecret,
     sendFile,
+    taskPriority,
+    taskDuePreset,
     selectedUsers,
     activeMaxBytes,
-    activeMaxLabel]);
+    activeMaxLabel
+  ]);
 
   const handleCopy = useCallback(async () => {
     if (!createdUrl) return;
@@ -463,6 +532,10 @@ export function SendComposer() {
     setSendFile(null);
     setFileName(null);
     setSelectedUsers([]);
+    setTaskPriority('medium');
+    setTaskDuePreset('none');
+    setIsTitleManuallyEdited(false);
+    setShowPassword(false);
   }, []);
 
   const handleClaimSendSpark = useCallback((spark: SendSparkRef) => {
@@ -558,358 +631,1098 @@ export function SendComposer() {
               }
             </Typography>
             
-            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-                <Paper sx={{ 
-                    px: 2, 
-                    py: 1, 
-                    borderRadius: 3, 
-                    bgcolor: alpha('#fff', 0.03), 
-                    border: RIM,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2
-                }}>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                        {effectiveSecureMode ? <Lock size={16} color={PRIMARY} /> : <Unlock size={16} color="#10B981" />}
-                        <Typography sx={{ fontSize: '0.82rem', fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '0.04em', textTransform: 'uppercase', color: '#ffffff' }}>
-                            {effectiveSecureMode ? 'Zero-Knowledge Sharing' : 'Instant Preview Sharing'}
-                        </Typography>
-                    </Stack>
-                    {!isMandatorySecure && (
-                        <Switch 
-                            checked={isSecureMode}
-                            onChange={(e) => setIsSecureMode(e.target.checked)}
-                            sx={{
-                              '& .MuiSwitch-switchBase.Mui-checked': { color: effectiveSecureMode ? PRIMARY : '#10B981' },
-                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: effectiveSecureMode ? PRIMARY : '#10B981' },
-                              '& .MuiSwitch-track': { bgcolor: '#34322F' }
-                            }}
-                            size="small"
-                        />
-                    )}
-                </Paper>
-            </Box>
           </Stack>
         </motion.div>
 
-        {sendSparks.length > 0 && (
-          <Paper
-            elevation={0}
-            sx={cardStyle}
-          >
-            <SendSparkShelf sparks={sendSparks} onSaveSparks={saveSendSparks} onClaim={handleClaimSendSpark} />
-          </Paper>
-        )}
-
         {!createdUrl ? (
           <Stack spacing={3}>
-            <Paper
-              elevation={0}
-              sx={cardStyle}
-            >
-              <Typography sx={{ fontWeight: 800, mb: 2, fontSize: '0.95rem', color: '#ffffff', fontFamily: 'var(--font-clash)' }}>
-                What are you sending?
-              </Typography>
-              <Box
+            {/* Unified Dropdown Controls */}
+            <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5, flexWrap: 'wrap' }}>
+              <Button
+                onClick={() => setKindDrawerOpen(true)}
+                endIcon={<ChevronDown size={16} />}
+                startIcon={React.createElement(KINDS.find(k => k.id === kind)?.Icon || FileText, { size: 18 })}
                 sx={{
-                  display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(6, 1fr)' },
-                  gap: 1.25,
+                  bgcolor: alpha('#fff', 0.02),
+                  border: RIM,
+                  borderRadius: '12px',
+                  px: 2.5,
+                  py: 1.5,
+                  color: '#ffffff',
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-clash)',
+                  '&:hover': { bgcolor: SURFACE_HOVER },
                 }}
               >
-                {KINDS.map(({ id, label, blurb, Icon }) => {
-                  const selected = kind === id;
-                  const activeColor = effectiveSecureMode ? PRIMARY : '#10B981';
-                  return (
-                    <Button
-                      key={id}
-                      onClick={() => {
-                        setKind(id);
-                        if (id !== 'file') {
-                          setSendFile(null);
-                          setFileName(null);
-                        }
-                      }}
-                      sx={{
-                        flexDirection: 'column',
-                        alignItems: 'flex-start',
-                        textAlign: 'left',
-                        textTransform: 'none',
-                        p: 1.75,
-                        borderRadius: 2,
-                        gap: 1,
-                        border: selected ? `1px solid ${alpha(activeColor, 0.55)}` : RIM,
-                        bgcolor: selected ? alpha(activeColor, 0.12) : alpha('#fff', 0.02),
-                        color: '#fff',
-                        minHeight: 108,
-                        '&:hover': {
-                          bgcolor: selected ? alpha(activeColor, 0.18) : SURFACE_HOVER,
-                          borderColor: alpha('#fff', 0.1),
-                        },
-                      }}
-                    >
-                      <Icon size={22} color={selected ? activeColor : 'rgba(255,255,255,0.65)'} />
-                      <Box>
-                        <Typography sx={{ fontWeight: 800, fontSize: '0.95rem', fontFamily: 'var(--font-satoshi)' }}>{label}</Typography>
-                        <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.35, fontFamily: 'var(--font-satoshi)' }}>
-                          {blurb}
-                        </Typography>
-                      </Box>
-                    </Button>
-                  );
-                })}
-              </Box>
-            </Paper>
+                {KINDS.find(k => k.id === kind)?.label || 'Note'}
+              </Button>
 
-            {(kind === 'note' || kind === 'discussion') ? (
-                <Paper
-                  elevation={0}
+              {(!isMandatorySecure) && (
+                <Button
+                  onClick={() => setSecurityDrawerOpen(true)}
+                  endIcon={<ChevronDown size={16} />}
+                  startIcon={effectiveSecureMode ? <Lock size={16} color={PRIMARY} /> : <Unlock size={16} color="#10B981" />}
                   sx={{
-                    ...cardStyle,
-                    p: 0,
-                    overflow: 'hidden',
-                    '&:focus-within': {
-                        borderColor: alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.4),
-                        boxShadow: `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 15px ${alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.1)}`
-                    }
+                    bgcolor: alpha('#fff', 0.02),
+                    border: RIM,
+                    borderRadius: '12px',
+                    px: 2.5,
+                    py: 1.5,
+                    color: '#ffffff',
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    fontFamily: 'var(--font-clash)',
+                    '&:hover': { bgcolor: SURFACE_HOVER },
                   }}
                 >
-                  {/* Editor Header */}
-                  <Box sx={{ 
-                      px: 3, 
-                      py: 2, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      borderBottom: '1px solid #34322F',
-                      bgcolor: alpha('#fff', 0.01)
-                  }}>
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                      <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 1, 
-                          px: 1.5, 
-                          py: 0.5, 
-                          borderRadius: '8px', 
-                          bgcolor: 'rgba(255, 255, 255, 0.03)',
-                          border: '1px solid rgba(255, 255, 255, 0.05)'
-                      }}>
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                color: noteBody.length >= 65000 ? '#FF453A' : 'rgba(255, 255, 255, 0.4)',
-                                fontWeight: 700,
-                                fontFamily: 'var(--font-jetbrains-mono)',
-                                letterSpacing: '0.05em'
-                            }}
-                        >
-                            {noteBody.length.toLocaleString()} / 65,000
-                        </Typography>
-                      </Box>
-                      {effectiveSecureMode && (
-                        <Tooltip title="This content is zero-knowledge encrypted before upload.">
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: PRIMARY }}>
-                                <Lock size={12} />
-                                <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.65rem', textTransform: 'uppercase' }}>SECURE</Typography>
-                            </Box>
-                        </Tooltip>
-                      )}
-                    </Stack>
+                  {effectiveSecureMode ? 'Zero-Knowledge Sharing' : 'Instant Preview Sharing'}
+                </Button>
+              )}
+            </Box>
 
-                    <Stack direction="row" spacing={1}>
-                        <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.2)' }}>
-                            {kind === 'note' ? <FileText size={16} /> : <MessageSquare size={16} />}
+            {kind === 'note' && (
+              <Paper
+                elevation={0}
+                sx={{
+                  ...cardStyle,
+                  p: 0,
+                  overflow: 'hidden',
+                  '&:focus-within': {
+                      borderColor: alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.4),
+                      boxShadow: `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 15px ${alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.1)}`
+                  }
+                }}
+              >
+                {/* Editor Header */}
+                <Box sx={{ 
+                    px: 3, 
+                    py: 2, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    borderBottom: '1px solid #34322F',
+                    bgcolor: alpha('#fff', 0.01)
+                }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 1, 
+                        px: 1.5, 
+                        py: 0.5, 
+                        borderRadius: '8px', 
+                        bgcolor: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.05)'
+                    }}>
+                      <Typography
+                          variant="caption"
+                          sx={{
+                              color: noteBody.length >= 65000 ? '#FF453A' : 'rgba(255, 255, 255, 0.4)',
+                              fontWeight: 700,
+                              fontFamily: 'var(--font-jetbrains-mono)',
+                              letterSpacing: '0.05em'
+                          }}
+                      >
+                          {noteBody.length.toLocaleString()} / 65,000
+                      </Typography>
+                    </Box>
+                    {effectiveSecureMode && (
+                      <Tooltip title="This content is zero-knowledge encrypted before upload.">
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: PRIMARY }}>
+                              <Lock size={12} />
+                              <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.65rem', textTransform: 'uppercase' }}>SECURE</Typography>
+                          </Box>
+                      </Tooltip>
+                    )}
+                  </Stack>
+
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Tooltip title={!draftValid ? "Type a note to share" : "Create & copy send link"}>
+                      <span>
+                        <IconButton 
+                          size="small"
+                          disabled={!draftValid || isCreating}
+                          onClick={() => void handleCreateLink()}
+                          sx={{ 
+                            color: !draftValid ? 'rgba(255,255,255,0.15)' : (effectiveSecureMode ? PRIMARY : '#10B981'),
+                            bgcolor: draftValid ? alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.08) : 'transparent',
+                            border: draftValid ? `1px solid ${alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.2)}` : '1px solid transparent',
+                            '&:hover': {
+                              bgcolor: alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.15),
+                            },
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <Share2 size={16} />
                         </IconButton>
-                    </Stack>
+                      </span>
+                    </Tooltip>
+                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                      <FileText size={16} />
+                    </IconButton>
+                  </Stack>
+                </Box>
+
+                {/* Main Inputs */}
+                <Box sx={{ p: { xs: 3, sm: 5 }, pt: { xs: 2.5, sm: 3 } }}>
+                  {(noteBody.trim().length > 0 || noteTitle.trim().length > 0) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <TextField
+                        fullWidth
+                        placeholder="Note Title"
+                        value={noteTitle}
+                        onChange={(e) => {
+                          setNoteTitle(e.target.value);
+                          setIsTitleManuallyEdited(true);
+                        }}
+                        variant="standard"
+                        InputProps={{
+                          disableUnderline: true,
+                          sx: { 
+                            fontSize: '2.25rem', 
+                            fontWeight: 900, 
+                            fontFamily: 'var(--font-clash)',
+                            color: 'white', 
+                            mb: 1.5,
+                            '&::placeholder': { opacity: 0.2, color: '#ffffff' }
+                          }
+                        }}
+                      />
+                    </motion.div>
+                  )}
+                  <TextField
+                    fullWidth
+                    required
+                    multiline
+                    minRows={10}
+                    maxRows={20}
+                    placeholder="Start typing your brilliant thoughts…"
+                    value={noteBody}
+                    onChange={(e) => setNoteBody(e.target.value)}
+                    variant="standard"
+                    InputProps={{
+                      disableUnderline: true,
+                      sx: { 
+                        fontSize: '1.1rem', 
+                        lineHeight: 1.7,
+                        color: 'rgba(255, 255, 255, 0.75)',
+                        fontFamily: 'var(--font-satoshi)',
+                        '&::placeholder': { opacity: 0.2, color: '#ffffff' }
+                      }
+                    }}
+                  />
+                </Box>
+              </Paper>
+            )}
+
+            {kind === 'discussion' && (
+              <Paper
+                elevation={0}
+                sx={{
+                  ...cardStyle,
+                  p: 0,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  '&:focus-within': {
+                      borderColor: alpha(PRIMARY, 0.4),
+                      boxShadow: `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 15px ${alpha(PRIMARY, 0.1)}`
+                  }
+                }}
+              >
+                {/* Mural Pattern Background */}
+                <MuralPattern />
+                
+                {/* Secure Chat Header */}
+                <Box sx={{ 
+                    px: 3, 
+                    py: 2, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    borderBottom: '1px solid #34322F',
+                    bgcolor: alpha('#0A0908', 0.85),
+                    backdropFilter: 'blur(8px)',
+                    zIndex: 1,
+                    position: 'relative',
+                }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ 
+                        width: 8, 
+                        height: 8, 
+                        borderRadius: '50%', 
+                        bgcolor: '#10B981', 
+                        boxShadow: '0 0 8px #10B981',
+                    }} />
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            color: '#ffffff',
+                            fontWeight: 900,
+                            fontFamily: 'var(--font-clash)',
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                        }}
+                    >
+                        EPHEMERAL HUDDLE ROOM
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: PRIMARY }}>
+                      <Lock size={12} />
+                      <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.65rem', textTransform: 'uppercase' }}>E2EE</Typography>
+                    </Box>
+                  </Stack>
+
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Tooltip title={!draftValid ? "Type a message to share" : "Create & copy huddle link"}>
+                      <span>
+                        <IconButton 
+                          size="small"
+                          disabled={!draftValid || isCreating}
+                          onClick={() => void handleCreateLink()}
+                          sx={{ 
+                            color: !draftValid ? 'rgba(255,255,255,0.15)' : PRIMARY,
+                            bgcolor: draftValid ? alpha(PRIMARY, 0.08) : 'transparent',
+                            border: draftValid ? `1px solid ${alpha(PRIMARY, 0.2)}` : '1px solid transparent',
+                            '&:hover': {
+                              bgcolor: alpha(PRIMARY, 0.15),
+                            },
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <Share2 size={16} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                      <MessageSquare size={16} />
+                    </IconButton>
+                  </Stack>
+                </Box>
+
+                {/* Simulated Chat Feed */}
+                <Box 
+                  sx={{ 
+                    p: 3, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: 2, 
+                    minHeight: 220, 
+                    justifyContent: 'flex-end', 
+                    position: 'relative',
+                    zIndex: 1,
+                  }}
+                >
+                  {/* System Note */}
+                  <Box sx={{ alignSelf: 'center', bgcolor: 'rgba(0,0,0,0.6)', border: RIM, borderRadius: '12px', px: 2, py: 1, maxWidth: '85%', textAlign: 'center' }}>
+                    <Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-satoshi)', display: 'flex', alignItems: 'center', gap: 1, justifyContent: 'center' }}>
+                      <Lock size={12} color={PRIMARY} />
+                      Messages are encrypted. Huddle automatically purges in 7 days.
+                    </Typography>
                   </Box>
 
-                  {/* Main Inputs */}
-                  <Box sx={{ p: { xs: 3, sm: 5 }, pt: { xs: 2.5, sm: 3 } }}>
-                    <TextField
-                      fullWidth
-                      placeholder={kind === 'note' ? "Note Title" : "Discussion Topic"}
-                      value={noteTitle}
-                      onChange={(e) => setNoteTitle(e.target.value)}
-                      variant="standard"
-                      InputProps={{
-                        disableUnderline: true,
-                        sx: { 
-                          fontSize: '2.25rem', 
-                          fontWeight: 900, 
-                          fontFamily: 'var(--font-clash)',
-                          color: 'white', 
-                          mb: 1,
-                          '&::placeholder': { opacity: 0.1, color: '#ffffff' }
-                        }
-                      }}
-                    />
+                  {/* Outgoing Bubble Preview */}
+                  {noteBody.trim().length > 0 && (
+                    <Box sx={{ alignSelf: 'flex-end', maxWidth: '80%', display: 'flex', gap: 1.5, alignItems: 'flex-end' }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                        <Box sx={{ 
+                          bgcolor: PRIMARY, 
+                          color: '#ffffff', 
+                          px: 2.5, 
+                          py: 1.75, 
+                          borderRadius: '20px 20px 4px 20px',
+                          boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)',
+                        }}>
+                          <Typography sx={{ fontSize: '0.95rem', fontFamily: 'var(--font-satoshi)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                            {noteBody}
+                          </Typography>
+                        </Box>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 0.5, fontSize: '0.7rem' }}>
+                          <Lock size={10} /> Zero-Knowledge Secured
+                        </Typography>
+                      </Box>
+                      <Box sx={{ 
+                        width: 32, 
+                        height: 32, 
+                        borderRadius: '50%', 
+                        bgcolor: '#34322F', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        fontSize: '0.8rem',
+                        fontWeight: 900,
+                        border: RIM,
+                        color: '#ffffff'
+                      }}>
+                        {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Chat Composer Well */}
+                <Box sx={{ 
+                  p: 3, 
+                  borderTop: '1px solid #34322F', 
+                  bgcolor: alpha('#0A0908', 0.95), 
+                  backdropFilter: 'blur(8px)',
+                  position: 'relative',
+                  zIndex: 1,
+                }}>
+                  {/* Conditional Topic Field */}
+                  {(noteBody.trim().length > 0 || noteTitle.trim().length > 0) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <TextField
+                        fullWidth
+                        placeholder="Discussion Topic / Room Name"
+                        value={noteTitle}
+                        onChange={(e) => {
+                          setNoteTitle(e.target.value);
+                          setIsTitleManuallyEdited(true);
+                        }}
+                        variant="standard"
+                        InputProps={{
+                          disableUnderline: true,
+                          sx: { 
+                            fontSize: '1.25rem', 
+                            fontWeight: 800, 
+                            fontFamily: 'var(--font-clash)',
+                            color: 'white', 
+                            mb: 2,
+                            px: 1,
+                            '&::placeholder': { opacity: 0.3, color: '#ffffff' }
+                          }
+                        }}
+                      />
+                    </motion.div>
+                  )}
+
+                  <Box sx={{ 
+                    bgcolor: '#000000', 
+                    borderRadius: '16px', 
+                    border: '1px solid #34322F',
+                    '&:focus-within': { borderColor: PRIMARY },
+                    p: 1.5,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1
+                  }}>
                     <TextField
                       fullWidth
                       required
                       multiline
-                      minRows={10}
-                      maxRows={20}
-                      placeholder={kind === 'note' ? "Start typing your brilliant thoughts…" : "Open the huddle with a clear message…"}
+                      minRows={3}
+                      maxRows={10}
+                      placeholder="Open the huddle with a clear message…"
                       value={noteBody}
                       onChange={(e) => setNoteBody(e.target.value)}
                       variant="standard"
                       InputProps={{
                         disableUnderline: true,
                         sx: { 
-                          fontSize: '1.1rem', 
-                          lineHeight: 1.7,
-                          color: 'rgba(255, 255, 255, 0.75)',
+                          fontSize: '1rem', 
+                          lineHeight: 1.6,
+                          color: 'rgba(255, 255, 255, 0.9)',
                           fontFamily: 'var(--font-satoshi)',
-                          '&::placeholder': { opacity: 0.1, color: '#ffffff' }
+                          px: 1,
+                          '&::placeholder': { opacity: 0.3, color: '#ffffff' }
                         }
                       }}
                     />
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: 1, borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                      <Stack direction="row" spacing={1}>
+                        <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#ffffff' } }}>
+                          <Paperclip size={16} />
+                        </IconButton>
+                        <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: '#ffffff' } }}>
+                          <Mic size={16} />
+                        </IconButton>
+                      </Stack>
+                      <Button
+                        size="small"
+                        disabled={!draftValid || isCreating}
+                        onClick={() => void handleCreateLink()}
+                        endIcon={isCreating ? <CircularProgress size={14} color="inherit" /> : <SendIcon size={14} />}
+                        sx={{
+                          bgcolor: draftValid ? PRIMARY : 'transparent',
+                          color: draftValid ? '#ffffff' : 'rgba(255,255,255,0.2)',
+                          textTransform: 'none',
+                          fontWeight: 800,
+                          borderRadius: '8px',
+                          px: 2,
+                          py: 0.75,
+                          '&:hover': {
+                            bgcolor: draftValid ? '#5558E8' : 'transparent',
+                          }
+                        }}
+                      >
+                        Share Huddle
+                      </Button>
+                    </Box>
                   </Box>
-                </Paper>
-              ) : (
+                </Box>
+              </Paper>
+            )}
+
+            {kind === 'password' && (
               <Paper
                 elevation={0}
                 sx={cardStyle}
               >
-                <Typography sx={{ fontWeight: 800, mb: 2.5, fontSize: '0.95rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>Payload</Typography>
-
-                {kind === 'password' && (
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Username / Email"
-                      fullWidth
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      sx={fieldSx}
-                    />
-                    <TextField
-                      label="Password"
-                      fullWidth
-                      required
-                      type="text"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      sx={fieldSx}
-                    />
-                    <TextField
-                      label="TOTP Secret (optional)"
-                      fullWidth
-                      placeholder="JBSWY3DPEHPK3PXP"
-                      value={passwordTotpBundle}
-                      onChange={(e) => setPasswordTotpBundle(e.target.value)}
-                      sx={fieldSx}
-                    />
+                {/* Vault Header */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: '8px', 
+                      bgcolor: alpha(PRIMARY, 0.1),
+                      border: `1px solid ${alpha(PRIMARY, 0.3)}`,
+                      color: PRIMARY,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <KeyRound size={16} />
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>
+                        Hardware Credential Vault
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)' }}>
+                        Sealed with local AES-256 E2EE
+                      </Typography>
+                    </Box>
                   </Stack>
-                )}
-
-                {kind === 'totp' && (
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Issuer (e.g. Google, AWS)"
-                      fullWidth
-                      value={totpIssuer}
-                      onChange={(e) => setTotpIssuer(e.target.value)}
-                      sx={fieldSx}
-                    />
-                    <TextField
-                      label="Secret Key"
-                      fullWidth
-                      required
-                      placeholder="JBSWY3DPEHPK3PXP"
-                      value={totpSecret}
-                      onChange={(e) => setTotpSecret(e.target.value)}
-                      sx={fieldSx}
-                    />
-                  </Stack>
-                )}
-
-                {kind === 'task' && (
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Task Title"
-                      fullWidth
-                      required
-                      value={taskTitle}
-                      onChange={(e) => setTaskTitle(e.target.value)}
-                      sx={fieldSx}
-                    />
-                    <TextField
-                      label="Task Details"
-                      fullWidth
-                      multiline
-                      minRows={3}
-                      placeholder="Context or sub-steps…"
-                      value={taskDetail}
-                      onChange={(e) => setTaskDetail(e.target.value)}
-                      sx={fieldSx}
-                    />
-                  </Stack>
-                )}
-
-                {kind === 'file' && (
-                  <Box
-                    onDragEnter={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDragOver={handleDrag}
-                    onDrop={handleDrop}
-                    sx={{
-                      border: `2px dashed ${dragActive ? alpha(PRIMARY, 0.45) : '#34322F'}`,
-                      borderRadius: 3,
-                      p: 4,
-                      textAlign: 'center',
-                      bgcolor: dragActive ? alpha(PRIMARY, 0.04) : 'rgba(255,255,255,0.01)',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <input
-                      type="file"
-                      id="send-file-input"
-                      onChange={handleFileChange}
-                      style={{ display: 'none' }}
-                    />
-                    <label htmlFor="send-file-input" style={{ cursor: 'pointer' }}>
-                      <Stack spacing={1.5} alignItems="center">
-                        <Box
-                          sx={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: '50%',
-                            bgcolor: '#161412',
-                            border: '1px solid #34322F',
-                            color: effectiveSecureMode ? PRIMARY : '#10B981',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                  
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    {/* Glowing state indicator */}
+                    <Tooltip title="High Entropy Cryptographic Seal Active">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: alpha(PRIMARY, 0.08), border: `1px solid ${alpha(PRIMARY, 0.2)}`, px: 1, py: 0.5, borderRadius: '6px' }}>
+                        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10B981', boxShadow: '0 0 6px #10B981' }} />
+                        <Typography sx={{ fontSize: '0.6rem', fontWeight: 900, color: PRIMARY, letterSpacing: '0.05em' }}>SEALED</Typography>
+                      </Box>
+                    </Tooltip>
+                    
+                    <Tooltip title={!draftValid ? "Enter a password to share" : "Create & copy secure link"}>
+                      <span>
+                        <IconButton 
+                          size="small"
+                          disabled={!draftValid || isCreating}
+                          onClick={() => void handleCreateLink()}
+                          sx={{ 
+                            color: !draftValid ? 'rgba(255,255,255,0.15)' : PRIMARY,
+                            bgcolor: draftValid ? alpha(PRIMARY, 0.08) : 'transparent',
+                            border: draftValid ? `1px solid ${alpha(PRIMARY, 0.2)}` : '1px solid transparent',
+                            '&:hover': {
+                              bgcolor: alpha(PRIMARY, 0.15),
+                            },
+                            transition: 'all 0.2s ease',
                           }}
                         >
-                          <Upload size={24} />
-                        </Box>
-                        <Box>
-                          <Typography sx={{ fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-satoshi)' }}>
-                            {fileName || 'Click or drag file to share'}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#9B9691', fontFamily: 'var(--font-satoshi)', display: 'block', mt: 0.5 }}>
-                            Max {activeMaxLabel} · Securely encrypted
-                          </Typography>
-                        </Box>
-                        {fileName && (
-                          <Button
-                            size="small"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setSendFile(null);
-                              setFileName(null);
-                            }}
-                            sx={{ color: '#FF453A', textTransform: 'none', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}
-                          >
-                            Remove
-                          </Button>
-                        )}
-                      </Stack>
-                    </label>
+                          <Share2 size={16} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Stack>
+                </Box>
+
+                {/* Interactive Card/Token Geometry Mock */}
+                <Box sx={{ 
+                  p: 3, 
+                  borderRadius: '16px', 
+                  bgcolor: '#000000', 
+                  border: RIM, 
+                  mb: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  background: 'radial-gradient(circle at top right, rgba(99, 102, 241, 0.1) 0%, transparent 60%)',
+                }}>
+                  {/* Interactive SIM/Chip Geometry */}
+                  <Box sx={{ 
+                    width: 40, 
+                    height: 32, 
+                    borderRadius: '6px', 
+                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)', 
+                    border: '1px solid #B45309',
+                    position: 'absolute',
+                    top: 20,
+                    right: 20,
+                    opacity: 0.8,
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      inset: 4,
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      borderRadius: '2px',
+                    }
+                  }} />
+
+                  <Stack spacing={2} sx={{ position: 'relative', zIndex: 1, maxWidth: '80%' }}>
+                    <Box>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+                        Vault Identity
+                      </Typography>
+                      <TextField
+                        placeholder="Username, Email, or Client ID"
+                        fullWidth
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        variant="standard"
+                        InputProps={{
+                          disableUnderline: true,
+                          sx: { 
+                            fontSize: '1rem', 
+                            fontFamily: 'var(--font-jetbrains-mono)',
+                            color: '#ffffff',
+                            py: 0.5,
+                            borderBottom: '1px dashed #34322F',
+                            '&::placeholder': { opacity: 0.2 }
+                          }
+                        }}
+                      />
+                    </Box>
+
+                    <Box>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+                        Credential Key
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: '1px dashed #34322F' }}>
+                        <TextField
+                          placeholder="Secret Password or Key Phrase"
+                          fullWidth
+                          required
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          variant="standard"
+                          InputProps={{
+                            disableUnderline: true,
+                            sx: { 
+                              fontSize: '1rem', 
+                              fontFamily: 'var(--font-jetbrains-mono)',
+                              color: '#ffffff',
+                              py: 0.5,
+                              '&::placeholder': { opacity: 0.2 }
+                            }
+                          }}
+                        />
+                        <IconButton size="small" onClick={() => setShowPassword(!showPassword)} sx={{ color: 'rgba(255,255,255,0.4)', p: 0.5 }}>
+                          {showPassword ? <Unlock size={16} /> : <Lock size={16} />}
+                        </IconButton>
+                      </Box>
+                    </Box>
+
+                    <Box>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+                        Bundled TOTP Secret (Optional)
+                      </Typography>
+                      <TextField
+                        placeholder="JBSWY3DPEHPK3PXP"
+                        fullWidth
+                        value={passwordTotpBundle}
+                        onChange={(e) => setPasswordTotpBundle(e.target.value)}
+                        variant="standard"
+                        InputProps={{
+                          disableUnderline: true,
+                          sx: { 
+                            fontSize: '1rem', 
+                            fontFamily: 'var(--font-jetbrains-mono)',
+                            color: '#ffffff',
+                            py: 0.5,
+                            borderBottom: '1px dashed #34322F',
+                            '&::placeholder': { opacity: 0.2 }
+                          }
+                        }}
+                      />
+                    </Box>
+                  </Stack>
+                </Box>
+              </Paper>
+            )}
+
+            {kind === 'totp' && (
+              <Paper
+                elevation={0}
+                sx={cardStyle}
+              >
+                {/* Authenticator Header */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: '8px', 
+                      bgcolor: alpha(PRIMARY, 0.1),
+                      border: `1px solid ${alpha(PRIMARY, 0.3)}`,
+                      color: PRIMARY,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Shield size={16} />
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>
+                        Authenticator Generator
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)' }}>
+                        Secure 2FA token seeds
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    {/* Glowing LED countdown simulation indicator */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', px: 1, py: 0.5, borderRadius: '6px' }}>
+                      <Box sx={{ 
+                        width: 6, 
+                        height: 6, 
+                        borderRadius: '50%', 
+                        bgcolor: '#10B981', 
+                        boxShadow: '0 0 6px #10B981',
+                      }} />
+                      <Typography sx={{ fontSize: '0.6rem', fontWeight: 900, color: '#10B981', letterSpacing: '0.05em' }}>ACTIVE</Typography>
+                    </Box>
+
+                    <Tooltip title={!draftValid ? "Enter a secret key to share" : "Create & copy secure link"}>
+                      <span>
+                        <IconButton 
+                          size="small"
+                          disabled={!draftValid || isCreating}
+                          onClick={() => void handleCreateLink()}
+                          sx={{ 
+                            color: !draftValid ? 'rgba(255,255,255,0.15)' : PRIMARY,
+                            bgcolor: draftValid ? alpha(PRIMARY, 0.08) : 'transparent',
+                            border: draftValid ? `1px solid ${alpha(PRIMARY, 0.2)}` : '1px solid transparent',
+                            '&:hover': {
+                              bgcolor: alpha(PRIMARY, 0.15),
+                            },
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <Share2 size={16} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Stack>
+                </Box>
+
+                {/* Digital LCD screen representation */}
+                <Box sx={{ 
+                  p: 3, 
+                  borderRadius: '16px', 
+                  bgcolor: '#000000', 
+                  border: RIM, 
+                  mb: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  background: 'radial-gradient(circle at top left, rgba(16, 185, 129, 0.05) 0%, transparent 60%)',
+                }}>
+                  {/* Mock Token Monospace Screen display */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    border: '1px solid #1C1A18',
+                    bgcolor: '#0A0908',
+                    borderRadius: '12px',
+                    p: 2.5,
+                    mb: 3.5
+                  }}>
+                    <Box>
+                      <Typography sx={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                        {totpIssuer.trim() ? totpIssuer.trim() : 'DEFAULT TOKEN'}
+                      </Typography>
+                      <Typography sx={{ fontSize: '2rem', fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 900, color: '#10B981', letterSpacing: '0.05em', mt: 0.5 }}>
+                        {totpSecret.trim() ? '••• •••' : '000 000'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                      <Typography sx={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', fontWeight: 800 }}>TIME REMAINING</Typography>
+                      <Typography sx={{ fontSize: '1.25rem', fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 900, color: 'rgba(255,255,255,0.7)', mt: 0.5 }}>
+                        30s
+                      </Typography>
+                    </Box>
                   </Box>
-                )}
+
+                  <Stack spacing={2}>
+                    <Box>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+                        Token Issuer (e.g. Google, AWS, GitHub)
+                      </Typography>
+                      <TextField
+                        placeholder="Google, AWS, GitHub"
+                        fullWidth
+                        value={totpIssuer}
+                        onChange={(e) => setTotpIssuer(e.target.value)}
+                        variant="standard"
+                        InputProps={{
+                          disableUnderline: true,
+                          sx: { 
+                            fontSize: '1rem', 
+                            fontFamily: 'var(--font-satoshi)',
+                            color: '#ffffff',
+                            py: 0.5,
+                            borderBottom: '1px dashed #34322F',
+                            '&::placeholder': { opacity: 0.2 }
+                          }
+                        }}
+                      />
+                    </Box>
+
+                    <Box>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+                        Secret Authenticator Key
+                      </Typography>
+                      <TextField
+                        placeholder="JBSWY3DPEHPK3PXP"
+                        fullWidth
+                        required
+                        value={totpSecret}
+                        onChange={(e) => setTotpSecret(e.target.value)}
+                        variant="standard"
+                        InputProps={{
+                          disableUnderline: true,
+                          sx: { 
+                            fontSize: '1rem', 
+                            fontFamily: 'var(--font-jetbrains-mono)',
+                            color: '#ffffff',
+                            py: 0.5,
+                            borderBottom: '1px dashed #34322F',
+                            '&::placeholder': { opacity: 0.2 }
+                          }
+                        }}
+                      />
+                    </Box>
+                  </Stack>
+                </Box>
+              </Paper>
+            )}
+
+            {kind === 'task' && (
+              <Paper
+                elevation={0}
+                sx={cardStyle}
+              >
+                {/* Task Header */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: '8px', 
+                      bgcolor: alpha('#10B981', 0.1),
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      color: '#10B981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <ListTodo size={16} />
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>
+                        Execution Goal Planner
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)' }}>
+                        Action items & milestones
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Tooltip title={!draftValid ? "Enter a goal title to share" : "Create & copy task link"}>
+                      <span>
+                        <IconButton 
+                          size="small"
+                          disabled={!draftValid || isCreating}
+                          onClick={() => void handleCreateLink()}
+                          sx={{ 
+                            color: !draftValid ? 'rgba(255,255,255,0.15)' : '#10B981',
+                            bgcolor: draftValid ? alpha('#10B981', 0.08) : 'transparent',
+                            border: draftValid ? `1px solid ${alpha('#10B981', 0.2)}` : '1px solid transparent',
+                            '&:hover': {
+                              bgcolor: alpha('#10B981', 0.15),
+                            },
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <Share2 size={16} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Stack>
+                </Box>
+
+                {/* Goals Metadata Schema board */}
+                <Box sx={{ 
+                  p: 3, 
+                  borderRadius: '16px', 
+                  bgcolor: '#000000', 
+                  border: RIM, 
+                  mb: 3,
+                  background: 'radial-gradient(circle at center, rgba(16, 185, 129, 0.03) 0%, transparent 80%)',
+                }}>
+                  <Stack spacing={3.5}>
+                    {/* Goal Title & Detail */}
+                    <Stack spacing={2}>
+                      <Box>
+                        <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+                          Goal / Objective
+                        </Typography>
+                        <TextField
+                          placeholder="What needs to be achieved?"
+                          fullWidth
+                          required
+                          value={taskTitle}
+                          onChange={(e) => setTaskTitle(e.target.value)}
+                          variant="standard"
+                          InputProps={{
+                            disableUnderline: true,
+                            sx: { 
+                              fontSize: '1.25rem', 
+                              fontWeight: 800,
+                              fontFamily: 'var(--font-clash)',
+                              color: '#ffffff',
+                              py: 0.5,
+                              borderBottom: '1px dashed #34322F',
+                              '&::placeholder': { opacity: 0.2 }
+                            }
+                          }}
+                        />
+                      </Box>
+
+                      <Box>
+                        <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.5 }}>
+                          Execution Details / Sub-steps
+                        </Typography>
+                        <TextField
+                          placeholder="Add context, specifications, or step-by-step checklist..."
+                          fullWidth
+                          multiline
+                          minRows={3}
+                          value={taskDetail}
+                          onChange={(e) => setTaskDetail(e.target.value)}
+                          variant="standard"
+                          InputProps={{
+                            disableUnderline: true,
+                            sx: { 
+                              fontSize: '0.95rem', 
+                              fontFamily: 'var(--font-satoshi)',
+                              color: 'rgba(255,255,255,0.8)',
+                              py: 0.5,
+                              lineHeight: 1.5,
+                              '&::placeholder': { opacity: 0.2 }
+                            }
+                          }}
+                        />
+                      </Box>
+                    </Stack>
+
+                    {/* Goal Priority Selector */}
+                    <Box>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1.5 }}>
+                        Goal Priority
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {(['low', 'medium', 'high', 'urgent'] as const).map((p) => {
+                          const isSelected = taskPriority === p;
+                          const color = p === 'low' ? '#A1A1AA' : p === 'medium' ? '#10B981' : p === 'high' ? '#F59E0B' : '#EF4444';
+                          return (
+                            <Button
+                              key={p}
+                              size="small"
+                              onClick={() => setTaskPriority(p)}
+                              sx={{
+                                textTransform: 'uppercase',
+                                fontSize: '0.7rem',
+                                fontWeight: 900,
+                                px: 2,
+                                py: 0.75,
+                                borderRadius: '8px',
+                                border: isSelected ? `1px solid ${color}` : '1px solid #34322F',
+                                bgcolor: isSelected ? alpha(color, 0.15) : 'transparent',
+                                color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                                '&:hover': {
+                                  bgcolor: isSelected ? alpha(color, 0.25) : 'rgba(255,255,255,0.02)',
+                                  borderColor: isSelected ? color : '#4A4845',
+                                },
+                                transition: 'all 0.25s ease',
+                              }}
+                            >
+                              {p}
+                            </Button>
+                          );
+                        })}
+                      </Box>
+                    </Box>
+
+                    {/* Goal Deadline Selector */}
+                    <Box>
+                      <Typography sx={{ fontSize: '0.75rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1.5 }}>
+                        Goal Target Deadline
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        {(['none', 'today', 'tomorrow', 'week'] as const).map((preset) => {
+                          const isSelected = taskDuePreset === preset;
+                          const label = preset === 'none' ? 'No Due Date' : preset === 'today' ? 'Today' : preset === 'tomorrow' ? 'Tomorrow' : '1 Week';
+                          return (
+                            <Button
+                              key={preset}
+                              size="small"
+                              onClick={() => setTaskDuePreset(preset)}
+                              sx={{
+                                textTransform: 'none',
+                                fontSize: '0.75rem',
+                                fontWeight: 800,
+                                px: 2,
+                                py: 0.75,
+                                borderRadius: '8px',
+                                border: isSelected ? `1px solid #10B981` : '1px solid #34322F',
+                                bgcolor: isSelected ? alpha('#10B981', 0.15) : 'transparent',
+                                color: isSelected ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                                '&:hover': {
+                                  bgcolor: isSelected ? alpha('#10B981', 0.25) : 'rgba(255,255,255,0.02)',
+                                  borderColor: isSelected ? '#10B981' : '#4A4845',
+                                },
+                                transition: 'all 0.25s ease',
+                              }}
+                            >
+                              {label}
+                            </Button>
+                          );
+                        })}
+                      </Box>
+                    </Box>
+                  </Stack>
+                </Box>
+              </Paper>
+            )}
+
+            {kind === 'file' && (
+              <Paper
+                elevation={0}
+                sx={cardStyle}
+              >
+                {/* File Header */}
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ 
+                      width: 32, 
+                      height: 32, 
+                      borderRadius: '8px', 
+                      bgcolor: alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.1),
+                      border: `1px solid ${alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.3)}`,
+                      color: effectiveSecureMode ? PRIMARY : '#10B981',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                      <Upload size={16} />
+                    </Box>
+                    <Box>
+                      <Typography sx={{ fontWeight: 800, fontSize: '1rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>
+                        Secure File Drop
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)' }}>
+                        Vanishing secure file storage
+                      </Typography>
+                    </Box>
+                  </Stack>
+                  
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Tooltip title={!draftValid ? "Choose a file to share" : "Create & copy file link"}>
+                      <span>
+                        <IconButton 
+                          size="small"
+                          disabled={!draftValid || isCreating}
+                          onClick={() => void handleCreateLink()}
+                          sx={{ 
+                            color: !draftValid ? 'rgba(255,255,255,0.15)' : (effectiveSecureMode ? PRIMARY : '#10B981'),
+                            bgcolor: draftValid ? alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.08) : 'transparent',
+                            border: draftValid ? `1px solid ${alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.2)}` : '1px solid transparent',
+                            '&:hover': {
+                              bgcolor: alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.15),
+                            },
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <Share2 size={16} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </Stack>
+                </Box>
+
+                <Box
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  sx={{
+                    border: `2px dashed ${dragActive ? alpha(PRIMARY, 0.45) : '#34322F'}`,
+                    borderRadius: 3,
+                    p: 4,
+                    textAlign: 'center',
+                    bgcolor: dragActive ? alpha(PRIMARY, 0.04) : 'rgba(255,255,255,0.01)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <input
+                    type="file"
+                    id="send-file-input"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="send-file-input" style={{ cursor: 'pointer' }}>
+                    <Stack spacing={1.5} alignItems="center">
+                      <Box
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: '50%',
+                          bgcolor: '#161412',
+                          border: '1px solid #34322F',
+                          color: effectiveSecureMode ? PRIMARY : '#10B981',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Upload size={24} />
+                      </Box>
+                      <Box>
+                        <Typography sx={{ fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-satoshi)' }}>
+                          {fileName || 'Click or drag file to share'}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#9B9691', fontFamily: 'var(--font-satoshi)', display: 'block', mt: 0.5 }}>
+                          Max {activeMaxLabel} · Securely encrypted
+                        </Typography>
+                      </Box>
+                      {fileName && (
+                        <Button
+                          size="small"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setSendFile(null);
+                            setFileName(null);
+                          }}
+                          sx={{ color: '#FF453A', textTransform: 'none', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </Stack>
+                  </label>
+                </Box>
               </Paper>
             )}
 
@@ -1113,12 +1926,168 @@ export function SendComposer() {
           </Paper>
         )}
 
+        {/* Stash (sends on this device) rendered as the last element above signature */}
+        {sendSparks.length > 0 && (
+          <Box sx={{ mt: 6 }}>
+            <Paper
+              elevation={0}
+              sx={cardStyle}
+            >
+              <SendSparkShelf sparks={sendSparks} onSaveSparks={saveSendSparks} onClaim={handleClaimSendSpark} />
+            </Paper>
+          </Box>
+        )}
+
         <Box sx={{ mt: 10, borderTop: RIM, pt: 5, textAlign: 'center' }}>
           <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', letterSpacing: '0.15em', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'var(--font-clash)' }}>
             Universal Polymorphic Ghost Relay · Powered by Kylrix Organization
           </Typography>
         </Box>
       </Container>
+
+      {/* Conditional Overlays strictly unmounted when closed */}
+      {kindDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={kindDrawerOpen}
+          onClose={() => setKindDrawerOpen(false)}
+          keepMounted={false}
+          disablePortal={true}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              p: 3,
+              color: '#ffffff',
+              fontFamily: 'var(--font-satoshi)',
+              maxWidth: 'md',
+              mx: 'auto',
+            }
+          }}
+        >
+          <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, mb: 2 }}>
+            Select Sharing Format
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 1.5,
+            }}
+          >
+            {KINDS.map(({ id, label, blurb, Icon }) => {
+              const selected = kind === id;
+              const activeColor = (id === 'password' || id === 'totp' || id === 'file' || id === 'discussion') || isSecureMode ? PRIMARY : '#10B981';
+              return (
+                <ListItemButton
+                  key={id}
+                  onClick={() => {
+                    setKind(id);
+                    setKindDrawerOpen(false);
+                    if (id !== 'file') {
+                      setSendFile(null);
+                      setFileName(null);
+                    }
+                  }}
+                  sx={{
+                    p: 2,
+                    borderRadius: '12px',
+                    border: selected ? `1px solid ${activeColor}` : '1px solid #34322F',
+                    bgcolor: selected ? alpha(activeColor, 0.08) : 'transparent',
+                    '&:hover': { bgcolor: alpha(activeColor, 0.12) },
+                    display: 'flex',
+                    gap: 2,
+                    alignItems: 'center',
+                    textAlign: 'left',
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 0, color: selected ? activeColor : 'rgba(255,255,255,0.4)' }}>
+                    <Icon size={24} />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={<Typography sx={{ fontWeight: 800, fontFamily: 'var(--font-satoshi)' }}>{label}</Typography>}
+                    secondary={<Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>{blurb}</Typography>}
+                  />
+                </ListItemButton>
+              );
+            })}
+          </Box>
+        </Drawer>
+      )}
+
+      {securityDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={securityDrawerOpen}
+          onClose={() => setSecurityDrawerOpen(false)}
+          keepMounted={false}
+          disablePortal={true}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              p: 3,
+              color: '#ffffff',
+              fontFamily: 'var(--font-satoshi)',
+              maxWidth: 'md',
+              mx: 'auto',
+            }
+          }}
+        >
+          <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, mb: 2 }}>
+            Sharing Security
+          </Typography>
+          <Stack spacing={1.5}>
+            <ListItemButton
+              onClick={() => {
+                handleSelectSecureMode(true);
+                setSecurityDrawerOpen(false);
+              }}
+              sx={{
+                p: 2,
+                borderRadius: '12px',
+                border: isSecureMode ? `1px solid ${PRIMARY}` : '1px solid #34322F',
+                bgcolor: isSecureMode ? alpha(PRIMARY, 0.08) : 'transparent',
+                '&:hover': { bgcolor: alpha(PRIMARY, 0.12) },
+              }}
+            >
+              <ListItemIcon sx={{ color: PRIMARY }}>
+                <Lock size={20} />
+              </ListItemIcon>
+              <ListItemText
+                primary={<Typography sx={{ fontWeight: 800, fontFamily: 'var(--font-satoshi)' }}>Zero-Knowledge Sharing</Typography>}
+                secondary={<Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', mt: 0.5 }}>End-to-end encrypted before upload. We never see your data.</Typography>}
+              />
+            </ListItemButton>
+
+            <ListItemButton
+              onClick={() => {
+                handleSelectSecureMode(false);
+                setSecurityDrawerOpen(false);
+              }}
+              sx={{
+                p: 2,
+                borderRadius: '12px',
+                border: !isSecureMode ? '1px solid #10B981' : '1px solid #34322F',
+                bgcolor: !isSecureMode ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
+                '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.12)' },
+              }}
+            >
+              <ListItemIcon sx={{ color: '#10B981' }}>
+                <Unlock size={20} />
+              </ListItemIcon>
+              <ListItemText
+                primary={<Typography sx={{ fontWeight: 800, fontFamily: 'var(--font-satoshi)' }}>Instant Preview Sharing</Typography>}
+                secondary={<Typography sx={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', mt: 0.5 }}>Fast, unencrypted previews. Perfect for public sharing.</Typography>}
+              />
+            </ListItemButton>
+          </Stack>
+        </Drawer>
+      )}
 
       <EphemeralClaimDrawer
         open={claimOpen}
