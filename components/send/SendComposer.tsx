@@ -57,6 +57,7 @@ import {
   SEND_MAX_TTL_MS,
   SEND_SPARK_STORAGE_KEY,
   SEND_SPARKS_MAX,
+  clampExpiryMs,
 } from '@/lib/send/constants';
 import type {
   SendFilePayload,
@@ -66,7 +67,7 @@ import type {
   SendTaskPayload,
   SendTotpPayload,
 } from '@/lib/send/types';
-import { clampExpiryMs, hasPaidKylrixPlan } from '@/lib/utils';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 const BG = '#0A0908';
