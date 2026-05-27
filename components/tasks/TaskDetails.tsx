@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -935,7 +935,7 @@ export default function TaskDetails({ taskId }: TaskDetailsProps) {
                             />
                             <Box sx={{ minWidth: 0, flex: 1 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'white', noWrap: true }}>
+                                    <Typography noWrap variant="body2" sx={{ fontWeight: 700, color: 'white' }}>
                                         {profile.displayName || profile.username}
                                     </Typography>
                                     <Typography 

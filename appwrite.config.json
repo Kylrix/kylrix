@@ -334,6 +334,38 @@
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
             "deploymentRetention": 0
+        },
+        {
+            "$id": "data-porter",
+            "name": "data-porter",
+            "runtime": "node-25",
+            "path": "functions/data-porter",
+            "entrypoint": "src/main.js",
+            "execute": [
+                "users"
+            ],
+            "enabled": true,
+            "logging": true,
+            "events": [],
+            "schedule": "",
+            "timeout": 300,
+            "commands": "npm install -g pnpm && pnpm install",
+            "scopes": [
+                "users.read",
+                "databases.read",
+                "databases.write",
+                "collections.read",
+                "collections.write",
+                "tables.read",
+                "tables.write",
+                "rows.read",
+                "rows.write",
+                "documents.read",
+                "documents.write"
+            ],
+            "buildSpecification": "s-0.5vcpu-512mb",
+            "runtimeSpecification": "s-0.5vcpu-512mb",
+            "deploymentRetention": 0
         }
     ],
     "tablesDB": [

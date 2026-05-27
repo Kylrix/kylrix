@@ -396,9 +396,10 @@ export type Stickers = Models.Row & { name: string; description: string | null; 
 export type Projects = Models.Row & {
     title: string;
     summary: string | null;
+    description: string | null;
     ownerId: string;
     visibility: 'private' | 'shared' | 'public';
-    status: 'active' | 'paused' | 'archived';
+    status: 'active' | 'paused' | 'archived' | 'completed' | 'on_hold';
     metadata: string | null;
     createdAt: string | null;
     updatedAt: string | null;

@@ -69,11 +69,13 @@ import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjec
 import { databases } from '@/lib/appwrite/client';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
-import { 
-  createGhostNoteForProject, 
-  promoteGhostThreadToStory, 
-  createEncryptedGroupForProject 
+import {
+  createGhostNoteForProject,
+  promoteGhostThreadToStory,
+  createEncryptedGroupForProject,
+  deleteGhostNoteForProject
 } from '@/lib/actions/client-ops';
+
 import { createComment, listComments, createReaction, deleteReaction, listReactions } from '@/lib/appwrite/note';
 import { TargetType } from '@/types/appwrite';
 import { client } from '@/lib/appwrite/client';
@@ -374,7 +376,7 @@ export default function ProjectDetailPage() {
                 </IconButton>
                 <Box sx={{ minWidth: 0 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: { xs: '1.25rem', md: '1.8rem' }, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', noWrap: true }}>
+                        <Typography noWrap sx={{ color: '#fff', fontWeight: 900, fontSize: { xs: '1.25rem', md: '1.8rem' }, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
                             {project.title}
                         </Typography>
                         <Chip 
@@ -895,7 +897,7 @@ export default function ProjectDetailPage() {
                                         verified={user.verified} 
                                     />
                                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 800, noWrap: true }}>{user.name || user.email}</Typography>
+                                        <Typography noWrap variant="body2" sx={{ fontWeight: 800 }}>{user.name || user.email}</Typography>
                                         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>Collaborator</Typography>
                                     </Box>
                                     <IconButton size="small" onClick={() => handleRemoveObject(user.$id)} sx={{ opacity: 0.2, '&:hover': { opacity: 1, color: '#FF453A' } }}>

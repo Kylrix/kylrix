@@ -105,7 +105,7 @@ export default function ProjectCard({ project, onClick, onDelete, onTogglePin }:
               <LayoutGrid size={22} strokeWidth={1.5} />
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: '1.15rem', fontFamily: 'var(--font-clash)', noWrap: true, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography noWrap sx={{ color: '#fff', fontWeight: 900, fontSize: '1.15rem', fontFamily: 'var(--font-clash)', display: 'flex', alignItems: 'center', gap: 1 }}>
                 {(project as any).isPinned && <Pin size={14} fill="#F59E0B" color="#F59E0B" style={{ transform: 'rotate(45deg)', flexShrink: 0 }} />}
                 <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.title}</Box>
               </Typography>

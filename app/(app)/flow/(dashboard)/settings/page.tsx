@@ -32,7 +32,7 @@ import toast from 'react-hot-toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export default function SettingsPage() {
-    const { openUnified } = useUnifiedDrawer();
+    const { open: openUnified } = useUnifiedDrawer();
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [oldPin, setOldPin] = useState('');
     const [pin, setPin] = useState('');

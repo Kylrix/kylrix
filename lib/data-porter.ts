@@ -17,12 +17,21 @@ const DATA_PORTER_FUNCTION_ID = APPWRITE_CONFIG.FUNCTIONS.DATA_PORTER || 'data-p
 export interface PorterImportResult {
     success: boolean;
     summary: {
-        foldersCreated: number;
-        credentialsCreated: number;
-        totpSecretsCreated: number;
-        errors: number;
-        skipped: number;
-        skippedExisting: number;
+        foldersCreated?: number;
+        credentialsCreated?: number;
+        totpSecretsCreated?: number;
+        errors?: number;
+        skipped?: number;
+        skippedExisting?: number;
+        // Version 2 structure
+        vaultFolders?: { created: number; reused: number; errors: number };
+        vaultCredentials?: { created: number; reused: number; errors: number };
+        vaultTotpSecrets?: { created: number; reused: number; errors: number };
+        tags?: { created: number; reused: number; errors: number };
+        notes?: { created: number; reused: number; errors: number };
+        forms?: { created: number; reused: number; errors: number };
+        tasks?: { created: number; reused: number; errors: number };
+        events?: { created: number; reused: number; errors: number };
     };
     errors: string[];
 }
@@ -33,9 +42,28 @@ export interface PorterExportResult {
         version: number;
         format: string;
         exportedAt: string;
-        folders: any[];
-        credentials: any[];
-        totpSecrets: any[];
+        userId: string;
+        // Version 1 structures
+        folders?: any[];
+        credentials?: any[];
+        totpSecrets?: any[];
+        // Version 2 structures
+        data?: {
+            vault: {
+                folders: any[];
+                credentials: any[];
+                totpSecrets: any[];
+            };
+            notes: {
+                rows: any[];
+                tags: any[];
+            };
+            flow: {
+                forms: any[];
+                tasks: any[];
+                events: any[];
+            };
+        };
     };
 }
 
@@ -44,7 +72,7 @@ export interface PorterExportResult {
  */
 export async function porterImport(
     userId: string,
-    format: 'bitwarden' | 'kylrixvault',
+    format: 'bitwarden' | 'kylrixvault' | 'kylrixworkspace',
     data: any
 ): Promise<PorterImportResult> {
     try {
@@ -74,7 +102,7 @@ export async function porterImport(
 }
 
 /**
- * Export entire vault via the server-side function.
+ * Export entire workspace via the server-side function.
  * Returns a JSON object that can be downloaded as a file.
  */
 export async function porterExport(userId: string): Promise<PorterExportResult> {
@@ -111,7 +139,7 @@ export function downloadExportAsFile(data: PorterExportResult['data'], filename?
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename || `kylrix-vault-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = filename || `kylrix-workspace-export-${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
