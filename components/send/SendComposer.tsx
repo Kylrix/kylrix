@@ -18,6 +18,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
@@ -97,10 +99,7 @@ export function SendComposer() {
   const reduceMotion = useReducedMotion();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const pathname = usePathname();
   const { user } = useAuth();
-
-  const isSecureMode = pathname?.includes('/secure');
 
   const isPro = useMemo(() => user ? hasPaidKylrixPlan(user) : false, [user]);
   const activeMaxBytes = isPro ? SEND_MAX_FILE_BYTES_PRO : SEND_MAX_FILE_BYTES_FREE;
@@ -108,6 +107,13 @@ export function SendComposer() {
 
   const [kind, setKind] = useState<SendKind>('note');
   const [expiryMs, setExpiryMs] = useState(SEND_EXPIRY_PRESETS[2].ms);
+  const [isSecureMode, setIsSecureMode] = useState(false);
+
+  // Forced Secure Mode for Credentials
+  const effectiveSecureMode = useMemo(() => {
+    if (kind === 'password' || kind === 'totp') return true;
+    return isSecureMode;
+  }, [kind, isSecureMode]);
   const [noteTitle, setNoteTitle] = useState('');
   const [noteBody, setNoteBody] = useState('');
   const [username, setUsername] = useState('');
@@ -385,7 +391,7 @@ export function SendComposer() {
         format,
         ghostSecret,
         expiresAt,
-        isEncrypted: isSecureMode,
+        isEncrypted: effectiveSecureMode,
         creatorDeletionProofHash,
         sendObject: sendObjectPayload,
       });
@@ -404,8 +410,7 @@ export function SendComposer() {
       }
 
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
-      const baseUrl = isSecureMode ? `${origin}/send/secure` : `${origin}/send`;
-      const url = isSecureMode ? `${baseUrl}/${note.$id}/${noteKey}` : `${baseUrl}/${note.$id}`;
+      const url = effectiveSecureMode ? `${origin}/send/${note.$id}/${noteKey}` : `${origin}/send/${note.$id}`;
       setCreatedUrl(url);
       setCopied(false);
 
@@ -429,7 +434,7 @@ export function SendComposer() {
         return next;
       });
 
-      toast.success(isSecureMode ? 'Secure link created' : 'Send link created');
+      toast.success(effectiveSecureMode ? 'Secure link created' : 'Send link created');
     } catch (e: unknown) {
       console.error('[Send]', e);
       toast.error(e instanceof Error ? e.message : 'Could not create send link');
@@ -497,7 +502,7 @@ export function SendComposer() {
           pointerEvents: 'none',
           position: 'fixed',
           inset: 0,
-          background: isSecureMode ?
+          background: effectiveSecureMode ?
             'radial-gradient(ellipse 78% 48% at 50% -18%, rgba(99, 102, 241, 0.22), transparent 56%), radial-gradient(ellipse 55% 38% at 100% 0%, rgba(236, 72, 153, 0.07), transparent 52%), radial-gradient(ellipse 48% 32% at 0% 100%, rgba(16, 185, 129, 0.06), transparent 46%)' :
             'radial-gradient(ellipse 78% 48% at 50% -18%, rgba(16, 185, 129, 0.15), transparent 56%), radial-gradient(ellipse 55% 38% at 100% 0%, rgba(99, 102, 241, 0.05), transparent 52%)',
           zIndex: 0,
@@ -513,13 +518,13 @@ export function SendComposer() {
           <Stack spacing={1} sx={{ mb: 4, textAlign: 'center' }}>
             <Chip
               icon={<Sparkles size={14} />}
-              label={isSecureMode ? "Secure Send" : "Send by Kylrix"}
+              label="Send by Kylrix"
               sx={{
                 alignSelf: 'center',
                 px: 1,
-                bgcolor: alpha(isSecureMode ? PRIMARY : '#10B981', 0.12),
+                bgcolor: alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.12),
                 color: alpha('#fff', 0.9),
-                border: `1px solid ${alpha(isSecureMode ? PRIMARY : '#10B981', 0.35)}`,
+                border: `1px solid ${alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.35)}`,
                 fontWeight: 600,
                 letterSpacing: '0.04em',
                 textTransform: 'uppercase',
@@ -535,29 +540,41 @@ export function SendComposer() {
                 fontSize: { xs: '2rem', md: '2.75rem' },
               }}
             >
-              {isSecureMode ? "Zero-Knowledge Sharing" : "Instant Preview Sharing"}
+              {effectiveSecureMode ? "Zero-Knowledge Sharing" : "Instant Preview Sharing"}
             </Typography>
             <Typography sx={{ color: 'rgba(255,255,255,0.62)', maxWidth: 520, mx: 'auto', lineHeight: 1.6 }}>
-              {isSecureMode ? 
+              {effectiveSecureMode ? 
                 "End-to-end encrypted objects with one link. We never see your data. Keys stay on your device." :
                 "Fast, unencrypted previews for notes, tasks, and files. Perfect for discovery and public sharing."
               }
             </Typography>
             
-            <Box sx={{ mt: 2 }}>
-              <Button
-                component={Link}
-                href={isSecureMode ? '/send' : '/send/secure'}
-                startIcon={isSecureMode ? <Unlock size={16} /> : <Lock size={16} />}
-                sx={{ 
-                  textTransform: 'none', 
-                  color: isSecureMode ? '#10B981' : PRIMARY,
-                  bgcolor: alpha(isSecureMode ? '#10B981' : PRIMARY, 0.05),
-                  '&:hover': { bgcolor: alpha(isSecureMode ? '#10B981' : PRIMARY, 0.1) }
-                }}
-              >
-                Switch to {isSecureMode ? 'Normal Send' : 'Secure Send'}
-              </Button>
+            <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
+                <Paper sx={{ 
+                    px: 2, 
+                    py: 1, 
+                    borderRadius: 3, 
+                    bgcolor: alpha('#fff', 0.03), 
+                    border: RIM,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2
+                }}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        {effectiveSecureMode ? <Lock size={16} color={PRIMARY} /> : <Unlock size={16} color="#10B981" />}
+                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
+                            {effectiveSecureMode ? 'Secure Mode Active' : 'Normal Mode'}
+                        </Typography>
+                    </Stack>
+                    {(kind !== 'password' && kind !== 'totp') && (
+                        <Switch 
+                            checked={isSecureMode}
+                            onChange={(e) => setIsSecureMode(e.target.checked)}
+                            color="primary"
+                            size="small"
+                        />
+                    )}
+                </Paper>
             </Box>
           </Stack>
         </motion.div>
