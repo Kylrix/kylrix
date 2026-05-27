@@ -686,172 +686,252 @@ export function SendComposer() {
               </Box>
             </Paper>
 
-            <Paper
-              elevation={0}
-              sx={cardStyle}
-            >
-              <Typography sx={{ fontWeight: 800, mb: 2.5, fontSize: '0.95rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>Payload</Typography>
-
-              {(kind === 'note' || kind === 'discussion') && (
-                <Stack spacing={2}>
-                  <TextField
-                    label={kind === 'note' ? "Title (optional)" : "Discussion Topic"}
-                    fullWidth
-                    value={noteTitle}
-                    onChange={(e) => setNoteTitle(e.target.value)}
-                    sx={fieldSx}
-                  />
-                  <TextField
-                    label={kind === 'note' ? "Note" : "Initial Message"}
-                    fullWidth
-                    required
-                    multiline
-                    minRows={6}
-                    placeholder={kind === 'note' ? "Write what you want to share…" : "Start the conversation…"}
-                    value={noteBody}
-                    onChange={(e) => setNoteBody(e.target.value)}
-                    sx={fieldSx}
-                  />
-                </Stack>
-              )}
-
-              {kind === 'password' && (
-                <Stack spacing={2}>
-                  <TextField
-                    label="Username / Email"
-                    fullWidth
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    sx={fieldSx}
-                  />
-                  <TextField
-                    label="Password"
-                    fullWidth
-                    required
-                    type="text"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    sx={fieldSx}
-                  />
-                  <TextField
-                    label="TOTP Secret (optional)"
-                    fullWidth
-                    placeholder="JBSWY3DPEHPK3PXP"
-                    value={passwordTotpBundle}
-                    onChange={(e) => setPasswordTotpBundle(e.target.value)}
-                    sx={fieldSx}
-                  />
-                </Stack>
-              )}
-
-              {kind === 'totp' && (
-                <Stack spacing={2}>
-                  <TextField
-                    label="Issuer (e.g. Google, AWS)"
-                    fullWidth
-                    value={totpIssuer}
-                    onChange={(e) => setTotpIssuer(e.target.value)}
-                    sx={fieldSx}
-                  />
-                  <TextField
-                    label="Secret Key"
-                    fullWidth
-                    required
-                    placeholder="JBSWY3DPEHPK3PXP"
-                    value={totpSecret}
-                    onChange={(e) => setTotpSecret(e.target.value)}
-                    sx={fieldSx}
-                  />
-                </Stack>
-              )}
-
-              {kind === 'task' && (
-                <Stack spacing={2}>
-                  <TextField
-                    label="Task Title"
-                    fullWidth
-                    required
-                    value={taskTitle}
-                    onChange={(e) => setTaskTitle(e.target.value)}
-                    sx={fieldSx}
-                  />
-                  <TextField
-                    label="Task Details"
-                    fullWidth
-                    multiline
-                    minRows={3}
-                    placeholder="Context or sub-steps…"
-                    value={taskDetail}
-                    onChange={(e) => setTaskDetail(e.target.value)}
-                    sx={fieldSx}
-                  />
-                </Stack>
-              )}
-
-              {kind === 'file' && (
-                <Box
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                  sx={{
-                    border: `2px dashed ${dragActive ? (effectiveSecureMode ? PRIMARY : '#10B981') : '#34322F'}`,
-                    borderRadius: '16px',
-                    p: 4,
-                    textAlign: 'center',
-                    bgcolor: dragActive ? '#1C1A18' : '#0A0908',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <input
-                    type="file"
-                    id="send-file-input"
-                    onChange={handleFileChange}
-                    style={{ display: 'none' }}
-                  />
-                  <label htmlFor="send-file-input" style={{ cursor: 'pointer' }}>
-                    <Stack spacing={1.5} alignItems="center">
-                      <Box
+            {(kind === 'note' || kind === 'discussion') ? (
+              <Paper
+                elevation={0}
+                sx={{
+                  ...cardStyle,
+                  p: 0,
+                  overflow: 'hidden',
+                  '&:focus-within': {
+                    borderColor: alpha(PRIMARY, 0.4),
+                    boxShadow: '0 20px 40px -15px rgba(0,0,0,0.8), 0 0 20px rgba(99, 102, 241, 0.1)',
+                  }
+                }}
+              >
+                {/* Opaque Subtle Header Toolbar */}
+                <Box sx={{
+                  px: { xs: 2.5, sm: 3 },
+                  py: 1.5,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderBottom: '1px solid #34322F',
+                  bgcolor: '#0E0D0C'
+                }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      px: 1.25,
+                      py: 0.25,
+                      borderRadius: '8px',
+                      bgcolor: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.05)'
+                    }}>
+                      <Typography
+                        variant="caption"
                         sx={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                          bgcolor: '#161412',
-                          border: '1px solid #34322F',
-                          color: effectiveSecureMode ? PRIMARY : '#10B981',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          color: noteBody.length >= 65000 ? '#F43F5E' : 'rgba(255, 255, 255, 0.4)',
+                          fontWeight: 700,
+                          fontFamily: 'var(--font-jetbrains-mono)',
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.05em'
                         }}
                       >
-                        <Upload size={24} />
-                      </Box>
-                      <Box>
-                        <Typography sx={{ fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-satoshi)' }}>
-                          {fileName || 'Click or drag file to share'}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#9B9691', fontFamily: 'var(--font-satoshi)', display: 'block', mt: 0.5 }}>
-                          Max {activeMaxLabel} · Securely encrypted
-                        </Typography>
-                      </Box>
-                      {fileName && (
-                        <Button
-                          size="small"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setSendFile(null);
-                            setFileName(null);
-                          }}
-                          sx={{ color: '#FF453A', textTransform: 'none', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </Stack>
-                  </label>
+                        {noteBody.length.toLocaleString()} / 65,000
+                      </Typography>
+                    </Box>
+                  </Stack>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'rgba(255, 255, 255, 0.3)' }}>
+                    <Shield size={14} />
+                    <Typography variant="caption" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>
+                      Secure Ghost Mode
+                    </Typography>
+                  </Box>
                 </Box>
-              )}
-            </Paper>
+
+                {/* Main Seamless Inputs */}
+                <Box sx={{ p: { xs: 2.5, sm: 4.5 }, pt: { xs: 2, sm: 3 } }}>
+                  <TextField
+                    fullWidth
+                    placeholder={kind === 'note' ? "Note Title" : "Discussion Topic"}
+                    value={noteTitle}
+                    onChange={(e) => setNoteTitle(e.target.value)}
+                    variant="standard"
+                    InputProps={{
+                      disableUnderline: true,
+                      sx: {
+                        fontSize: '2rem',
+                        fontWeight: 900,
+                        fontFamily: 'var(--font-clash)',
+                        color: 'white',
+                        mb: 1.5,
+                        '&::placeholder': { opacity: 0.2, color: 'rgba(255,255,255,0.4)' }
+                      }
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={10}
+                    maxRows={20}
+                    placeholder={kind === 'note' ? "Start typing your note here…" : "Start the conversation topic…"}
+                    value={noteBody}
+                    onChange={(e) => setNoteBody(e.target.value)}
+                    variant="standard"
+                    InputProps={{
+                      disableUnderline: true,
+                      sx: {
+                        fontSize: '1.05rem',
+                        lineHeight: 1.6,
+                        color: 'rgba(255, 255, 255, 0.75)',
+                        fontFamily: 'var(--font-satoshi)',
+                        '&::placeholder': { opacity: 0.2, color: 'rgba(255,255,255,0.4)' }
+                      }
+                    }}
+                    inputProps={{
+                      maxLength: 65000
+                    }}
+                  />
+                </Box>
+              </Paper>
+            ) : (
+              <Paper
+                elevation={0}
+                sx={cardStyle}
+              >
+                <Typography sx={{ fontWeight: 800, mb: 2.5, fontSize: '0.95rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>Payload</Typography>
+
+                {kind === 'password' && (
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Username / Email"
+                      fullWidth
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      sx={fieldSx}
+                    />
+                    <TextField
+                      label="Password"
+                      fullWidth
+                      required
+                      type="text"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      sx={fieldSx}
+                    />
+                    <TextField
+                      label="TOTP Secret (optional)"
+                      fullWidth
+                      placeholder="JBSWY3DPEHPK3PXP"
+                      value={passwordTotpBundle}
+                      onChange={(e) => setPasswordTotpBundle(e.target.value)}
+                      sx={fieldSx}
+                    />
+                  </Stack>
+                )}
+
+                {kind === 'totp' && (
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Issuer (e.g. Google, AWS)"
+                      fullWidth
+                      value={totpIssuer}
+                      onChange={(e) => setTotpIssuer(e.target.value)}
+                      sx={fieldSx}
+                    />
+                    <TextField
+                      label="Secret Key"
+                      fullWidth
+                      required
+                      placeholder="JBSWY3DPEHPK3PXP"
+                      value={totpSecret}
+                      onChange={(e) => setTotpSecret(e.target.value)}
+                      sx={fieldSx}
+                    />
+                  </Stack>
+                )}
+
+                {kind === 'task' && (
+                  <Stack spacing={2}>
+                    <TextField
+                      label="Task Title"
+                      fullWidth
+                      required
+                      value={taskTitle}
+                      onChange={(e) => setTaskTitle(e.target.value)}
+                      sx={fieldSx}
+                    />
+                    <TextField
+                      label="Task Details"
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      placeholder="Context or sub-steps…"
+                      value={taskDetail}
+                      onChange={(e) => setTaskDetail(e.target.value)}
+                      sx={fieldSx}
+                    />
+                  </Stack>
+                )}
+
+                {kind === 'file' && (
+                  <Box
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                    sx={{
+                      border: `2px dashed ${dragActive ? (effectiveSecureMode ? PRIMARY : '#10B981') : '#34322F'}`,
+                      borderRadius: '16px',
+                      p: 4,
+                      textAlign: 'center',
+                      bgcolor: dragActive ? '#1C1A18' : '#0A0908',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <input
+                      type="file"
+                      id="send-file-input"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <label htmlFor="send-file-input" style={{ cursor: 'pointer' }}>
+                      <Stack spacing={1.5} alignItems="center">
+                        <Box
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: '50%',
+                            bgcolor: '#161412',
+                            border: '1px solid #34322F',
+                            color: effectiveSecureMode ? PRIMARY : '#10B981',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Upload size={24} />
+                        </Box>
+                        <Box>
+                          <Typography sx={{ fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-satoshi)' }}>
+                            {fileName || 'Click or drag file to share'}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#9B9691', fontFamily: 'var(--font-satoshi)', display: 'block', mt: 0.5 }}>
+                            Max {activeMaxLabel} · Securely encrypted
+                          </Typography>
+                        </Box>
+                        {fileName && (
+                          <Button
+                            size="small"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setSendFile(null);
+                              setFileName(null);
+                            }}
+                            sx={{ color: '#FF453A', textTransform: 'none', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </Stack>
+                    </label>
+                  </Box>
+                )}
+              </Paper>
+            )}
 
             <Paper
               elevation={0}
