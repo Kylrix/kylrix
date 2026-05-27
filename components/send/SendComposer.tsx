@@ -46,6 +46,7 @@ import {
   ChevronDown,
   Calendar,
   Flag,
+  Clock,
 } from 'lucide-react';
 
 import MuralPattern from '@/components/chat/MuralPattern';
@@ -160,6 +161,8 @@ export function SendComposer() {
   const [showPassword, setShowPassword] = useState(false);
   const [kindDrawerOpen, setKindDrawerOpen] = useState(false);
   const [securityDrawerOpen, setSecurityDrawerOpen] = useState(false);
+  const [expiryDrawerOpen, setExpiryDrawerOpen] = useState(false);
+  const [discreteDrawerOpen, setDiscreteDrawerOpen] = useState(false);
 
   // Load persistent security preferences per format
   useEffect(() => {
@@ -547,6 +550,7 @@ export function SendComposer() {
     setTaskDuePreset('none');
     setIsTitleManuallyEdited(false);
     setShowPassword(false);
+    setExpiryMs(SEND_EXPIRY_PRESETS[2].ms);
   }, []);
 
   const handleClaimSendSpark = useCallback((spark: SendSparkRef) => {
@@ -567,6 +571,80 @@ export function SendComposer() {
         return next;
     });
   }, []);
+
+  const renderHeaderActions = (tooltipText: string) => {
+    const isExpiryCustomized = expiryMs !== SEND_EXPIRY_PRESETS[2].ms;
+    const isSharingCustomized = selectedUsers.length > 0;
+    
+    return (
+      <Stack direction="row" spacing={1.5} alignItems="center">
+        {/* Link Expiry Button */}
+        <Tooltip title={`Expiry Configuration (${formatRemaining(expiryMs)})`}>
+          <IconButton 
+            size="medium"
+            onClick={() => setExpiryDrawerOpen(true)}
+            sx={{ 
+              color: isExpiryCustomized ? themeColor : 'rgba(255,255,255,0.4)',
+              bgcolor: isExpiryCustomized ? alpha(themeColor, 0.08) : 'transparent',
+              border: isExpiryCustomized ? `1px solid ${alpha(themeColor, 0.2)}` : '1px solid transparent',
+              '&:hover': {
+                bgcolor: alpha(themeColor, 0.12),
+                color: themeColor,
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Clock size={18} />
+          </IconButton>
+        </Tooltip>
+
+        {/* Discrete Sharing Button */}
+        <Tooltip title={isSharingCustomized ? `${selectedUsers.length} collaborator(s) added` : "Discrete Sharing (Optional)"}>
+          <IconButton 
+            size="medium"
+            onClick={() => setDiscreteDrawerOpen(true)}
+            sx={{ 
+              color: isSharingCustomized ? themeColor : 'rgba(255,255,255,0.4)',
+              bgcolor: isSharingCustomized ? alpha(themeColor, 0.08) : 'transparent',
+              border: isSharingCustomized ? `1px solid ${alpha(themeColor, 0.2)}` : '1px solid transparent',
+              '&:hover': {
+                bgcolor: alpha(themeColor, 0.12),
+                color: themeColor,
+              },
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <UsersIcon size={18} />
+          </IconButton>
+        </Tooltip>
+
+        {/* Main Share/Link Generation Button */}
+        <Tooltip title={!draftValid ? tooltipText : "Create & copy send link"}>
+          <span>
+            <IconButton 
+              size="medium"
+              disabled={!draftValid || isCreating}
+              onClick={() => void handleCreateLink()}
+              sx={{ 
+                color: !draftValid ? 'rgba(255,255,255,0.15)' : themeColor,
+                bgcolor: draftValid ? alpha(themeColor, 0.08) : 'transparent',
+                border: draftValid ? `1px solid ${alpha(themeColor, 0.35)}` : '1px solid transparent',
+                transform: draftValid ? 'scale(1.15)' : 'scale(1.0)',
+                '&:hover': {
+                  bgcolor: alpha(themeColor, 0.15),
+                  transform: draftValid ? 'scale(1.2)' : 'scale(1.0)',
+                },
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                p: 1.25,
+              }}
+            >
+              {isCreating ? <CircularProgress size={18} color="inherit" /> : <Share2 size={20} />}
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Stack>
+    );
+  };
 
   const fieldSx = {
     '& .MuiOutlinedInput-root': { bgcolor: '#000000', borderRadius: '12px' },
@@ -750,31 +828,7 @@ export function SendComposer() {
                     )}
                   </Stack>
 
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Tooltip title={!draftValid ? "Type a note to share" : "Create & copy send link"}>
-                      <span>
-                        <IconButton 
-                          size="small"
-                          disabled={!draftValid || isCreating}
-                          onClick={() => void handleCreateLink()}
-                          sx={{ 
-                            color: !draftValid ? 'rgba(255,255,255,0.15)' : '#EC4899',
-                            bgcolor: draftValid ? alpha('#EC4899', 0.08) : 'transparent',
-                            border: draftValid ? `1px solid ${alpha('#EC4899', 0.2)}` : '1px solid transparent',
-                            '&:hover': {
-                              bgcolor: alpha('#EC4899', 0.15),
-                            },
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          <Share2 size={16} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-                      <FileText size={16} />
-                    </IconButton>
-                  </Stack>
+                  {renderHeaderActions("Type a note to share")}
                 </Box>
 
                 {/* Main Inputs */}
@@ -889,31 +943,7 @@ export function SendComposer() {
                     </Box>
                   </Stack>
 
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Tooltip title={!draftValid ? "Type a message to share" : "Create & copy huddle link"}>
-                      <span>
-                        <IconButton 
-                          size="small"
-                          disabled={!draftValid || isCreating}
-                          onClick={() => void handleCreateLink()}
-                          sx={{ 
-                            color: !draftValid ? 'rgba(255,255,255,0.15)' : '#F59E0B',
-                            bgcolor: draftValid ? alpha('#F59E0B', 0.08) : 'transparent',
-                            border: draftValid ? `1px solid ${alpha('#F59E0B', 0.2)}` : '1px solid transparent',
-                            '&:hover': {
-                              bgcolor: alpha('#F59E0B', 0.15),
-                            },
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          <Share2 size={16} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-                      <MessageSquare size={16} />
-                    </IconButton>
-                  </Stack>
+                  {renderHeaderActions("Type a message to share")}
                 </Box>
 
                 {/* Simulated Chat Feed */}
@@ -1121,7 +1151,7 @@ export function SendComposer() {
                     </Box>
                   </Stack>
                   
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack direction="row" spacing={1.5} alignItems="center">
                     {/* Glowing state indicator */}
                     <Tooltip title="High Entropy Cryptographic Seal Active">
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: alpha('#10B981', 0.08), border: `1px solid ${alpha('#10B981', 0.2)}`, px: 1, py: 0.5, borderRadius: '6px' }}>
@@ -1130,26 +1160,7 @@ export function SendComposer() {
                       </Box>
                     </Tooltip>
                     
-                    <Tooltip title={!draftValid ? "Enter a password to share" : "Create & copy secure link"}>
-                      <span>
-                        <IconButton 
-                          size="small"
-                          disabled={!draftValid || isCreating}
-                          onClick={() => void handleCreateLink()}
-                          sx={{ 
-                            color: !draftValid ? 'rgba(255,255,255,0.15)' : '#10B981',
-                            bgcolor: draftValid ? alpha('#10B981', 0.08) : 'transparent',
-                            border: draftValid ? `1px solid ${alpha('#10B981', 0.2)}` : '1px solid transparent',
-                            '&:hover': {
-                              bgcolor: alpha('#10B981', 0.15),
-                            },
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          <Share2 size={16} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
+                    {renderHeaderActions("Enter a password to share")}
                   </Stack>
                 </Box>
 
@@ -1304,7 +1315,7 @@ export function SendComposer() {
                     </Box>
                   </Stack>
                   
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack direction="row" spacing={1.5} alignItems="center">
                     {/* Glowing LED countdown simulation indicator */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', px: 1, py: 0.5, borderRadius: '6px' }}>
                       <Box sx={{ 
@@ -1317,26 +1328,7 @@ export function SendComposer() {
                       <Typography sx={{ fontSize: '0.6rem', fontWeight: 900, color: '#10B981', letterSpacing: '0.05em' }}>ACTIVE</Typography>
                     </Box>
 
-                    <Tooltip title={!draftValid ? "Enter a secret key to share" : "Create & copy secure link"}>
-                      <span>
-                        <IconButton 
-                          size="small"
-                          disabled={!draftValid || isCreating}
-                          onClick={() => void handleCreateLink()}
-                          sx={{ 
-                            color: !draftValid ? 'rgba(255,255,255,0.15)' : '#10B981',
-                            bgcolor: draftValid ? alpha('#10B981', 0.08) : 'transparent',
-                            border: draftValid ? `1px solid ${alpha('#10B981', 0.2)}` : '1px solid transparent',
-                            '&:hover': {
-                              bgcolor: alpha('#10B981', 0.15),
-                            },
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          <Share2 size={16} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
+                    {renderHeaderActions("Enter a secret key to share")}
                   </Stack>
                 </Box>
 
@@ -1469,28 +1461,7 @@ export function SendComposer() {
                     </Box>
                   </Stack>
                   
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Tooltip title={!draftValid ? "Enter a goal title to share" : "Create & copy task link"}>
-                      <span>
-                        <IconButton 
-                          size="small"
-                          disabled={!draftValid || isCreating}
-                          onClick={() => void handleCreateLink()}
-                          sx={{ 
-                            color: !draftValid ? 'rgba(255,255,255,0.15)' : '#A855F7',
-                            bgcolor: draftValid ? alpha('#A855F7', 0.08) : 'transparent',
-                            border: draftValid ? `1px solid ${alpha('#A855F7', 0.2)}` : '1px solid transparent',
-                            '&:hover': {
-                              bgcolor: alpha('#A855F7', 0.15),
-                            },
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          <Share2 size={16} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Stack>
+                  {renderHeaderActions("Enter a goal title to share")}
                 </Box>
 
                 {/* Goals Metadata Schema board */}
@@ -1675,28 +1646,7 @@ export function SendComposer() {
                     </Box>
                   </Stack>
                   
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Tooltip title={!draftValid ? "Choose a file to share" : "Create & copy file link"}>
-                      <span>
-                        <IconButton 
-                          size="small"
-                          disabled={!draftValid || isCreating}
-                          onClick={() => void handleCreateLink()}
-                          sx={{ 
-                            color: !draftValid ? 'rgba(255,255,255,0.15)' : '#6366F1',
-                            bgcolor: draftValid ? alpha('#6366F1', 0.08) : 'transparent',
-                            border: draftValid ? `1px solid ${alpha('#6366F1', 0.2)}` : '1px solid transparent',
-                            '&:hover': {
-                              bgcolor: alpha('#6366F1', 0.15),
-                            },
-                            transition: 'all 0.2s ease',
-                          }}
-                        >
-                          <Share2 size={16} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Stack>
+                  {renderHeaderActions("Choose a file to share")}
                 </Box>
 
                 <Box
@@ -1763,80 +1713,7 @@ export function SendComposer() {
               </Paper>
             )}
 
-            <Paper
-              elevation={0}
-              sx={cardStyle}
-            >
-              <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                <InputLabel sx={{ color: '#9B9691', fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                  Link Expiry
-                </InputLabel>
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: themeColor, fontFamily: 'var(--font-mono)' }}>
-                  {formatRemaining(expiryMs)}
-                </Typography>
-              </Stack>
-              <Slider
-                value={expiryMs}
-                min={SEND_EXPIRY_PRESETS[0].ms}
-                max={SEND_MAX_TTL_MS}
-                step={60000}
-                onChange={(_, v) => setExpiryMs(v as number)}
-                sx={{
-                  color: themeColor,
-                  '& .MuiSlider-rail': { bgcolor: '#34322F', opacity: 1 },
-                  '& .MuiSlider-thumb': {
-                    width: 14,
-                    height: 14,
-                    bgcolor: '#ffffff',
-                    boxShadow: `0 0 0 4px ${alpha(themeColor, 0.2)}`,
-                    '&:hover, &.Mui-focusVisible': { boxShadow: `0 0 0 8px ${alpha(themeColor, 0.3)}` },
-                  },
-                }}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-                {SEND_EXPIRY_PRESETS.map((p) => (
-                  <Button
-                    key={p.id}
-                    size="small"
-                    onClick={() => setExpiryMs(p.ms)}
-                    sx={{
-                      minWidth: 0,
-                      fontSize: '0.75rem',
-                      color: expiryMs === p.ms ? themeColor : 'rgba(255,255,255,0.4)',
-                      fontWeight: expiryMs === p.ms ? 900 : 600,
-                      fontFamily: 'var(--font-satoshi)'
-                    }}
-                  >
-                    {p.label}
-                  </Button>
-                ))}
-              </Box>
-            </Paper>
 
-            <Paper
-              elevation={0}
-              sx={{
-                ...cardStyle,
-                '&:focus-within': {
-                    borderColor: alpha(themeColor, 0.45),
-                    boxShadow: `0 20px 40px -10px rgba(0,0,0,0.5), 0 0 15px ${alpha(themeColor, 0.15)}`
-                }
-              }}
-            >
-              <Typography sx={{ fontWeight: 800, mb: 2, fontSize: '0.95rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>
-                Discrete Sharing (Optional)
-              </Typography>
-              <Typography sx={{ fontSize: '0.8rem', color: '#9B9691', mb: 2, fontFamily: 'var(--font-satoshi)', lineHeight: 1.5 }}>
-                Send directly to specific users in the ecosystem. They will be added as collaborators.
-              </Typography>
-              <UserSearch
-                label=""
-                placeholder="Search for users to share with..."
-                selectedUsers={selectedUsers}
-                onSelect={(u) => setSelectedUsers([...selectedUsers, u])}
-                onRemove={(id) => setSelectedUsers(selectedUsers.filter(u => u.id !== id))}
-              />
-            </Paper>
 
             <Button
               variant="contained"
@@ -2052,8 +1929,8 @@ export function SendComposer() {
                     textAlign: 'left',
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 0, color: selected ? itemColor : 'rgba(255,255,255,0.4)' }}>
-                    <Icon size={24} style={{ color: selected ? itemColor : 'rgba(255,255,255,0.4)' }} />
+                  <ListItemIcon sx={{ minWidth: 0, color: itemColor }}>
+                    <Icon size={24} style={{ color: itemColor }} />
                   </ListItemIcon>
                   <ListItemText
                     primary={<Typography sx={{ fontWeight: 800, fontFamily: 'var(--font-satoshi)', color: selected ? '#ffffff' : 'rgba(255,255,255,0.8)' }}>{label}</Typography>}
@@ -2137,6 +2014,137 @@ export function SendComposer() {
               />
             </ListItemButton>
           </Stack>
+        </Drawer>
+      )}
+
+      {/* Expiry Drawer */}
+      {expiryDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={expiryDrawerOpen}
+          onClose={() => setExpiryDrawerOpen(false)}
+          keepMounted={false}
+          disablePortal={true}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              p: 4,
+              color: '#ffffff',
+              fontFamily: 'var(--font-satoshi)',
+              maxWidth: 'md',
+              mx: 'auto',
+              maxHeight: '60vh',
+              overflowY: 'auto',
+            }
+          }}
+        >
+          <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, mb: 1 }}>
+            Link Expiry
+          </Typography>
+          <Typography sx={{ fontSize: '0.8rem', color: '#9B9691', mb: 3, fontFamily: 'var(--font-satoshi)' }}>
+            Choose when your polymorphic secure link will automatically purge from the servers.
+          </Typography>
+          
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+            <Typography sx={{ color: '#ffffff', fontSize: '0.9rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
+              Selected Duration
+            </Typography>
+            <Typography sx={{ fontSize: '0.95rem', fontWeight: 900, color: themeColor, fontFamily: 'var(--font-mono)' }}>
+              {formatRemaining(expiryMs)}
+            </Typography>
+          </Stack>
+          <Slider
+            value={expiryMs}
+            min={SEND_EXPIRY_PRESETS[0].ms}
+            max={SEND_MAX_TTL_MS}
+            step={60000}
+            onChange={(_, v) => setExpiryMs(v as number)}
+            sx={{
+              color: themeColor,
+              mb: 3,
+              '& .MuiSlider-rail': { bgcolor: '#34322F', opacity: 1 },
+              '& .MuiSlider-thumb': {
+                width: 16,
+                height: 16,
+                bgcolor: '#ffffff',
+                boxShadow: `0 0 0 4px ${alpha(themeColor, 0.2)}`,
+                '&:hover, &.Mui-focusVisible': { boxShadow: `0 0 0 8px ${alpha(themeColor, 0.3)}` },
+              },
+            }}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+            {SEND_EXPIRY_PRESETS.map((p) => (
+              <Button
+                key={p.id}
+                size="small"
+                onClick={() => setExpiryMs(p.ms)}
+                sx={{
+                  flex: 1,
+                  minWidth: '60px',
+                  py: 1,
+                  fontSize: '0.75rem',
+                  borderRadius: '8px',
+                  border: expiryMs === p.ms ? `1px solid ${themeColor}` : '1px solid #34322F',
+                  bgcolor: expiryMs === p.ms ? alpha(themeColor, 0.08) : 'transparent',
+                  color: expiryMs === p.ms ? '#ffffff' : 'rgba(255,255,255,0.4)',
+                  fontWeight: expiryMs === p.ms ? 900 : 600,
+                  fontFamily: 'var(--font-satoshi)',
+                  '&:hover': {
+                    bgcolor: expiryMs === p.ms ? alpha(themeColor, 0.12) : 'rgba(255,255,255,0.02)',
+                    borderColor: expiryMs === p.ms ? themeColor : '#4A4845',
+                  }
+                }}
+              >
+                {p.label}
+              </Button>
+            ))}
+          </Box>
+        </Drawer>
+      )}
+
+      {/* Discrete Sharing Drawer */}
+      {discreteDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={discreteDrawerOpen}
+          onClose={() => setDiscreteDrawerOpen(false)}
+          keepMounted={false}
+          disablePortal={true}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              p: 4,
+              color: '#ffffff',
+              fontFamily: 'var(--font-satoshi)',
+              maxWidth: 'md',
+              mx: 'auto',
+              maxHeight: '60vh',
+              overflowY: 'auto',
+            }
+          }}
+        >
+          <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, mb: 1 }}>
+            Discrete Sharing
+          </Typography>
+          <Typography sx={{ fontSize: '0.8rem', color: '#9B9691', mb: 3, fontFamily: 'var(--font-satoshi)', lineHeight: 1.5 }}>
+            Send directly to specific users in the ecosystem. They will be added as collaborators with read permissions.
+          </Typography>
+          
+          <Box sx={{ minHeight: 200 }}>
+            <UserSearch
+              label=""
+              placeholder="Search for users to share with..."
+              selectedUsers={selectedUsers}
+              onSelect={(u) => setSelectedUsers([...selectedUsers, u])}
+              onRemove={(id) => setSelectedUsers(selectedUsers.filter(u => u.id !== id))}
+            />
+          </Box>
         </Drawer>
       )}
 
