@@ -260,6 +260,26 @@ export async function executeCascadeDeleteSecure(
     } catch (err) {
       console.error('[Cascade Delete] Note vault key mapping cleanup failed:', err);
     }
+
+    // F. Delete Ephemeral Files for Send (isFile)
+    try {
+      const note = await tables.getRow<any>(databaseId, tableId, rowId);
+      if (note.isFile === true || (note.isGhost === true && note.metadata?.includes('fileId'))) {
+        const meta = (() => {
+            try { return typeof note.metadata === 'string' ? JSON.parse(note.metadata) : note.metadata; } catch { return {}; }
+        })();
+        const bucketId = meta?.send_object?.bucketId || APPWRITE_CONFIG.BUCKETS.SEND_EPHEMERAL;
+        const fileId = meta?.send_object?.fileId;
+        if (bucketId && fileId) {
+            console.log(`[Cascade Delete] Purging ephemeral file: ${fileId} from bucket: ${bucketId}`);
+            await storage.deleteFile(bucketId, fileId).catch(err => {
+                console.warn(`[Cascade Delete] Failed to delete ephemeral file ${fileId}:`, err?.message);
+            });
+        }
+      }
+    } catch (err) {
+      console.error('[Cascade Delete] Ghost file cleanup failed:', err);
+    }
   }
 
   // --- 2. CASCADE FOR PROJECTS ---
