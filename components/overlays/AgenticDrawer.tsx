@@ -15,7 +15,19 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
-import { Bot, Play, Plug, Plus, X } from 'lucide-react';
+import {
+  Bot,
+  Play,
+  Plug,
+  Plus,
+  X,
+  ChevronRight,
+  ArrowLeft,
+  Check,
+  Power,
+  AlertCircle,
+  RefreshCw,
+} from 'lucide-react';
 
 import { useAgenticDrawer } from '@/context/AgenticDrawerContext';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -42,7 +54,8 @@ interface AgentRow {
 const frameworks: Array<{ id: AgentFramework; title: string; comingSoon?: boolean }> = [
   { id: 'kylrix', title: 'Kylrix Internal' },
   { id: 'openclaw', title: 'OpenClaw', comingSoon: true },
-  { id: 'hermes', title: 'Hermes', comingSoon: true }];
+  { id: 'hermes', title: 'Hermes', comingSoon: true }
+];
 
 const fontUi = 'var(--font-satoshi)';
 const fontDisplay = 'var(--font-clash)';
@@ -86,9 +99,12 @@ export function AgenticDrawer() {
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
   const isPro = hasPaidKylrixPlan(user);
-  const [isExpanded, setIsExpanded] = useState(false);
 
-  const [stage, setStage] = useState<'live' | 'framework' | 'create'>('live');
+  // Nested Overlay State Controllers
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isFrameworkOpen, setIsFrameworkOpen] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
   const [framework, setFramework] = useState<AgentFramework>('kylrix');
   const [agentName, setAgentName] = useState('');
   const [agentGoal, setAgentGoal] = useState('');
@@ -97,11 +113,12 @@ export function AgenticDrawer() {
   const [saving, setSaving] = useState(false);
   const [updatingAgentId, setUpdatingAgentId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const stageOrder: Array<typeof stage> = ['live', 'framework', 'create'];
 
   useEffect(() => {
     if (!isOpen) {
-      setStage('live');
+      setIsCreateOpen(false);
+      setIsFrameworkOpen(false);
+      setSelectedAgentId(null);
       setFramework('kylrix');
       setAgentName('');
       setAgentGoal('');
@@ -133,7 +150,7 @@ export function AgenticDrawer() {
 
   const createAgent = useCallback(async () => {
     if (!user?.$id || !agentName.trim()) return;
-    
+
     if (!isPro) {
       openProUpgrade('Create AI Agent');
       return;
@@ -150,7 +167,7 @@ export function AgenticDrawer() {
       });
       setAgentName('');
       setAgentGoal('');
-      setStage('live');
+      setIsCreateOpen(false);
       await fetchAgents();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create agent.');
@@ -216,6 +233,10 @@ export function AgenticDrawer() {
     });
   }, [agents]);
 
+  const selectedAgent = useMemo(() => {
+    return parsedAgents.find((a) => a.$id === selectedAgentId) || null;
+  }, [parsedAgents, selectedAgentId]);
+
   const runSummary = useMemo(() => {
     const working = parsedAgents.filter((a) => a.status === 'working').length;
     return {
@@ -230,332 +251,287 @@ export function AgenticDrawer() {
     '& .MuiButton-root': { fontFamily: fontUi },
   } as const;
 
-  return (
-    <Drawer
-      anchor={isDesktop ? 'right' : 'bottom'}
-      open={isOpen}
-      onClose={closeAgenticDrawer}
-      ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
-      slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
-      sx={{
-        '& .MuiDrawer-paper': {
-          ...(isDesktop
-            ? {
-                top: '88px',
-                right: 0,
-                height: 'calc(100vh - 88px)',
-                width: 'min(460px, 94vw)',
-                maxWidth: 'min(460px, 94vw)',
-                borderTopLeftRadius: RADIUS_LARGE,
-                borderTopRightRadius: 0,
-                borderBottomLeftRadius: 0,
-                borderBottomRightRadius: 0,
-                borderLeft: BORDER,
-                borderTop: BORDER,
-                borderBottom: 0,
-                borderRight: 0,
-              }
-            : {
-                height: isExpanded ? '92dvh' : '60dvh',
-                transition: BRAND_TRANSITION,
-                borderTopLeftRadius: RADIUS_LARGE,
-                borderTopRightRadius: RADIUS_LARGE,
-                border: BORDER,
-                borderBottom: 0,
-              }),
-          bgcolor: SURFACE_ASH,
-          boxShadow: 'none',
-          backgroundImage: 'none',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-        },
-      }}
-    >
-      {!isDesktop && (
-        <Box 
-            sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
-            onClick={() => setIsExpanded(!isExpanded)}
-        >
-          <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
-        </Box>
-      )}
+  const subDrawerPaperSx = {
+    ...(isDesktop
+      ? {
+          top: '88px',
+          right: 0,
+          height: 'calc(100vh - 88px)',
+          width: 'min(460px, 94vw)',
+          maxWidth: 'min(460px, 94vw)',
+          borderTopLeftRadius: RADIUS_LARGE,
+          borderTopRightRadius: 0,
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
+          borderLeft: BORDER,
+          borderTop: BORDER,
+          borderBottom: 0,
+          borderRight: 0,
+        }
+      : {
+          height: '75dvh',
+          borderTopLeftRadius: RADIUS_LARGE,
+          borderTopRightRadius: RADIUS_LARGE,
+          border: BORDER,
+          borderBottom: 0,
+        }),
+    bgcolor: SURFACE_ASH,
+    boxShadow: '0 -8px 24px rgba(0,0,0,0.5)',
+    backgroundImage: 'none',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  };
 
-      <Box
+  return (
+    <>
+      <Drawer
+        anchor={isDesktop ? 'right' : 'bottom'}
+        open={isOpen}
+        onClose={closeAgenticDrawer}
+        ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
+        slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
         sx={{
-          px: { xs: 2.25, sm: 2.75 },
-          pb: 'max(20px, env(safe-area-inset-bottom))',
-          pt: 0,
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          minHeight: 0,
-          ...sheetBodySx,
+          zIndex: 1300,
+          '& .MuiDrawer-paper': {
+            ...(isDesktop
+              ? {
+                  top: '88px',
+                  right: 0,
+                  height: 'calc(100vh - 88px)',
+                  width: 'min(460px, 94vw)',
+                  maxWidth: 'min(460px, 94vw)',
+                  borderTopLeftRadius: RADIUS_LARGE,
+                  borderTopRightRadius: 0,
+                  borderBottomLeftRadius: 0,
+                  borderBottomRightRadius: 0,
+                  borderLeft: BORDER,
+                  borderTop: BORDER,
+                  borderBottom: 0,
+                  borderRight: 0,
+                }
+              : {
+                  height: '75dvh',
+                  borderTopLeftRadius: RADIUS_LARGE,
+                  borderTopRightRadius: RADIUS_LARGE,
+                  border: BORDER,
+                  borderBottom: 0,
+                }),
+            bgcolor: SURFACE_ASH,
+            boxShadow: 'none',
+            backgroundImage: 'none',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          },
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={1.5}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: RADIUS_SMALL,
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: VOID,
-                border: BORDER,
-              }}
-            >
-              <Bot size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />
-            </Box>
-            <Typography
-              sx={{
-                color: '#fff',
-                fontWeight: 900,
-                fontSize: '1rem',
-                fontFamily: fontDisplay,
-                letterSpacing: '-0.03em',
-              }}
-            >
-              Smart Systems
-            </Typography>
-          </Stack>
-          <IconButton
-            onClick={closeAgenticDrawer}
-            aria-label="Close"
-            sx={{
-              color: '#E8E6E3',
-              bgcolor: VOID,
-              border: BORDER,
-              '&:hover': { bgcolor: HOVER },
-            }}
+        {!isDesktop && (
+          <Box 
+              sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
+              onClick={closeAgenticDrawer}
           >
-            <X size={18} />
-          </IconButton>
-        </Stack>
+            <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
+          </Box>
+        )}
 
-        <Paper
-          elevation={0}
+        <Box
           sx={{
-            mb: 1.75,
-            p: 1.5,
-            borderRadius: RADIUS_MEDIUM,
-            bgcolor: VOID,
-            border: BORDER,
+            px: { xs: 2.25, sm: 2.75 },
+            pb: 'max(20px, env(safe-area-inset-bottom))',
+            pt: { xs: 1, md: 3 },
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+            ...sheetBodySx,
           }}
         >
-          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center" justifyContent="space-between">
-            <Stack direction="row" spacing={0.8} alignItems="center">
-              <Box sx={{ width: 8, height: 8, borderRadius: '999px', bgcolor: runSummary.working > 0 ? SYSTEM_WARNING : SYSTEM_SUCCESS }} />
-              <Typography sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 800 }}>
-                {runSummary.total} Systems
-              </Typography>
-            </Stack>
-            <Typography sx={{ color: TEXT_MUTED, fontSize: '0.74rem', fontWeight: 700 }}>
-              {runSummary.working} Active · {runSummary.idle} Inactive
-            </Typography>
-          </Stack>
-        </Paper>
-
-        <Stack direction="row" spacing={0.75} sx={{ mb: 1.6 }}>
-          {stageOrder.map((entry, index) => {
-            const active = stage === entry;
-            const label = entry === 'live' ? 'Live' : entry === 'framework' ? 'Runtime' : 'Create';
-            return (
-              <Button
-                key={entry}
-                size="small"
-                onClick={() => setStage(entry)}
+          {/* Main Header */}
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.5, flexShrink: 0 }}>
+            <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Box
                 sx={{
-                  flex: 1,
-                  minHeight: 36,
-                  borderRadius: '10px',
-                  textTransform: 'none',
-                  fontWeight: 800,
-                  fontSize: '0.76rem',
-                  letterSpacing: '0.02em',
-                  color: active ? '#fff' : TEXT_MUTED,
-                  bgcolor: active ? SYSTEM_PRIMARY : VOID,
-                  border: BORDER,
-                  transition: BRAND_TRANSITION,
-                  '&:hover': { bgcolor: active ? SYSTEM_HOVER : HOVER },
-                }}
-              >
-                {index + 1}. {label}
-              </Button>
-            );
-          })}
-        </Stack>
-
-        {stage === 'live' && (
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ flexShrink: 0 }}>
-              <Typography sx={{ fontFamily: fontUi, fontSize: '0.8125rem', color: TEXT_MUTED, fontWeight: 600 }}>
-                {parsedAgents.length} active assistants
-              </Typography>
-              <Button
-                size="small"
-                onClick={() => setStage('create')}
-                startIcon={<Plus size={16} />}
-                sx={{
-                  textTransform: 'none',
-                  borderRadius: '10px',
-                  color: '#F4F4F5',
+                  width: 40,
+                  height: 40,
+                  borderRadius: RADIUS_SMALL,
+                  display: 'grid',
+                  placeItems: 'center',
                   bgcolor: VOID,
                   border: BORDER,
-                  fontWeight: 700,
-                  px: 1.2,
                 }}
               >
-                Setup
-              </Button>
+                <Bot size={20} color={SYSTEM_PRIMARY} strokeWidth={2} />
+              </Box>
+              <Stack spacing={0.25}>
+                <Typography
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 900,
+                    fontSize: '1rem',
+                    fontFamily: fontDisplay,
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1,
+                  }}
+                >
+                  Smart Systems
+                </Typography>
+                <Typography sx={{ color: TEXT_MUTED, fontSize: '0.74rem', fontWeight: 600 }}>
+                  Automate work with secure AI assistants
+                </Typography>
+              </Stack>
             </Stack>
+            <IconButton
+              onClick={closeAgenticDrawer}
+              aria-label="Close"
+              sx={{
+                color: '#E8E6E3',
+                bgcolor: VOID,
+                border: BORDER,
+                '&:hover': { bgcolor: HOVER },
+              }}
+            >
+              <X size={18} />
+            </IconButton>
+          </Stack>
 
+          {/* Stats Bar */}
+          <Paper
+            elevation={0}
+            sx={{
+              mb: 2,
+              p: 1.5,
+              borderRadius: RADIUS_MEDIUM,
+              bgcolor: VOID,
+              border: BORDER,
+              flexShrink: 0,
+            }}
+          >
+            <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
+              <Stack direction="row" spacing={0.8} alignItems="center">
+                <Box sx={{ width: 8, height: 8, borderRadius: '999px', bgcolor: runSummary.working > 0 ? SYSTEM_WARNING : SYSTEM_SUCCESS }} />
+                <Typography sx={{ color: '#fff', fontSize: '0.8rem', fontWeight: 800 }}>
+                  {runSummary.total} Active Systems
+                </Typography>
+              </Stack>
+              <Typography sx={{ color: TEXT_MUTED, fontSize: '0.74rem', fontWeight: 700 }}>
+                {runSummary.working} Active · {runSummary.idle} Inactive
+              </Typography>
+            </Stack>
+          </Paper>
+
+          {/* Main List Box */}
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {error ? <Typography sx={{ color: '#FCA5A5', fontSize: '0.8rem' }}>{error}</Typography> : null}
 
             <Stack
               spacing={1}
               sx={{
-                maxHeight: { xs: 440, md: 520 },
                 overflowY: 'auto',
                 pr: 0.25,
                 flex: 1,
               }}
             >
               {loading ? (
-                <Box sx={{ py: 4, display: 'grid', placeItems: 'center' }}>
+                <Box sx={{ py: 6, display: 'grid', placeItems: 'center' }}>
                   <CircularProgress size={24} />
                 </Box>
               ) : parsedAgents.length === 0 ? (
-                  <Paper
-                    elevation={0}
-                    sx={{
-                      p: 2.2,
-                      borderRadius: RADIUS_MEDIUM,
-                      bgcolor: VOID,
-                      border: BORDER,
-                    }}
-                  >
-                  <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: '0.88rem' }}>No assistants yet</Typography>
-                  <Typography sx={{ color: TEXT_MUTED, fontSize: '0.8rem', mt: 0.5 }}>
-                    Initialize your first Smart Assistant to start automations.
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    borderRadius: RADIUS_MEDIUM,
+                    bgcolor: VOID,
+                    border: BORDER,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem', mb: 0.5 }}>
+                    No Smart Systems
+                  </Typography>
+                  <Typography sx={{ color: TEXT_MUTED, fontSize: '0.8rem', lineHeight: 1.5 }}>
+                    Initialize your first background assistant to automate routine operations.
                   </Typography>
                 </Paper>
               ) : (
-                parsedAgents.map((agent) => (
-                  <Paper
-                    key={agent.$id}
-                    elevation={0}
-                    sx={{
-                      p: 1.6,
-                      borderRadius: RADIUS_MEDIUM,
-                      bgcolor: LIFTED,
-                      border: BORDER,
-                      transition: BRAND_TRANSITION,
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        bgcolor: HOVER,
-                      }
-                    }}
-                  >
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography noWrap sx={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}>
-                          {agent.name}
-                        </Typography>
-                        <Typography noWrap sx={{ color: TEXT_MUTED, fontSize: '0.76rem' }}>
-                          {agent.framework === 'kylrix' ? 'Kylrix Internal' : agent.framework}
-                        </Typography>
-                        <Typography noWrap sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.72rem', mt: 0.25 }}>
-                          {formatUpdatedAgo(agent.$updatedAt)}
-                        </Typography>
-                      </Box>
-                      <Box
-                        component="span"
-                        sx={{
-                          px: 1.1,
-                          py: 0.25,
-                          borderRadius: '999px',
-                          bgcolor: agent.status === 'working' ? SYSTEM_PRIMARY : SYSTEM_SUCCESS,
-                          color: '#fff',
-                          fontSize: '0.66rem',
-                          fontWeight: 800,
-                          letterSpacing: '0.06em',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {agent.status}
-                      </Box>
-                    </Stack>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.78rem', mt: 1.1, mb: 1.05, lineHeight: 1.5 }}>
-                      {agent.goal}
-                    </Typography>
-                    {agent.lastError ? (
-                      <Typography sx={{ color: '#FCA5A5', fontSize: '0.75rem', mb: 1.05, lineHeight: 1.45 }}>
-                        Last run error: {agent.lastError}
-                      </Typography>
-                    ) : agent.lastSummary ? (
-                      <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.75rem', mb: 1.05, lineHeight: 1.45 }}>
-                        Last run: {agent.lastSummary}
-                      </Typography>
-                    ) : null}
-                    <Stack direction="row" spacing={1}>
-                      <Button
-                        size="small"
-                        fullWidth
-                        variant="outlined"
-                        disabled={updatingAgentId === agent.$id || agent.status === 'idle'}
-                        onClick={() => void setAgentStatus(agent, 'idle')}
-                        sx={{ textTransform: 'none', borderColor: BORDER_HAIRLINE, color: '#F4F4F5', borderRadius: '10px', minHeight: 38 }}
-                      >
-                        Inactive
-                      </Button>
-                      <Button
-                        size="small"
-                        fullWidth
-                        variant="contained"
-                        startIcon={<Play size={14} />}
-                        disabled={updatingAgentId === agent.$id || agent.status === 'working'}
-                        onClick={() => void runAgentNow(agent)}
-                        sx={{ textTransform: 'none', borderRadius: '10px', bgcolor: SYSTEM_PRIMARY, minHeight: 38, '&:hover': { bgcolor: SYSTEM_HOVER } }}
-                      >
-                        Activate
-                      </Button>
-                    </Stack>
-                  </Paper>
-                ))
+                parsedAgents.map((agent) => {
+                  const isWorking = agent.status === 'working';
+                  return (
+                    <Paper
+                      key={agent.$id}
+                      elevation={0}
+                      onClick={() => setSelectedAgentId(agent.$id)}
+                      sx={{
+                        p: 2,
+                        borderRadius: RADIUS_MEDIUM,
+                        bgcolor: VOID,
+                        border: BORDER,
+                        cursor: 'pointer',
+                        transition: BRAND_TRANSITION,
+                        '&:hover': {
+                          bgcolor: HOVER,
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 8px 10px -8px rgba(0,0,0,1)',
+                        }
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}>
+                        <Stack spacing={0.5} sx={{ minWidth: 0 }}>
+                          <Typography noWrap sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem', fontFamily: fontDisplay }}>
+                            {agent.name}
+                          </Typography>
+                          <Stack direction="row" spacing={1} alignItems="center">
+                            <Typography sx={{ color: TEXT_MUTED, fontSize: '0.75rem', fontWeight: 600 }}>
+                              {agent.framework === 'kylrix' ? 'Kylrix Internal' : agent.framework}
+                            </Typography>
+                            <Box sx={{ width: 3, height: 3, borderRadius: '99px', bgcolor: '#5D5A56' }} />
+                            <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.72rem' }}>
+                              {formatUpdatedAgo(agent.$updatedAt)}
+                            </Typography>
+                          </Stack>
+                        </Stack>
+
+                        <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flexShrink: 0 }}>
+                          <Box
+                            sx={{
+                              px: 1.2,
+                              py: 0.4,
+                              borderRadius: '999px',
+                              bgcolor: isWorking ? alpha(SYSTEM_PRIMARY, 0.15) : alpha(SYSTEM_SUCCESS, 0.15),
+                              border: `1px solid ${isWorking ? alpha(SYSTEM_PRIMARY, 0.3) : alpha(SYSTEM_SUCCESS, 0.3)}`,
+                              color: isWorking ? SYSTEM_PRIMARY : SYSTEM_SUCCESS,
+                              fontSize: '0.68rem',
+                              fontWeight: 900,
+                              letterSpacing: '0.05em',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            {agent.status}
+                          </Box>
+                          <ChevronRight size={16} color={TEXT_MUTED} />
+                        </Stack>
+                      </Stack>
+                    </Paper>
+                  );
+                })
               )}
             </Stack>
 
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => setStage('framework')}
-                sx={{
-                  py: 1.15,
-                  borderRadius: RADIUS_SMALL,
-                  textTransform: 'none',
-                  color: '#F4F4F5',
-                  borderColor: BORDER_HAIRLINE,
-                  fontWeight: 700,
-                  transition: BRAND_TRANSITION,
-                  '&:hover': { borderColor: '#4F4C49', bgcolor: VOID },
-                }}
-              >
-                Runtime
-              </Button>
+            {/* Bottom Initialize Action Button */}
+            <Box sx={{ mt: 'auto', pt: 2, flexShrink: 0 }}>
               <Button
                 fullWidth
                 variant="contained"
                 disableElevation
                 startIcon={<Plus size={18} />}
-                onClick={() => setStage('create')}
+                onClick={() => setIsCreateOpen(true)}
                 sx={{
-                  py: 1.15,
+                  py: 1.3,
                   borderRadius: RADIUS_SMALL,
                   textTransform: 'none',
                   fontWeight: 800,
+                  fontSize: '0.85rem',
                   bgcolor: SYSTEM_PRIMARY,
                   color: '#FFFFFF',
                   boxShadow: 'none',
@@ -563,174 +539,175 @@ export function AgenticDrawer() {
                   '&:hover': { bgcolor: SYSTEM_HOVER },
                 }}
               >
-                Initialize
+                Initialize Smart System
               </Button>
-            </Stack>
+            </Box>
           </Box>
-        )}
+        </Box>
+      </Drawer>
 
-        {stage === 'framework' && (
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9375rem', fontFamily: fontDisplay, letterSpacing: '-0.02em' }}>
-              System Runtime
-            </Typography>
+      {/* NESTED OVERLAY 1: Initialize/Create Assistant Drawer */}
+      {isCreateOpen && (
+        <Drawer
+          anchor={isDesktop ? 'right' : 'bottom'}
+          open={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          ModalProps={{ keepMounted: false, disableScrollLock: true, disablePortal: true }}
+          slotProps={{ backdrop: { style: { backgroundColor: 'transparent' } } }}
+          sx={{
+            zIndex: 1400,
+            '& .MuiDrawer-paper': subDrawerPaperSx,
+          }}
+        >
+          {!isDesktop && (
+            <Box 
+              sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
+              onClick={() => setIsCreateOpen(false)}
+            >
+              <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
+            </Box>
+          )}
 
-            <Stack spacing={1.25} sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 0.25 }}>
-              {frameworks.map((item) => {
-                const selected = item.id === framework;
-                const disabled = Boolean(item.comingSoon);
-                return (
-                  <Paper
-                    key={item.id}
-                    elevation={0}
-                    onClick={() => !disabled && setFramework(item.id)}
-                    sx={{
-                      p: 1.75,
-                      borderRadius: RADIUS_MEDIUM,
-                      bgcolor: VOID,
-                      border: selected ? `2px solid ${SYSTEM_PRIMARY}` : BORDER,
-                      cursor: disabled ? 'default' : 'pointer',
-                      transition: BRAND_TRANSITION,
-                      '&:hover': disabled
-                        ? undefined
-                        : {
-                            bgcolor: HOVER,
-                            borderColor: selected ? SYSTEM_PRIMARY : BORDER_HAIRLINE,
-                          },
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        color: disabled ? TEXT_MUTED : '#fff',
-                        fontWeight: 800,
-                        fontSize: '0.875rem',
-                        fontFamily: fontDisplay,
-                        letterSpacing: '-0.02em',
-                      }}
-                    >
-                      {item.title}{item.comingSoon ? ' (Coming soon)' : ''}
-                    </Typography>
-                  </Paper>
-                );
-              })}
+          <Box
+            sx={{
+              px: { xs: 2.25, sm: 2.75 },
+              pb: 'max(20px, env(safe-area-inset-bottom))',
+              pt: 1,
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+              ...sheetBodySx,
+            }}
+          >
+            {/* Header */}
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.5, flexShrink: 0 }}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <IconButton
+                  onClick={() => setIsCreateOpen(false)}
+                  aria-label="Back"
+                  sx={{
+                    color: '#E8E6E3',
+                    bgcolor: VOID,
+                    border: BORDER,
+                    '&:hover': { bgcolor: HOVER },
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                </IconButton>
+                <Typography
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    fontFamily: fontDisplay,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  Initialize System
+                </Typography>
+              </Stack>
             </Stack>
 
-            <Button
-              variant="contained"
-              onClick={() => setStage('create')}
-              disabled={framework !== 'kylrix'}
-              sx={{ borderRadius: '10px', minHeight: 40, textTransform: 'none', fontWeight: 700, bgcolor: SYSTEM_PRIMARY, '&:hover': { bgcolor: SYSTEM_HOVER } }}
-            >
-              Continue
-            </Button>
-            <Button variant="text" onClick={() => setStage('live')} sx={{ alignSelf: 'flex-start', color: TEXT_MUTED, textTransform: 'none', fontWeight: 700 }}>
-              Back
-            </Button>
-          </Box>
-        )}
-
-        {stage === 'create' && (
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 1.75 }}>
-            <Typography sx={{ color: '#fff', fontWeight: 800, fontSize: '0.9375rem', fontFamily: fontDisplay, letterSpacing: '-0.02em' }}>
-              Setup Assistant
-            </Typography>
-
-            <Paper
-              elevation={0}
-              sx={{
-                p: 1.75,
-                borderRadius: RADIUS_MEDIUM,
-                bgcolor: LIFTED,
-                border: BORDER,
-                flex: 1,
-                minHeight: 0,
-                overflowY: 'auto',
-              }}
-            >
-              <Stack spacing={1.25}>
+            {/* Main Form Scroll Area */}
+            <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.25, display: 'flex', flexDirection: 'column', gap: 2.5, minHeight: 0 }}>
+              <Stack spacing={2.5}>
                 <TextField
                   value={agentName}
                   onChange={(event) => setAgentName(event.target.value)}
-                  label="Assistant Name"
-                  placeholder="Workflow Manager"
+                  label="System Name"
+                  placeholder="e.g., Workflow Manager"
                   fullWidth
-                  size="small"
+                  size="medium"
                   sx={{
-                    '& .MuiOutlinedInput-root': { bgcolor: '#201E1C', borderRadius: '12px' },
-                    '& .MuiInputBase-input': { color: '#fff' },
-                    '& .MuiInputLabel-root': { color: TEXT_MUTED },
+                    '& .MuiOutlinedInput-root': { 
+                      bgcolor: VOID, 
+                      borderRadius: RADIUS_SMALL,
+                      border: BORDER,
+                      '& fieldset': { border: 'none' },
+                      '&:hover': { bgcolor: HOVER },
+                      '&.Mui-focused': { bgcolor: HOVER, border: `1px solid ${SYSTEM_PRIMARY}` }
+                    },
+                    '& .MuiInputBase-input': { color: '#fff', fontSize: '0.9rem', fontWeight: 600 },
+                    '& .MuiInputLabel-root': { color: TEXT_MUTED, fontSize: '0.85rem' },
                   }}
                 />
+
                 <TextField
                   value={agentGoal}
                   onChange={(event) => setAgentGoal(event.target.value)}
-                  label="Goal"
-                  placeholder="Triage overdue tasks and report blockers"
+                  label="Goal / Instructions"
+                  placeholder="e.g., Triage overdue tasks and notify team members..."
                   fullWidth
                   multiline
-                  minRows={3}
-                  size="small"
+                  minRows={4}
+                  size="medium"
                   sx={{
-                    '& .MuiOutlinedInput-root': { bgcolor: HOVER, borderRadius: '12px' },
-                    '& .MuiInputBase-input': { color: '#fff' },
-                    '& .MuiInputLabel-root': { color: TEXT_MUTED },
+                    '& .MuiOutlinedInput-root': { 
+                      bgcolor: VOID, 
+                      borderRadius: RADIUS_SMALL,
+                      border: BORDER,
+                      '& fieldset': { border: 'none' },
+                      '&:hover': { bgcolor: HOVER },
+                      '&.Mui-focused': { bgcolor: HOVER, border: `1px solid ${SYSTEM_PRIMARY}` }
+                    },
+                    '& .MuiInputBase-input': { color: '#fff', fontSize: '0.9rem', lineHeight: 1.5 },
+                    '& .MuiInputLabel-root': { color: TEXT_MUTED, fontSize: '0.85rem' },
                   }}
                 />
-                <Box
+
+                {/* Framework Selector Trigger */}
+                <Paper
+                  elevation={0}
+                  onClick={() => setIsFrameworkOpen(true)}
                   sx={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 0.75,
-                    height: 36,
-                    px: 1.5,
-                    borderRadius: '999px',
+                    p: 2,
+                    borderRadius: RADIUS_SMALL,
                     bgcolor: VOID,
                     border: BORDER,
-                    color: '#F4F4F5',
-                    fontFamily: fontUi,
-                    fontWeight: 700,
-                    fontSize: '0.8125rem',
-                    width: 'fit-content',
+                    cursor: 'pointer',
+                    transition: BRAND_TRANSITION,
+                    '&:hover': { bgcolor: HOVER }
                   }}
                 >
-                  <Plug size={14} />
-                  System: {framework === 'kylrix' ? 'Kylrix Internal' : framework}
-                </Box>
-                <Typography sx={{ color: TEXT_MUTED, fontSize: '0.74rem' }}>
-                  Assistants run with your internal account permissions and never expose external interfaces.
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
+                      <Plug size={18} color={SYSTEM_PRIMARY} />
+                      <Stack spacing={0.25}>
+                        <Typography sx={{ color: TEXT_MUTED, fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                          Runtime Environment
+                        </Typography>
+                        <Typography sx={{ color: '#fff', fontSize: '0.88rem', fontWeight: 800 }}>
+                          {framework === 'kylrix' ? 'Kylrix Internal' : framework}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                    <ChevronRight size={16} color={TEXT_MUTED} />
+                  </Stack>
+                </Paper>
+
+                <Typography sx={{ color: TEXT_MUTED, fontSize: '0.74rem', lineHeight: 1.5, px: 0.5 }}>
+                  Smart systems run locally using in-process tasks. They cannot connect to arbitrary external websites or leak internal files.
                 </Typography>
               </Stack>
-            </Paper>
+            </Box>
 
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-              <Button
-                fullWidth
-                variant="outlined"
-                onClick={() => setStage('framework')}
-                sx={{
-                  py: 1.15,
-                  borderRadius: RADIUS_SMALL,
-                  textTransform: 'none',
-                  color: '#F4F4F5',
-                  borderColor: BORDER_HAIRLINE,
-                  fontWeight: 700,
-                  transition: BRAND_TRANSITION,
-                  '&:hover': { borderColor: '#4F4C49', bgcolor: VOID },
-                }}
-              >
-                Runtime
-              </Button>
+            {/* Action Footer */}
+            <Box sx={{ mt: 'auto', pt: 2, flexShrink: 0 }}>
               <Button
                 fullWidth
                 variant="contained"
                 disableElevation
-                onClick={() => void createAgent()}
+                onClick={async () => {
+                  await createAgent();
+                }}
                 disabled={saving || !agentName.trim() || !user?.$id}
                 sx={{
-                  py: 1.15,
+                  py: 1.3,
                   borderRadius: RADIUS_SMALL,
                   textTransform: 'none',
                   fontWeight: 800,
+                  fontSize: '0.85rem',
                   bgcolor: SYSTEM_PRIMARY,
                   color: '#FFFFFF',
                   boxShadow: 'none',
@@ -740,14 +717,339 @@ export function AgenticDrawer() {
               >
                 {saving ? <CircularProgress size={18} color="inherit" /> : 'Ready'}
               </Button>
+            </Box>
+          </Box>
+        </Drawer>
+      )}
+
+      {/* NESTED OVERLAY 2: Select Runtime Framework Drawer */}
+      {isFrameworkOpen && (
+        <Drawer
+          anchor={isDesktop ? 'right' : 'bottom'}
+          open={isFrameworkOpen}
+          onClose={() => setIsFrameworkOpen(false)}
+          ModalProps={{ keepMounted: false, disableScrollLock: true, disablePortal: true }}
+          slotProps={{ backdrop: { style: { backgroundColor: 'transparent' } } }}
+          sx={{
+            zIndex: 1500,
+            '& .MuiDrawer-paper': subDrawerPaperSx,
+          }}
+        >
+          {!isDesktop && (
+            <Box 
+              sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
+              onClick={() => setIsFrameworkOpen(false)}
+            >
+              <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
+            </Box>
+          )}
+
+          <Box
+            sx={{
+              px: { xs: 2.25, sm: 2.75 },
+              pb: 'max(20px, env(safe-area-inset-bottom))',
+              pt: 1,
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+              ...sheetBodySx,
+            }}
+          >
+            {/* Header */}
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.5, flexShrink: 0 }}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <IconButton
+                  onClick={() => setIsFrameworkOpen(false)}
+                  aria-label="Back"
+                  sx={{
+                    color: '#E8E6E3',
+                    bgcolor: VOID,
+                    border: BORDER,
+                    '&:hover': { bgcolor: HOVER },
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                </IconButton>
+                <Typography
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    fontFamily: fontDisplay,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  Select Runtime
+                </Typography>
+              </Stack>
             </Stack>
 
-            <Button variant="text" onClick={() => setStage('live')} sx={{ alignSelf: 'flex-start', color: TEXT_MUTED, textTransform: 'none', fontWeight: 700 }}>
-              Back
-            </Button>
+            {/* Main List */}
+            <Stack spacing={1.25} sx={{ flex: 1, overflowY: 'auto', pr: 0.25 }}>
+              {frameworks.map((item) => {
+                const selected = item.id === framework;
+                const disabled = Boolean(item.comingSoon);
+                return (
+                  <Paper
+                    key={item.id}
+                    elevation={0}
+                    onClick={() => {
+                      if (!disabled) {
+                        setFramework(item.id);
+                        setIsFrameworkOpen(false);
+                      }
+                    }}
+                    sx={{
+                      p: 2,
+                      borderRadius: RADIUS_MEDIUM,
+                      bgcolor: VOID,
+                      border: selected ? `2px solid ${SYSTEM_PRIMARY}` : BORDER,
+                      cursor: disabled ? 'default' : 'pointer',
+                      opacity: disabled ? 0.5 : 1,
+                      transition: BRAND_TRANSITION,
+                      '&:hover': disabled
+                        ? undefined
+                        : {
+                            bgcolor: HOVER,
+                          },
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" justifyContent="space-between">
+                      <Typography
+                        sx={{
+                          color: disabled ? TEXT_MUTED : '#fff',
+                          fontWeight: 800,
+                          fontSize: '0.875rem',
+                          fontFamily: fontDisplay,
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
+                        {item.title}{item.comingSoon ? ' (Coming soon)' : ''}
+                      </Typography>
+                      {selected && <Check size={16} color={SYSTEM_PRIMARY} />}
+                    </Stack>
+                  </Paper>
+                );
+              })}
+            </Stack>
           </Box>
-        )}
-      </Box>
-    </Drawer>
+        </Drawer>
+      )}
+
+      {/* NESTED OVERLAY 3: Agent Details System Panel Drawer */}
+      {selectedAgent && (
+        <Drawer
+          anchor={isDesktop ? 'right' : 'bottom'}
+          open={Boolean(selectedAgent)}
+          onClose={() => setSelectedAgentId(null)}
+          ModalProps={{ keepMounted: false, disableScrollLock: true, disablePortal: true }}
+          slotProps={{ backdrop: { style: { backgroundColor: 'transparent' } } }}
+          sx={{
+            zIndex: 1400,
+            '& .MuiDrawer-paper': subDrawerPaperSx,
+          }}
+        >
+          {!isDesktop && (
+            <Box 
+              sx={{ display: 'flex', justifyContent: 'center', py: 1.5, cursor: 'pointer' }}
+              onClick={() => setSelectedAgentId(null)}
+            >
+              <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36' }} aria-hidden />
+            </Box>
+          )}
+
+          <Box
+            sx={{
+              px: { xs: 2.25, sm: 2.75 },
+              pb: 'max(20px, env(safe-area-inset-bottom))',
+              pt: 1,
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+              ...sheetBodySx,
+            }}
+          >
+            {/* Header */}
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2.5, flexShrink: 0 }}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                <IconButton
+                  onClick={() => setSelectedAgentId(null)}
+                  aria-label="Back"
+                  sx={{
+                    color: '#E8E6E3',
+                    bgcolor: VOID,
+                    border: BORDER,
+                    '&:hover': { bgcolor: HOVER },
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                </IconButton>
+                <Typography
+                  sx={{
+                    color: '#fff',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    fontFamily: fontDisplay,
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  System Panel
+                </Typography>
+              </Stack>
+            </Stack>
+
+            {/* Main Details Panel */}
+            <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.25, display: 'flex', flexDirection: 'column', gap: 2.5, minHeight: 0 }}>
+              {/* Name and State Card */}
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: RADIUS_MEDIUM,
+                  bgcolor: VOID,
+                  border: BORDER,
+                }}
+              >
+                <Typography sx={{ color: '#fff', fontWeight: 900, fontSize: '1.1rem', fontFamily: fontDisplay, mb: 1 }}>
+                  {selectedAgent.name}
+                </Typography>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Box
+                    sx={{
+                      px: 1.2,
+                      py: 0.4,
+                      borderRadius: '999px',
+                      bgcolor: selectedAgent.status === 'working' ? alpha(SYSTEM_PRIMARY, 0.15) : alpha(SYSTEM_SUCCESS, 0.15),
+                      border: `1px solid ${selectedAgent.status === 'working' ? alpha(SYSTEM_PRIMARY, 0.3) : alpha(SYSTEM_SUCCESS, 0.3)}`,
+                      color: selectedAgent.status === 'working' ? SYSTEM_PRIMARY : SYSTEM_SUCCESS,
+                      fontSize: '0.68rem',
+                      fontWeight: 900,
+                      letterSpacing: '0.05em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {selectedAgent.status}
+                  </Box>
+                  <Typography sx={{ color: TEXT_MUTED, fontSize: '0.8rem', fontWeight: 600 }}>
+                    {selectedAgent.framework === 'kylrix' ? 'Kylrix Internal' : selectedAgent.framework}
+                  </Typography>
+                </Stack>
+              </Paper>
+
+              {/* Goal Description Card */}
+              <Stack spacing={1}>
+                <Typography sx={{ color: TEXT_MUTED, fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', px: 0.5 }}>
+                  Objective Goal
+                </Typography>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    borderRadius: RADIUS_SMALL,
+                    bgcolor: VOID,
+                    border: BORDER,
+                  }}
+                >
+                  <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+                    {selectedAgent.goal}
+                  </Typography>
+                </Paper>
+              </Stack>
+
+              {/* Logs & Run Summaries Card */}
+              {(selectedAgent.lastSummary || selectedAgent.lastError) && (
+                <Stack spacing={1}>
+                  <Typography sx={{ color: TEXT_MUTED, fontSize: '0.74rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', px: 0.5 }}>
+                    System Logs / Activity
+                  </Typography>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      borderRadius: RADIUS_SMALL,
+                      bgcolor: VOID,
+                      border: BORDER,
+                    }}
+                  >
+                    {selectedAgent.lastError ? (
+                      <Stack direction="row" spacing={1} alignItems="flex-start">
+                        <AlertCircle size={16} color="#EF4444" sx={{ mt: 0.25, flexShrink: 0 }} />
+                        <Typography sx={{ color: '#FCA5A5', fontSize: '0.8rem', fontFamily: 'monospace', lineHeight: 1.45 }}>
+                          Error: {selectedAgent.lastError}
+                        </Typography>
+                      </Stack>
+                    ) : (
+                      <Stack direction="row" spacing={1} alignItems="flex-start">
+                        <RefreshCw size={16} color={SYSTEM_SUCCESS} sx={{ mt: 0.25, flexShrink: 0 }} />
+                        <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.8rem', fontFamily: 'monospace', lineHeight: 1.45 }}>
+                          {selectedAgent.lastSummary}
+                        </Typography>
+                      </Stack>
+                    )}
+                  </Paper>
+                </Stack>
+              )}
+            </Box>
+
+            {/* Action Footer */}
+            <Box sx={{ mt: 'auto', pt: 2, flexShrink: 0 }}>
+              {selectedAgent.status === 'working' ? (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  disableElevation
+                  startIcon={<Power size={16} />}
+                  disabled={updatingAgentId === selectedAgent.$id}
+                  onClick={async () => {
+                    await setAgentStatus(selectedAgent, 'idle');
+                  }}
+                  sx={{
+                    py: 1.3,
+                    borderRadius: RADIUS_SMALL,
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    bgcolor: '#EF4444',
+                    color: '#FFFFFF',
+                    boxShadow: 'none',
+                    transition: BRAND_TRANSITION,
+                    '&:hover': { bgcolor: '#DC2626' },
+                  }}
+                >
+                  Deactivate / Set Idle
+                </Button>
+              ) : (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  disableElevation
+                  startIcon={<Play size={16} />}
+                  disabled={updatingAgentId === selectedAgent.$id}
+                  onClick={async () => {
+                    await runAgentNow(selectedAgent);
+                  }}
+                  sx={{
+                    py: 1.3,
+                    borderRadius: RADIUS_SMALL,
+                    textTransform: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    bgcolor: SYSTEM_SUCCESS,
+                    color: '#FFFFFF',
+                    boxShadow: 'none',
+                    transition: BRAND_TRANSITION,
+                    '&:hover': { bgcolor: '#059669' },
+                  }}
+                >
+                  Run Agent Now
+                </Button>
+              )}
+            </Box>
+          </Box>
+        </Drawer>
+      )}
+    </>
   );
 }
