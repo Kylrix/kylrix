@@ -28,22 +28,30 @@ async function cleanupExpiredPublicGhostNotes(payload?: { batchSize?: number }) 
   const res = await databases.listRows(NOTE_DB, NOTES_TABLE, [
     Query.isNull('userId'),
     Query.equal('isPublic', true),
+    Query.equal('isThread', false),
+    Query.equal('isChat', false),
     Query.orderDesc('$updatedAt'),
     Query.limit(cap),
-    Query.select(['$id', 'metadata', 'updatedAt'])]);
+    Query.select(['$id', 'metadata', 'updatedAt', 'isThread', 'isChat'])]);
 
   let deleted = 0;
   for (const doc of res.rows) {
-    let meta: { isGhost?: boolean; expiresAt?: string };
+    let meta: { isGhost?: boolean; expiresAt?: string; isThread?: boolean; isChat?: boolean };
     try {
       meta =
         typeof doc.metadata === 'string' && doc.metadata
-          ? (JSON.parse(doc.metadata) as { isGhost?: boolean; expiresAt?: string })
+          ? (JSON.parse(doc.metadata) as { isGhost?: boolean; expiresAt?: string; isThread?: boolean; isChat?: boolean })
           : {};
     } catch {
       continue;
     }
     if (!meta.isGhost) continue;
+
+    // Preservation Gate: Skip persistent threads and chats
+    if ((doc as any).isThread || (doc as any).isChat || meta.isThread || meta.isChat) {
+      continue;
+    }
+
     const exp = meta.expiresAt ? new Date(meta.expiresAt).getTime() : NaN;
     if (!Number.isFinite(exp) || exp > Date.now()) continue;
 
