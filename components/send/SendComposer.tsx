@@ -120,11 +120,15 @@ export function SendComposer() {
   const [expiryMs, setExpiryMs] = useState(SEND_EXPIRY_PRESETS[2].ms);
   const [isSecureMode, setIsSecureMode] = useState(false);
 
-  // Forced Secure Mode for Credentials
+  // Mandatory Secure Types: Credentials and Files
+  const isMandatorySecure = useMemo(() => {
+    return kind === 'password' || kind === 'totp' || kind === 'file';
+  }, [kind]);
+
   const effectiveSecureMode = useMemo(() => {
-    if (kind === 'password' || kind === 'totp') return true;
+    if (isMandatorySecure) return true;
     return isSecureMode;
-  }, [kind, isSecureMode]);
+  }, [isMandatorySecure, isSecureMode]);
 
   const [noteTitle, setNoteTitle] = useState('');
   const [noteBody, setNoteBody] = useState('');
@@ -510,30 +514,13 @@ export function SendComposer() {
           bgcolor: '#0A0908',
         }}
       >
-        <Container maxWidth="md" sx={{ py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Container maxWidth="md" sx={{ py: 2, display: 'flex', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Logo variant="icon" size={26} />
             <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 600, color: '#ffffff', letterSpacing: '-0.02em', fontSize: '1.1rem' }}>
               Kylrix Send
             </Typography>
           </Box>
-          <Box sx={{ flex: 1 }} />
-          <Button
-            component={Link}
-            href="/"
-            sx={{
-              color: '#9B9691',
-              fontFamily: 'var(--font-satoshi)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              textTransform: 'none',
-              borderRadius: '8px',
-              px: 2,
-              '&:hover': { color: '#ffffff', bgcolor: '#1C1A18' },
-            }}
-          >
-            Dashboard
-          </Button>
         </Container>
       </Box>
 

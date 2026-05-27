@@ -847,6 +847,25 @@ export default function CommentsSection({ noteId }: CommentsProps) {
     try {
       let finalContent = text;
       let isEncrypted = false;
+      let finalMetadata: string | null = null;
+      let isVoiceNote = false;
+
+      // Extract voiceFileId from plaintext BEFORE encryption for cleanup integrity
+      if (text.startsWith('__voice_note__:') || text.includes('"voiceFileId"')) {
+        isVoiceNote = true;
+        let voiceFileId = null;
+        if (text.startsWith('__voice_note__:')) {
+          voiceFileId = text.substring('__voice_note__:'.length);
+        } else {
+            try {
+                const parsed = JSON.parse(text);
+                if (parsed.voiceFileId) voiceFileId = parsed.voiceFileId;
+            } catch {}
+        }
+        if (voiceFileId) {
+            finalMetadata = JSON.stringify({ voiceFileId });
+        }
+      }
       
       if (decryptionKey) {
         const encrypted = await encryptGhostData(text, decryptionKey);
@@ -854,7 +873,7 @@ export default function CommentsSection({ noteId }: CommentsProps) {
         isEncrypted = true;
       }
 
-      const comment = await createComment(noteId, finalContent, parentId, null, false, isEncrypted);
+      const comment = await createComment(noteId, finalContent, parentId, finalMetadata, isVoiceNote, isEncrypted);
       const newCommentDoc = comment as unknown as Comments;
       setComments(prev => [...prev, newCommentDoc]);
 
