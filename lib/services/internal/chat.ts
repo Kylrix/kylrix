@@ -1,4 +1,4 @@
-import { createServerClient } from '@/lib/appwrite-server-only';
+import { createServerClient } from '@/lib/appwrite/server';
 import { ID, Permission, Role, Query, TablesDB } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';

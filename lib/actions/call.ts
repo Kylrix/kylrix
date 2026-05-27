@@ -4,7 +4,7 @@ import { ID, Permission, Role } from 'node-appwrite';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createCallMetadata } from '@/lib/sdk/calls/index';
-import { createServerClient } from '@/lib/appwrite-server-only';
+import { createServerClient } from '@/lib/appwrite/server';
 
 const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;

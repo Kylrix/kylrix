@@ -1,6 +1,6 @@
 import { Client, Account } from 'node-appwrite';
 import { cookies } from 'next/headers';
-import { APPWRITE_CONFIG } from './appwrite/config';
+import { APPWRITE_CONFIG } from './config';
 import { cache } from 'react';
 
 /**

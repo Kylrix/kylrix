@@ -1,5 +1,5 @@
 import { AuthPort, Actor } from '../../ports/auth.port';
-import { createServerClient } from '@/lib/appwrite-server-only';
+import { createServerClient } from '@/lib/appwrite/server';
 import { isEmailInAdminList } from '@/lib/appwrite-admin';
 
 export class AppwriteAuthAdapter implements AuthPort {

@@ -7,7 +7,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { Registry } from '@/lib/core/di/registry';
-import { createServerClient } from '@/lib/appwrite-server-only';
+import { createServerClient } from '@/lib/appwrite/server';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
 import { trackEngagementView, type TrackEngagementInput } from '@/lib/services/internal/engagement-views';
 import { deleteCallIfExpired } from '@/lib/services/internal/calls';

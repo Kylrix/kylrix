@@ -1,7 +1,7 @@
 'use server';
 
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
-import { createServerClient } from '@/lib/appwrite-server-only';
+import { createServerClient } from '@/lib/appwrite/server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Permission, Role, Query } from 'node-appwrite';
 

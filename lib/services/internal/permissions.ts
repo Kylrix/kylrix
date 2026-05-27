@@ -12,7 +12,7 @@ import {
   upsertLockboxRows,
 } from '@/lib/api/permission-updater';
 import { createSystemClient } from '@/lib/appwrite-admin';
-import { createServerClient } from '@/lib/appwrite-server-only';
+import { createServerClient } from '@/lib/appwrite/server';
 import { ID, Permission, Role } from 'node-appwrite';
 
 const DEFAULT_GHOST_RESOURCE_TYPE = 'ghost_note';

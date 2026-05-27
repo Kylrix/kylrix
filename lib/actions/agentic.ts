@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ID, Query } from 'node-appwrite';
 
 import { createSystemClient } from '@/lib/appwrite-admin';
-import { createServerClient } from '@/lib/appwrite-server-only';
+import { createServerClient } from '@/lib/appwrite/server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 type AgentStatus = 'idle' | 'working';

@@ -1,6 +1,6 @@
 import { Query, TablesDB } from 'node-appwrite';
 import { DatabasePort, QueryExpression, ListRowsResult } from '../../ports/database.port';
-import { createServerClient } from '@/lib/appwrite-server-only';
+import { createServerClient } from '@/lib/appwrite/server';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 
 export function mapQueryExpressions(expressions: QueryExpression[]): string[] {
