@@ -443,8 +443,22 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
   const [isReactionsHover, setIsReactionsHover] = useState(false);
   const closeReactionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [isDeviceOwner, setIsDeviceOwner] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('kylrix_my_comments');
+      if (stored) {
+        const list = JSON.parse(stored);
+        if (list.includes(comment.$id)) {
+          setIsDeviceOwner(true);
+        }
+      }
+    } catch {}
+  }, [comment.$id]);
+
   const commentUser = userMap[comment.userId] || getCachedCommentIdentity(comment.userId) || undefined;
-  const isOwner = user?.$id === comment.userId;
+  const isOwner = user?.$id === comment.userId || isDeviceOwner;
   const isDeleted = comment.content === '[Deleted]';
   const profilePicId = getUserProfilePicId(commentUser);
   const avatarSrc = isDeleted
@@ -876,6 +890,16 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
       const comment = await createComment(noteId, finalContent, parentId, finalMetadata, isVoiceNote, isEncrypted);
       const newCommentDoc = comment as unknown as Comments;
       setComments(prev => [...prev, newCommentDoc]);
+
+      // Track created comment ID locally on this device for ephemeral access control
+      try {
+        const stored = localStorage.getItem('kylrix_my_comments');
+        const list = stored ? JSON.parse(stored) : [];
+        list.push(newCommentDoc.$id);
+        localStorage.setItem('kylrix_my_comments', JSON.stringify(list));
+      } catch (e) {
+        console.warn('Failed to save comment ID to local storage:', e);
+      }
 
       // If the user who commented isn't in userMap, we might want to refresh or add them
       // For now, we refresh to be safe or just wait for the user to be there
