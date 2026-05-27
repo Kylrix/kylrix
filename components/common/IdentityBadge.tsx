@@ -43,6 +43,8 @@ export function IdentityAvatar({
   verifiedSize = 16,
   borderRadius = '50%',
   seed,
+  sx,
+  status,
 }: {
   src?: string | null;
   fileId?: string | null;
@@ -54,6 +56,8 @@ export function IdentityAvatar({
   verifiedSize?: number;
   borderRadius?: string | number;
   seed?: string;
+  sx?: any;
+  status?: string;
 }) {
   const previewUrl = useCachedProfilePreview(fileId || src, size, size);
 
@@ -75,6 +79,7 @@ export function IdentityAvatar({
           : {
               padding: '0px',
             }),
+        ...(sx || {}),
       }}
     >
       <Box

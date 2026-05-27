@@ -13,7 +13,6 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      all: false,
       include: ['lib/sdk/**', 'utils/**'],
       exclude: ['**/*.d.ts', '**/*.config.*', '__tests__/**'],
       thresholds: {

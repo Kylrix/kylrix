@@ -1,2 +1,2 @@
-import { InputFile } from 'node-appwrite';
+import { InputFile } from 'node-appwrite/file';
 console.log(typeof InputFile.fromBuffer);

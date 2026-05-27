@@ -142,7 +142,7 @@ export const APPWRITE_CONFIG = {
         VOICE: 'voice'
     },
     FUNCTIONS: {
-        PERMISSION_UPDATER: 'permission-updater',
+        PERMISSION_UPDATER: '69c0ff79001b60e664d2',
         CLAIM_GHOST_NOTES: 'claim-ghost-notes',
         SEARCH_USERS: '69a582720012957d2027',
         SYNC_USER_PROFILE: '69a583ac002b674685b0',
@@ -153,7 +153,8 @@ export const APPWRITE_CONFIG = {
         SYNC_SUBSCRIPTION_STATUS: '69a6c56d00203438232c',
         ACCOUNT_CLEANUP: '69a6c6fc001dc877979d',
         CONNECT_CALL_CLEANUP: '69a6c841000b2c5aaae3',
-        DATA_PORTER: 'data-porter'
+        DATA_PORTER: 'data-porter',
+        WEB3_WALLET: '68e76f25001e8b80a6c2'
     },
     SYSTEM: {
         DOMAIN: 'kylrix.space',

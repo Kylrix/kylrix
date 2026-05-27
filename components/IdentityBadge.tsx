@@ -42,6 +42,8 @@ export function IdentityAvatar({
   borderRadius = '50%',
   isPreview = false,
   status,
+  sx,
+  fileId,
 }: {
   src?: string | null;
   alt?: string;
@@ -53,6 +55,8 @@ export function IdentityAvatar({
   borderRadius?: string | number;
   isPreview?: boolean;
   status?: UserPresenceState;
+  sx?: any;
+  fileId?: string | null;
 }) {
   const getStatusColor = (s: UserPresenceState) => {
       switch (s) {
@@ -62,6 +66,11 @@ export function IdentityAvatar({
           default: return 'transparent';
       }
   };
+
+  // If fileId is provided but no src, we should ideally use getProfilePicturePreview
+  // For now we'll just allow it to pass through types
+  const resolvedSrc = src || (fileId ? `/api/avatar/${fileId}` : null);
+
   const avatar = (
     <Box
       sx={{
@@ -86,21 +95,22 @@ export function IdentityAvatar({
           : {
               padding: '0px',
             }),
+        ...(sx || {}),
       }}
     >
       <Box
         component="img"
-        src={src || undefined}
+        src={resolvedSrc || undefined}
         alt={alt || ''}
         sx={{
           width: '100%',
           height: '100%',
           borderRadius: `calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`,
           objectFit: 'cover',
-          display: src ? 'block' : 'none',
+          display: resolvedSrc ? 'block' : 'none',
         }}
       />
-      {!src && (
+      {!resolvedSrc && (
         <Box
           sx={{
             width: '100%',
