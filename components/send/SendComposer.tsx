@@ -43,6 +43,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { EphemeralClaimDrawer, type EphemeralClaimTarget } from '@/components/ephemeral/EphemeralClaimDrawer';
 import { SendSparkShelf } from '@/components/send/SendSparkShelf';
 import UserSearch from '@/components/UserSearch';
+import Logo from '@/components/Logo';
 import { AppwriteService } from '@/lib/appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { storage } from '@/lib/appwrite/client';
@@ -73,8 +74,18 @@ import toast from 'react-hot-toast';
 const BG = '#0A0908';
 const SURFACE = '#161412';
 const SURFACE_HOVER = '#1C1A18';
-const RIM = '1px solid rgba(255, 255, 255, 0.05)';
+const RIM = '1px solid #34322F';
 const PRIMARY = '#6366F1';
+
+const cardStyle = {
+  p: { xs: 2, sm: 2.5 },
+  borderRadius: '24px',
+  bgcolor: '#161412',
+  border: '1px solid #34322F',
+  boxShadow: '0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px rgba(37,35,33,0.9)',
+  transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+  position: 'relative',
+} as const;
 
 const KINDS: { id: SendKind; label: string; blurb: string; Icon: typeof FileText }[] = [
   { id: 'note', label: 'Note', blurb: 'Text and context', Icon: FileText },
@@ -470,12 +481,12 @@ export function SendComposer() {
   }, []);
 
   const fieldSx = {
-    '& .MuiOutlinedInput-root': { bgcolor: alpha('#fff', 0.03), borderRadius: 2 },
-    '& .MuiInputLabel-root': { color: alpha('#fff', 0.55) },
-    '& .MuiOutlinedInput-notchedOutline': { borderColor: alpha('#fff', 0.12) },
-    '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: alpha('#fff', 0.2) },
-    '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: alpha(PRIMARY, 0.55) },
-    '& .MuiInputBase-input': { color: '#fff' },
+    '& .MuiOutlinedInput-root': { bgcolor: '#000000', borderRadius: '12px' },
+    '& .MuiInputLabel-root': { color: '#9B9691', fontFamily: 'var(--font-satoshi)' },
+    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#34322F' },
+    '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#4A4845' },
+    '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: PRIMARY },
+    '& .MuiInputBase-input': { color: '#ffffff', fontFamily: 'var(--font-satoshi)' },
   } as const;
 
   return (
@@ -483,22 +494,48 @@ export function SendComposer() {
       sx={{
         minHeight: '100vh',
         position: 'relative',
-        bgcolor: BG,
-        color: 'rgba(255,255,255,0.92)',
+        bgcolor: '#0A0908',
+        color: '#ffffff',
+        fontFamily: 'var(--font-satoshi)',
         overflowX: 'hidden',
       }}
     >
+      {/* Sticky Header */}
       <Box
         sx={{
-          pointerEvents: 'none',
-          position: 'fixed',
-          inset: 0,
-          background: effectiveSecureMode ?
-            'radial-gradient(ellipse 78% 48% at 50% -18%, rgba(99, 102, 241, 0.22), transparent 56%), radial-gradient(ellipse 55% 38% at 100% 0%, rgba(236, 72, 153, 0.07), transparent 52%), radial-gradient(ellipse 48% 32% at 0% 100%, rgba(16, 185, 129, 0.06), transparent 46%)' :
-            'radial-gradient(ellipse 78% 48% at 50% -18%, rgba(16, 185, 129, 0.15), transparent 56%), radial-gradient(ellipse 55% 38% at 100% 0%, rgba(99, 102, 241, 0.05), transparent 52%)',
-          zIndex: 0,
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          borderBottom: '1px solid #34322F',
+          bgcolor: '#0A0908',
         }}
-      />
+      >
+        <Container maxWidth="md" sx={{ py: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Logo variant="icon" size={26} />
+            <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 600, color: '#ffffff', letterSpacing: '-0.02em', fontSize: '1.1rem' }}>
+              Kylrix Send
+            </Typography>
+          </Box>
+          <Box sx={{ flex: 1 }} />
+          <Button
+            component={Link}
+            href="/"
+            sx={{
+              color: '#9B9691',
+              fontFamily: 'var(--font-satoshi)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: '8px',
+              px: 2,
+              '&:hover': { color: '#ffffff', bgcolor: '#1C1A18' },
+            }}
+          >
+            Dashboard
+          </Button>
+        </Container>
+      </Box>
 
       <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, py: { xs: 4, md: 7 }, pb: 10 }}>
         <motion.div
@@ -506,20 +543,22 @@ export function SendComposer() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Stack spacing={1} sx={{ mb: 4, textAlign: 'center' }}>
+          <Stack spacing={2} sx={{ mb: 4, textAlign: 'center' }}>
             <Chip
-              icon={<Sparkles size={14} />}
-              label="Send by Kylrix"
+              icon={<Sparkles size={14} color={effectiveSecureMode ? PRIMARY : '#10B981'} />}
+              label="Send"
               sx={{
                 alignSelf: 'center',
-                px: 1,
-                bgcolor: alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.12),
-                color: alpha('#fff', 0.9),
-                border: `1px solid ${alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.35)}`,
-                fontWeight: 600,
-                letterSpacing: '0.04em',
+                px: 1.5,
+                py: 0.5,
+                bgcolor: '#161412',
+                color: '#ffffff',
+                border: '1px solid #34322F',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
                 textTransform: 'uppercase',
                 fontSize: '0.7rem',
+                fontFamily: 'var(--font-mono)',
               }}
             />
             <Typography
@@ -529,13 +568,14 @@ export function SendComposer() {
                 fontWeight: 600,
                 letterSpacing: '-0.03em',
                 fontSize: { xs: '2rem', md: '2.75rem' },
+                color: '#ffffff',
               }}
             >
-              {effectiveSecureMode ? "Zero-Knowledge Sharing" : "Instant Preview Sharing"}
+              {effectiveSecureMode ? "Secure Private Sharing" : "Instant Preview Sharing"}
             </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.62)', maxWidth: 520, mx: 'auto', lineHeight: 1.6 }}>
+            <Typography sx={{ color: '#9B9691', maxWidth: 520, mx: 'auto', lineHeight: 1.6, fontFamily: 'var(--font-satoshi)' }}>
               {effectiveSecureMode ? 
-                "End-to-end encrypted objects with one link. We never see your data. Keys stay on your device." :
+                "Securely share private information with one link. Keys stay on your device so only you and the recipient can see it." :
                 "Fast, unencrypted previews for notes, tasks, and files. Perfect for discovery and public sharing."
               }
             </Typography>
@@ -544,24 +584,28 @@ export function SendComposer() {
                 <Paper sx={{ 
                     px: 2, 
                     py: 1, 
-                    borderRadius: 3, 
-                    bgcolor: alpha('#fff', 0.03), 
-                    border: RIM,
+                    borderRadius: '16px', 
+                    bgcolor: '#161412', 
+                    border: '1px solid #34322F',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 2
                 }}>
                     <Stack direction="row" spacing={1} alignItems="center">
                         {effectiveSecureMode ? <Lock size={16} color={PRIMARY} /> : <Unlock size={16} color="#10B981" />}
-                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 600 }}>
-                            {effectiveSecureMode ? 'Secure Mode Active' : 'Normal Mode'}
+                        <Typography sx={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)', color: '#ffffff' }}>
+                            {effectiveSecureMode ? 'Secure Link Sharing' : 'Instant Preview Sharing'}
                         </Typography>
                     </Stack>
                     {(kind !== 'password' && kind !== 'totp') && (
                         <Switch 
                             checked={isSecureMode}
                             onChange={(e) => setIsSecureMode(e.target.checked)}
-                            color="primary"
+                            sx={{
+                              '& .MuiSwitch-switchBase.Mui-checked': { color: effectiveSecureMode ? PRIMARY : '#10B981' },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: effectiveSecureMode ? PRIMARY : '#10B981' },
+                              '& .MuiSwitch-track': { bgcolor: '#34322F' }
+                            }}
                             size="small"
                         />
                     )}
@@ -573,14 +617,7 @@ export function SendComposer() {
         {sendSparks.length > 0 && (
           <Paper
             elevation={0}
-            sx={{
-              mb: 4,
-              p: { xs: 2, sm: 2.5 },
-              borderRadius: 3,
-              bgcolor: SURFACE,
-              border: RIM,
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-            }}
+            sx={cardStyle}
           >
             <SendSparkShelf sparks={sendSparks} onSaveSparks={saveSendSparks} onClaim={handleClaimSendSpark} />
           </Paper>
@@ -590,15 +627,9 @@ export function SendComposer() {
           <Stack spacing={3}>
             <Paper
               elevation={0}
-              sx={{
-                p: { xs: 2, sm: 2.5 },
-                borderRadius: 3,
-                bgcolor: SURFACE,
-                border: RIM,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-              }}
+              sx={cardStyle}
             >
-              <Typography sx={{ fontWeight: 700, mb: 2, fontSize: '0.95rem', color: 'rgba(255,255,255,0.88)' }}>
+              <Typography sx={{ fontWeight: 800, mb: 2, fontSize: '0.95rem', color: '#ffffff', fontFamily: 'var(--font-clash)' }}>
                 What are you sending?
               </Typography>
               <Box
@@ -767,11 +798,11 @@ export function SendComposer() {
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
                   sx={{
-                    border: `2px dashed ${dragActive ? alpha(PRIMARY, 0.45) : alpha('#fff', 0.1)}`,
-                    borderRadius: 3,
+                    border: `2px dashed ${dragActive ? (effectiveSecureMode ? PRIMARY : '#10B981') : '#34322F'}`,
+                    borderRadius: '16px',
                     p: 4,
                     textAlign: 'center',
-                    bgcolor: dragActive ? alpha(PRIMARY, 0.04) : alpha('#fff', 0.01),
+                    bgcolor: dragActive ? '#1C1A18' : '#0A0908',
                     transition: 'all 0.2s ease',
                   }}
                 >
@@ -788,8 +819,9 @@ export function SendComposer() {
                           width: 48,
                           height: 48,
                           borderRadius: '50%',
-                          bgcolor: alpha(PRIMARY, 0.1),
-                          color: PRIMARY,
+                          bgcolor: '#161412',
+                          border: '1px solid #34322F',
+                          color: effectiveSecureMode ? PRIMARY : '#10B981',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -798,11 +830,11 @@ export function SendComposer() {
                         <Upload size={24} />
                       </Box>
                       <Box>
-                        <Typography sx={{ fontWeight: 700 }}>
+                        <Typography sx={{ fontWeight: 800, color: '#ffffff', fontFamily: 'var(--font-satoshi)' }}>
                           {fileName || 'Click or drag file to share'}
                         </Typography>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
-                          Max {activeMaxLabel} · Always end-to-end encrypted
+                        <Typography variant="caption" sx={{ color: '#9B9691', fontFamily: 'var(--font-satoshi)', display: 'block', mt: 0.5 }}>
+                          Max {activeMaxLabel} · Securely encrypted
                         </Typography>
                       </Box>
                       {fileName && (
@@ -813,7 +845,7 @@ export function SendComposer() {
                             setSendFile(null);
                             setFileName(null);
                           }}
-                          sx={{ color: '#FF453A', textTransform: 'none' }}
+                          sx={{ color: '#FF453A', textTransform: 'none', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}
                         >
                           Remove
                         </Button>
@@ -826,19 +858,13 @@ export function SendComposer() {
 
             <Paper
               elevation={0}
-              sx={{
-                p: { xs: 2, sm: 3 },
-                borderRadius: 3,
-                bgcolor: SURFACE,
-                border: RIM,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-              }}
+              sx={cardStyle}
             >
               <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-                <InputLabel sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', fontWeight: 600 }}>
+                <InputLabel sx={{ color: '#9B9691', fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
                   Link Expiry
                 </InputLabel>
-                <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: PRIMARY }}>
+                <Typography sx={{ fontSize: '0.85rem', fontWeight: 800, color: effectiveSecureMode ? PRIMARY : '#10B981', fontFamily: 'var(--font-mono)' }}>
                   {formatRemaining(expiryMs)}
                 </Typography>
               </Stack>
@@ -849,14 +875,14 @@ export function SendComposer() {
                 step={60000}
                 onChange={(_, v) => setExpiryMs(v as number)}
                 sx={{
-                  color: PRIMARY,
-                  '& .MuiSlider-rail': { bgcolor: alpha('#fff', 0.1) },
+                  color: effectiveSecureMode ? PRIMARY : '#10B981',
+                  '& .MuiSlider-rail': { bgcolor: '#34322F', opacity: 1 },
                   '& .MuiSlider-thumb': {
                     width: 14,
                     height: 14,
-                    bgcolor: '#fff',
-                    boxShadow: `0 0 0 4px ${alpha(PRIMARY, 0.2)}`,
-                    '&:hover, &.Mui-focusVisible': { boxShadow: `0 0 0 8px ${alpha(PRIMARY, 0.3)}` },
+                    bgcolor: '#ffffff',
+                    boxShadow: `0 0 0 4px ${effectiveSecureMode ? 'rgba(99, 102, 241, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+                    '&:hover, &.Mui-focusVisible': { boxShadow: `0 0 0 8px ${effectiveSecureMode ? 'rgba(99, 102, 241, 0.3)' : 'rgba(16, 185, 129, 0.3)'}` },
                   },
                 }}
               />
@@ -868,9 +894,12 @@ export function SendComposer() {
                     onClick={() => setExpiryMs(p.ms)}
                     sx={{
                       minWidth: 0,
-                      fontSize: '0.7rem',
-                      color: expiryMs === p.ms ? PRIMARY : 'rgba(255,255,255,0.4)',
+                      fontSize: '0.75rem',
+                      color: expiryMs === p.ms ? (effectiveSecureMode ? PRIMARY : '#10B981') : '#9B9691',
                       fontWeight: expiryMs === p.ms ? 800 : 500,
+                      fontFamily: 'var(--font-satoshi)',
+                      textTransform: 'none',
+                      '&:hover': { bgcolor: '#1C1A18' }
                     }}
                   >
                     {p.label}
@@ -881,18 +910,12 @@ export function SendComposer() {
 
             <Paper
               elevation={0}
-              sx={{
-                p: { xs: 2, sm: 3 },
-                borderRadius: 3,
-                bgcolor: SURFACE,
-                border: RIM,
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
-              }}
+              sx={cardStyle}
             >
-              <Typography sx={{ fontWeight: 700, mb: 2, fontSize: '0.95rem' }}>
+              <Typography sx={{ fontWeight: 800, mb: 1, fontSize: '0.95rem', fontFamily: 'var(--font-clash)', color: '#ffffff' }}>
                 Discrete Sharing (Optional)
               </Typography>
-              <Typography sx={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', mb: 2 }}>
+              <Typography sx={{ fontSize: '0.8rem', color: '#9B9691', mb: 2, fontFamily: 'var(--font-satoshi)' }}>
                 Send directly to specific users in the ecosystem. They will be added as collaborators.
               </Typography>
               <UserSearch
@@ -911,21 +934,26 @@ export function SendComposer() {
               onClick={() => void handleCreateLink()}
               sx={{
                 py: 1.75,
-                borderRadius: 2,
+                borderRadius: '12px',
                 textTransform: 'none',
                 fontWeight: 700,
                 fontSize: '1.05rem',
                 bgcolor: effectiveSecureMode ? PRIMARY : '#10B981',
-                boxShadow: `0 12px 40px ${alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.35)}`,
-                '&:hover': { bgcolor: effectiveSecureMode ? '#5558E8' : '#059669' },
+                color: '#ffffff',
+                boxShadow: 'none',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  bgcolor: effectiveSecureMode ? '#5558E8' : '#059669',
+                  boxShadow: `0 8px 24px rgba(${effectiveSecureMode ? '99, 102, 241' : '16, 185, 129'}, 0.3)`,
+                },
               }}
             >
               {isCreating ? <CircularProgress size={26} color="inherit" /> : `Create ${effectiveSecureMode ? 'secure' : 'send'} link`}
             </Button>
 
-            <Typography sx={{ textAlign: 'center', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', px: 2, lineHeight: 1.6 }}>
-              {effectiveSecureMode ? 'Encrypted' : 'Unencrypted'} ghost rows in the note database — same 7-day auto-clearing relay.
-              {effectiveSecureMode && ' The key stays in the link fragment only.'}
+            <Typography sx={{ textAlign: 'center', fontSize: '0.8rem', color: '#9B9691', px: 2, lineHeight: 1.6, fontFamily: 'var(--font-satoshi)' }}>
+              {effectiveSecureMode ? 'Secure' : 'Temporary'} rows inside the table — they vanish automatically after 7 days.
+              {effectiveSecureMode && ' The decryption key is contained in the link fragment only.'}
             </Typography>
           </Stack>
         ) : (
@@ -933,11 +961,12 @@ export function SendComposer() {
             elevation={0}
             sx={{
               p: { xs: 3, sm: 5 },
-              borderRadius: 4,
-              bgcolor: SURFACE,
-              border: RIM,
+              borderRadius: '24px',
+              bgcolor: '#161412',
+              border: '1px solid #34322F',
               textAlign: 'center',
-              boxShadow: '0 32px 80px rgba(0,0,0,0.4)',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.8)',
+              transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
             <Box
@@ -945,7 +974,8 @@ export function SendComposer() {
                 width: 64,
                 height: 64,
                 borderRadius: '50%',
-                bgcolor: alpha(effectiveSecureMode ? PRIMARY : '#10B981', 0.1),
+                bgcolor: '#0A0908',
+                border: `2px solid ${effectiveSecureMode ? PRIMARY : '#10B981'}`,
                 color: effectiveSecureMode ? PRIMARY : '#10B981',
                 display: 'flex',
                 alignItems: 'center',
@@ -956,19 +986,19 @@ export function SendComposer() {
             >
               <Check size={32} strokeWidth={3} />
             </Box>
-            <Typography variant="h5" sx={{ fontWeight: 800, mb: 1.5, fontFamily: 'var(--font-clash)' }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, mb: 1.5, fontFamily: 'var(--font-clash)', color: '#ffffff' }}>
               Link is ready to ship
             </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 4, maxWidth: 360, mx: 'auto' }}>
+            <Typography sx={{ color: '#9B9691', mb: 4, maxWidth: 360, mx: 'auto', fontFamily: 'var(--font-satoshi)' }}>
               Anyone with this link can {effectiveSecureMode ? 'decrypt' : 'view'} the payload. It will vanish automatically in {formatRemaining(expiryMs)}.
             </Typography>
 
             <Box
               sx={{
                 p: 2,
-                borderRadius: 2,
-                bgcolor: alpha('#000', 0.25),
-                border: RIM,
+                borderRadius: '12px',
+                bgcolor: '#0A0908',
+                border: '1px solid #34322F',
                 mb: 4,
                 display: 'flex',
                 alignItems: 'center',
@@ -981,7 +1011,7 @@ export function SendComposer() {
                   flex: 1,
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.85rem',
-                  color: alpha('#fff', 0.7),
+                  color: '#ffffff',
                   textAlign: 'left',
                 }}
               >
@@ -1000,10 +1030,12 @@ export function SendComposer() {
                 sx={{
                   px: 4,
                   py: 1.25,
-                  borderRadius: 2,
+                  borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 700,
                   bgcolor: effectiveSecureMode ? PRIMARY : '#10B981',
+                  color: '#ffffff',
+                  boxShadow: 'none',
                   '&:hover': { bgcolor: effectiveSecureMode ? '#5558E8' : '#059669' },
                 }}
               >
@@ -1015,12 +1047,12 @@ export function SendComposer() {
                 sx={{
                   px: 3,
                   py: 1.25,
-                  borderRadius: 2,
+                  borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 700,
-                  borderColor: alpha('#fff', 0.1),
-                  color: alpha('#fff', 0.7),
-                  '&:hover': { borderColor: alpha('#fff', 0.2), bgcolor: alpha('#fff', 0.02) },
+                  borderColor: '#34322F',
+                  color: '#9B9691',
+                  '&:hover': { borderColor: '#4A4845', bgcolor: '#1C1A18', color: '#ffffff' },
                 }}
               >
                 Create Another
@@ -1029,8 +1061,8 @@ export function SendComposer() {
           </Paper>
         )}
 
-        <Box sx={{ mt: 8, borderTop: RIM, pt: 4, textAlign: 'center' }}>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', letterSpacing: '0.02em' }}>
+        <Box sx={{ mt: 8, borderTop: '1px solid #34322F', pt: 4, textAlign: 'center' }}>
+          <Typography variant="caption" sx={{ color: '#9B9691', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', opacity: 0.5 }}>
             POLYMORPHIC GHOST RELAY · POWERED BY KYLRIX ORGANIZATION
           </Typography>
         </Box>
