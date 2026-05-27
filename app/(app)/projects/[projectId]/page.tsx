@@ -76,7 +76,7 @@ import {
   deleteGhostNoteForProject
 } from '@/lib/actions/client-ops';
 
-import { createComment, listComments, createReaction, deleteReaction, listReactions } from '@/lib/appwrite/note';
+import { createComment, listComments, createReaction, deleteReaction, listReactions, deleteReactionsForTarget } from '@/lib/appwrite/note';
 import { TargetType } from '@/types/appwrite';
 import { client } from '@/lib/appwrite/client';
 import { ChatService } from '@/lib/services/chat';
@@ -1875,6 +1875,47 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
     }
   };
 
+  const handleWipeDiscussion = async () => {
+    if (!chatNoteId) return;
+    if (!window.confirm("Are you sure you want to wipe this entire discussion? All messages and replies will be permanently deleted.")) {
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Fetch all comment rows for this discussion note's table representation
+      const commentsRes = await databases.listRows(
+        APPWRITE_CONFIG.DATABASES.NOTE,
+        'comments',
+        [Query.equal('noteId', chatNoteId), Query.limit(1000)]
+      );
+      
+      const commentIds = (commentsRes.rows as any[]).map((c) => c.$id).filter(Boolean);
+      if (commentIds.length > 0) {
+        // Delete reactions associated with comment rows
+        try {
+          await deleteReactionsForTarget(TargetType.COMMENT, commentIds);
+        } catch (e) {
+          console.warn('Failed to delete reactions during discussion wipe:', e);
+        }
+        
+        // Delete comment rows from comments table
+        await Promise.all(
+          commentIds.map((id) => databases.deleteRow(APPWRITE_CONFIG.DATABASES.NOTE, 'comments', id))
+        );
+      }
+      
+      setMessages([]);
+      setActiveThreadParent(null);
+      showSuccess('Discussion wiped successfully');
+    } catch (err) {
+      console.error('Failed to wipe discussion:', err);
+      showError('Failed to wipe discussion');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const hasChat = activeMode === 'huddle' ? !!chatNoteId : !!encryptedGroupId;
 
   // Split messages into general huddle list vs thread huddle replies
@@ -1953,6 +1994,29 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
             Private Chat (Disabled)
           </Button>
         </Stack>
+        {hasChat && activeMode === 'huddle' && (
+          <Button
+            size="small"
+            variant="text"
+            startIcon={<Trash2 size={16} />}
+            onClick={handleWipeDiscussion}
+            sx={{
+              color: '#FF453A',
+              fontWeight: 800,
+              fontSize: '0.8rem',
+              textTransform: 'none',
+              borderRadius: '10px',
+              px: 2,
+              py: 0.75,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: alpha('#FF453A', 0.1),
+              }
+            }}
+          >
+            Wipe Discussion
+          </Button>
+        )}
       </Stack>
 
       {/* Main Panel Content */}

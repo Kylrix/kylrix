@@ -33,6 +33,7 @@ import { ThemeProvider } from '@/lib/theme-context';
 import { CallLauncherProvider } from '@/context/CallLauncherContext';
 import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
+import GlobalShortcuts from '@/components/GlobalShortcuts';
 
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 const PresenceProvider = dynamic(() => import('@/components/providers/PresenceProvider').then(m => m.PresenceProvider), { ssr: false });
@@ -72,6 +73,7 @@ export function ClientProviders({ children }: { children: ReactNode }) {
                                                       <ChatNotificationProvider>
                                                         <CallLauncherProvider>
                                                           <PresenceProvider>
+                                                            <GlobalShortcuts />
                                                             {children}
                                                           </PresenceProvider>
                                                         </CallLauncherProvider>
