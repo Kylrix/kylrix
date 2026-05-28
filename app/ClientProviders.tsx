@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/auth/AuthContext';
 import { ThemeProvider } from '@/lib/theme-context';
 import { ToastProvider } from '@/components/ui/Toast';
+import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
 
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 
@@ -30,6 +31,7 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   AuthProvider,
   ThemeProvider,
+  UnifiedDrawerProvider,
   ToastProvider,
 ];
 
