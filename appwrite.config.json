@@ -440,6 +440,37 @@
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
             "deploymentRetention": 0
+        },
+        {
+            "$id": "ghost-cleanup",
+            "name": "ghost-cleanup",
+            "runtime": "node-25",
+            "path": "functions/ghost-cleanup",
+            "entrypoint": "src/main.js",
+            "execute": [],
+            "enabled": true,
+            "logging": true,
+            "events": [],
+            "schedule": "0 0 * * *",
+            "timeout": 300,
+            "commands": "npm install -g pnpm && pnpm install",
+            "scopes": [
+                "databases.read",
+                "databases.write",
+                "tables.read",
+                "collections.read",
+                "tables.write",
+                "collections.write",
+                "rows.read",
+                "documents.read",
+                "rows.write",
+                "documents.write",
+                "files.write",
+                "buckets.write"
+            ],
+            "buildSpecification": "s-0.5vcpu-512mb",
+            "runtimeSpecification": "s-0.5vcpu-512mb",
+            "deploymentRetention": 0
         }
     ],
     "tablesDB": [

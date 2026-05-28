@@ -353,7 +353,7 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
     const channel = `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_CONFIG.DATABASES.NOTE}.notes.documents.${noteId}`;
     const sub = realtime.subscribe(channel, (response) => {
       if (response.events.some(e => e.endsWith('.delete'))) {
-        setError('This link has been burned or expired.');
+        setError('This link has been deleted or expired.');
         setVerifiedNote(null);
       } else if (response.events.some(e => e.endsWith('.update'))) {
           fetchNote(true);

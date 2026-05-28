@@ -21,7 +21,6 @@ export default function CTA() {
         transform: 'translateX(-50%)',
         width: '100%',
         height: '100%',
-        // keep the subtle ecosystem radial as a background accent for balance
         background: 'radial-gradient(circle at bottom, rgba(99, 102, 241, 0.1) 0%, transparent 70%)',
         zIndex: 0,
         pointerEvents: 'none'
@@ -29,10 +28,10 @@ export default function CTA() {
       
       <Container maxWidth="sm" sx={{ position: 'relative', zIndex: 1 }}>
         <Typography variant="h3" sx={{ fontWeight: 900, mb: 3, fontFamily: 'var(--font-space-grotesk)' }}>
-          Ready to secure your digital life?
+          Ready to keep your passwords safe?
         </Typography>
         <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.6)', mb: 6 }}>
-          Join thousands of users who trust Kylrix Vault with their passwords.
+          Store your passwords in one place and get back to work faster.
         </Typography>
         <Button
           variant="contained"

@@ -127,10 +127,10 @@ export function SendSparkShelf({ sparks, onSaveSparks, onClaim }: Props) {
       try {
         await burnEphemeralNoteWithProof(id, spark.deletionSecret);
       } catch {
-        toast.error('Could not burn this send on the server.');
+        toast.error('Could not delete this link on the server.');
         return;
       }
-      toast.success('Send burned — link no longer works.');
+      toast.success('Link deleted — it no longer works.');
     }
 
     onSaveSparks(sparks.filter((s) => s.id !== id));
@@ -204,7 +204,7 @@ export function SendSparkShelf({ sparks, onSaveSparks, onClaim }: Props) {
                 </Typography>
                 {staleRow && (
                   <Typography variant="caption" sx={{ display: 'block', color: alpha('#fff', 0.55), mt: 0.75, fontWeight: 700 }}>
-                    Expired — burn still works if the row exists on the server.
+                    Expired — delete still works if the item is still on the server.
                   </Typography>
                 )}
               </Box>
@@ -308,7 +308,7 @@ export function SendSparkShelf({ sparks, onSaveSparks, onClaim }: Props) {
             <Trash2 size={16} />
           </ListItemIcon>
           <ListItemText
-            primary={ctxNote?.deletionSecret ? 'Burn link (delete from servers)' : 'Remove from this device'}
+            primary={ctxNote?.deletionSecret ? 'Delete link' : 'Remove from this device'}
             slotProps={{ primary: { sx: { fontSize: '0.82rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' } } }}
           />
         </MenuItem>

@@ -48,9 +48,9 @@ const surfaceShadow =
   'inset 0 1px 0 rgba(255, 255, 255, 0.05), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0,0,0,0.8)';
 
 const heroMetrics = [
-  { value: 'E2EE', label: 'by default' },
-  { value: 'Agents', label: 'inside your workspace' },
-  { value: 'One system', label: 'for people and AI' }];
+  { value: 'Private', label: 'by default' },
+  { value: 'Smart helpers', label: 'inside your workspace' },
+  { value: 'One place', label: 'for people and helpers' }];
 
 const livePanels = [
   {
@@ -142,21 +142,21 @@ const integrationCards = [
 
 const infraPanels = [
   {
-    title: 'Autonomous agents in the workspace',
-    label: 'AI agents',
-    copy: 'Assign work to agents where your notes, tasks, and conversations already live.',
+    title: 'Helpful automations in the workspace',
+    label: 'Smart helpers',
+    copy: 'Assign work where your notes, tasks, and conversations already live.',
     icon: Zap,
   },
   {
-    title: 'Agentic wallet infrastructure',
+    title: 'Smart wallet tools',
     label: 'Wallets',
-    copy: 'Wallet-native flows can power agent actions and settlement without locking your stack to one chain.',
+    copy: 'Wallet tools can support payments and transfers without locking you to one chain.',
     icon: Wallet,
   },
   {
-    title: 'Built for cloud execution',
+    title: 'Built for always-on work',
     label: 'Billing',
-    copy: 'Coordinate human and agent work in one control plane so work can continue while you sleep.',
+    copy: 'Keep people and smart helpers working together, even after hours.',
     icon: Waypoints,
   }];
 
@@ -583,7 +583,7 @@ export default function LandingPage() {
                 fontFamily: 'var(--font-clash)',
               }}
             >
-              Secure work for people and agents.
+              Secure work for people and smart helpers.
             </Typography>
 
             <Typography
@@ -598,7 +598,7 @@ export default function LandingPage() {
                 fontFamily: 'var(--font-satoshi)',
               }}
             >
-              The only E2EE workspace where your productivity tools and autonomous agents coexist; work while you sleep.
+              The workspace where your work and smart helpers stay together.
             </Typography>
           </Box>
 
@@ -742,7 +742,7 @@ export default function LandingPage() {
                   See the real app screens.
                 </Typography>
                 <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.85, maxWidth: 460 }}>
-                  These are the core surfaces where teams and agents collaborate together, with shared context and
+                  These are the core surfaces where teams and smart helpers collaborate together, with shared context and
                   secure defaults.
                 </Typography>
                 <Box
@@ -811,7 +811,7 @@ export default function LandingPage() {
           </Typography>
           <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.85, maxWidth: 720 }}>
             Kylrix is not disconnected tooling. It is one execution surface where your work, collaborators, and
-            autonomous agents share the same source of truth.
+            smart helpers share the same context.
           </Typography>
         </Stack>
 

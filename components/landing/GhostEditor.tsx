@@ -252,7 +252,7 @@ const GhostSparkShelf = React.memo(({
             {staleSparks.length > 0 && (
                 <Box>
                     <Typography variant="caption" sx={{ fontWeight: 900, color: 'error.main', mb: 1.5, display: 'block', letterSpacing: '0.1em' }}>
-                        STALE (EXPIRED)
+                        EXPIRED
                     </Typography>
                     <Stack spacing={1.5}>
                         {staleSparks.map((note) => (
@@ -295,7 +295,7 @@ const GhostSparkShelf = React.memo(({
                                         onClick={() => onViewNote(note)}
                                         sx={{ fontSize: '0.7rem', fontWeight: 900, height: 'auto', py: 0.5, mb: 0.5 }}
                                     >
-                                        VIEW STALE NOTE
+                                        VIEW EXPIRED NOTE
                                     </Button>
                                     <Button
                                         fullWidth
@@ -304,7 +304,7 @@ const GhostSparkShelf = React.memo(({
                                         onClick={() => onClaimNote(note)}
                                         sx={{ fontSize: '0.7rem', fontWeight: 900, height: 'auto', py: 0.5 }}
                                     >
-                                        CLAIM TO RESTORE
+                                        SAVE TO ACCOUNT
                                     </Button>
                                 </CardContent>
                             </Card>
@@ -356,7 +356,7 @@ const GhostSparkShelf = React.memo(({
                         <Import size={16} />
                     </ListItemIcon>
                     <ListItemText
-                        primary="Claim to account"
+                        primary="Save to account"
                         slotProps={{ primary: { sx: { fontSize: '0.8rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' } } }}
                     />
                 </MenuItem>
@@ -374,7 +374,7 @@ const GhostSparkShelf = React.memo(({
                         <Trash2 size={16} />
                     </ListItemIcon>
                     <ListItemText
-                        primary={ctxNote?.deletionSecret ? 'Burn link (delete from servers)' : 'Remove from stash'}
+                        primary={ctxNote?.deletionSecret ? 'Delete link' : 'Remove from stash'}
                         slotProps={{ primary: { sx: { fontSize: '0.8rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' } } }}
                     />
                 </MenuItem>
@@ -382,10 +382,10 @@ const GhostSparkShelf = React.memo(({
 
             <Box sx={{ mt: 4, p: 3, borderRadius: '24px', bgcolor: '#1C1A18', border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}`, boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)' }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 900, mb: 1, color: theme.palette.secondary.main }}>
-                    Don&apos;t Lose Your Spark!
+                    Don&apos;t Lose Your Note!
                 </Typography>
                 <Typography variant="caption" sx={{ display: 'block', mb: 2, opacity: 0.8 }}>
-                    Sparks vanish from stash 7 days after creation. Claim them now to secure them.
+                    Saved links expire after 7 days. Save them to keep them.
                 </Typography>
                 <Button
                     fullWidth
@@ -401,7 +401,7 @@ const GhostSparkShelf = React.memo(({
                         fontWeight: 900
                     }}
                 >
-                    CLAIM NOTES NOW
+                    SAVE NOTES NOW
                 </Button>
             </Box>
         </Stack>
@@ -496,7 +496,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink, onClaim }: 
                         {note.title}
                     </Typography>
                     <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700 }}>
-                        GHOST SPARK • {new Date(note.createdAt).toLocaleDateString()}
+                        SHARED NOTE • {new Date(note.createdAt).toLocaleDateString()}
                     </Typography>
                 </Stack>
                 <Box sx={{ p: 3, borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.02)' }}>
@@ -527,7 +527,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink, onClaim }: 
                         {note.title}
                     </Typography>
                     <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700 }}>
-                        GHOST SPARK • {new Date(note.createdAt).toLocaleDateString()}
+                        SHARED NOTE • {new Date(note.createdAt).toLocaleDateString()}
                     </Typography>
                 </Stack>
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -544,7 +544,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink, onClaim }: 
                     {displayTitle}
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700 }}>
-                    GHOST SPARK • {new Date(note.createdAt).toLocaleDateString()}
+                    SHARED NOTE • {new Date(note.createdAt).toLocaleDateString()}
                 </Typography>
             </Stack>
 
@@ -581,7 +581,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink, onClaim }: 
                     startIcon={<RefreshCcw size={16} />}
                     sx={{ flex: 1, minWidth: '100px', borderRadius: '12px', fontWeight: 800 }}
                 >
-                    RECREATE
+                    COPY AGAIN
                 </Button>
                 <Button
                     size="small"
@@ -625,7 +625,7 @@ const GhostSparkDetailPanel = ({ note, onRecreate, onOpenPublicLink, onClaim }: 
                 startIcon={<ExternalLink size={16} />}
                 sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}
             >
-                OPEN PUBLIC LINK
+                OPEN LINK
             </Button>
         </Box>
     );
@@ -969,7 +969,7 @@ export const GhostEditor = () => {
         if (target?.deletionSecret) {
             try {
                 await burnEphemeralNoteWithProof(noteId, target.deletionSecret);
-                toast.success('Ghost link burned — it no longer resolves.');
+                toast.success('Link deleted — it no longer works.');
             } catch (e: unknown) {
                 toast.error(e instanceof Error ? e.message : 'Could not delete from servers.');
                 setContextMenu(null);

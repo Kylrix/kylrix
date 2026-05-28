@@ -5,7 +5,7 @@ description: Detail the balance between client-side end-to-end encryption and se
 
 # Why: UX Priority & Client vs. Server Encryption Balance
 
-In secure systems design, engineers often strive for "ideological perfection" by encrypting every single database field client-side using end-to-end encryption (E2EE). While highly secure, this introduces severe friction: users must input a password or master key every time they open the app, search their notes, or load a page. 
+In secure systems design, engineers often strive for "ideological perfection" by sealing every single field client-side using end-to-end encryption (E2EE). While highly secure, this introduces severe friction: users must input a password or master key every time they open the app, search their notes, or load a page. 
 
 We address this by balancing **Client-Side vs. Server-Side Encryption** based on real-world user experience (UX).
 
@@ -40,7 +40,7 @@ export async function searchMyNotes(queryText: string, jwt: string) {
 }
 ```
 
-If these notes were E2EE client-side, the server could not search them. The client would have to download and decrypt *every single note* in their history to perform a search, destroying mobile performance and battery life.
+If these notes were sealed client-side, the server could not search them. The client would have to download and decrypt *every single note* in their history to perform a search, destroying mobile performance and battery life.
 
 ---
 

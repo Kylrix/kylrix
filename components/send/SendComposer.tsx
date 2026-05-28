@@ -386,7 +386,7 @@ function DiscussionComposerCard({
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#F59E0B' }}>
             <Lock size={12} />
-            <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.65rem', textTransform: 'uppercase' }}>E2EE</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.65rem', textTransform: 'uppercase' }}>LOCKED</Typography>
           </Box>
         </Stack>
 
@@ -1271,7 +1271,7 @@ export function SendComposer() {
                         Hardware Credential Vault
                       </Typography>
                       <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)' }}>
-                        Sealed with local AES-256 E2EE
+                        Locked on this device
                       </Typography>
                     </Box>
                   </Stack>
@@ -1281,7 +1281,7 @@ export function SendComposer() {
                     <Tooltip title="Secure link active">
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, bgcolor: alpha('#10B981', 0.08), border: `1px solid ${alpha('#10B981', 0.2)}`, px: 1, py: 0.5, borderRadius: '6px' }}>
                         <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10B981', boxShadow: '0 0 6px #10B981' }} />
-                        <Typography sx={{ fontSize: '0.6rem', fontWeight: 900, color: '#10B981', letterSpacing: '0.05em' }}>SEALED</Typography>
+                        <Typography sx={{ fontSize: '0.6rem', fontWeight: 900, color: '#10B981', letterSpacing: '0.05em' }}>LOCKED</Typography>
                       </Box>
                     </Tooltip>
                     
@@ -1866,7 +1866,7 @@ export function SendComposer() {
             </Button>
 
             <Typography sx={{ textAlign: 'center', fontSize: '0.8rem', color: '#9B9691', px: 2, lineHeight: 1.6, fontFamily: 'var(--font-satoshi)' }}>
-              {effectiveSecureMode ? 'Encrypted' : 'Unencrypted'} rows in the note database — they clear automatically after 7 days.
+              {effectiveSecureMode ? 'Encrypted' : 'Unencrypted'} rows stored for this link — they clear automatically after 7 days.
               {effectiveSecureMode && ' The key stays in the link fragment only.'}
             </Typography>
           </Stack>

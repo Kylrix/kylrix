@@ -18,9 +18,9 @@ import SyncIcon from '@mui/icons-material/Sync';
 const features = [
   {
     icon: ShieldIcon,
-    title: "Private Encryption",
+    title: "Private Storage",
     description:
-      "Your data is encrypted on your device. We never see your passwords.",
+      "Your data is locked on your device. We never see your passwords.",
   },
   {
     icon: VpnKeyIcon,
@@ -36,9 +36,9 @@ const features = [
   },
   {
     icon: SyncIcon,
-    title: "Automatic Syncing",
+    title: "Keep in Sync",
     description:
-      "Your credentials sync automatically across all your devices.",
+      "Your saved items stay up to date across all your devices.",
   },
   {
     icon: PublicIcon,
@@ -47,8 +47,8 @@ const features = [
   },
   {
     icon: LockIcon,
-    title: "Two-Factor Authentication",
-    description: "Built-in TOTP code generator for added security.",
+    title: "One-Time Codes",
+    description: "Built-in code generator for extra security.",
   }];
 
 export default function Features() {
@@ -57,10 +57,10 @@ export default function Features() {
       <Container maxWidth="lg">
         <Box sx={{ textAlign: 'center', mb: 10 }}>
           <Typography variant="h3" sx={{ fontWeight: 900, mb: 2, fontFamily: 'var(--font-space-grotesk)' }}>
-            Security-First Password Management
+            Private Password Management
           </Typography>
           <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.5)', maxWidth: '700px', mx: 'auto' }}>
-            Designed with your security and privacy as the top priority.
+            Built to keep your passwords safe and easy to use.
           </Typography>
         </Box>
 

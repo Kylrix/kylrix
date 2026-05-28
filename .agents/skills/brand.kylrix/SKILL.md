@@ -25,6 +25,7 @@ disable-model-invocation: true
 6. Prohibit technical jargon (e.g., E2EE, agentic, infrastructure, entropy, decentralized node). Use layman-friendly equivalents (e.g., Private, Smart, System, Secure).
 7. **Opaque UI:** No gradient fills and no translucent (`rgba` / `alpha` / opacity) **backgrounds** on product chrome—see `design.md` and `kylrix-muted-v3-design`.
 8. **Do not cram copy:** Keep hero and drawer copy short. Prefer one clear sentence per block and clear whitespace between text groups.
-9. **Authorized fonts only:** Use `var(--font-satoshi)`, `var(--font-clash)`, and `var(--font-mono)`; never introduce ad-hoc or default fallback-only typography for primary UI.
-10. **Drawer-to-sidebar responsiveness:** Topbar drawers become sidebars on desktop (top drawer -> left sidebar, bottom drawer -> right sidebar). Avoid desktop topbar extension panels.
-11. **Dark Ash Baseline:** Use `#161412` (Dark Ash / Deep Ash) as the default background for all primary surfaces and components (cards, drawers, bottom bars) sitting on the pitch-black (`#0A0908`) shell.
+9. **Never expose internal IDs:** Do not surface database names, table IDs, or bucket names in user-facing copy. Use plain words like "link", "note", "shared item", and "saved".
+10. **Authorized fonts only:** Use `var(--font-satoshi)`, `var(--font-clash)`, and `var(--font-mono)`; never introduce ad-hoc or default fallback-only typography for primary UI.
+11. **Drawer-to-sidebar responsiveness:** Topbar drawers become sidebars on desktop (top drawer -> left sidebar, bottom drawer -> right sidebar). Avoid desktop topbar extension panels.
+12. **Dark Ash Baseline:** Use `#161412` (Dark Ash / Deep Ash) as the default background for all primary surfaces and components (cards, drawers, bottom bars) sitting on the pitch-black (`#0A0908`) shell.
