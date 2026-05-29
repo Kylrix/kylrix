@@ -344,7 +344,7 @@ export const DiscoverabilitySettings = () => {
         );
     }
 
-    const isDiscoverable = profile?.isPublic !== false;
+    const isDiscoverable = profile?.isPublic !== false && profile?.isGuest !== false;
 
     const isContactable = !!profile?.publicKey;
 
@@ -470,9 +470,8 @@ export const DiscoverabilitySettings = () => {
                         <Switch
                             checked={isContactable}
                             onChange={(e) => handleToggleContact(e.target.checked)}
-                            disabled={savingContact || (!isContactable && !ecosystemSecurity.status.isUnlocked)}
+                            disabled={savingContact}
                             sx={{
-                                opacity: !isContactable && !ecosystemSecurity.status.isUnlocked ? 0.55 : 1,
                                 '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT_MESSAGE },
                                 '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: alpha(ACCENT_MESSAGE, 0.45) },
                             }}
