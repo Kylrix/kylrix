@@ -325,7 +325,19 @@ export default function ProjectsPage() {
   }, [projects]);
 
   const handleProjectClick = (projectId: string) => {
-    router.push(`/projects/${projectId}`);
+    const selectedProj = projects.find(p => p.$id === projectId);
+    if (selectedProj && (selectedProj as any).isPending) {
+      open('project-invite', {
+        project: selectedProj,
+        onAccepted: () => {
+          fetchProjects().then(() => {
+            router.push(`/projects/${projectId}`);
+          });
+        }
+      });
+    } else {
+      router.push(`/projects/${projectId}`);
+    }
   };
 
   const displayedTemplates = showAllTemplates ? projectTemplates : projectTemplates.slice(0, 3);

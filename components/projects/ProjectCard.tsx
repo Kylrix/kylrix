@@ -117,28 +117,44 @@ export default function ProjectCard({ project, onClick, onDelete, onTogglePin }:
               </Stack>
             </Box>
           </Stack>
-          <Stack direction="row" spacing={0.5} sx={{ mt: -0.5, mr: -0.5 }}>
-            <IconButton 
-                size="small" 
-                onClick={(e) => { e.stopPropagation(); onTogglePin?.(project.$id); }}
-                sx={{ 
-                    color: (project as any).isPinned ? '#F59E0B' : 'rgba(255,255,255,0.2)', 
-                    '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.05) },
-                }}
-            >
-                <Pin size={18} fill={(project as any).isPinned ? '#F59E0B' : 'none'} />
-            </IconButton>
-            <IconButton 
-                size="small" 
-                onClick={(e) => { e.stopPropagation(); onDelete(project.$id); }}
-                sx={{ 
-                    color: 'rgba(255,255,255,0.2)', 
-                    '&:hover': { color: '#FF453A', bgcolor: alpha('#FF453A', 0.05) },
-                }}
-            >
-                <Trash2 size={18} />
-            </IconButton>
-          </Stack>
+          {!(project as any).isPending ? (
+            <Stack direction="row" spacing={0.5} sx={{ mt: -0.5, mr: -0.5 }}>
+              <IconButton 
+                  size="small" 
+                  onClick={(e) => { e.stopPropagation(); onTogglePin?.(project.$id); }}
+                  sx={{ 
+                      color: (project as any).isPinned ? '#F59E0B' : 'rgba(255,255,255,0.2)', 
+                      '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.05) },
+                  }}
+              >
+                  <Pin size={18} fill={(project as any).isPinned ? '#F59E0B' : 'none'} />
+              </IconButton>
+              <IconButton 
+                  size="small" 
+                  onClick={(e) => { e.stopPropagation(); onDelete(project.$id); }}
+                  sx={{ 
+                      color: 'rgba(255,255,255,0.2)', 
+                      '&:hover': { color: '#FF453A', bgcolor: alpha('#FF453A', 0.05) },
+                  }}
+              >
+                  <Trash2 size={18} />
+              </IconButton>
+            </Stack>
+          ) : (
+            <Chip 
+              label="INVITED" 
+              size="small" 
+              sx={{ 
+                bgcolor: alpha('#6366F1', 0.1), 
+                color: '#818CF8', 
+                fontWeight: 900, 
+                fontSize: '0.65rem', 
+                fontFamily: 'var(--font-mono)',
+                border: '1px solid rgba(99, 102, 241, 0.2)',
+                height: 20
+              }} 
+            />
+          )}
         </Box>
 
         <Typography 
@@ -165,17 +181,17 @@ export default function ProjectCard({ project, onClick, onDelete, onTogglePin }:
             </Typography>
           </Stack>
           <Chip 
-            label={project.status} 
+            label={(project as any).isPending ? 'invite pending' : project.status} 
             size="small" 
             sx={{ 
-              bgcolor: alpha(getStatusColor(), 0.1),
-              color: getStatusColor(),
+              bgcolor: alpha((project as any).isPending ? '#F59E0B' : getStatusColor(), 0.1),
+              color: (project as any).isPending ? '#F59E0B' : getStatusColor(),
               fontWeight: 900,
               fontSize: '0.62rem',
               borderRadius: '8px',
               textTransform: 'uppercase',
               height: 20,
-              border: `1px solid ${alpha(getStatusColor(), 0.2)}`
+              border: `1px solid ${alpha((project as any).isPending ? '#F59E0B' : getStatusColor(), 0.2)}`
             }} 
           />
         </Box>
