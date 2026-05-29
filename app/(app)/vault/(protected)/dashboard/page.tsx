@@ -34,7 +34,7 @@ import {
   IconButton,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Eye, EyeOff } from 'lucide-react';
 
 function DashboardPageContent() {
   const { user, needsMasterPassword, isVaultUnlocked } = useAppwriteVault();
@@ -51,6 +51,7 @@ function DashboardPageContent() {
   
   // State for all credentials, fetched once
   const [allCredentials, setAllCredentials] = useState<Credentials[]>([]);
+  const [isBlurEnabled, setIsBlurEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [dialogType, setDialogType] = useState<string>("login");
@@ -237,6 +238,18 @@ function DashboardPageContent() {
             <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
               Secrets
             </Typography>
+            <IconButton
+              onClick={() => setIsBlurEnabled(!isBlurEnabled)}
+              sx={{
+                color: isBlurEnabled ? 'rgba(255,255,255,0.4)' : '#10B981',
+                bgcolor: '#161412',
+                border: '1px solid #1C1A18',
+                '&:hover': { bgcolor: '#1C1A18' },
+              }}
+              size="small"
+            >
+              {isBlurEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
+            </IconButton>
           </Stack>
 
           {/* Credentials List */}
@@ -269,6 +282,7 @@ function DashboardPageContent() {
                   onEdit={() => handleEdit(cred)}
                   onDelete={() => openDeleteModal(cred)}
                   onTogglePin={() => handleTogglePin(cred.$id)}
+                  isBlurEnabled={isBlurEnabled}
                   onClick={() => {
                     setSelectedCredential(cred);
                     setShowDetail(true);

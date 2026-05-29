@@ -32,6 +32,7 @@ export default function CredentialItem({
   onDelete,
   onClick,
   onTogglePin,
+  isBlurEnabled = false,
 }: {
   credential: Credentials;
   onCopy: (value: string) => void;
@@ -40,6 +41,7 @@ export default function CredentialItem({
   onDelete: () => void;
   onClick?: () => void;
   onTogglePin?: () => void;
+  isBlurEnabled?: boolean;
 }) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -122,7 +124,18 @@ export default function CredentialItem({
           {credential.isPinned && <PinIcon sx={{ fontSize: 14, color: '#F59E0B', transform: 'rotate(45deg)' }} />}
           {credential.name}
         </Typography>
-        <Typography variant="body2" noWrap sx={{ color: '#9B9691', mt: 0.5, fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>
+        <Typography 
+          variant="body2" 
+          noWrap 
+          sx={{ 
+            color: '#9B9691', 
+            mt: 0.5, 
+            fontWeight: 500, 
+            fontFamily: 'var(--font-satoshi)',
+            filter: isBlurEnabled ? 'blur(4px)' : 'none',
+            transition: 'filter 0.3s ease',
+          }}
+        >
           {credential.username}
         </Typography>
         {(credential as any).sharedFrom && (
