@@ -14,6 +14,10 @@ import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
 import { LocalContextProvider } from '@/lib/context-engine';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
 import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
+import { SudoProvider } from '@/context/SudoContext';
+import { TokenOpsProvider } from '@/context/TokenOpsContext';
+import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
+import { CallLauncherProvider } from '@/context/CallLauncherContext';
 
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 
@@ -45,9 +49,13 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   OverlayProvider,
   DynamicSidebarProvider,
   SidebarProvider,
+  DrawerStateProvider,
+  SudoProvider,
+  TokenOpsProvider,
+  AppChromeProvider,
+  CallLauncherProvider,
   WalletOverlayProvider,
   LocalContextProvider,
-  DrawerStateProvider,
   ToastProvider,
 ];
 
