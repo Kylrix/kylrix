@@ -21,9 +21,12 @@ import {
     FormControl
 } from '@mui/material';
 import { Send as SendIcon, CheckCircleOutline as SuccessIcon } from '@mui/icons-material';
+import { Upload as UploadIcon, X as XIcon } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import { useDataNexus } from '@/context/DataNexusContext';
+import { secureUploadFile } from '@/lib/actions/client-ops';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 export default function PublicFormPage({ params }: { params: Promise<{ id: string }> }) {
     const resolvedParams = use(params);
