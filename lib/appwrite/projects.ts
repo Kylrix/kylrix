@@ -9,15 +9,16 @@ const PROJECT_OBJECTS_COLLECTION_ID = 'project_objects';
 
 export const ProjectsService = {
   async listProjects() {
-    const user = await getCurrentUser();
-    if (!user) throw new Error('Not authenticated');
-
-    // Returns both owned and shared projects (via Role.team) automatically
-    return databases.listRows<any>(
-      DATABASE_ID,
-      PROJECTS_COLLECTION_ID,
-      [Query.orderDesc('updatedAt')]
-    );
+    if (typeof window !== 'undefined') {
+      const { account } = await import('./client');
+      const { jwt } = await account.createJWT();
+      const { listProjectsWithCollaborationsSecure } = await import('@/lib/actions/secure-ops');
+      const rows = await listProjectsWithCollaborationsSecure(jwt);
+      return { rows };
+    }
+    const { listProjectsWithCollaborationsSecure } = await import('@/lib/actions/secure-ops');
+    const rows = await listProjectsWithCollaborationsSecure();
+    return { rows };
   },
   async getProject(projectId: string) {
     return databases.getRow<any>(

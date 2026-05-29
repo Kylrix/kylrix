@@ -19,6 +19,7 @@ const NewTagDrawer = dynamic(() => import('./NewTagDrawer').then(mod => mod.NewT
 const NewProjectDrawer = dynamic(() => import('./NewProjectDrawer').then(mod => mod.NewProjectDrawer), { ssr: false });
 const SecureChatSetupDrawer = dynamic(() => import('./SecureChatSetupDrawer').then(mod => mod.SecureChatSetupDrawer), { ssr: false });
 const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(mod => mod.DeleteConfirmDrawer), { ssr: false });
+const ProjectInviteDrawer = dynamic(() => import('./ProjectInviteDrawer').then(mod => mod.ProjectInviteDrawer), { ssr: false });
 
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
@@ -60,6 +61,8 @@ export function UnifiedBottomDrawer() {
             return <SecureChatSetupDrawer />;
         case 'delete-confirm':
             return <DeleteConfirmDrawer />;
+        case 'project-invite':
+            return <ProjectInviteDrawer />;
         default: return null;
     }
   };
@@ -68,12 +71,13 @@ export function UnifiedBottomDrawer() {
   if (!content) return null;
 
   // Some components handle their own Drawer wrapper, but for new simple ones we wrap them
-  if (['secure-chat-setup', 'delete-confirm'].includes(activeContent)) {
+  if (['secure-chat-setup', 'delete-confirm', 'project-invite'].includes(activeContent)) {
     return (
         <Drawer
             anchor="bottom"
             open={true}
             onClose={close}
+            ModalProps={{ keepMounted: false, disablePortal: true }}
             PaperProps={{
                 sx: {
                     bgcolor: '#161412',
