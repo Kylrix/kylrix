@@ -65,8 +65,7 @@ export default function NoteComponent({
 
   return (
     <>
-      <MotionCard
-        transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      <Card
         sx={{
           height: '100%',
           display: 'flex',
@@ -178,7 +177,7 @@ export default function NoteComponent({
             </IconButton>
           </Stack>
         </CardActions>
-      </MotionCard>
+      </Card>
 
       {/* Context Menu */}
       <Menu

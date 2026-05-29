@@ -21,15 +21,16 @@ export function Dialog({
       anchor={isMobile ? 'bottom' : 'right'}
       open={open}
       onClose={onClose}
+      keepMounted={false}
+      disablePortal={true}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 640px)',
           maxWidth: '100%',
           height: isMobile ? 'auto' : '100%',
           maxHeight: isMobile ? '92dvh' : '100%',
-          bgcolor: 'rgba(10, 10, 10, 0.95)',
-          backdropFilter: 'blur(25px) saturate(180%)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          bgcolor: '#0A0A0A',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: isMobile ? '24px 24px 0 0' : '0',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           backgroundImage: 'none',

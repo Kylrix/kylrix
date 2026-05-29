@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
   Alert,
   Avatar,
@@ -489,6 +489,7 @@ export function ProfileRedesign({ username }: ProfileProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [refreshNonce, setRefreshNonce] = useState(0);
+  const debounceTimerRef = useRef<NodeJS.Timeout>();
   const { openTokenUserSearch } = useTokenOps();
   const { openWalletWithIntent } = useWalletOverlay();
 
@@ -651,23 +652,31 @@ export function ProfileRedesign({ username }: ProfileProps) {
 
     const unsubscribe = subscribeIdentityCache((identity) => {
       if (identity.username !== normalizedUsername) return;
-      setProfile((prev: any) => {
-        if (
-          prev &&
-          prev.$id === identity.$id &&
-          prev.username === identity.username &&
-          prev.bio === identity.bio &&
-          prev.displayName === identity.displayName &&
-          prev.avatar === identity.avatar &&
-          JSON.stringify(prev.socialStats) === JSON.stringify(identity.socialStats)
-        ) {
-          return prev;
-        }
-        return identity;
-      });
+
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+      debounceTimerRef.current = setTimeout(() => {
+        setProfile((prev: any) => {
+          if (
+            prev &&
+            prev.$id === identity.$id &&
+            prev.username === identity.username &&
+            prev.bio === identity.bio &&
+            prev.displayName === identity.displayName &&
+            prev.avatar === identity.avatar &&
+            JSON.stringify(prev.socialStats) === JSON.stringify(identity.socialStats)
+          ) {
+            return prev;
+          }
+          return identity;
+        });
+      }, 50);
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      unsubscribe();
+    };
   }, [normalizedUsername]);
 
   const categorizedByTab = useMemo(

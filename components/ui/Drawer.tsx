@@ -23,6 +23,7 @@ export function Drawer({
       open={open}
       onClose={onClose}
       ModalProps={{ keepMounted: false }}
+      disablePortal={true}
       slotProps={TOPBAR_DRAWER_BACKDROP_SLOT}
       PaperProps={{
         sx: {
@@ -30,9 +31,8 @@ export function Drawer({
           maxWidth: '100%',
           height: isMobile ? '92dvh' : '100%',
           maxHeight: '100dvh',
-          bgcolor: 'rgba(10, 10, 10, 0.95)',
-          backdropFilter: 'blur(25px) saturate(180%)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          bgcolor: '#0A0A0A',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: isMobile ? '24px 24px 0 0' : '0',
           backgroundImage: 'none',
           color: 'white',

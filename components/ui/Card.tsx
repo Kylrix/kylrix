@@ -8,9 +8,8 @@ const Card = React.forwardRef<
   <MuiCard
     ref={ref}
     sx={{
-      bgcolor: 'rgba(15, 13, 12, 0.95)',
-      backdropFilter: 'blur(25px) saturate(180%)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      bgcolor: '#13110F',
+      border: '1px solid rgba(255, 255, 255, 0.08)',
       borderRadius: '24px',
       boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
       overflow: 'hidden',
