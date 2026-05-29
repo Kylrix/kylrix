@@ -148,6 +148,7 @@ export default function ProjectDetailPage() {
   const [tabMenuAnchorEl, setTabMenuAnchorEl] = useState<{ x: number, y: number } | null>(null);
   const [activeTabMenuIndex, setActiveTabMenuIndex] = useState<number | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [ownerProfile, setOwnerProfile] = useState<any | null>(null);
 
   const handleSaveSettings = async (title: string, summary: string, status: string) => {
     if (!project) return;

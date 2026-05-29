@@ -770,14 +770,18 @@ function extractCollaboratorsFromPermissions(permissions: string[]): Array<{ use
 
 export async function getResourceCollaboratorsSecure(input: {
     resourceId: string;
-    resourceType: 'note' | 'task';
+    resourceType: 'note' | 'task' | 'project';
     jwt?: string;
 }) {
     const requester = await getActor(input.jwt);
     if (!requester) throw new Error('Unauthorized');
 
-    const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : APPWRITE_CONFIG.DATABASES.FLOW;
-    const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : APPWRITE_CONFIG.TABLES.FLOW.TASKS;
+    const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
+                 input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
+                 APPWRITE_CONFIG.DATABASES.FLOW;
+    const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
+                    input.resourceType === 'project' ? 'projects' :
+                    APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
     const tables = createSystemTablesDB();
     const row = await tables.getRow({
@@ -786,24 +790,52 @@ export async function getResourceCollaboratorsSecure(input: {
       rowId: input.resourceId,
     });
     
-    let filteredCollabs: Array<{ userId: string, level: string }> = [];
+    let filteredCollabs: Array<{ userId: string, level: string, status: string, accepted: boolean }> = [];
     
-    if (input.resourceType === 'note') {
+    if (input.resourceType === 'note' || input.resourceType === 'project') {
         let meta: any = {};
         try {
             meta = JSON.parse(row.metadata || '{}');
         } catch {}
         const collaboratorsMap = meta.collaborators || {};
+
+        // Query polymorphic collaborators table for status (pending/accepted)
+        let polymorphicCollabs: Record<string, { status: string; accepted: boolean }> = {};
+        try {
+            const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+            const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+            const collabsRes = await tables.listRows({
+                databaseId: FLOW_DATABASE_ID,
+                tableId: COLLABORATORS_TABLE,
+                queries: [
+                    Query.equal('resourceId', input.resourceId),
+                    Query.equal('resourceType', input.resourceType)
+                ] as any
+            });
+            for (const c of collabsRes.rows) {
+                polymorphicCollabs[c.userId] = {
+                    status: c.status || 'accepted',
+                    accepted: c.accepted ?? true
+                };
+            }
+        } catch (e) {
+            console.warn('[getResourceCollaboratorsSecure] Failed to query polymorphic status:', e);
+        }
+
         filteredCollabs = Object.entries(collaboratorsMap).map(([userId, level]) => ({
             userId,
-            level: String(level)
+            level: String(level),
+            status: polymorphicCollabs[userId]?.status || 'accepted',
+            accepted: polymorphicCollabs[userId]?.accepted ?? true
         }));
     } else {
         // Fallback for tasks
         const rawPermissions = row.$permissions || [];
         const collabMeta = extractCollaboratorsFromPermissions(rawPermissions);
         const ownerId = String((row as any).userId || '').trim();
-        filteredCollabs = collabMeta.filter(c => c.userId !== ownerId && c.userId !== requester.$id);
+        filteredCollabs = collabMeta
+            .filter(c => c.userId !== ownerId && c.userId !== requester.$id)
+            .map(c => ({ userId: c.userId, level: c.level, status: 'accepted', accepted: true }));
     }
 
     if (filteredCollabs.length === 0) return { collaborators: [] };
@@ -822,7 +854,9 @@ export async function getResourceCollaboratorsSecure(input: {
                 avatar: p.avatar || p.profilePicId || null,
                 tier: p.tier,
                 verified: p.tier === 'admin' || p.verified,
-                permissionLevel: collab.level
+                permissionLevel: collab.level,
+                status: collab.status,
+                accepted: collab.accepted
             };
         })
     );
