@@ -1,6 +1,6 @@
 'use client';
 
-import React, { ReactNode, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import React, { ReactNode, Suspense, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Box, alpha } from '@mui/material';
@@ -73,14 +73,18 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
     }
   }, [isLoading, user, isAppRoute, isSharedPage, openUnified]);
 
+  const lastPathnameRef = useRef(pathname);
   useEffect(() => {
     // Single-batch UI reset on navigation - ONLY call if currently open to prevent cascading update loops!
-    if (isDynamicSidebarOpen) closeSidebar();
-    if (isOverlayOpen) closeOverlay();
-    if (isWalletOpen) closeWallet();
-    if (showProUpgrade) closeProUpgrade();
-    if (secondarySidebar.isOpen) closeSecondarySidebar();
-    if (isAgenticDrawerOpen) closeAgenticDrawer();
+    if (lastPathnameRef.current !== pathname) {
+      lastPathnameRef.current = pathname;
+      if (isDynamicSidebarOpen) closeSidebar();
+      if (isOverlayOpen) closeOverlay();
+      if (isWalletOpen) closeWallet();
+      if (showProUpgrade) closeProUpgrade();
+      if (secondarySidebar.isOpen) closeSecondarySidebar();
+      if (isAgenticDrawerOpen) closeAgenticDrawer();
+    }
   }, [
     pathname,
     isDynamicSidebarOpen,
