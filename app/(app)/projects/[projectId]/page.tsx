@@ -30,6 +30,8 @@ import {
   Popover,
   Checkbox,
   FormControlLabel,
+  List,
+  ListItemText,
 } from '@mui/material';
 import {
   Plus,
@@ -3120,6 +3122,84 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
             )}
           </Stack>
         </Stack>
+      </Popover>
+
+      {/* Mention Autocomplete Popover */}
+      <Popover
+        open={Boolean(mentionAnchorEl && (mentionQuery || mentionResults.length))}
+        anchorEl={mentionAnchorEl}
+        onClose={closeMentionSuggestions}
+        disableAutoFocus
+        disableEnforceFocus
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            width: { xs: 'calc(100vw - 32px)', sm: 380 },
+            maxWidth: 'calc(100vw - 32px)',
+            bgcolor: 'rgba(16, 14, 12, 0.98)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
+            borderRadius: 4,
+            overflow: 'hidden',
+            zIndex: 1400,
+          },
+          onMouseDown: (event: any) => event.preventDefault(),
+        }}
+      >
+        <Box sx={{ p: 1.25, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', letterSpacing: '0.14em', fontWeight: 800 }}>
+            Mention profiles
+          </Typography>
+          {mentionLoading ? <CircularProgress size={12} sx={{ color: '#6366F1' }} /> : null}
+        </Box>
+        <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
+        <List dense sx={{ p: 0 }}>
+          {mentionResults.length === 0 && !mentionLoading ? (
+            <Box sx={{ px: 1.5, py: 1.25 }}>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.55)' }}>
+                No matches yet.
+              </Typography>
+            </Box>
+          ) : (
+            mentionResults.map((item) => (
+              <MenuItem
+                key={item.id}
+                onClick={() => replaceActiveMention(item)}
+                sx={{
+                  py: 1,
+                  px: 1.25,
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' },
+                }}
+              >
+                <Avatar
+                  src={item.avatar || undefined}
+                  sx={{
+                    width: 28,
+                    height: 28,
+                    bgcolor: alpha('#6366F1', 0.14),
+                    color: '#6366F1',
+                    fontSize: 11,
+                    fontWeight: 900,
+                  }}
+                >
+                  {item.title.charAt(0).toUpperCase()}
+                </Avatar>
+                <ListItemText
+                  primary={item.title}
+                  secondary={item.username ? `@${item.username}` : null}
+                  primaryTypographyProps={{ sx: { fontSize: '0.85rem', fontWeight: 800, color: 'white' } }}
+                  secondaryTypographyProps={{ sx: { fontSize: '0.75rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)' } }}
+                />
+              </MenuItem>
+            ))
+          )}
+        </List>
       </Popover>
     </Box>
   );
