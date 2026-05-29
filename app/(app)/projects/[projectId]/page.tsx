@@ -96,6 +96,7 @@ import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import FormDialog from '@/components/forms/FormDialog';
 import { CallActionModal } from '@/components/call/CallActionModal';
 import NewTotpDialog from '@/components/app/totp/new';
+import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -1554,6 +1555,78 @@ function ResourceItem({
             </Stack>
         </Paper>
     );
+}
+
+function getActiveMentionToken(value: string, caret: number | null | undefined) {
+  const cursor = typeof caret === 'number' ? caret : value.length;
+  const before = value.slice(0, cursor);
+  const match = before.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
+  if (!match) return null;
+
+  const start = before.lastIndexOf('@');
+  if (start < 0) return null;
+
+  const prefix = before.slice(0, start);
+  if (prefix.length > 0) {
+    const prev = prefix[prefix.length - 1];
+    if (!/[\s(]/.test(prev)) return null;
+  }
+
+  return {
+    query: match[1] || '',
+    start,
+    end: cursor,
+  };
+}
+
+function renderMessageText(text: string): React.ReactNode {
+  const MENTION_REGEX = /(^|[\s(])@([a-zA-Z0-9_]+)/g;
+  const pieces: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  MENTION_REGEX.lastIndex = 0;
+
+  while ((match = MENTION_REGEX.exec(text)) !== null) {
+    const [full, prefix, username] = match;
+    const start = match.index;
+    const end = start + full.length;
+
+    if (start > lastIndex) {
+      pieces.push(text.slice(lastIndex, start));
+    }
+
+    if (prefix) {
+      pieces.push(prefix);
+    }
+
+    pieces.push(
+      <Box
+        component="span"
+        key={`${start}-${username}`}
+        sx={{
+          color: '#6366F1', // Ecosystem primary
+          fontWeight: 800,
+          bgcolor: 'rgba(99, 102, 241, 0.08)',
+          px: 0.4,
+          py: 0.1,
+          borderRadius: '4px',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.9em',
+          userSelect: 'text',
+        }}
+      >
+        @{username}
+      </Box>
+    );
+
+    lastIndex = end;
+  }
+
+  if (lastIndex < text.length) {
+    pieces.push(text.slice(lastIndex));
+  }
+
+  return <Box component="span" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{pieces}</Box>;
 }
 
 interface ProjectDiscussionTabProps {
