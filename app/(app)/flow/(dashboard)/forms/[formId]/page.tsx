@@ -525,12 +525,14 @@ export default function FormDetailsPage({ params }: { params: Promise<{ formId: 
             )}
 
             {/* Edit Dialog */}
-            <FormDialog 
-                open={isEditing} 
-                onClose={() => setIsEditing(false)} 
-                form={form} 
-                onSaved={fetchForm} 
-            />
+            {isEditing && (
+                <FormDialog 
+                    open={isEditing} 
+                    onClose={() => setIsEditing(false)} 
+                    form={form} 
+                    onSaved={fetchForm} 
+                />
+            )}
 
             <Snackbar 
                 open={!!snackbar} 

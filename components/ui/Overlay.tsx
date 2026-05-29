@@ -43,6 +43,12 @@ const Overlay: React.FC = () => {
     dragStartY.current = 0;
   };
 
+  const hasOwnDrawer = React.isValidElement(content) && (content.props as any).open !== undefined;
+
+  if (hasOwnDrawer) {
+    return <>{content}</>;
+  }
+
   const drawerHeight = isMobile 
     ? (isExpanded ? '100dvh' : '60dvh')
     : '100%';

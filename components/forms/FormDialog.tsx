@@ -569,6 +569,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
       anchor={isMobile ? 'bottom' : 'right'}
       open={open} 
       onClose={onClose}
+      ModalProps={{ keepMounted: false, disablePortal: true }}
       PaperProps={{
         sx: { 
           width: isMobile ? '100%' : 'min(100vw, 800px)',

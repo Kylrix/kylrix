@@ -495,20 +495,24 @@ export default function FormsDashboard() {
                 </Box>
             )}
 
-            <FormDialog 
-                open={dialogOpen} 
-                onClose={() => setDialogOpen(false)} 
-                form={selectedForm}
-                initialDraft={selectedDraft || undefined}
-                onSaved={() => fetchForms(false)} 
-            />
+            {dialogOpen && (
+                <FormDialog 
+                    open={dialogOpen} 
+                    onClose={() => setDialogOpen(false)} 
+                    form={selectedForm}
+                    initialDraft={selectedDraft || undefined}
+                    onSaved={() => fetchForms(false)} 
+                />
+            )}
 
-            <FormSettingsDialog
-                open={settingsOpen}
-                onClose={() => setSettingsOpen(false)}
-                form={selectedForm}
-                onSaved={() => fetchForms(false)}
-            />
+            {settingsOpen && (
+                <FormSettingsDialog
+                    open={settingsOpen}
+                    onClose={() => setSettingsOpen(false)}
+                    form={selectedForm}
+                    onSaved={() => fetchForms(false)}
+                />
+            )}
 
             {/* ACTION MENU */}
             <Menu
