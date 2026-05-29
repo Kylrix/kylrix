@@ -105,7 +105,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
             
             if (drawerData?.onShared) {
                 try {
-                    await drawerData.onShared(targetUser.id);
+                    await drawerData.onShared(targetUser.id, permission);
                 } catch (err) {
                     console.error('onShared callback failed:', err);
                 }

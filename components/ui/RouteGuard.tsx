@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAuth } from './AuthContext';
+import { useAuth } from '@/context/auth/AuthContext';
 
 interface RouteGuardProps {
   children: React.ReactNode;

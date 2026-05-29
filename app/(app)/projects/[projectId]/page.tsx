@@ -422,8 +422,8 @@ export default function ProjectDetailPage() {
           resourceId: projectId as string,
           resourceType: 'project',
           resourceTitle: project?.title || 'Project',
-          onShared: (userId: string) => {
-              ProjectsService.addCollaborator(projectId as string, userId);
+          onShared: (userId: string, permission: string) => {
+              ProjectsService.addCollaborator(projectId as string, userId, permission);
               fetchProjectData();
           }
       });
@@ -1039,7 +1039,33 @@ export default function ProjectDetailPage() {
 
                             {/* Collaborators Section (Active and Pending) */}
                             {collaborators.map(user => (
-                                <Box key={user.$id || user.userId} sx={{ p: 1.5, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                <Box 
+                                    key={user.$id || user.userId} 
+                                    onClick={() => {
+                                        openUnified('share-note', {
+                                            resourceId: projectId as string,
+                                            resourceType: 'project',
+                                            resourceTitle: project?.title || 'Project',
+                                            initialCollaborator: user,
+                                            onShared: () => fetchProjectData()
+                                        });
+                                    }}
+                                    sx={{ 
+                                        p: 1.5, 
+                                        borderRadius: '16px', 
+                                        bgcolor: '#0A0908', 
+                                        border: '1px solid #1C1A18', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: 1.5,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            borderColor: 'rgba(255,255,255,0.15)',
+                                            bgcolor: 'rgba(255,255,255,0.02)'
+                                        }
+                                    }}
+                                >
                                     <IdentityAvatar 
                                         size={34} 
                                         fileId={user.avatar || user.profilePicId} 
@@ -1061,9 +1087,6 @@ export default function ProjectDetailPage() {
                                         {user.status === 'pending' && (
                                             <Chip label="PENDING" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900, fontFamily: 'var(--font-satoshi)', bgcolor: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B' }} />
                                         )}
-                                        <IconButton size="small" onClick={() => handleRemoveObject(user.$id || user.userId)} sx={{ opacity: 0.2, '&:hover': { opacity: 1, color: '#FF453A' } }}>
-                                            <Trash2 size={14} />
-                                        </IconButton>
                                     </Stack>
                                 </Box>
                             ))}

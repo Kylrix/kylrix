@@ -42,9 +42,8 @@ const SearchResultAvatar = ({ u }: { u: any }) => {
     return (
         <IdentityAvatar
             fileId={u.avatar}
-            alt={u.displayName || u.username}
-            seed={u.username || u.$id}
-            size={44}
+            alt={u.displayName || u.username || 'User'}
+            size={40}
             pro={flags.pro}
             verified={flags.verified}
             borderRadius="12px"

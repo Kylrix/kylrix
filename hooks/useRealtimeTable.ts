@@ -15,7 +15,7 @@ export function useRealtimeTable<T extends Models.Row>(
     const throttleMs = options?.throttleMs;
     const lastEventTimeRef = useRef<number>(0);
     const pendingEventsRef = useRef<{ type: 'create' | 'update' | 'delete'; payload: T }[]>([]);
-    const timeoutRef = useRef<NodeJS.Timeout>();
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         let unsub: any;
