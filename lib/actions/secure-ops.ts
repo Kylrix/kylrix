@@ -1043,6 +1043,20 @@ export async function verifyResourcePermissionSecure(params: {
       tableId: tableId,
       rowId: rowId,
     }).catch(() => null);
+
+    // Dynamic Admin RLS Bypass Fallback (Second Gate)
+    if (!row) {
+      try {
+        const systemTables = createSystemTablesDB();
+        row = await systemTables.getRow({
+          databaseId,
+          tableId,
+          rowId,
+        });
+      } catch (err) {
+        console.warn('[verifyResourcePermissionSecure] Admin fallback fetch failed:', err);
+      }
+    }
   }
 
   if (!row) {
