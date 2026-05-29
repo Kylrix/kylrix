@@ -351,7 +351,7 @@ export default function SettingsPage() {
             </Stack>
 
             <PasskeySetup 
-                isOpen={passkeySetupOpen}
+                open={passkeySetupOpen}
                 onClose={() => setPasskeySetupOpen(false)}
                 userId={user?.$id || ""}
                 onSuccess={() => {

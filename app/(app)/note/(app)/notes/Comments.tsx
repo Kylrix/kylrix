@@ -24,6 +24,7 @@ interface CommentsProps {
 
 interface CommentWithChildren extends Comments {
   children: CommentWithChildren[];
+  isEncrypted?: boolean;
 }
 
 function buildCommentTree(flatComments: Comments[]): CommentWithChildren[] {

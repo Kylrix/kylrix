@@ -105,7 +105,7 @@ export default function CreateNoteForm({
   const existingTags = useMemo(() => {
     const tagSet = new Set<string>();
     (Array.isArray(allNotes) ? allNotes : []).forEach((note) => {
-      (note.tags || []).forEach((tag) => {
+      (note.tags || []).forEach((tag: string) => {
         const cleaned = tag.trim();
         if (cleaned) tagSet.add(cleaned);
       });

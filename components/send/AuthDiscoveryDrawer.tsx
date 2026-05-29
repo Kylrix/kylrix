@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Button, Drawer, Typography, Stack, alpha } from '@mui/material';
 import { Sparkles, ArrowRight, X } from 'lucide-react';
