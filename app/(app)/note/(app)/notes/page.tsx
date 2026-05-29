@@ -262,7 +262,7 @@ export default function NotesPage() {
     );
 
     cleanParams();
-  }, [openNoteIdParam, allNotes, openSidebar, handleNoteUpdated, handleNoteDeleted, router]);
+  }, [openNoteIdParam, visibleNotes, openSidebar, handleNoteUpdated, handleNoteDeleted, router]);
 
   const handleCreateNoteClick = () => {
     openOverlay(<CreateNoteForm onNoteCreated={handleNoteCreated} />);

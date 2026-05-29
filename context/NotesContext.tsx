@@ -291,7 +291,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       isFetchingRef.current = false;
       setIsLoading(false);
     }
-  }, [isAuthenticated, isAuthLoading, user?.$id, PAGE_SIZE, fetchOptimized, setCachedData, PINNED_CACHE_KEY, INITIAL_NOTES_CACHE_KEY]);
+  }, [isAuthenticated, isAuthLoading, user?.$id, PAGE_SIZE, fetchOptimized, fetchPinnedIds, setCachedData, PINNED_CACHE_KEY, INITIAL_NOTES_CACHE_KEY]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isFetchingRef.current) return;

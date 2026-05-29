@@ -235,7 +235,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
   }, []);
 
   // Load and Subscribe to Huddle Thread (Ghost Note)
-  const loadHuddleMessages = async () => {
+  const loadHuddleMessages = useCallback(async () => {
     if (!chatNoteId) return;
     try {
       const res = await listComments(chatNoteId);
@@ -288,7 +288,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
     } finally {
       setLoading(false);
     }
-  };
+  }, [chatNoteId, user]);
 
   useEffect(() => {
     if (!chatNoteId) return;
@@ -314,7 +314,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
       active = false;
       unsubscribe();
     };
-  }, [chatNoteId, user]);
+  }, [chatNoteId, loadHuddleMessages]);
 
   const handleSendMainMessage = async (text: string) => {
     if (!text.trim() || sending) return false;

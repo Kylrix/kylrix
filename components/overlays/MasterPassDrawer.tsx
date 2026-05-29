@@ -287,7 +287,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
     setMasterPassword("");
     setConfirmPassword("");
     setPin("");
-  }, [user, isOpen, handlePasskeyUnlock, onSuccess]);
+  }, [user, isOpen, handlePasskeyUnlock, onSuccess, intent]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -360,7 +360,7 @@ export const ChatList = ({
         } else {
             setActiveTab('public');
         }
-    }, [isUnlocked]);
+    }, [isUnlocked, setActiveTab]);
 
     useEffect(() => {
         rememberConversationRoster(conversations);
@@ -1009,7 +1009,7 @@ export const ChatList = ({
             if (typeof subscription === 'function') subscription();
             else if (subscription?.unsubscribe) subscription.unsubscribe();
         };
-    }, [user, loadConversations, formatPreviewFromMessage, startTransition]);
+    }, [user, activeTab, loadConversations, loadGhostConversations, formatPreviewFromMessage, startTransition]);
 
     if (loading) return (
         <Box sx={{ p: 2 }}>

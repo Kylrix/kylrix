@@ -39,14 +39,14 @@ export function AuthDiscoveryDrawer() {
     }
   }, [isLoading, isAuthenticated]);
 
-  const handleReturn = () => {
+  const handleReturn = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     sessionStorage.removeItem('kylrix_send_redirect_source');
     setOpen(false);
     if (targetPath) {
       router.push(targetPath);
     }
-  };
+  }, [targetPath, router]);
 
   useEffect(() => {
     if (open && countdown > 0) {

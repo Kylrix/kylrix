@@ -57,7 +57,7 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
       setAllowAnonymousFill(form.isGuest ?? settings.allowAnonymousFill ?? false);
       setExpiresAt(settings.expiresAt ? settings.expiresAt.slice(0, 16) : '');
     }
-  }, [form, open]);
+  }, [form, open, status]);
 
   const handleSave = async () => {
     if (!form) return;

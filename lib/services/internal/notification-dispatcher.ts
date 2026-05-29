@@ -73,42 +73,23 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
     tgMessage = `🔔 <b>${input.title}</b>\n\n${input.body}${ctaUrl ? `\n\n👉 <a href="${ctaUrl}">View Details</a>` : ''}`;
   }
 
-  if (input.type === 'invite') {
-    // High Importance: Email is primary, duplicate to Telegram if linked!
-    let emailSuccess = false;
-    if (targetEmail) {
-      try {
-        await dispatchEmail(emailPayload);
-        emailSuccess = true;
-      } catch (err) {
-        console.error('[dispatchSecureNotification] Primary email invite delivery failed:', err);
-      }
+  // Prefer Telegram and ensure at most ONE channel gets the message (never send to both)
+  let tgSuccess = false;
+  try {
+    tgSuccess = await dispatchTelegramNotification(input.targetUserId, tgMessage);
+    if (tgSuccess) {
+      console.log('[dispatchSecureNotification] Primary Telegram dispatch successful');
     }
+  } catch (err) {
+    console.warn('[dispatchSecureNotification] Telegram dispatch failed:', err);
+  }
 
+  // If Telegram is not linked or delivery failed, fallback to Email
+  if (!tgSuccess && targetEmail) {
     try {
-      const tgSuccess = await dispatchTelegramNotification(input.targetUserId, tgMessage);
-      if (tgSuccess) {
-        console.log('[dispatchSecureNotification] Secondary Telegram invite push successful');
-      }
+      await dispatchEmail(emailPayload);
     } catch (err) {
-      console.warn('[dispatchSecureNotification] Secondary Telegram push failed:', err);
-    }
-  } else {
-    // Standard Importance: Try Telegram first!
-    let tgSuccess = false;
-    try {
-      tgSuccess = await dispatchTelegramNotification(input.targetUserId, tgMessage);
-    } catch (err) {
-      console.warn('[dispatchSecureNotification] Primary Telegram standard dispatch failed:', err);
-    }
-
-    // If Telegram fails/not connected, fallback to Email!
-    if (!tgSuccess && targetEmail) {
-      try {
-        await dispatchEmail(emailPayload);
-      } catch (err) {
-        console.error('[dispatchSecureNotification] Fallback email delivery failed:', err);
-      }
+      console.error('[dispatchSecureNotification] Fallback email delivery failed:', err);
     }
   }
 

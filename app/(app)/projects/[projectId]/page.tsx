@@ -1877,7 +1877,7 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
   }, []);
 
   // Load and Subscribe to Huddle Thread (Ghost Note)
-  const loadHuddleMessages = async () => {
+  const loadHuddleMessages = useCallback(async () => {
     if (!chatNoteId) return;
     try {
       const res = await listComments(chatNoteId);
@@ -1930,7 +1930,7 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
     } finally {
       setLoading(false);
     }
-  };
+  }, [chatNoteId, user]);
 
   useEffect(() => {
     if (activeMode !== 'huddle' || !chatNoteId) return;
@@ -1956,7 +1956,7 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
       active = false;
       unsubscribe();
     };
-  }, [activeMode, chatNoteId, user]);
+  }, [activeMode, chatNoteId, loadHuddleMessages]);
 
   // Load and Subscribe to Private E2E Huddle (Connect Group)
   useEffect(() => {

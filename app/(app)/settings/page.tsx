@@ -155,7 +155,7 @@ export default function SettingsPage() {
         }
 
         return unsubscribe;
-    }, [isUnlocked, user, loadPasskeys]);
+    }, [isUnlocked, isArgon, user, loadPasskeys]);
 
     const handleRemovePasskey = async (id: string) => {
         if (!window.confirm("Are you sure you want to remove this passkey? This cannot be undone.")) return;
