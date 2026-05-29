@@ -63,7 +63,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const { isOpen: isOverlayOpen, closeOverlay } = useOverlay();
   const { isOpen: isDynamicSidebarOpen, closeSidebar } = useDynamicSidebar();
   const { isCollapsed } = useSidebarContext();
-  const { closeWallet } = useWalletOverlay();
+  const { isWalletOpen, closeWallet } = useWalletOverlay();
   const { isOpen: isAgenticDrawerOpen, closeAgenticDrawer } = useAgenticDrawer();
 
   // 3. Automated Logic
@@ -74,14 +74,28 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   }, [isLoading, user, isAppRoute, isSharedPage, openUnified]);
 
   useEffect(() => {
-    // Single-batch UI reset on navigation
-    closeSidebar();
-    closeOverlay();
-    closeWallet();
-    closeProUpgrade();
-    closeSecondarySidebar();
-    closeAgenticDrawer();
-  }, [pathname, closeSidebar, closeOverlay, closeWallet, closeProUpgrade, closeSecondarySidebar, closeAgenticDrawer]);
+    // Single-batch UI reset on navigation - ONLY call if currently open to prevent cascading update loops!
+    if (isDynamicSidebarOpen) closeSidebar();
+    if (isOverlayOpen) closeOverlay();
+    if (isWalletOpen) closeWallet();
+    if (showProUpgrade) closeProUpgrade();
+    if (secondarySidebar.isOpen) closeSecondarySidebar();
+    if (isAgenticDrawerOpen) closeAgenticDrawer();
+  }, [
+    pathname,
+    isDynamicSidebarOpen,
+    isOverlayOpen,
+    isWalletOpen,
+    showProUpgrade,
+    secondarySidebar.isOpen,
+    isAgenticDrawerOpen,
+    closeSidebar,
+    closeOverlay,
+    closeWallet,
+    closeProUpgrade,
+    closeSecondarySidebar,
+    closeAgenticDrawer
+  ]);
 
   // 4. Stacking Determinism
   const TOPBAR_Z = 1200;

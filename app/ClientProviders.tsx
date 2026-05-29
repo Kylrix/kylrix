@@ -13,6 +13,7 @@ import { SidebarProvider } from '@/components/ui/SidebarContext';
 import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
 import { LocalContextProvider } from '@/lib/context-engine';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
+import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 
@@ -40,6 +41,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   ThemeProvider,
   UnifiedDrawerProvider,
   TaskProvider,
+  SubscriptionProvider,
   OverlayProvider,
   DynamicSidebarProvider,
   SidebarProvider,

@@ -474,6 +474,16 @@ function FeedPanel({
 export function ProfileRedesign({ username }: ProfileProps) {
   const { user: currentUser } = useAuth();
   const { profile: myProfile, refreshProfile: refreshMyProfile } = useProfile();
+
+  const currentUserRef = useRef(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
+  const myProfileRef = useRef(myProfile);
+  useEffect(() => {
+    myProfileRef.current = myProfile;
+  }, [myProfile]);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -561,9 +571,9 @@ export function ProfileRedesign({ username }: ProfileProps) {
       setMomentsError(null);
       try {
         const [feedRes, followStats, followingStatus] = await Promise.all([
-          SocialService.getFeed(currentUser?.$id, targetId),
+          SocialService.getFeed(currentUserRef.current?.$id, targetId),
           SocialService.getFollowStats(targetId),
-          currentUser ? SocialService.isFollowing(currentUser.$id, targetId) : Promise.resolve(false)]);
+          currentUserRef.current ? SocialService.isFollowing(currentUserRef.current.$id, targetId) : Promise.resolve(false)]);
 
         setMoments(feedRes.rows || []);
         setStats({
@@ -579,7 +589,7 @@ export function ProfileRedesign({ username }: ProfileProps) {
         setMomentsLoading(false);
       }
     },
-    [currentUser],
+    [],
   );
 
   const loadProfile = useCallback(async () => {
@@ -604,11 +614,11 @@ export function ProfileRedesign({ username }: ProfileProps) {
       let data: any = null;
       if (normalizedUsername) {
         data = await UsersService.getProfile(normalizedUsername);
-      } else if (currentUser) {
-        const synced = await UsersService.forceSyncProfileWithIdentity(currentUser);
-        data = synced || (myProfile && myProfile.userId === currentUser.$id ? myProfile : null);
+      } else if (currentUserRef.current) {
+        const synced = await UsersService.forceSyncProfileWithIdentity(currentUserRef.current);
+        data = synced || (myProfileRef.current && myProfileRef.current.userId === currentUserRef.current.$id ? myProfileRef.current : null);
         if (!data) {
-          data = await UsersService.ensureProfileForUser(currentUser);
+          data = await UsersService.ensureProfileForUser(currentUserRef.current);
         }
       }
 
@@ -641,7 +651,7 @@ export function ProfileRedesign({ username }: ProfileProps) {
     } finally {
       setLoading(false);
     }
-  }, [cachedUsernameProfile, currentUser, loadRelatedData, myProfile, normalizedUsername, preloadedProfile, username]);
+  }, [cachedUsernameProfile, loadRelatedData, normalizedUsername, preloadedProfile, username]);
 
   useEffect(() => {
     loadProfile();

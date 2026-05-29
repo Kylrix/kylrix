@@ -36,6 +36,7 @@ const Logo: React.FC<LogoProps> = ({
     flow: "FLOW",
     note: "NOTE",
     connect: "CONNECT",
+    send: "SEND",
   };
 
   const label = appLabels[app] || appLabels.kylrix;

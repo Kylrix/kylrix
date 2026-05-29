@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { useDataNexus } from '@/context/DataNexusContext';
@@ -172,11 +172,17 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
         refreshProfile();
     }, [user, refreshProfile]);
 
-    return (
-        <ProfileContext.Provider value={{ profile, isLoading, refreshProfile: async () => {
-            if (user?.$id) invalidate(`profile_${user.$id}`);
+    const contextValue = useMemo(() => ({
+        profile,
+        isLoading,
+        refreshProfile: async () => {
+            if (user?.$id) invalidate(`profile_${user?.$id}`);
             await refreshProfile();
-        } }}>
+        }
+    }), [profile, isLoading, user?.$id, invalidate, refreshProfile]);
+
+    return (
+        <ProfileContext.Provider value={contextValue}>
             {children}
         </ProfileContext.Provider>
     );

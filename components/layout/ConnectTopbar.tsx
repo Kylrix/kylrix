@@ -83,6 +83,7 @@ export default function ConnectTopbar({
     if (pathname?.startsWith('/vault')) return 'vault';
     if (pathname?.startsWith('/connect')) return 'connect';
     if (pathname?.startsWith('/accounts')) return 'accounts';
+    if (pathname?.startsWith('/send')) return 'send';
     return 'kylrix';
   }, [pathname]);
 
