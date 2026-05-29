@@ -1085,7 +1085,11 @@ export default function ConnectTopbar({
                     fullWidth
                     onClick={() => {
                       handleCloseAll();
-                      router.push(item.href);
+                      if (!user && item.app !== 'kylrix') {
+                        openUnified('login');
+                      } else {
+                        router.push(item.href);
+                      }
                     }}
                     sx={{
                       justifyContent: 'flex-start',

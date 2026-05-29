@@ -20,6 +20,7 @@ export const APP_BASE_PATHS: Record<string, string> = {
   flow: '/flow',
   connect: '/connect',
   kylrix: '/',
+  send: '/send',
 };
 
 export const KYLRIX_AUTH_URI =
