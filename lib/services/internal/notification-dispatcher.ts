@@ -32,7 +32,7 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
   }
 
   // Derive target CTA invite link or standard link
-  const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kylrix.space';
+  const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.kylrix.space';
   let ctaUrl = input.ctaUrl;
   if (!ctaUrl && input.resourceId) {
     if (input.resourceType === 'project') {
