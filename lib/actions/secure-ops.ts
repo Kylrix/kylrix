@@ -15,6 +15,7 @@ import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/l
 import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
+import { dispatchSecureNotification } from '@/lib/services/internal/notification-dispatcher';
 import { executeCascadeDeleteSecure } from './cascade-delete';
 
 // Short-lived in-memory cache for row reads during permission checks.
@@ -650,34 +651,22 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     });
   }
 
-  // 3. Automated Email (Optional)
+  // 3. Structured Notification Layer (Optional)
   if (!input.skipEmail) {
-    let resolvedEmail = input.targetEmail;
-    if (!resolvedEmail) {
-      try {
-        const targetUser = await users.get(input.targetUserId);
-        resolvedEmail = targetUser.email;
-      } catch (err) {
-        console.warn('Failed to resolve target email for notification:', err);
-      }
-    }
-
-    if (resolvedEmail) {
-      await dispatchEmail({
-        eventType: 'resource_shared',
-        sourceApp: 'kylrix',
+    try {
+      await dispatchSecureNotification({
+        targetUserId: input.targetUserId,
+        type: 'invite',
+        title: 'New Invitation',
+        body: `${input.actorName} has invited you to collaborate.`,
         actorName: input.actorName,
-        recipientEmails: [resolvedEmail],
         resourceId: input.resourceId,
         resourceTitle: input.resourceTitle,
         resourceType: input.resourceType,
-        rightsLabel: input.permission,
-        templateKey: 'RESOURCE_SHARED_NOTIFY',
-        metadata: {
-          permissionType: input.permission,
-          iconUrl: 'https://kylrix.space/logo.svg'
-        }
+        permission: input.permission
       });
+    } catch (notifErr) {
+      console.error('[grantPermissionSecure] Notification dispatch failed:', notifErr);
     }
   }
 

@@ -148,35 +148,20 @@ export default function ProjectDetailPage() {
   const [tabMenuAnchorEl, setTabMenuAnchorEl] = useState<{ x: number, y: number } | null>(null);
   const [activeTabMenuIndex, setActiveTabMenuIndex] = useState<number | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDesc, setEditDesc] = useState('');
-  const [editStatus, setEditStatus] = useState<'active' | 'completed' | 'paused' | 'on_hold'>('active');
-  const [savingSettings, setSavingSettings] = useState(false);
 
-  useEffect(() => {
-    if (project && isSettingsOpen) {
-      setEditTitle(project.title || '');
-      setEditDesc(project.summary || '');
-      setEditStatus((project.status || 'active') as any);
-    }
-  }, [project, isSettingsOpen]);
-
-  const handleSaveSettings = async () => {
-    if (!editTitle.trim() || savingSettings || !project) return;
-    setSavingSettings(true);
+  const handleSaveSettings = async (title: string, summary: string, status: string) => {
+    if (!project) return;
     try {
       await ProjectsService.updateProject(project.$id, {
-        title: editTitle.trim(),
-        summary: editDesc.trim(),
-        status: editStatus
+        title,
+        summary,
+        status
       });
       showSuccess('Project settings updated successfully!');
       fetchProjectData();
-      setIsSettingsOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update project settings:', err);
-    } finally {
-      setSavingSettings(false);
+      showError('Failed to update settings', err.message);
     }
   };
 
@@ -1045,165 +1030,12 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Project Settings Bottom Drawer */}
-      <Drawer
-        anchor="bottom"
+      <ProjectSettingsDrawer
         open={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
-        keepMounted={false}
-        disablePortal={true}
-        PaperProps={{
-          sx: {
-            bgcolor: '#0E0C0A',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            borderTopLeftRadius: '32px',
-            borderTopRightRadius: '32px',
-            maxHeight: '60vh',
-            height: 'auto',
-            color: '#fff',
-            backgroundImage: 'none',
-            p: { xs: 3, sm: 4 }
-          }
-        }}
-      >
-        <Box sx={{ width: 40, height: 4, bgcolor: 'rgba(255,255,255,0.15)', borderRadius: '2px', mx: 'auto', mb: 3 }} />
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.01em' }}>
-              Project Settings
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
-              Manage details and status for {project?.title}
-            </Typography>
-          </Box>
-          <IconButton onClick={() => setIsSettingsOpen(false)} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.05)' } }}>
-            <X size={20} />
-          </IconButton>
-        </Stack>
-
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 8 }}>
-            <Stack spacing={2.5}>
-              <TextField
-                fullWidth
-                label="Project Title"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                variant="outlined"
-                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.5)', '&.Mui-focused': { color: '#6366F1' } } }}
-                InputProps={{
-                  sx: {
-                    bgcolor: '#13110F',
-                    borderRadius: '12px',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    '&:hover': { borderColor: 'rgba(255,255,255,0.12)' },
-                    '&.Mui-focused': { borderColor: '#6366F1' }
-                  }
-                }}
-              />
-              <TextField
-                fullWidth
-                label="Description"
-                value={editDesc}
-                onChange={(e) => setEditDesc(e.target.value)}
-                multiline
-                rows={3}
-                variant="outlined"
-                InputLabelProps={{ sx: { color: 'rgba(255,255,255,0.5)', '&.Mui-focused': { color: '#6366F1' } } }}
-                InputProps={{
-                  sx: {
-                    bgcolor: '#13110F',
-                    borderRadius: '12px',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    '&:hover': { borderColor: 'rgba(255,255,255,0.12)' },
-                    '&.Mui-focused': { borderColor: '#6366F1' }
-                  }
-                }}
-              />
-            </Stack>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 4 }}>
-              <Stack spacing={2.5} sx={{ height: '100%', justifyContent: 'space-between' }}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="project-status-label" sx={{ color: 'rgba(255,255,255,0.5)', '&.Mui-focused': { color: '#6366F1' } }}>Status</InputLabel>
-                <Select
-                  labelId="project-status-label"
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as any)}
-                  label="Status"
-                  sx={{
-                    bgcolor: '#13110F',
-                    borderRadius: '12px',
-                    color: 'white',
-                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.06)' },
-                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.12)' },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#6366F1' }
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: {
-                        bgcolor: '#13110F',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        color: 'white',
-                        '& .MuiMenuItem-root': {
-                          fontSize: '0.85rem',
-                          fontWeight: 700,
-                          py: 1,
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
-                          '&.Mui-selected': { bgcolor: 'rgba(99, 102, 241, 0.15)', color: '#6366F1' }
-                        }
-                      }
-                    }
-                  }}
-                >
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="completed">Completed</MenuItem>
-                  <MenuItem value="paused">Paused</MenuItem>
-                  <MenuItem value="on_hold">On Hold</MenuItem>
-                </Select>
-              </FormControl>
-
-              <Stack direction="row" spacing={2} sx={{ mt: { xs: 3, md: 'auto' }, pt: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => setIsSettingsOpen(false)}
-                  sx={{
-                    flex: 1,
-                    borderRadius: '12px',
-                    borderColor: 'rgba(255,255,255,0.06)',
-                    color: 'rgba(255,255,255,0.6)',
-                    fontWeight: 800,
-                    textTransform: 'none',
-                    py: 1.5,
-                    '&:hover': { borderColor: 'rgba(255,255,255,0.2)', bgcolor: alpha('#fff', 0.02) }
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="contained"
-                  disabled={savingSettings || !editTitle.trim()}
-                  onClick={handleSaveSettings}
-                  sx={{
-                    flex: 1,
-                    borderRadius: '12px',
-                    bgcolor: '#6366F1',
-                    color: '#000',
-                    fontWeight: 900,
-                    textTransform: 'none',
-                    py: 1.5,
-                    '&:hover': { bgcolor: alpha('#6366F1', 0.9) }
-                  }}
-                >
-                  {savingSettings ? <CircularProgress size={20} color="inherit" /> : 'Save'}
-                </Button>
-              </Stack>
-            </Stack>
-          </Grid>
-        </Grid>
-      </Drawer>
+        project={project}
+        onSave={handleSaveSettings}
+      />
 
       {isAddSubProjectModalOpen && (
         <ProjectAddSubProjectModal
@@ -3005,5 +2837,231 @@ export function ProjectDiscussionTab({ project, fetchProjectData, user }: Projec
         </Stack>
       </Popover>
     </Box>
+  );
+}
+
+interface ProjectSettingsDrawerProps {
+  open: boolean;
+  onClose: () => void;
+  project: any;
+  onSave: (title: string, summary: string, status: string) => Promise<void>;
+}
+
+function ProjectSettingsDrawer({ open, onClose, project, onSave }: ProjectSettingsDrawerProps) {
+  const [title, setTitle] = useState('');
+  const [summary, setSummary] = useState('');
+  const [status, setStatus] = useState<'active' | 'completed' | 'paused' | 'on_hold'>('active');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open && project) {
+      setTitle(project.title || '');
+      setSummary(project.summary || '');
+      setStatus((project.status || 'active') as any);
+    }
+  }, [open, project]);
+
+  const handleSave = async () => {
+    if (!title.trim() || saving) return;
+    setSaving(true);
+    try {
+      await onSave(title.trim(), summary.trim(), status);
+      onClose();
+    } catch {
+      // Handled by parent
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Drawer
+      anchor="bottom"
+      open={open}
+      onClose={onClose}
+      keepMounted={false}
+      disablePortal={true}
+      PaperProps={{
+        sx: {
+          bgcolor: '#161412', // Deep Ash
+          borderTop: '1px solid #1C1A18', // Rim/Border Ash
+          borderTopLeftRadius: '28px',
+          borderTopRightRadius: '28px',
+          maxHeight: '60vh',
+          height: 'auto',
+          color: '#fff',
+          backgroundImage: 'none',
+          p: { xs: 3, sm: 4 },
+        }
+      }}
+    >
+      <Box sx={{ width: 40, height: 4, bgcolor: 'rgba(255,255,255,0.12)', borderRadius: '2px', mx: 'auto', mb: 3 }} />
+      
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', mb: 0.5 }}>
+            Project Settings
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
+            Configure and synchronize details for this workspace
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#fff', bgcolor: 'rgba(255,255,255,0.05)' } }}>
+          <X size={20} />
+        </IconButton>
+      </Stack>
+
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 8 }}>
+          <Stack spacing={3}>
+            <Box>
+              <Typography variant="caption" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', mb: 1, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)' }}>
+                Project Title
+              </Typography>
+              <TextField
+                fullWidth
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                variant="outlined"
+                placeholder="Give your project a title"
+                InputProps={{
+                  sx: {
+                    bgcolor: '#0A0908', // Inset Ash/Pitch Black
+                    borderRadius: '16px',
+                    color: 'white',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 700,
+                    border: '1px solid #1C1A18',
+                    transition: 'all 0.2s',
+                    '&:hover': { borderColor: 'rgba(255,255,255,0.15)' },
+                    '&.Mui-focused': { borderColor: '#6366F1' },
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                  }
+                }}
+              />
+            </Box>
+
+            <Box>
+              <Typography variant="caption" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', mb: 1, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)' }}>
+                Description / Summary
+              </Typography>
+              <TextField
+                fullWidth
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                multiline
+                rows={4}
+                variant="outlined"
+                placeholder="Explain the scope and goals of this project..."
+                InputProps={{
+                  sx: {
+                    bgcolor: '#0A0908', // Inset Ash/Pitch Black
+                    borderRadius: '16px',
+                    color: 'white',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 500,
+                    lineHeight: 1.6,
+                    border: '1px solid #1C1A18',
+                    transition: 'all 0.2s',
+                    '&:hover': { borderColor: 'rgba(255,255,255,0.15)' },
+                    '&.Mui-focused': { borderColor: '#6366F1' },
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                  }
+                }}
+              />
+            </Box>
+          </Stack>
+        </Grid>
+
+        <Grid size={{ xs: 12, md: 4 }}>
+          <Stack spacing={3} sx={{ height: '100%', justifyContent: 'space-between' }}>
+            <Box>
+              <Typography variant="caption" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', mb: 1, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)' }}>
+                Project Status
+              </Typography>
+              <FormControl fullWidth>
+                <Select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                  sx={{
+                    bgcolor: '#0A0908',
+                    borderRadius: '16px',
+                    color: 'white',
+                    fontFamily: 'var(--font-satoshi)',
+                    fontWeight: 700,
+                    border: '1px solid #1C1A18',
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                    '&:hover': { borderColor: 'rgba(255,255,255,0.15)' },
+                    '&.Mui-focused': { borderColor: '#6366F1' }
+                  }}
+                  MenuProps={{
+                    PaperProps: {
+                      sx: {
+                        bgcolor: '#161412',
+                        border: '1px solid #1C1A18',
+                        borderRadius: '16px',
+                        color: 'white',
+                        mt: 1,
+                        '& .MuiMenuItem-root': {
+                          fontSize: '0.85rem',
+                          fontWeight: 700,
+                          py: 1.25,
+                          fontFamily: 'var(--font-satoshi)',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                          '&.Mui-selected': { bgcolor: 'rgba(99, 102, 241, 0.15)', color: '#6366F1' }
+                        }
+                      }
+                    }
+                  }}
+                >
+                  <MenuItem value="active">Active</MenuItem>
+                  <MenuItem value="completed">Completed</MenuItem>
+                  <MenuItem value="paused">Paused</MenuItem>
+                  <MenuItem value="on_hold">On Hold</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Stack direction="row" spacing={2} sx={{ mt: 'auto', pt: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={onClose}
+                sx={{
+                  flex: 1,
+                  borderRadius: '14px',
+                  borderColor: '#1C1A18',
+                  color: 'rgba(255,255,255,0.6)',
+                  fontWeight: 800,
+                  fontFamily: 'var(--font-satoshi)',
+                  textTransform: 'none',
+                  py: 1.6,
+                  '&:hover': { borderColor: 'rgba(255,255,255,0.15)', bgcolor: alpha('#fff', 0.01) }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                disabled={saving || !title.trim()}
+                onClick={handleSave}
+                sx={{
+                  flex: 1,
+                  borderRadius: '14px',
+                  bgcolor: '#6366F1',
+                  color: '#000',
+                  fontWeight: 900,
+                  fontFamily: 'var(--font-satoshi)',
+                  textTransform: 'none',
+                  py: 1.6,
+                  '&:hover': { bgcolor: alpha('#6366F1', 0.9) }
+                }}
+              >
+                {saving ? <CircularProgress size={20} color="inherit" /> : 'Save Changes'}
+              </Button>
+            </Stack>
+          </Stack>
+        </Grid>
+      </Grid>
+    </Drawer>
   );
 }
