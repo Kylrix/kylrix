@@ -39,6 +39,15 @@ export function AuthDiscoveryDrawer() {
     }
   }, [isLoading, isAuthenticated]);
 
+  const handleReturn = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    sessionStorage.removeItem('kylrix_send_redirect_source');
+    setOpen(false);
+    if (targetPath) {
+      router.push(targetPath);
+    }
+  };
+
   useEffect(() => {
     if (open && countdown > 0) {
       timerRef.current = setTimeout(() => {
@@ -51,16 +60,7 @@ export function AuthDiscoveryDrawer() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [open, countdown]);
-
-  const handleReturn = () => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    sessionStorage.removeItem('kylrix_send_redirect_source');
-    setOpen(false);
-    if (targetPath) {
-      router.push(targetPath);
-    }
-  };
+  }, [open, countdown, handleReturn]);
 
   const handleCancel = () => {
     if (timerRef.current) clearTimeout(timerRef.current);

@@ -77,7 +77,7 @@ import {
 } from '@/lib/actions/client-ops';
 
 import { account } from '@/lib/appwrite/client';
-import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
+import { getResourceCollaboratorsSecure, getUsersByIdsSecure } from '@/lib/actions/secure-ops';
 
 import { createComment, listComments, createReaction, deleteReaction, listReactions, deleteReactionsForTarget } from '@/lib/appwrite/note';
 import { TargetType } from '@/types/appwrite';
@@ -262,9 +262,9 @@ export default function ProjectDetailPage() {
       const p = await ProjectsService.getProject(projectId as string);
       setProject(p);
 
-      // Resolve owner profile
+      // Resolve owner profile securely
       if (p?.ownerId) {
-        AppwriteService.getUsersByIds([p.ownerId])
+        getUsersByIdsSecure([p.ownerId])
           .then((users: any) => setOwnerProfile(users[0] || null))
           .catch(() => setOwnerProfile(null));
       }
@@ -1024,10 +1024,10 @@ export default function ProjectDetailPage() {
                                 />
                                 <Box sx={{ flex: 1, minWidth: 0 }}>
                                     <Typography noWrap variant="body2" sx={{ fontWeight: 800, fontFamily: 'var(--font-satoshi)', color: 'white' }}>
-                                        {ownerProfile?.displayName || ownerProfile?.name || 'Project Owner'}
+                                        {ownerProfile?.displayName || ownerProfile?.name || ownerProfile?.username || ownerProfile?.email || 'Project Owner'}
                                     </Typography>
                                     <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>
-                                        {ownerProfile?.username ? `@${ownerProfile.username}` : 'Full Control'}
+                                        {ownerProfile?.displayName || ownerProfile?.name ? (ownerProfile?.username ? `@${ownerProfile.username}` : 'Project Owner') : 'Project Owner'}
                                     </Typography>
                                 </Box>
                                 <Chip label="OWNER" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900, fontFamily: 'var(--font-satoshi)', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1' }} />

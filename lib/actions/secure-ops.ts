@@ -921,6 +921,12 @@ export async function getResourceCollaboratorsSecure(input: {
     return { collaborators: collaborators.filter(Boolean) };
 }
 
+export async function getUsersByIdsSecure(ids: string[]) {
+  const { UsersService } = await import('@/lib/services/users');
+  const profiles = await UsersService.getUsersByIds(ids);
+  return JSON.parse(JSON.stringify(profiles));
+}
+
 export async function createNoteSecure(data: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
