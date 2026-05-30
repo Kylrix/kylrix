@@ -366,16 +366,7 @@ export default function ConnectTopbar({
     const query = searchQuery.trim().toLowerCase();
     const hasQuery = query.length >= 2;
 
-    return (
-      <Box
-        data-note-search-surface="true"
-        sx={{
-          width: '100%',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          bgcolor: '#161412',
-          overflow: 'hidden',
-        }}
-      >
+    const searchContent = (
         <Box
           onWheel={(event) => {
             const node = event.currentTarget;
@@ -843,15 +834,49 @@ export default function ConnectTopbar({
             )}
           </Stack>
         </Box>
-      </Box>
     );
-  };
 
-  const renderProfilePanel = () => {
-    if (!profileMenuAnchorEl || !user) return null;
+    if (isDesktop) {
+      return (
+        <Drawer
+          anchor="left"
+          open={searchOpen}
+          onClose={handleCloseAll}
+          keepMounted={false}
+          disablePortal={true}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              width: 380,
+              height: '100vh',
+              borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+            }
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff' }}>
+              Search Ecosystem
+            </Typography>
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+              <CloseIcon size={18} />
+            </IconButton>
+          </Box>
+          
+          <Box sx={{ flex: 1, overflowY: 'auto', mx: -3, px: 3 }}>
+            {searchContent}
+          </Box>
+        </Drawer>
+      );
+    }
 
     return (
       <Box
+        data-note-search-surface="true"
         sx={{
           width: '100%',
           borderTop: '1px solid rgba(255,255,255,0.05)',
@@ -859,9 +884,18 @@ export default function ConnectTopbar({
           overflow: 'hidden',
         }}
       >
-        <Box
-          sx={{ px: { xs: 2, md: 4 }, py: 1.5, maxHeight: TOPBAR_LAYOUT.searchDockMaxHeight, overflowY: 'auto' }}
-        >
+        {searchContent}
+      </Box>
+    );
+  };
+
+  const renderProfilePanel = () => {
+    if (!profileMenuAnchorEl || !user) return null;
+
+    const profileContent = (
+      <Box
+        sx={{ px: { xs: 2, md: 4 }, py: 1.5, maxHeight: isDesktop ? 'calc(100vh - 120px)' : TOPBAR_LAYOUT.searchDockMaxHeight, overflowY: 'auto' }}
+      >
           <Paper
             elevation={0}
             sx={{
