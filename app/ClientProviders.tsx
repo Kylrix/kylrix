@@ -15,6 +15,7 @@ import { SidebarProvider } from '@/components/ui/SidebarContext';
 import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
 import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
+import { LoginDrawerProvider } from '@/context/LoginDrawerContext';
 import { AIProvider } from '@/context/AIContext';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 import { SudoProvider } from '@/context/SudoContext';
