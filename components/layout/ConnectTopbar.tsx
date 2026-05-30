@@ -369,6 +369,7 @@ export default function ConnectTopbar({
     const searchContent = (
         <Box
           onWheel={(event) => {
+            if (isDesktop) return;
             const node = event.currentTarget;
             if (event.deltaY < 0 && isTopbarScrollAtTop(node)) {
               event.preventDefault();
@@ -377,63 +378,65 @@ export default function ConnectTopbar({
           }}
           sx={{
             width: '100%',
-            px: { xs: 2, md: 4 },
-            py: 1.5,
-            maxHeight: TOPBAR_LAYOUT.searchDockMaxHeight,
-            overflowY: 'auto',
+            px: isDesktop ? 0 : { xs: 2, md: 4 },
+            py: isDesktop ? 0 : 1.5,
+            maxHeight: isDesktop ? 'none' : TOPBAR_LAYOUT.searchDockMaxHeight,
+            overflowY: isDesktop ? 'visible' : 'auto',
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-              <Logo app={activeApp} size={18} variant="icon" />
+          {!isDesktop && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+              <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                <Logo app={activeApp} size={18} variant="icon" />
+              </Box>
+              <TextField
+                id="topbar-search-field"
+                inputRef={searchInputRef}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search notes, tags, shared links, people"
+                variant="standard"
+                fullWidth
+                autoFocus
+                InputProps={{
+                  disableUnderline: true,
+                  sx: {
+                    color: 'white',
+                    fontWeight: 800,
+                    fontSize: '0.98rem',
+                    '& input::placeholder': { color: 'rgba(255,255,255,0.42)', opacity: 1 },
+                  },
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Typography sx={{ color: 'rgba(255,255,255,0.42)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mr: 0.5 }}>
+                        Search
+                      </Typography>
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchQuery ? (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                        <CloseIcon size={16} />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : null,
+                }}
+                sx={{ flex: 1, minWidth: { xs: '100%', md: 320 } }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    handleCloseAll();
+                  }
+                }}
+              />
             </Box>
-            <TextField
-              id="topbar-search-field"
-              inputRef={searchInputRef}
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search notes, tags, shared links, people"
-              variant="standard"
-              fullWidth
-              autoFocus
-              InputProps={{
-                disableUnderline: true,
-                sx: {
-                  color: 'white',
-                  fontWeight: 800,
-                  fontSize: '0.98rem',
-                  '& input::placeholder': { color: 'rgba(255,255,255,0.42)', opacity: 1 },
-                },
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Typography sx={{ color: 'rgba(255,255,255,0.42)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mr: 0.5 }}>
-                      Search
-                    </Typography>
-                  </InputAdornment>
-                ),
-                endAdornment: searchQuery ? (
-                  <InputAdornment position="end">
-                    <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)' }}>
-                      <CloseIcon size={16} />
-                    </IconButton>
-                  </InputAdornment>
-                ) : null,
-              }}
-              sx={{ flex: 1, minWidth: { xs: '100%', md: 320 } }}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  handleCloseAll();
-                }
-              }}
-            />
-          </Box>
+          )}
 
-          <Stack spacing={2} sx={{ mt: 2 }}>
+          <Stack spacing={2} sx={{ mt: isDesktop ? 0 : 2 }}>
             {!hasQuery ? (
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr' },
+                  gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' },
                   gap: 3,
                 }}
               >
@@ -730,7 +733,7 @@ export default function ConnectTopbar({
                   <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
                     {searchSurface.searchAcrossLabel}
                   </Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
                     {searchSurface.searchTargets.slice(0, 4).map((action) => (
                       <Box
                         key={action.id}
@@ -1114,17 +1117,203 @@ export default function ConnectTopbar({
           }}
         >
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff' }}>
-              My Account
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', letterSpacing: '0.02em' }}>
+              Secure Space
             </Typography>
-            <IconButton onClick={() => setProfileMenuAnchorEl(null)} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+            <IconButton onClick={() => setProfileMenuAnchorEl(null)} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' } }}>
               <CloseIcon size={18} />
             </IconButton>
           </Box>
-          
-          <Box sx={{ flex: 1, overflowY: 'auto', mx: -3, px: 3 }}>
-            {profileContent}
+
+          {/* Scrollable Content */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3.5, overflowY: 'auto' }}>
+            {/* User Profile Info Card */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2, p: 2, borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+              <Box sx={{ position: 'relative' }}>
+                <Avatar
+                  src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
+                  sx={{ width: 96, height: 96, bgcolor: tone.secondary, color: '#fff', fontWeight: 900, fontSize: '2rem', borderRadius: '28px', border: `2px solid ${alpha(getAppColor('connect'), 0.2)}` }}
+                >
+                  {profileName.slice(0, 1).toUpperCase()}
+                </Avatar>
+                {/* Active Indicator dot */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: -2,
+                    right: -2,
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    bgcolor: '#10B981',
+                    border: '3px solid #161412',
+                  }}
+                />
+              </Box>
+
+              <Box sx={{ width: '100%' }}>
+                <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.25rem', mb: 0.5 }}>
+                  {profileName}
+                </Typography>
+                
+                {profileUsername && (
+                  <Box
+                    onClick={handleCopyUsername}
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.75,
+                      px: 1.5,
+                      py: 0.5,
+                      borderRadius: '999px',
+                      bgcolor: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+                    }}
+                  >
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: '0.82rem' }}>
+                      @{String(profileUsername).replace(/^@+/, '')}
+                    </Typography>
+                    <CopyIcon size={12} style={{ color: copyState === 'copied-username' ? '#10B981' : 'rgba(255, 255, 255, 0.4)' }} />
+                  </Box>
+                )}
+              </Box>
+            </Box>
+
+            {/* System Identification details */}
+            <Box sx={{ borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)', p: 2 }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1 }}>
+                System Key
+              </Typography>
+              
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600, minWidth: 0, flex: 1, wordBreak: 'break-all' }}>
+                  {profileSeed.userId || 'No ID'}
+                </Typography>
+                <IconButton
+                  onClick={handleCopyUserId}
+                  size="small"
+                  sx={{
+                    flexShrink: 0,
+                    width: 28,
+                    height: 28,
+                    bgcolor: 'rgba(255,255,255,0.04)',
+                    color: copyState === 'copied-userid' ? '#10B981' : 'rgba(255, 255, 255, 0.4)',
+                    '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' }
+                  }}
+                >
+                  <CopyIcon size={13} />
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* Large styled navigation lists */}
+            <Stack spacing={1.5}>
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  openWallet();
+                }}
+                variant="contained"
+                sx={{
+                  borderRadius: '16px',
+                  bgcolor: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  color: 'white',
+                  py: 1.5,
+                  px: 2.5,
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  fontSize: '0.92rem',
+                  display: 'flex',
+                  justifyContent: 'flex-start',
+                  gap: 2,
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.1)' },
+                }}
+              >
+                <Wallet size={18} style={{ color: getAppColor('connect') }} />
+                Manage Wallet
+              </Button>
+
+              <Button
+                fullWidth
+                onClick={() => {
+                  handleCloseAll();
+                  router.push('/settings');
+                }}
+                variant="contained"
+                sx={{
+                  borderRadius: '16px',
+                  bgcolor: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255,255,255,0.05)',
+                  color: 'white',
+                  py: 1.5,
+                  px: 2.5,
+                  textTransform: 'none',
+                  fontWeight: 800,
+                  fontSize: '0.92rem',
+                  display: 'flex',
+                  justifyContent: 'flex-start',
+                  gap: 2,
+                  '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255,255,255,0.1)' },
+                }}
+              >
+                <UserIcon size={18} style={{ color: '#F59E0B' }} />
+                Account Settings
+              </Button>
+
+              <Button
+                fullWidth
+                onClick={handleOpenFullProfile}
+                disabled={!profileSeed.username}
+                variant="contained"
+                sx={{
+                  borderRadius: '16px',
+                  bgcolor: '#F59E0B',
+                  color: '#000',
+                  py: 1.5,
+                  px: 2.5,
+                  textTransform: 'none',
+                  fontWeight: 900,
+                  fontSize: '0.92rem',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  '&:hover': { bgcolor: alpha('#F59E0B', 0.86) },
+                  '&.Mui-disabled': { bgcolor: 'rgba(245,158,11,0.15)', color: 'rgba(255,255,255,0.3)' },
+                }}
+              >
+                See Full Profile
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* Sign Out Button strictly aligned at the bottom */}
+          <Box sx={{ mt: 'auto', pt: 3, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <Button
+              fullWidth
+              onClick={() => {
+                handleCloseAll();
+                void logout();
+              }}
+              variant="contained"
+              sx={{
+                borderRadius: '14px',
+                bgcolor: 'rgba(255, 77, 77, 0.08)',
+                border: '1px solid rgba(255, 77, 77, 0.15)',
+                color: '#FF4D4D',
+                py: 1.25,
+                textTransform: 'none',
+                fontWeight: 800,
+                fontSize: '0.88rem',
+                '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.16)', borderColor: 'rgba(255, 77, 77, 0.25)' },
+              }}
+            >
+              Sign Out
+            </Button>
           </Box>
         </Drawer>
       );
