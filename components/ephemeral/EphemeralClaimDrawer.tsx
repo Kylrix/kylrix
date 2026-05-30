@@ -11,6 +11,8 @@ import {
   TextField,
   Typography,
   alpha,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { ID, Permission, Role } from 'appwrite';
 import { X } from 'lucide-react';
@@ -71,6 +73,9 @@ interface Props {
 export function EphemeralClaimDrawer({ open, onClose, target, onConsumed }: Props) {
   const { user, openIDMWindow } = useAuth();
   const { openProUpgrade } = useProUpgrade();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  
   const [masterPass, setMasterPass] = useState('');
   const [busy, setBusy] = useState(false);
 

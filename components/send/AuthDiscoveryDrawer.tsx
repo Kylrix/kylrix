@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Button, Drawer, Typography, Stack, alpha } from '@mui/material';
+import { Box, Button, Drawer, Typography, Stack, alpha, useTheme, useMediaQuery } from '@mui/material';
 import { Sparkles, ArrowRight, X } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 
@@ -23,6 +23,8 @@ function getPathTitle(path: string): string {
 export function AuthDiscoveryDrawer() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   
   const [open, setOpen] = useState(false);
   const [targetPath, setTargetPath] = useState<string | null>(null);
@@ -72,7 +74,7 @@ export function AuthDiscoveryDrawer() {
 
   return (
     <Drawer
-      anchor="bottom"
+      anchor={isDesktop ? 'right' : 'bottom'}
       open={open}
       variant="persistent"
       PaperProps={{
@@ -82,8 +84,10 @@ export function AuthDiscoveryDrawer() {
           pointerEvents: 'none',
           pb: { xs: 2, sm: 4 },
           px: { xs: 2, sm: 4 },
+          pt: { xs: 0, md: 4 },
           display: 'flex',
-          alignItems: 'center'
+          alignItems: isDesktop ? 'flex-end' : 'center',
+          justifyContent: isDesktop ? 'flex-end' : 'center',
         }
       }}
     >
