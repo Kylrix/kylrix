@@ -1228,7 +1228,11 @@ export default function ProjectDetailPage() {
           <MenuItem 
             onClick={() => {
               setTabMenuAnchorEl(null);
-              setIsAddSubProjectModalOpen(true);
+              if (!hasPaidKylrixPlan(user)) {
+                openUnified('pro-upgrade', {});
+              } else {
+                setIsAddSubProjectModalOpen(true);
+              }
             }}
             sx={{ fontWeight: 700, borderRadius: '8px', color: 'rgba(255,255,255,0.8)', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)', color: '#fff' } }}
           >
