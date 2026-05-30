@@ -18,7 +18,8 @@ import {
     FormGroup,
     Select,
     MenuItem,
-    FormControl
+    FormControl,
+    IconButton
 } from '@mui/material';
 import { Send as SendIcon, CheckCircleOutline as SuccessIcon } from '@mui/icons-material';
 import { Upload as UploadIcon, X as XIcon } from 'lucide-react';
