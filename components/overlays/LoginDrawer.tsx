@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Box, Typography, Button, Divider, IconButton, TextField, Stack, CircularProgress, alpha } from '@mui/material';
+import { Box, Typography, Button, Divider, IconButton, TextField, Stack, CircularProgress, alpha, useTheme, useMediaQuery } from '@mui/material';
 import { X, Mail, ArrowLeft, Fingerprint } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -11,22 +11,13 @@ import toast from 'react-hot-toast';
 
 import Link from 'next/link';
 
-const DRAWER_SX = {
-  borderTopLeftRadius: '24px',
-  borderTopRightRadius: '24px',
-  bgcolor: '#161412',
-  borderTop: '1px solid #34322F',
-  backgroundImage: 'none',
-  maxWidth: 480,
-  width: '100%',
-  mx: 'auto'
-};
-
 type LoginStep = 'initial' | 'email' | 'otp' | 'mfa';
 
 export function LoginDrawer() {
   const { activeContent, close } = useUnifiedDrawer();
   const { loginWithEmailOTP, verifyEmailOTP, verifyMFA, refreshUser } = useAuth();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   
   const [step, setStep] = useState<LoginStep>('initial');
   const [email, setEmail] = useState('');
@@ -338,10 +329,28 @@ export function LoginDrawer() {
 
   return (
     <Drawer 
-      anchor="bottom" 
+      anchor={isDesktop ? 'right' : 'bottom'} 
       open={isOpen} 
       onClose={handleClose}
-      PaperProps={{ sx: DRAWER_SX }}
+      PaperProps={{
+        sx: {
+          bgcolor: '#161412',
+          backgroundImage: 'none',
+          maxWidth: 480,
+          width: '100%',
+          ...(isDesktop ? {
+            height: '100%',
+            borderLeft: '1px solid #34322F',
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
+          } : {
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
+            borderTop: '1px solid #34322F',
+            mx: 'auto'
+          })
+        }
+      }}
       ModalProps={{
         keepMounted: false,
         disableScrollLock: false,
