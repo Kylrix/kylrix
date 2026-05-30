@@ -363,6 +363,7 @@ function DashboardPageContent() {
           onSuccess={handleMasterPassSuccess}
           onCancel={() => { }}
         />
+        </Box>
         </MultiSectionContainer>
       </Box>
     </>
