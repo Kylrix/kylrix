@@ -6,19 +6,16 @@ import { AuthProvider } from '@/context/auth/AuthContext';
 import { ThemeProvider } from '@/lib/theme-context';
 import { ToastProvider } from '@/components/ui/Toast';
 import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
+import { ProUpgradeProvider } from '@/context/ProUpgradeContext';
 import { TaskProvider } from '@/context/TaskContext';
 import { OverlayProvider } from '@/components/ui/OverlayContext';
-import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebarContext';
+import { DynamicSidebarProvider } from '@/components/ui/DynamicSidebar';
 import { SidebarProvider } from '@/components/ui/SidebarContext';
 import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
-import { LocalContextProvider } from '@/lib/context-engine';
-import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
-import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
-import { SudoProvider } from '@/context/SudoContext';
-import { TokenOpsProvider } from '@/context/TokenOpsContext';
+import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
+import { AIProvider } from '@/context/AIContext';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
-import { CallLauncherProvider } from '@/context/CallLauncherContext';
-import { NotesProvider } from '@/context/NotesContext';
+import { LocalContextProvider } from '@/lib/context-engine';
 
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
 
@@ -38,27 +35,25 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
 }
 
 /**
- * Root-level ClientProviders.
- * Keeps public pages (/send, /) ultra-lightweight. Heavy ecosystem providers live in app/(app)/EcosystemProviders.tsx.
+ * Tier 1: Root Providers
+ * Mandatory for GlobalShell and UI orchestration. 
+ * Lightweight UI-state providers that don't block hydration with heavy data fetching.
  */
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
+  LocalContextProvider,
+  AppChromeProvider,
   AuthProvider,
   ThemeProvider,
+  ToastProvider,
   UnifiedDrawerProvider,
+  ProUpgradeProvider,
   TaskProvider,
-  NotesProvider,
-  SubscriptionProvider,
   OverlayProvider,
   DynamicSidebarProvider,
   SidebarProvider,
-  DrawerStateProvider,
-  SudoProvider,
-  TokenOpsProvider,
-  AppChromeProvider,
-  CallLauncherProvider,
   WalletOverlayProvider,
-  LocalContextProvider,
-  ToastProvider,
+  AgenticDrawerProvider,
+  AIProvider,
 ];
 
 export function ClientProviders({ children }: { children: ReactNode }) {
