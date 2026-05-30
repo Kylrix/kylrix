@@ -34,7 +34,9 @@ function NoteLandingInner() {
     }}>
       <Box component="main" sx={{ flex: 1 }}>
         <Suspense fallback={null}>
-          <GhostEditor />
+          <LoginDrawerProvider>
+            <GhostEditor />
+          </LoginDrawerProvider>
         </Suspense>
       </Box>
     </Box>
