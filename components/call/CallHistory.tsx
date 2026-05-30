@@ -21,7 +21,9 @@ import {
     Stack,
     Divider,
     Badge,
-    Skeleton
+    Skeleton,
+    useTheme,
+    useMediaQuery
 } from '@mui/material';
 import CallIcon from '@mui/icons-material/Call';
 import VideocamIcon from '@mui/icons-material/Videocam';
@@ -35,6 +37,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import HistoryIcon from '@mui/icons-material/History';
 import toast from 'react-hot-toast';
 import { seedIdentityCache } from '@/lib/identity-cache';
+import { useSection } from '@/context/SectionContext';
 
 export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
     const { user } = useAuth();
@@ -42,6 +45,9 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
     const [activeCalls, setActiveCalls] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+    const { setActiveDetail } = useSection();
 
     const loadCalls = React.useCallback(async () => {
         if (!user) return;
@@ -117,7 +123,11 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
 
     const startCall = (call: any) => {
         if (call.isLink) {
-            router.push(`/connect/call/${call.$id}`);
+            if (isDesktop) {
+                setActiveDetail({ type: 'call', id: call.$id, data: call });
+            } else {
+                router.push(`/connect/call/${call.$id}`);
+            }
             return;
         }
         if (!call.otherUser?.$id) {

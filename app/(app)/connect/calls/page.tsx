@@ -3,11 +3,11 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
-import { Box, Typography, Container, CircularProgress, Paper, TextField, Button, Divider } from '@mui/material';
+import { Box, Typography, Container, CircularProgress, Paper, TextField, Button, Divider, useTheme, useMediaQuery } from '@mui/material';
 import { Hash, ArrowRight, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { listNotes } from '@/lib/appwrite';
 
 function NotesFeed() {
@@ -115,6 +115,9 @@ function CallsContent() {
     const [joinInput, setJoinId] = useState('');
     const [refreshKey, setRefreshKey] = useState(0);
     const router = useRouter();
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+    const { setActiveDetail } = useSection();
 
     useEffect(() => {
         if (searchParams.get('start') === '1') {
@@ -141,7 +144,11 @@ function CallsContent() {
             id = id.split('/call/').pop() || id;
         }
         
-        router.push(`/connect/call/${id}`);
+        if (isDesktop) {
+            setActiveDetail({ type: 'call', id });
+        } else {
+            router.push(`/connect/call/${id}`);
+        }
     };
 
     return (
@@ -192,11 +199,6 @@ function CallsContent() {
             
             <CallHistory key={refreshKey} onNewCall={() => setModalOpen(true)} />
 
-            {/* Desktop only Notes Feed sharing the original section */}
-            <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-                <NotesFeed />
-            </Box>
-
             <CallActionModal 
                 open={modalOpen} 
                 onClose={() => {
@@ -211,16 +213,11 @@ function CallsContent() {
 export default function CallsPage() {
     return (
         <Container maxWidth="xl" sx={{ py: 3, position: 'relative', minHeight: '100vh', pointerEvents: 'auto' }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start' }}>
-                <Box>
-                    <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
-                        <CallsContent />
-                    </Suspense>
-                </Box>
-                <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-                    <DesktopRightSection panels={['projects', 'threads']} />
-                </Box>
-            </Box>
+            <MultiSectionContainer panels={['projects', 'threads']}>
+                <Suspense fallback={<Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}><CircularProgress /></Box>}>
+                    <CallsContent />
+                </Suspense>
+            </MultiSectionContainer>
         </Container>
     );
 }

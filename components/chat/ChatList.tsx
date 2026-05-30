@@ -29,7 +29,10 @@ import {
     Tab,
     Button,
     Drawer,
+    useTheme,
+    useMediaQuery,
 } from '@mui/material';
+import { useSection } from '@/context/SectionContext';
 import ShieldCheckIcon from '@mui/icons-material/ShieldOutlined';
 import { showIslandNotification } from '@/lib/island-notification';
 import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
@@ -93,6 +96,9 @@ export const ChatList = ({
     const { requestSudo } = useSudo();
     const { openMenu } = useContextMenu();
     const { open: openUnified } = useUnifiedDrawer();
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+    const { setActiveDetail } = useSection();
     const [conversations, setConversations] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -551,14 +557,22 @@ export const ChatList = ({
 
                 if (foundGhost) {
                     toast.dismiss('ghost-init');
-                    router.push(`/connect/chat/${foundGhost.$id}`);
+                    if (isDesktop) {
+                        setActiveDetail({ type: 'chat', id: foundGhost.$id, data: foundGhost });
+                    } else {
+                        router.push(`/connect/chat/${foundGhost.$id}`);
+                    }
                     return;
                 }
 
                 const title = targetUser.displayName || targetUser.username || 'Huddle';
                 const newGhost = await createGhostNoteChat(title, [user.$id, targetUserId]);
                 toast.success('Huddle thread ready!', { id: 'ghost-init' });
-                router.push(`/connect/chat/${newGhost.$id}`);
+                if (isDesktop) {
+                    setActiveDetail({ type: 'chat', id: newGhost.$id, data: newGhost });
+                } else {
+                    router.push(`/connect/chat/${newGhost.$id}`);
+                }
             } catch (error: any) {
                 console.error('Failed to create huddle:', error);
                 toast.error(`Failed: ${error?.message || 'Unknown error'}`, { id: 'ghost-init' });
@@ -572,7 +586,11 @@ export const ChatList = ({
         );
 
         if (found) {
-            router.push(`/connect/chat/${found.$id}`);
+            if (isDesktop) {
+                setActiveDetail({ type: 'chat', id: found.$id, data: found });
+            } else {
+                router.push(`/connect/chat/${found.$id}`);
+            }
             return;
         }
 
@@ -583,7 +601,11 @@ export const ChatList = ({
                     await ecosystemSecurity.ensureE2EIdentity(user.$id);
                     const participants = [user.$id, targetUserId];
                     const newConv = await ChatService.createConversation(participants, 'direct');
-                    router.push(`/connect/chat/${newConv.$id}`);
+                    if (isDesktop) {
+                        setActiveDetail({ type: 'chat', id: newConv.$id, data: newConv });
+                    } else {
+                        router.push(`/connect/chat/${newConv.$id}`);
+                    }
                 } catch (error: any) {
                     console.error('Failed to create chat:', error);
                     toast.error(`Failed to create chat: ${error?.message || 'Unknown error'}`);
@@ -1189,9 +1211,15 @@ export const ChatList = ({
                             {filteredConversations.map((conv) => (
                                 <ListItem key={conv.$id} disablePadding sx={{ mb: 1 }}>
                                     <ListItemButton
-                                        component={Link}
-                                        href={`/connect/chat/${conv.$id}`}
-                                        onClick={handleItemClick}
+                                        {...(!isDesktop ? { component: Link, href: `/connect/chat/${conv.$id}` } : {})}
+                                        onClick={(e: React.MouseEvent) => {
+                                            if (isDesktop) {
+                                                e.preventDefault();
+                                                setActiveDetail({ type: 'chat', id: conv.$id, data: conv });
+                                                return;
+                                            }
+                                            handleItemClick(e);
+                                        }}
                                         onContextMenu={(e) => handleConversationRightClick(e, conv)}
                                     sx={{
                                             borderRadius: '24px',
@@ -1357,9 +1385,15 @@ export const ChatList = ({
                             {filteredGhostConversations.map((conv) => (
                                 <ListItem key={conv.$id} disablePadding sx={{ mb: 1 }}>
                                     <ListItemButton
-                                        component={Link}
-                                        href={`/connect/chat/${conv.$id}`}
-                                        onClick={handleItemClick}
+                                        {...(!isDesktop ? { component: Link, href: `/connect/chat/${conv.$id}` } : {})}
+                                        onClick={(e: React.MouseEvent) => {
+                                            if (isDesktop) {
+                                                e.preventDefault();
+                                                setActiveDetail({ type: 'chat', id: conv.$id, data: conv });
+                                                return;
+                                            }
+                                            handleItemClick(e);
+                                        }}
                                         onContextMenu={(e) => handleGhostConversationRightClick(e, conv)}
                                         sx={{
                                             borderRadius: '24px',

@@ -24,7 +24,9 @@ import {
     Dialog as ConfirmDialog,
     DialogTitle as ConfirmTitle,
     DialogContent as ConfirmContent,
-    DialogActions as ConfirmActions
+    DialogActions as ConfirmActions,
+    useTheme,
+    useMediaQuery
 } from '@mui/material';
 import { 
     Add as AddIcon, 
@@ -52,12 +54,16 @@ import { toast } from 'react-hot-toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { FolderKanban } from 'lucide-react';
 import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { useSection } from '@/context/SectionContext';
 
 export default function FormsDashboard() {
     const { user } = useAuth();
     const router = useRouter();
     const { fetchOptimized, invalidate } = useDataNexus();
     const { open: openDrawer } = useUnifiedDrawer();
+    const theme = useTheme();
+    const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
+    const { setActiveDetail } = useSection();
     const [forms, setForms] = useState<Forms[]>([]);
     const [offlineDrafts, setOfflineDrafts] = useState<FormDraft[]>([]);
     const [loading, setLoading] = useState(true);
@@ -310,7 +316,13 @@ export default function FormsDashboard() {
                                         <Grid size={{ xs: 12, md: 6, lg: 4 }} key={form.$id}>
                                             <Fade in={true}>
                                                 <Card 
-                                                    onClick={() => router.push(`/flow/forms/${form.$id}`)}
+                                                    onClick={() => {
+                                                        if (isDesktop) {
+                                                            setActiveDetail({ type: 'form', id: form.$id, data: form });
+                                                        } else {
+                                                            router.push(`/flow/forms/${form.$id}`);
+                                                        }
+                                                    }}
                                                     sx={{ 
                                                         bgcolor: '#161514', 
                                                         border: '1px solid rgba(255, 255, 255, 0.05)', 
