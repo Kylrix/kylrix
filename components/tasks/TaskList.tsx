@@ -30,6 +30,7 @@ import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
 import { ViewMode, SortField, TaskStatus } from '@/types';
+import DesktopRightSection from '@/components/layout/DesktopRightSection';
 
 export default function TaskList() {
   const theme = useTheme();

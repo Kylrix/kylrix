@@ -95,6 +95,12 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
   const [totps, setTotps] = useState<any[]>([]);
   const [totpsLoading, setTotpsLoading] = useState(false);
 
+  const [userForms, setUserForms] = useState<any[]>([]);
+  const [userFormsLoading, setUserFormsLoading] = useState(false);
+
+  const [userGoals, setUserGoals] = useState<any[]>([]);
+  const [userGoalsLoading, setUserGoalsLoading] = useState(false);
+
   // Load active projects
   useEffect(() => {
     if (!panels.includes('projects') || !user) return;
@@ -108,6 +114,47 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
         console.error('Failed loading projects:', e);
       } finally {
         if (mounted) setProjectsLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, [panels, user]);
+
+  // Load forms
+  useEffect(() => {
+    if (!panels.includes('forms') || !user) return;
+    const userId = user.$id;
+    let mounted = true;
+    async function load() {
+      setUserFormsLoading(true);
+      try {
+        const { FormsService } = await import('@/lib/services/forms');
+        const res = await FormsService.listUserForms(userId);
+        if (mounted) setUserForms(res.rows || []);
+      } catch (e) {
+        console.error('Failed loading forms:', e);
+      } finally {
+        if (mounted) setUserFormsLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, [panels, user]);
+
+  // Load goals/tasks
+  useEffect(() => {
+    if (!panels.includes('goals') || !user) return;
+    let mounted = true;
+    async function load() {
+      setUserGoalsLoading(true);
+      try {
+        const { tasks: tasksApi } = await import('@/lib/kylrixflow');
+        const res = await tasksApi.list([]);
+        if (mounted) setUserGoals(res.rows || []);
+      } catch (e) {
+        console.error('Failed loading goals:', e);
+      } finally {
+        if (mounted) setUserGoalsLoading(false);
       }
     }
     load();
@@ -180,7 +227,18 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
       setSecretsLoading(true);
       try {
         const res = await listKeepCredentials();
-        if (mounted) setSecrets(res.rows || []);
+        let list = res.rows || [];
+        if (contextId) {
+          const query = contextId.toLowerCase();
+          list = [...list].sort((a, b) => {
+            const aTitle = (a.title || a.label || '').toLowerCase();
+            const bTitle = (b.title || b.label || '').toLowerCase();
+            const aMatch = aTitle.includes(query) ? 1 : 0;
+            const bMatch = bTitle.includes(query) ? 1 : 0;
+            return bMatch - aMatch;
+          });
+        }
+        if (mounted) setSecrets(list);
       } catch (e) {
         console.error('Failed loading secrets:', e);
       } finally {
@@ -189,7 +247,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
     }
     load();
     return () => { mounted = false; };
-  }, [panels, user]);
+  }, [panels, user, contextId]);
 
   // Load TOTPs
   useEffect(() => {
@@ -794,6 +852,223 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                         ))}
                       </Box>
                     )}
+                  </Box>
+                )}
+              </Box>
+            );
+
+          case 'forms':
+            return (
+              <Box key={panel} sx={{
+                bgcolor: '#161412',
+                borderRadius: '24px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                p: 2.5,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: isOpen ? '1 1 auto' : '0 0 68px',
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+                    Forms
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </IconButton>
+                    <IconButton onClick={() => router.push('/flow/forms')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#10B981' } }}>
+                      <Maximize2 size={14} />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                {isOpen && (
+                  <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+                    {userFormsLoading ? renderSkeletonList() : userForms.length === 0 ? (
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                          No forms found.
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {userForms.map((form) => (
+                          <Box
+                            key={form.$id}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'form', id: form.$id, title: form.title }));
+                            }}
+                            onClick={() => router.push(`/flow/forms/${form.$id}`)}
+                            sx={{
+                              display: 'flex',
+                              gap: 1.5,
+                              p: 1.5,
+                              borderRadius: '16px',
+                              bgcolor: 'rgba(255,255,255,0.02)',
+                              border: '1px solid rgba(255,255,255,0.03)',
+                              cursor: 'grab',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: 'rgba(255,255,255,0.04)',
+                                borderColor: 'rgba(255,255,255,0.08)',
+                                transform: 'translateX(3px)',
+                              }
+                            }}
+                          >
+                            <Box sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: '10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: 'rgba(16, 185, 129, 0.1)',
+                              color: '#10B981',
+                              flexShrink: 0,
+                            }}>
+                              <FileText size={18} />
+                            </Box>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }} noWrap>
+                                {form.title || 'Untitled Form'}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }} noWrap>
+                                {form.description || 'No description'}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            );
+
+          case 'goals':
+            return (
+              <Box key={panel} sx={{
+                bgcolor: '#161412',
+                borderRadius: '24px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                p: 2.5,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: isOpen ? '1 1 auto' : '0 0 68px',
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+                    Goals
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </IconButton>
+                    <IconButton onClick={() => router.push('/flow/goals')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#10B981' } }}>
+                      <Maximize2 size={14} />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                {isOpen && (
+                  <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+                    {userGoalsLoading ? renderSkeletonList() : userGoals.length === 0 ? (
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                          No goals found.
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {userGoals.map((goal) => (
+                          <Box
+                            key={goal.$id}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'goal', id: goal.$id, title: goal.title }));
+                            }}
+                            onClick={() => router.push('/flow/goals')}
+                            sx={{
+                              display: 'flex',
+                              gap: 1.5,
+                              p: 1.5,
+                              borderRadius: '16px',
+                              bgcolor: 'rgba(255,255,255,0.02)',
+                              border: '1px solid rgba(255,255,255,0.03)',
+                              cursor: 'grab',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: 'rgba(255,255,255,0.04)',
+                                borderColor: 'rgba(255,255,255,0.08)',
+                                transform: 'translateX(3px)',
+                              }
+                            }}
+                          >
+                            <Box sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: '10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              bgcolor: 'rgba(16, 185, 129, 0.1)',
+                              color: '#10B981',
+                              flexShrink: 0,
+                            }}>
+                              <Activity size={18} />
+                            </Box>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }} noWrap>
+                                {goal.title || 'Untitled Goal'}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }} noWrap>
+                                STATUS: {(goal.status || 'todo').toUpperCase()}
+                              </Typography>
+                            </Box>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                  </Box>
+                )}
+              </Box>
+            );
+
+          case 'secret_chat':
+            return (
+              <Box key={panel} sx={{
+                bgcolor: '#161412',
+                borderRadius: '24px',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                p: 2.5,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: isOpen ? '1 1 auto' : '0 0 68px',
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
+                    Secret Chat
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </IconButton>
+                    <IconButton onClick={() => router.push('/connect/chats')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#F59E0B' } }}>
+                      <Maximize2 size={14} />
+                    </IconButton>
+                  </Box>
+                </Box>
+
+                {isOpen && (
+                  <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+                    <ChatList activeTab="secure" hideTabs={true} />
                   </Box>
                 )}
               </Box>
