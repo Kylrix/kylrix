@@ -16,6 +16,7 @@ import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
 import { AIProvider } from '@/context/AIContext';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 import { DrawerStateProvider } from '@/components/ui/DrawerStateContext';
+import { CallLauncherProvider } from '@/context/CallLauncherContext';
 import { LocalContextProvider } from '@/lib/context-engine';
 
 const ClientToaster = dynamic(() => import('@/components/ClientToaster'), { ssr: false });
@@ -44,6 +45,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   LocalContextProvider,
   AppChromeProvider,
   DrawerStateProvider,
+  CallLauncherProvider,
   AuthProvider,
   ThemeProvider,
   ToastProvider,

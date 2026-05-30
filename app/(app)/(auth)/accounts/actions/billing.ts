@@ -39,6 +39,59 @@ const parsePositiveInteger = (value: unknown, fallback = 1) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+/**
+ * Resolves a secure billing country code by combining Appwrite session locale/logs,
+ * Edge header fallbacks, and a threshold-gated historical account IP consensus check.
+ */
+async function resolveSecureCountryCode(userId: string, clientCountryCode?: string): Promise<string> {
+  let edgeCountry: string | null = clientCountryCode || null;
+  
+  // 1. Edge/CDN Geolocation Fallback check
+  try {
+    const { headers } = await import('next/headers');
+    const headerStore = await headers();
+    edgeCountry = headerStore.get('x-vercel-ip-country') || 
+                  headerStore.get('cf-ipcountry') || 
+                  clientCountryCode || 
+                  null;
+  } catch {}
+
+  const { users } = createSystemClient();
+  try {
+    // 2. Fetch the user's historical account session activity logs
+    const logsRes = await users.listLogs(userId);
+    const logs = logsRes.logs || [];
+
+    // Reliability threshold: consensus requires at least 5 logs
+    if (logs.length >= 5) {
+      const counts: Record<string, number> = {};
+      logs.forEach((log: any) => {
+        if (log.countryCode && log.countryCode !== '—') {
+          counts[log.countryCode] = (counts[log.countryCode] || 0) + 1;
+        }
+      });
+
+      // Sort logs by regional popularity
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      if (sorted.length > 0) {
+        const topCountry = sorted[0][0];
+        const topCount = sorted[0][1];
+
+        // 40% majority consensus required to regard this as their canonical home country
+        if (topCount >= logs.length * 0.4) {
+          console.log(`[Billing Location] SECURE CONSENSUS: Resolved ${topCountry} from ${topCount}/${logs.length} activity entries.`);
+          return topCountry;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Billing Location] SECURE CONSENSUS: Failed to calculate from account activity logs:', err);
+  }
+
+  // 3. Fallback path: Edge Location -> Client Input -> US default
+  return edgeCountry || 'US';
+}
+
 async function calculateStackedPeriod(databases: ReturnType<typeof createSystemClient>['databases'], userId: string, planId: string, months: number) {
   const now = new Date();
   let currentPeriodStart = now;
@@ -80,6 +133,10 @@ export async function createBillingCheckoutSessionAction(input: {
   const user = await getAuthenticatedUserForBillingAction({ jwt });
   if (!user) throw new Error('Authentication required');
   if (!planId || !method) throw new Error('Missing parameters');
+
+  // Resolve secure billing location using edge headers and account IP history consensus
+  const resolvedCountryCode = await resolveSecureCountryCode(user.$id, countryCode);
+
   const provider = billingManager.getProvider(method as PaymentMethod);
   const normalizedMonths = parsePositiveInteger(months, 1);
   const giftDetails = giftRecipientId
@@ -110,7 +167,7 @@ export async function createBillingCheckoutSessionAction(input: {
     if (claimedBy && claimedBy !== user.$id) throw new Error('Coupon is reserved for another account');
     if (targetUserId && targetUserId !== user.$id) throw new Error('Coupon is not assigned to this account');
 
-    const baseAmount = calculateSubscriptionPrice(String(planId), String(countryCode || 'US'), 'CRYPTO', normalizedMonths);
+    const baseAmount = calculateSubscriptionPrice(String(planId), resolvedCountryCode, 'CRYPTO', normalizedMonths);
     adjustedAmountUsd = Math.max(0, baseAmount * (1 - couponDiscountPercent / 100));
 
     if (adjustedAmountUsd <= 0.00001) {
@@ -198,7 +255,7 @@ export async function createBillingCheckoutSessionAction(input: {
   const session = await provider.createCheckoutSession(
     planId,
     user.$id,
-    countryCode || 'US',
+    resolvedCountryCode,
     normalizedMonths,
     user.email,
     giftDetails,
@@ -214,7 +271,7 @@ export async function createBillingCheckoutSessionAction(input: {
     const expectedAmountUsd =
       typeof adjustedAmountUsd === 'number' && Number.isFinite(adjustedAmountUsd)
         ? adjustedAmountUsd
-        : calculateSubscriptionPrice(String(planId), String(countryCode || 'US'), method as any, normalizedMonths);
+        : calculateSubscriptionPrice(String(planId), resolvedCountryCode, method as any, normalizedMonths);
 
     const { databases } = createSystemClient();
     await databases.createDocument(
@@ -235,7 +292,7 @@ export async function createBillingCheckoutSessionAction(input: {
           giftRecipientId: giftRecipientId || null,
           giftRecipientName: giftRecipientName || null,
           giftMessage: giftMessage || null,
-          countryCode: countryCode || 'US',
+          countryCode: resolvedCountryCode,
           createdAt: new Date().toISOString(),
         }),
       },
@@ -253,14 +310,14 @@ export async function createBillingCheckoutSessionAction(input: {
     const expectedAmountUsd =
       typeof adjustedAmountUsd === 'number' && Number.isFinite(adjustedAmountUsd)
         ? adjustedAmountUsd
-        : calculateSubscriptionPrice(String(planId), String(countryCode || 'US'), 'CRYPTO', normalizedMonths);
+        : calculateSubscriptionPrice(String(planId), resolvedCountryCode, 'CRYPTO', normalizedMonths);
 
     await registerBlockBeePendingCheckout({
       paymentId: session.id,
       payerUserId: user.$id,
       planId: String(planId),
       months: normalizedMonths,
-      countryCode: String(countryCode || 'US'),
+      countryCode: resolvedCountryCode,
       expectedAmountUsd,
       giftRecipientId: giftRecipientId || undefined,
       giftRecipientName: giftRecipientName || undefined,

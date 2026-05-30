@@ -16,7 +16,6 @@ import { NoteDrawerProvider } from '@/context/NoteDrawerContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { GlobalContextMenu } from '@/components/ui/GlobalContextMenu';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
-import { CallLauncherProvider } from '@/context/CallLauncherContext';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
 import GlobalShortcuts from '@/components/GlobalShortcuts';
 import dynamic from 'next/dynamic';
@@ -76,10 +75,8 @@ const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>
   PotatoProvider,
   TokenOpsProvider,
   ChatNotificationProvider,
-  CallLauncherProvider,
   PresenceWrapper,
   ];
-
 export function EcosystemProviders({ children }: { children: ReactNode }) {
   return (
     <ComposeProviders providers={ecosystemProvidersList}>
