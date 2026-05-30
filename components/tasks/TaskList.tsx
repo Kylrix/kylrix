@@ -552,6 +552,5 @@ export default function TaskList() {
         </Box>
       )}
       </MultiSectionContainer>
-    </Box>
   );
 }
