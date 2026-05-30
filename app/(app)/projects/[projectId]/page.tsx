@@ -59,7 +59,7 @@ import {
 } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { SourceControlService, SourceControlRow } from '@/lib/services/sourceControl';
-import GitIntegrationDialog from '@/components/projects/GitIntegrationDialog';
+import GitIntegrationDrawer from '@/components/projects/GitIntegrationDrawer';
 import { useToast } from '@/components/ui/Toast';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { IdentityAvatar } from '@/components/IdentityBadge';
@@ -1280,7 +1280,7 @@ export default function ProjectDetailPage() {
       )}
 
       {isGitModalOpen && (
-        <GitIntegrationDialog
+        <GitIntegrationDrawer
           isOpen={isGitModalOpen}
           onClose={() => setIsGitModalOpen(false)}
           projectId={projectId as string}
