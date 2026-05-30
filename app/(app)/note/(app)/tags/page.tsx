@@ -28,6 +28,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { formatDateWithFallback } from '@/lib/date-utils';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import DesktopRightSection from '@/components/layout/DesktopRightSection';
 
 export default function TagsPage() {
   const { user, isAuthenticated, openIDMWindow } = useAuth();
@@ -206,221 +207,231 @@ export default function TagsPage() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: 'white', p: { xs: 2, md: 6 } }}>
       <Container maxWidth="xl">
-        {/* Header */}
-        <Box sx={{ mb: 6 }}>
-          <Typography 
-            variant="h1" 
-            sx={{ 
-              fontWeight: 900, 
-              fontFamily: 'var(--font-clash)',
-              background: 'linear-gradient(to bottom, #FFF 0%, rgba(255,255,255,0.7) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: { xs: '2.5rem', md: '4rem' },
-              letterSpacing: '-0.02em',
-              mb: 1
-            }}
-          >
-            Tags Management
-          </Typography>
-          <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>
-            Organize your notes with custom tags and colors
-          </Typography>
-        </Box>
-
-        {error && (
-          <Box sx={{ mb: 4, p: 2, bgcolor: alpha('#ff4444', 0.05), border: '1px solid rgba(255, 68, 68, 0.2)', borderRadius: '12px' }}>
-            <Typography color="#ff4444" sx={{ fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>{error}</Typography>
-          </Box>
-        )}
-
-        {/* Action Bar */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 6 }}>
-          <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 800, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-            {tags.length} tag{tags.length !== 1 ? 's' : ''} total
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={handleCreateNew}
-            sx={{
-              bgcolor: '#6366F1',
-              color: 'black',
-              fontWeight: 900,
-              px: 4,
-              py: 1.5,
-              borderRadius: '12px',
-              boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)',
-              '&:hover': { bgcolor: alpha('#6366F1', 0.8), transform: 'translateY(-2px)' }
-            }}
-          >
-            Create New Tag
-          </Button>
-        </Stack>
-
-        {/* Tags Grid */}
-        {tags.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 12 }}>
-            <Box 
-              sx={{ 
-                width: 140, 
-                height: 140, 
-                bgcolor: '#161412', 
-                borderRadius: '48px', 
-                mx: 'auto', 
-                mb: 4, 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                fontSize: '4rem',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
-              }}
-            >
-              🏷️
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start' }}>
+          <Box>
+            {/* Header */}
+            <Box sx={{ mb: 6 }}>
+              <Typography 
+                variant="h1" 
+                sx={{ 
+                  fontWeight: 900, 
+                  fontFamily: 'var(--font-clash)',
+                  background: 'linear-gradient(to bottom, #FFF 0%, rgba(255,255,255,0.7) 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontSize: { xs: '2.5rem', md: '4rem' },
+                  letterSpacing: '-0.02em',
+                  mb: 1
+                }}
+              >
+                Tags Management
+              </Typography>
+              <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>
+                Organize your notes with custom tags and colors
+              </Typography>
             </Box>
-            <Typography variant="h4" sx={{ fontWeight: 900, mb: 1, fontFamily: 'var(--font-clash)', letterSpacing: '-0.01em' }}>No tags yet</Typography>
-            <Typography sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, fontFamily: 'var(--font-satoshi)', fontWeight: 500 }}>Create your first tag to start organizing your notes</Typography>
-            <Button
-              variant="contained"
-              onClick={handleCreateNew}
-              sx={{
-                bgcolor: '#6366F1',
-                color: 'black',
-                fontWeight: 900,
-                px: 6,
-                py: 2,
-                borderRadius: '16px',
-                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)',
-                '&:hover': { bgcolor: alpha('#6366F1', 0.8), transform: 'translateY(-2px)' }
-              }}
-            >
-              Create First Tag
-            </Button>
-          </Box>
-        ) : (
-          <Grid container spacing={4}>
-            {tags.map((tag) => (
-              <Grid size={{ xs: 12, md: 6, lg: 4 }} key={tag.$id}>
-                <Card
-                  onClick={() => setSelectedTag(tag)}
-                  sx={{
-                    bgcolor: '#161412',
+
+            {error && (
+              <Box sx={{ mb: 4, p: 2, bgcolor: alpha('#ff4444', 0.05), border: '1px solid rgba(255, 68, 68, 0.2)', borderRadius: '12px' }}>
+                <Typography color="#ff4444" sx={{ fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>{error}</Typography>
+              </Box>
+            )}
+
+            {/* Action Bar */}
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 6 }}>
+              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 800, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                {tags.length} tag{tags.length !== 1 ? 's' : ''} total
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleCreateNew}
+                sx={{
+                  bgcolor: '#6366F1',
+                  color: 'black',
+                  fontWeight: 900,
+                  px: 4,
+                  py: 1.5,
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)',
+                  '&:hover': { bgcolor: alpha('#6366F1', 0.8), transform: 'translateY(-2px)' }
+                }}
+              >
+                Create New Tag
+              </Button>
+            </Stack>
+
+            {/* Tags Grid */}
+            {tags.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 12 }}>
+                <Box 
+                  sx={{ 
+                    width: 140, 
+                    height: 140, 
+                    bgcolor: '#161412', 
+                    borderRadius: '48px', 
+                    mx: 'auto', 
+                    mb: 4, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    fontSize: '4rem',
                     border: '1px solid rgba(255, 255, 255, 0.05)',
-                    borderRadius: '32px',
-                    cursor: 'pointer',
-                    backgroundImage: 'none',
-                    boxShadow: '0 20px 40px -15px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.5)',
-                    transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-                    '&:hover': { 
-                      transform: 'translateY(-8px) scale(1.01)', 
-                      borderColor: alpha(tag.color || '#6366F1', 0.4),
-                      boxShadow: `0 40px 80px -20px rgba(0,0,0,0.9), 0 0 20px ${alpha(tag.color || '#6366F1', 0.15)}, inset 0 1px 1px ${alpha('#FFFFFF', 0.1)}`
-                    }
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
                   }}
                 >
-                  <CardContent sx={{ p: 4 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Box 
-                          sx={{ 
-                            width: 48, 
-                            height: 48, 
-                            borderRadius: '16px', 
-                            bgcolor: alpha(tag.color || '#6366F1', 0.1),
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: tag.color || '#6366F1',
-                            border: `1px solid ${alpha(tag.color || '#6366F1', 0.2)}`
-                          }}
-                        >
-                          <LabelIcon />
-                        </Box>
-                        <Box>
-                          <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>
-                            {tag.name}
+                  🏷️
+                </Box>
+                <Typography variant="h4" sx={{ fontWeight: 900, mb: 1, fontFamily: 'var(--font-clash)', letterSpacing: '-0.01em' }}>No tags yet</Typography>
+                <Typography sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, fontFamily: 'var(--font-satoshi)', fontWeight: 500 }}>Create your first tag to start organizing your notes</Typography>
+                <Button
+                  variant="contained"
+                  onClick={handleCreateNew}
+                  sx={{
+                    bgcolor: '#6366F1',
+                    color: 'black',
+                    fontWeight: 900,
+                    px: 6,
+                    py: 2,
+                    borderRadius: '16px',
+                    boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)',
+                    '&:hover': { bgcolor: alpha('#6366F1', 0.8), transform: 'translateY(-2px)' }
+                  }}
+                >
+                  Create First Tag
+                </Button>
+              </Box>
+            ) : (
+              <Grid container spacing={4}>
+                {tags.map((tag) => (
+                  <Grid size={{ xs: 12, md: 6, lg: 6 }} key={tag.$id}>
+                    <Card
+                      onClick={() => setSelectedTag(tag)}
+                      sx={{
+                        bgcolor: '#161412',
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '32px',
+                        cursor: 'pointer',
+                        backgroundImage: 'none',
+                        boxShadow: '0 20px 40px -15px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.5)',
+                        transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+                        '&:hover': { 
+                          transform: 'translateY(-8px) scale(1.01)', 
+                          borderColor: alpha(tag.color || '#6366F1', 0.4),
+                          boxShadow: `0 40px 80px -20px rgba(0,0,0,0.9), 0 0 20px ${alpha(tag.color || '#6366F1', 0.15)}, inset 0 1px 1px ${alpha('#FFFFFF', 0.1)}`
+                        }
+                      }}
+                    >
+                      <CardContent sx={{ p: 4 }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                            <Box 
+                              sx={{ 
+                                width: 48, 
+                                height: 48, 
+                                borderRadius: '16px', 
+                                bgcolor: alpha(tag.color || '#6366F1', 0.1),
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: tag.color || '#6366F1',
+                                border: `1px solid ${alpha(tag.color || '#6366F1', 0.2)}`
+                              }}
+                            >
+                              <LabelIcon />
+                            </Box>
+                            <Box>
+                              <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>
+                                {tag.name}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 800, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
+                                {tag.usageCount || 0} notes
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Stack>
+
+                        {tag.description && (
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: 'rgba(255, 255, 255, 0.5)', 
+                              fontFamily: 'var(--font-satoshi)',
+                              lineHeight: 1.6,
+                              mb: 3, 
+                              minHeight: 44,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            {tag.description}
                           </Typography>
-                          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 800, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
-                            {tag.usageCount || 0} notes
+                        )}
+
+                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 4, color: 'rgba(255, 255, 255, 0.2)' }}>
+                          <AccessTimeIcon sx={{ fontSize: 14 }} />
+                          <Typography variant="caption" sx={{ fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
+                            Created {formatDateWithFallback(tag.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
                           </Typography>
-                        </Box>
-                      </Stack>
-                    </Stack>
+                        </Stack>
 
-                    {tag.description && (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: 'rgba(255, 255, 255, 0.5)', 
-                          fontFamily: 'var(--font-satoshi)',
-                          lineHeight: 1.6,
-                          mb: 3, 
-                          minHeight: 44,
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden'
-                        }}
-                      >
-                        {tag.description}
-                      </Typography>
-                    )}
-
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 4, color: 'rgba(255, 255, 255, 0.2)' }}>
-                      <AccessTimeIcon sx={{ fontSize: 14 }} />
-                      <Typography variant="caption" sx={{ fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                        Created {formatDateWithFallback(tag.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
-                      </Typography>
-                    </Stack>
-
-                    <Stack direction="row" spacing={2}>
-                      <Button
-                        fullWidth
-                        size="small"
-                        startIcon={<EditIcon />}
-                        onClick={ (e) => {
-                          e.stopPropagation();
-                          handleEdit(tag);
-                        }}
-                        sx={{
-                          bgcolor: '#1C1A18',
-                          color: 'white',
-                          fontWeight: 800,
-                          borderRadius: '12px',
-                          border: '1px solid rgba(255, 255, 255, 0.05)',
-                          '&:hover': { bgcolor: '#252220', borderColor: 'rgba(255, 255, 255, 0.1)' }
-                        }}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        fullWidth
-                        size="small"
-                        startIcon={<DeleteIcon />}
-                        onClick={ (e) => {
-                          e.stopPropagation();
-                          handleDelete(tag);
-                        }}
-                        sx={{
-                          bgcolor: alpha('#ff4444', 0.05),
-                          color: '#ff4444',
-                          fontWeight: 800,
-                          borderRadius: '12px',
-                          border: '1px solid rgba(255, 68, 68, 0.1)',
-                          '&:hover': { bgcolor: alpha('#ff4444', 0.1), borderColor: alpha('#ff4444', 0.3) }
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </Stack>
-                  </CardContent>
-                </Card>
+                        <Stack direction="row" spacing={2}>
+                          <Button
+                            fullWidth
+                            size="small"
+                            startIcon={<EditIcon />}
+                            onClick={ (e) => {
+                              e.stopPropagation();
+                              handleEdit(tag);
+                            }}
+                            sx={{
+                              bgcolor: '#1C1A18',
+                              color: 'white',
+                              fontWeight: 800,
+                              borderRadius: '12px',
+                              border: '1px solid rgba(255, 255, 255, 0.05)',
+                              '&:hover': { bgcolor: '#252220', borderColor: 'rgba(255, 255, 255, 0.1)' }
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            fullWidth
+                            size="small"
+                            startIcon={<DeleteIcon />}
+                            onClick={ (e) => {
+                              e.stopPropagation();
+                              handleDelete(tag);
+                            }}
+                            sx={{
+                              bgcolor: alpha('#ff4444', 0.05),
+                              color: '#ff4444',
+                              fontWeight: 800,
+                              borderRadius: '12px',
+                              border: '1px solid rgba(255, 68, 68, 0.1)',
+                              '&:hover': { bgcolor: alpha('#ff4444', 0.1), borderColor: alpha('#ff4444', 0.3) }
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                ))}
               </Grid>
-            ))}
-          </Grid>
-        )}
+            )}
+          </Box>
+
+          {/* Desktop Right Sidebar */}
+          <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
+            <DesktopRightSection panels={['note', 'huddles', 'projects']} />
+          </Box>
+        </Box>
       </Container>
     </Box>
   );
+}
 }
