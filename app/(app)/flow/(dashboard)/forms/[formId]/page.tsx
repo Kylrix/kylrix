@@ -40,8 +40,10 @@ import { MessageSquare, Clock, FileText, Globe, Send } from 'lucide-react';
 import { TextField } from '@mui/material';
 import DesktopRightSection from '@/components/layout/DesktopRightSection';
 
-export default function FormDetailsPage({ params }: { params: Promise<{ formId: string }> }) {
-    const resolvedParams = use(params);
+export default function FormDetailsPage({ params, formId: propFormId, onBack }: { params?: Promise<{ formId: string }>; formId?: string; onBack?: () => void }) {
+    const resolvedParams = {
+        formId: propFormId || (params ? use(params).formId : '')
+    };
     const [form, setForm] = useState<Forms | null>(null);
     const [loading, setLoading] = useState(true);
     const [tab, setTab] = useState(0);
@@ -267,7 +269,10 @@ export default function FormDetailsPage({ params }: { params: Promise<{ formId: 
             {/* Header / Sub-Header */}
             <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, justifyContent: 'space-between', alignItems: { md: 'center' } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <IconButton component={Link} href="/flow/forms" sx={{ bgcolor: '#161514', color: '#6366F1', '&:hover': { bgcolor: '#1F1D1B' } }}>
+                    <IconButton 
+                        {...(onBack ? { onClick: onBack } : { component: Link, href: "/flow/forms" })} 
+                        sx={{ bgcolor: '#161514', color: '#6366F1', '&:hover': { bgcolor: '#1F1D1B' } }}
+                    >
                         <BackIcon />
                     </IconButton>
                     <Box>
