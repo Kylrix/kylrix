@@ -98,7 +98,8 @@ export const APPWRITE_CONFIG = {
             KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger',
             ENGAGEMENT_VIEWS: 'engagement_views',
             ENGAGEMENT_VIEW_ROLLUPS: 'engagement_view_rollups',
-            TELEGRAM_CONNECTIONS: 'telegram_connections'
+            TELEGRAM_CONNECTIONS: 'telegram_connections',
+            SOURCE_CONTROL: 'source_control'
         },
         CHAT: {
             USERS: 'users',
@@ -120,7 +121,8 @@ export const APPWRITE_CONFIG = {
             KYLRIX_TOKEN_LEDGER: 'kylrix_token_ledger',
             ENGAGEMENT_VIEWS: 'engagement_views',
             ENGAGEMENT_VIEW_ROLLUPS: 'engagement_view_rollups',
-            TELEGRAM_CONNECTIONS: 'telegram_connections'
+            TELEGRAM_CONNECTIONS: 'telegram_connections',
+            SOURCE_CONTROL: 'source_control'
         }
     },
     BUCKETS: {

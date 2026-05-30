@@ -58,6 +58,8 @@ import {
   Globe,
 } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
+import { SourceControlService, SourceControlRow } from '@/lib/services/sourceControl';
+import GitIntegrationDialog from '@/components/projects/GitIntegrationDialog';
 import { useToast } from '@/components/ui/Toast';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { IdentityAvatar } from '@/components/IdentityBadge';
@@ -149,6 +151,8 @@ export default function ProjectDetailPage() {
   const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
   const [extractGoalsNote, setExtractGoalsNote] = useState<Notes | null>(null);
   const [isAddSubProjectModalOpen, setIsAddSubProjectModalOpen] = useState(false);
+  const [gitIntegration, setGitIntegration] = useState<SourceControlRow | null>(null);
+  const [isGitModalOpen, setIsGitModalOpen] = useState(false);
   const [initializingHuddle, setInitializingHuddle] = useState(false);
   const [discussionMenuAnchor, setDiscussionMenuAnchor] = useState<HTMLElement | null>(null);
   const [tabMenuAnchorEl, setTabMenuAnchorEl] = useState<{ x: number, y: number } | null>(null);
@@ -290,6 +294,14 @@ export default function ProjectDetailPage() {
 
       // Resolve other entities
       await resolveEntities(objects.rows);
+
+      // Fetch Git integration details for this project
+      try {
+        const integrations = await SourceControlService.listIntegrations(projectId as string);
+        setGitIntegration(integrations[0] || null);
+      } catch (gitErr) {
+        console.error('Failed to load project git integration:', gitErr);
+      }
     } catch (err: any) {
       showError('Failed to load project', err.message);
     } finally {
@@ -977,6 +989,64 @@ export default function ProjectDetailPage() {
                         ))}
                     </Grid>
                 </Box>
+
+                {/* Integrations Section */}
+                <Box sx={{ mt: 6 }}>
+                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', mb: 3, display: 'block' }}>
+                        Integrations
+                    </Typography>
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, md: 4 }}>
+                            <Paper 
+                                elevation={0} 
+                                onClick={() => setIsGitModalOpen(true)}
+                                sx={{ 
+                                    p: 2.5, 
+                                    borderRadius: '24px', 
+                                    bgcolor: '#161412', 
+                                    border: '1px solid rgba(255,255,255,0.06)', 
+                                    transition: 'all 0.2s ease', 
+                                    cursor: 'pointer', 
+                                    position: 'relative',
+                                    '&:hover': { 
+                                        borderColor: alpha('#6366F1', 0.3), 
+                                        transform: 'translateY(-2px)' 
+                                    } 
+                                }}
+                            >
+                                <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1.5 }}>
+                                    <Box sx={{ color: '#6366F1', display: 'flex', alignItems: 'center' }}>
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                                        </svg>
+                                    </Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 800 }}>GitHub</Typography>
+                                    {gitIntegration?.enabled && (
+                                        <Box 
+                                            sx={{ 
+                                                ml: 'auto', 
+                                                px: 1, 
+                                                py: 0.2, 
+                                                borderRadius: '6px', 
+                                                bgcolor: 'rgba(16, 185, 129, 0.1)', 
+                                                color: '#10B981', 
+                                                fontSize: '0.65rem', 
+                                                fontWeight: 900 
+                                            }}
+                                        >
+                                            CONNECTED
+                                        </Box>
+                                    )}
+                                </Stack>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', lineHeight: 1.4, display: 'block', minHeight: '38px' }}>
+                                    {gitIntegration?.enabled 
+                                        ? `Connected to ${gitIntegration.ownerName}/${gitIntegration.repoName}` 
+                                        : 'Link your GitHub repository to sync tasks, issues, and pull requests.'}
+                                </Typography>
+                            </Paper>
+                        </Grid>
+                    </Grid>
+                </Box>
             </Grid>
 
             {/* Right Sidebar Column */}
@@ -1167,6 +1237,16 @@ export default function ProjectDetailPage() {
           onClose={() => setIsAddSubProjectModalOpen(false)}
           projectId={projectId as string}
           onAdded={fetchProjectData}
+        />
+      )}
+
+      {isGitModalOpen && (
+        <GitIntegrationDialog
+          isOpen={isGitModalOpen}
+          onClose={() => setIsGitModalOpen(false)}
+          projectId={projectId as string}
+          onSaved={fetchProjectData}
+          tasks={tasks}
         />
       )}
 

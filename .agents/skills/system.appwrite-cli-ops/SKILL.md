@@ -231,4 +231,8 @@ Verify your Appwrite credentials via `appwrite whoami` and ensure your API key h
 - **No rollback**: If schema creation fails mid-way, you must manually clean up
 - **No bulk import**: Cannot load schema from file; use interactive or flag-based workflows
 
-For large schema migrations, consider using `appwrite.config.json` + `appwrite push`, but always validate with this skill first.
+## Static Configuration File Restrictions
+
+⚠️ **CRITICAL ARCHITECTURAL MANDATE:**
+- **DO NOT edit `appwrite.config.json` directly**: Manually editing static configuration files is strictly prohibited. It is slow to process, highly error-prone, and can lead to overwriting or breaking live production databases.
+- **Strictly use Appwrite CLI live commands**: All schema mutations, including creating tables, columns, and indexes, must be executed directly via live Appwrite CLI commands.
