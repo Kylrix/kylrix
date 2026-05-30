@@ -10,7 +10,9 @@ import {
   alpha,
   SpeedDial,
   SpeedDialAction,
-  SpeedDialIcon
+  SpeedDialIcon,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { Plus, X } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
@@ -25,6 +27,9 @@ export default function UniversalFAB() {
   const [isExpanded, setIsExpanded] = useState(false);
   const { isRecording, startRecording, stopRecording, currentWorkflow } = useLocalContext();
 
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+
   // Landing page has different positioning
   const isLandingPage = pathname === '/';
 
@@ -36,6 +41,7 @@ export default function UniversalFAB() {
     (pathname.startsWith('/connect') && pathname !== '/connect' && !pathname.includes('/invite/') && !pathname.startsWith('/connect/chat/'))
   );
 
+  if (isDesktop) return null;
   if (isDrawerOpen) return null;
   if (!config.isVisible && !isAppRoute) return null;
 
