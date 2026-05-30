@@ -5,7 +5,7 @@ import type { Notes } from '@/types/appwrite';
 import NoteCard from '@/components/ui/NoteCard';
 import { getSharedNotes, listPublicNotesByUser, getCurrentUser } from '@/lib/appwrite';
 import { useNotes } from '@/context/NotesContext';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer } from '@/context/SectionContext';
 import {
   Box,
   Typography,

@@ -23,7 +23,7 @@ import { permissions, EventVisibility } from '@/lib/permissions';
 import { CallService } from '@/lib/services/call';
 import toast from 'react-hot-toast';
 import { Query } from 'appwrite';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer } from '@/context/SectionContext';
 
 export default function EventList() {
   const [tabValue, setTabValue] = useState(0);
@@ -165,8 +165,7 @@ export default function EventList() {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#000000', minHeight: '100vh', p: { xs: 2, md: 4 } }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start' }}>
-        <Box>
+      <MultiSectionContainer panels={['note', 'huddles', 'goals']} contextId="event">
       <Box
         sx={{
           display: 'flex',
@@ -293,11 +292,7 @@ export default function EventList() {
         onClose={() => setIsDialogOpen(false)}
         onSubmit={handleCreateEvent}
       />
-        </Box>
-        <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <DesktopRightSection panels={['note', 'huddles', 'goals']} contextId="event" />
-        </Box>
-      </Box>
+      </MultiSectionContainer>
     </Box>
   );
 }

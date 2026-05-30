@@ -36,7 +36,7 @@ import { MessageSquare, Clock, FileText, Globe, Send } from 'lucide-react';
 import { generateEventPattern } from '@/utils/patternGenerator';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from '@/components/common/IdentityBadge';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer } from '@/context/SectionContext';
 
 function AttendeeAvatar({ guest, theme }: { guest: any, theme: any }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -382,8 +382,7 @@ export default function EventPage() {
 
   return (
     <Box sx={{ minHeight: '100%', pb: 8 }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start', px: { xs: 2, md: 4 } }}>
-        <Box>
+      <MultiSectionContainer panels={['note', 'huddles', 'goals']} contextId={eventId}>
       <Container maxWidth="md" sx={{ px: { xs: 0, sm: 2 } }}>
         <Paper sx={{ overflow: 'hidden', borderRadius: { xs: 0, sm: 3 }, mb: 4 }}>
           <Box sx={{ height: { xs: 250, md: 350 }, position: 'relative', backgroundSize: 'cover', ...coverStyle }}>
@@ -565,11 +564,7 @@ export default function EventPage() {
           </Box>
         </Paper>
       </Container>
-        </Box>
-        <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <DesktopRightSection panels={['note', 'huddles', 'goals']} contextId={eventId} />
-        </Box>
-      </Box>
+      </MultiSectionContainer>
     </Box>
   );
 }
