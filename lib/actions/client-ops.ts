@@ -338,4 +338,15 @@ export async function deleteGhostThread(threadId: string) {
     return deleteGhostThreadSecure(threadId, jwt);
 }
 
+export async function recordAnonymizedTelemetry(params: {
+  niche: any;
+  app: string;
+  action: string;
+  intent?: string | null;
+  metadata?: any | null;
+}) {
+  const { recordAnonymizedTelemetrySecure } = await import('./secure-ops');
+  return recordAnonymizedTelemetrySecure(params);
+}
+
 

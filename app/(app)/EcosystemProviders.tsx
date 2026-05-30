@@ -20,6 +20,7 @@ import { ChatNotificationProvider } from '@/components/providers/ChatNotificatio
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
 import GlobalShortcuts from '@/components/GlobalShortcuts';
 import dynamic from 'next/dynamic';
+import { SectionProvider } from '@/context/SectionContext';
 
 const PresenceProvider = dynamic(() => import('@/components/providers/PresenceProvider').then(m => m.PresenceProvider), { ssr: false });
 
@@ -64,6 +65,7 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
 const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   AuthProvider,
   SudoProvider,
+  SectionProvider,
   AppwriteProvider,
   DocsProvider,
   NotesProvider,

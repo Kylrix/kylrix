@@ -419,6 +419,23 @@ export async function trackEngagementViewSecure(input: Omit<TrackEngagementInput
   });
 }
 
+export async function recordAnonymizedTelemetrySecure(params: {
+  niche: any;
+  app: string;
+  action: string;
+  intent?: string | null;
+  metadata?: any | null;
+}) {
+  const { TelemetryService } = await import('@/lib/services/telemetry');
+  return await TelemetryService.recordTelemetry({
+    niche: params.niche,
+    app: params.app,
+    action: params.action,
+    intent: params.intent || null,
+    metadata: params.metadata || null
+  });
+}
+
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {
   const requester = await getActor();
   if (!requester) return { success: false, reason: 'Unauthorized' };
