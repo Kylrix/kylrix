@@ -37,7 +37,8 @@ import {
     User,
     ChevronRight,
     Key,
-    Bot
+    Bot,
+    Lightbulb
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -50,6 +51,7 @@ import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/components/overlays/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
 import TelegramIcon from '@mui/icons-material/Telegram';
+import { UnifiedFormDrawer } from '@/components/forms/UnifiedFormDrawer';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -76,6 +78,9 @@ export default function SettingsPage() {
     // Passkey state
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
     const [_loadingPasskeys, setLoadingPasskeys] = useState(true);
+
+    const [formDrawerOpen, setFormDrawerOpen] = useState(false);
+    const FEATURE_FORM_ID = '6a19dc99002634bd33ae';
 
 
 
@@ -644,6 +649,48 @@ export default function SettingsPage() {
                                     </>
                                 )}
                             </Stack>
+                        </Paper>
+                    </Box>
+
+                    {/* Feature Requests section */}
+                    <Box>
+                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
+                            <Lightbulb size={20} color="#6366F1" /> Feedback & Intelligence
+                        </Typography>
+                        
+                        <Paper sx={{ 
+                            p: { xs: 2.25, md: 3 }, 
+                            borderRadius: '28px', 
+                            bgcolor: '#161412', 
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            backgroundImage: 'none',
+                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                                bgcolor: '#1C1A18',
+                                borderColor: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Feature Request & Bug Report</Typography>
+                                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.</Typography>
+                                </Box>
+                                <Button 
+                                    variant="contained"
+                                    onClick={() => setFormDrawerOpen(true)}
+                                    sx={{ 
+                                        borderRadius: '12px',
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        minWidth: 132,
+                                        bgcolor: '#6366F1',
+                                        '&:hover': { bgcolor: '#5458E8' }
+                                    }}
+                                >
+                                    Open Portal
+                                </Button>
+                            </Box>
                         </Paper>
                     </Box>
                 </Stack>
