@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Box, Typography, alpha } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { UserPresenceState } from '@/lib/services/presence';
@@ -32,6 +33,9 @@ export function computeIdentityFlags(signals: IdentitySignals) {
   return { verified, pro };
 }
 
+// Thread-safe in-memory cache for user profiles fetched from the server SDK
+const profileCache = new Map<string, any>();
+
 export function IdentityAvatar({
   src,
   alt,
@@ -46,6 +50,14 @@ export function IdentityAvatar({
   sx,
   fileId,
   isAvatar = true,
+  // Added properties for privileged fetching and granular fallback matching
+  userId,
+  isPublic,
+  isGuest,
+  displayName,
+  username,
+  accountName,
+  email,
 }: {
   src?: string | null;
   alt?: string;
@@ -60,7 +72,131 @@ export function IdentityAvatar({
   sx?: any;
   fileId?: string | null;
   isAvatar?: boolean;
+  userId?: string | null;
+  isPublic?: boolean | null;
+  isGuest?: boolean | null;
+  displayName?: string | null;
+  username?: string | null;
+  accountName?: string | null;
+  email?: string | null;
 }) {
+  const [profileRecord, setProfileRecord] = useState<any>(null);
+  const [resolvedSrc, setResolvedSrc] = useState<string | null>(src || null);
+  const [imageError, setImageError] = useState(false);
+
+  // 1. Fetch the user's profile status row securely using Server Action if userId is provided
+  useEffect(() => {
+    if (!userId) return;
+
+    if (profileCache.has(userId)) {
+      setProfileRecord(profileCache.get(userId));
+      return;
+    }
+
+    let active = true;
+    const fetchProfile = async () => {
+      try {
+        const { getGlobalProfileStatusSecure } = await import('@/lib/actions/secure-ops');
+        const res = await getGlobalProfileStatusSecure(userId);
+        if (res?.exists && res.profile) {
+          if (active) {
+            profileCache.set(userId, res.profile);
+            setProfileRecord(res.profile);
+          }
+        } else {
+          if (active) {
+            profileCache.set(userId, null);
+            setProfileRecord(null);
+          }
+        }
+      } catch (err) {
+        console.warn('[IdentityAvatar] Failed to fetch secure profile row:', err);
+        if (active) {
+          profileCache.set(userId, null);
+          setProfileRecord(null);
+        }
+      }
+    };
+
+    fetchProfile();
+    return () => { active = false; };
+  }, [userId]);
+
+  // 2. Resolve visibilities dynamically using the fetched profile row
+  const resolvedIsAvatar = profileRecord ? profileRecord.isAvatar : isAvatar;
+  const resolvedIsPublic = profileRecord ? profileRecord.isPublic : isPublic;
+  const resolvedIsGuest = profileRecord ? profileRecord.isGuest : isGuest;
+
+  // Conditions for fetching the profile picture: isAvatar is null or true,
+  // AND either isPublic or isGuest is null or true.
+  const isAvatarSatisfied = resolvedIsAvatar === null || resolvedIsAvatar === undefined || resolvedIsAvatar === true;
+  const isPublicOrGuestSatisfied = resolvedIsPublic === null || resolvedIsPublic === undefined || resolvedIsPublic === true ||
+                                    resolvedIsGuest === null || resolvedIsGuest === undefined || resolvedIsGuest === true;
+  
+  const canFetchAvatar = isAvatarSatisfied && isPublicOrGuestSatisfied;
+
+  // 3. Retrieve the secure profile picture preview URL asynchronously
+  useEffect(() => {
+    if (src) {
+      setResolvedSrc(src);
+      setImageError(false);
+      return;
+    }
+
+    const targetFileId = profileRecord?.avatar || fileId;
+    if (!targetFileId) {
+      setResolvedSrc(null);
+      return;
+    }
+
+    if (!canFetchAvatar) {
+      setResolvedSrc(null);
+      return;
+    }
+
+    let active = true;
+    const loadPreview = async () => {
+      try {
+        const { fetchProfilePreview } = await import('@/lib/profile-preview');
+        const url = await fetchProfilePreview(targetFileId, size * 2, size * 2);
+        if (active) {
+          setResolvedSrc(url);
+          setImageError(false);
+        }
+      } catch (err) {
+        console.warn('[IdentityAvatar] Failed to generate privileged file preview:', err);
+        if (active) {
+          setResolvedSrc(null);
+        }
+      }
+    };
+
+    loadPreview();
+    return () => { active = false; };
+  }, [profileRecord?.avatar, fileId, src, canFetchAvatar, size]);
+
+  // 4. Compute initials using the exact requested priority:
+  // (1) Display Name -> (2) Username -> (3) Account Name -> (4) Email -> fallback -> alt -> 'U'
+  const resolvedDisplayName = profileRecord?.displayName || displayName || null;
+  const resolvedUsername = profileRecord?.username || username || null;
+  const resolvedAccountName = accountName || null;
+  const resolvedEmail = email || null;
+
+  let initial = 'U';
+  if (resolvedDisplayName && resolvedDisplayName.trim()) {
+    initial = resolvedDisplayName.trim().charAt(0).toUpperCase();
+  } else if (resolvedUsername && resolvedUsername.trim()) {
+    initial = resolvedUsername.trim().replace(/^@/, '').charAt(0).toUpperCase();
+  } else if (resolvedAccountName && resolvedAccountName.trim()) {
+    initial = resolvedAccountName.trim().charAt(0).toUpperCase();
+  } else if (resolvedEmail && resolvedEmail.trim()) {
+    initial = resolvedEmail.trim().charAt(0).toUpperCase();
+  } else if (fallback) {
+    initial = fallback.charAt(0).toUpperCase();
+  } else if (alt) {
+    initial = alt.charAt(0).toUpperCase();
+  }
+
   const getStatusColor = (s: UserPresenceState) => {
       switch (s) {
           case 'online': return '#10B981';
@@ -69,19 +205,6 @@ export function IdentityAvatar({
           default: return 'transparent';
       }
   };
-
-  let resolvedSrc = null;
-  if (isAvatar !== false) {
-    if (src) {
-      resolvedSrc = src;
-    } else if (fileId) {
-      try {
-        resolvedSrc = storage.getFilePreview('profile_pictures', fileId, size * 2, size * 2).toString();
-      } catch (e) {
-        console.warn('[IdentityAvatar] Failed to build preview URL:', e);
-      }
-    }
-  }
 
   const avatar = (
     <Box
@@ -110,19 +233,21 @@ export function IdentityAvatar({
         ...(sx || {}),
       }}
     >
-      <Box
-        component="img"
-        src={resolvedSrc || undefined}
-        alt={alt || ''}
-        sx={{
-          width: '100%',
-          height: '100%',
-          borderRadius: `calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`,
-          objectFit: 'cover',
-          display: resolvedSrc ? 'block' : 'none',
-        }}
-      />
-      {!resolvedSrc && (
+      {resolvedSrc && !imageError ? (
+        <Box
+          component="img"
+          src={resolvedSrc}
+          alt={alt || ''}
+          onError={() => setImageError(true)}
+          sx={{
+            width: '100%',
+            height: '100%',
+            borderRadius: `calc(${typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius} - 2px)`,
+            objectFit: 'cover',
+            display: 'block',
+          }}
+        />
+      ) : (
         <Box
           sx={{
             width: '100%',
@@ -137,7 +262,7 @@ export function IdentityAvatar({
             fontSize: `${Math.max(11, size / 3)}px`,
           }}
         >
-          {fallback || 'U'}
+          {initial}
         </Box>
       )}
       {status && status !== 'offline' && (
@@ -156,7 +281,6 @@ export function IdentityAvatar({
           />
       )}
       {verified && (
-
         <Box
           sx={{
             position: 'absolute',

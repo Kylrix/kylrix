@@ -5024,6 +5024,34 @@ export async function claimSendObjectSecure(payload: {
   return { success: true, kind };
 }
 
+/**
+ * Server SDK Port: Fetches the profile status row from the profiles table.
+ * Bypasses client-side RLS limits using the system tables database.
+ */
+export async function getGlobalProfileStatusSecure(userId: string) {
+  const targetUserId = String(userId || '').trim();
+  if (!targetUserId) return { exists: false, error: 'userId is required' };
+
+  try {
+    const tables = createSystemTablesDB();
+    const res = await tables.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+      tableId: APPWRITE_CONFIG.TABLES.CHAT.PROFILES,
+      queries: [
+        Query.equal('userId', targetUserId),
+        Query.limit(1)
+      ]
+    });
+    if (res.total > 0) {
+      return { exists: true, profile: JSON.parse(JSON.stringify(res.rows[0])) };
+    }
+    return { exists: false, error: 'Not Found' };
+  } catch (e: any) {
+    return { exists: false, error: e.message };
+  }
+}
+
+
 
 
 

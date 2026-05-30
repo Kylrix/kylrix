@@ -47,6 +47,14 @@ const SearchResultAvatar = ({ u }: { u: any }) => {
             pro={flags.pro}
             verified={flags.verified}
             borderRadius="12px"
+            userId={u.$id || u.userId}
+            isAvatar={u.isAvatar}
+            isPublic={u.isPublic}
+            isGuest={u.isGuest}
+            displayName={u.displayName}
+            username={u.username}
+            accountName={u.name}
+            email={u.email}
         />
     );
 };

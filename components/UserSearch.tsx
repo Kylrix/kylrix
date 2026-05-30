@@ -149,6 +149,14 @@ export default function UserSearch({
                     publicKey: (user as any).publicKey || null,
                   }).pro}
                   size={24}
+                  userId={user.id}
+                  isAvatar={(user as any).isAvatar}
+                  isPublic={(user as any).isPublic}
+                  isGuest={(user as any).isGuest}
+                  displayName={user.displayName || (user as any).displayName}
+                  username={user.username || (user as any).username}
+                  accountName={(user as any).name || (user as any).displayName}
+                  email={(user as any).email}
                 />
               }
               label={user.title}
@@ -283,6 +291,14 @@ export default function UserSearch({
                         publicKey: (user as any).publicKey || null,
                       }).pro}
                       size={36}
+                      userId={user.id}
+                      isAvatar={(user as any).isAvatar}
+                      isPublic={(user as any).isPublic}
+                      isGuest={(user as any).isGuest}
+                      displayName={user.displayName || (user as any).displayName}
+                      username={user.username || (user as any).username}
+                      accountName={(user as any).name || (user as any).displayName}
+                      email={(user as any).email}
                     />
                   </ListItemAvatar>
                   <ListItemText
