@@ -13,6 +13,7 @@ import { PotatoProvider } from '@/components/providers/PotatoProvider';
 import { ProfileProvider } from '@/components/providers/ProfileProvider';
 import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
 import { NoteDrawerProvider } from '@/context/NoteDrawerContext';
+import { LoginDrawerProvider } from '@/context/LoginDrawerContext';
 import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { GlobalContextMenu } from '@/components/ui/GlobalContextMenu';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
@@ -71,6 +72,7 @@ const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>
   NotificationProvider,
   SourceProvider,
   NoteDrawerProvider,
+  LoginDrawerProvider,
   ContextMenuWrapper,
   PotatoProvider,
   TokenOpsProvider,
