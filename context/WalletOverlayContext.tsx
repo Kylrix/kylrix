@@ -9,12 +9,15 @@ import React, {
   useState,
   Suspense,
 } from 'react';
+import dynamic from 'next/dynamic';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { WalletSidebar } from '@/components/overlays/WalletSidebar';
 import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
 
 /**
- * Heavy crypto deps ...
+ * Heavy crypto deps (ethers, @solana/web3.js, @mysten/sui, bitcoinjs-lib, bip32/39, …) are
+ * transitively imported from WalletSidebar. Loading it eagerly forces every route to ship
+ * that crypto graph in its initial JS bundle. Code-splitting it keeps the wallet code in its
+ * own chunk that only loads when a user actually opens the wallet overlay.
  */
 const WalletSidebarComponent = dynamic(
   () => import('@/components/overlays/WalletSidebar').then((m) => ({ default: m.WalletSidebar })),
@@ -75,11 +78,6 @@ export function WalletOverlayProvider({ children }: { children: React.ReactNode 
     () => ({ isWalletOpen, openWallet, openWalletWithIntent, closeWallet }),
     [closeWallet, isWalletOpen, openWallet, openWalletWithIntent]
   );
-
-import { WalletSidebar } from '@/components/overlays/WalletSidebar'; // Import statically if possible, or keep dynamic if needed for bundle size
-import { SubscriptionProvider } from '@/context/subscription/SubscriptionContext';
-
-...
 
   return (
     <WalletOverlayContext.Provider value={value}>
