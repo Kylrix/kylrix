@@ -555,7 +555,6 @@ export default function FormsDashboard() {
                 <MuiMenuItem onClick={() => { handleMenuClose(); handleDelete(menuAnchor!.form); }} sx={{ color: '#D14343 !important' }}>
                     <DeleteIcon fontSize="small" /> Delete Form
                 </MuiMenuItem>
-        </Box>
         <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
           <DesktopRightSection panels={['projects', 'huddles', 'goals']} />
         </Box>

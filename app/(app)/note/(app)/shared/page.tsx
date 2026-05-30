@@ -241,8 +241,6 @@ export default function SharedNotesPage() {
                   ))}
               </Grid>
             )}
-          </Box>
-
         </MultiSectionContainer>
       </Container>
     </Box>
