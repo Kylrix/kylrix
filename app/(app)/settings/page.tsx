@@ -216,7 +216,7 @@ export default function SettingsPage() {
         <>
             <Box
                 sx={{
-                    maxWidth: 840,
+                    maxWidth: 1200,
                     mx: 'auto',
                     pt: { xs: 2, md: 2.5 },
                     pb: { xs: 3, md: 4 },
@@ -265,456 +265,465 @@ export default function SettingsPage() {
                     </Typography>
                 </Box>
 
-                <Stack spacing={4}>
-                    <ButtonBase 
-                        onClick={() => router.push('/accounts')}
-                        sx={{ 
-                            width: '100%', 
-                            textAlign: 'left', 
-                            borderRadius: '28px',
-                            display: 'block' 
-                        }}
-                    >
-                        <Box sx={{ 
-                            bgcolor: '#161412', 
-                            borderRadius: '28px', 
-                            p: 3, 
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                                bgcolor: '#1C1A18',
-                                borderColor: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
-                                    <User size={24} />
-                                </Box>
-                                <Box>
-                                    <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
-                                        Go to account settings
-                                    </Typography>
-                                    <Typography sx={{ color: '#9B9691', fontSize: '0.85rem' }}>
-                                        Manage your unified identity, WebAuthn passkeys, and connected apps.
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
-                        </Box>
-                    </ButtonBase>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.1fr 1fr' }, gap: 4, alignItems: 'flex-start' }}>
+                    {/* Left Column: Discoverability, Integrations & Feedback */}
+                    <Stack spacing={4}>
+                        <DiscoverabilitySettings />
 
-                    {/* Smart Assistants Card */}
-                    <ButtonBase 
-                        onClick={() => router.push('/settings/agents')}
-                        sx={{ 
-                            width: '100%', 
-                            textAlign: 'left', 
-                            borderRadius: '28px',
-                            display: 'block' 
-                        }}
-                    >
-                        <Box sx={{ 
-                            bgcolor: '#161412', 
-                            borderRadius: '28px', 
-                            p: 3, 
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                                bgcolor: '#1C1A18',
-                                borderColor: 'rgba(255, 255, 255, 0.1)',
-                                transform: 'translateY(-2px)'
-                            }
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
-                                    <Bot size={24} />
-                                </Box>
-                                <Box>
-                                    <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
-                                        Smart Assistants
-                                    </Typography>
-                                    <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
-                                        Configure private AI keys, automated assistant systems, and active workspaces.
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
-                        </Box>
-                    </ButtonBase>
-
-                    {/* Telegram Notifications */}
-                    <Box sx={{ 
-                        bgcolor: '#161412', 
-                        borderRadius: '28px', 
-                        p: 3, 
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                            bgcolor: '#1C1A18',
-                            borderColor: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(0, 136, 204, 0.1)', color: '#0088cc', display: 'flex' }}>
-                                <TelegramIcon sx={{ fontSize: 24 }} />
-                            </Box>
-                            <Box>
-                                <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
-                                    Telegram Notifications
-                                </Typography>
-                                <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
-                                    Receive instant secure push notifications for calls, active chat threads, and mentions.
-                                </Typography>
-                            </Box>
-                        </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Button
-                                variant="contained"
-                                onClick={() => setTgDrawerOpen(true)}
-                                sx={{
-                                    bgcolor: '#6366F1',
-                                    color: 'white',
-                                    fontSize: '0.85rem',
-                                    fontWeight: 700,
-                                    textTransform: 'none',
-                                    borderRadius: '12px',
-                                    px: 3,
-                                    py: 1,
-                                    '&:hover': {
-                                        bgcolor: '#4F46E5',
-                                    }
-                                }}
-                            >
-                                Manage
-                            </Button>
-                        </Box>
-                    </Box>
-
-                    <DiscoverabilitySettings />
-                    <Box sx={{ bgcolor: '#161412', borderRadius: '28px', p: 3, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                        <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>Daily Token Mint</Typography>
-                        <Typography sx={{ color: '#9B9691', mb: 2, fontSize: '0.9rem' }}>Manually trigger your daily token minting reward.</Typography>
-                        <Button 
-                            variant="contained" 
-                            startIcon={minting ? <CircularProgress size={18} /> : <RefreshCw size={18}/>} 
-                            onClick={handleManualMint} 
-                            disabled={minting}
-                            sx={{ borderRadius: '12px', fontWeight: 700, px: 3, py: 1.2, bgcolor: '#6366F1' }}
-                        >
-                            {minting ? 'Minting...' : 'Mint Daily Tokens'}
-                        </Button>
-                    </Box>
-                    
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
-                            <Shield size={20} color="#6366F1" /> Security & Privacy
-                        </Typography>
-                        
-                        <Paper sx={{ 
-                            p: { xs: 2.25, md: 3 }, 
-                            borderRadius: '28px', 
-                            bgcolor: '#161412', 
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            backgroundImage: 'none',
-                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)'
-                        }}>
-                            <Stack spacing={3}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Vault Status</Typography>
-                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: 0.5 }}>Current encryption state of your session</Typography>
-                                        
-                                        {hasMasterpass && (
-                                            <Typography variant="caption" sx={{ 
-                                                fontFamily: 'var(--font-mono)', 
-                                                fontWeight: 700, 
-                                                display: 'flex', 
-                                                alignItems: 'center', 
-                                                gap: 0.75,
-                                                fontSize: '0.65rem',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.05em',
-                                                color: isArgon ? '#10B981' : '#F59E0B'
-                                            }}>
-                                                <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'currentColor' }} />
-                                                {isArgon ? 'Vault upgraded to T5 core' : 'Unlock to upgrade to Argon2id'}
-                                            </Typography>
-                                        )}
-                                    </Box>
-                                    <Button 
-                                        variant={isUnlocked ? 'outlined' : 'contained'}
-                                        onClick={() =>
-                                          isUnlocked
-                                            ? ecosystemSecurity.lock()
-                                            : requestSudo({ onSuccess: () => {} })
-                                        }
-                                        color={isUnlocked ? 'inherit' : 'primary'}
-                                        startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
-                                        sx={{ 
-                                            borderRadius: '12px',
-                                            textTransform: 'none',
-                                            fontWeight: 700,
-                                            minWidth: 132,
-                                            ...(isUnlocked
-                                                ? { borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.85)' }
-                                                : { bgcolor: '#6366F1', '&:hover': { bgcolor: '#5458E8' } })
-                                        }}
-                                    >
-                                        {isUnlocked ? "Lock Vault" : (hasMasterpass === false ? "Setup" : "Unlock Vault")}
-                                    </Button>
-                                </Box>
-
-                                <Divider sx={{ opacity: 0.05 }} />
-
-                                {/* Passkey Section */}
-                                <Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                        {/* Integrations Category - Google Suite */}
+                        <Box id="google-workspace-settings" sx={{ transition: 'all 0.5s ease', borderRadius: '28px', border: '1px solid transparent' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
+                                <svg viewBox="0 0 24 24" width="20" height="20" style={{ marginRight: 8 }}>
+                                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 6.64l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                                </svg>
+                                Connected Integrations
+                            </Typography>
+                            
+                            <Paper sx={{ 
+                                p: { xs: 2.25, md: 3 }, 
+                                borderRadius: '28px', 
+                                bgcolor: '#161412', 
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                backgroundImage: 'none',
+                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)'
+                            }}>
+                                <Stack spacing={3}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <Box>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Passkeys</Typography>
-                                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>
-                                                Use biometrics to unlock your secure session.
-                                            </Typography>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Google Suite Integration</Typography>
+                                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Connect your Google workspace to sync Keep, Drive, Tasks, and Calendars.</Typography>
                                         </Box>
                                         <Button 
-                                            variant="contained" 
-                                            size="small" 
-                                            startIcon={<Fingerprint size={16} />}
-                                            onClick={() => setPasskeySetupOpen(true)}
-                                            disabled={hasMasterpass === false}
+                                            variant={googleConnected ? 'outlined' : 'contained'}
+                                            onClick={() => {
+                                                setGoogleConnected(!googleConnected);
+                                                toast.success(googleConnected ? 'Google Suite disconnected.' : 'Google Suite integrated successfully!');
+                                            }}
                                             sx={{ 
-                                                borderRadius: '10px',
-                                                bgcolor: '#6366F1',
+                                                borderRadius: '12px',
                                                 textTransform: 'none',
                                                 fontWeight: 700,
-                                                '&:hover': { bgcolor: '#5458E8' }
+                                                minWidth: 132,
+                                                ...(googleConnected
+                                                    ? { borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.85)' }
+                                                    : { bgcolor: '#4285F4', '&:hover': { bgcolor: '#357AE8' } })
                                             }}
                                         >
-                                            Add Passkey
+                                            {googleConnected ? "Disconnect" : "Integrate"}
                                         </Button>
                                     </Box>
 
-                                    <List sx={{ bgcolor: '#0A0908', borderRadius: '18px', p: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                        {passkeyEntries.length === 0 ? (
-                                            <Box sx={{ p: 2, textAlign: 'center', opacity: 0.6 }}>
-                                                <Typography variant="body2">No passkeys registered.</Typography>
-                                            </Box>
-                                        ) : (
-                                            passkeyEntries.map((pk, idx) => (
-                                                <React.Fragment key={pk.$id}>
-                                                    <ListItem 
-                                                        secondaryAction={
-                                                            <IconButton edge="end" color="error" onClick={() => handleRemovePasskey(pk.$id)}>
-                                                                <Trash2 size={18} />
-                                                            </IconButton>
+                                    {googleConnected && (
+                                        <>
+                                            <Divider sx={{ opacity: 0.05 }} />
+                                            <Box>
+                                                <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: 'rgba(255,255,255,0.7)' }}>Sync Preferences</Typography>
+                                                <Stack spacing={2}>
+                                                    <FormControlLabel
+                                                        control={<Switch checked={googleSyncKeep} onChange={(e) => setGoogleSyncKeep(e.target.checked)} color="primary" />}
+                                                        label={
+                                                            <Box>
+                                                                <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Keep Sync</Typography>
+                                                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Real-time synchronization of notes and quick sheets</Typography>
+                                                            </Box>
                                                         }
-                                                        sx={{ py: 1.25 }}
-                                                    >
-                                                        <ListItemIcon>
-                                                            <Fingerprint size={20} color="#6366F1" />
-                                                        </ListItemIcon>
-                                                        <ListItemText 
-                                                            primary={pk.params?.name || `Passkey ${idx + 1}`}
-                                                            secondary="Active"
-                                                            primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem', color: 'white' }}
-                                                            secondaryTypographyProps={{ fontSize: '0.75rem', color: alpha('#10B981', 0.9) }}
-                                                        />
-                                                    </ListItem>
-                                                    {idx < passkeyEntries.length - 1 && <Divider sx={{ opacity: 0.05 }} />}
-                                                </React.Fragment>
-                                            ))
-                                        )}
-                                    </List>
-                                </Box>
+                                                        sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                                    />
+                                                    <Divider sx={{ opacity: 0.05 }} />
+                                                    <FormControlLabel
+                                                        control={<Switch checked={googleSyncCalendar} onChange={(e) => setGoogleSyncCalendar(e.target.checked)} color="primary" />}
+                                                        label={
+                                                            <Box>
+                                                                <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Calendar Connections</Typography>
+                                                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Bi-directional event schedules and huddle meetings</Typography>
+                                                            </Box>
+                                                        }
+                                                        sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                                    />
+                                                    <Divider sx={{ opacity: 0.05 }} />
+                                                    <FormControlLabel
+                                                        control={<Switch checked={googleSyncTasks} onChange={(e) => setGoogleSyncTasks(e.target.checked)} color="primary" />}
+                                                        label={
+                                                            <Box>
+                                                                <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Tasks Sync</Typography>
+                                                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Synchronize your personal goals and assignees across platforms</Typography>
+                                                            </Box>
+                                                        }
+                                                        sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                                    />
+                                                    <Divider sx={{ opacity: 0.05 }} />
+                                                    <FormControlLabel
+                                                        control={<Switch checked={googleSyncDrive} onChange={(e) => setGoogleSyncDrive(e.target.checked)} color="primary" />}
+                                                        label={
+                                                            <Box>
+                                                                <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Drive File Picker</Typography>
+                                                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Direct attachment of cloud storage assets to chat and notes</Typography>
+                                                            </Box>
+                                                        }
+                                                        sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                                    />
+                                                </Stack>
+                                            </Box>
+                                        </>
+                                    )}
+                                </Stack>
+                            </Paper>
+                        </Box>
 
+                        {/* Daily Token Mint */}
+                        <Box sx={{ bgcolor: '#161412', borderRadius: '28px', p: 3, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                            <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>Daily Token Mint</Typography>
+                            <Typography sx={{ color: '#9B9691', mb: 2, fontSize: '0.9rem' }}>Manually trigger your daily token minting reward.</Typography>
+                            <Button 
+                                variant="contained" 
+                                startIcon={minting ? <CircularProgress size={18} /> : <RefreshCw size={18}/>} 
+                                onClick={handleManualMint} 
+                                disabled={minting}
+                                sx={{ borderRadius: '12px', fontWeight: 700, px: 3, py: 1.2, bgcolor: '#6366F1' }}
+                            >
+                                {minting ? 'Minting...' : 'Mint Daily Tokens'}
+                            </Button>
+                        </Box>
 
-
-                                {/* App Preferences */}
-                                <Box>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
-                                        <Smartphone size={18} color="#6366F1" /> App Preferences
-                                    </Typography>
-                                    <Stack spacing={2}>
-                                        <FormControlLabel
-                                            control={<Switch defaultChecked color="primary" />}
-                                            label={
-                                                <Box>
-                                                    <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Push Notifications</Typography>
-                                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Get notified of new messages</Typography>
-                                                </Box>
-                                            }
-                                            sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                        />
-                                        <Divider sx={{ opacity: 0.05 }} />
-                                        <FormControlLabel
-                                            control={<Switch defaultChecked color="primary" />}
-                                            label={
-                                                <Box>
-                                                    <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Active Status</Typography>
-                                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Show when you are online</Typography>
-                                                </Box>
-                                            }
-                                            sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                        />
-                                    </Stack>
-                                </Box>
-                            </Stack>
-                        </Paper>
-                    </Box>
-
-                    {/* Integrations Category - Google Suite */}
-                    <Box id="google-workspace-settings" sx={{ transition: 'all 0.5s ease', borderRadius: '28px', border: '1px solid transparent' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
-                            <svg viewBox="0 0 24 24" width="20" height="20" style={{ marginRight: 2 }}>
-                                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 6.64l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                            </svg>
-                            Connected Integrations
-                        </Typography>
-                        
-                        <Paper sx={{ 
-                            p: { xs: 2.25, md: 3 }, 
-                            borderRadius: '28px', 
-                            bgcolor: '#161412', 
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            backgroundImage: 'none',
-                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)'
-                        }}>
-                            <Stack spacing={3}>
+                        {/* Feature Requests section */}
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
+                                <Lightbulb size={20} color="#6366F1" /> Feedback & Intelligence
+                            </Typography>
+                            
+                            <Paper sx={{ 
+                                p: { xs: 2.25, md: 3 }, 
+                                borderRadius: '28px', 
+                                bgcolor: '#161412', 
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                backgroundImage: 'none',
+                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    bgcolor: '#1C1A18',
+                                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Google Suite Integration</Typography>
-                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Connect your Google workspace to sync Keep, Drive, Tasks, and Calendars.</Typography>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Feature Request & Bug Report</Typography>
+                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.</Typography>
                                     </Box>
                                     <Button 
-                                        variant={googleConnected ? 'outlined' : 'contained'}
-                                        onClick={() => {
-                                            setGoogleConnected(!googleConnected);
-                                            toast.success(googleConnected ? 'Google Suite disconnected.' : 'Google Suite integrated successfully!');
-                                        }}
+                                        variant="contained"
+                                        onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
                                         sx={{ 
                                             borderRadius: '12px',
                                             textTransform: 'none',
                                             fontWeight: 700,
                                             minWidth: 132,
-                                            ...(googleConnected
-                                                ? { borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.85)' }
-                                                : { bgcolor: '#4285F4', '&:hover': { bgcolor: '#357AE8' } })
+                                            bgcolor: '#6366F1',
+                                            '&:hover': { bgcolor: '#5458E8' }
                                         }}
                                     >
-                                        {googleConnected ? "Disconnect" : "Integrate"}
+                                        Open Portal
                                     </Button>
                                 </Box>
+                            </Paper>
+                        </Box>
+                    </Stack>
 
-                                {googleConnected && (
-                                    <>
-                                        <Divider sx={{ opacity: 0.05 }} />
-                                        <Box>
-                                            <Typography variant="subtitle2" sx={{ fontWeight: 800, mb: 2, color: 'rgba(255,255,255,0.7)' }}>Sync Preferences</Typography>
-                                            <Stack spacing={2}>
-                                                <FormControlLabel
-                                                    control={<Switch checked={googleSyncKeep} onChange={(e) => setGoogleSyncKeep(e.target.checked)} color="primary" />}
-                                                    label={
-                                                        <Box>
-                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Keep Sync</Typography>
-                                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Real-time synchronization of notes and quick sheets</Typography>
-                                                        </Box>
-                                                    }
-                                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                                />
-                                                <Divider sx={{ opacity: 0.05 }} />
-                                                <FormControlLabel
-                                                    control={<Switch checked={googleSyncCalendar} onChange={(e) => setGoogleSyncCalendar(e.target.checked)} color="primary" />}
-                                                    label={
-                                                        <Box>
-                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Calendar Connections</Typography>
-                                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Bi-directional event schedules and huddle meetings</Typography>
-                                                        </Box>
-                                                    }
-                                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                                />
-                                                <Divider sx={{ opacity: 0.05 }} />
-                                                <FormControlLabel
-                                                    control={<Switch checked={googleSyncTasks} onChange={(e) => setGoogleSyncTasks(e.target.checked)} color="primary" />}
-                                                    label={
-                                                        <Box>
-                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Tasks Sync</Typography>
-                                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Synchronize your personal goals and assignees across platforms</Typography>
-                                                        </Box>
-                                                    }
-                                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                                />
-                                                <Divider sx={{ opacity: 0.05 }} />
-                                                <FormControlLabel
-                                                    control={<Switch checked={googleSyncDrive} onChange={(e) => setGoogleSyncDrive(e.target.checked)} color="primary" />}
-                                                    label={
-                                                        <Box>
-                                                            <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Google Drive File Picker</Typography>
-                                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Direct attachment of cloud storage assets to chat and notes</Typography>
-                                                        </Box>
-                                                    }
-                                                    sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                                />
-                                            </Stack>
-                                        </Box>
-                                    </>
-                                )}
-                            </Stack>
-                        </Paper>
-                    </Box>
+                    {/* Right Column: Account settings, Smart Assistants, Telegram & Security */}
+                    <Stack spacing={4}>
+                        {/* Go to account settings */}
+                        <ButtonBase 
+                            onClick={() => router.push('/accounts')}
+                            sx={{ 
+                                width: '100%', 
+                                textAlign: 'left', 
+                                borderRadius: '28px',
+                                display: 'block' 
+                            }}
+                        >
+                            <Box sx={{ 
+                                bgcolor: '#161412', 
+                                borderRadius: '28px', 
+                                p: 3, 
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    bgcolor: '#1C1A18',
+                                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
+                                        <User size={24} />
+                                    </Box>
+                                    <Box>
+                                        <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
+                                            Go to account settings
+                                        </Typography>
+                                        <Typography sx={{ color: '#9B9691', fontSize: '0.85rem' }}>
+                                            Manage your unified identity, WebAuthn passkeys, and connected apps.
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
+                            </Box>
+                        </ButtonBase>
 
-                    {/* Feature Requests section */}
-                    <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
-                            <Lightbulb size={20} color="#6366F1" /> Feedback & Intelligence
-                        </Typography>
-                        
-                        <Paper sx={{ 
-                            p: { xs: 2.25, md: 3 }, 
-                            borderRadius: '28px', 
+                        {/* Smart Assistants Card */}
+                        <ButtonBase 
+                            onClick={() => router.push('/settings/agents')}
+                            sx={{ 
+                                width: '100%', 
+                                textAlign: 'left', 
+                                borderRadius: '28px',
+                                display: 'block' 
+                            }}
+                        >
+                            <Box sx={{ 
+                                bgcolor: '#161412', 
+                                borderRadius: '28px', 
+                                p: 3, 
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                    bgcolor: '#1C1A18',
+                                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                                    transform: 'translateY(-2px)'
+                                }
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
+                                        <Bot size={24} />
+                                    </Box>
+                                    <Box>
+                                        <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
+                                            Smart Assistants
+                                        </Typography>
+                                        <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
+                                            Configure private AI keys, automated assistant systems, and active workspaces.
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                                <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
+                            </Box>
+                        </ButtonBase>
+
+                        {/* Telegram Notifications */}
+                        <Box sx={{ 
                             bgcolor: '#161412', 
+                            borderRadius: '28px', 
+                            p: 3, 
                             border: '1px solid rgba(255, 255, 255, 0.05)',
-                            backgroundImage: 'none',
-                            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
                             transition: 'all 0.2s ease',
                             '&:hover': {
                                 bgcolor: '#1C1A18',
                                 borderColor: 'rgba(255, 255, 255, 0.1)'
                             }
                         }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Box>
-                                    <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Feature Request & Bug Report</Typography>
-                                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(0, 136, 204, 0.1)', color: '#0088cc', display: 'flex' }}>
+                                    <TelegramIcon sx={{ fontSize: 24 }} />
                                 </Box>
-                                <Button 
+                                <Box>
+                                    <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
+                                        Telegram Notifications
+                                    </Typography>
+                                    <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
+                                        Receive push notifications for calls and active chat threads.
+                                    </Typography>
+                                </Box>
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Button
                                     variant="contained"
-                                    onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
-                                    sx={{ 
-                                        borderRadius: '12px',
-                                        textTransform: 'none',
-                                        fontWeight: 700,
-                                        minWidth: 132,
+                                    onClick={() => setTgDrawerOpen(true)}
+                                    sx={{
                                         bgcolor: '#6366F1',
-                                        '&:hover': { bgcolor: '#5458E8' }
+                                        color: 'white',
+                                        fontSize: '0.85rem',
+                                        fontWeight: 700,
+                                        textTransform: 'none',
+                                        borderRadius: '12px',
+                                        px: 3,
+                                        py: 1,
+                                        '&:hover': {
+                                            bgcolor: '#4F46E5',
+                                        }
                                     }}
                                 >
-                                    Open Portal
+                                    Manage
                                 </Button>
                             </Box>
-                        </Paper>
-                    </Box>
-                </Stack>
+                        </Box>
+
+                        {/* Security & Privacy card */}
+                        <Box>
+                            <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
+                                <Shield size={20} color="#6366F1" /> Security & Privacy
+                            </Typography>
+                            
+                            <Paper sx={{ 
+                                p: { xs: 2.25, md: 3 }, 
+                                borderRadius: '28px', 
+                                bgcolor: '#161412', 
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                backgroundImage: 'none',
+                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)'
+                            }}>
+                                <Stack spacing={3}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Box>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Vault Status</Typography>
+                                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: 0.5 }}>Current encryption state of your session</Typography>
+                                            
+                                            {hasMasterpass && (
+                                                <Typography variant="caption" sx={{ 
+                                                    fontFamily: 'var(--font-mono)', 
+                                                    fontWeight: 700, 
+                                                    display: 'flex', 
+                                                    alignItems: 'center', 
+                                                    gap: 0.75,
+                                                    fontSize: '0.65rem',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.05em',
+                                                    color: isArgon ? '#10B981' : '#F59E0B'
+                                                }}>
+                                                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'currentColor' }} />
+                                                    {isArgon ? 'Vault upgraded to T5 core' : 'Unlock to upgrade to Argon2id'}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                        <Button 
+                                            variant={isUnlocked ? 'outlined' : 'contained'}
+                                            onClick={() =>
+                                              isUnlocked
+                                                ? ecosystemSecurity.lock()
+                                                : requestSudo({ onSuccess: () => {} })
+                                            }
+                                            color={isUnlocked ? 'inherit' : 'primary'}
+                                            startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
+                                            sx={{ 
+                                                borderRadius: '12px',
+                                                textTransform: 'none',
+                                                fontWeight: 700,
+                                                minWidth: 132,
+                                                ...(isUnlocked
+                                                    ? { borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.85)' }
+                                                    : { bgcolor: '#6366F1', '&:hover': { bgcolor: '#5458E8' } })
+                                            }}
+                                        >
+                                            {isUnlocked ? "Lock Vault" : (hasMasterpass === false ? "Setup" : "Unlock Vault")}
+                                        </Button>
+                                    </Box>
+
+                                    <Divider sx={{ opacity: 0.05 }} />
+
+                                    {/* Passkey Section */}
+                                    <Box>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                            <Box>
+                                                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Passkeys</Typography>
+                                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>
+                                                    Use biometrics to unlock your secure session.
+                                                </Typography>
+                                            </Box>
+                                            <Button 
+                                                variant="contained" 
+                                                size="small" 
+                                                startIcon={<Fingerprint size={16} />}
+                                                onClick={() => setPasskeySetupOpen(true)}
+                                                disabled={hasMasterpass === false}
+                                                sx={{ 
+                                                    borderRadius: '10px',
+                                                    bgcolor: '#6366F1',
+                                                    textTransform: 'none',
+                                                    fontWeight: 700,
+                                                    '&:hover': { bgcolor: '#5458E8' }
+                                                }}
+                                            >
+                                                Add Passkey
+                                            </Button>
+                                        </Box>
+
+                                        <List sx={{ bgcolor: '#0A0908', borderRadius: '18px', p: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                            {passkeyEntries.length === 0 ? (
+                                                <Box sx={{ p: 2, textAlign: 'center', opacity: 0.6 }}>
+                                                    <Typography variant="body2">No passkeys registered.</Typography>
+                                                </Box>
+                                            ) : (
+                                                passkeyEntries.map((pk, idx) => (
+                                                    <React.Fragment key={pk.$id}>
+                                                        <ListItem 
+                                                            secondaryAction={
+                                                                <IconButton edge="end" color="error" onClick={() => handleRemovePasskey(pk.$id)}>
+                                                                    <Trash2 size={18} />
+                                                                </IconButton>
+                                                            }
+                                                            sx={{ py: 1.25 }}
+                                                        >
+                                                            <ListItemIcon>
+                                                                <Fingerprint size={20} color="#6366F1" />
+                                                            </ListItemIcon>
+                                                            <ListItemText 
+                                                                primary={pk.params?.name || `Passkey ${idx + 1}`}
+                                                                secondary="Active"
+                                                                primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem', color: 'white' }}
+                                                                secondaryTypographyProps={{ fontSize: '0.75rem', color: alpha('#10B981', 0.9) }}
+                                                            />
+                                                        </ListItem>
+                                                        {idx < passkeyEntries.length - 1 && <Divider sx={{ opacity: 0.05 }} />}
+                                                    </React.Fragment>
+                                                ))
+                                            )}
+                                        </List>
+                                    </Box>
+
+                                    {/* App Preferences */}
+                                    <Box>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
+                                            <Smartphone size={18} color="#6366F1" /> App Preferences
+                                        </Typography>
+                                        <Stack spacing={2}>
+                                            <FormControlLabel
+                                                control={<Switch defaultChecked color="primary" />}
+                                                label={
+                                                    <Box>
+                                                        <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Push Notifications</Typography>
+                                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Get notified of new messages</Typography>
+                                                    </Box>
+                                                }
+                                                sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                            />
+                                            <Divider sx={{ opacity: 0.05 }} />
+                                            <FormControlLabel
+                                                control={<Switch defaultChecked color="primary" />}
+                                                label={
+                                                    <Box>
+                                                        <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Active Status</Typography>
+                                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Show when you are online</Typography>
+                                                    </Box>
+                                                }
+                                                sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
+                                            />
+                                        </Stack>
+                                    </Box>
+                                </Stack>
+                            </Paper>
+                        </Box>
+                    </Stack>
+                </Box>
+            </Box>
             </Box>
 
             {/* Conditionally unmounted overlays/drawers mathematically preventing click blocking */}
