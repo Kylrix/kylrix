@@ -218,7 +218,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     screenWidth,
     activeDetail,
     setActiveDetail,
-  }), [screenWidth, overrides, activeDetail]);
+  }), [screenWidth, overrides, activeDetail, getLayoutForRoute, updateRouteOverride, resetOverrides]);
 
   return (
     <SectionContext.Provider value={contextValue}>
@@ -274,7 +274,7 @@ export function NoteDetailContainer({ noteId, onBack }: { noteId: string; onBack
       }
     })();
     return () => { mounted = false; };
-  }, [noteId, CACHE_KEY, fetchOptimized, getCachedData]);
+  }, [noteId, CACHE_KEY, fetchOptimized, getCachedData, showError]);
 
   const handleUpdate = async (updated: Notes) => {
     try {
