@@ -30,7 +30,7 @@ import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
 import { ViewMode, SortField, TaskStatus } from '@/types';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer } from '@/context/SectionContext';
 
 export default function TaskList() {
   const theme = useTheme();
@@ -148,8 +148,7 @@ export default function TaskList() {
 
   return (
     <Box sx={{ animation: 'fadeIn 0.4s ease-out', minHeight: '100vh', bgcolor: '#0A0908', p: { xs: 2, md: 4 }, pointerEvents: 'auto' }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start' }}>
-        <Box>
+      <MultiSectionContainer panels={['forms', 'huddles', 'projects']}>
       {/* Header */}
       <Box
         sx={{
@@ -552,11 +551,7 @@ export default function TaskList() {
           </Typography>
         </Box>
       )}
-        </Box>
-        <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <DesktopRightSection panels={['forms', 'huddles', 'projects']} />
-        </Box>
-      </Box>
+      </MultiSectionContainer>
     </Box>
   );
 }

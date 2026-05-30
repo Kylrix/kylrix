@@ -107,8 +107,7 @@ export default function SharedNotesPage() {
       overflowX: 'hidden'
     }}>
       <Container maxWidth="xl" sx={{ flexGrow: 1, pt: 6, pb: { xs: 12, md: 4 } }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start' }}>
-          <Box>
+        <MultiSectionContainer panels={['tags', 'huddles', 'projects']}>
             {/* Mobile Header - Hidden on Desktop */}
             <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
               <Typography variant="h2" sx={{ fontWeight: 900 }}>
@@ -244,11 +243,7 @@ export default function SharedNotesPage() {
             )}
           </Box>
 
-          {/* Desktop Right Sidebar */}
-          <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-            <DesktopRightSection panels={['tags', 'huddles', 'projects']} />
-          </Box>
-        </Box>
+        </MultiSectionContainer>
       </Container>
     </Box>
   );

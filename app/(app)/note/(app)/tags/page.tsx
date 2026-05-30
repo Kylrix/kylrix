@@ -28,7 +28,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { formatDateWithFallback } from '@/lib/date-utils';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer } from '@/context/SectionContext';
 
 export default function TagsPage() {
   const { user, isAuthenticated, openIDMWindow } = useAuth();
@@ -207,8 +207,7 @@ export default function TagsPage() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: 'white', p: { xs: 2, md: 6 } }}>
       <Container maxWidth="xl">
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start' }}>
-          <Box>
+        <MultiSectionContainer panels={['note', 'huddles', 'projects']}>
             {/* Header */}
             <Box sx={{ mb: 6 }}>
               <Typography 
@@ -425,11 +424,7 @@ export default function TagsPage() {
             )}
           </Box>
 
-          {/* Desktop Right Sidebar */}
-          <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-            <DesktopRightSection panels={['note', 'huddles', 'projects']} />
-          </Box>
-        </Box>
+        </MultiSectionContainer>
       </Container>
     </Box>
   );
