@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { Client, Account } from 'appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { AuthProvider } from '@/context/auth/AuthContext';
 
 const client = new Client();
 if (typeof window !== 'undefined') {
@@ -12,7 +11,7 @@ if (typeof window !== 'undefined') {
 }
 const account = new Account(client);
 
-function SilentCheckContent() {
+export default function SilentCheckPage() {
     useEffect(() => {
         async function performCheck() {
             // SECURITY: Validate origin to prevent auth status leakage (CVE-KYL-2026-001)
@@ -42,12 +41,4 @@ function SilentCheckContent() {
     }, []);
 
     return null; // Silent
-}
-
-export default function SilentCheckPage() {
-    return (
-        <AuthProvider>
-            <SilentCheckContent />
-        </AuthProvider>
-    );
 }

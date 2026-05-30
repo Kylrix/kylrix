@@ -5,6 +5,7 @@ import ThemeRegistry from '@/theme/ThemeProvider';
 import { DataNexusProvider } from '@/context/DataNexusContext';
 import { LayoutProvider } from '@/context/LayoutContext';
 import { ClientProviders } from './ClientProviders';
+import { AuthProvider } from '@/context/auth/AuthContext';
 
 const mono = JetBrains_Mono({
   subsets: ["latin"],
@@ -97,17 +98,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={mono.className}>
-        <ThemeRegistry>
-          <DataNexusProvider>
-            <LayoutProvider>
-              <ClientProviders>
-                <GlobalShell>
-                  {children}
-                </GlobalShell>
-              </ClientProviders>
-            </LayoutProvider>
-          </DataNexusProvider>
-        </ThemeRegistry>
+        <AuthProvider>
+            <ThemeRegistry>
+              <DataNexusProvider>
+                <LayoutProvider>
+                  <ClientProviders>
+                    <GlobalShell>
+                      {children}
+                    </GlobalShell>
+                  </ClientProviders>
+                </LayoutProvider>
+              </DataNexusProvider>
+            </ThemeRegistry>
+        </AuthProvider>
       </body>
     </html>
   );
