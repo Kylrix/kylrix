@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Typography, Stack, Button, IconButton, Skeleton, alpha, useTheme } from '@mui/material';
+import { Box, Typography, Stack, Button, IconButton, Skeleton, alpha, useTheme, Chip } from '@mui/material';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -117,11 +117,12 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
   // Load calls/huddles
   useEffect(() => {
     if (!panels.includes('huddles') || !user) return;
+    const userId = user.$id;
     let mounted = true;
     async function load() {
       setCallsLoading(true);
       try {
-        const res = await CallService.getActiveCalls(user.$id, true);
+        const res = await CallService.getActiveCalls(userId, true);
         if (mounted) setCalls(res || []);
       } catch (e) {
         console.error('Failed loading calls:', e);
@@ -193,11 +194,12 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
   // Load TOTPs
   useEffect(() => {
     if (!panels.includes('totp') || !user) return;
+    const userId = user.$id;
     let mounted = true;
     async function load() {
       setTotpsLoading(true);
       try {
-        const res = await listTotpSecrets(user.$id);
+        const res = await listTotpSecrets(userId);
         if (mounted) setTotps(res || []);
       } catch (e) {
         console.error('Failed loading TOTPs:', e);
