@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { Box } from '@mui/material';
 import { GhostEditor } from '@/components/landing/GhostEditor';
+import { LoginDrawerProvider } from '@/context/LoginDrawerContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 
 function NoteLandingInner() {
@@ -34,7 +34,9 @@ function NoteLandingInner() {
     }}>
       <Box component="main" sx={{ flex: 1 }}>
         <Suspense fallback={null}>
-          <GhostEditor />
+          <LoginDrawerProvider>
+            <GhostEditor />
+          </LoginDrawerProvider>
         </Suspense>
       </Box>
     </Box>
