@@ -18,7 +18,7 @@ import SudoModal from '@/components/overlays/SudoModal';
 import { useAI } from '@/context/AIContext';
 import { useSudo } from '@/context/SudoContext';
 import { useFAB } from '@/context/FABContext';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { 
   Box, 
   Typography, 
@@ -46,6 +46,7 @@ function DashboardPageContent() {
   const isMobileView = useMediaQuery(theme.breakpoints.down('md'));
   const { requestSudo } = useSudo();
   const { setConfiguration, resetConfiguration } = useFAB();
+  const { setActiveDetail } = useSection();
   
   // Master password modal state
   const [showMasterPassDrawer, setShowMasterPassDrawer] = useState(needsMasterPassword || !isVaultUnlocked());
@@ -222,7 +223,7 @@ function DashboardPageContent() {
         opacity: showMasterPassDrawer ? 0.3 : 1,
         pt: { xs: 2, md: 4 }
       }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start', px: { xs: 2, md: 6 } }}>
+        <MultiSectionContainer panels={['note', 'totp', 'projects']}>
           <Box>
         {/* Header Section */}
         <Box sx={{ px: { xs: 2, md: 6 } }}>
@@ -288,7 +289,7 @@ function DashboardPageContent() {
                   isBlurEnabled={isBlurEnabled}
                   onClick={() => {
                     setSelectedCredential(cred);
-                    setShowDetail(true);
+                    setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
                   }}
                 />
               ))
@@ -356,14 +357,6 @@ function DashboardPageContent() {
           </DialogActions>
         </Dialog>
 
-        {showDetail && selectedCredential && (
-          <CredentialDetail
-            credential={selectedCredential}
-            onClose={() => setShowDetail(false)}
-            isMobile={isMobileView}
-          />
-        )}
-
         <SudoModal
           isOpen={showMasterPassDrawer}
           app="vault"
@@ -371,9 +364,7 @@ function DashboardPageContent() {
           onCancel={() => { }}
         />
         </Box>
-        <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <DesktopRightSection panels={['note', 'totp', 'projects']} />
-        </Box>
+        </MultiSectionContainer>
       </Box>
       </Box>
     </>
