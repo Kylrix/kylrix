@@ -100,8 +100,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     setActiveDetail(null);
   }, [pathname]);
 
-  // Persist overrides locally and conditionally dispatch 1% anonymous telemetry
-  const updateRouteOverride = (route: string, override: Partial<SectionConfig>) => {
+  const updateRouteOverride = useCallback((route: string, override: Partial<SectionConfig>) => {
     setOverrides((prev) => {
       const updated = { ...prev, [route]: { ...prev[route], ...override } };
       if (typeof window !== 'undefined') {
@@ -125,14 +124,14 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
       }
       return updated;
     });
-  };
+  }, [screenWidth]);
 
-  const resetOverrides = () => {
+  const resetOverrides = useCallback(() => {
     setOverrides({});
     if (typeof window !== 'undefined') {
       localStorage.removeItem('kylrix:sections:overrides');
     }
-  };
+  }, []);
 
   // Intelligent fallback: auto-partitions data/sections for non-configured routes
   const analyzeAndPartitionRoute = (route: string): PanelType[] => {
@@ -152,7 +151,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Computes the dynamic layout depending on screen width and route preferences
-  const getLayoutForRoute = (route: string): SectionConfig => {
+  const getLayoutForRoute = useCallback((route: string): SectionConfig => {
     const cleanRoute = route.split('?')[0];
     const userOverride = overrides[cleanRoute];
 
@@ -218,7 +217,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     screenWidth,
     activeDetail,
     setActiveDetail,
-  }), [screenWidth, overrides, activeDetail, getLayoutForRoute, updateRouteOverride, resetOverrides]);
+  }), [screenWidth, activeDetail, getLayoutForRoute, updateRouteOverride, resetOverrides]);
 
   return (
     <SectionContext.Provider value={contextValue}>
