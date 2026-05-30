@@ -1086,10 +1086,60 @@ export default function ConnectTopbar({
                 >
                   See full profile
                 </Button>
-              </Box>
             </Box>
-          </Paper>
-        </Box>
+          </Box>
+        </Paper>
+      </Box>
+    );
+
+    if (isDesktop) {
+      return (
+        <Drawer
+          anchor="left"
+          open={Boolean(profileMenuAnchorEl)}
+          onClose={() => setProfileMenuAnchorEl(null)}
+          keepMounted={false}
+          disablePortal={true}
+          PaperProps={{
+            sx: {
+              bgcolor: '#161412',
+              width: 320,
+              height: '100vh',
+              borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+              p: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+            }
+          }}
+        >
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff' }}>
+              My Account
+            </Typography>
+            <IconButton onClick={() => setProfileMenuAnchorEl(null)} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+              <CloseIcon size={18} />
+            </IconButton>
+          </Box>
+          
+          <Box sx={{ flex: 1, overflowY: 'auto', mx: -3, px: 3 }}>
+            {profileContent}
+          </Box>
+        </Drawer>
+      );
+    }
+
+    return (
+      <Box
+        sx={{
+          width: '100%',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+          bgcolor: '#161412',
+          overflow: 'hidden',
+        }}
+      >
+        {profileContent}
       </Box>
     );
   };
