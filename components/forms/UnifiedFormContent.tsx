@@ -8,12 +8,10 @@ import {
     Button, 
     Paper, 
     CircularProgress, 
-    Container,
     Alert,
     Fade,
     Radio,
     RadioGroup,
-    Stack,
     FormControlLabel,
     Checkbox,
     FormGroup,
@@ -21,7 +19,7 @@ import {
     MenuItem,
     FormControl,
     IconButton,
-    Drawer,
+    Stack,
     alpha
 } from '@mui/material';
 import { 
@@ -38,13 +36,12 @@ import { secureUploadFile } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { useAuth } from '@/context/auth/AuthContext';
 
-interface UnifiedFormDrawerProps {
-    open: boolean;
-    onClose: () => void;
+interface UnifiedFormContentProps {
     formId: string;
+    onClose: () => void;
 }
 
-export function UnifiedFormDrawer({ open, onClose, formId }: UnifiedFormDrawerProps) {
+export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps) {
     const { fetchOptimized } = useDataNexus();
     const { user } = useAuth();
     const [form, setForm] = useState<Forms | null>(null);
@@ -55,7 +52,7 @@ export function UnifiedFormDrawer({ open, onClose, formId }: UnifiedFormDrawerPr
     const [formData, setFormData] = useState<Record<string, any>>({});
 
     useEffect(() => {
-        if (!open || !formId) return;
+        if (!formId) return;
 
         const fetchForm = async () => {
             setLoading(true);
@@ -72,7 +69,7 @@ export function UnifiedFormDrawer({ open, onClose, formId }: UnifiedFormDrawerPr
             }
         };
         fetchForm();
-    }, [formId, open, fetchOptimized]);
+    }, [formId, fetchOptimized]);
 
     const handleFieldChange = (fieldId: string, value: any) => {
         setFormData(prev => ({ ...prev, [fieldId]: value }));
@@ -253,23 +250,15 @@ export function UnifiedFormDrawer({ open, onClose, formId }: UnifiedFormDrawerPr
     try { schema = JSON.parse(form?.schema || '[]'); } catch (_e) {}
 
     return (
-        <Drawer
-            anchor="bottom"
-            open={open}
-            onClose={onClose}
-            PaperProps={{
-                sx: {
-                    maxHeight: '60vh',
-                    borderTopLeftRadius: '32px',
-                    borderTopRightRadius: '32px',
-                    bgcolor: '#050505',
-                    backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%)',
-                    color: 'white',
-                    p: 0,
-                    overflow: 'hidden'
-                }
-            }}
-        >
+        <Box sx={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            maxHeight: '60dvh',
+            bgcolor: '#050505',
+            backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%)',
+            color: 'white',
+            overflow: 'hidden'
+        }}>
             <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)' }}>
                     {form?.title || 'Intelligence Portal'}
@@ -339,6 +328,6 @@ export function UnifiedFormDrawer({ open, onClose, formId }: UnifiedFormDrawerPr
                     </Box>
                 )}
             </Box>
-        </Drawer>
+        </Box>
     );
 }

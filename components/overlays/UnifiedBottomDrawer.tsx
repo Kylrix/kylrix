@@ -20,6 +20,7 @@ const NewProjectDrawer = dynamic(() => import('./NewProjectDrawer').then(mod => 
 const SecureChatSetupDrawer = dynamic(() => import('./SecureChatSetupDrawer').then(mod => mod.SecureChatSetupDrawer), { ssr: false });
 const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(mod => mod.DeleteConfirmDrawer), { ssr: false });
 const ProjectInviteDrawer = dynamic(() => import('./ProjectInviteDrawer').then(mod => mod.ProjectInviteDrawer), { ssr: false });
+const UnifiedFormContent = dynamic(() => import('../forms/UnifiedFormContent').then(mod => mod.UnifiedFormContent), { ssr: false });
 
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
@@ -63,6 +64,11 @@ export function UnifiedBottomDrawer() {
             return <DeleteConfirmDrawer />;
         case 'project-invite':
             return <ProjectInviteDrawer />;
+        case 'form':
+            return <UnifiedFormContent 
+                formId={drawerData?.formId} 
+                onClose={close} 
+            />;
         default: return null;
     }
   };
@@ -71,7 +77,7 @@ export function UnifiedBottomDrawer() {
   if (!content) return null;
 
   // Some components handle their own Drawer wrapper, but for new simple ones we wrap them
-  if (['secure-chat-setup', 'delete-confirm', 'project-invite'].includes(activeContent)) {
+  if (['secure-chat-setup', 'delete-confirm', 'project-invite', 'form'].includes(activeContent)) {
     return (
         <Drawer
             anchor="bottom"
@@ -83,7 +89,7 @@ export function UnifiedBottomDrawer() {
                     bgcolor: '#161412',
                     borderTop: '1px solid rgba(255,255,255,0.08)',
                     borderRadius: '32px 32px 0 0',
-                    maxHeight: '90dvh',
+                    maxHeight: activeContent === 'form' ? '60dvh' : '90dvh',
                     overflow: 'hidden'
                 }
             }}

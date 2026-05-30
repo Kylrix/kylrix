@@ -51,7 +51,6 @@ import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/components/overlays/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
 import TelegramIcon from '@mui/icons-material/Telegram';
-import { UnifiedFormDrawer } from '@/components/forms/UnifiedFormDrawer';
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -79,7 +78,6 @@ export default function SettingsPage() {
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
     const [_loadingPasskeys, setLoadingPasskeys] = useState(true);
 
-    const [formDrawerOpen, setFormDrawerOpen] = useState(false);
     const FEATURE_FORM_ID = '6a19dc99002634bd33ae';
 
 
@@ -678,7 +676,7 @@ export default function SettingsPage() {
                                 </Box>
                                 <Button 
                                     variant="contained"
-                                    onClick={() => setFormDrawerOpen(true)}
+                                    onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
                                     sx={{ 
                                         borderRadius: '12px',
                                         textTransform: 'none',
@@ -719,12 +717,6 @@ export default function SettingsPage() {
                     }}
                 />
             )}
-
-            <UnifiedFormDrawer 
-                open={formDrawerOpen}
-                onClose={() => setFormDrawerOpen(false)}
-                formId={FEATURE_FORM_ID}
-            />
         </>
     );
 }
