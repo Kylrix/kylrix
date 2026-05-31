@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, Button, Stack, alpha, Switch, FormControlLabel, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Typography, IconButton, Button, Stack, alpha, Switch, FormControlLabel, useTheme, useMediaQuery, Chip } from '@mui/material';
 import { X } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
+import { account } from '@/lib/appwrite';
 
 import { GoogleAuthAdapter } from '@/lib/integrations/google/auth';
 
@@ -27,12 +28,46 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
     setIsDrawerOpen(isOpen);
     
     if (isOpen) {
-      // Check if already connected on open
+      // 1. Initial synchronous check of Firebase auth
       const currentUser = GoogleAuthAdapter.getCurrentUser();
       if (currentUser) {
         setGoogleConnected(true);
         setGoogleUser(currentUser);
       }
+
+      // Helper to query active Appwrite linked identities
+      const fetchAppwriteIdentity = async () => {
+        try {
+          const identityList = await account.listIdentities();
+          const googleIdentity = identityList.identities?.find(i => i.provider === 'google');
+          if (googleIdentity) {
+            setGoogleConnected(true);
+            setGoogleUser(prev => prev || {
+              displayName: googleIdentity.providerEmail || 'Connected Account',
+              email: googleIdentity.providerEmail || 'google',
+              photoURL: null
+            });
+          }
+        } catch (e) {
+          console.error('[GoogleIntegrationDrawer] failed to check identities', e);
+        }
+      };
+
+      // 2. Subscribe to live Firebase auth changes
+      const unsubscribe = GoogleAuthAdapter.initAuth(
+        (user) => {
+          setGoogleConnected(true);
+          setGoogleUser(user);
+        },
+        () => {
+          // Fall back to check Appwrite identities if Firebase auth hasn't synced
+          void fetchAppwriteIdentity();
+        }
+      );
+
+      return () => {
+        unsubscribe();
+      };
     }
   }, [isOpen, setIsDrawerOpen]);
 
@@ -102,6 +137,66 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
         </Box>
 
         <Stack spacing={3}>
+          {googleConnected && googleUser && (
+            <Box 
+              sx={{ 
+                p: 2, 
+                borderRadius: '20px', 
+                bgcolor: '#0A0908', 
+                border: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                mb: 1
+              }}
+            >
+              {googleUser.photoURL ? (
+                <Box 
+                  component="img" 
+                  src={googleUser.photoURL} 
+                  alt="Google Profile"
+                  sx={{ width: 44, height: 44, borderRadius: '12px', flexShrink: 0 }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 44,
+                    height: 44,
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    fontSize: '1.25rem',
+                    flexShrink: 0,
+                  }}
+                >
+                  🔵
+                </Box>
+              )}
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {googleUser.displayName || 'Google Account'}
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                  {googleUser.email || 'Connected'}
+                </Typography>
+              </Box>
+              <Chip 
+                label="CONNECTED" 
+                size="small" 
+                sx={{ 
+                  height: 18, 
+                  fontSize: '9px', 
+                  fontWeight: 900, 
+                  bgcolor: 'rgba(16, 185, 129, 0.1)', 
+                  color: '#10B981', 
+                  border: '1px solid rgba(16, 185, 129, 0.2)' 
+                }} 
+              />
+            </Box>
+          )}
+
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
              <Button 
                 variant={googleConnected ? 'outlined' : 'contained'}
