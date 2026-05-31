@@ -886,6 +886,78 @@ export function GoogleIntegrationDrawer({
                           sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
                       />
                   </Box>
+                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                      <FormControlLabel
+                          control={<Switch checked={googleSyncDocs} onChange={(e) => handleToggleSync('docs', e.target.checked)} color="primary" />}
+                          label={
+                              <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Docs Sync</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Sync Google Docs as Kylrix Markdown notes.</Typography>
+                              </Box>
+                          }
+                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                      />
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                      <FormControlLabel
+                          control={<Switch checked={googleSyncSheets} onChange={(e) => handleToggleSync('sheets', e.target.checked)} color="primary" />}
+                          label={
+                              <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Sheets Sync</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Tabular data ingestion and reporting.</Typography>
+                              </Box>
+                          }
+                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                      />
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                      <FormControlLabel
+                          control={<Switch checked={googleSyncSlides} onChange={(e) => handleToggleSync('slides', e.target.checked)} color="primary" />}
+                          label={
+                              <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Slides Sync</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Index and fetch presentation assets.</Typography>
+                              </Box>
+                          }
+                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                      />
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                      <FormControlLabel
+                          control={<Switch checked={googleSyncForms} onChange={(e) => handleToggleSync('forms', e.target.checked)} color="primary" />}
+                          label={
+                              <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Forms Sync</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Route external responses to Kylrix tasks.</Typography>
+                              </Box>
+                          }
+                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                      />
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                      <FormControlLabel
+                          control={<Switch checked={googleSyncMeet} onChange={(e) => handleToggleSync('meet', e.target.checked)} color="primary" />}
+                          label={
+                              <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Meet Bridge</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Generate meeting links from Kylrix chats.</Typography>
+                              </Box>
+                          }
+                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                      />
+                  </Box>
+                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                      <FormControlLabel
+                          control={<Switch checked={googleSyncGmail} onChange={(e) => handleToggleSync('gmail', e.target.checked)} color="primary" />}
+                          label={
+                              <Box>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Gmail Routing</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Fetch labels and route important threads.</Typography>
+                              </Box>
+                          }
+                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                      />
+                  </Box>
                 </Stack>
 
                 {/* 2. Master Sync Terminal Panel */}
