@@ -8,31 +8,28 @@ import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
 import { account } from '@/lib/appwrite';
 
-import { GoogleAuthAdapter } from '@/lib/integrations/google/auth';
+import { GithubAuthAdapter } from '@/lib/integrations/github/auth';
 
-const GOOGLE_ICON = (
-  <svg width="24" height="24" viewBox="0 0 24 24">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+const GITHUB_ICON = (
+  <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+    <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
   </svg>
 );
 
-export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { setIsDrawerOpen } = useDrawerState();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   
-  const [googleConnected, setGoogleConnected] = useState(false);
-  const [googleUser, setGoogleUser] = useState<any | null>(null);
+  const [githubConnected, setGithubConnected] = useState(false);
+  const [githubUser, setGithubUser] = useState<any | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const [googleSyncKeep, setGoogleSyncKeep] = useState(true);
-  const [googleSyncCalendar, setGoogleSyncCalendar] = useState(true);
-  const [googleSyncDrive, setGoogleSyncDrive] = useState(false);
-  const [googleSyncTasks, setGoogleSyncTasks] = useState(true);
+  const [githubSyncIssues, setGithubSyncIssues] = useState(true);
+  const [githubSyncCommits, setGithubSyncCommits] = useState(true);
+  const [githubSyncPRs, setGithubSyncPRs] = useState(false);
 
+  // Disconnect Confirmation Multi-Stage Flow States
   const [disconnectStep, setDisconnectStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
 
@@ -40,38 +37,43 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
     setIsDrawerOpen(isOpen);
     
     if (isOpen) {
+      // Reset disconnect verification states on open
       setDisconnectStep(0);
       setConfirmText('');
 
-      const currentUser = GoogleAuthAdapter.getCurrentUser();
+      // 1. Initial synchronous check of Firebase auth
+      const currentUser = GithubAuthAdapter.getCurrentUser();
       if (currentUser) {
-        setGoogleConnected(true);
-        setGoogleUser(currentUser);
+        setGithubConnected(true);
+        setGithubUser(currentUser);
       }
 
+      // Helper to query active Appwrite linked identities
       const fetchAppwriteIdentity = async () => {
         try {
           const identityList = await account.listIdentities();
-          const googleIdentity = identityList.identities?.find(i => i.provider === 'google');
-          if (googleIdentity) {
-            setGoogleConnected(true);
-            setGoogleUser(prev => prev || {
-              displayName: googleIdentity.providerEmail || 'Connected Account',
-              email: googleIdentity.providerEmail || 'google',
+          const githubIdentity = identityList.identities?.find(i => i.provider === 'github');
+          if (githubIdentity) {
+            setGithubConnected(true);
+            setGithubUser(prev => prev || {
+              displayName: githubIdentity.providerEmail || githubIdentity.providerUid,
+              email: githubIdentity.providerEmail || 'github',
               photoURL: null
             });
           }
         } catch (e) {
-          console.error('[GoogleIntegrationDrawer] failed to check identities', e);
+          console.error('[GithubIntegrationDrawer] failed to check identities', e);
         }
       };
 
-      const unsubscribe = GoogleAuthAdapter.initAuth(
+      // 2. Subscribe to live Firebase auth changes
+      const unsubscribe = GithubAuthAdapter.initAuth(
         (user) => {
-          setGoogleConnected(true);
-          setGoogleUser(user);
+          setGithubConnected(true);
+          setGithubUser(user);
         },
         () => {
+          // Fall back to check Appwrite identities if Firebase auth hasn't synced
           void fetchAppwriteIdentity();
         }
       );
@@ -83,19 +85,20 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
   }, [isOpen, setIsDrawerOpen]);
 
   const handleToggleConnection = async () => {
-    if (googleConnected) {
+    if (githubConnected) {
+      // Trigger confirmation instead of immediate disconnect
       setDisconnectStep(1);
     } else {
       setIsAuthenticating(true);
       try {
-        const result = await GoogleAuthAdapter.signIn();
+        const result = await GithubAuthAdapter.signIn();
         if (result?.user) {
-          setGoogleConnected(true);
-          setGoogleUser(result.user);
-          toast.success('Google Suite integrated successfully!');
+          setGithubConnected(true);
+          setGithubUser(result.user);
+          toast.success('GitHub integrated successfully!');
         }
       } catch (err: any) {
-        toast.error(err.message || 'Failed to connect Google account.');
+        toast.error(err.message || 'Failed to connect GitHub account.');
       } finally {
         setIsAuthenticating(false);
       }
@@ -105,12 +108,12 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
   const handleFinalDisconnect = async () => {
     setIsAuthenticating(true);
     try {
-      await GoogleAuthAdapter.logout();
-      setGoogleConnected(false);
-      setGoogleUser(null);
+      await GithubAuthAdapter.logout();
+      setGithubConnected(false);
+      setGithubUser(null);
       setDisconnectStep(0);
       setConfirmText('');
-      toast.success('Google Suite disconnected and credentials purged.');
+      toast.success('GitHub disconnected and credentials purged.');
     } catch (err: any) {
       toast.error(err.message || 'Failed to disconnect account.');
     } finally {
@@ -152,10 +155,10 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
           <Box>
             <Typography sx={{ fontWeight: 900, fontSize: '1.25rem', color: '#fff', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
-              Google Suite Integration
+              GitHub Integration
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.5 }}>
-              Connect your Google workspace to sync Keep, Drive, Tasks, and Calendars.
+              Connect your GitHub account to access repositories, manage sync settings, and export tasks.
             </Typography>
           </Box>
           <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)' }}><X size={20} /></IconButton>
@@ -177,7 +180,7 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                 Step 1: Confirm Disconnect
               </Typography>
               <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.65)', mb: 4, lineHeight: 1.6 }}>
-                Disassociating Google Suite will immediately suspend Notes, Drive, and Calendar synchronization. All active background tasks linking your data will cease.
+                Disassociating GitHub will immediately suspend task, issue and pull request synchronization. All active background tasks linking your repository data will cease.
               </Typography>
               <Stack direction="row" spacing={2}>
                 <Button
@@ -212,7 +215,7 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
               }}
             >
               <Typography variant="h6" sx={{ fontWeight: 900, color: '#EF4444', mb: 1, fontFamily: 'var(--font-clash)' }}>
-                Step 2: Permanent Removal
+                Step 2: Permanent Teardown
               </Typography>
               <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)', mb: 3, lineHeight: 1.5 }}>
                 This action requires cryptographic token teardown. Please type <Box component="span" sx={{ color: '#fff', fontWeight: 900 }}>DISCONNECT</Box> below to finalize.
@@ -271,7 +274,7 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
           </Stack>
         ) : (
           <Stack spacing={3}>
-            {googleConnected && googleUser && (
+            {githubConnected && githubUser && (
               <Box 
                 sx={{ 
                   p: 2, 
@@ -284,11 +287,11 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                   mb: 1
                 }}
               >
-                {googleUser.photoURL ? (
+                {githubUser.photoURL ? (
                   <Box 
                     component="img" 
-                    src={googleUser.photoURL} 
-                    alt="Google Profile"
+                    src={githubUser.photoURL} 
+                    alt="GitHub Profile"
                     sx={{ width: 44, height: 44, borderRadius: '12px', flexShrink: 0 }}
                   />
                 ) : (
@@ -300,21 +303,21 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                       width: 44,
                       height: 44,
                       borderRadius: '12px',
-                      backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                      fontSize: '1.25rem',
+                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                      color: 'white',
                       flexShrink: 0,
                       '& svg': { width: 22, height: 22 }
                     }}
                   >
-                    {GOOGLE_ICON}
+                    {GITHUB_ICON}
                   </Box>
                 )}
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {googleUser.displayName || 'Google Account'}
+                    {githubUser.displayName || 'GitHub Account'}
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                    {googleUser.email || 'Connected'}
+                    {githubUser.email || githubUser.uid || 'Connected'}
                   </Typography>
                 </Box>
                 <Chip 
@@ -334,7 +337,7 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
 
             <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
                <Button 
-                  variant={googleConnected ? 'outlined' : 'contained'}
+                  variant={githubConnected ? 'outlined' : 'contained'}
                   onClick={handleToggleConnection}
                   disabled={isAuthenticating}
                   sx={{ 
@@ -343,24 +346,24 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                       fontWeight: 800,
                       width: '100%',
                       py: 1.5,
-                      ...(googleConnected 
+                      ...(githubConnected 
                           ? { borderColor: '#34322F', color: '#fff', '&:hover': { borderColor: '#4A4845', bgcolor: 'rgba(255,255,255,0.02)' } }
                           : { bgcolor: '#6366F1', '&:hover': { bgcolor: '#5458E8' } })
                   }}
               >
-                  {isAuthenticating ? 'Connecting...' : (googleConnected ? "Disconnect Account" : "Connect Google Account")}
+                  {isAuthenticating ? 'Connecting...' : (githubConnected ? "Disconnect Account" : "Connect GitHub Account")}
               </Button>
             </Box>
 
-            {googleConnected && (
+            {githubConnected && (
               <Stack spacing={1}>
                   <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
                       <FormControlLabel
-                          control={<Switch checked={googleSyncKeep} onChange={(e) => setGoogleSyncKeep(e.target.checked)} color="primary" />}
+                          control={<Switch checked={githubSyncIssues} onChange={(e) => setGithubSyncIssues(e.target.checked)} color="primary" />}
                           label={
                               <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Keep Sync</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Two-way sync with Kylrix Notes.</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>GitHub Issue Sync</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Mirror project tasks directly into GitHub repository issues.</Typography>
                               </Box>
                           }
                           sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
@@ -368,11 +371,11 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                   </Box>
                   <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
                       <FormControlLabel
-                          control={<Switch checked={googleSyncCalendar} onChange={(e) => setGoogleSyncCalendar(e.target.checked)} color="primary" />}
+                          control={<Switch checked={githubSyncCommits} onChange={(e) => setGithubSyncCommits(e.target.checked)} color="primary" />}
                           label={
                               <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Calendar Connections</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Sync tasks and project events.</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Commits Feed Sync</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Import repository commits as personal feed actions.</Typography>
                               </Box>
                           }
                           sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
@@ -380,23 +383,11 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                   </Box>
                   <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
                       <FormControlLabel
-                          control={<Switch checked={googleSyncTasks} onChange={(e) => setGoogleSyncTasks(e.target.checked)} color="primary" />}
+                          control={<Switch checked={githubSyncPRs} onChange={(e) => setGithubSyncPRs(e.target.checked)} color="primary" />}
                           label={
                               <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Tasks Sync</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Mirror Kylrix Flow items to Google Tasks.</Typography>
-                              </Box>
-                          }
-                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
-                      />
-                  </Box>
-                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
-                      <FormControlLabel
-                          control={<Switch checked={googleSyncDrive} onChange={(e) => setGoogleSyncDrive(e.target.checked)} color="primary" />}
-                          label={
-                              <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Drive Picker</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Attach files directly from Drive.</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Pull Request Notifications</Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Notify on repository open PR and code review activities.</Typography>
                               </Box>
                           }
                           sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}

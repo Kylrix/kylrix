@@ -22,6 +22,7 @@ const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(m
 const ProjectInviteDrawer = dynamic(() => import('./ProjectInviteDrawer').then(mod => mod.ProjectInviteDrawer), { ssr: false });
 const UnifiedFormContent = dynamic(() => import('../forms/UnifiedFormContent').then(mod => mod.UnifiedFormContent), { ssr: false });
 const GoogleIntegrationDrawer = dynamic(() => import('./GoogleIntegrationDrawer').then(mod => mod.GoogleIntegrationDrawer), { ssr: false });
+const GithubIntegrationDrawer = dynamic(() => import('./GithubIntegrationDrawer').then(mod => mod.GithubIntegrationDrawer), { ssr: false });
 
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
