@@ -60,6 +60,7 @@ import {
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { SourceControlService, SourceControlRow } from '@/lib/services/sourceControl';
 import { useToast } from '@/components/ui/Toast';
+import toast from 'react-hot-toast';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
@@ -146,6 +147,7 @@ export default function ProjectDetailPage() {
   const [projectObjects, setProjectObjects] = useState<ProjectObjects[]>([]);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
+  const [externalTabValue, setExternalTabValue] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
   const [extractGoalsNote, setExtractGoalsNote] = useState<Notes | null>(null);
@@ -721,6 +723,15 @@ export default function ProjectDetailPage() {
                                 onTouchMove={handleTabTouchMove}
                                 onTouchEnd={handleTabTouchEnd}
                              />
+                             <Tab 
+                                label="External Objects" 
+                                icon={<Globe size={18} />} 
+                                iconPosition="start" 
+                                onContextMenu={(e) => handleTabContextMenu(e, 7)}
+                                onTouchStart={(e) => handleTabTouchStart(e, 7)}
+                                onTouchMove={handleTabTouchMove}
+                                onTouchEnd={handleTabTouchEnd}
+                             />
                         </Tabs>
                     </Box>
 
@@ -960,6 +971,44 @@ export default function ProjectDetailPage() {
                                 fetchProjectData={fetchProjectData}
                                 user={user}
                             />
+                        </CustomTabPanel>
+
+                        {/* External Objects */}
+                        <CustomTabPanel value={tabValue} index={7}>
+                            <Box sx={{ borderBottom: '1px solid #1C1A18', mb: 3 }}>
+                                <Tabs
+                                    value={externalTabValue}
+                                    onChange={(_, v) => setExternalTabValue(v)}
+                                    sx={{
+                                        '& .MuiTab-root': {
+                                            color: 'rgba(255, 255, 255, 0.4)',
+                                            fontWeight: 800,
+                                            textTransform: 'none',
+                                            minHeight: 48,
+                                            fontSize: '0.85rem',
+                                            mr: 2,
+                                            '&.Mui-selected': { color: '#6366F1' }
+                                        },
+                                        '& .MuiTabs-indicator': { bgcolor: '#6366F1' }
+                                    }}
+                                >
+                                    <Tab label="GitHub Repositories" icon={<FolderKanban size={14} />} iconPosition="start" />
+                                    <Tab label="Google Workspace" icon={<Globe size={14} />} iconPosition="start" />
+                                </Tabs>
+                            </Box>
+
+                            {externalTabValue === 0 ? (
+                                <GitHubExternalObjectsTab 
+                                    projectId={projectId as string}
+                                    projectObjects={projectObjects}
+                                    fetchProjectData={fetchProjectData}
+                                />
+                            ) : (
+                                <GoogleExternalObjectsTab 
+                                    projectId={projectId as string}
+                                    openUnified={openUnified}
+                                />
+                            )}
                         </CustomTabPanel>
                     </Box>
                 </Paper>
@@ -3559,5 +3608,405 @@ function ProjectSettingsDrawer({ open, onClose, project, onSave }: ProjectSettin
         </Grid>
       </Grid>
     </Drawer>
+  );
+}
+
+// ============================================================================
+// NEW SOLID INTEGRATION MODULES: UNVERIFIED EXTERNAL OBJECTS
+// ============================================================================
+
+function GitHubExternalObjectsTab({
+  projectId,
+  projectObjects,
+  fetchProjectData
+}: {
+  projectId: string;
+  projectObjects: any[];
+  fetchProjectData: () => Promise<void>;
+}) {
+  const [repoInput, setRepoInput] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [liveStats, setLiveStats] = useState<Record<string, any>>({});
+  const [loadingLive, setLoadingLive] = useState<Record<string, boolean>>({});
+
+  const unverifiedRepos = useMemo(() => {
+    return projectObjects.filter(o => o.entityKind === 'unverified_github');
+  }, [projectObjects]);
+
+  // Load live statistics dynamically on mount
+  useEffect(() => {
+    unverifiedRepos.forEach(repo => {
+      const repoPath = repo.entityId;
+      if (!liveStats[repoPath] && !loadingLive[repoPath]) {
+        fetchLiveStats(repoPath);
+      }
+    });
+  }, [unverifiedRepos]);
+
+  const fetchLiveStats = async (repoPath: string) => {
+    setLoadingLive(prev => ({ ...prev, [repoPath]: true }));
+    try {
+      const parts = repoPath.split('/');
+      if (parts.length !== 2) throw new Error('Invalid repo');
+      const [owner, repoName] = parts;
+
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repoName}`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      const repoData = await res.json();
+
+      const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/commits?per_page=1`);
+      const commitData = commitRes.ok ? await commitRes.json() : [];
+
+      const pullsRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/pulls?state=open&per_page=1`);
+      let pullsCount = 0;
+      if (pullsRes.ok) {
+        const linkHeader = pullsRes.headers.get('Link');
+        if (linkHeader) {
+          const match = linkHeader.match(/page=(\d+)>; rel="last"/);
+          if (match) pullsCount = parseInt(match[1], 10);
+          else {
+            const pulls = await pullsRes.json();
+            pullsCount = pulls.length;
+          }
+        } else {
+          const pulls = await pullsRes.json();
+          pullsCount = pulls.length;
+        }
+      }
+
+      setLiveStats(prev => ({
+        ...prev,
+        [repoPath]: {
+          description: repoData?.description,
+          stars: repoData?.stargazers_count,
+          openIssues: repoData?.open_issues_count,
+          pullsCount,
+          language: repoData?.language,
+          lastCommit: commitData?.[0]?.commit?.message || 'No commits found',
+          lastCommitAuthor: commitData?.[0]?.commit?.author?.name || 'Unknown',
+          lastCommitDate: commitData?.[0]?.commit?.author?.date || ''
+        }
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch live stats for', repoPath, e);
+    } finally {
+      setLoadingLive(prev => ({ ...prev, [repoPath]: false }));
+    }
+  };
+
+  const handleAddRepo = async () => {
+    let input = repoInput.trim();
+    if (!input) {
+      toast.error('Please enter a GitHub repository path or URL.');
+      return;
+    }
+
+    if (input.includes('github.com/')) {
+      const parts = input.split('github.com/');
+      input = parts[1];
+    }
+    const cleanPath = input.replace(/^\/|\/$/g, '');
+    const pathParts = cleanPath.split('/');
+    if (pathParts.length < 2) {
+      toast.error('Invalid format. Use "owner/repository" or GitHub URL.');
+      return;
+    }
+    const owner = pathParts[0];
+    const repo = pathParts[1];
+    const fullPath = `${owner}/${repo}`;
+
+    if (unverifiedRepos.some(r => r.entityId === fullPath)) {
+      toast.error('This repository is already associated with this project.');
+      return;
+    }
+
+    setAdding(true);
+    const toastId = toast.loading('Validating repository and fetching details...');
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}`);
+      if (!res.ok) {
+        throw new Error('Repository not found or is private. Ensure it is a public repository.');
+      }
+      const repoData = await res.json();
+
+      const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`);
+      const commitData = commitRes.ok ? await commitRes.json() : [];
+
+      const pullsRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=open&per_page=1`);
+      let pullsCount = 0;
+      if (pullsRes.ok) {
+        const linkHeader = pullsRes.headers.get('Link');
+        if (linkHeader) {
+          const match = linkHeader.match(/page=(\d+)>; rel="last"/);
+          if (match) pullsCount = parseInt(match[1], 10);
+        }
+      }
+
+      const metadata = {
+        isUnverified: true,
+        description: repoData.description || 'Public Repository',
+        stars: repoData.stargazers_count || 0,
+        openIssues: repoData.open_issues_count || 0,
+        pullsCount,
+        language: repoData.language || 'Codebase',
+        lastCommit: commitData?.[0]?.commit?.message || 'No commits',
+        lastCommitAuthor: commitData?.[0]?.commit?.author?.name || 'Unknown',
+        lastCommitDate: commitData?.[0]?.commit?.author?.date || '',
+        addedAt: new Date().toISOString()
+      };
+
+      await ProjectsService.addObjectToProject(
+        projectId,
+        'unverified_github',
+        fullPath,
+        'viewer',
+        metadata
+      );
+
+      toast.success('Unverified repository added to project successfully!', { id: toastId });
+      setRepoInput('');
+      fetchProjectData();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || 'Failed to add repository.', { id: toastId });
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const handleRemoveRepo = async (objectId: string) => {
+    const confirmed = window.confirm('Are you sure you want to unlink this repository from the project?');
+    if (!confirmed) return;
+    try {
+      await ProjectsService.removeObjectFromProject(objectId);
+      toast.success('Repository unlinked successfully.');
+      fetchProjectData();
+    } catch (e: any) {
+      toast.error('Failed to unlink repository: ' + e.message);
+    }
+  };
+
+  return (
+    <Stack spacing={3}>
+      <Box sx={{ p: 3, borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 905, color: 'white', mb: 1, fontFamily: 'var(--font-clash)' }}>
+          Associate GitHub Repository (Unverified)
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', mb: 2, display: 'block', lineHeight: 1.5 }}>
+          No GitHub connection is required. Paste any public GitHub repository URL or path (e.g. <code>facebook/react</code>) to integrate its live statistics, commit logs, and issues list directly into this project.
+        </Typography>
+        
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="e.g. facebook/react or https://github.com/facebook/react"
+            value={repoInput}
+            onChange={(e) => setRepoInput(e.target.value)}
+            disabled={adding}
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                bgcolor: '#161412',
+                borderRadius: '12px',
+                color: 'white',
+                '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                '&.Mui-focused fieldset': { borderColor: '#6366F1' }
+              }
+            }}
+          />
+          <Button
+            variant="contained"
+            disabled={adding || !repoInput.trim()}
+            onClick={handleAddRepo}
+            sx={{
+              borderRadius: '12px',
+              bgcolor: '#6366F1',
+              color: '#000',
+              fontWeight: 900,
+              px: 3,
+              py: 1.25,
+              textTransform: 'none',
+              flexShrink: 0,
+              width: { xs: '100%', sm: 'auto' },
+              '&:hover': { bgcolor: alpha('#6366F1', 0.9) }
+            }}
+          >
+            {adding ? 'Adding...' : 'Add Repository'}
+          </Button>
+        </Stack>
+      </Box>
+
+      {unverifiedRepos.length === 0 ? (
+        <Box sx={{ p: 4, textAlign: 'center', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '20px' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+            No unverified repositories linked yet.
+          </Typography>
+        </Box>
+      ) : (
+        <Grid container spacing={2}>
+          {unverifiedRepos.map((repo) => {
+            const path = repo.entityId;
+            let cached: any = {};
+            try {
+              cached = typeof repo.metadata === 'string' ? JSON.parse(repo.metadata) : repo.metadata || {};
+            } catch (e) {}
+
+            const stats = liveStats[path] || cached || {};
+            const loading = loadingLive[path];
+
+            return (
+              <Grid size={{ xs: 12 }} key={repo.$id}>
+                <Box 
+                  sx={{ 
+                    p: 2.5, 
+                    borderRadius: '20px', 
+                    bgcolor: '#0A0908', 
+                    border: '1px solid #1C1A18',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2,
+                    position: 'relative',
+                    transition: 'all 0.2s',
+                    '&:hover': { borderColor: 'rgba(255,255,255,0.1)' }
+                  }}
+                >
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '8px', bgcolor: 'rgba(255,255,255,0.06)', color: 'white' }}>
+                        <FolderKanban size={18} />
+                      </Box>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography 
+                          onClick={() => window.open(`https://github.com/${path}`, '_blank')}
+                          sx={{ 
+                            fontWeight: 900, 
+                            color: '#6366F1', 
+                            fontSize: '1rem', 
+                            cursor: 'pointer',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            '&:hover': { textDecoration: 'underline' }
+                          }}
+                        >
+                          {path}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>
+                          Linked {new Date(cached.addedAt || repo.$createdAt).toLocaleDateString()}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      {loading && <CircularProgress size={12} sx={{ color: '#F59E0B' }} />}
+                      <Chip 
+                        label="UNVERIFIED" 
+                        size="small" 
+                        sx={{ 
+                          height: 18, 
+                          fontSize: '8px', 
+                          fontWeight: 900, 
+                          bgcolor: 'rgba(245, 158, 11, 0.1)', 
+                          color: '#F59E0B', 
+                          border: '1px solid rgba(245, 158, 11, 0.2)' 
+                        }} 
+                      />
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleRemoveRepo(repo.$id)}
+                        sx={{
+                          height: 24,
+                          fontSize: '10px',
+                          fontWeight: 800,
+                          borderColor: 'rgba(239, 68, 68, 0.15)',
+                          color: '#EF4444',
+                          textTransform: 'none',
+                          borderRadius: '8px',
+                          '&:hover': { borderColor: '#EF4444', bgcolor: 'rgba(239, 68, 68, 0.05)' }
+                        }}
+                      >
+                        Unlink
+                      </Button>
+                    </Stack>
+                  </Box>
+
+                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
+                    {stats.description || 'Public GitHub Repository'}
+                  </Typography>
+
+                  <Grid container spacing={1.5} sx={{ bgcolor: 'rgba(255,255,255,0.01)', p: 1.5, borderRadius: '12px', border: '1px solid rgba(255,255,255,0.02)' }}>
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'block' }}>⭐ Stars</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats.stars ?? cached.stars ?? '-'}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'block' }}>🎫 Open Issues</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats.openIssues ?? cached.openIssues ?? '-'}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'block' }}>🔀 Open PRs</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats.pullsCount ?? cached.pullsCount ?? '-'}</Typography>
+                    </Grid>
+                    <Grid size={{ xs: 6, sm: 3 }}>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', display: 'block' }}>🛠️ Language</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800 }}>{stats.language ?? cached.language ?? '-'}</Typography>
+                    </Grid>
+                  </Grid>
+
+                  {(stats.lastCommit || cached.lastCommit) && (
+                    <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.03)', border: '1px dashed rgba(99, 102, 241, 0.15)' }}>
+                      <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 900, display: 'block', mb: 0.5 }}>
+                        LATEST COMMIT LOG
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mb: 0.5, fontSize: '0.85rem' }}>
+                        {stats.lastCommit || cached.lastCommit}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                        Authored by {stats.lastCommitAuthor || cached.lastCommitAuthor || 'Unknown'} {stats.lastCommitDate || cached.lastCommitDate ? `on ${new Date(stats.lastCommitDate || cached.lastCommitDate).toLocaleDateString()}` : ''}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
+    </Stack>
+  );
+}
+
+function GoogleExternalObjectsTab({
+  projectId,
+  openUnified
+}: {
+  projectId: string;
+  openUnified: any;
+}) {
+  return (
+    <Box sx={{ p: 4, textAlign: 'center', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '20px' }}>
+      <Typography variant="body1" sx={{ color: 'white', fontWeight: 800, mb: 1 }}>
+        Google Suite Calendar & Keep Integration
+      </Typography>
+      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mb: 3, maxWidth: 500, mx: 'auto', lineHeight: 1.5 }}>
+        To sync calendars, tasks, and notes with your Google Workspace, please open the Google Suite Integration panel directly.
+      </Typography>
+      <Button
+        variant="outlined"
+        onClick={() => openUnified('google-integration', { context: 'project', projectId })}
+        sx={{
+          borderRadius: '12px',
+          borderColor: 'rgba(255,255,255,0.1)',
+          color: 'white',
+          fontWeight: 800,
+          textTransform: 'none',
+          '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.02)' }
+        }}
+      >
+        Configure Google Suite
+      </Button>
+    </Box>
   );
 }
