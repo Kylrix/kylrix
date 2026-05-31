@@ -32,6 +32,7 @@ import {
   FormControlLabel,
   List,
   ListItemText,
+  Switch,
 } from '@mui/material';
 import {
   Plus,
@@ -77,7 +78,8 @@ import {
   createGhostNoteForProject,
   promoteGhostThreadToStory,
   createEncryptedGroupForProject,
-  deleteGhostNoteForProject
+  deleteGhostNoteForProject,
+  updateRow
 } from '@/lib/actions/client-ops';
 
 import { account } from '@/lib/appwrite/client';
@@ -88,7 +90,7 @@ import { TargetType } from '@/types/appwrite';
 import { client } from '@/lib/appwrite/client';
 import { ChatService } from '@/lib/services/chat';
 import { createMessageAction } from '@/lib/actions/chat';
-import { Send, Clock, Mic, Square, Tag, ShieldCheck, Camera, PhoneCall, FileSpreadsheet, X, Copy, ChevronLeft } from 'lucide-react';
+import { Send, Clock, Mic, Square, Tag, ShieldCheck, Camera, PhoneCall, FileSpreadsheet, X, Copy, ChevronLeft, Info } from 'lucide-react';
 import MuralPattern from '@/components/chat/MuralPattern';
 import { VoiceMessage } from '@/components/chat/VoiceMessage';
 import { StorageService } from '@/lib/services/storage';
@@ -411,6 +413,57 @@ export default function ProjectDetailPage() {
       });
   };
 
+  const handleToggleKeepPermission = async (entityId: string, kind: string, checked: boolean) => {
+      let databaseId = '';
+      let tableId = '';
+
+      const lowerKind = kind.toLowerCase();
+      if (lowerKind === 'note') {
+          databaseId = APPWRITE_CONFIG.DATABASES.NOTE;
+          tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+      } else if (lowerKind === 'goal' || lowerKind === 'task') {
+          databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
+          tableId = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
+      } else if (lowerKind === 'password' || lowerKind === 'credential' || lowerKind === 'secret') {
+          databaseId = APPWRITE_CONFIG.DATABASES.VAULT;
+          tableId = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
+      } else if (lowerKind === 'totp') {
+          databaseId = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
+          tableId = 'totpSecrets';
+      } else if (lowerKind === 'event') {
+          databaseId = APPWRITE_CONFIG.DATABASES.KYLRIXFLOW;
+          tableId = 'events';
+      }
+
+      if (!databaseId || !tableId) return;
+
+      try {
+          await updateRow(databaseId, tableId, entityId, { keepPermission: checked });
+          
+          if (lowerKind === 'note') {
+              setNotes(prev => prev.map(n => n.$id === entityId ? { ...n, keepPermission: checked } : n));
+          } else if (lowerKind === 'goal' || lowerKind === 'task') {
+              setTasks(prev => prev.map(t => t.$id === entityId ? { ...t, keepPermission: checked } : t));
+          } else if (lowerKind === 'password' || lowerKind === 'credential' || lowerKind === 'secret') {
+              setCredentials(prev => prev.map(c => c.$id === entityId ? { ...c, keepPermission: checked } : c));
+          } else if (lowerKind === 'totp') {
+              setTotps(prev => prev.map(t => t.$id === entityId ? { ...t, keepPermission: checked } : t));
+          } else if (lowerKind === 'event') {
+              setEvents(prev => prev.map(e => e.$id === entityId ? { ...e, keepPermission: checked } : e));
+          }
+
+          if (checked) {
+              showSuccess('Original permissions kept. View the resource directly to edit its own permissions.');
+          } else {
+              showSuccess('Object now inherits project permissions.');
+          }
+          
+          await fetchProjectData();
+      } catch (err: any) {
+          showError('Failed to update permission override settings', err.message);
+      }
+  };
+
   const handleCopyInviteLink = () => {
       try {
           const inviteUrl = `${window.location.origin}/project/${projectId}`;
@@ -627,6 +680,23 @@ export default function ProjectDetailPage() {
         <Grid container spacing={4}>
             {/* Left Content Column */}
             <Grid size={{ xs: 12, lg: 8.5 }}>
+                <Box 
+                    sx={{ 
+                        mb: 3, 
+                        p: 2.5, 
+                        borderRadius: '24px', 
+                        bgcolor: 'rgba(255, 255, 255, 0.02)', 
+                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2
+                    }}
+                >
+                    <Info size={18} style={{ color: '#6366F1', flexShrink: 0 }} />
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontWeight: 700, fontSize: '0.85rem', lineHeight: 1.4 }}>
+                        All integrated internal objects inherit project member's permission level, except on object level permission override.
+                    </Typography>
+                </Box>
                 <Paper
                     elevation={0}
                     sx={{
@@ -759,6 +829,8 @@ export default function ProjectDetailPage() {
                                                     setExtractGoalsNote(note);
                                                     setIsExtractModalOpen(true);
                                                 }}
+                                                keepPermission={note.keepPermission}
+                                                onToggleKeepPermission={(checked) => handleToggleKeepPermission(note.$id, 'note', checked)}
                                             />
                                         </Grid>
                                     ))}
@@ -778,6 +850,8 @@ export default function ProjectDetailPage() {
                                                 metadata={`${task.status.replace('-', ' ')} • ${task.priority}`}
                                                 onOpen={() => openSecondarySidebar('task', task.$id)}
                                                 onUnlink={() => handleRemoveObject(task.$id)}
+                                                keepPermission={task.keepPermission}
+                                                onToggleKeepPermission={(checked) => handleToggleKeepPermission(task.$id, 'goal', checked)}
                                             />
                                         </Grid>
                                     ))}
@@ -804,6 +878,8 @@ export default function ProjectDetailPage() {
                                                   />
                                                 )}
                                                 onUnlink={() => handleRemoveObject(cred.$id)}
+                                                keepPermission={cred.keepPermission}
+                                                onToggleKeepPermission={(checked) => handleToggleKeepPermission(cred.$id, 'password', checked)}
                                             />
                                         </Grid>
                                     ))}
@@ -824,6 +900,8 @@ export default function ProjectDetailPage() {
                                                   />
                                                 )}
                                                 onUnlink={() => handleRemoveObject(totp.$id)}
+                                                keepPermission={totp.keepPermission}
+                                                onToggleKeepPermission={(checked) => handleToggleKeepPermission(totp.$id, 'totp', checked)}
                                             />
                                         </Grid>
                                     ))}
@@ -890,6 +968,8 @@ export default function ProjectDetailPage() {
                                                 metadata={`${event.location || 'No location'} • ${new Date(event.startTime).toLocaleString()}`}
                                                 onOpen={() => openSecondarySidebar('event', event.$id, event)}
                                                 onUnlink={() => handleRemoveObject(event.$id)}
+                                                keepPermission={event.keepPermission}
+                                                onToggleKeepPermission={(checked) => handleToggleKeepPermission(event.$id, 'event', checked)}
                                             />
                                         </Grid>
                                     ))}
@@ -1524,15 +1604,62 @@ function ResourceItem({
     metadata, 
     onOpen, 
     onUnlink,
-    onExtractGoals
+    onExtractGoals,
+    keepPermission,
+    onToggleKeepPermission
 }: { 
     title: string, 
     kind: string, 
     metadata: string, 
     onOpen: () => void, 
     onUnlink: () => void,
-    onExtractGoals?: () => void
+    onExtractGoals?: () => void,
+    keepPermission?: boolean | null,
+    onToggleKeepPermission?: (checked: boolean) => void
 }) {
+    const [menuAnchor, setMenuAnchor] = useState<{ x: number, y: number } | null>(null);
+    const longPressTimerRef = useRef<any>(null);
+    const touchStartPosRef = useRef<{ x: number, y: number } | null>(null);
+
+    const handleContextMenu = (event: React.MouseEvent) => {
+        if (!onToggleKeepPermission) return;
+        event.preventDefault();
+        setMenuAnchor({ x: event.clientX, y: event.clientY });
+    };
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (!onToggleKeepPermission) return;
+        const touch = e.touches[0];
+        touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+        const currentTarget = e.currentTarget;
+        longPressTimerRef.current = setTimeout(() => {
+            const rect = currentTarget.getBoundingClientRect();
+            setMenuAnchor({ x: rect.left + rect.width / 2, y: rect.bottom });
+            if (navigator.vibrate) navigator.vibrate(10);
+        }, 600);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!touchStartPosRef.current) return;
+        const touch = e.touches[0];
+        const dx = touch.clientX - touchStartPosRef.current.x;
+        const dy = touch.clientY - touchStartPosRef.current.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 10) {
+            if (longPressTimerRef.current) {
+                clearTimeout(longPressTimerRef.current);
+                longPressTimerRef.current = null;
+            }
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+        }
+    };
+
     // Elegant mapping for all 9 types (Notes, Goals, Secrets/Credentials, Forms, Events, Tags, TOTPs, Moments, Calls)
     const getKindAssets = (k: string) => {
         const lower = k?.toLowerCase() || '';
@@ -1565,177 +1692,238 @@ function ResourceItem({
     const { icon, accent } = getKindAssets(kind);
 
     return (
-        <Paper
-            elevation={0}
-            sx={{
-                bgcolor: '#13110F',
-                border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: '24px',
-                p: { xs: 2, sm: 2.5 },
-                display: 'flex',
-                flexDirection: { xs: 'column', sm: 'row' },
-                alignItems: { xs: 'flex-start', sm: 'center' },
-                justifyContent: 'space-between',
-                gap: { xs: 2, sm: 3 },
-                backgroundImage: 'none',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '4px',
-                    height: '100%',
-                    bgcolor: accent,
-                    opacity: 0.6,
-                    transition: 'all 0.2s ease',
-                },
-                '&:hover': { 
-                    bgcolor: '#181613', 
-                    borderColor: alpha(accent, 0.25),
-                    transform: 'translateY(-1.5px)',
-                    boxShadow: `0 8px 24px ${alpha(accent, 0.05)}`,
+        <>
+            <Paper
+                elevation={0}
+                onContextMenu={handleContextMenu}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                sx={{
+                    bgcolor: '#13110F',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    borderRadius: '24px',
+                    p: { xs: 2, sm: 2.5 },
+                    display: 'flex',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    justifyContent: 'space-between',
+                    gap: { xs: 2, sm: 3 },
+                    backgroundImage: 'none',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    cursor: onToggleKeepPermission ? 'context-menu' : 'default',
                     '&::before': {
-                        opacity: 1,
-                        height: '100%'
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '4px',
+                        height: '100%',
+                        bgcolor: accent,
+                        opacity: 0.6,
+                        transition: 'all 0.2s ease',
+                    },
+                    '&:hover': { 
+                        bgcolor: '#181613', 
+                        borderColor: alpha(accent, 0.25),
+                        transform: 'translateY(-1.5px)',
+                        boxShadow: `0 8px 24px ${alpha(accent, 0.05)}`,
+                        '&::before': {
+                            opacity: 1,
+                            height: '100%'
+                        }
                     }
-                }
-            }}
-        >
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0, width: '100%' }}>
-                <Box sx={{ 
-                    width: 44, 
-                    height: 44, 
-                    borderRadius: '14px', 
-                    bgcolor: alpha(accent, 0.08), 
-                    color: accent, 
-                    display: 'grid', 
-                    placeItems: 'center',
-                    border: `1px solid ${alpha(accent, 0.15)}`,
-                    flexShrink: 0,
-                    transition: 'all 0.2s ease',
-                }}>
-                    {icon}
-                </Box>
-                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                    <Typography 
-                        sx={{ 
-                            color: '#fff', 
-                            fontWeight: 800, 
-                            fontSize: '0.95rem',
-                            lineHeight: 1.3,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            mb: 0.5
-                        }}
-                    >
-                        {title}
-                    </Typography>
-                    <Typography 
-                        variant="caption" 
-                        sx={{ 
-                            color: 'rgba(255,255,255,0.4)', 
-                            fontWeight: 800, 
-                            textTransform: 'uppercase', 
-                            letterSpacing: '0.08em',
-                            fontSize: '0.68rem',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            bgcolor: 'rgba(255,255,255,0.03)',
-                            px: 1,
-                            py: 0.25,
-                            borderRadius: '6px',
-                            border: '1px solid rgba(255,255,255,0.04)'
-                        }}
-                    >
-                        {metadata || kind}
-                    </Typography>
-                </Box>
-            </Stack>
-
-            <Stack 
-                direction="row" 
-                spacing={1.5} 
-                alignItems="center" 
-                justifyContent={{ xs: 'flex-end', sm: 'flex-start' }}
-                sx={{ 
-                    width: { xs: '100%', sm: 'auto' },
-                    flexShrink: 0,
-                    borderTop: { xs: '1px solid rgba(255,255,255,0.04)', sm: 'none' },
-                    pt: { xs: 1.5, sm: 0 },
                 }}
             >
-                {onExtractGoals && (
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0, width: '100%' }}>
+                    <Box sx={{ 
+                        width: 44, 
+                        height: 44, 
+                        borderRadius: '14px', 
+                        bgcolor: alpha(accent, 0.08), 
+                        color: accent, 
+                        display: 'grid', 
+                        placeItems: 'center',
+                        border: `1px solid ${alpha(accent, 0.15)}`,
+                        flexShrink: 0,
+                        transition: 'all 0.2s ease',
+                    }}>
+                        {icon}
+                    </Box>
+                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                            <Typography 
+                                sx={{ 
+                                    color: '#fff', 
+                                    fontWeight: 800, 
+                                    fontSize: '0.95rem',
+                                    lineHeight: 1.3,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
+                                {title}
+                            </Typography>
+                            {keepPermission && (
+                                <Tooltip title="Keeps original permissions (override active)" arrow>
+                                    <Box component="span" sx={{ display: 'inline-flex', color: '#10B981', flexShrink: 0 }}>
+                                        <ShieldCheck size={16} />
+                                    </Box>
+                                </Tooltip>
+                            )}
+                        </Box>
+                        <Typography 
+                            variant="caption" 
+                            sx={{ 
+                                color: 'rgba(255,255,255,0.4)', 
+                                fontWeight: 800, 
+                                textTransform: 'uppercase', 
+                                letterSpacing: '0.08em',
+                                fontSize: '0.68rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                bgcolor: 'rgba(255,255,255,0.03)',
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: '6px',
+                                border: '1px solid rgba(255,255,255,0.04)'
+                            }}
+                        >
+                            {metadata || kind}
+                        </Typography>
+                    </Box>
+                </Stack>
+
+                <Stack 
+                    direction="row" 
+                    spacing={1.5} 
+                    alignItems="center" 
+                    justifyContent={{ xs: 'flex-end', sm: 'flex-start' }}
+                    sx={{ 
+                        width: { xs: '100%', sm: 'auto' },
+                        flexShrink: 0,
+                        borderTop: { xs: '1px solid rgba(255,255,255,0.04)', sm: 'none' },
+                        pt: { xs: 1.5, sm: 0 },
+                    }}
+                >
+                    {onExtractGoals && (
+                        <Button
+                            size="small"
+                            startIcon={<Sparkles size={14} />}
+                            onClick={onExtractGoals}
+                            sx={{ 
+                                color: '#818CF8', 
+                                fontWeight: 800, 
+                                textTransform: 'none', 
+                                fontSize: '0.8rem',
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: '10px',
+                                bgcolor: alpha('#818CF8', 0.05),
+                                border: `1px solid ${alpha('#818CF8', 0.15)}`,
+                                '&:hover': { 
+                                    color: '#A5B4FC', 
+                                    bgcolor: alpha('#818CF8', 0.1),
+                                    borderColor: '#818CF8'
+                                } 
+                            }}
+                        >
+                            Extract Goals
+                        </Button>
+                    )}
                     <Button
                         size="small"
-                        startIcon={<Sparkles size={14} />}
-                        onClick={onExtractGoals}
+                        startIcon={<ExternalLink size={14} />}
+                        onClick={onOpen}
                         sx={{ 
-                            color: '#818CF8', 
+                            color: 'rgba(255,255,255,0.6)', 
                             fontWeight: 800, 
                             textTransform: 'none', 
                             fontSize: '0.8rem',
                             px: 1.5,
                             py: 0.5,
                             borderRadius: '10px',
-                            bgcolor: alpha('#818CF8', 0.05),
-                            border: `1px solid ${alpha('#818CF8', 0.15)}`,
+                            bgcolor: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.05)',
                             '&:hover': { 
-                                color: '#A5B4FC', 
-                                bgcolor: alpha('#818CF8', 0.1),
-                                borderColor: '#818CF8'
+                                color: '#fff',
+                                bgcolor: 'rgba(255,255,255,0.05)',
+                                borderColor: 'rgba(255,255,255,0.2)'
                             } 
                         }}
                     >
-                        Extract Goals
+                        View
                     </Button>
-                )}
-                <Button
-                    size="small"
-                    startIcon={<ExternalLink size={14} />}
-                    onClick={onOpen}
-                    sx={{ 
-                        color: 'rgba(255,255,255,0.6)', 
-                        fontWeight: 800, 
-                        textTransform: 'none', 
-                        fontSize: '0.8rem',
-                        px: 1.5,
-                        py: 0.5,
-                        borderRadius: '10px',
-                        bgcolor: 'rgba(255,255,255,0.02)',
-                        border: '1px solid rgba(255,255,255,0.05)',
-                        '&:hover': { 
-                            color: '#fff',
-                            bgcolor: 'rgba(255,255,255,0.05)',
-                            borderColor: 'rgba(255,255,255,0.2)'
-                        } 
+                    <IconButton 
+                        size="small" 
+                        onClick={onUnlink} 
+                        sx={{ 
+                            color: 'rgba(255,255,255,0.2)', 
+                            width: 32,
+                            height: 32,
+                            borderRadius: '10px',
+                            border: '1px solid rgba(255,255,255,0.04)',
+                            '&:hover': { 
+                                color: '#FF453A', 
+                                bgcolor: alpha('#FF453A', 0.08),
+                                borderColor: alpha('#FF453A', 0.2)
+                            } 
+                        }}
+                    >
+                        <Trash2 size={15} />
+                    </IconButton>
+                </Stack>
+            </Paper>
+
+            {menuAnchor && (
+                <Menu
+                    open={Boolean(menuAnchor)}
+                    onClose={() => setMenuAnchor(null)}
+                    anchorReference="anchorPosition"
+                    anchorPosition={{ top: menuAnchor.y, left: menuAnchor.x }}
+                    disablePortal={true}
+                    keepMounted={false}
+                    PaperProps={{
+                        sx: {
+                            bgcolor: '#161412',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '16px',
+                            minWidth: 240,
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                            py: 1.5,
+                        }
                     }}
                 >
-                    View
-                </Button>
-                <IconButton 
-                    size="small" 
-                    onClick={onUnlink} 
-                    sx={{ 
-                        color: 'rgba(255,255,255,0.2)', 
-                        width: 32,
-                        height: 32,
-                        borderRadius: '10px',
-                        border: '1px solid rgba(255,255,255,0.04)',
-                        '&:hover': { 
-                            color: '#FF453A', 
-                            bgcolor: alpha('#FF453A', 0.08),
-                            borderColor: alpha('#FF453A', 0.2)
-                        } 
-                    }}
-                >
-                    <Trash2 size={15} />
-                </IconButton>
-            </Stack>
-        </Paper>
+                    <Box sx={{ px: 2, py: 0.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <FormControlLabel
+                            control={
+                                <Switch 
+                                    checked={!!keepPermission} 
+                                    onChange={(e) => {
+                                        onToggleKeepPermission(e.target.checked);
+                                        setMenuAnchor(null);
+                                    }}
+                                    color="primary"
+                                    size="small"
+                                />
+                            }
+                            label={
+                                <Typography sx={{ color: '#fff', fontSize: '0.85rem', fontWeight: 800 }}>
+                                    Keep Original Permissions
+                                </Typography>
+                            }
+                            sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                        />
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', mt: 0.5, lineHeight: 1.3 }}>
+                            When enabled, this object uses its own permissions instead of inheriting the project's.
+                        </Typography>
+                    </Box>
+                </Menu>
+            )}
+        </>
     );
 }
 

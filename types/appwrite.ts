@@ -379,6 +379,7 @@ export type Events = Models.Row & {
     isPinned?: boolean | null;
     isPublic?: boolean | null;
     isGuest?: boolean | null;
+    keepPermission?: boolean | null;
 }
 
 export type Calendars = Models.Row & {
@@ -404,6 +405,7 @@ export type Tasks = Models.Row & {
     isPinned?: boolean | null;
     isPublic?: boolean | null;
     isGuest?: boolean | null;
+    keepPermission?: boolean | null;
 }
 
 export type Stickers = Models.Row & { name: string; description: string | null; creatorId: string | null; packId: string | null; imageUrl: string; imageFileId: string | null; animatedUrl: string | null; animatedFileId: string | null; tags: string[]; category: string | null; isPremium: boolean; isAnimated: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }

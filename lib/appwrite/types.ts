@@ -59,6 +59,7 @@ export type CredentialsCreate = {
   sharedFrom?: string | null;
   attachments?: string | null;
   dek?: string | null;
+  keepPermission?: boolean | null;
 };
 
 export type FoldersCreate = {
@@ -93,6 +94,7 @@ export type TotpSecretsCreate = {
   updatedAt?: string | null;
   sharedFrom?: string | null;
   dek?: string | null;
+  keepPermission?: boolean | null;
 };
 
 export type KeychainCreate = {
