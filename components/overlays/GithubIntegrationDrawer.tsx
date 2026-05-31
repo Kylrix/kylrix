@@ -7,6 +7,7 @@ import Drawer from '@mui/material/Drawer';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
 import { account } from '@/lib/appwrite';
+import { useAuth } from '@/context/auth/AuthContext';
 
 import { GithubAuthAdapter } from '@/lib/integrations/github/auth';
 
@@ -20,6 +21,8 @@ export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
   const { setIsDrawerOpen } = useDrawerState();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const { user } = useAuth();
+  const kylrixEmail = user?.email || '';
   
   const [githubConnected, setGithubConnected] = useState(false);
   const [githubUser, setGithubUser] = useState<any | null>(null);
@@ -153,13 +156,18 @@ export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
     >
       <Box sx={{ p: 3, pb: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Box>
-            <Typography sx={{ fontWeight: 900, fontSize: '1.25rem', color: '#fff', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
-              GitHub Integration
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.5 }}>
-              Connect your GitHub account to access repositories, manage sync settings, and export tasks.
-            </Typography>
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: '12px', bgcolor: 'rgba(255, 255, 255, 0.08)', color: 'white', flexShrink: 0, '& svg': { width: 22, height: 22 } }}>
+              {GITHUB_ICON}
+            </Box>
+            <Box>
+              <Typography sx={{ fontWeight: 900, fontSize: '1.25rem', color: '#fff', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
+                GitHub Integration
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.5 }}>
+                Connect your GitHub account to access repositories, manage sync settings, and export tasks.
+              </Typography>
+            </Box>
           </Box>
           <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)' }}><X size={20} /></IconButton>
         </Box>
@@ -332,6 +340,31 @@ export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                     border: '1px solid rgba(16, 185, 129, 0.2)' 
                   }} 
                 />
+              </Box>
+            )}
+
+            {!githubConnected && kylrixEmail && (
+              <Box 
+                sx={{ 
+                  p: 2.25, 
+                  borderRadius: '16px', 
+                  bgcolor: alpha('#6366F1', 0.03), 
+                  border: '1px dashed rgba(99, 102, 241, 0.2)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 1.5,
+                  mb: 1
+                }}
+              >
+                <Box sx={{ fontSize: '1.25rem', mt: 0.25 }}>💡</Box>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mb: 0.5 }}>
+                    Link Recommendation <Typography component="span" sx={{ color: '#F59E0B', fontSize: '0.75rem', fontWeight: 900, ml: 1 }}>(STRONGLY ADVISED)</Typography>
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', lineHeight: 1.4, display: 'block' }}>
+                    To prevent directory sync conflicts, we strongly recommend connecting a GitHub account that uses your active Kylrix email address: <Box component="span" sx={{ color: '#fff', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>{kylrixEmail}</Box>.
+                  </Typography>
+                </Box>
               </Box>
             )}
 
