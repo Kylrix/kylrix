@@ -31,7 +31,7 @@ import { authenticator } from 'otplib';
 import toast from 'react-hot-toast';
 import NewTotpDialog from '@/components/app/totp/new';
 import { useSudo } from '@/context/SudoContext';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer } from '@/context/SectionContext';
 
 export const dynamic = 'force-dynamic';
 
@@ -446,8 +446,7 @@ function TOTPPageContent() {
       bgcolor: '#0A0908',
       pt: { xs: 2, md: 4 }
     }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start', px: { xs: 2, md: 6 } }}>
-        <Box>
+      <MultiSectionContainer panels={['secrets', 'secret_chat']} contextId={selectedTotp?.issuer || selectedTotp?.accountName || undefined}>
       {/* Header & Back Action */}
       <Box sx={{ px: { xs: 2, md: 6 } }}>
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
@@ -682,13 +681,7 @@ function TOTPPageContent() {
         </Dialog>
       )}
         </Box>
-        <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <DesktopRightSection 
-            panels={['secrets', 'secret_chat']} 
-            contextId={selectedTotp?.issuer || selectedTotp?.accountName || undefined} 
-          />
-        </Box>
-      </Box>
+      </MultiSectionContainer>
     </Box>
   );
 }

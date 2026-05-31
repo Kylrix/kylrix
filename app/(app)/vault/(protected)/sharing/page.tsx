@@ -40,7 +40,7 @@ import toast from 'react-hot-toast';
 import { ArrowLeft, User, Share2 } from 'lucide-react';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
-import DesktopRightSection from '@/components/layout/DesktopRightSection';
+import { MultiSectionContainer } from '@/context/SectionContext';
 
 type SearchResult = Awaited<ReturnType<typeof searchGlobalUsers>>[number];
 
@@ -223,8 +223,7 @@ export default function SharingPage() {
       bgcolor: '#0A0908',
       pt: { xs: 2, md: 4 }
     }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 400px' }, gap: 4, alignItems: 'flex-start', px: { xs: 2, md: 6 } }}>
-        <Box>
+      <MultiSectionContainer panels={['secrets', 'totp', 'secret_chat']}>
       {/* Header Section */}
       <Box sx={{ px: { xs: 2, md: 6 } }}>
         <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
@@ -601,10 +600,7 @@ export default function SharingPage() {
           />
         )}
         </Box>
-        <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
-          <DesktopRightSection panels={['secrets', 'totp', 'secret_chat']} />
-        </Box>
-      </Box>
+      </MultiSectionContainer>
     </Box>
   );
 }
