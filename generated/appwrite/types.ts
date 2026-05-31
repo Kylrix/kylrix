@@ -496,6 +496,7 @@ export type CredentialsCreate = {
     "isGuest"?: boolean | null;
     "isShared"?: boolean | null;
     "isPinned"?: boolean | null;
+    "dek"?: string | null;
 }
 
 export type Credentials = Models.Row & {
@@ -530,6 +531,7 @@ export type Credentials = Models.Row & {
     "isGuest"?: boolean | null;
     "isShared"?: boolean | null;
     "isPinned"?: boolean | null;
+    "dek"?: string | null;
 }
 
 export type IdentitiesCreate = {
@@ -654,6 +656,7 @@ export type TotpSecretsCreate = {
     "isGuest"?: boolean | null;
     "isShared"?: boolean | null;
     "isPinned"?: boolean | null;
+    "dek"?: string | null;
 }
 
 export type TotpSecrets = Models.Row & {
@@ -678,6 +681,7 @@ export type TotpSecrets = Models.Row & {
     "isGuest"?: boolean | null;
     "isShared"?: boolean | null;
     "isPinned"?: boolean | null;
+    "dek"?: string | null;
 }
 
 export type KeychainCreate = {

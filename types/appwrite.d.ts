@@ -351,6 +351,7 @@ export type Credentials = Models.Row & {
     isGuest: boolean | null;
     isShared: boolean | null;
     isPinned: boolean | null;
+    dek?: string | null;
 }
 
 export type Identities = Models.Row & {
@@ -425,6 +426,7 @@ export type TotpSecrets = Models.Row & {
     isGuest: boolean | null;
     isShared: boolean | null;
     isPinned: boolean | null;
+    dek?: string | null;
 }
 
 export type Keychain = Models.Row & {

@@ -581,7 +581,7 @@ export type PermissionLevel = 'viewer' | 'editor' | 'admin';
 export interface PermissionChangeInput {
   userId: string;
   resourceId: string;
-  resourceType: 'note' | 'task' | 'project';
+  resourceType: 'note' | 'task' | 'project' | 'secret' | 'totp';
   resourceTitle: string;
   targetUserId: string;
   targetEmail?: string;
@@ -617,9 +617,13 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
 
   const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
                input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
+               input.resourceType === 'secret' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
+               input.resourceType === 'totp' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
                APPWRITE_CONFIG.DATABASES.FLOW;
   const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
                   input.resourceType === 'project' ? 'projects' :
+                  input.resourceType === 'secret' ? 'credentials' :
+                  input.resourceType === 'totp' ? 'totpSecrets' :
                   APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
   // 1. Grant physical READ permission only!
@@ -628,14 +632,14 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     permission: 'read',
     targetUserId: input.targetUserId,
     resourceId: input.resourceId,
-    resourceType: input.resourceType === 'note' ? 'ghost_note' : 'task',
+    resourceType: input.resourceType === 'note' ? 'ghost_note' : (input.resourceType === 'secret' || input.resourceType === 'totp' ? 'secret' : 'task'),
     databaseId: dbId,
     tableId: tableId,
     rowId: input.resourceId,
   }, requester.$id);
 
   // 2. Set virtual permission in polymorphic flow.collaborators table
-  if (input.resourceType === 'note' || input.resourceType === 'project') {
+  if (input.resourceType === 'note' || input.resourceType === 'project' || input.resourceType === 'secret' || input.resourceType === 'totp') {
     const tables = createSystemTablesDB();
     const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
     const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
@@ -842,7 +846,7 @@ function extractCollaboratorsFromPermissions(permissions: string[]): Array<{ use
 
 export async function getResourceCollaboratorsSecure(input: {
     resourceId: string;
-    resourceType: 'note' | 'task' | 'project' | 'event' | 'form' | 'huddle' | 'call';
+    resourceType: 'note' | 'task' | 'project' | 'event' | 'form' | 'huddle' | 'call' | 'secret' | 'totp';
     jwt?: string;
 }) {
     const requester = await getActor(input.jwt);
@@ -850,6 +854,8 @@ export async function getResourceCollaboratorsSecure(input: {
 
     const dbId = input.resourceType === 'note' ? APPWRITE_CONFIG.DATABASES.NOTE : 
                  input.resourceType === 'project' ? APPWRITE_CONFIG.DATABASES.CHAT :
+                 input.resourceType === 'secret' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
+                 input.resourceType === 'totp' ? (APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER || 'passwordManagerDb') :
                  APPWRITE_CONFIG.DATABASES.FLOW;
     const tableId = input.resourceType === 'note' ? APPWRITE_CONFIG.TABLES.NOTE.NOTES : 
                     input.resourceType === 'project' ? 'projects' :
@@ -857,6 +863,8 @@ export async function getResourceCollaboratorsSecure(input: {
                     input.resourceType === 'form' ? (APPWRITE_CONFIG.TABLES.FLOW.FORMS || 'forms') :
                     input.resourceType === 'huddle' ? 'huddles' :
                     input.resourceType === 'call' ? 'calls' :
+                    input.resourceType === 'secret' ? 'credentials' :
+                    input.resourceType === 'totp' ? 'totpSecrets' :
                     APPWRITE_CONFIG.TABLES.FLOW.TASKS;
 
     const tables = createSystemTablesDB();
@@ -868,7 +876,7 @@ export async function getResourceCollaboratorsSecure(input: {
     
     let filteredCollabs: Array<{ userId: string, level: string, status: string, accepted: boolean }> = [];
     
-    if (input.resourceType === 'note' || input.resourceType === 'project' || input.resourceType === 'event' || input.resourceType === 'form' || input.resourceType === 'huddle' || input.resourceType === 'call') {
+    if (input.resourceType === 'note' || input.resourceType === 'project' || input.resourceType === 'event' || input.resourceType === 'form' || input.resourceType === 'huddle' || input.resourceType === 'call' || input.resourceType === 'secret' || input.resourceType === 'totp') {
         // Query polymorphic collaborators table as the single source of truth
         try {
             const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;

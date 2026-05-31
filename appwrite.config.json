@@ -2335,6 +2335,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "dek",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -3168,6 +3177,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "dek",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
