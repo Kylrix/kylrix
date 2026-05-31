@@ -1903,7 +1903,7 @@ function ResourceItem({
                                 <Switch 
                                     checked={!!keepPermission} 
                                     onChange={(e) => {
-                                        onToggleKeepPermission(e.target.checked);
+                                        onToggleKeepPermission?.(e.target.checked);
                                         setMenuAnchor(null);
                                     }}
                                     color="primary"
@@ -3821,15 +3821,6 @@ function GitHubExternalObjectsTab({
     return projectObjects.filter(o => o.entityKind === 'unverified_github');
   }, [projectObjects]);
 
-  // Load live statistics dynamically on mount
-  useEffect(() => {
-    unverifiedRepos.forEach(repo => {
-      const repoPath = repo.entityId;
-      if (!liveStats[repoPath] && !loadingLive[repoPath]) {
-        fetchLiveStats(repoPath);
-      }
-    });
-  }, [unverifiedRepos, liveStats, loadingLive, fetchLiveStats]);
   const fetchLiveStats = useCallback(async (repoPath: string) => {
     setLoadingLive(prev => ({ ...prev, [repoPath]: true }));
     try {
@@ -3880,6 +3871,16 @@ function GitHubExternalObjectsTab({
       setLoadingLive(prev => ({ ...prev, [repoPath]: false }));
     }
   }, [setLoadingLive, setLiveStats]);
+
+  // Load live statistics dynamically on mount
+  useEffect(() => {
+    unverifiedRepos.forEach(repo => {
+      const repoPath = repo.entityId;
+      if (!liveStats[repoPath] && !loadingLive[repoPath]) {
+        fetchLiveStats(repoPath);
+      }
+    });
+  }, [unverifiedRepos, liveStats, loadingLive, fetchLiveStats]);
 
   const handleAddRepo = async () => {
     let input = repoInput.trim();

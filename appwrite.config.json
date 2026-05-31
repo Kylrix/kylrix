@@ -704,11 +704,53 @@
                     "encrypt": false
                 },
                 {
-                    "key": "keepPermission",
+                    "key": "isGuest",
                     "type": "boolean",
                     "required": false,
                     "array": false,
-                    "default": null
+                    "default": false
+                },
+                {
+                    "key": "isEncrypted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isPass",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isTask",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isFile",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isTotp",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
+                },
+                {
+                    "key": "isDiscussion",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -867,6 +909,13 @@
                     "size": 16384,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isEncrypted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -2342,22 +2391,6 @@
                     "required": false,
                     "array": false,
                     "default": null
-                },
-                {
-                    "key": "dek",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 5000,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "keepPermission",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": null
                 }
             ],
             "indexes": [
@@ -3191,22 +3224,6 @@
                     "required": false,
                     "array": false,
                     "default": null
-                },
-                {
-                    "key": "dek",
-                    "type": "string",
-                    "required": false,
-                    "array": false,
-                    "size": 5000,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
-                    "key": "keepPermission",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": null
                 }
             ],
             "indexes": [
@@ -3420,6 +3437,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "totpId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": "null",
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -7257,6 +7283,95 @@
             "indexes": []
         },
         {
+            "$id": "source_control",
+            "$permissions": [
+                "read(\"users\")",
+                "create(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "chat",
+            "name": "source_control",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "projectId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "provider",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 32,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "repoName",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ownerName",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "accessToken",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "enabled",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": true
+                },
+                {
+                    "key": "metadata",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_project",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "projectId"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "focusSessions",
             "$permissions": [],
             "databaseId": "whisperrflow",
@@ -7613,13 +7728,6 @@
                     "required": false,
                     "array": false,
                     "default": null
-                },
-                {
-                    "key": "keepPermission",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": null
                 }
             ],
             "indexes": [
@@ -7914,13 +8022,6 @@
                 },
                 {
                     "key": "isPinned",
-                    "type": "boolean",
-                    "required": false,
-                    "array": false,
-                    "default": null
-                },
-                {
-                    "key": "keepPermission",
                     "type": "boolean",
                     "required": false,
                     "array": false,
@@ -9412,6 +9513,41 @@
             "maximumFileSize": 10485760,
             "allowedFileExtensions": [],
             "compression": "gzip",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "general_storage",
+            "$permissions": [
+                "read(\"any\")"
+            ],
+            "fileSecurity": true,
+            "name": "General Storage",
+            "enabled": true,
+            "maximumFileSize": 104857600,
+            "allowedFileExtensions": [
+                "[]"
+            ],
+            "compression": "zstd",
+            "encryption": true,
+            "antivirus": true
+        },
+        {
+            "$id": "form_attachments",
+            "$permissions": [
+                "read(\"any\")",
+                "create(\"any\")",
+                "update(\"any\")",
+                "delete(\"any\")"
+            ],
+            "fileSecurity": true,
+            "name": "Form Attachments",
+            "enabled": true,
+            "maximumFileSize": 5242880,
+            "allowedFileExtensions": [
+                "[]"
+            ],
+            "compression": "zstd",
             "encryption": true,
             "antivirus": true
         }

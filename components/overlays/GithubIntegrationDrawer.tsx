@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Box, Typography, IconButton, Button, Stack, alpha, Switch, FormControlLabel, useTheme, useMediaQuery, Chip, TextField, LinearProgress, CircularProgress } from '@mui/material';
 import { X, GitBranch, Terminal, Shield, RefreshCw, CheckCircle, ChevronRight, ArrowLeft, AlertCircle, Play, ChevronDown, ChevronUp, Info, GitPullRequest } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
