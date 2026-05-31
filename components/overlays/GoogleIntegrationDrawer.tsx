@@ -20,7 +20,17 @@ const GOOGLE_ICON = (
   </svg>
 );
 
-export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function GoogleIntegrationDrawer({
+  isOpen,
+  onClose,
+  projectId,
+  context = 'settings'
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId?: string;
+  context?: 'settings' | 'project';
+}) {
   const { setIsDrawerOpen } = useDrawerState();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -31,10 +41,51 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
   const [googleUser, setGoogleUser] = useState<any | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  const [googleSyncKeep, setGoogleSyncKeep] = useState(true);
-  const [googleSyncCalendar, setGoogleSyncCalendar] = useState(true);
-  const [googleSyncDrive, setGoogleSyncDrive] = useState(false);
-  const [googleSyncTasks, setGoogleSyncTasks] = useState(true);
+  const [googleSyncKeep, setGoogleSyncKeep] = useState(() => {
+    if (typeof window !== 'undefined' && projectId) {
+      const val = localStorage.getItem(`google_sync_keep_${projectId}`);
+      return val === null ? true : val === 'true';
+    }
+    return true;
+  });
+  const [googleSyncCalendar, setGoogleSyncCalendar] = useState(() => {
+    if (typeof window !== 'undefined' && projectId) {
+      const val = localStorage.getItem(`google_sync_calendar_${projectId}`);
+      return val === null ? true : val === 'true';
+    }
+    return true;
+  });
+  const [googleSyncDrive, setGoogleSyncDrive] = useState(() => {
+    if (typeof window !== 'undefined' && projectId) {
+      const val = localStorage.getItem(`google_sync_drive_${projectId}`);
+      return val === null ? false : val === 'true';
+    }
+    return false;
+  });
+  const [googleSyncTasks, setGoogleSyncTasks] = useState(() => {
+    if (typeof window !== 'undefined' && projectId) {
+      const val = localStorage.getItem(`google_sync_tasks_${projectId}`);
+      return val === null ? true : val === 'true';
+    }
+    return true;
+  });
+
+  const handleToggleSync = (type: 'keep' | 'calendar' | 'drive' | 'tasks', checked: boolean) => {
+    if (type === 'keep') {
+      setGoogleSyncKeep(checked);
+      if (projectId) localStorage.setItem(`google_sync_keep_${projectId}`, String(checked));
+    } else if (type === 'calendar') {
+      setGoogleSyncCalendar(checked);
+      if (projectId) localStorage.setItem(`google_sync_calendar_${projectId}`, String(checked));
+    } else if (type === 'drive') {
+      setGoogleSyncDrive(checked);
+      if (projectId) localStorage.setItem(`google_sync_drive_${projectId}`, String(checked));
+    } else if (type === 'tasks') {
+      setGoogleSyncTasks(checked);
+      if (projectId) localStorage.setItem(`google_sync_tasks_${projectId}`, String(checked));
+    }
+    toast.success('Preferences updated securely!');
+  };
 
   const [disconnectStep, setDisconnectStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
@@ -389,11 +440,15 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
               <Stack spacing={1}>
                   <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
                       <FormControlLabel
-                          control={<Switch checked={googleSyncKeep} onChange={(e) => setGoogleSyncKeep(e.target.checked)} color="primary" />}
+                          control={<Switch checked={googleSyncKeep} onChange={(e) => handleToggleSync('keep', e.target.checked)} color="primary" />}
                           label={
                               <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Keep Sync</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Two-way sync with Kylrix Notes.</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>
+                                    {context === 'project' ? 'Google Keep Project Sync' : 'Google Keep Sync'}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                                    {context === 'project' ? 'Sync project notes with Google Keep.' : 'Two-way sync with Kylrix Notes.'}
+                                  </Typography>
                               </Box>
                           }
                           sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
@@ -401,11 +456,15 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                   </Box>
                   <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
                       <FormControlLabel
-                          control={<Switch checked={googleSyncCalendar} onChange={(e) => setGoogleSyncCalendar(e.target.checked)} color="primary" />}
+                          control={<Switch checked={googleSyncCalendar} onChange={(e) => handleToggleSync('calendar', e.target.checked)} color="primary" />}
                           label={
                               <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Calendar Connections</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Sync tasks and project events.</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>
+                                    {context === 'project' ? 'Project Calendar Connection' : 'Google Calendar Connections'}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                                    {context === 'project' ? 'Sync this project events and milestones.' : 'Sync tasks and project events.'}
+                                  </Typography>
                               </Box>
                           }
                           sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
@@ -413,11 +472,15 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                   </Box>
                   <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
                       <FormControlLabel
-                          control={<Switch checked={googleSyncTasks} onChange={(e) => setGoogleSyncTasks(e.target.checked)} color="primary" />}
+                          control={<Switch checked={googleSyncTasks} onChange={(e) => handleToggleSync('tasks', e.target.checked)} color="primary" />}
                           label={
                               <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Tasks Sync</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Mirror Kylrix Flow items to Google Tasks.</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>
+                                    {context === 'project' ? 'Project Tasks Sync' : 'Google Tasks Sync'}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                                    {context === 'project' ? 'Mirror this project tasks to Google Tasks.' : 'Mirror Kylrix Flow items to Google Tasks.'}
+                                  </Typography>
                               </Box>
                           }
                           sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
@@ -425,11 +488,15 @@ export function GoogleIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
                   </Box>
                   <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
                       <FormControlLabel
-                          control={<Switch checked={googleSyncDrive} onChange={(e) => setGoogleSyncDrive(e.target.checked)} color="primary" />}
+                          control={<Switch checked={googleSyncDrive} onChange={(e) => handleToggleSync('drive', e.target.checked)} color="primary" />}
                           label={
                               <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Google Drive Picker</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Attach files directly from Drive.</Typography>
+                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>
+                                    {context === 'project' ? 'Project Google Drive Attachments' : 'Google Drive Picker'}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                                    {context === 'project' ? 'Attach Drive files specifically inside this project.' : 'Attach files directly from Drive.'}
+                                  </Typography>
                               </Box>
                           }
                           sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}

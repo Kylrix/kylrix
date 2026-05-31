@@ -59,7 +59,6 @@ import {
 } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { SourceControlService, SourceControlRow } from '@/lib/services/sourceControl';
-import GitIntegrationDrawer from '@/components/projects/GitIntegrationDrawer';
 import { useToast } from '@/components/ui/Toast';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { IdentityAvatar } from '@/components/IdentityBadge';
@@ -152,7 +151,6 @@ export default function ProjectDetailPage() {
   const [extractGoalsNote, setExtractGoalsNote] = useState<Notes | null>(null);
   const [isAddSubProjectModalOpen, setIsAddSubProjectModalOpen] = useState(false);
   const [gitIntegration, setGitIntegration] = useState<SourceControlRow | null>(null);
-  const [isGitModalOpen, setIsGitModalOpen] = useState(false);
   const [initializingHuddle, setInitializingHuddle] = useState(false);
   const [discussionMenuAnchor, setDiscussionMenuAnchor] = useState<HTMLElement | null>(null);
   const [tabMenuAnchorEl, setTabMenuAnchorEl] = useState<{ x: number, y: number } | null>(null);
@@ -999,7 +997,7 @@ export default function ProjectDetailPage() {
                         <Grid size={{ xs: 12, md: 4 }}>
                             <Paper 
                                 elevation={0} 
-                                onClick={() => setIsGitModalOpen(true)}
+                                onClick={() => openUnified('github-integration', { context: 'project', projectId: projectId as string, tasks: tasks, onSaved: fetchProjectData })}
                                 sx={{ 
                                     p: 2.5, 
                                     borderRadius: '24px', 
@@ -1049,12 +1047,7 @@ export default function ProjectDetailPage() {
                         <Grid size={{ xs: 12, md: 4 }}>
                             <Paper 
                                 elevation={0} 
-                                onClick={() => {
-                                    if (typeof window !== 'undefined') {
-                                        sessionStorage.setItem('scroll_to_google_workspace', 'true');
-                                    }
-                                    router.push('/settings');
-                                }}
+                                onClick={() => openUnified('google-integration', { context: 'project', projectId: projectId as string })}
                                 sx={{ 
                                     p: 2.5, 
                                     borderRadius: '24px', 
@@ -1279,15 +1272,7 @@ export default function ProjectDetailPage() {
         />
       )}
 
-      {isGitModalOpen && (
-        <GitIntegrationDrawer
-          isOpen={isGitModalOpen}
-          onClose={() => setIsGitModalOpen(false)}
-          projectId={projectId as string}
-          onSaved={fetchProjectData}
-          tasks={tasks}
-        />
-      )}
+
 
       {/* Custom Tabs Context Menu */}
       <Menu

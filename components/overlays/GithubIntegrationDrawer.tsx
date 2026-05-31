@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, Button, Stack, alpha, Switch, FormControlLabel, useTheme, useMediaQuery, Chip, TextField } from '@mui/material';
-import { X } from 'lucide-react';
+import { Box, Typography, IconButton, Button, Stack, alpha, Switch, FormControlLabel, useTheme, useMediaQuery, Chip, TextField, CircularProgress, Divider, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { X, GitBranch, Terminal, Shield, RefreshCw, CheckCircle, ChevronRight, ArrowLeft, AlertCircle } from 'lucide-react';
 import Drawer from '@mui/material/Drawer';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
 import { account } from '@/lib/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useSudo } from '@/context/SudoContext';
+import { SourceControlService } from '@/lib/services/sourceControl';
 
 import { GithubAuthAdapter } from '@/lib/integrations/github/auth';
 
@@ -17,7 +19,21 @@ const GITHUB_ICON = (
   </svg>
 );
 
-export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+export function GithubIntegrationDrawer({
+  isOpen,
+  onClose,
+  projectId,
+  context = 'settings',
+  onSaved,
+  tasks = []
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  projectId?: string;
+  context?: 'settings' | 'project';
+  onSaved?: () => void;
+  tasks?: any[];
+}) {
   const { setIsDrawerOpen } = useDrawerState();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -35,6 +51,19 @@ export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
   // Disconnect Confirmation Multi-Stage Flow States
   const [disconnectStep, setDisconnectStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
+
+  // Project-specific states
+  const [provider, setProvider] = useState('github');
+  const [ownerName, setOwnerName] = useState('');
+  const [repoName, setRepoName] = useState('');
+  const [enabled, setEnabled] = useState(true);
+  const [syncLogs, setSyncLogs] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [integration, setIntegration] = useState<any | null>(null);
+  const [step, setStep] = useState(1);
+
+  const { requestSudo } = useSudo();
 
   React.useEffect(() => {
     setIsDrawerOpen(isOpen);
@@ -69,23 +98,58 @@ export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
         }
       };
 
+      // Helper to query active project integration configurations
+      const fetchProjectIntegration = async () => {
+        if (!projectId) return;
+        setLoading(true);
+        try {
+          const list = await SourceControlService.listIntegrations(projectId);
+          if (list.length > 0) {
+            const item = list[0];
+            setIntegration(item);
+            setProvider(item.provider || 'github');
+            setOwnerName(item.ownerName || '');
+            setRepoName(item.repoName || '');
+            setEnabled(item.enabled !== false);
+            setStep(2);
+          } else {
+            setIntegration(null);
+            setStep(1);
+          }
+        } catch (e) {
+          console.error('[GithubIntegrationDrawer] failed to load project integrations', e);
+        } finally {
+          setLoading(false);
+        }
+      };
+
       // 2. Subscribe to live Firebase auth changes
       const unsubscribe = GithubAuthAdapter.initAuth(
         (user) => {
           setGithubConnected(true);
           setGithubUser(user);
+          if (projectId) {
+            void fetchProjectIntegration();
+          }
         },
         () => {
           // Fall back to check Appwrite identities if Firebase auth hasn't synced
           void fetchAppwriteIdentity();
+          if (projectId) {
+            void fetchProjectIntegration();
+          }
         }
       );
+
+      if (projectId) {
+        void fetchProjectIntegration();
+      }
 
       return () => {
         unsubscribe();
       };
     }
-  }, [isOpen, setIsDrawerOpen]);
+  }, [isOpen, setIsDrawerOpen, projectId]);
 
   const handleToggleConnection = async () => {
     if (githubConnected) {
@@ -121,6 +185,92 @@ export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
       toast.error(err.message || 'Failed to disconnect account.');
     } finally {
       setIsAuthenticating(false);
+    }
+  };
+
+  const handleSave = () => {
+    if (!ownerName.trim() || !repoName.trim()) {
+      toast.error('Owner name and repository name are required.');
+      return;
+    }
+
+    if (!githubConnected) {
+      toast.error('You must link a GitHub account first.');
+      return;
+    }
+
+    requestSudo({
+      onSuccess: async () => {
+        setLoading(true);
+        try {
+          const saved = await SourceControlService.saveIntegration(projectId!, {
+            provider,
+            ownerName: ownerName.trim(),
+            repoName: repoName.trim(),
+            enabled,
+            metadata: JSON.stringify({
+              updatedAt: new Date().toISOString(),
+              syncEnabled: true,
+            }),
+          });
+          setIntegration(saved);
+          toast.success('Git integration saved securely!');
+          if (onSaved) onSaved();
+          setStep(2);
+        } catch (err: any) {
+          toast.error(err.message || 'Could not save configuration.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
+  const handleDeleteRepo = () => {
+    const integrationId = integration?.$id;
+    if (!integrationId) return;
+    
+    requestSudo({
+      onSuccess: async () => {
+        setLoading(true);
+        try {
+          const ok = await SourceControlService.removeIntegration(integrationId);
+          if (ok) {
+            toast.success('Integration disconnected successfully!');
+            setIntegration(null);
+            setOwnerName('');
+            setRepoName('');
+            setSyncLogs([]);
+            if (onSaved) onSaved();
+            setStep(1);
+          } else {
+            toast.error('Could not remove integration.');
+          }
+        } catch (err: any) {
+          toast.error(err.message || 'Could not delete configuration.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+  };
+
+  const handleSyncTasks = async () => {
+    if (!integration || !projectId) return;
+    setSyncing(true);
+    setSyncLogs(['[Sync] Connecting to Git provider API...']);
+    
+    try {
+      const res = await SourceControlService.syncTasksToGitIssues(projectId, integration, tasks);
+      setSyncLogs(res.logs);
+      if (res.success) {
+        toast.success(`Successfully exported ${res.syncedCount} tasks to ${provider}!`);
+      }
+    } catch (err: any) {
+      setSyncLogs(prev => [...prev, `[Error] Sync failed: ${err.message || 'Network Timeout'}`]);
+      toast.error(err.message || 'Task-to-issue export failed.');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -389,44 +539,218 @@ export function GithubIntegrationDrawer({ isOpen, onClose }: { isOpen: boolean; 
             </Box>
 
             {githubConnected && (
-              <Stack spacing={1}>
-                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
-                      <FormControlLabel
-                          control={<Switch checked={githubSyncIssues} onChange={(e) => setGithubSyncIssues(e.target.checked)} color="primary" />}
-                          label={
-                              <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>GitHub Issue Sync</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Mirror project tasks directly into GitHub repository issues.</Typography>
-                              </Box>
-                          }
-                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
-                      />
-                  </Box>
-                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
-                      <FormControlLabel
-                          control={<Switch checked={githubSyncCommits} onChange={(e) => setGithubSyncCommits(e.target.checked)} color="primary" />}
-                          label={
-                              <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Commits Feed Sync</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Import repository commits as personal feed actions.</Typography>
-                              </Box>
-                          }
-                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
-                      />
-                  </Box>
-                  <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
-                      <FormControlLabel
-                          control={<Switch checked={githubSyncPRs} onChange={(e) => setGithubSyncPRs(e.target.checked)} color="primary" />}
-                          label={
-                              <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Pull Request Notifications</Typography>
-                                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Notify on repository open PR and code review activities.</Typography>
-                              </Box>
-                          }
-                          sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
-                      />
-                  </Box>
-              </Stack>
+              context === 'project' ? (
+                <Stack spacing={3} sx={{ mt: 1 }}>
+                  {step === 1 ? (
+                    <Box
+                      sx={{
+                        p: 3,
+                        borderRadius: '20px',
+                        bgcolor: alpha('#10B981', 0.03),
+                        border: '1px solid rgba(16, 185, 129, 0.15)',
+                      }}
+                    >
+                      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2.5 }}>
+                        <Box sx={{ color: '#10B981', display: 'flex' }}><CheckCircle size={24} /></Box>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                          <Typography variant="body1" sx={{ fontWeight: 800, color: '#fff' }}>
+                            GitHub Account Connected
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                            Linked Profile: {githubUser?.email || githubUser?.displayName || 'Connected'}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        onClick={() => setStep(2)}
+                        endIcon={<ChevronRight size={16} />}
+                        sx={{
+                          borderRadius: '14px',
+                          bgcolor: '#6366F1',
+                          color: '#fff',
+                          fontWeight: 900,
+                          py: 1.5,
+                          textTransform: 'none',
+                          '&:hover': { bgcolor: '#4F46E5' },
+                        }}
+                      >
+                        Configure Repository Integration
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Stack spacing={3}>
+                      <Box>
+                        <Button
+                          variant="text"
+                          size="small"
+                          onClick={() => setStep(1)}
+                          startIcon={<ArrowLeft size={14} />}
+                          sx={{ color: 'rgba(255, 255, 255, 0.5)', textTransform: 'none', fontWeight: 800, p: 0, '&:hover': { color: '#fff', bgcolor: 'transparent' } }}
+                        >
+                          View Linked Account Info
+                        </Button>
+                      </Box>
+
+                      {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                          <CircularProgress size={28} sx={{ color: '#6366F1' }} />
+                        </Box>
+                      ) : (
+                        <Stack spacing={3.25}>
+                          <Box sx={{ p: 2.5, borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'white', mb: 2 }}>
+                              Repository Settings
+                            </Typography>
+                            <Stack spacing={2}>
+                              <TextField
+                                fullWidth
+                                label="Repository Owner"
+                                variant="outlined"
+                                size="small"
+                                placeholder="e.g. facebook"
+                                value={ownerName}
+                                onChange={(e) => setOwnerName(e.target.value)}
+                                sx={{
+                                  '& .MuiOutlinedInput-root': {
+                                    bgcolor: '#161412',
+                                    borderRadius: '12px',
+                                    color: 'white',
+                                    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                                  }
+                                }}
+                              />
+                              <TextField
+                                fullWidth
+                                label="Repository Name"
+                                variant="outlined"
+                                size="small"
+                                placeholder="e.g. react"
+                                value={repoName}
+                                onChange={(e) => setRepoName(e.target.value)}
+                                sx={{
+                                  '& .MuiOutlinedInput-root': {
+                                    bgcolor: '#161412',
+                                    borderRadius: '12px',
+                                    color: 'white',
+                                    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                                  }
+                                }}
+                              />
+                              <FormControlLabel
+                                control={<Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} color="primary" />}
+                                label={
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Enable Repository Sync</Typography>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Active background sync for tasks.</Typography>
+                                  </Box>
+                                }
+                                sx={{ ml: 0, justifyContent: 'space-between', flexDirection: 'row-reverse', width: '100%', mt: 1 }}
+                              />
+                            </Stack>
+                          </Box>
+
+                          <Stack direction="row" spacing={2}>
+                            <Button
+                              variant="contained"
+                              fullWidth
+                              onClick={handleSave}
+                              disabled={loading}
+                              sx={{ borderRadius: '12px', bgcolor: '#6366F1', fontWeight: 800, '&:hover': { bgcolor: '#4F46E5' } }}
+                            >
+                              Save Settings
+                            </Button>
+
+                            {integration && (
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                fullWidth
+                                onClick={handleDeleteRepo}
+                                disabled={loading}
+                                sx={{ borderRadius: '12px', borderColor: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', '&:hover': { bgcolor: 'rgba(239,68,68,0.05)', borderColor: '#EF4444' } }}
+                              >
+                                Remove Integration
+                              </Button>
+                            )}
+                          </Stack>
+
+                          {integration && (
+                            <Box sx={{ p: 2.5, borderRadius: '20px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                              <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'white', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Terminal size={16} /> Actions & Logs
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mb: 2, display: 'block' }}>
+                                Sync Kylrix project tasks to this repository's GitHub Issues.
+                              </Typography>
+                              <Button
+                                variant="contained"
+                                fullWidth
+                                onClick={handleSyncTasks}
+                                disabled={syncing}
+                                startIcon={syncing ? <CircularProgress size={16} color="inherit" /> : <RefreshCw size={16} />}
+                                sx={{ borderRadius: '12px', bgcolor: '#10B981', fontWeight: 800, mb: 2, '&:hover': { bgcolor: '#059669' } }}
+                              >
+                                {syncing ? 'Syncing...' : 'Sync Tasks to Issues'}
+                              </Button>
+
+                              {syncLogs.length > 0 && (
+                                <Box sx={{ bgcolor: '#161412', p: 1.5, borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', maxHeight: 160, overflowY: 'auto', mt: 1 }}>
+                                  {syncLogs.map((log, idx) => (
+                                    <Typography key={idx} variant="caption" sx={{ fontFamily: 'var(--font-mono)', display: 'block', color: log.startsWith('[Error]') ? '#EF4444' : 'rgba(255,255,255,0.78)', mb: 0.5 }}>
+                                      {log}
+                                    </Typography>
+                                  ))}
+                                </Box>
+                              )}
+                            </Box>
+                          )}
+                        </Stack>
+                      )}
+                    </Stack>
+                  )}
+                </Stack>
+              ) : (
+                <Stack spacing={1}>
+                    <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                        <FormControlLabel
+                            control={<Switch checked={githubSyncIssues} onChange={(e) => setGithubSyncIssues(e.target.checked)} color="primary" />}
+                            label={
+                                <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>GitHub Issue Sync</Typography>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Mirror project tasks directly into GitHub repository issues.</Typography>
+                                </Box>
+                            }
+                            sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                        />
+                    </Box>
+                    <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                        <FormControlLabel
+                            control={<Switch checked={githubSyncCommits} onChange={(e) => setGithubSyncCommits(e.target.checked)} color="primary" />}
+                            label={
+                                <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Commits Feed Sync</Typography>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Import repository commits as personal feed actions.</Typography>
+                                </Box>
+                            }
+                            sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                        />
+                    </Box>
+                    <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
+                        <FormControlLabel
+                            control={<Switch checked={githubSyncPRs} onChange={(e) => setGithubSyncPRs(e.target.checked)} color="primary" />}
+                            label={
+                                <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white' }}>Pull Request Notifications</Typography>
+                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Notify on repository open PR and code review activities.</Typography>
+                                </Box>
+                            }
+                            sx={{ m: 0, width: '100%', justifyContent: 'space-between', flexDirection: 'row-reverse' }}
+                        />
+                    </Box>
+                </Stack>
+              )
             )}
           </Stack>
         )}

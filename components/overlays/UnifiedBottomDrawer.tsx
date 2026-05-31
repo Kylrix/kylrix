@@ -74,9 +74,9 @@ export function UnifiedBottomDrawer() {
                 onClose={close} 
             />;
         case 'google-integration':
-            return <GoogleIntegrationDrawer isOpen={true} onClose={close} />;
+            return <GoogleIntegrationDrawer isOpen={true} onClose={close} {...drawerData} />;
         case 'github-integration':
-            return <GithubIntegrationDrawer isOpen={true} onClose={close} />;
+            return <GithubIntegrationDrawer isOpen={true} onClose={close} {...drawerData} />;
         default: return null;
     }
   };
