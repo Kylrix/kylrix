@@ -44,435 +44,6 @@
             }
         }
     },
-    "functions": [
-        {
-            "$id": "68e76f25001e8b80a6c2",
-            "name": "function_appwrite_web3",
-            "runtime": "node-22",
-            "path": "functions/function-appwrite-web3",
-            "entrypoint": "dist/main.js",
-            "execute": [
-                "any"
-            ],
-            "enabled": true,
-            "logging": true,
-            "events": [],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install && npm run build",
-            "scopes": [],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a582720012957d2027",
-            "name": "search-users",
-            "runtime": "node-25",
-            "path": "functions/search-users",
-            "entrypoint": "src/main.js",
-            "execute": [
-                "users"
-            ],
-            "enabled": true,
-            "logging": true,
-            "events": [],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "users.read"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a583ac002b674685b0",
-            "name": "sync-user-profile",
-            "runtime": "node-25",
-            "path": "functions/sync-user-profile",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "users.*.create"
-            ],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "users.read",
-                "databases.write",
-                "tables.write",
-                "collections.write",
-                "rows.write",
-                "documents.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a58c1c001c39695bf6",
-            "name": "notify-on-share",
-            "runtime": "node-25",
-            "path": "functions/notify-on-share",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "databases.67ff05a9000296822396.tables.collaborators.rows.*.create",
-                "databases.passwordManagerDb.tables.keychain.rows.*.update"
-            ],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "users.read",
-                "databases.read",
-                "tables.read",
-                "collections.read",
-                "rows.read",
-                "documents.read",
-                "messages.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a6bf6200180e70aca1",
-            "name": "notify-on-social-activity",
-            "runtime": "node-25",
-            "path": "functions/notify-on-social-activity",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "databases.chat.tables.messages.rows.*.create",
-                "databases.chat.tables.follows.rows.*.create",
-                "databases.chat.tables.interactions.rows.*.create"
-            ],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "users.read",
-                "databases.read",
-                "tables.read",
-                "collections.read",
-                "rows.read",
-                "documents.read",
-                "messages.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a6c28f003bb7d7e054",
-            "name": "flow-event-sync",
-            "runtime": "node-25",
-            "path": "functions/flow-event-sync",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "databases.whisperrflow.tables.eventGuests.rows.*.create"
-            ],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "databases.read",
-                "tables.read",
-                "collections.read",
-                "rows.read",
-                "documents.read",
-                "messages.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a6c45a002085baa8dd",
-            "name": "log-security-event",
-            "runtime": "node-25",
-            "path": "functions/log-security-event",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "databases.passwordManagerDb.tables.securityLogs.rows.*.create",
-                "users.*.sessions.*.create",
-                "users.*.sessions.*.delete"
-            ],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "databases.write",
-                "tables.write",
-                "collections.write",
-                "rows.write",
-                "documents.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a6c56d00203438232c",
-            "name": "sync-subscription-status",
-            "runtime": "node-25",
-            "path": "functions/sync-subscription-status",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "databases.67ff05a9000296822396.tables.subscriptions.rows.*.create",
-                "databases.67ff05a9000296822396.tables.subscriptions.rows.*.update"
-            ],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "users.read",
-                "users.write",
-                "databases.read",
-                "tables.read",
-                "collections.read",
-                "rows.read",
-                "documents.read"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a6c6fc001dc877979d",
-            "name": "account-cleanup",
-            "runtime": "node-25",
-            "path": "functions/account-cleanup",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "users.*.delete"
-            ],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "users.read",
-                "databases.read",
-                "databases.write",
-                "tables.read",
-                "collections.read",
-                "tables.write",
-                "collections.write",
-                "rows.read",
-                "documents.read",
-                "rows.write",
-                "documents.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69a6c841000b2c5aaae3",
-            "name": "connect-call-cleanup",
-            "runtime": "node-25",
-            "path": "functions/connect-call-cleanup",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "databases.chat.tables.call_links.rows.*.delete"
-            ],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "databases.write",
-                "tables.write",
-                "collections.write",
-                "rows.write",
-                "documents.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "69c0ff79001b60e664d2",
-            "name": "permission_updater",
-            "runtime": "node-25",
-            "path": "functions/permission-updater",
-            "entrypoint": "src/main.js",
-            "execute": [
-                "users"
-            ],
-            "enabled": true,
-            "logging": true,
-            "events": [],
-            "schedule": "",
-            "timeout": 15,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "data-porter",
-            "name": "data-porter",
-            "runtime": "node-25",
-            "path": "functions/data-porter",
-            "entrypoint": "src/main.js",
-            "execute": [
-                "users"
-            ],
-            "enabled": true,
-            "logging": true,
-            "events": [],
-            "schedule": "",
-            "timeout": 300,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "users.read",
-                "databases.read",
-                "databases.write",
-                "collections.read",
-                "collections.write",
-                "tables.read",
-                "tables.write",
-                "rows.read",
-                "rows.write",
-                "documents.read",
-                "documents.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "flow-agent-orchestrator",
-            "name": "flow-agent-orchestrator",
-            "runtime": "node-25",
-            "path": "functions/flow-agent-orchestrator",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [
-                "databases.whisperrflow.tables.tasks.rows.*.create"
-            ],
-            "schedule": "",
-            "timeout": 300,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "databases.read",
-                "databases.write",
-                "tables.read",
-                "tables.write",
-                "collections.read",
-                "collections.write",
-                "rows.read",
-                "rows.write",
-                "documents.read",
-                "documents.write",
-                "functions.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "ecosystem-context-aggregator",
-            "name": "ecosystem-context-aggregator",
-            "runtime": "node-25",
-            "path": "functions/ecosystem-context-aggregator",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [],
-            "schedule": "",
-            "timeout": 120,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "databases.read",
-                "tables.read",
-                "collections.read",
-                "rows.read",
-                "documents.read"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "agent-action-guardrail",
-            "name": "agent-action-guardrail",
-            "runtime": "node-25",
-            "path": "functions/agent-action-guardrail",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [],
-            "schedule": "",
-            "timeout": 60,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        },
-        {
-            "$id": "ghost-cleanup",
-            "name": "ghost-cleanup",
-            "runtime": "node-25",
-            "path": "functions/ghost-cleanup",
-            "entrypoint": "src/main.js",
-            "execute": [],
-            "enabled": true,
-            "logging": true,
-            "events": [],
-            "schedule": "0 0 * * *",
-            "timeout": 300,
-            "commands": "npm install -g pnpm && pnpm install",
-            "scopes": [
-                "databases.read",
-                "databases.write",
-                "tables.read",
-                "collections.read",
-                "tables.write",
-                "collections.write",
-                "rows.read",
-                "documents.read",
-                "rows.write",
-                "documents.write",
-                "files.write",
-                "buckets.write"
-            ],
-            "buildSpecification": "s-0.5vcpu-512mb",
-            "runtimeSpecification": "s-0.5vcpu-512mb",
-            "deploymentRetention": 0
-        }
-    ],
     "tablesDB": [
         {
             "$id": "67ff05a9000296822396",
@@ -751,6 +322,15 @@
                     "required": false,
                     "array": false,
                     "default": false
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -2391,6 +1971,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -3224,6 +2813,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -7728,6 +7326,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -8026,6 +7633,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -8180,6 +7796,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -8308,6 +7933,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -9550,16 +9184,6 @@
             "compression": "zstd",
             "encryption": true,
             "antivirus": true
-        }
-    ],
-    "teams": [
-        {
-            "$id": "users_admin",
-            "$createdAt": "2025-09-26T10:59:00.018+00:00",
-            "$updatedAt": "2025-09-26T10:59:00.018+00:00",
-            "name": "users_admin",
-            "total": 0,
-            "prefs": {}
         }
     ]
 }
