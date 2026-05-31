@@ -172,6 +172,7 @@ export type Notes = Models.Row & {
     creatorId?: string | null;
     resourceId?: string | null;
     resourceType?: string | null;
+    keepPermission?: boolean | null;
 }
 
 export type Tags = Models.Row & {

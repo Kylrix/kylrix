@@ -702,6 +702,13 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -2344,6 +2351,13 @@
                     "size": 5000,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -3186,6 +3200,13 @@
                     "size": 5000,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7592,6 +7613,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7886,6 +7914,13 @@
                 },
                 {
                     "key": "isPinned",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
+                },
+                {
+                    "key": "keepPermission",
                     "type": "boolean",
                     "required": false,
                     "array": false,
