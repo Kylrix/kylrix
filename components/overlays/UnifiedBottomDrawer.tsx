@@ -75,6 +75,8 @@ export function UnifiedBottomDrawer() {
             />;
         case 'google-integration':
             return <GoogleIntegrationDrawer isOpen={true} onClose={close} />;
+        case 'github-integration':
+            return <GithubIntegrationDrawer isOpen={true} onClose={close} />;
         default: return null;
     }
   };

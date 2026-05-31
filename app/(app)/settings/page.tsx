@@ -285,9 +285,9 @@ export default function SettingsPage() {
                             }}>
                                 <Stack spacing={3}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Box>
+                                        <Box sx={{ pr: 2 }}>
                                             <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Google Suite Integration</Typography>
-                                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Connect your Google workspace to sync Keep, Drive, Tasks, and Calendars.</Typography>
+                                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.5 }}>Connect your Google workspace to sync Keep, Drive, Tasks, and Calendars.</Typography>
                                         </Box>
                                         <Button 
                                             variant="contained"
@@ -298,6 +298,28 @@ export default function SettingsPage() {
                                                 fontWeight: 700,
                                                 minWidth: 132,
                                                 bgcolor: '#4285F4', '&:hover': { bgcolor: '#357AE8' }
+                                            }}
+                                        >
+                                            Configure
+                                        </Button>
+                                    </Box>
+
+                                    <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Box sx={{ pr: 2 }}>
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>GitHub Integration</Typography>
+                                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.5 }}>Connect your GitHub profile to sync code, tasks, issues, and PR boards.</Typography>
+                                        </Box>
+                                        <Button 
+                                            variant="contained"
+                                            onClick={() => openDrawer('github-integration')}
+                                            sx={{ 
+                                                borderRadius: '12px',
+                                                textTransform: 'none',
+                                                fontWeight: 700,
+                                                minWidth: 132,
+                                                bgcolor: '#24292F', '&:hover': { bgcolor: '#1F2328' }
                                             }}
                                         >
                                             Configure
