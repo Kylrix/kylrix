@@ -680,7 +680,6 @@ function TOTPPageContent() {
           </DialogActions>
         </Dialog>
       )}
-        </Box>
       </MultiSectionContainer>
     </Box>
   );

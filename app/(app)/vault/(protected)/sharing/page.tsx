@@ -599,7 +599,6 @@ export default function SharingPage() {
             isMobile={false}
           />
         )}
-        </Box>
       </MultiSectionContainer>
     </Box>
   );
