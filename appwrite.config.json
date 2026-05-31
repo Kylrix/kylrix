@@ -704,6 +704,15 @@
                     "encrypt": false
                 },
                 {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
                     "key": "isGuest",
                     "type": "boolean",
                     "required": false,
@@ -2356,6 +2365,15 @@
                     "encrypt": false
                 },
                 {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
                     "key": "attachments",
                     "type": "string",
                     "required": false,
@@ -3194,6 +3212,15 @@
                     "required": false,
                     "array": false,
                     "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
                     "default": null,
                     "encrypt": false
                 },
@@ -7728,6 +7755,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -8026,6 +8062,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [

@@ -173,6 +173,7 @@ export type Notes = Models.Row & {
     resourceId?: string | null;
     resourceType?: string | null;
     keepPermission?: boolean | null;
+    source?: string | null;
 }
 
 export type Tags = Models.Row & {
@@ -299,7 +300,7 @@ export type Subscriptions = Models.Row & { userId: string; plan: Plan; status: S
 
 export type SecurityLogs = Models.Row & { userId: string; eventType: string; ipAddress: string | null; userAgent: string | null; deviceFingerprint: string | null; details: string | null; success: boolean; severity: string; timestamp: string; }
 
-export type Credentials = Models.Row & { userId: string; itemType: string; name: string; url: string | null; notes: string | null; totpId: string | null; username: string | null; password: string | null; cardNumber: string | null; cardholderName: string | null; cardExpiry: string | null; cardCVV: string | null; cardPIN: string | null; cardType: string | null; folderId: string | null; tags: string[] | null; customFields: string | null; faviconUrl: string | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastAccessedAt: string | null; passwordChangedAt: string | null; createdAt: string | null; updatedAt: string | null; attachments: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; }
+export type Credentials = Models.Row & { userId: string; itemType: string; name: string; url: string | null; notes: string | null; totpId: string | null; username: string | null; password: string | null; cardNumber: string | null; cardholderName: string | null; cardExpiry: string | null; cardCVV: string | null; cardPIN: string | null; cardType: string | null; folderId: string | null; tags: string[] | null; customFields: string | null; faviconUrl: string | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastAccessedAt: string | null; passwordChangedAt: string | null; createdAt: string | null; updatedAt: string | null; attachments: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; source?: string | null; }
 
 export type Identities = Models.Row & { userId: string; identityType: string; label: string; credentialId: string | null; publicKey: string | null; counter: number; passkeyBlob: string | null; transports: string[] | null; aaguid: string | null; deviceInfo: string | null; isPrimary: boolean; isBackup: boolean; lastUsedAt: string | null; createdAt: string | null; updatedAt: string | null; }
 
@@ -307,7 +308,7 @@ export type User = Models.Row & { userId: string; email: string | null; masterpa
 
 export type Folders = Models.Row & { userId: string; name: string; parentFolderId: string | null; icon: string | null; color: string | null; sortOrder: number; isDeleted: boolean; deletedAt: string | null; createdAt: string | null; updatedAt: string | null; }
 
-export type TotpSecrets = Models.Row & { userId: string; issuer: string; accountName: string; secretKey: string; algorithm: string; digits: number; period: number; url: string | null; folderId: string | null; tags: string[] | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastUsedAt: string | null; createdAt: string | null; updatedAt: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; }
+export type TotpSecrets = Models.Row & { userId: string; issuer: string; accountName: string; secretKey: string; algorithm: string; digits: number; period: number; url: string | null; folderId: string | null; tags: string[] | null; isFavorite: boolean; isDeleted: boolean; deletedAt: string | null; lastUsedAt: string | null; createdAt: string | null; updatedAt: string | null; isPinned?: boolean | null; isPublic?: boolean | null; isGuest?: boolean | null; sharedFrom?: string | null; dek?: string | null; keepPermission?: boolean | null; source?: string | null; }
 
 export type Messages = Models.Row & { conversationId: string; senderId: string; content: string; contentType: ContentType; plainText: string | null; mediaUrls: string[]; mediaFileIds: string[]; thumbnailUrl: string | null; thumbnailFileId: string | null; metadata: string | null; replyToMessageId: string | null; forwardedFromMessageId: string | null; forwardedFromConversationId: string | null; editedAt: string | null; deletedAt: string | null; deletedFor: string[]; isSystemMessage: boolean; isPinned: boolean; pinnedAt: string | null; reactions: string | null; mentions: string[]; links: string[]; readBy: string[]; deliveredTo: string[]; status: Status; expiresAt: string | null; createdAt: string | null; updatedAt: string | null; }
 
@@ -380,6 +381,7 @@ export type Events = Models.Row & {
     isPublic?: boolean | null;
     isGuest?: boolean | null;
     keepPermission?: boolean | null;
+    source?: string | null;
 }
 
 export type Calendars = Models.Row & {
@@ -406,6 +408,7 @@ export type Tasks = Models.Row & {
     isPublic?: boolean | null;
     isGuest?: boolean | null;
     keepPermission?: boolean | null;
+    source?: string | null;
 }
 
 export type Stickers = Models.Row & { name: string; description: string | null; creatorId: string | null; packId: string | null; imageUrl: string; imageFileId: string | null; animatedUrl: string | null; animatedFileId: string | null; tags: string[]; category: string | null; isPremium: boolean; isAnimated: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }
