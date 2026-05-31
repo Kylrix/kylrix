@@ -136,11 +136,19 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
 
   // Intelligent fallback: auto-partitions data/sections for non-configured routes
   const analyzeAndPartitionRoute = (route: string): PanelType[] => {
-    const cleanRoute = route.split('?')[0];
+    let cleanRoute = route.split('?')[0];
+    if (cleanRoute.length > 1 && cleanRoute.endsWith('/')) {
+      cleanRoute = cleanRoute.slice(0, -1);
+    }
 
     // /send page fallback: split composition, Sparks history, security Context
     if (cleanRoute.startsWith('/send')) {
       return ['note', 'secrets', 'huddles'];
+    }
+
+    // /projects/[projectId] fallback: display relevant execution panels
+    if (cleanRoute.startsWith('/projects/')) {
+      return ['note', 'huddles', 'goals'];
     }
 
     // Default dynamic fallback
@@ -153,7 +161,10 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
 
   // Computes the dynamic layout depending on screen width and route preferences
   const getLayoutForRoute = useCallback((route: string): SectionConfig => {
-    const cleanRoute = route.split('?')[0];
+    let cleanRoute = route.split('?')[0];
+    if (cleanRoute.length > 1 && cleanRoute.endsWith('/')) {
+      cleanRoute = cleanRoute.slice(0, -1);
+    }
     const userOverride = overrides[cleanRoute];
 
     // Find predefined panels or fetch dynamic partition fallback

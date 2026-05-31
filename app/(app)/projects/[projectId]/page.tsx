@@ -98,6 +98,7 @@ import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
 import { useLayout } from '@/context/LayoutContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { MultiSectionContainer } from '@/context/SectionContext';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import FormDialog from '@/components/forms/FormDialog';
 import { CallActionModal } from '@/components/call/CallActionModal';
@@ -516,8 +517,9 @@ export default function ProjectDetailPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff' }}>
-      <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, pt: { xs: 2, md: 6 }, pb: 10 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff', pt: { xs: 2, md: 6 }, pb: 10 }}>
+      <MultiSectionContainer panels={['note', 'huddles', 'goals']} contextId={projectId as string}>
+        <Box sx={{ width: '100%' }}>
         
         {/* Modern Breadcrumb / Top Bar */}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={{ xs: 3, md: 0 }} alignItems={{ xs: 'flex-start', md: 'center' }} justifyContent="space-between" sx={{ mb: 6 }}>
@@ -1325,7 +1327,8 @@ export default function ProjectDetailPage() {
                 </Stack>
             </Grid>
         </Grid>
-      </Box>
+        </Box>
+      </MultiSectionContainer>
 
       {isAddModalOpen && (
         <ProjectAddObjectModal 
