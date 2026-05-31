@@ -404,7 +404,7 @@ export function GoogleIntegrationDrawer({
       fetchCalendarEvents(googleToken);
       fetchGoogleDocs(googleToken);
     }
-  }, [googleConnected, googleToken]);
+  }, [googleConnected, googleToken, fetchCalendarEvents, fetchGoogleDocs]);
 
   // Check auth state on drawer load
   useEffect(() => {
