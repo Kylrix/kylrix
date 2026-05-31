@@ -194,7 +194,13 @@ export type Notes = Models.Row & {
     creatorId: string | null;
     resourceId: string | null;
     resourceType: string | null;
-    keepPermission?: boolean | null;
+    isGuest: boolean;
+    isEncrypted: boolean;
+    isPass: boolean;
+    isTask: boolean;
+    isFile: boolean;
+    isTotp: boolean;
+    isDiscussion: boolean;
 }
 
 export type Comments = Models.Row & {
@@ -207,6 +213,7 @@ export type Comments = Models.Row & {
     isGuest: boolean | null;
     isVoice: boolean;
     metadata: string | null;
+    isEncrypted: boolean;
 }
 
 export type Extensions = Models.Row & {
@@ -351,8 +358,7 @@ export type Credentials = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isShared: boolean | null;
-    dek?: string | null;
-    keepPermission?: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type Identities = Models.Row & {
@@ -426,8 +432,7 @@ export type TotpSecrets = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isShared: boolean | null;
-    dek?: string | null;
-    keepPermission?: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type Keychain = Models.Row & {
@@ -442,6 +447,7 @@ export type Keychain = Models.Row & {
     updatedAt: string | null;
     isArgon: boolean;
     isPending: boolean;
+    totpId: string;
 }
 
 export type KeyMapping = Models.Row & {
@@ -771,6 +777,16 @@ export type TelegramConnections = Models.Row & {
     is_verified: boolean;
 }
 
+export type SourceControl = Models.Row & {
+    projectId: string;
+    provider: string;
+    repoName: string | null;
+    ownerName: string | null;
+    accessToken: string | null;
+    enabled: boolean;
+    metadata: string | null;
+}
+
 export type FocusSessions = Models.Row & {
     userId: string;
     taskId: string | null;
@@ -809,7 +825,6 @@ export type Events = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isPinned: boolean | null;
-    keepPermission?: boolean | null;
 }
 
 export type Calendars = Models.Row & {
@@ -837,7 +852,6 @@ export type Tasks = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isPinned: boolean | null;
-    keepPermission?: boolean | null;
 }
 
 export type Forms = Models.Row & {
