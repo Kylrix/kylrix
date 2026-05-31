@@ -12,6 +12,7 @@ const eslintConfig = [
       "build/**",
       "**/generated/**",
       "functions/**",
+      ".repo/**",
     ],
   },
   ...nextConfigs,

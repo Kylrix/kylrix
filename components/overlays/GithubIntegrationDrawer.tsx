@@ -682,7 +682,7 @@ export function GithubIntegrationDrawer({
                                 <Terminal size={16} /> Actions & Logs
                               </Typography>
                               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mb: 2, display: 'block' }}>
-                                Sync Kylrix project tasks to this repository's GitHub Issues.
+                                Sync Kylrix project tasks to this repository&apos;s GitHub Issues.
                               </Typography>
                               <Button
                                 variant="contained"
