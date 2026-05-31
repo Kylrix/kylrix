@@ -91,6 +91,7 @@ export function GithubIntegrationDrawer({
   const [githubUser, setGithubUser] = useState<any | null>(null);
   const [githubToken, setGithubToken] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [checkingIdentities, setCheckingIdentities] = useState(false);
 
   const [githubSyncIssues, setGithubSyncIssues] = useState(true);
   const [githubSyncCommits, setGithubSyncCommits] = useState(true);
@@ -398,6 +399,14 @@ export function GithubIntegrationDrawer({
       toast.error(err.message || 'Failed to disconnect account.');
     } finally {
       setIsAuthenticating(false);
+    }
+  };
+
+  const handleToggleConnection = () => {
+    if (githubConnected) {
+      setDisconnectStep(1);
+    } else {
+      handleConnectGitHub();
     }
   };
 
