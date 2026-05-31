@@ -793,15 +793,6 @@ export default function ProjectDetailPage() {
                                 onTouchMove={handleTabTouchMove}
                                 onTouchEnd={handleTabTouchEnd}
                              />
-                             <Tab 
-                                label="External Objects" 
-                                icon={<Globe size={18} />} 
-                                iconPosition="start" 
-                                onContextMenu={(e) => handleTabContextMenu(e, 7)}
-                                onTouchStart={(e) => handleTabTouchStart(e, 7)}
-                                onTouchMove={handleTabTouchMove}
-                                onTouchEnd={handleTabTouchEnd}
-                             />
                         </Tabs>
                     </Box>
 
@@ -1052,44 +1043,59 @@ export default function ProjectDetailPage() {
                                 user={user}
                             />
                         </CustomTabPanel>
+                    </Box>
+                </Paper>
 
-                        {/* External Objects */}
-                        <CustomTabPanel value={tabValue} index={7}>
-                            <Box sx={{ borderBottom: '1px solid #1C1A18', mb: 3 }}>
-                                <Tabs
-                                    value={externalTabValue}
-                                    onChange={(_, v) => setExternalTabValue(v)}
-                                    sx={{
-                                        '& .MuiTab-root': {
-                                            color: 'rgba(255, 255, 255, 0.4)',
-                                            fontWeight: 800,
-                                            textTransform: 'none',
-                                            minHeight: 48,
-                                            fontSize: '0.85rem',
-                                            mr: 2,
-                                            '&.Mui-selected': { color: '#6366F1' }
-                                        },
-                                        '& .MuiTabs-indicator': { bgcolor: '#6366F1' }
-                                    }}
-                                >
-                                    <Tab label="GitHub Repositories" icon={<FolderKanban size={14} />} iconPosition="start" />
-                                    <Tab label="Google Workspace" icon={<Globe size={14} />} iconPosition="start" />
-                                </Tabs>
-                            </Box>
+                {/* External Objects Card */}
+                <Paper
+                    elevation={0}
+                    sx={{
+                        bgcolor: '#161412',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: '32px',
+                        overflow: 'hidden',
+                        backgroundImage: 'none',
+                        boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+                        mt: 4
+                    }}
+                >
+                    <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.06)', px: 3, pt: 1, bgcolor: alpha('#fff', 0.01) }}>
+                        <Tabs
+                            value={externalTabValue}
+                            onChange={(_, v) => setExternalTabValue(v)}
+                            sx={{
+                                '& .MuiTab-root': {
+                                    color: 'rgba(255, 255, 255, 0.4)',
+                                    fontWeight: 900,
+                                    textTransform: 'none',
+                                    minHeight: 72,
+                                    fontSize: '0.95rem',
+                                    letterSpacing: '0.01em',
+                                    mr: { xs: 1.5, md: 3 },
+                                    px: { xs: 1, md: 2 },
+                                    '&.Mui-selected': { color: '#6366F1' }
+                                },
+                                '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' }
+                            }}
+                        >
+                            <Tab label="GitHub" icon={<FolderKanban size={18} />} iconPosition="start" />
+                            <Tab label="Google" icon={<Globe size={18} />} iconPosition="start" />
+                        </Tabs>
+                    </Box>
 
-                            {externalTabValue === 0 ? (
-                                <GitHubExternalObjectsTab 
-                                    projectId={projectId as string}
-                                    projectObjects={projectObjects}
-                                    fetchProjectData={fetchProjectData}
-                                />
-                            ) : (
-                                <GoogleExternalObjectsTab 
-                                    projectId={projectId as string}
-                                    openUnified={openUnified}
-                                />
-                            )}
-                        </CustomTabPanel>
+                    <Box sx={{ p: { xs: 2, md: 4 } }}>
+                        {externalTabValue === 0 ? (
+                            <GitHubExternalObjectsTab 
+                                projectId={projectId as string}
+                                projectObjects={projectObjects}
+                                fetchProjectData={fetchProjectData}
+                            />
+                        ) : (
+                            <GoogleExternalObjectsTab 
+                                projectId={projectId as string}
+                                openUnified={openUnified}
+                            />
+                        )}
                     </Box>
                 </Paper>
 
