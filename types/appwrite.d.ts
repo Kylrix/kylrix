@@ -201,6 +201,7 @@ export type Notes = Models.Row & {
     isFile: boolean;
     isTotp: boolean;
     isDiscussion: boolean;
+    source?: string | null;
 }
 
 export type Comments = Models.Row & {
@@ -359,6 +360,7 @@ export type Credentials = Models.Row & {
     isGuest: boolean | null;
     isShared: boolean | null;
     isPinned: boolean | null;
+    source?: string | null;
 }
 
 export type Identities = Models.Row & {
@@ -433,6 +435,7 @@ export type TotpSecrets = Models.Row & {
     isGuest: boolean | null;
     isShared: boolean | null;
     isPinned: boolean | null;
+    source?: string | null;
 }
 
 export type Keychain = Models.Row & {
@@ -825,6 +828,7 @@ export type Events = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isPinned: boolean | null;
+    source?: string | null;
 }
 
 export type Calendars = Models.Row & {
@@ -852,6 +856,7 @@ export type Tasks = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isPinned: boolean | null;
+    source?: string | null;
 }
 
 export type Forms = Models.Row & {
@@ -865,6 +870,7 @@ export type Forms = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isPinned: boolean | null;
+    source?: string | null;
 }
 
 export type FormSubmissions = Models.Row & {
@@ -875,6 +881,7 @@ export type FormSubmissions = Models.Row & {
     metadata: string | null;
     isPublic: boolean | null;
     isGuest: boolean | null;
+    source?: string | null;
 }
 
 export type Agents = Models.Row & {
