@@ -4054,65 +4054,63 @@ function GitHubExternalObjectsTab({
 
   return (
     <Stack spacing={3}>
-      <Box 
-        sx={{ 
-          p: unverifiedRepos.length === 0 ? 3 : 2.5, 
-          borderRadius: '20px', 
-          bgcolor: 'rgba(255,255,255,0.02)', 
-          border: '1px solid rgba(255,255,255,0.06)' 
-        }}
-      >
-        {unverifiedRepos.length === 0 && (
-          <>
-            <Typography variant="subtitle2" sx={{ fontWeight: 905, color: 'white', mb: 1, fontFamily: 'var(--font-clash)' }}>
-              Associate GitHub Repository (Unverified)
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', mb: 2, display: 'block', lineHeight: 1.5 }}>
-              No GitHub connection is required. Paste any public GitHub repository URL or path (e.g. <code>facebook/react</code>) to integrate its live statistics, commit logs, and issues list directly into this project.
-            </Typography>
-          </>
-        )}
-        
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="e.g. facebook/react or https://github.com/facebook/react"
-            value={repoInput}
-            onChange={(e) => setRepoInput(e.target.value)}
-            disabled={adding}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                bgcolor: '#161412',
+      {unverifiedRepos.length === 0 && (
+        <Box 
+          sx={{ 
+            p: 3, 
+            borderRadius: '20px', 
+            bgcolor: 'rgba(255,255,255,0.02)', 
+            border: '1px solid rgba(255,255,255,0.06)' 
+          }}
+        >
+          <Typography variant="subtitle2" sx={{ fontWeight: 905, color: 'white', mb: 1, fontFamily: 'var(--font-clash)' }}>
+            Associate GitHub Repository (Unverified)
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)', mb: 2, display: 'block', lineHeight: 1.5 }}>
+            No GitHub connection is required. Paste any public GitHub repository URL or path (e.g. <code>facebook/react</code>) to integrate its live statistics, commit logs, and issues list directly into this project.
+          </Typography>
+          
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="e.g. facebook/react or https://github.com/facebook/react"
+              value={repoInput}
+              onChange={(e) => setRepoInput(e.target.value)}
+              disabled={adding}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#161412',
+                  borderRadius: '12px',
+                  color: 'white',
+                  '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                  '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
+                  '&.Mui-focused fieldset': { borderColor: '#6366F1' }
+                }
+              }}
+            />
+            <Button
+              variant="contained"
+              disabled={adding || !repoInput.trim()}
+              onClick={handleAddRepo}
+              sx={{
                 borderRadius: '12px',
-                color: 'white',
-                '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-                '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.15)' },
-                '&.Mui-focused fieldset': { borderColor: '#6366F1' }
-              }
-            }}
-          />
-          <Button
-            variant="contained"
-            disabled={adding || !repoInput.trim()}
-            onClick={handleAddRepo}
-            sx={{
-              borderRadius: '12px',
-              bgcolor: '#6366F1',
-              color: '#000',
-              fontWeight: 900,
-              px: 3,
-              py: 1.25,
-              textTransform: 'none',
-              flexShrink: 0,
-              width: { xs: '100%', sm: 'auto' },
-              '&:hover': { bgcolor: alpha('#6366F1', 0.9) }
-            }}
-          >
-            {adding ? 'Adding...' : 'Add Repository'}
-          </Button>
-        </Stack>
-      </Box>
+                bgcolor: '#6366F1',
+                color: '#000',
+                fontWeight: 900,
+                px: 3,
+                py: 1.25,
+                textTransform: 'none',
+                flexShrink: 0,
+                width: { xs: '100%', sm: 'auto' },
+                '&:hover': { bgcolor: alpha('#6366F1', 0.9) }
+              }}
+            >
+              {adding ? 'Adding...' : 'Add Repository'}
+            </Button>
+          </Stack>
+        </Box>
+      )}
 
       {unverifiedRepos.length === 0 ? (
         <Box sx={{ p: 4, textAlign: 'center', border: '1px dashed rgba(255,255,255,0.06)', borderRadius: '20px' }}>
