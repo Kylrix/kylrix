@@ -870,6 +870,7 @@ export type Forms = Models.Row & {
     isPublic: boolean | null;
     isGuest: boolean | null;
     isPinned: boolean | null;
+    source?: string | null;
 }
 
 export type FormSubmissions = Models.Row & {

@@ -8225,6 +8225,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "source",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 256,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
