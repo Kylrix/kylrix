@@ -331,6 +331,13 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -1980,6 +1987,22 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "dek",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -2822,6 +2845,22 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "dek",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7335,6 +7374,13 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7642,6 +7688,13 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
@@ -7805,6 +7858,13 @@
                     "size": 256,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "keepPermission",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": null
                 }
             ],
             "indexes": [
