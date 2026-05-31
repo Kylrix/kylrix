@@ -202,6 +202,7 @@ export type Notes = Models.Row & {
     isTotp: boolean;
     isDiscussion: boolean;
     source: string | null;
+    keepPermission: boolean | null;
 }
 
 export type Comments = Models.Row & {
@@ -361,6 +362,8 @@ export type Credentials = Models.Row & {
     isShared: boolean | null;
     isPinned: boolean | null;
     source: string | null;
+    dek: string | null;
+    keepPermission: boolean | null;
 }
 
 export type Identities = Models.Row & {
@@ -436,6 +439,8 @@ export type TotpSecrets = Models.Row & {
     isShared: boolean | null;
     isPinned: boolean | null;
     source: string | null;
+    dek: string | null;
+    keepPermission: boolean | null;
 }
 
 export type Keychain = Models.Row & {
@@ -829,6 +834,7 @@ export type Events = Models.Row & {
     isGuest: boolean | null;
     isPinned: boolean | null;
     source: string | null;
+    keepPermission: boolean | null;
 }
 
 export type Calendars = Models.Row & {
@@ -857,6 +863,7 @@ export type Tasks = Models.Row & {
     isGuest: boolean | null;
     isPinned: boolean | null;
     source: string | null;
+    keepPermission: boolean | null;
 }
 
 export type Forms = Models.Row & {
@@ -871,6 +878,7 @@ export type Forms = Models.Row & {
     isGuest: boolean | null;
     isPinned: boolean | null;
     source: string | null;
+    keepPermission: boolean | null;
 }
 
 export type FormSubmissions = Models.Row & {
