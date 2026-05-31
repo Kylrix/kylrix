@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useSection } from '@/context/SectionContext';
 import { SocialService } from '@/lib/services/social';
 import { UsersService } from '@/lib/services/users';
 import { getEcosystemUrl } from '@/lib/constants';
@@ -1066,6 +1067,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
     const router = useRouter();
     const { user } = useAuth();
     const { profile: myProfile } = useProfile();
+    const { setActiveDetail } = useSection();
     const hasPreviewRef = React.useRef(Boolean(getCachedMomentPreview(momentId)));
     const [moment, setMoment] = useState<any>(() => getCachedMomentPreview(momentId) || null);
     const [replies, setReplies] = useState<any[]>([]);
@@ -1131,17 +1133,17 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
     const attachmentNav = useMemo<MomentAttachmentNav>(() => ({
         onOpenNote: (note: any) => {
             if (!note?.$id) return;
-            router.push(`/note/notes/${note.$id}`);
+            setActiveDetail({ type: 'note', id: note.$id, data: note });
         },
         onOpenEvent: (ev: any) => {
             if (!ev?.$id) return;
-            router.push(`/flow/events/${ev.$id}`);
+            setActiveDetail({ type: 'event', id: ev.$id, data: ev });
         },
         onOpenCall: (call: any) => {
             if (!call?.$id) return;
-            router.push(`/connect/call/${call.$id}`);
+            setActiveDetail({ type: 'call', id: call.$id, data: call });
         },
-    }), [router]);
+    }), [setActiveDetail]);
 
     const fetchAncestorThread = useCallback(async (sourceMomentId: string): Promise<any[]> => {
         const ancestors: any[] = [];

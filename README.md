@@ -42,6 +42,22 @@ We asked ourselves a fundamental question: **Why isn't there a premium, open-sou
 
 Then, the AI agentic revolution arrived, and it became clear: this was the exact moment to design the future of productivity. Kylrix was engineered from the ground up to solve this paradigm. It is an end-to-end interconnected workspace where data is genuinely secured, completely open source with nothing hidden, free of telemetry or marketing fluff, and fully self-hostable. **There is absolutely nothing in existence today that can boast this level of premium utility combined with cryptographic openness, security, and user freedom. Absolutely nothing.**
 
+<h2 align="center">🎨 Design Philosophy</h2>
+
+<p align="center">
+  Kylrix design language was a deliberate attempt to dare to aim beyond the safe design aesthetic, <br>
+  inspired by the architectural solidity and outlined form of GNOME's Adwaita design language, <br>
+  adapted for absolute pitch-black utility. 
+</p>
+
+<p align="center">
+  The <strong>OpenBricks</strong> system was born for unapologetic, deep work focus and move away <br>
+  from flat software boilerplate look into tactile, physical surface. We prioritize depth, <br>
+  layered contrast, and the physical presence of UI elements to ground your focus.
+</p>
+
+---
+
 <h2 align="center">🪐 The Holy Grail: Ecosystem Integration</h2>
 
 <p align="center">

@@ -2254,7 +2254,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                         {moment.attachedCall && (
                             <Paper
                                 variant="outlined"
-                                onClick={() => router.push(`/connect/call/${moment.attachedCall.$id}`)}
+                                onClick={() => setActiveDetail({ type: 'call', id: moment.attachedCall.$id, data: moment.attachedCall })}
                                 sx={{
                                     p: 0,
                                     borderRadius: 4,
