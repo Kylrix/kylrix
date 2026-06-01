@@ -5,6 +5,97 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 
 /**
+ * Helper to wipe both key mappings and polymorphic collaborators for any resource.
+ */
+async function wipeCollaboratorsAndKeys(
+  tables: any,
+  resourceId: string,
+  resourceType: string
+) {
+  const VAULT_DB = APPWRITE_CONFIG.DATABASES.VAULT;
+  const FLOW_DB = APPWRITE_CONFIG.DATABASES.FLOW;
+  const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+  // 1. Wipe key mappings
+  try {
+    const mappingsRes = await tables.listRows({
+      databaseId: VAULT_DB,
+      tableId: 'key_mapping',
+      queries: [
+        Query.equal('resourceType', resourceType),
+        Query.equal('resourceId', resourceId),
+        Query.limit(1000),
+      ] as any,
+    });
+
+    await Promise.all(
+      (mappingsRes.rows || []).map((m: any) =>
+        tables.deleteRow({
+          databaseId: VAULT_DB,
+          tableId: 'key_mapping',
+          rowId: m.$id,
+        })
+      )
+    );
+    console.log(`[Cascade Delete] Wiped ${mappingsRes.rows?.length || 0} key mappings for resource ${resourceId} (${resourceType})`);
+  } catch (err) {
+    console.error(`[Cascade Delete] Key mapping cleanup failed for ${resourceType} ${resourceId}:`, err);
+  }
+
+  // 2. Wipe polymorphic collaborators
+  try {
+    const polyCollabsRes = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', resourceId),
+        Query.equal('resourceType', resourceType),
+        Query.limit(1000),
+      ] as any,
+    });
+
+    await Promise.all(
+      (polyCollabsRes.rows || []).map((collab: any) =>
+        tables.deleteRow({
+          databaseId: FLOW_DB,
+          tableId: POLYMORPHIC_COLLABORATORS_TABLE,
+          rowId: collab.$id,
+        })
+      )
+    );
+    console.log(`[Cascade Delete] Wiped ${polyCollabsRes.rows?.length || 0} polymorphic collaborators for resource ${resourceId} (${resourceType})`);
+  } catch (err) {
+    console.error(`[Cascade Delete] Polymorphic collaborators cleanup failed for ${resourceType} ${resourceId}:`, err);
+  }
+}
+
+/**
+ * Helper to dynamically resolve database and table IDs based on resource entity kind.
+ */
+function getResourceDbAndTable(entityKind: string) {
+  const lower = entityKind.toLowerCase();
+  if (lower === 'note') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.NOTE, tableId: APPWRITE_CONFIG.TABLES.NOTE.NOTES };
+  }
+  if (lower === 'goal' || lower === 'task') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.FLOW, tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS };
+  }
+  if (lower === 'password' || lower === 'credential' || lower === 'secret') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.VAULT, tableId: APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS };
+  }
+  if (lower === 'totp') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, tableId: 'totpSecrets' };
+  }
+  if (lower === 'event') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, tableId: 'events' };
+  }
+  if (lower === 'form') {
+    return { databaseId: APPWRITE_CONFIG.DATABASES.FLOW, tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS };
+  }
+  return null;
+}
+
+/**
  * Centrally and recursively deletes all connected, linked, or owned child resources
  * when a parent row is deleted, minimizing database roundtrips by using pagination
  * and parallel execution.
@@ -12,7 +103,8 @@ import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 export async function executeCascadeDeleteSecure(
   databaseId: string,
   tableId: string,
-  rowId: string
+  rowId: string,
+  projectDeleteMode: 'detach' | 'created_within' | 'all' = 'detach'
 ): Promise<void> {
   const tables = createSystemTablesDB();
   const { storage } = createSystemClient();
@@ -284,7 +376,7 @@ export async function executeCascadeDeleteSecure(
 
   // --- 2. CASCADE FOR PROJECTS ---
   else if (databaseId === CHAT_DB && tableId === 'projects') {
-    console.log(`[Cascade Delete] Triggered project cascade cleanup for: ${rowId}`);
+    console.log(`[Cascade Delete] Triggered project cascade cleanup for: ${rowId} (mode: ${projectDeleteMode})`);
 
     try {
       const objectsRes = await tables.listRows({
@@ -293,8 +385,45 @@ export async function executeCascadeDeleteSecure(
         queries: [Query.equal('projectId', rowId), Query.limit(1000)] as any,
       });
 
+      const linkedObjects = (objectsRes.rows as any[]) || [];
+
+      if (projectDeleteMode === 'created_within' || projectDeleteMode === 'all') {
+        await Promise.all(
+          linkedObjects.map(async (obj) => {
+            const info = getResourceDbAndTable(obj.entityKind);
+            if (!info) return;
+
+            try {
+              // 1. Fetch the actual resource row
+              const resourceRow = await tables.getRow<any>(info.databaseId, info.tableId, obj.entityId);
+              
+              // 2. Check if we should delete it
+              const isCreatedWithin = resourceRow && resourceRow.source === 'project';
+              const shouldDelete = projectDeleteMode === 'all' || isCreatedWithin;
+
+              if (shouldDelete) {
+                console.log(`[Cascade Delete] Project cascade deleting linked resource: ${obj.entityId} of kind ${obj.entityKind}`);
+                
+                // Recurse cascade delete child elements of this resource first
+                await executeCascadeDeleteSecure(info.databaseId, info.tableId, obj.entityId);
+
+                // Delete the resource row itself
+                await tables.deleteRow({
+                  databaseId: info.databaseId,
+                  tableId: info.tableId,
+                  rowId: obj.entityId,
+                });
+              }
+            } catch (err: any) {
+              console.warn(`[Cascade Delete] Failed to fetch or delete linked resource ${obj.entityId} (${obj.entityKind}):`, err?.message);
+            }
+          })
+        );
+      }
+
+      // In all cases, we delete the project object links (detaching them if they weren't deleted)
       await Promise.all(
-        objectsRes.rows.map((obj: any) =>
+        linkedObjects.map((obj) =>
           tables.deleteRow({
             databaseId,
             tableId: 'project_objects',
@@ -305,6 +434,9 @@ export async function executeCascadeDeleteSecure(
     } catch (err) {
       console.error('[Cascade Delete] Project objects cleanup failed:', err);
     }
+
+    // Wipe collaborators and key mappings for the project itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'project');
   }
 
   // --- 3. CASCADE FOR FORMS ---
@@ -330,6 +462,9 @@ export async function executeCascadeDeleteSecure(
     } catch (err) {
       console.error('[Cascade Delete] Form submissions cleanup failed:', err);
     }
+
+    // Wipe collaborators and key mappings for the form itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'form');
   }
 
   // --- 4. CASCADE FOR EVENTS ---
@@ -356,29 +491,8 @@ export async function executeCascadeDeleteSecure(
       console.error('[Cascade Delete] Event guests cleanup failed:', err);
     }
 
-    try {
-      const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-      const polyCollabsRes = await tables.listRows({
-        databaseId: FLOW_DB,
-        tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-        queries: [
-          Query.equal('resourceId', rowId),
-          Query.equal('resourceType', 'event'),
-          Query.limit(1000),
-        ] as any,
-      });
-      await Promise.all(
-        polyCollabsRes.rows.map((collab: any) =>
-          tables.deleteRow({
-            databaseId: FLOW_DB,
-            tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-            rowId: collab.$id,
-          })
-        )
-      );
-    } catch (err) {
-      console.error('[Cascade Delete] Polymorphic event collaborators cleanup failed:', err);
-    }
+    // Wipe collaborators and key mappings for the event itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'event');
   }
 
   // --- 5. CASCADE FOR CALLS (HUDDLES) ---
@@ -408,57 +522,44 @@ export async function executeCascadeDeleteSecure(
       console.error('[Cascade Delete] Call ghost notes cleanup failed:', err);
     }
 
-    try {
-      const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-      const polyCollabsRes = await tables.listRows({
-        databaseId: FLOW_DB,
-        tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-        queries: [
-          Query.equal('resourceId', rowId),
-          Query.equal('resourceType', 'call'),
-          Query.limit(1000),
-        ] as any,
-      });
-      await Promise.all(
-        polyCollabsRes.rows.map((collab: any) =>
-          tables.deleteRow({
-            databaseId: FLOW_DB,
-            tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-            rowId: collab.$id,
-          })
-        )
-      );
-    } catch (err) {
-      console.error('[Cascade Delete] Polymorphic call cohosts cleanup failed:', err);
-    }
+    // Wipe collaborators and key mappings for the huddle/call itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'call');
   }
 
   // --- 6. CASCADE FOR TASKS ---
   else if (databaseId === FLOW_DB && tableId === APPWRITE_CONFIG.TABLES.FLOW.TASKS) {
     console.log(`[Cascade Delete] Triggered task cascade cleanup for: ${rowId}`);
 
+    // Wipe collaborators and key mappings for the task/goal itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'task');
+  }
+
+  // --- 7. CASCADE FOR CREDENTIALS/SECRETS ---
+  else if (databaseId === APPWRITE_CONFIG.DATABASES.VAULT && tableId === APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS) {
+    console.log(`[Cascade Delete] Triggered credential cascade cleanup for: ${rowId}`);
+
     try {
-      const POLYMORPHIC_COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-      const polyCollabsRes = await tables.listRows({
-        databaseId: FLOW_DB,
-        tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-        queries: [
-          Query.equal('resourceId', rowId),
-          Query.equal('resourceType', 'task'),
-          Query.limit(1000),
-        ] as any,
-      });
-      await Promise.all(
-        polyCollabsRes.rows.map((collab: any) =>
-          tables.deleteRow({
-            databaseId: FLOW_DB,
-            tableId: POLYMORPHIC_COLLABORATORS_TABLE,
-            rowId: collab.$id,
-          })
-        )
-      );
+      const credential = await tables.getRow<any>(databaseId, tableId, rowId);
+      if (credential && credential.attachments) {
+        let attachmentsList: any[] = [];
+        try {
+          attachmentsList = typeof credential.attachments === 'string' ? JSON.parse(credential.attachments) : credential.attachments || [];
+        } catch {}
+        if (Array.isArray(attachmentsList)) {
+          await Promise.all(
+            attachmentsList.map((file: any) =>
+              storage.deleteFile('vault_attachments', file.id || file.fileId).catch((err) => {
+                console.warn(`[Cascade Delete] Failed to delete credential attachment file ${file.id}:`, err?.message);
+              })
+            )
+          );
+        }
+      }
     } catch (err) {
-      console.error('[Cascade Delete] Polymorphic task assignees cleanup failed:', err);
+      console.error('[Cascade Delete] Credential attachments cleanup failed:', err);
     }
+
+    // Wipe collaborators and key mappings for the credential itself
+    await wipeCollaboratorsAndKeys(tables, rowId, 'credential');
   }
 }
