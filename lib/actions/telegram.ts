@@ -177,7 +177,15 @@ let isBotPollerRunning = false;
 let lastTelegramUpdateOffset = 0;
 let pollerTimeout: NodeJS.Timeout | null = null;
 
-export async function syncServerTelegramListener() {
+export async function syncServerTelegramListener(jwt?: string) {
+  const { getActor } = await import('./secure-ops');
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  
+  const { isUserAdmin } = await import('./admin/check-admin');
+  const isAdmin = await isUserAdmin();
+  if (!isAdmin) throw new Error('Forbidden: admin only');
+
   const botToken = process.env.TELEGRAM_BOT_API;
   if (!botToken) {
     return;

@@ -4,10 +4,9 @@ import { ID, Permission, Role } from 'node-appwrite';
 import { createSystemTablesDB } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { createCallMetadata } from '@/lib/sdk/calls/index';
-import { createServerClient } from '@/lib/appwrite/server';
+import { getActor } from './secure-ops';
 
-const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
-const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
+// ... (rest of imports)
 
 export async function createChatCallAction(input: {
   conversationId: string;
@@ -16,12 +15,19 @@ export async function createChatCallAction(input: {
   title?: string;
   durationMinutes?: number;
   scope?: 'direct' | 'group';
-}) {
-  const { account } = await createServerClient();
-  const actor = await account.get();
+}, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
   const userId = actor.$id;
 
-  const durationMinutes = input.durationMinutes ?? 120;
+  const conversationId = String(input.conversationId || '').trim();
+  if (!conversationId) throw new Error('conversationId is required');
+
+  if (!Array.isArray(input.participantIds) || input.participantIds.length === 0) {
+    throw new Error('At least one participantId is required');
+  }
+
+  const durationMinutes = Number(input.durationMinutes) || 120;
   const startTime = new Date();
   const expiresAt = new Date(startTime.getTime() + durationMinutes * 60 * 1000).toISOString();
 

@@ -39,27 +39,33 @@ function parseAgentConfig(raw?: string): AgentConfig {
   }
 }
 
-async function requireUser() {
-  const { account } = await createServerClient();
-  const user = await account.get();
-  if (!user?.$id) throw new Error('Unauthorized');
-  return user;
+import { getActor } from './secure-ops';
+
+// ... (rest of imports)
+
+async function requireUser(jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  return actor;
 }
 
 async function getOwnedAgentOrThrow(agentId: string, ownerId: string) {
   const { databases } = createSystemClient();
+  const id = String(agentId || '').trim();
+  if (!id) throw new Error('agentId is required');
+
   const agent = (await databases.getRow(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-    agentId,
+    id,
   )) as unknown as AgentRecord;
   if (!agent) throw new Error('Agent not found.');
   if (agent.ownerId !== ownerId) throw new Error('Forbidden');
   return agent;
 }
 
-export async function listMyAgents(): Promise<AgentRecord[]> {
-  const user = await requireUser();
+export async function listMyAgents(jwt?: string): Promise<AgentRecord[]> {
+  const user = await requireUser(jwt);
   const { databases } = createSystemClient();
   const res = await databases.listRows(
     APPWRITE_CONFIG.DATABASES.FLOW,
@@ -73,8 +79,12 @@ export async function createMyAgent(input: {
   name: string;
   goal?: string;
   framework?: 'kylrix' | 'openclaw' | 'hermes';
-}) {
-  const user = await requireUser();
+}, jwt?: string) {
+  const user = await requireUser(jwt);
+  
+  const name = String(input.name || '').trim();
+  if (!name) throw new Error('name is required');
+
   const framework = input.framework === 'openclaw' || input.framework === 'hermes' ? input.framework : 'kylrix';
   const { databases } = createSystemClient();
   await databases.createRow(
@@ -87,7 +97,7 @@ export async function createMyAgent(input: {
       publicKey: `pending:${Date.now().toString(36)}`,
       status: 'idle',
       config: JSON.stringify({
-        name: input.name.trim(),
+        name,
         goal: input.goal?.trim() || null,
         framework,
       }),
@@ -95,21 +105,27 @@ export async function createMyAgent(input: {
   );
 }
 
-export async function setMyAgentStatus(agentId: string, status: AgentStatus) {
-  const user = await requireUser();
-  await getOwnedAgentOrThrow(agentId, user.$id);
+export async function setMyAgentStatus(agentId: string, status: AgentStatus, jwt?: string) {
+  const user = await requireUser(jwt);
+  const id = String(agentId || '').trim();
+  if (!id) throw new Error('agentId is required');
+
+  await getOwnedAgentOrThrow(id, user.$id);
   const { databases } = createSystemClient();
   await databases.updateRow(
     APPWRITE_CONFIG.DATABASES.FLOW,
     APPWRITE_CONFIG.TABLES.FLOW.AGENTS,
-    agentId,
+    id,
     { status },
   );
 }
 
-export async function runMyAgent(agentId: string): Promise<{ summary: string }> {
-  const user = await requireUser();
-  const agent = await getOwnedAgentOrThrow(agentId, user.$id);
+export async function runMyAgent(agentId: string, jwt?: string): Promise<{ summary: string }> {
+  const user = await requireUser(jwt);
+  const id = String(agentId || '').trim();
+  if (!id) throw new Error('agentId is required');
+
+  const agent = await getOwnedAgentOrThrow(id, user.$id);
   const config = parseAgentConfig(agent.config);
   const { databases } = createSystemClient();
 

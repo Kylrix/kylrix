@@ -11,7 +11,17 @@ import { TelemetryService } from "@/lib/services/telemetry";
 const MODEL_NAME = process.env.GEMINI_MODEL_NAME || "gemini-2.0-flash";
 
 export async function generateAIContent(payload: AIRequestPayload): Promise<AIResponse> {
-  const activeKey = payload.byokKey || process.env.GOOGLE_API_KEY;
+  // Input Validation & Sanitization
+  if (!payload || typeof payload !== 'object') {
+    return { success: false, error: "Invalid request payload." };
+  }
+  
+  const VALID_MODES = ['VAULT_ORGANIZE', 'PASSWORD_AUDIT', 'URL_SAFETY', 'GENERAL_QUERY', 'GENERIC_CHAT', 'COMMAND_INTENT'];
+  if (!VALID_MODES.includes(payload.mode)) {
+    return { success: false, error: "Invalid analysis mode." };
+  }
+
+  const activeKey = (typeof payload.byokKey === 'string' ? payload.byokKey.trim() : null) || process.env.GOOGLE_API_KEY;
   if (!activeKey) {
     return { success: false, error: "AI Service not configured. Please supply your own private API Key in Settings." };
   }

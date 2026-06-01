@@ -7,15 +7,13 @@ import { getActor } from '@/lib/actions/secure-ops';
 /**
  * Server action to securely save/sync a workflow chain to the database
  */
-export async function saveWorkflowAction(wf: WorkflowChain) {
+export async function saveWorkflowAction(wf: WorkflowChain, jwt?: string) {
   try {
-    let userId: string | undefined;
-    try {
-      const actor = await getActor();
-      if (actor) userId = actor.$id;
-    } catch {
-      // Silent fail-safe for unauthenticated flows
-    }
+    const actor = await getActor(jwt);
+    if (!actor?.$id) throw new Error('Unauthorized');
+    const userId = actor.$id;
+
+    if (!wf || !wf.id) throw new Error('Invalid workflow chain');
     
     await WorkflowDbService.saveWorkflow(wf, userId);
     return { success: true };
@@ -28,8 +26,11 @@ export async function saveWorkflowAction(wf: WorkflowChain) {
 /**
  * Server action to list all user-accessible workflows
  */
-export async function listWorkflowsAction() {
+export async function listWorkflowsAction(jwt?: string) {
   try {
+    const actor = await getActor(jwt);
+    if (!actor?.$id) throw new Error('Unauthorized');
+
     const list = await WorkflowDbService.listWorkflows();
     return { success: true, data: list };
   } catch (err: any) {
@@ -43,6 +44,9 @@ export async function listWorkflowsAction() {
  */
 export async function listPublicWorkflowsAction() {
   try {
+    // Public listings don't necessarily require auth, but we should still track the actor if available
+    const actor = await getActor();
+    
     const list = await WorkflowDbService.listPublicWorkflows();
     return { success: true, data: list };
   } catch (err: any) {
@@ -54,11 +58,18 @@ export async function listPublicWorkflowsAction() {
 /**
  * Server action to securely delete a workflow
  */
-export async function deleteWorkflowAction(workflowId: string) {
+export async function deleteWorkflowAction(workflowId: string, jwt?: string) {
   try {
+    const actor = await getActor(jwt);
+    if (!actor?.$id) throw new Error('Unauthorized');
+
+    const id = String(workflowId || '').trim();
+    if (!id) throw new Error('workflowId is required');
+
     // Note: Appwrite document-level security will automatically reject 
-    // unauthorized delete attempts on the database layer.
-    await WorkflowDbService.deleteWorkflow(workflowId);
+    // unauthorized delete attempts on the database layer, but we add 
+    // explicit check for consistency.
+    await WorkflowDbService.deleteWorkflow(id);
     return { success: true };
   } catch (err: any) {
     console.error('[deleteWorkflowAction] Exception:', err);

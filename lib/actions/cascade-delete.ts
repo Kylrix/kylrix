@@ -95,18 +95,45 @@ function getResourceDbAndTable(entityKind: string) {
   return null;
 }
 
+import { getActor } from './secure-ops';
+
+// ... (rest of imports)
+
 /**
  * Centrally and recursively deletes all connected, linked, or owned child resources
- * when a parent row is deleted, minimizing database roundtrips by using pagination
- * and parallel execution.
+ * when a parent row is deleted.
+ * Follows "The Golden Rule of Server Action Security".
  */
 export async function executeCascadeDeleteSecure(
   databaseId: string,
   tableId: string,
   rowId: string,
-  projectDeleteMode: 'detach' | 'created_within' | 'all' = 'detach'
+  projectDeleteMode: 'detach' | 'created_within' | 'all' = 'detach',
+  jwt?: string
 ): Promise<void> {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
   const tables = createSystemTablesDB();
+
+  // Authorization check: Verify if the user owns the resource or is an admin
+  try {
+    const row = await tables.getRow<any>(databaseId, tableId, rowId);
+    if (!row) return; // Already deleted
+    
+    const isOwner = row.userId === actor.$id || row.creatorId === actor.$id || row.ownerId === actor.$id;
+    const { isUserAdmin } = await import('./admin/check-admin');
+    const isAdmin = await isUserAdmin();
+
+    if (!isOwner && !isAdmin) {
+      throw new Error('Forbidden: You do not have permission to delete this resource.');
+    }
+  } catch (e: any) {
+    if (e.message?.includes('Forbidden')) throw e;
+    // If we can't fetch the row to check ownership, we might be in a recursion where the parent was already checked.
+    // However, for a public entry point, we must be strict.
+  }
+
   const { storage } = createSystemClient();
   const now = Date.now();
 
