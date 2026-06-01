@@ -187,7 +187,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                             disableUnderline
                             sx={{ 
                                 borderRadius: '12px', 
-                                bgcolor: '#0A0908', 
+                                bgcolor: '#000000', 
                                 border: '1px solid #34322F', 
                                 color: 'white',
                                 '& .MuiSelect-select': { color: 'white' },
@@ -250,7 +250,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                             disableUnderline: true, 
                             sx: { 
                                 borderRadius: '12px', 
-                                bgcolor: '#0A0908', 
+                                bgcolor: '#000000', 
                                 border: '1px solid #34322F', 
                                 color: 'white',
                                 fontFamily: 'var(--font-satoshi)',
@@ -264,7 +264,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                 return (
                     <Box>
                         {selectedFile ? (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '12px', bgcolor: '#0A0908', border: '1px solid #34322F' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, borderRadius: '12px', bgcolor: '#000000', border: '1px solid #34322F' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <SuccessIcon sx={{ color: '#10B981', fontSize: 20 }} />
                                     <Typography variant="body2" noWrap sx={{ maxWidth: 200, fontFamily: 'var(--font-satoshi)', color: '#FFF' }}>
@@ -341,7 +341,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                             disableUnderline: true, 
                             sx: { 
                                 borderRadius: '12px', 
-                                bgcolor: '#0A0908', 
+                                bgcolor: '#000000', 
                                 border: '1px solid #34322F', 
                                 color: 'white',
                                 fontFamily: 'var(--font-satoshi)',
@@ -354,16 +354,16 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
     };
 
     return (
-        <Box sx={{ minHeight: '100vh', bgcolor: '#050505', backgroundImage: 'radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%)' }}>
+        <Box sx={{ minHeight: '100vh', bgcolor: '#000000', backgroundImage: 'none' }}>
             <Container maxWidth="sm" sx={{ py: { xs: 6, md: 12 } }}>
                 <Fade in={true} timeout={800}>
                     <Box>
                         <Box sx={{ mb: 8, textAlign: 'center' }}>
-                            <Typography variant="h2" sx={{ fontWeight: 900, mb: 2, letterSpacing: '-0.05em', fontFamily: 'var(--font-clash)' }}>
+                            <Typography variant="h2" sx={{ fontWeight: 900, mb: 2, letterSpacing: '-0.05em', fontFamily: 'var(--font-clash)', color: '#FFF' }}>
                                 {form?.title}
                             </Typography>
                             {form?.description && (
-                                <Typography variant="body1" sx={{ color: 'text.secondary', maxWidth: 450, mx: 'auto', fontWeight: 500, lineHeight: 1.6 }}>
+                                <Typography variant="body1" sx={{ color: '#9B9691', maxWidth: 450, mx: 'auto', fontWeight: 500, lineHeight: 1.6, fontFamily: 'var(--font-satoshi)' }}>
                                     {form.description}
                                 </Typography>
                             )}
@@ -374,15 +374,15 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                                         px: 2, 
                                         py: 0.5, 
                                         borderRadius: '20px', 
-                                        bgcolor: 'rgba(255, 255, 255, 0.03)', 
-                                        border: '1px solid rgba(255, 255, 255, 0.05)',
+                                        bgcolor: '#1C1A18', 
+                                        border: '1px solid #34322F',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: 1
                                     }}
                                 >
-                                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: currentUser ? '#10B981' : 'rgba(255,255,255,0.2)' }} />
-                                    <Typography variant="caption" sx={{ fontWeight: 800, color: currentUser ? 'text.primary' : 'text.secondary', letterSpacing: '0.02em', fontSize: '0.7rem' }}>
+                                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: currentUser ? '#10B981' : '#9B9691' }} />
+                                    <Typography variant="caption" sx={{ fontWeight: 800, color: currentUser ? '#FFF' : '#9B9691', letterSpacing: '0.02em', fontSize: '0.7rem', fontFamily: 'var(--font-mono)' }}>
                                         {currentUser ? `Filling as ${currentUser.name || currentUser.email}` : 'Filling anonymously'}
                                     </Typography>
                                 </Box>
@@ -390,16 +390,16 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                         </Box>
 
                         {submitted ? (
-                            <Paper sx={{ p: 8, textAlign: 'center', borderRadius: '32px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(20px)' }}>
-                                <SuccessIcon sx={{ fontSize: 80, color: '#6366F1', mb: 4, filter: 'drop-shadow(0 0 20px rgba(99, 102, 241, 0.3))' }} />
-                                <Typography variant="h4" sx={{ mb: 2, fontWeight: 900 }}>Transmission Complete</Typography>
-                                <Typography variant="body1" sx={{ color: 'text.secondary', mb: 5, fontWeight: 500 }}>
+                            <Paper sx={{ p: 8, textAlign: 'center', borderRadius: '28px', bgcolor: '#161412', border: '1px solid #34322F', backgroundImage: 'none', boxShadow: 'none' }}>
+                                <SuccessIcon sx={{ fontSize: 80, color: '#6366F1', mb: 4 }} />
+                                <Typography variant="h4" sx={{ mb: 2, fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#FFF' }}>Transmission Complete</Typography>
+                                <Typography variant="body1" sx={{ color: '#9B9691', mb: 5, fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>
                                     Your data has been securely injected into the Kylrix Flow nexus.
                                 </Typography>
                                 <Button 
                                     variant="outlined" 
                                     onClick={() => window.location.reload()}
-                                    sx={{ borderRadius: '14px', px: 4, fontWeight: 800, borderColor: 'rgba(255,255,255,0.1)' }}
+                                    sx={{ borderRadius: '12px', px: 4, fontWeight: 800, borderColor: '#34322F', color: '#FFF', bgcolor: '#161412', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#1C1A18', borderColor: '#6366F1' } }}
                                 >
                                     Submit New Entry
                                 </Button>
@@ -410,10 +410,11 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                                 onSubmit={handleSubmit}
                                 sx={{ 
                                     p: { xs: 4, md: 6 }, 
-                                    borderRadius: '32px', 
-                                    bgcolor: 'rgba(255, 255, 255, 0.02)', 
-                                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                                    backdropFilter: 'blur(20px)',
+                                    borderRadius: '28px', 
+                                    bgcolor: '#161412', 
+                                    border: '1px solid #34322F',
+                                    backgroundImage: 'none',
+                                    boxShadow: 'none',
                                     display: 'flex',
                                     flexDirection: 'column',
                                     gap: 5
@@ -421,14 +422,14 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                             >
                                 {schema.map((field) => (
                                     <Box key={field.id}>
-                                        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 800, opacity: 0.9, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 800, color: '#FFF', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 1, fontFamily: 'var(--font-satoshi)' }}>
                                             {field.label} {field.required && <Box component="span" sx={{ color: '#ff4d4d', fontSize: '1.2rem' }}>*</Box>}
                                         </Typography>
                                         {renderField(field)}
                                     </Box>
                                 ))}
 
-                                {error && <Alert severity="error" sx={{ borderRadius: '14px' }}>{error}</Alert>}
+                                {error && <Alert severity="error" sx={{ borderRadius: '12px', bgcolor: 'rgba(211, 47, 47, 0.05)', color: '#ff1744', border: '1px solid rgba(211, 47, 47, 0.2)' }}>{error}</Alert>}
 
                                 <Button
                                     type="submit"
@@ -439,13 +440,15 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                                     sx={{ 
                                         mt: 2,
                                         py: 2,
-                                        borderRadius: '16px',
+                                        borderRadius: '12px',
                                         fontWeight: 900,
                                         bgcolor: '#6366F1',
-                                        color: 'white',
-                                        boxShadow: '0 12px 40px rgba(99, 102, 241, 0.25)',
+                                        color: 'black',
+                                        fontFamily: 'var(--font-satoshi)',
                                         fontSize: '1.1rem',
-                                        '&:hover': { bgcolor: '#5254e0' }
+                                        boxShadow: 'none',
+                                        '&:hover': { bgcolor: '#575CF0' },
+                                        '&.Mui-disabled': { bgcolor: '#1C1A18', color: '#34322F' }
                                     }}
                                 >
                                     {submitting ? 'Transmitting...' : 'Commit Response'}
@@ -454,7 +457,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                         )}
 
                         <Box sx={{ mt: 8, textAlign: 'center', opacity: 0.2 }}>
-                            <Typography variant="caption" sx={{ letterSpacing: '0.3em', fontWeight: 900, fontSize: '0.65rem' }}>
+                            <Typography variant="caption" sx={{ letterSpacing: '0.3em', fontWeight: 900, fontSize: '0.65rem', color: '#9B9691', fontFamily: 'var(--font-mono)' }}>
                                 SECURED BY KYLRIX NEURAL FLOW
                             </Typography>
                         </Box>

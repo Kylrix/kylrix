@@ -218,7 +218,7 @@ export default function FormsDashboard() {
             animation: 'fadeIn 0.4s ease-out', 
             p: { xs: 2, md: 4 },
             minHeight: '100vh',
-            bgcolor: '#0A0908'
+            bgcolor: '#000000'
         }}>
             <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>

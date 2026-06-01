@@ -301,7 +301,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
             animation: 'fadeIn 0.3s ease-out', 
             p: { xs: 2, md: 4 },
             minHeight: '100vh',
-            bgcolor: '#0A0908'
+            bgcolor: '#000000'
         }}>
             <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
             {/* Header / Sub-Header */}
@@ -445,7 +445,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                         <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 800, fontFamily: 'var(--font-satoshi)', color: '#FFF' }}>
                                             {field.label} {field.required && <Box component="span" sx={{ color: '#ff1744' }}>*</Box>}
                                         </Typography>
-                                        <Box sx={{ p: 2, borderRadius: '12px', bgcolor: '#0A0908', border: '1px solid #34322F', color: '#9B9691', fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }}>
+                                        <Box sx={{ p: 2, borderRadius: '12px', bgcolor: '#000000', border: '1px solid #34322F', color: '#9B9691', fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }}>
                                             {field.placeholder || `Input for ${field.type}...`}
                                         </Box>
                                     </Box>
@@ -459,7 +459,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                 {loading ? (
                                     <Skeleton variant="rounded" width="100%" height={160} sx={{ bgcolor: '#161412', borderRadius: '8px' }} />
                                 ) : (
-                                    <Box component="pre" sx={{ fontSize: '0.75rem', color: '#9B9691', overflow: 'auto', maxHeight: 400, fontFamily: 'var(--font-mono)', bgcolor: '#0A0908', border: '1px solid #34322F', p: 2, borderRadius: '12px' }}>
+                                    <Box component="pre" sx={{ fontSize: '0.75rem', color: '#9B9691', overflow: 'auto', maxHeight: 400, fontFamily: 'var(--font-mono)', bgcolor: '#000000', border: '1px solid #34322F', p: 2, borderRadius: '12px' }}>
                                         {JSON.stringify(JSON.parse(form.schema || '[]'), null, 2)}
                                     </Box>
                                 )}
@@ -548,7 +548,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                 <Fade in={true}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', height: 600, bgcolor: '#161412', borderRadius: '24px', border: '1px solid #34322F', overflow: 'hidden', position: 'relative' }}>
                         {/* Mode Control & Toolbar */}
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.25, borderBottom: '1px solid #34322F', bgcolor: '#0A0908' }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.25, borderBottom: '1px solid #34322F', bgcolor: '#000000' }}>
                             <Typography variant="body2" sx={{ fontWeight: 800, color: '#FFF', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>Public Huddle Thread</Typography>
                             {isHuddleInit && huddleTimeRemaining && (
                                 <Stack direction="row" spacing={1.5} alignItems="center">
@@ -574,7 +574,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                         {/* Main Viewport */}
                         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
                             {huddleLoading && (
-                                <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: '#0A0908', zIndex: 2 }}>
+                                <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: '#000000', zIndex: 2 }}>
                                     <CircularProgress size={28} sx={{ color: '#6366F1' }} />
                                 </Box>
                             )}
@@ -639,7 +639,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                     </Box>
 
                                     {/* Input Form */}
-                                    <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ p: 2.25, borderTop: '1px solid #34322F', bgcolor: '#0A0908' }}>
+                                    <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ p: 2.25, borderTop: '1px solid #34322F', bgcolor: '#000000' }}>
                                         <Stack direction="row" spacing={1.5}>
                                             <TextField
                                                 fullWidth
