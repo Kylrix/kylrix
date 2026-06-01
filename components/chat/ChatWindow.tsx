@@ -2148,6 +2148,7 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                             return (
                                 <Box
                                     id={`msg-${msg.$id}`}
+                                    className="chat-message-bubble"
                                     sx={{
                                         width: '100%',
                                         display: 'flex',

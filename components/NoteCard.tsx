@@ -319,6 +319,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
             {...sidebarIgnoreProps}
             onClick={handleClick}
             onContextMenu={handleRightClick}
+            className="note-card-item"
             sx={{
               height: { xs: 160, sm: 180, md: 200, lg: 220 },
               display: 'flex',

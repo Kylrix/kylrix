@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { JetBrains_Mono, Outfit, Space_Grotesk } from 'next/font/google';
 import './globals.css';
+import './chrome.css';
+import './lists.css';
 import ThemeRegistry from '@/theme/ThemeProvider';
 import { DataNexusProvider } from '@/context/DataNexusContext';
 import { LayoutProvider } from '@/context/LayoutContext';

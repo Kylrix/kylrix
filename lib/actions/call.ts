@@ -8,6 +8,9 @@ import { getActor } from './secure-ops';
 
 // ... (rest of imports)
 
+const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
+const LINKS_TABLE = APPWRITE_CONFIG.TABLES.CHAT.CALL_LINKS;
+
 export async function createChatCallAction(input: {
   conversationId: string;
   participantIds: string[];

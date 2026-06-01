@@ -26,6 +26,8 @@ import { SuggestionsDeck } from '@/components/ephemeral/SuggestionsDeck';
 import { useAppChrome } from '@/components/providers/AppChromeProvider';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
+import { useServiceWorker } from '@/hooks/useServiceWorker';
+import { useReloadHijack } from '@/hooks/useReloadHijack';
 
 // Lazy Components
 const UnifiedBottomDrawer = dynamic(() => import('./overlays/UnifiedBottomDrawer').then(m => m.UnifiedBottomDrawer), { ssr: false });
@@ -42,6 +44,10 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
   
+  // 0. Aggressive Optimization Hooks
+  useServiceWorker();
+  useReloadHijack();
+
   // 1. Route Analysis
   const isAppRoute = useMemo(() => Boolean(
     pathname?.startsWith('/note') ||
@@ -181,7 +187,18 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       </Box>
 
       {/* --- LAYER 1: CHROME --- */}
-      <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: TOPBAR_Z, pointerEvents: 'none' }}>
+      <Box 
+        sx={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            zIndex: TOPBAR_Z, 
+            pointerEvents: 'none',
+            contain: 'layout size style', // Section 5: Absolute Layout Isolation
+            willChange: 'transform'
+        }}
+      >
         <Box sx={{ pointerEvents: 'auto' }}>
             <ConnectTopbar />
         </Box>
@@ -191,7 +208,11 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
         <UnifiedBottomBar />
       )}
       
-      {showLeftSidebar && <UnifiedLeftSidebar />}
+      {showLeftSidebar && (
+        <Box sx={{ contain: 'layout size style', willChange: 'transform' }}>
+            <UnifiedLeftSidebar />
+        </Box>
+      )}
       {isAppRoute && !isSharedPage && !isVaultResetRoute && !isLandingPage && !isConnectPage && (
         <Box sx={{ display: 'none' }} />
       )}

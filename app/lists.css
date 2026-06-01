@@ -1,0 +1,28 @@
+/* Off-screen DOM Pruning & Content Visibility */
+
+.virtual-scroll-feed-row {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 74px; /* Estimated height of item frame */
+}
+
+.note-card-item {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 160px;
+}
+
+.task-list-item {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 56px;
+}
+
+.chat-message-bubble {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 80px;
+}
+
+/* Section 6: Active Fragment Pruning Styles */
+.pruned-node-placeholder {
+    width: 100%;
+    background: transparent;
+    pointer-events: none;
+}

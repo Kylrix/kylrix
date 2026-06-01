@@ -20,7 +20,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
         }
 
         // Perform server-side check using the private ADMINS variable
-        const result = await isUserAdmin(user.email);
+        const result = await isUserAdmin();
         setIsAdmin(result);
 
         if (!result) {

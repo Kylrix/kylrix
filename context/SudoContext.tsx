@@ -37,11 +37,27 @@ export function SudoProvider({ children }: { children: ReactNode }) {
         });
     }, []);
 
+    const { isUnlocked, hasMasterpass, hasPasskey } = securityStatus;
+
     useEffect(() => {
         if (user?.$id) {
             ecosystemSecurity.fetchSecuritySnapshot(user.$id);
+            
+            // Section 1: Volatile MEK Preservation Recovery
+            // Attempt to recover MEK from Service Worker on reload
+            if (!isUnlocked) {
+                const recoverMEK = async () => {
+                    const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+                    const recovered = await masterPassCrypto.recoverFromServiceWorker();
+                    if (recovered) {
+                        console.log('[SudoContext] Session re-hydrated from Service Worker.');
+                        ecosystemSecurity.fetchSecuritySnapshot(user.$id, true);
+                    }
+                };
+                recoverMEK();
+            }
         }
-    }, [user?.$id]);
+    }, [user?.$id, isUnlocked]);
 
     const sudoApp: KylrixApp = (() => {
         if (pathname?.startsWith('/vault')) return 'vault';
@@ -54,8 +70,6 @@ export function SudoProvider({ children }: { children: ReactNode }) {
 
     const [pendingAction, setPendingAction] = useState<SudoOptions | null>(null);
     const [sudoPromise, setSudoPromise] = useState<{ resolve: (v: boolean) => void } | null>(null);
-
-    const { isUnlocked, hasMasterpass, hasPasskey } = securityStatus;
 
     const requestSudo = useCallback((options: SudoOptions) => {
         // Force prompt for 'upgrade' intent always, as password is required for re-wrapping

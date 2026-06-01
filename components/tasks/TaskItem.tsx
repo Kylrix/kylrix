@@ -156,6 +156,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   return (
     <>
       <Box
+        className="task-list-item"
         onClick={() => {
           selectTask(task.id);
           setActiveDetail({ type: 'goal', id: task.id, data: task });

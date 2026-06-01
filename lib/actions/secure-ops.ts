@@ -649,13 +649,7 @@ export async function createHandoffSessionSecure(jwt?: string) {
   }
 
   // Session context verification (MFA check)
-  const serverClient = createServerClient();
-  const account = new Account(serverClient);
-  
-  // We use the same client but we need to check sessions and factors
-  // Since we are server-side, we might need a separate client with the user's JWT
-  const { client } = await Registry.getAuth().getAuthenticatedClient(jwt);
-  const userAccount = new Account(client);
+  const { account: userAccount } = await createServerClient();
 
   const [session, factors] = await Promise.all([
     userAccount.getSession('current').catch(() => null),
@@ -815,7 +809,7 @@ export async function getReferralStatusSecure(jwt?: string) {
 
   const referrerProfile = referralEvent?.actorId ? await databases.getDocument(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, referralEvent.actorId).catch(() => null) : null;
 
-  const username = profile?.username || actor.prefs?.username || null;
+  const username = profile?.username || (actor as any).prefs?.username || null;
   const referralLink = username ? `https://www.kylrix.space/referral/${encodeURIComponent(username)}` : null;
 
   return {
@@ -1237,6 +1231,71 @@ export async function verifyTurnstileSecure(token: string) {
     throw new Error(`Turnstile verification failed: ${result.error_codes?.join(', ') || 'unknown'}`);
   }
   return { success: true };
+}
+
+/**
+ * Transaction-Clock Delta Sync: Computes surgical patches for notes.
+ * Follows "The Golden Rule of Server Action Security".
+ * Eliminates thundering herds by returning only changed records.
+ */
+export async function syncNotesDeltaSecure(localManifest: { id: string; updatedAt: string }[], jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
+  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+
+  // 1. Fetch all server-side note IDs and their updatedAt timestamps for this user
+  // This is a lightweight metadata-only fetch
+  const serverRows = await databases.listDocuments(dbId, tableId, [
+    Query.equal('userId', actor.$id),
+    Query.select(['$id', '$updatedAt']),
+    Query.limit(5000)
+  ]);
+
+  const serverManifest = new Map(serverRows.documents.map(d => [d.$id, d.$updatedAt]));
+  const localMap = new Map(localManifest.map(m => [m.id, m.updatedAt]));
+
+  const toFetch: string[] = [];
+  const toDelete: string[] = [];
+
+  // Check for updates or new items
+  for (const [sId, sUpdated] of serverManifest.entries()) {
+    const lUpdated = localMap.get(sId);
+    if (!lUpdated || new Date(sUpdated) > new Date(lUpdated)) {
+      toFetch.push(sId);
+    }
+  }
+
+  // Check for deletions
+  for (const lId of localMap.keys()) {
+    if (!serverManifest.has(lId)) {
+      toDelete.push(lId);
+    }
+  }
+
+  // 2. Surgical Fetch: Only get the full records that have changed
+  let patches: any[] = [];
+  if (toFetch.length > 0) {
+    // Chunk requests if there are too many (Appwrite limit)
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < toFetch.length; i += CHUNK_SIZE) {
+        const chunk = toFetch.slice(i, i + CHUNK_SIZE);
+        const res = await databases.listDocuments(dbId, tableId, [
+            Query.equal('$id', chunk),
+            Query.limit(CHUNK_SIZE)
+        ]);
+        patches.push(...res.documents);
+    }
+  }
+
+  return {
+    success: true,
+    patches,
+    deletedIds: toDelete,
+    serverTime: new Date().toISOString()
+  };
 }
 
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {

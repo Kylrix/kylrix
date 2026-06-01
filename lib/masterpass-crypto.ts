@@ -119,6 +119,64 @@ export class MasterPassCrypto {
       true, // Make it extractable so it can be re-wrapped
       ["encrypt", "decrypt", "wrapKey", "unwrapKey"],
     );
+    
+    // Auto-unlock if we just imported a key (e.g. from SW recovery)
+    if (this.masterKey) {
+        this.isUnlocked = true;
+    }
+  }
+
+  /**
+   * Section 1: Volatile MEK Preservation (The "Session Worker")
+   * Attempts to recover the MEK from the Service Worker memory.
+   */
+  async recoverFromServiceWorker(): Promise<boolean> {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker.controller) {
+      return false;
+    }
+
+    return new Promise((resolve) => {
+      if (!navigator.serviceWorker.controller) {
+        resolve(false);
+        return;
+      }
+      const channel = new MessageChannel();
+      channel.port1.onmessage = async (event) => {
+        if (event.data.type === 'CONTEXT_RECOVERED' && event.data.payload) {
+          try {
+            const rawMek = event.data.payload as ArrayBuffer;
+            await this.importKey(rawMek);
+            await this.unlockWithImportedKey();
+            console.log('[MasterPass] Successfully recovered MEK from Service Worker.');
+            resolve(true);
+          } catch (err) {
+            console.error('[MasterPass] Failed to import recovered MEK:', err);
+            resolve(false);
+          }
+        } else {
+          resolve(false);
+        }
+      };
+
+      navigator.serviceWorker.controller.postMessage({ type: 'RECOVER_CONTEXT' }, [channel.port2]);
+    });
+  }
+
+  /**
+   * Syncs the current MEK to the Service Worker for reload preservation.
+   */
+  private async syncToServiceWorker() {
+    if (!this.masterKey || typeof window === 'undefined' || !navigator.serviceWorker.controller) return;
+
+    try {
+      const rawMek = await crypto.subtle.exportKey('raw', this.masterKey);
+      navigator.serviceWorker.controller.postMessage({
+        type: 'STORE_CONTEXT',
+        payload: rawMek
+      });
+    } catch (err) {
+      console.warn('[MasterPass] Failed to sync MEK to Service Worker:', err);
+    }
   }
 
   // Unlock a key has been imported (e.g., from passkey)
@@ -173,6 +231,7 @@ export class MasterPassCrypto {
           sessionStorage.setItem("kylrix_vault_unlocked", "true");
         }
         markSudoActive();
+        await this.syncToServiceWorker();
         return true;
       }
 
@@ -207,6 +266,7 @@ export class MasterPassCrypto {
           sessionStorage.setItem("kylrix_vault_unlocked", "true");
         }
         markSudoActive();
+        await this.syncToServiceWorker();
         return true;
       }
 
@@ -610,6 +670,11 @@ export class MasterPassCrypto {
     this.masterKey = null;
     this.isUnlocked = false;
     resetSudo();
+
+    // Wipe from Service Worker
+    if (typeof window !== 'undefined' && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'WIPE_CONTEXT' });
+    }
 
     // Clear session storage
     if (typeof sessionStorage !== "undefined") {

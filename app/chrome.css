@@ -1,0 +1,27 @@
+/* Kylrix Absolute Layout Isolation */
+.kylrix-sidebar, .kylrix-topbar, .kylrix-bottombar {
+  contain: layout size style;
+  will-change: transform;
+  background-color: #000000;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Hardware-Accelerated Skeleton Transitions */
+.nexus-skeleton-pulse {
+  animation: visual-fade 1.2s infinite ease-in-out;
+  background: linear-gradient(90deg, #121212 25%, #1c1c1c 50%, #121212 75%);
+  background-size: 200% 100%;
+  will-change: opacity;
+  transform: translate3d(0,0,0); /* Force GPU composite layer */
+}
+
+@keyframes visual-fade {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Eliminate layout thrashing from dynamic Emotion interpolations */
+.static-surface {
+    background-color: #0A0908 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
