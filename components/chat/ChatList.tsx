@@ -363,12 +363,13 @@ export const ChatList = ({
     }, [propActiveTab]);
 
     useEffect(() => {
+        if (hideTabs || propActiveTab) return;
         if (isUnlocked) {
             setActiveTab('secure');
         } else {
             setActiveTab('public');
         }
-    }, [isUnlocked, setActiveTab]);
+    }, [isUnlocked, setActiveTab, hideTabs, propActiveTab]);
 
     useEffect(() => {
         rememberConversationRoster(conversations);
