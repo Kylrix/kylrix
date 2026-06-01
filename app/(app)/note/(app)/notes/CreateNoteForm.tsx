@@ -24,7 +24,8 @@ import {
   Public as PublicIcon,
   Brush as PencilIcon,
 } from '@mui/icons-material';
-import { Check, ArrowUpRight } from 'lucide-react';
+import { Check, ArrowUpRight, Mic, Square } from 'lucide-react';
+import { StorageService } from '@/lib/services/storage';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useToast } from '@/components/ui/Toast';
@@ -89,6 +90,106 @@ export default function CreateNoteForm({
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
   const createdToastShown = useRef(false);
   const persistInFlightRef = useRef<Promise<Notes | null> | null>(null);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+    };
+  }, []);
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        let options = { audioBitsPerSecond: 16000 };
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          (options as any).mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+          (options as any).mimeType = 'audio/ogg;codecs=opus';
+        }
+
+        const mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
+
+          stream.getTracks().forEach(track => track.stop());
+
+          try {
+            setIsSaving(true);
+            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
+            insertTextAtCursor(` [voice:${uploaded.$id}] `);
+            showSuccess('Voice note recorded', 'Inserted into your note content.');
+          } catch (error) {
+            console.error('Failed to upload voice note:', error);
+            showError('Recording failed', 'Could not save voice note.');
+          } finally {
+            setIsSaving(false);
+          }
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+        setRecordingDuration(0);
+
+        durationIntervalRef.current = setInterval(() => {
+          setRecordingDuration(prev => prev + 1);
+        }, 1000);
+
+        recordingTimerRef.current = setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+          }
+          setIsRecording(false);
+        }, 120000); // 120 seconds limit (2 minutes)
+
+      } catch (err) {
+        console.error("Failed to start recording:", err);
+        showError('Permission denied', 'Microphone access is required to record voice notes.');
+      }
+    }
+  };
+
+  const insertTextAtCursor = (text: string) => {
+    const textarea = contentRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const nextContent = content.substring(0, start) + text + content.substring(end);
+      setContent(nextContent);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + text.length, start + text.length);
+      }, 50);
+    } else {
+      setContent(prev => prev + text);
+    }
+  };
 
   // Load draft on mount
   useEffect(() => {
@@ -560,11 +661,36 @@ export default function CreateNoteForm({
               <ToggleButton value={true}><PublicIcon fontSize="small" /></ToggleButton>
             </ToggleButtonGroup>
 
+            {format === 'text' && (
+              <IconButton 
+                onClick={toggleRecording} 
+                sx={{ 
+                  color: isRecording ? '#EF4444' : 'rgba(255, 255, 255, 0.7)',
+                  bgcolor: isRecording ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
+                  animation: isRecording ? 'pulseGlow 1.2s infinite alternate' : 'none',
+                  '&:hover': {
+                    bgcolor: isRecording ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.08)'
+                  }
+                }}
+                title={isRecording ? `Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}) - Click to Stop & Insert` : "Record Voice Note"}
+              >
+                {isRecording ? <Square size={16} fill="#EF4444" /> : <Mic size={16} />}
+              </IconButton>
+            )}
+
             {(content.trim().length > 0 || title.trim().length > 0) && (
               <IconButton onClick={handleMorphToDetail} sx={{ color: '#F59E0B' }} title="Go Full Detail">
                 <ArrowUpRight size={20} />
               </IconButton>
             )}
+
+            <style>{`
+              @keyframes pulseGlow {
+                0% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.2); }
+                100% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
+              }
+            `}</style>
 
             <IconButton onClick={() => setIsExpanded((prev) => !prev)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
               {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}

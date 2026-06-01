@@ -26,7 +26,8 @@ import {
   CircularProgress,
   Skeleton,
   useTheme,
-  alpha
+  alpha,
+  Stack
 } from '@mui/material';
 import {
   Delete as TrashIcon,
@@ -78,6 +79,8 @@ import {
 import { updateNote } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { formatFileSize } from '@/lib/utils';
+import { Mic, Square } from 'lucide-react';
+import { StorageService } from '@/lib/services/storage';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAutosave } from '@/hooks/useAutosave';
@@ -232,6 +235,110 @@ export function NoteDetailSidebar({
   const [crossSuggestions, setCrossSuggestions] = useState<any[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+    };
+  }, []);
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        let options = { audioBitsPerSecond: 16000 };
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          (options as any).mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+          (options as any).mimeType = 'audio/ogg;codecs=opus';
+        }
+
+        const mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
+
+          stream.getTracks().forEach(track => track.stop());
+
+          try {
+            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
+            insertTextAtCursor(` [voice:${uploaded.$id}] `);
+            showSuccess('Voice note recorded', 'Inserted into your note content.');
+          } catch (error) {
+            console.error('Failed to upload voice note:', error);
+            showError('Recording failed', 'Could not save voice note.');
+          }
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+        setRecordingDuration(0);
+
+        durationIntervalRef.current = setInterval(() => {
+          setRecordingDuration(prev => prev + 1);
+        }, 1000);
+
+        recordingTimerRef.current = setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+          }
+          setIsRecording(false);
+        }, 120000); // 2 minutes limit
+
+      } catch (err) {
+        console.error("Failed to start recording:", err);
+        showError('Permission denied', 'Microphone access is required to record voice notes.');
+      }
+    }
+  };
+
+  const insertTextAtCursor = (text: string) => {
+    const textarea = contentTextareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const nextContent = content.substring(0, start) + text + content.substring(end);
+      setContent(nextContent);
+      
+      const updatedNote = { ...liveNote, content: nextContent };
+      onUpdate(updatedNote);
+
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + text.length, start + text.length);
+      }, 50);
+    } else {
+      const nextContent = content + text;
+      setContent(nextContent);
+      const updatedNote = { ...liveNote, content: nextContent };
+      onUpdate(updatedNote);
+    }
+  };
 
   // ENCRYPTION LOGIC
   const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
@@ -731,10 +838,38 @@ export function NoteDetailSidebar({
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.5 }}>
           <Typography variant="caption" sx={{ color: theme.palette.primary.main, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Content</Typography>
           {isEditingContent && (
-            <ToggleButtonGroup value={format} exclusive onChange={(_, v) => v && setFormat(v)} size="small" sx={{ height: 28, bgcolor: alpha('#fff', 0.04), borderRadius: '10px' }}>
-              <ToggleButton value="text" sx={{ px: 2, py: 0, fontSize: '0.7rem', fontWeight: 800 }}>Text</ToggleButton>
-              <ToggleButton value="doodle" sx={{ px: 2, py: 0, fontSize: '0.7rem', fontWeight: 800 }}>Doodle</ToggleButton>
-            </ToggleButtonGroup>
+            <Stack direction="row" spacing={1} alignItems="center">
+              {format === 'text' && (
+                <IconButton 
+                  onClick={toggleRecording} 
+                  size="small"
+                  sx={{ 
+                    color: isRecording ? '#EF4444' : 'rgba(255, 255, 255, 0.7)',
+                    bgcolor: isRecording ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
+                    animation: isRecording ? 'pulseGlow 1.2s infinite alternate' : 'none',
+                    p: 0.5,
+                    '&:hover': {
+                      bgcolor: isRecording ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.08)'
+                    }
+                  }}
+                  title={isRecording ? `Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}) - Click to Stop & Insert` : "Record Voice Note"}
+                >
+                  {isRecording ? <Square size={14} fill="#EF4444" /> : <Mic size={14} />}
+                </IconButton>
+              )}
+              <ToggleButtonGroup value={format} exclusive onChange={(_, v) => v && setFormat(v)} size="small" sx={{ height: 28, bgcolor: alpha('#fff', 0.04), borderRadius: '10px' }}>
+                <ToggleButton value="text" sx={{ px: 2, py: 0, fontSize: '0.7rem', fontWeight: 800 }}>Text</ToggleButton>
+                <ToggleButton value="doodle" sx={{ px: 2, py: 0, fontSize: '0.7rem', fontWeight: 800 }}>Doodle</ToggleButton>
+              </ToggleButtonGroup>
+
+              <style>{`
+                @keyframes pulseGlow {
+                  0% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.2); }
+                  100% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
+                }
+              `}</style>
+            </Stack>
           )}
         </Box>
         <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', pr: 1 }}>

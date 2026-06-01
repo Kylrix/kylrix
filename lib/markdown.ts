@@ -4,8 +4,8 @@
 export function preProcessMarkdown(md?: string): string {
   if (!md) return '';
 
-  // Normalize CRLF to LF
-  const normalized = md.replace(/\r\n/g, '\n');
+  // Normalize CRLF to LF and pre-process custom voice note tags
+  const normalized = md.replace(/\r\n/g, '\n').replace(/\[voice:([a-zA-Z0-9_-]+)\]/g, '[Voice Note](voice:$1)');
 
   // Split into segments: fenced code blocks (``` or ~~~) and non-code parts
   const parts = normalized.split(/(^(?:```|~~~)[\s\S]*?^(?:```|~~~))/gm);
