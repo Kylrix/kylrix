@@ -51,6 +51,7 @@ import {
   PlaylistAddCheck as TaskIcon,
   EventNote as EventIcon,
   VpnKey as KeyIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material';
 import { FolderKanban } from 'lucide-react';
 

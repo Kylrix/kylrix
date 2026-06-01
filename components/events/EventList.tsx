@@ -193,9 +193,10 @@ export default function EventList() {
           <Typography 
             variant="body2" 
             sx={{ 
-              color: 'rgba(255, 255, 255, 0.5)',
+              color: '#8E8A86',
               fontWeight: 600,
-              letterSpacing: '0.01em'
+              letterSpacing: '0.01em',
+              fontFamily: 'var(--font-satoshi)'
             }}
           >
             Discover and manage your schedule
@@ -213,11 +214,10 @@ export default function EventList() {
             fontWeight: 800,
             textTransform: 'none',
             fontSize: '0.9rem',
-            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',
+            fontFamily: 'var(--font-satoshi)',
             '&:hover': {
-              bgcolor: alpha('#6366F1', 0.8),
+              bgcolor: '#4F46E5',
               transform: 'translateY(-2px)',
-              boxShadow: '0 12px 28px rgba(99, 102, 241, 0.4)',
             },
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
@@ -235,11 +235,12 @@ export default function EventList() {
 
       <Box sx={{ 
         mb: 4, 
-        bgcolor: '#161514', 
-        borderRadius: '16px', 
+        bgcolor: '#161412', 
+        borderRadius: '28px', 
         p: 0.5,
         width: 'fit-content',
-        border: '1px solid rgba(255, 255, 255, 0.05)'
+        border: '1px solid #34322F',
+        backgroundImage: 'none'
       }}>
         <Tabs 
           value={tabValue} 
@@ -252,20 +253,21 @@ export default function EventList() {
             },
             '& .MuiTab-root': {
               minHeight: 40,
-              borderRadius: '12px',
+              borderRadius: '24px',
               textTransform: 'none',
               fontWeight: 700,
               fontSize: '0.85rem',
-              color: 'rgba(255, 255, 255, 0.5)',
+              fontFamily: 'var(--font-satoshi)',
+              color: '#8E8A86',
               px: 3,
               transition: 'all 0.2s ease',
               '&.Mui-selected': {
                 color: 'white',
-                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                bgcolor: '#1C1A18',
               },
               '&:hover': {
                 color: 'white',
-                bgcolor: 'rgba(255, 255, 255, 0.04)',
+                bgcolor: '#1C1A18',
               }
             }
           }}
@@ -287,11 +289,13 @@ export default function EventList() {
         ))}
       </Grid>
 
-      <EventDialog
-        open={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onSubmit={handleCreateEvent}
-      />
+      {isDialogOpen && (
+        <EventDialog
+          open={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          onSubmit={handleCreateEvent}
+        />
+      )}
       </MultiSectionContainer>
     </Box>
   );

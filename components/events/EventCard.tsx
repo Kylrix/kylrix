@@ -256,7 +256,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
         }}
       >
         <MenuItem onClick={handleMenuClose}>
-          <ListItemIcon sx={{ minWidth: 'auto !important', color: 'inherit' }}><Share2 size={16} strokeWidth={1.5} /></MenuItem>
+          <ListItemIcon sx={{ minWidth: 'auto !important', color: 'inherit' }}><Share2 size={16} strokeWidth={1.5} /></ListItemIcon>
           <ListItemText primary="Share Event" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 800 }} />
         </MenuItem>
       </Menu>

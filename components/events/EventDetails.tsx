@@ -101,7 +101,7 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
     : { background: generateEventPattern(eventIdValue + event.title) };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#161412' }}>
       {/* Header with Cover */}
       <Box sx={{ position: 'relative' }}>
         <Box
@@ -119,9 +119,10 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
                 position: 'absolute',
                 top: 8,
                 right: 8,
-                bgcolor: 'rgba(0,0,0,0.3)',
+                bgcolor: '#000000',
+                border: '1px solid #34322F',
                 color: 'white',
-                '&:hover': { bgcolor: 'rgba(0,0,0,0.5)' },
+                '&:hover': { bgcolor: '#1C1A18' },
             }}
         >
             <CloseIcon sx={{ fontSize: 24 }} />
@@ -135,32 +136,47 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
                 <Chip
                     label={visibility}
                     size="small"
-                    color="primary"
-                    variant="outlined"
+                    sx={{
+                      bgcolor: '#1C1A18',
+                      border: '1px solid #34322F',
+                      color: 'white',
+                      fontWeight: 700,
+                      fontFamily: 'var(--font-satoshi)',
+                      textTransform: 'capitalize'
+                    }}
                 />
                 {(event as any).status === 'cancelled' && (
-                    <Chip label="Cancelled" size="small" color="error" />
+                    <Chip 
+                      label="Cancelled" 
+                      size="small" 
+                      sx={{
+                        bgcolor: '#EF4444',
+                        color: 'black',
+                        fontWeight: 800,
+                        fontFamily: 'var(--font-mono)'
+                      }}
+                    />
                 )}
             </Box>
-            <Typography variant="h5" fontWeight={700} gutterBottom>
+            <Typography variant="h5" fontWeight={900} gutterBottom sx={{ fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white' }}>
                 {event.title}
             </Typography>
         </Box>
 
         {/* Date & Time */}
         <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 When
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
-                <CalendarIcon sx={{ fontSize: 18, color: theme.palette.action.active }} />
-                <Typography variant="body2">
+                <CalendarIcon sx={{ fontSize: 18, color: '#8E8A86' }} />
+                <Typography variant="body2" sx={{ color: 'white', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>
                     {format(startDate, 'EEEE, MMMM d, yyyy')}
                 </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <TimeIcon sx={{ fontSize: 18, color: theme.palette.action.active }} />
-                <Typography variant="body2">
+                <TimeIcon sx={{ fontSize: 18, color: '#8E8A86' }} />
+                <Typography variant="body2" sx={{ color: 'white', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>
                     {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
                 </Typography>
             </Box>
@@ -168,15 +184,15 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
 
         {/* Location */}
         <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Where
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                 <Box sx={{ mt: 0.5 }}>
-                    <LocationIcon sx={{ fontSize: 18, color: theme.palette.action.active }} />
+                    <LocationIcon sx={{ fontSize: 18, color: '#8E8A86' }} />
                 </Box>
                 <Box>
-                    <Typography variant="body2" gutterBottom>
+                    <Typography variant="body2" sx={{ color: 'white', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }} gutterBottom>
                         {event.location || 'Online Event'}
                     </Typography>
                     {meetingUrl && (
@@ -186,7 +202,20 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
                             startIcon={<MeetingIcon sx={{ fontSize: 18 }} />}
                             href={meetingUrl}
                             target="_blank"
-                            sx={{ mt: 1 }}
+                            sx={{ 
+                              mt: 1, 
+                              bgcolor: '#1C1A18', 
+                              border: '1px solid #34322F',
+                              color: 'white',
+                              fontWeight: 700,
+                              fontFamily: 'var(--font-satoshi)',
+                              borderRadius: '8px',
+                              textTransform: 'none',
+                              '&:hover': {
+                                bgcolor: '#242220',
+                                borderColor: '#6366F1'
+                              }
+                            }}
                         >
                             Join Meeting
                         </Button>
@@ -195,19 +224,19 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
             </Box>
         </Box>
 
-        <Divider sx={{ my: 3 }} />
+        <Divider sx={{ my: 3, borderColor: '#34322F' }} />
 
         {/* Description */}
         <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 About
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
+            <Typography variant="body2" sx={{ color: '#C1BEBA', fontFamily: 'var(--font-satoshi)', whiteSpace: 'pre-line', lineHeight: 1.6 }}>
                 {event.description || 'No description provided.'}
             </Typography>
         </Box>
 
-        <Divider sx={{ my: 3 }} />
+        <Divider sx={{ my: 3, borderColor: '#34322F' }} />
 
         {/* Actions */}
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -216,6 +245,17 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
                 fullWidth
                 href={`/flow/events/${eventIdValue}`}
                 target="_blank"
+                sx={{
+                  bgcolor: '#6366F1',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-satoshi)',
+                  borderRadius: '12px',
+                  py: 1.25,
+                  '&:hover': {
+                    bgcolor: '#4F46E5'
+                  }
+                }}
             >
                 View Event Page
             </Button>
@@ -225,6 +265,19 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
                 startIcon={<ShareIcon sx={{ fontSize: 18 }} />}
                 onClick={() => {
                      navigator.clipboard.writeText(`${window.location.origin}/events/${eventIdValue}`);
+                }}
+                sx={{
+                  bgcolor: '#1C1A18',
+                  border: '1px solid #34322F',
+                  color: 'white',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-satoshi)',
+                  borderRadius: '12px',
+                  py: 1.25,
+                  '&:hover': {
+                    bgcolor: '#242220',
+                    borderColor: '#6366F1'
+                  }
                 }}
             >
                 Copy Link

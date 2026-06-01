@@ -402,9 +402,9 @@ export default function EventPage() {
 
   if (!loading && (error || !event)) {
     return (
-      <Container maxWidth="md" sx={{ py: 8, textAlign: 'center' }}>
-        <Typography variant="h4">{error || "Event not found"}</Typography>
-      </Container>
+      <Box sx={{ minHeight: '100vh', bgcolor: '#000000', display: 'grid', placeItems: 'center', p: 4 }}>
+        <Typography variant="h4" sx={{ color: 'white', fontFamily: 'var(--font-clash)', fontWeight: 900 }}>{error || "Event not found"}</Typography>
+      </Box>
     );
   }
 
@@ -415,36 +415,65 @@ export default function EventPage() {
     : { background: generateEventPattern(event.$id + event.title) };
 
   return (
-    <Box sx={{ minHeight: '100%', pb: 8 }}>
+    <Box sx={{ minHeight: '100vh', pb: 8, bgcolor: '#000000', p: { xs: 2, md: 4 } }}>
       <MultiSectionContainer panels={['note', 'huddles', 'goals']} contextId={eventId}>
       <Container maxWidth="md" sx={{ px: { xs: 0, sm: 2 } }}>
-        <Paper sx={{ overflow: 'hidden', borderRadius: { xs: 0, sm: 3 }, mb: 4 }}>
+        <Paper sx={{ overflow: 'hidden', borderRadius: { xs: 0, sm: '28px' }, mb: 4, bgcolor: '#161412', border: '1px solid #34322F', backgroundImage: 'none' }}>
           {loading ? (
-            <Skeleton variant="rectangular" height={350} sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
+            <Skeleton variant="rectangular" height={350} sx={{ bgcolor: '#1C1A18' }} />
           ) : (
             <Box sx={{ height: { xs: 250, md: 350 }, position: 'relative', backgroundSize: 'cover', ...coverStyle }}>
               <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
-                <Button variant="contained" color="inherit" onClick={handleCopyLink}><ContentCopyIcon fontSize="small" /></Button>
+                <Button 
+                  variant="contained" 
+                  onClick={handleCopyLink}
+                  sx={{
+                    bgcolor: '#000000',
+                    color: 'white',
+                    border: '1px solid #34322F',
+                    minWidth: 'auto',
+                    p: 1.25,
+                    borderRadius: '12px',
+                    '&:hover': { bgcolor: '#1C1A18' }
+                  }}
+                >
+                  <ContentCopyIcon fontSize="small" />
+                </Button>
               </Box>
             </Box>
           )}
 
           <Box sx={{ p: { xs: 3, md: 5 } }}>
             {loading ? (
-              <Skeleton variant="text" width="60%" height={48} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 2, borderRadius: '4px' }} />
+              <Skeleton variant="text" width="60%" height={48} sx={{ bgcolor: '#1C1A18', mb: 2, borderRadius: '4px' }} />
             ) : (
-              <Typography variant="h3" fontWeight={800} gutterBottom>{event.title}</Typography>
+              <Typography variant="h3" fontWeight={900} gutterBottom sx={{ fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white', fontSize: { xs: '2rem', md: '3rem' } }}>{event.title}</Typography>
             )}
 
             {loading ? (
-              <Skeleton variant="rounded" width="100%" height={88} sx={{ bgcolor: 'rgba(255,255,255,0.03)', mb: 4, borderRadius: '12px' }} />
+              <Skeleton variant="rounded" width="100%" height={88} sx={{ bgcolor: '#1C1A18', mb: 4, borderRadius: '12px' }} />
             ) : (
-              <Paper variant="outlined" sx={{ p: 3, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+              <Paper sx={{ p: 3, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#1C1A18', border: '1px solid #34322F', borderRadius: '16px', backgroundImage: 'none' }}>
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={600}>{format(startDate, 'EEEE, MMMM d, yyyy')}</Typography>
-                  <Typography variant="body2" color="text.secondary">{format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}</Typography>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ color: 'white', fontFamily: 'var(--font-satoshi)' }}>{format(startDate, 'EEEE, MMMM d, yyyy')}</Typography>
+                  <Typography variant="body2" sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>{format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}</Typography>
                 </Box>
-                <Button variant="contained" onClick={isRegistered ? handleCancelRegistration : handleRegister} disabled={registering}>
+                <Button 
+                  variant="contained" 
+                  onClick={isRegistered ? handleCancelRegistration : handleRegister} 
+                  disabled={registering}
+                  sx={{
+                    bgcolor: '#6366F1',
+                    color: 'white',
+                    fontWeight: 800,
+                    borderRadius: '12px',
+                    px: 3,
+                    py: 1.25,
+                    fontFamily: 'var(--font-satoshi)',
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: '#4F46E5' }
+                  }}
+                >
                   {registering ? '...' : isRegistered ? 'Cancel' : 'Register'}
                 </Button>
               </Paper>
@@ -452,20 +481,20 @@ export default function EventPage() {
 
             {loading ? (
               <Box sx={{ mb: 4 }}>
-                <Skeleton variant="text" width="15%" height={24} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 1.5 }} />
-                <Skeleton variant="text" width="100%" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
-                <Skeleton variant="text" width="85%" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
+                <Skeleton variant="text" width="15%" height={24} sx={{ bgcolor: '#1C1A18', mb: 1.5 }} />
+                <Skeleton variant="text" width="100%" sx={{ bgcolor: '#1C1A18' }} />
+                <Skeleton variant="text" width="85%" sx={{ bgcolor: '#1C1A18' }} />
               </Box>
             ) : (
               <Box sx={{ mb: 4 }}>
-                <Typography variant="h6" fontWeight={700} gutterBottom>About</Typography>
-                <Typography variant="body1" color="text.secondary">{event.description}</Typography>
+                <Typography variant="h6" fontWeight={700} gutterBottom sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.85rem' }}>About</Typography>
+                <Typography variant="body1" sx={{ color: '#C1BEBA', fontFamily: 'var(--font-satoshi)', lineHeight: 1.6 }}>{event.description}</Typography>
               </Box>
             )}
 
             <Box sx={{ mb: 4 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" fontWeight={700}>Organizers</Typography>
+                <Typography variant="h6" fontWeight={700} sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.85rem' }}>Organizers</Typography>
                 {!loading && user && event.userId === user.$id && (
                   <Button 
                     size="small"
@@ -475,7 +504,7 @@ export default function EventPage() {
                       resourceTitle: event.title,
                       onShared: () => fetchOrganizers()
                     })}
-                    sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.75rem', textTransform: 'none', '&:hover': { textDecoration: 'underline' } }}
+                    sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.75rem', fontFamily: 'var(--font-satoshi)', textTransform: 'none', '&:hover': { textDecoration: 'underline' } }}
                   >
                     + Manage Organizers
                   </Button>
@@ -483,11 +512,11 @@ export default function EventPage() {
               </Box>
               
               {loading ? (
-                <Skeleton variant="rounded" width={120} height={32} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '16px' }} />
+                <Skeleton variant="rounded" width={120} height={32} sx={{ bgcolor: '#1C1A18', borderRadius: '16px' }} />
               ) : loadingOrganizers ? (
                 <CircularProgress size={16} sx={{ color: '#F59E0B' }} />
               ) : organizers.length === 0 ? (
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic', opacity: 0.7 }}>
+                <Typography variant="body2" sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', fontStyle: 'italic' }}>
                   No co-organizers added yet.
                 </Typography>
               ) : (
@@ -516,13 +545,13 @@ export default function EventPage() {
                         }
                       }}
                       sx={{ 
-                        bgcolor: 'rgba(255,255,255,0.03)', 
-                        border: '1px solid rgba(255,255,255,0.05)',
+                        bgcolor: '#1C1A18', 
+                        border: '1px solid #34322F',
                         color: 'white',
                         fontWeight: 700,
                         fontFamily: 'var(--font-satoshi)',
                         fontSize: '0.75rem',
-                        '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
+                        '&:hover': { bgcolor: '#242220', borderColor: '#6366F1' }
                       }}
                     />
                   ))}
@@ -531,7 +560,7 @@ export default function EventPage() {
             </Box>
 
             <Box>
-              <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>Attendees</Typography>
+              <Typography variant="h6" fontWeight={700} sx={{ mb: 2, color: '#8E8A86', fontFamily: 'var(--font-satoshi)', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.85rem' }}>Attendees</Typography>
               <AvatarGroup max={6} sx={{ justifyContent: 'flex-start' }}>
                 {attendees.map((attendee) => (
                   <AttendeeAvatar key={attendee.$id} guest={attendee} theme={theme} />
@@ -542,15 +571,15 @@ export default function EventPage() {
         </Paper>
 
         {/* Public Huddle Discussion Thread */}
-        <Paper sx={{ mt: 4, display: 'flex', flexDirection: 'column', height: 500, bgcolor: 'rgba(255,255,255,0.01)', borderRadius: 3, border: '1px solid rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
+        <Paper sx={{ mt: 4, display: 'flex', flexDirection: 'column', height: 500, bgcolor: '#161412', borderRadius: '28px', border: '1px solid #34322F', overflow: 'hidden', position: 'relative', backgroundImage: 'none' }}>
           {/* Mode Control & Toolbar */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.25, borderBottom: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(0,0,0,0.15)' }}>
-            <Typography variant="body2" sx={{ fontWeight: 900, color: 'white' }}>Public Huddle Thread</Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.25, borderBottom: '1px solid #34322F', bgcolor: '#1C1A18' }}>
+            <Typography variant="body2" sx={{ fontWeight: 900, color: 'white', fontFamily: 'var(--font-clash)', letterSpacing: '-0.01em' }}>Public Huddle Thread</Typography>
             {isHuddleInit && huddleTimeRemaining && (
               <Stack direction="row" spacing={1.5} alignItems="center">
                 <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: '#F59E0B' }}>
                   <Clock size={14} style={{ color: '#F59E0B' }} />
-                  <Typography variant="caption" sx={{ fontWeight: 800 }}>{huddleTimeRemaining}</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 800, fontFamily: 'var(--font-satoshi)' }}>{huddleTimeRemaining}</Typography>
                 </Stack>
                 {/* Save Story button - only event owner can promote */}
                 {user && event.userId === user.$id && (
@@ -559,8 +588,17 @@ export default function EventPage() {
                     startIcon={<FileText size={14} />}
                     onClick={handleSaveHuddleAsStory}
                     sx={{
-                      bgcolor: 'rgba(236, 72, 153, 0.1)', color: '#EC4899', fontWeight: 800, fontSize: '0.75rem', px: 2, py: 0.75, borderRadius: '8px', textTransform: 'none',
-                      '&:hover': { bgcolor: 'rgba(236, 72, 153, 0.15)' }
+                      bgcolor: '#1C1A18',
+                      border: '1px solid #34322F',
+                      color: '#EC4899',
+                      fontWeight: 800,
+                      fontSize: '0.75rem',
+                      px: 2,
+                      py: 0.75,
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                      fontFamily: 'var(--font-satoshi)',
+                      '&:hover': { bgcolor: '#242220', borderColor: '#EC4899' }
                     }}
                   >
                     Save Story
@@ -573,23 +611,23 @@ export default function EventPage() {
           {/* Main Viewport */}
           <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
             {huddleLoading && (
-              <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: 'rgba(10,9,8,0.7)', zIndex: 2 }}>
+              <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: '#161412', zIndex: 2 }}>
                 <CircularProgress size={28} sx={{ color: '#6366F1' }} />
               </Box>
             )}
 
             {!isHuddleInit ? (
               <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center' }}>
-                <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.08)', color: '#6366F1', border: '1px solid rgba(99, 102, 241, 0.15)', mb: 2.5 }}>
+                <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: '#1C1A18', color: '#6366F1', border: '1px solid #34322F', mb: 2.5 }}>
                   <Globe size={26} style={{ color: '#6366F1' }} />
                 </Box>
-                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mb: 1 }}>Initialize Event Discussion</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 360, lineHeight: 1.5, mb: 3 }}>
+                <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mb: 1, fontFamily: 'var(--font-clash)' }}>Initialize Event Discussion</Typography>
+                <Typography variant="caption" sx={{ color: '#8E8A86', maxWidth: 360, lineHeight: 1.5, mb: 3, fontFamily: 'var(--font-satoshi)' }}>
                   Start a temporary public huddle chat thread for this event. Registered attendees and guests can read and post. Ephemeral chat automatically purges in 7 days.
                 </Typography>
                 <Button 
                   onClick={handleInitHuddle}
-                  sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 800, fontSize: '0.8rem', py: 1.25, px: 3, borderRadius: '10px', textTransform: 'none', '&:hover': { bgcolor: '#575CF0' } }}
+                  sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 800, fontSize: '0.8rem', py: 1.25, px: 3, borderRadius: '12px', textTransform: 'none', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#4F46E5' } }}
                 >
                   Start Huddle
                 </Button>
@@ -598,15 +636,15 @@ export default function EventPage() {
               <>
                 <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {huddleMessages.length === 0 ? (
-                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
-                      <Typography variant="caption" sx={{ fontStyle: 'italic' }}>No messages yet. Start the event huddle!</Typography>
+                    <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#8E8A86', fontFamily: 'var(--font-satoshi)' }}>No messages yet. Start the event huddle!</Typography>
                     </Box>
                   ) : (
                     huddleMessages.map((msg) => {
                       const isSelf = user && msg.senderId === user.$id;
                       return (
                         <Box key={msg.id} sx={{ alignSelf: isSelf ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, display: 'block', mb: 0.5, textAlign: isSelf ? 'right' : 'left' }}>
+                          <Typography variant="caption" sx={{ color: '#8E8A86', fontWeight: 800, display: 'block', mb: 0.5, textAlign: isSelf ? 'right' : 'left', fontFamily: 'var(--font-satoshi)' }}>
                             {msg.senderName}
                           </Typography>
                           <Paper 
@@ -616,18 +654,18 @@ export default function EventPage() {
                               borderRadius: '16px',
                               borderTopRightRadius: isSelf ? 0 : '16px',
                               borderTopLeftRadius: isSelf ? '16px' : 0,
-                              bgcolor: isSelf ? '#6366F1' : 'rgba(255,255,255,0.03)',
-                              border: isSelf ? 'none' : '1px solid rgba(255,255,255,0.04)',
+                              bgcolor: isSelf ? '#6366F1' : '#1C1A18',
+                              border: isSelf ? 'none' : '1px solid #34322F',
                               color: '#fff',
                               boxShadow: 'none',
                               backgroundImage: 'none'
                             }}
                           >
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word', fontSize: '0.85rem' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word', fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }}>
                               {msg.content}
                             </Typography>
                           </Paper>
-                          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left' }}>
+                          <Typography variant="caption" sx={{ color: '#5E5B58', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left', fontFamily: 'var(--font-mono)' }}>
                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </Typography>
                         </Box>
@@ -638,7 +676,7 @@ export default function EventPage() {
                 </Box>
 
                 {/* Input Form */}
-                <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ p: 2.25, borderTop: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(0,0,0,0.15)' }}>
+                <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ p: 2.25, borderTop: '1px solid #34322F', bgcolor: '#1C1A18' }}>
                   <Stack direction="row" spacing={1.5}>
                     <TextField
                       fullWidth
@@ -651,15 +689,16 @@ export default function EventPage() {
                       InputProps={{
                         disableUnderline: true,
                         sx: {
-                          bgcolor: '#0A0908',
+                          bgcolor: '#000000',
                           borderRadius: '12px',
                           color: 'white',
                           px: 2,
                           py: 1,
                           fontWeight: 600,
                           fontSize: '0.85rem',
-                          border: '1px solid rgba(255,255,255,0.05)',
-                          '&:hover': { borderColor: 'rgba(255,255,255,0.1)' }
+                          fontFamily: 'var(--font-satoshi)',
+                          border: '1px solid #34322F',
+                          '&:hover': { borderColor: '#6366F1' }
                         }
                       }}
                     />
@@ -672,8 +711,8 @@ export default function EventPage() {
                         borderRadius: '12px',
                         width: 40,
                         height: 40,
-                        '&:hover': { bgcolor: '#575CF0' },
-                        '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.1)' }
+                        '&:hover': { bgcolor: '#4F46E5' },
+                        '&.Mui-disabled': { bgcolor: '#1C1A18', color: '#5E5B58' }
                       }}
                     >
                       <Send size={16} style={{ color: '#fff' }} />

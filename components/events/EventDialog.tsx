@@ -105,17 +105,17 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
         open={open}
         onClose={handleClose}
         ModalProps={{ keepMounted: false }}
+        disablePortal
         PaperProps={{
           sx: {
             width: isMobile ? '100%' : 'min(100vw, 600px)',
             maxWidth: '100%',
             height: isMobile ? '92dvh' : '100%',
             maxHeight: '100dvh',
-            bgcolor: 'rgba(10, 10, 10, 0.9)',
-            backdropFilter: 'blur(25px) saturate(180%)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            bgcolor: '#161412',
+            border: '1px solid #34322F',
             backgroundImage: 'none',
-            borderRadius: isMobile ? '24px 24px 0 0' : '0',
+            borderRadius: isMobile ? '28px 28px 0 0' : '0',
             display: 'flex',
             flexDirection: 'column'
           },
@@ -129,7 +129,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+            borderBottom: '1px solid #34322F',
             flexShrink: 0
           }}
         >
@@ -137,7 +137,8 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
             <Box sx={{ 
               p: 1, 
               borderRadius: '12px', 
-              bgcolor: alpha('#6366F1', 0.1), 
+              bgcolor: '#1C1A18', 
+              border: '1px solid #34322F',
               color: '#6366F1',
               display: 'flex'
             }}>
@@ -147,12 +148,12 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
               <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
                 Create New Event
               </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600 }}>
+              <Typography variant="caption" sx={{ color: '#8E8A86', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
                 Orchestrate a new moment in the ecosystem
               </Typography>
             </Box>
           </Box>
-          <IconButton onClick={handleClose} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white', bgcolor: 'rgba(255, 255, 255, 0.05)' } }}>
+          <IconButton onClick={handleClose} sx={{ color: '#8E8A86', '&:hover': { color: 'white', bgcolor: '#1C1A18' } }}>
             <CloseIcon sx={{ fontSize: 20 }} />
           </IconButton>
         </Box>
@@ -171,10 +172,10 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
             bgcolor: 'transparent'
           },
           '&::-webkit-scrollbar-thumb': {
-            bgcolor: 'rgba(255, 255, 255, 0.1)',
+            bgcolor: '#34322F',
             borderRadius: '3px',
             '&:hover': {
-              bgcolor: 'rgba(255, 255, 255, 0.2)'
+              bgcolor: '#5E5B58'
             }
           }
         }}>
@@ -194,7 +195,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                   fontWeight: 900,
                   fontFamily: 'var(--font-clash)',
                   color: 'white',
-                  '&::placeholder': { color: 'rgba(255, 255, 255, 0.2)', opacity: 1 }
+                  '&::placeholder': { color: '#5E5B58', opacity: 1 }
                 },
               }}
             />
@@ -213,18 +214,19 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                 sx: { 
                   fontSize: '1rem', 
                   fontWeight: 500,
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  '&::placeholder': { color: 'rgba(255, 255, 255, 0.3)', opacity: 1 }
+                  fontFamily: 'var(--font-satoshi)',
+                  color: '#C1BEBA',
+                  '&::placeholder': { color: '#5E5B58', opacity: 1 }
                 },
               }}
             />
 
-            <Divider sx={{ opacity: 0.05 }} />
+            <Divider sx={{ borderColor: '#34322F' }} />
 
             {/* Date Time Row */}
             <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', sm: 'row' } }}>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <Typography variant="caption" sx={{ color: '#8E8A86', fontWeight: 700, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-satoshi)' }}>
                   Starts At
                 </Typography>
                 <DateTimePicker
@@ -237,12 +239,15 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                       InputProps: { 
                         disableUnderline: true,
                         sx: { 
-                          bgcolor: 'rgba(255, 255, 255, 0.03)', 
+                          bgcolor: '#000000', 
                           p: 1.5, 
                           borderRadius: '12px',
-                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          border: '1px solid #34322F',
                           fontSize: '0.9rem',
-                          fontWeight: 600
+                          fontWeight: 600,
+                          color: 'white',
+                          fontFamily: 'var(--font-satoshi)',
+                          '&:hover': { borderColor: '#6366F1' }
                         } 
                       }
                     } 
@@ -250,7 +255,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                 />
               </Box>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <Typography variant="caption" sx={{ color: '#8E8A86', fontWeight: 700, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-satoshi)' }}>
                   Ends At
                 </Typography>
                 <DateTimePicker
@@ -263,12 +268,15 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                       InputProps: { 
                         disableUnderline: true,
                         sx: { 
-                          bgcolor: 'rgba(255, 255, 255, 0.03)', 
+                          bgcolor: '#000000', 
                           p: 1.5, 
                           borderRadius: '12px',
-                          border: '1px solid rgba(255, 255, 255, 0.05)',
+                          border: '1px solid #34322F',
                           fontSize: '0.9rem',
-                          fontWeight: 600
+                          fontWeight: 600,
+                          color: 'white',
+                          fontFamily: 'var(--font-satoshi)',
+                          '&:hover': { borderColor: '#6366F1' }
                         } 
                       }
                     } 
@@ -293,12 +301,15 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                     </InputAdornment>
                   ),
                   sx: { 
-                    bgcolor: 'rgba(255, 255, 255, 0.03)', 
+                    bgcolor: '#000000', 
                     p: 1.5, 
                     borderRadius: '12px', 
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    border: '1px solid #34322F',
                     fontSize: '0.9rem',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    color: 'white',
+                    fontFamily: 'var(--font-satoshi)',
+                    '&:hover': { borderColor: '#6366F1' }
                   }
                 }}
               />
@@ -316,12 +327,15 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                     </InputAdornment>
                   ),
                   sx: { 
-                    bgcolor: 'rgba(255, 255, 255, 0.03)', 
+                    bgcolor: '#000000', 
                     p: 1.5, 
                     borderRadius: '12px',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    border: '1px solid #34322F',
                     fontSize: '0.9rem',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    color: 'white',
+                    fontFamily: 'var(--font-satoshi)',
+                    '&:hover': { borderColor: '#6366F1' }
                   }
                 }}
               />
@@ -334,20 +348,20 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
               justifyContent: 'space-between',
               p: 2,
               borderRadius: '16px',
-              bgcolor: alpha('#6366F1', 0.05),
-              border: `1px solid ${alpha('#6366F1', 0.1)}`,
+              bgcolor: '#1C1A18',
+              border: '1px solid #34322F',
               transition: 'all 0.2s ease',
-              '&:hover': { bgcolor: alpha('#6366F1', 0.08) }
+              '&:hover': { borderColor: '#6366F1' }
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box sx={{ p: 1, bgcolor: alpha('#6366F1', 0.1), borderRadius: '10px', color: '#6366F1' }}>
+                <Box sx={{ p: 1, bgcolor: '#000000', border: '1px solid #34322F', borderRadius: '10px', color: '#6366F1' }}>
                   <VideoIcon sx={{ fontSize: 20 }} />
                 </Box>
                 <Box>
-                    <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'white' }}>
+                    <Typography variant="subtitle2" fontWeight={800} sx={{ color: 'white', fontFamily: 'var(--font-satoshi)' }}>
                     Kylrix Connect Call
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontWeight: 600 }}>
+                    <Typography variant="caption" sx={{ color: '#8E8A86', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
                      Create a secure video call link for this event
                     </Typography>
                   </Box>
@@ -364,7 +378,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
             {/* Visibility */}
             <Box>
-              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <Typography variant="caption" sx={{ color: '#8E8A86', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-satoshi)' }}>
                 Event Visibility
               </Typography>
               <ToggleButtonGroup
@@ -375,20 +389,21 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
                 sx={{
                   gap: 1,
                   '& .MuiToggleButtonGroup-grouped': {
-                    border: '1px solid rgba(255, 255, 255, 0.05) !important',
+                    border: '1px solid #34322F !important',
                     borderRadius: '12px !important',
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: '#8E8A86',
                     textTransform: 'none',
                     fontWeight: 700,
                     fontSize: '0.85rem',
-                    bgcolor: 'rgba(255, 255, 255, 0.02)',
+                    fontFamily: 'var(--font-satoshi)',
+                    bgcolor: '#000000',
                     '&.Mui-selected': {
-                      bgcolor: alpha('#6366F1', 0.1),
+                      bgcolor: '#1C1A18',
                       color: '#6366F1',
-                      borderColor: alpha('#6366F1', 0.3) + ' !important',
+                      borderColor: '#6366F1 !important',
                     },
                     '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.05)',
+                      bgcolor: '#1C1A18',
                     }
                   },
                 }}
@@ -432,19 +447,21 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
           gap: 1.5,
           display: 'flex',
           flexDirection: 'column',
-          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          borderTop: '1px solid #34322F',
+          bgcolor: '#161412',
           flexShrink: 0
         }}>
           <Button 
             onClick={handleClose} 
             fullWidth
             sx={{ 
-              color: 'rgba(255, 255, 255, 0.5)', 
+              color: '#8E8A86', 
               fontWeight: 700, 
               textTransform: 'none',
               borderRadius: '12px',
+              fontFamily: 'var(--font-satoshi)',
               py: 1.5,
-              '&:hover': { color: 'white', bgcolor: 'rgba(255, 255, 255, 0.05)' }
+              '&:hover': { color: 'white', bgcolor: '#1C1A18' }
             }}
           >
             Cancel
@@ -460,16 +477,16 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
               py: 1.5,
               fontWeight: 800,
               textTransform: 'none',
+              fontFamily: 'var(--font-satoshi)',
               bgcolor: '#6366F1',
               color: 'white',
-              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.3)',
               '&:hover': { 
-                bgcolor: alpha('#6366F1', 0.8),
-                boxShadow: '0 12px 28px rgba(99, 102, 241, 0.4)',
+                bgcolor: '#4F46E5',
               },
               '&.Mui-disabled': {
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                color: 'rgba(255, 255, 255, 0.2)'
+                bgcolor: '#1C1A18',
+                color: '#5E5B58',
+                border: '1px solid #34322F'
               }
             }}
           >
