@@ -2484,22 +2484,22 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
   const CHAT_DATABASE_ID = APPWRITE_CONFIG.DATABASES.CHAT;
   const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
-  // 1. Fetch projects owned by the user
-  const ownedProjectsRes = await tables.listRows({
-    databaseId: CHAT_DATABASE_ID,
-    tableId: 'projects',
-    queries: [Query.equal('ownerId', actor.$id)],
-  });
-
-  // 2. Fetch all project collaborator entries for this user
-  const collabRowsRes = await tables.listRows({
-    databaseId: FLOW_DATABASE_ID,
-    tableId: COLLABORATORS_TABLE,
-    queries: [
-      Query.equal('resourceType', 'project'),
-      Query.equal('userId', actor.$id),
-    ] as any,
-  });
+  // Parallel Fetch: Owned projects + Collaborator rows
+  const [ownedProjectsRes, collabRowsRes] = await Promise.all([
+    tables.listRows({
+        databaseId: CHAT_DATABASE_ID,
+        tableId: 'projects',
+        queries: [Query.equal('ownerId', actor.$id)],
+    }),
+    tables.listRows({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceType', 'project'),
+          Query.equal('userId', actor.$id),
+        ] as any,
+    })
+  ]);
 
   const projectsListMap = new Map<string, any>();
 
@@ -2512,30 +2512,37 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
     });
   }
 
-  // Fetch projects from collaborator entries
-  for (const collabRow of collabRowsRes.rows) {
-    const projectId = collabRow.resourceId;
-    if (projectsListMap.has(projectId)) {
-      continue;
-    }
+  // Identify unique project IDs to fetch that are NOT owned by the user
+  const projectsToFetch = collabRowsRes.rows.filter(row => !projectsListMap.has(row.resourceId));
+  
+  if (projectsToFetch.length > 0) {
+    // Parallel Fetch: Details for all collaborated projects
+    const projectDetails = await Promise.all(
+        projectsToFetch.map(async (collabRow) => {
+            try {
+                const proj = await tables.getRow({
+                    databaseId: CHAT_DATABASE_ID,
+                    tableId: 'projects',
+                    rowId: collabRow.resourceId,
+                });
+                return { proj, collabRow };
+            } catch (e) {
+                console.warn(`[listProjectsWithCollaborationsSecure] Failed to fetch project ${collabRow.resourceId}:`, e);
+                return null;
+            }
+        })
+    );
 
-    try {
-      const proj = await tables.getRow({
-        databaseId: CHAT_DATABASE_ID,
-        tableId: 'projects',
-        rowId: projectId,
-      });
-
-      if (proj) {
-        projectsListMap.set(projectId, {
-          ...proj,
-          collabStatus: collabRow.status,
-          isPending: collabRow.status === 'pending' || !collabRow.accepted,
-          role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer'),
-        });
-      }
-    } catch (e) {
-      console.warn(`[listProjectsWithCollaborationsSecure] Failed to fetch project ${projectId}:`, e);
+    for (const item of projectDetails) {
+        if (item?.proj) {
+            const { proj, collabRow } = item;
+            projectsListMap.set(proj.$id, {
+                ...proj,
+                collabStatus: collabRow.status,
+                isPending: collabRow.status === 'pending' || !collabRow.accepted,
+                role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer'),
+            });
+        }
     }
   }
 
