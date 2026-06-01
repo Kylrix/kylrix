@@ -74,6 +74,7 @@ tableIdMap["chat"]["projects"] = "projects";
 tableIdMap["chat"]["project_objects"] = "project_objects";
 tableIdMap["chat"]["Telegram Connections"] = "telegram_connections";
 tableIdMap["chat"]["source_control"] = "source_control";
+tableIdMap["chat"]["Call Signals"] = "call_signals";
 tableIdMap["whisperrflow"] = Object.create(null);
 tableIdMap["whisperrflow"]["focusSessions"] = "focusSessions";
 tableIdMap["whisperrflow"]["eventGuests"] = "eventGuests";

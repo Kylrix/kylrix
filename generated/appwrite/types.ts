@@ -124,6 +124,12 @@ export enum ProjectsStatus {
     ARCHIVED = "archived"
 }
 
+export enum CallSignalsType {
+    OFFER = "offer",
+    ANSWER = "answer",
+    CANDIDATE = "candidate"
+}
+
 export enum FormsStatus {
     DRAFT = "draft",
     PUBLISHED = "published",
@@ -1414,6 +1420,20 @@ export type SourceControl = Models.Row & {
     "accessToken"?: string | null;
     "enabled"?: boolean;
     "metadata"?: string | null;
+}
+
+export type CallSignalsCreate = {
+    "callId": string;
+    "senderId": string;
+    "type": CallSignalsType;
+    "payload": string;
+}
+
+export type CallSignals = Models.Row & {
+    "callId": string;
+    "senderId": string;
+    "type": CallSignalsType;
+    "payload": string;
 }
 
 export type FocusSessionsCreate = {
@@ -3244,6 +3264,23 @@ export type DatabaseTableMap = {
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<SourceControl>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<SourceControl>>(field: K, value: QueryableFieldValue<SourceControl, K>) => string; notEqual: <K extends QueryableKeys<SourceControl>>(field: K, value: QueryableFieldValue<SourceControl, K>) => string; lessThan: <K extends QueryableKeys<SourceControl>>(field: K, value: QueryableFieldValue<SourceControl, K>) => string; lessThanEqual: <K extends QueryableKeys<SourceControl>>(field: K, value: QueryableFieldValue<SourceControl, K>) => string; greaterThan: <K extends QueryableKeys<SourceControl>>(field: K, value: QueryableFieldValue<SourceControl, K>) => string; greaterThanEqual: <K extends QueryableKeys<SourceControl>>(field: K, value: QueryableFieldValue<SourceControl, K>) => string; contains: <K extends QueryableKeys<SourceControl>>(field: K, value: QueryableFieldValue<SourceControl, K>) => string; search: <K extends QueryableKeys<SourceControl>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<SourceControl>>(field: K) => string; isNotNull: <K extends QueryableKeys<SourceControl>>(field: K) => string; startsWith: <K extends QueryableKeys<SourceControl>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<SourceControl>>(field: K, value: string) => string; between: <K extends QueryableKeys<SourceControl>>(field: K, start: QueryableFieldValue<SourceControl, K>, end: QueryableFieldValue<SourceControl, K>) => string; select: <K extends keyof SourceControl>(fields: K[]) => string; orderAsc: <K extends keyof SourceControl>(field: K) => string; orderDesc: <K extends keyof SourceControl>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: SourceControl[] }>;
+    };
+    "Call Signals": {
+      create: (data: {
+        "callId": string;
+        "senderId": string;
+        "type": CallSignalsType;
+        "payload": string;
+      }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<CallSignals>;
+      get: (id: string) => Promise<CallSignals>;
+      update: (id: string, data: Partial<{
+        "callId": string;
+        "senderId": string;
+        "type": CallSignalsType;
+        "payload": string;
+      }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<CallSignals>;
+      delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
+      list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<CallSignals>>(field: K, value: QueryableFieldValue<CallSignals, K>) => string; notEqual: <K extends QueryableKeys<CallSignals>>(field: K, value: QueryableFieldValue<CallSignals, K>) => string; lessThan: <K extends QueryableKeys<CallSignals>>(field: K, value: QueryableFieldValue<CallSignals, K>) => string; lessThanEqual: <K extends QueryableKeys<CallSignals>>(field: K, value: QueryableFieldValue<CallSignals, K>) => string; greaterThan: <K extends QueryableKeys<CallSignals>>(field: K, value: QueryableFieldValue<CallSignals, K>) => string; greaterThanEqual: <K extends QueryableKeys<CallSignals>>(field: K, value: QueryableFieldValue<CallSignals, K>) => string; contains: <K extends QueryableKeys<CallSignals>>(field: K, value: QueryableFieldValue<CallSignals, K>) => string; search: <K extends QueryableKeys<CallSignals>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<CallSignals>>(field: K) => string; isNotNull: <K extends QueryableKeys<CallSignals>>(field: K) => string; startsWith: <K extends QueryableKeys<CallSignals>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<CallSignals>>(field: K, value: string) => string; between: <K extends QueryableKeys<CallSignals>>(field: K, start: QueryableFieldValue<CallSignals, K>, end: QueryableFieldValue<CallSignals, K>) => string; select: <K extends keyof CallSignals>(fields: K[]) => string; orderAsc: <K extends keyof CallSignals>(field: K) => string; orderDesc: <K extends keyof CallSignals>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: CallSignals[] }>;
     }
   };
   "whisperrflow": {

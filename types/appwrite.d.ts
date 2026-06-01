@@ -127,6 +127,12 @@ export enum ProjectsStatus {
     ARCHIVED = "archived"
 }
 
+export enum CallSignalsType {
+    OFFER = "offer",
+    ANSWER = "answer",
+    CANDIDATE = "candidate"
+}
+
 export enum FormsStatus {
     DRAFT = "draft",
     PUBLISHED = "published",
@@ -793,6 +799,13 @@ export type SourceControl = Models.Row & {
     accessToken: string | null;
     enabled: boolean;
     metadata: string | null;
+}
+
+export type CallSignals = Models.Row & {
+    callId: string;
+    senderId: string;
+    type: CallSignalsType;
+    payload: string;
 }
 
 export type FocusSessions = Models.Row & {
