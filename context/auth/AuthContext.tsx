@@ -166,6 +166,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   refreshUserRef.current = refreshUser;
 
+  // 3. RxDB Replication Trigger
+  useEffect(() => {
+    if (user?.$id && !user.isPulse) {
+        const initCollaboration = async () => {
+            const { CollaborationService } = await import('@/lib/services/collaboration');
+            await CollaborationService.setupReplication(user.$id);
+        };
+        initCollaboration();
+    }
+  }, [user?.$id, user?.isPulse]);
+
   useEffect(() => {
     if (initAuthStarted.current) return;
     initAuthStarted.current = true;

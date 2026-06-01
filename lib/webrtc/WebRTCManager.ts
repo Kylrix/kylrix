@@ -76,7 +76,7 @@ export class WebRTCManager {
       });
 
       this.unsubscribeRealtime = () => {
-          if (typeof unsub === 'function') unsub();
+          if (typeof unsub === 'function') (unsub as any)();
           else if ((unsub as any).unsubscribe) (unsub as any).unsubscribe();
       };
   }

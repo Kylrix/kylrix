@@ -27,6 +27,7 @@ import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { useCollaborativeNote } from '@/hooks/useCollaborativeNote';
 
 interface AttachmentMeta { id: string; name: string; size: number; mime: string | null; }
 
@@ -108,9 +109,33 @@ export default function NoteEditor({
   onSave,
   onNoteCreated
 }: NoteEditorProps) {
+  const { note: collabNote, updateNote: collabUpdate } = useCollaborativeNote(externalNoteId);
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [format, setFormat] = useState<'text' | 'doodle'>(initialFormat);
+  
+  // Sync state with collab note
+  useEffect(() => {
+    if (collabNote) {
+        setTitle(collabNote.title);
+        setContent(collabNote.content);
+    }
+  }, [collabNote]);
+
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
+    if (externalNoteId) {
+        collabUpdate({ content: newContent });
+    }
+  };
+
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    if (externalNoteId) {
+        collabUpdate({ title: newTitle });
+    }
+  };
+
   const [isPublic, setIsPublic] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,37 +157,10 @@ export default function NoteEditor({
   }, [effectiveNoteId, joinResource]);
 
   useEffect(() => {
-
     if (externalNoteId && externalNoteId !== internalNoteId) {
       setInternalNoteId(externalNoteId);
-
-      const CACHE_KEY = `note_${externalNoteId}`;
-      const cached = getCachedData<any>(CACHE_KEY);
-      if (cached) {
-        setTitle(cached.title || '');
-        setContent(cached.content || '');
-        setFormat((cached.format as 'text' | 'doodle') || 'text');
-        const cachedPublic = getNotePublicState(cached);
-        setIsPublic(cachedPublic);
-        setPersistedIsPublic(cachedPublic);
-      }
-
-      (async () => {
-        try {
-          const n = await fetchOptimized(CACHE_KEY, () => getNote(externalNoteId));
-          if (n) {
-            setTitle(n.title || '');
-            setContent(n.content || '');
-            setFormat((n.format as 'text' | 'doodle') || 'text');
-            const loadedPublic = getNotePublicState(n);
-            setIsPublic(loadedPublic);
-            setPersistedIsPublic(loadedPublic);
-          }
-        } catch {}
-      })();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [externalNoteId, fetchOptimized, getCachedData]);
+  }, [externalNoteId, internalNoteId]);
 
   const handleSave = async () => {
     if (!title.trim() && !content.trim()) return;
@@ -242,7 +240,7 @@ export default function NoteEditor({
           placeholder="Note Title"
           variant="standard"
           value={title}
-          onChange={ (e) => setTitle(e.target.value)}
+          onChange={ (e) => handleTitleChange(e.target.value)}
           disabled={isSaving}
           InputProps={{
             disableUnderline: true,
@@ -263,7 +261,7 @@ export default function NoteEditor({
         <NoteContent
           format={format}
           content={content}
-          onChange={setContent}
+          onChange={handleContentChange}
           onFormatChange={setFormat}
           disabled={isSaving}
         />

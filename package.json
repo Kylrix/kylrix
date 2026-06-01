@@ -74,6 +74,8 @@
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.2",
     "rxdb": "^17.3.0",
+    "rxdb-utils": "2.0.0-beta.2",
+    "rxjs": "^7.8.2",
     "speakeasy": "^2.0.0",
     "stripe": "^20.2.0",
     "thread-stream": "^4.0.0",

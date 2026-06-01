@@ -161,9 +161,9 @@ export function AgentsClient({ initialAgents }: { initialAgents?: AgentRow[] }) 
                     {agents.map((agent) => {
                         const config = parseConfig(agent.config);
                         return (
-                            <Grid item xs={12} sm={6} key={agent.$id}>
+                            <Grid key={agent.$id} size={{ xs: 12, sm: 6 }}>
                                 <Paper
-                                    onClick={() => openAgenticDrawer(agent.$id)}
+                                    onClick={() => openAgenticDrawer()}
                                     sx={{
                                         p: 2.5,
                                         bgcolor: SURFACE_ASH,
@@ -209,7 +209,7 @@ export function AgentsClient({ initialAgents }: { initialAgents?: AgentRow[] }) 
                         );
                     })}
 
-                    <Grid item xs={12} sm={6}>
+                    <Grid size={{ xs: 12, sm: 6 }}>
                         <Paper
                             onClick={() => openAgenticDrawer()}
                             sx={{

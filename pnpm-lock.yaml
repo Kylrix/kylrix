@@ -203,6 +203,12 @@ importers:
       rxdb:
         specifier: ^17.3.0
         version: 17.3.0(bufferutil@4.1.0)(firebase@12.14.0)(mongodb@6.21.0(socks@2.8.8))(nats@2.29.3)(react@19.2.4)(rxjs@7.8.2)(utf-8-validate@6.0.6)
+      rxdb-utils:
+        specifier: 2.0.0-beta.2
+        version: 2.0.0-beta.2(rxdb@17.3.0(bufferutil@4.1.0)(firebase@12.14.0)(mongodb@6.21.0(socks@2.8.8))(nats@2.29.3)(react@19.2.4)(rxjs@7.8.2)(utf-8-validate@6.0.6))(rxjs@7.8.2)
+      rxjs:
+        specifier: ^7.8.2
+        version: 7.8.2
       speakeasy:
         specifier: ^2.0.0
         version: 2.0.0
@@ -4456,6 +4462,9 @@ packages:
   lodash.camelcase@4.3.0:
     resolution: {integrity: sha512-TwuEnCnxbc3rAvhf/LbG7tJUDzhqXyFnv3dtzLOPgCG/hODL7WFnsbwktkD7yUV0RrreP/l1PALq/YSg6VvjlA==}
 
+  lodash.flattendeep@4.4.0:
+    resolution: {integrity: sha512-uHaJFihxmJcEX3kT4I23ABqKKalJ/zDrDg0lsFtc1h+3uw49SIJ5beyhx5ExVRti3AvKoOJngIj7xz3oylPdWQ==}
+
   lodash.includes@4.3.0:
     resolution: {integrity: sha512-W3Bx6mdkRTGtlJISOvVD/lbqjTlPPUDTMnlXZFnVwi9NKJ6tiAk6LVdlhZMm17VZisqhKcgzpO5Wz91PCt5b0w==}
 
@@ -4932,6 +4941,10 @@ packages:
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
+
+  object-hash@2.2.0:
+    resolution: {integrity: sha512-gScRMn0bS5fH+IuwyIFgnh9zBdo4DV+6GhygmWM9HyNJSgS0hScp1f5vjtm7oIIOiT9trXrShAkLFSc2IqKNgw==}
+    engines: {node: '>= 6'}
 
   object-inspect@1.13.4:
     resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
@@ -5418,6 +5431,13 @@ packages:
 
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
+
+  rxdb-utils@2.0.0-beta.2:
+    resolution: {integrity: sha512-0XYy+JGCl6QgFX3o6RMWFG6KKwmFi8ISSrlkp6QNfZsuiSqmLAKbTcSWrPquUzgza10BZBt+d9Vx0RC6oOi/vw==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      rxdb: '>= 8.0.0 < 8.7.0'
+      rxjs: 6.x
 
   rxdb@17.3.0:
     resolution: {integrity: sha512-8Pt7RWnibHVr4Ze213zqnCCGC+T2mNW1hRVQqr8widLAmyPmVVO/+nNgzWhd7tDFCqp899v55Le1w+4AF2I4+A==}
@@ -6111,6 +6131,11 @@ packages:
 
   uuid@14.0.0:
     resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
+    hasBin: true
+
+  uuid@7.0.3:
+    resolution: {integrity: sha512-DPSke0pXhTZgoF/d+WSt2QaKMCFSfx7QegxEWT+JOuHF5aWrKEn0G+ztjuJg/gG8/ItK+rbPCD/yNv8yyih6Cg==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   uuid@8.3.2:
@@ -11506,6 +11531,8 @@ snapshots:
 
   lodash.camelcase@4.3.0: {}
 
+  lodash.flattendeep@4.4.0: {}
+
   lodash.includes@4.3.0: {}
 
   lodash.isboolean@3.0.3: {}
@@ -12181,6 +12208,8 @@ snapshots:
 
   object-assign@4.1.1: {}
 
+  object-hash@2.2.0: {}
+
   object-inspect@1.13.4: {}
 
   object-keys@1.1.1: {}
@@ -12802,6 +12831,15 @@ snapshots:
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
+
+  rxdb-utils@2.0.0-beta.2(rxdb@17.3.0(bufferutil@4.1.0)(firebase@12.14.0)(mongodb@6.21.0(socks@2.8.8))(nats@2.29.3)(react@19.2.4)(rxjs@7.8.2)(utf-8-validate@6.0.6))(rxjs@7.8.2):
+    dependencies:
+      lodash.flattendeep: 4.4.0
+      lodash.merge: 4.6.2
+      object-hash: 2.2.0
+      rxdb: 17.3.0(bufferutil@4.1.0)(firebase@12.14.0)(mongodb@6.21.0(socks@2.8.8))(nats@2.29.3)(react@19.2.4)(rxjs@7.8.2)(utf-8-validate@6.0.6)
+      rxjs: 7.8.2
+      uuid: 7.0.3
 
   rxdb@17.3.0(bufferutil@4.1.0)(firebase@12.14.0)(mongodb@6.21.0(socks@2.8.8))(nats@2.29.3)(react@19.2.4)(rxjs@7.8.2)(utf-8-validate@6.0.6):
     dependencies:
@@ -13651,6 +13689,8 @@ snapshots:
   uuid@13.0.1: {}
 
   uuid@14.0.0: {}
+
+  uuid@7.0.3: {}
 
   uuid@8.3.2: {}
 

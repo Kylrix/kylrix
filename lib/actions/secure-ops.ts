@@ -1317,6 +1317,125 @@ export async function syncNotesDeltaSecure(localManifest: { id: string; updatedA
   };
 }
 
+/**
+ * RxDB Replication: Pull Handler (Server -> Client)
+ * Fetches changed notes since the last checkpoint.
+ * Follows "The Golden Rule of Server Action Security".
+ */
+export async function pullNotesDeltaSecure(params: { lastCheckpoint: string | null; limit: number }, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
+  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+
+  const queries = [
+    Query.equal('userId', actor.$id),
+    Query.orderAsc('$updatedAt'),
+    Query.limit(params.limit || 50)
+  ];
+
+  if (params.lastCheckpoint) {
+    queries.push(Query.greaterThan('$updatedAt', params.lastCheckpoint));
+  }
+
+  const res = await databases.listDocuments(dbId, tableId, queries);
+
+  const documents = res.documents.map(doc => ({
+    id: doc.$id,
+    title: doc.title,
+    content: doc.content,
+    userId: doc.userId,
+    metadata: doc.metadata,
+    updatedAt: doc.$updatedAt,
+    crdt: doc.crdt || null,
+    _deleted: false // Appwrite doesn't have native soft deletes, would need a flag
+  }));
+
+  const lastDoc = documents[documents.length - 1];
+  const checkpoint = lastDoc ? { updatedAt: lastDoc.updatedAt, id: lastDoc.id } : null;
+
+  return { documents, checkpoint };
+}
+
+/**
+ * RxDB Replication: Push Handler (Client -> Server)
+ * Persists local changes to the server and detects conflicts.
+ * Follows "The Golden Rule of Server Action Security".
+ */
+export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
+  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+
+  const conflicts: any[] = [];
+
+  for (const row of rows) {
+    const { newDocumentState, assumedMasterState } = row;
+    const noteId = newDocumentState.id;
+
+    // 1. Fetch current master state
+    const currentMaster = await databases.getDocument(dbId, tableId, noteId).catch(() => null);
+
+    if (currentMaster) {
+      // 2. Authorization: Verify ownership
+      if (currentMaster.userId !== actor.$id) {
+          // Check shared access if not owner
+          const hasAccess = await verifyResourcePermissionSecure({
+              databaseId: dbId,
+              tableId: tableId,
+              rowId: noteId,
+              actorId: actor.$id,
+              action: 'update'
+          });
+          if (!hasAccess) {
+              console.warn(`[PushDelta] Unauthorized write attempt for ${noteId} by ${actor.$id}`);
+              continue; 
+          }
+      }
+
+      // 3. Conflict Detection
+      if (!assumedMasterState || currentMaster.$updatedAt !== assumedMasterState.updatedAt) {
+        console.log(`[PushDelta] Conflict detected for ${noteId}. Server: ${currentMaster.$updatedAt}, Client assumed: ${assumedMasterState?.updatedAt}`);
+        conflicts.push({
+            id: currentMaster.$id,
+            title: currentMaster.title,
+            content: currentMaster.content,
+            userId: currentMaster.userId,
+            metadata: currentMaster.metadata,
+            updatedAt: currentMaster.$updatedAt,
+            crdt: currentMaster.crdt || null,
+            _deleted: false
+        });
+        continue;
+      }
+
+      // 4. No conflict: Update
+      await databases.updateDocument(dbId, tableId, noteId, {
+        title: newDocumentState.title,
+        content: newDocumentState.content,
+        metadata: newDocumentState.metadata,
+        crdt: typeof newDocumentState.crdt === 'string' ? newDocumentState.crdt : JSON.stringify(newDocumentState.crdt),
+      });
+    } else {
+      // 5. New document: Create
+      await databases.createDocument(dbId, tableId, noteId || ID.unique(), {
+        title: newDocumentState.title,
+        content: newDocumentState.content,
+        userId: actor.$id,
+        metadata: newDocumentState.metadata,
+        crdt: typeof newDocumentState.crdt === 'string' ? newDocumentState.crdt : JSON.stringify(newDocumentState.crdt),
+      });
+    }
+  }
+
+  return conflicts;
+}
+
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {
   const requester = await getActor();
   if (!requester) return { success: false, reason: 'Unauthorized' };
