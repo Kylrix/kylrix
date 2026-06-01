@@ -5,6 +5,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
+    taint: true,
     optimizePackageImports: [
       '@mui/material',
       '@mui/icons-material',
