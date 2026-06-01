@@ -293,10 +293,23 @@ export default function EventCard({ event, onClick }: EventCardProps) {
           },
         }}
       >
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={handleShareEvent}>
           <ListItemIcon sx={{ minWidth: 'auto !important', color: 'inherit' }}><Share2 size={16} strokeWidth={1.5} /></ListItemIcon>
           <ListItemText primary="Share Event" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 800 }} />
         </MenuItem>
+        {isCreator && (
+          <>
+            <MenuItem onClick={handleEditEvent}>
+              <ListItemIcon sx={{ minWidth: 'auto !important', color: 'inherit' }}><Edit size={16} strokeWidth={1.5} /></ListItemIcon>
+              <ListItemText primary="Edit Event" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 800 }} />
+            </MenuItem>
+            <Divider sx={{ borderColor: '#34322F', my: 0.5 }} />
+            <MenuItem onClick={handleDeleteEvent} sx={{ '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1) !important', color: '#EF4444 !important' } }}>
+              <ListItemIcon sx={{ minWidth: 'auto !important', color: 'inherit' }}><Trash2 size={16} strokeWidth={1.5} /></ListItemIcon>
+              <ListItemText primary="Delete Event" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 800 }} />
+            </MenuItem>
+          </>
+        )}
       </Menu>
     </Card>
   );
