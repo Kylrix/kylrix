@@ -336,11 +336,11 @@ export default function ConnectTopbar({
 
   const connectApps = useMemo(
     () =>
-      createEcosystemPanelItems('connect').map((item) => ({
+      createEcosystemPanelItems(activeApp).map((item) => ({
         ...item,
         href: getEcosystemUrl(item.app),
       })),
-    [],
+    [activeApp],
   );
 
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
