@@ -53,7 +53,7 @@ export default function TaskList() {
   React.useEffect(() => {
     setConfiguration({
       isVisible: true,
-      mainColor: '#10B981',
+      mainColor: '#A855F7',
       actions: [
         { id: 'new-goal', label: 'NEW GOAL', icon: <AddIcon />, onClick: () => setTaskDialogOpen(true) },
         { id: 'focus', label: 'FOCUS MODE', icon: <CalendarIcon />, onClick: () => window.location.href = '/flow/focus' }]
@@ -165,7 +165,7 @@ export default function TaskList() {
               {getViewTitle()}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#10B981', boxShadow: '0 0 8px #10B981' }} />
+              <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#A855F7', boxShadow: '0 0 8px #A855F7' }} />
               <Typography variant="caption" sx={{ fontFamily: 'var(--font-satoshi)', color: '#9B9691', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   {tasks.length} {tasks.length === 1 ? 'Goal' : 'Goals'}
               </Typography>
@@ -203,7 +203,7 @@ export default function TaskList() {
                       sx={{
                           borderRadius: '8px',
                           px: isMobile ? 1 : 1.5,
-                          color: viewMode === mode.id ? '#10B981' : '#9B9691',
+                          color: viewMode === mode.id ? '#A855F7' : '#9B9691',
                           bgcolor: viewMode === mode.id ? '#1C1A18' : 'transparent',
                           '&:hover': { bgcolor: '#1C1A18' }
                       }}
@@ -264,7 +264,7 @@ export default function TaskList() {
               >
                   {isMobile ? <FilterIcon fontSize="small" /> : 'Filter'}
                   {(filter.status?.length || filter.labels?.length) && (
-                  <Box sx={{ ml: 1, width: 18, height: 18, borderRadius: '50%', bgcolor: '#10B981', color: '#0A0908', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+                  <Box sx={{ ml: 1, width: 18, height: 18, borderRadius: '50%', bgcolor: '#A855F7', color: '#0A0908', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
                       {(filter.status?.length || 0) + (filter.labels?.length || 0)}
                   </Box>
                   )}
@@ -281,15 +281,15 @@ export default function TaskList() {
                     borderRadius: '12px',
                     px: 3,
                     py: 1,
-                    bgcolor: '#10B981',
+                    bgcolor: '#A855F7',
                     color: '#0A0908',
                     fontFamily: 'var(--font-satoshi)',
                     fontWeight: 700,
                     textTransform: 'none',
-                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                    boxShadow: '0 4px 12px rgba(168, 85, 247, 0.2)',
                     '&:hover': {
-                      bgcolor: '#0D9488',
-                      boxShadow: '0 6px 16px rgba(16, 185, 129, 0.3)'
+                      bgcolor: '#9333EA',
+                      boxShadow: '0 6px 16px rgba(168, 85, 247, 0.3)'
                     }
                 }}
               >

@@ -378,6 +378,33 @@ export async function executeCascadeDeleteSecure(
   else if (databaseId === CHAT_DB && tableId === 'projects') {
     console.log(`[Cascade Delete] Triggered project cascade cleanup for: ${rowId} (mode: ${projectDeleteMode})`);
 
+    // A. Fetch project metadata to find discussion ghost note
+    let discussionNoteId = '';
+    try {
+      const projectDoc = await tables.getRow<any>(CHAT_DB, 'projects', rowId);
+      if (projectDoc?.metadata) {
+        const meta = JSON.parse(projectDoc.metadata);
+        discussionNoteId = meta.discussionNoteId;
+      }
+    } catch (err) {
+      console.warn(`[Cascade Delete] Failed to fetch project metadata for discussion check:`, err);
+    }
+
+    // B. Purge discussion note (comments, reactions, voice, etc.) recursively
+    if (discussionNoteId) {
+      console.log(`[Cascade Delete] Purging linked project discussion ghost note: ${discussionNoteId}`);
+      try {
+        await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, discussionNoteId);
+        await tables.deleteRow({
+          databaseId: NOTE_DB,
+          tableId: NOTE_TABLE,
+          rowId: discussionNoteId,
+        });
+      } catch (err: any) {
+        console.warn(`[Cascade Delete] Failed to delete project discussion note ${discussionNoteId}:`, err?.message);
+      }
+    }
+
     try {
       const objectsRes = await tables.listRows({
         databaseId,

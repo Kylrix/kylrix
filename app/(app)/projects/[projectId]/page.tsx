@@ -1984,9 +1984,7 @@ function renderMessageText(text: string): React.ReactNode {
     pieces.push(text.slice(lastIndex));
   }
 
-  return <Box component="span" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{pieces}</B </Popover>
-    </Box>
-  );
+  return <Box component="span" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{pieces}</Box>;
 }
 
 interface ProjectSettingsDrawerProps {
