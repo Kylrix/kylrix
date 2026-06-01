@@ -471,6 +471,51 @@ export async function executeCascadeDeleteSecure(
   else if (databaseId === FLOW_DB && tableId === EVENTS_TABLE) {
     console.log(`[Cascade Delete] Triggered event cascade cleanup for: ${rowId}`);
 
+    let meetingUrl = '';
+    try {
+      const eventDoc = await tables.getRow({
+        databaseId: FLOW_DB,
+        tableId: EVENTS_TABLE,
+        rowId: rowId,
+      });
+      meetingUrl = eventDoc?.meetingUrl || '';
+    } catch (err) {
+      console.warn(`[Cascade Delete] Failed to fetch event row ${rowId} for meetingUrl:`, err);
+    }
+
+    // A. Clean up linked Call Link
+    if (meetingUrl && meetingUrl.includes('/connect/call/')) {
+      const parts = meetingUrl.split('/connect/call/');
+      const callId = parts[parts.length - 1];
+      if (callId) {
+        console.log(`[Cascade Delete] Cleaning up linked call link: ${callId}`);
+        try {
+          await executeCascadeDeleteSecure(CHAT_DB, CALL_LINKS_TABLE, callId);
+          await tables.deleteRow({
+            databaseId: CHAT_DB,
+            tableId: CALL_LINKS_TABLE,
+            rowId: callId,
+          });
+        } catch (err: any) {
+          console.warn(`[Cascade Delete] Failed to delete linked call ${callId}:`, err?.message);
+        }
+      }
+    }
+
+    // B. Clean up linked Ghost Note (Discussion Thread)
+    try {
+      console.log(`[Cascade Delete] Cleaning up linked event ghost huddle: ${rowId}`);
+      await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, rowId);
+      await tables.deleteRow({
+        databaseId: NOTE_DB,
+        tableId: NOTE_TABLE,
+        rowId: rowId,
+      });
+    } catch (err: any) {
+      // It's normal for many events to not have initialized discussions
+    }
+
+    // C. Clean up Guests/Participants
     try {
       const guestsRes = await tables.listRows({
         databaseId,
@@ -491,7 +536,7 @@ export async function executeCascadeDeleteSecure(
       console.error('[Cascade Delete] Event guests cleanup failed:', err);
     }
 
-    // Wipe collaborators and key mappings for the event itself
+    // D. Wipe collaborators and key mappings for the event itself
     await wipeCollaboratorsAndKeys(tables, rowId, 'event');
   }
 
