@@ -1031,4 +1031,3 @@ export function NoteDetailSidebar({
       {showDoodleEditor && <DoodleCanvas initialData={format === 'doodle' ? content : ''} onSave={handleDoodleSave} onClose={() => setShowDoodleEditor(false)} />}
     </Box>
   );
-}
