@@ -89,6 +89,10 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
   // Global contextmenu listener to block standard browser behavior and display dynamic morphing menu
   useEffect(() => {
     const handleGlobalContextMenu = (e: MouseEvent) => {
+      if (e.defaultPrevented) {
+        return;
+      }
+
       // If a specific React component (like NoteCard) already opened a menu, do not override it
       if (menuOpenedInCurrentTick.current) {
         menuOpenedInCurrentTick.current = false;

@@ -10,6 +10,11 @@ import {
   AvatarGroup,
   IconButton,
   Chip,
+  Divider,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import {
   MapPin,
@@ -17,12 +22,17 @@ import {
   Clock,
   Users,
   MoreVertical,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { Event } from '@/types';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { generateEventPattern as generatePattern } from '@/utils/patternGenerator';
 import { useState } from 'react';
-import { Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/auth/AuthContext';
+import { events as eventApi } from '@/lib/kylrixflow';
+import toast from 'react-hot-toast';
 
 interface EventCardProps {
   event: Event;
@@ -32,6 +42,10 @@ interface EventCardProps {
 export default function EventCard({ event, onClick }: EventCardProps) {
   const pattern = generatePattern(event.id);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const isCreator = user && (event.creatorId === user.$id || (event as any).userId === user.$id);
   
   const getDateLabel = () => {
     const date = new Date(event.startTime);
@@ -50,6 +64,30 @@ export default function EventCard({ event, onClick }: EventCardProps) {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleShareEvent = () => {
+    handleMenuClose();
+    navigator.clipboard.writeText(`${window.location.origin}/flow/events/${event.id}`);
+    toast.success('Event link copied to clipboard');
+  };
+
+  const handleEditEvent = () => {
+    handleMenuClose();
+    router.push(`/flow/events/${event.id}`);
+  };
+
+  const handleDeleteEvent = async () => {
+    handleMenuClose();
+    if (!confirm('Are you sure you want to delete this event? This will also purge all linked voice files, call links, and guest RSVPs.')) return;
+    try {
+      await eventApi.delete(event.id);
+      toast.success('Event successfully deleted');
+      window.location.reload();
+    } catch (err) {
+      console.error('Failed to delete event:', err);
+      toast.error('Failed to delete event');
+    }
   };
 
   return (
