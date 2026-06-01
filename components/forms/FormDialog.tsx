@@ -402,9 +402,10 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         setHasUnsavedChanges(true);
     } else {
         const formId = form?.$id || 'new';
-        const savedDraft = DraftsService.getDraft(formId);
-        
+        const savedDraft = await DraftsService.getDraft(formId);
+
         if (savedDraft) {
+
             setTitle(savedDraft.title || '');
             setDescription(savedDraft.description || '');
             setStatus(savedDraft.status as any || 'draft');

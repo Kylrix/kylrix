@@ -71,6 +71,7 @@ export default function FormsDashboard() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [selectedForm, setSelectedForm] = useState<Forms | null>(null);
     const [selectedDraft, setSelectedDraft] = useState<FormDraft | null>(null);
+    const [formDraftStatus, setFormDraftStatus] = useState<Record<string, boolean>>({});
     
     // UI States
     const [menuAnchor, setMenuAnchor] = useState<{ element: HTMLElement, form: Forms } | null>(null);
@@ -104,12 +105,15 @@ export default function FormsDashboard() {
             setForms(uniqueForms);
 
             // Load offline drafts
-            const manifest = DraftsService.getManifest();
+            const manifest = await DraftsService.getManifest();
+            setFormDraftStatus(Object.keys(manifest).reduce((acc, id) => ({ ...acc, [id]: true }), {}));
+            
             const draftList: FormDraft[] = [];
-            Object.keys(manifest).forEach(id => {
-                const d = DraftsService.getDraft(id);
+            const draftPromises = Object.keys(manifest).map(async id => {
+                const d = await DraftsService.getDraft(id);
                 if (d) draftList.push(d);
             });
+            await Promise.all(draftPromises);
             setOfflineDrafts(draftList.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
 
         } catch (err) {
@@ -352,7 +356,7 @@ export default function FormsDashboard() {
                                                                         fontFamily: 'var(--font-mono)' 
                                                                     }} 
                                                                 />
-                                                                {DraftsService.hasDraft(form.$id) && (
+                                                                {formDraftStatus[form.$id] && (
                                                                     <Chip 
                                                                         label="UNSYNCED DRAFT" 
                                                                         size="small" 
