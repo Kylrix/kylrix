@@ -9,6 +9,7 @@ import {
   CircularProgress,
   IconButton,
   alpha,
+  Paper,
 } from '@mui/material';
 import { Trash2, AlertTriangle, X } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -17,13 +18,15 @@ export interface DeleteConfirmData {
   title: string;
   description?: string;
   confirmLabel?: string;
-  onConfirm: () => Promise<void> | void;
+  onConfirm: (deleteMode?: 'detach' | 'created_within' | 'all') => Promise<void> | void;
   resourceName?: string;
+  isProject?: boolean;
 }
 
 export function DeleteConfirmDrawer() {
   const { drawerData, close } = useUnifiedDrawer();
   const [loading, setLoading] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<'detach' | 'created_within' | 'all'>('detach');
 
   const data = drawerData as DeleteConfirmData;
 
@@ -32,7 +35,11 @@ export function DeleteConfirmDrawer() {
   const handleConfirm = async () => {
     setLoading(true);
     try {
-      await data.onConfirm();
+      if (data.isProject) {
+        await data.onConfirm(deleteMode);
+      } else {
+        await data.onConfirm();
+      }
       close();
     } catch (err) {
       console.error('[DeleteConfirm] Action failed:', err);
@@ -65,6 +72,83 @@ export function DeleteConfirmDrawer() {
           {data.description || `This action is permanent and cannot be undone. All data associated with ${data.resourceName || 'this resource'} will be wiped from the ecosystem.`}
         </Typography>
       </Box>
+
+      {data.isProject && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2, display: 'block' }}>
+            Choose Deletion Mode
+          </Typography>
+          <Stack spacing={2}>
+            {[
+              {
+                value: 'detach',
+                title: 'Detach resources untouched (Safe)',
+                desc: 'Keep all associated notes, tasks, and credentials intact. Only unlink and delete the project wrapper.',
+                color: '#10B981'
+              },
+              {
+                value: 'created_within',
+                title: 'Delete project-created resources only',
+                desc: 'Delete only resources that were created directly inside this project workspace. External linked resources remain untouched.',
+                color: '#F59E0B'
+              },
+              {
+                value: 'all',
+                title: 'Delete all cascading resources (Dangerous)',
+                desc: 'Permanently wipe all linked resources and their sub-objects (including comment reactions, chats, and physical voice notes).',
+                color: '#EF4444'
+              }
+            ].map((option) => {
+              const selected = deleteMode === option.value;
+              return (
+                <Paper
+                  key={option.value}
+                  variant="outlined"
+                  onClick={() => setDeleteMode(option.value as any)}
+                  sx={{
+                    p: 2,
+                    borderRadius: '16px',
+                    bgcolor: selected ? alpha(option.color, 0.05) : 'rgba(255,255,255,0.01)',
+                    borderColor: selected ? option.color : 'rgba(255,255,255,0.06)',
+                    borderWidth: selected ? '2px' : '1px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.5,
+                    '&:hover': {
+                      borderColor: selected ? option.color : 'rgba(255,255,255,0.15)',
+                      bgcolor: selected ? alpha(option.color, 0.07) : 'rgba(255,255,255,0.02)'
+                    }
+                  }}
+                >
+                  <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between">
+                    <Typography variant="body2" sx={{ fontWeight: 900, color: selected ? option.color : 'white' }}>
+                      {option.title}
+                    </Typography>
+                    <Box
+                      sx={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: '50%',
+                        border: `2px solid ${selected ? option.color : 'rgba(255,255,255,0.3)'}`,
+                        display: 'grid',
+                        placeItems: 'center',
+                        bgcolor: selected ? option.color : 'transparent'
+                      }}
+                    >
+                      {selected && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#000' }} />}
+                    </Box>
+                  </Stack>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', lineHeight: 1.4 }}>
+                    {option.desc}
+                  </Typography>
+                </Paper>
+              );
+            })}
+          </Stack>
+        </Box>
+      )}
 
       <Stack spacing={2}>
         <Button

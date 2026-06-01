@@ -104,9 +104,9 @@ export async function updateProject(projectId: string, data: any, permissions?: 
   return updateProjectSecure(projectId, data, permissions, jwt);
 }
 
-export async function deleteProject(projectId: string) {
+export async function deleteProject(projectId: string, deleteMode: 'detach' | 'created_within' | 'all' = 'detach') {
   const jwt = await getJwt();
-  return deleteProjectSecure(projectId, jwt);
+  return deleteProjectSecure(projectId, deleteMode, jwt);
 }
 
 export async function addProjectCollaborator(projectId: string, userId: string, roleLevel: string = 'viewer') {

@@ -292,9 +292,10 @@ export default function ProjectsPage() {
       title: `Delete "${project.title}"?`,
       resourceName: 'this project',
       confirmLabel: 'Delete Project',
-      onConfirm: async () => {
+      isProject: true,
+      onConfirm: async (deleteMode?: 'detach' | 'created_within' | 'all') => {
         try {
-          await ProjectsService.deleteProject(project.$id);
+          await ProjectsService.deleteProject(project.$id, deleteMode);
           showSuccess('Project deleted');
           setProjects(prev => prev.filter(p => p.$id !== project.$id));
         } catch (err: any) {

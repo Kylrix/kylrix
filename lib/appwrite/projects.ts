@@ -75,13 +75,13 @@ export const ProjectsService = {
     return await updateProjectSecure(projectId, data, permissions);
   },
 
-  async deleteProject(projectId: string) {
+  async deleteProject(projectId: string, deleteMode: 'detach' | 'created_within' | 'all' = 'detach') {
     if (typeof window !== 'undefined') {
       const { deleteProject } = await import('@/lib/actions/client-ops');
-      return await deleteProject(projectId);
+      return await deleteProject(projectId, deleteMode);
     }
     const { deleteProjectSecure } = await import('@/lib/actions/secure-ops');
-    return await deleteProjectSecure(projectId);
+    return await deleteProjectSecure(projectId, deleteMode);
   },
 
   async listProjectObjects(projectId: string) {

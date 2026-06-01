@@ -1758,7 +1758,11 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
   return JSON.parse(JSON.stringify(project));
 }
 
-export async function deleteProjectSecure(projectId: string, jwt?: string) {
+export async function deleteProjectSecure(
+  projectId: string,
+  deleteMode: 'detach' | 'created_within' | 'all' = 'detach',
+  jwt?: string
+) {
   const actor = await getActor(jwt);
   if (!actor || !actor.$id) {
     throw new Error('Unauthorized: Session expired or invalid');
@@ -1774,7 +1778,7 @@ export async function deleteProjectSecure(projectId: string, jwt?: string) {
 
   // Cascade delete all object links
   try {
-    await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.CHAT, 'projects', projectId);
+    await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.CHAT, 'projects', projectId, deleteMode);
   } catch (err: any) {
     console.error('deleteProjectSecure cascade objects cleanup failed:', err);
   }
