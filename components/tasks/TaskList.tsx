@@ -386,7 +386,7 @@ export default function TaskList() {
               </ListItemIcon>
               <ListItemText primaryTypographyProps={{ fontSize: '0.875rem', fontFamily: 'var(--font-satoshi)' }}>{item.label}</ListItemText>
               {filter.status?.includes(item.status) && (
-                <CheckIcon sx={{ fontSize: 18, color: '#10B981' }} />
+                <CheckIcon sx={{ fontSize: 18, color: '#A855F7' }} />
               )}
             </MenuItem>
           ))}
@@ -401,7 +401,7 @@ export default function TaskList() {
             }}
           >
             <ListItemText primaryTypographyProps={{ fontSize: '0.875rem', fontFamily: 'var(--font-satoshi)' }}>Include Completed</ListItemText>
-            {filter.showCompleted && <CheckIcon sx={{ fontSize: 18, color: '#10B981' }} />}
+            {filter.showCompleted && <CheckIcon sx={{ fontSize: 18, color: '#A855F7' }} />}
           </MenuItem>
           <Divider sx={{ my: 1.5, borderColor: '#1C1A18' }} />
           <MenuItem
@@ -541,7 +541,7 @@ export default function TaskList() {
             }}
           >
             <Box sx={{ mb: 3, opacity: 0.3 }}>
-              <CalendarIcon sx={{ fontSize: 80, color: '#10B981' }} />
+              <CalendarIcon sx={{ fontSize: 80, color: '#A855F7' }} />
             </Box>
             <Typography variant="h5" gutterBottom sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, color: '#F5F2ED', letterSpacing: '-0.02em' }}>
               Time Dimension

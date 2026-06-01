@@ -428,11 +428,11 @@ export default function TaskDialog() {
                 fontWeight: 700,
                 fontSize: '0.75rem',
                 textTransform: 'none',
-                bgcolor: '#10B981',
+                bgcolor: '#A855F7',
                 color: '#0A0908',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)',
+                boxShadow: '0 4px 12px rgba(168, 85, 247, 0.2)',
                 '&:hover': {
-                    bgcolor: '#0D9488',
+                    bgcolor: '#9333EA',
                 },
                 '&.Mui-disabled': {
                     bgcolor: '#1C1A18',
