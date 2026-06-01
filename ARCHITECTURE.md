@@ -807,6 +807,15 @@ The following catalog provides a highly detailed engineering breakdown of the 56
 *   **Ecosystem Synergy**: Fuses local creation drafts and the Global Unmount Policy with secure polymorphic relays, allowing teammates in a chat to audit or review a configuration before it is officially committed to the database.
 *   **Next-Gen Optimizations**: Single-click draft import, enabling the recipient user to instantly populate their active creation drawer with the decrypted snapshot layout payload.
 
+#### 59. Direct Huddle Jump from Unified Calendar Cells
+*   **shipped Mechanism & Substrate**: Integrated within the centralized grid rendering logic inside `components/calendar/CalendarView.tsx` specifically inside the `DayCell` memo block.
+*   **Data Nexus Caching & Live Presence Pulse**: Dynamically checks `resourcePresence` states from `PresenceProvider.tsx` using `usePresence()`, checking the live active participant count from the Data Nexus cache instantly. If a milestone block or event cell has active teammates, it displays a tiny, ash-colored pulsing indicator icon.
+*   **Bypassed Page Routing & Dedicated Flap-Over**: Hovering over the ash indicator icon instantly pulls and displays the active participant count from the Data Nexus cache. Double-clicking the icon bypasses standard page routing entirely, preventing default sidebar detail navigation, and immediately mounts a dedicated, slide-out drawer panel (`FlowPresenceFlapOver`) directly on top of the active calendar viewport, revealing the live audio/video stream and WebRTC connection.
+*   **Acute Architectural Rationale**: Upgrades the calendar from a static tracking grid to an active, real-time command deck. Preserves the user's high-level scheduling timeline perspective while allowing seamless jump-in/jump-out collaboration contextually.
+*   **Ecosystem Synergy**: Unifies calendar grids and scheduling views with real-time WebRTC audio/video huddles and live discussion threads.
+*   **Next-Gen Optimizations**: High-velocity visual indicator displaying tiny participant avatars inside the cell hovering state without triggering network overhead.
+
 ---
 
 **Build freely. Work while you sleep.** 🌙
+

@@ -32,6 +32,8 @@ import {
 import { useTask } from '@/context/TaskContext';
 import { useLayout } from '@/context/LayoutContext';
 import { Task, Priority } from '@/types';
+import { usePresence } from '@/components/providers/PresenceProvider';
+import { FlowPresenceFlapOver } from '@/components/LinkRenderer';
 
 const priorityColors: Record<Priority, string> = {
   low: '#94a3b8',
@@ -46,15 +48,32 @@ interface DayCellProps {
   isCurrentMonth: boolean;
   onTaskClick: (taskId: string) => void;
   onAddTask: (date: Date) => void;
+  onHuddleDoubleClick: (task: Task) => void;
 }
 
-const DayCell = React.memo(function DayCell({ date, tasks, isCurrentMonth, onTaskClick, onAddTask }: DayCellProps) {
+const DayCell = React.memo(function DayCell({
+  date,
+  tasks,
+  isCurrentMonth,
+  onTaskClick,
+  onAddTask,
+  onHuddleDoubleClick,
+}: DayCellProps) {
   const theme = useTheme();
+  const { resourcePresence } = usePresence();
   const today = isToday(date);
   const maxVisible = 3;
   const visibleTasks = tasks.slice(0, maxVisible);
   const moreCount = tasks.length - maxVisible;
   const hasTasks = tasks.length > 0;
+
+  // Resolve presence across all tasks in this cell from Data Nexus presence cache
+  const tasksWithPresence = tasks.filter(t => (resourcePresence[t.id] || []).length > 0);
+  const cellHasPresence = tasksWithPresence.length > 0;
+  const totalCellParticipants = tasksWithPresence.reduce(
+    (acc, t) => acc + (resourcePresence[t.id] || []).length,
+    0
+  );
 
   return (
     <Box
@@ -123,7 +142,7 @@ const DayCell = React.memo(function DayCell({ date, tasks, isCurrentMonth, onTas
           >
             {format(date, 'd')}
           </Typography>
-          {hasTasks && !today && (
+          {hasTasks && !today && !cellHasPresence && (
             <Box
               sx={{
                 width: 6,
@@ -131,6 +150,43 @@ const DayCell = React.memo(function DayCell({ date, tasks, isCurrentMonth, onTas
                 borderRadius: '50%',
                 backgroundColor: '#10B981',
                 opacity: 0.6,
+              }}
+            />
+          )}
+          {cellHasPresence && (
+            <Box
+              component="span"
+              title={`${totalCellParticipants} active huddle participant(s) (double-click to jump)`}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (tasksWithPresence[0]) {
+                  onHuddleDoubleClick(tasksWithPresence[0]);
+                }
+              }}
+              sx={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                backgroundColor: '#A1A1AA', // ash color
+                boxShadow: '0 0 6px rgba(161, 161, 170, 0.8)',
+                cursor: 'pointer',
+                animation: 'ashPresencePulse 2s infinite',
+                '@keyframes ashPresencePulse': {
+                  '0%': {
+                    boxShadow: '0 0 0 0 rgba(161, 161, 170, 0.4)',
+                  },
+                  '70%': {
+                    boxShadow: '0 0 0 5px rgba(161, 161, 170, 0)',
+                  },
+                  '100%': {
+                    boxShadow: '0 0 0 0 rgba(161, 161, 170, 0)',
+                  }
+                },
+                '&:hover': {
+                  backgroundColor: '#E4E4E7',
+                  transform: 'scale(1.2)',
+                }
               }}
             />
           )}
@@ -153,39 +209,84 @@ const DayCell = React.memo(function DayCell({ date, tasks, isCurrentMonth, onTas
         </IconButton>
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-        {visibleTasks.map((task) => (
-          <Box
-            key={task.id}
-            onClick={() => onTaskClick(task.id)}
-            sx={{
-              py: 0.25,
-              px: 0.5,
-              borderRadius: 0.75,
-              backgroundColor: alpha(priorityColors[task.priority], 0.12),
-              borderLeft: `2px solid ${priorityColors[task.priority]}`,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                backgroundColor: alpha(priorityColors[task.priority], 0.2),
-                transform: 'translateX(2px)',
-              },
-            }}
-          >
-            <Typography
-              variant="caption"
-              noWrap
+        {visibleTasks.map((task) => {
+          const activeTeammates = resourcePresence[task.id] || [];
+          const hasPresence = activeTeammates.length > 0;
+          return (
+            <Box
+              key={task.id}
+              onClick={() => onTaskClick(task.id)}
               sx={{
-                fontSize: '0.7rem',
-                fontWeight: 500,
-                textDecoration: task.status === 'done' ? 'line-through' : 'none',
-                color: task.status === 'done' ? 'text.secondary' : 'text.primary',
-                opacity: task.status === 'done' ? 0.6 : 1,
+                py: 0.25,
+                px: 0.5,
+                borderRadius: 0.75,
+                backgroundColor: alpha(priorityColors[task.priority], 0.12),
+                borderLeft: `2px solid ${priorityColors[task.priority]}`,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 0.5,
+                '&:hover': {
+                  backgroundColor: alpha(priorityColors[task.priority], 0.2),
+                  transform: 'translateX(2px)',
+                },
               }}
             >
-              {task.title}
-            </Typography>
-          </Box>
-        ))}
+              <Typography
+                variant="caption"
+                noWrap
+                sx={{
+                  fontSize: '0.7rem',
+                  fontWeight: 500,
+                  textDecoration: task.status === 'done' ? 'line-through' : 'none',
+                  color: task.status === 'done' ? 'text.secondary' : 'text.primary',
+                  opacity: task.status === 'done' ? 0.6 : 1,
+                  flexGrow: 1,
+                }}
+              >
+                {task.title}
+              </Typography>
+              {hasPresence && (
+                <Box
+                  component="span"
+                  title={`${activeTeammates.length} active participant(s) in huddle (double-click to jump)`}
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onHuddleDoubleClick(task);
+                  }}
+                  sx={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: '50%',
+                    backgroundColor: '#A1A1AA', // ash color
+                    boxShadow: '0 0 6px rgba(161, 161, 170, 0.8)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    animation: 'ashPresencePulse 2s infinite',
+                    '@keyframes ashPresencePulse': {
+                      '0%': {
+                        boxShadow: '0 0 0 0 rgba(161, 161, 170, 0.4)',
+                      },
+                      '70%': {
+                        boxShadow: '0 0 0 5px rgba(161, 161, 170, 0)',
+                      },
+                      '100%': {
+                        boxShadow: '0 0 0 0 rgba(161, 161, 170, 0)',
+                      }
+                    },
+                    '&:hover': {
+                      backgroundColor: '#E4E4E7',
+                      transform: 'scale(1.2)',
+                    }
+                  }}
+                />
+              )}
+            </Box>
+          );
+        })}
         {moreCount > 0 && (
           <Typography 
             variant="caption" 
@@ -209,6 +310,15 @@ export default function CalendarView() {
   const { tasks, selectTask, setTaskDialogOpen } = useTask();
   const { openSecondarySidebar } = useLayout();
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Flap-over state for active WebRTC huddle sessions
+  const [flapOverOpen, setFlapOverOpen] = useState(false);
+  const [selectedFlapOverTask, setSelectedFlapOverTask] = useState<Task | null>(null);
+
+  const handleHuddleDoubleClick = React.useCallback((task: Task) => {
+    setSelectedFlapOverTask(task);
+    setFlapOverOpen(true);
+  }, []);
 
   const { days, tasksByDate, monthTasks, completedMonthTasks } = React.useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -367,6 +477,7 @@ export default function CalendarView() {
                 isCurrentMonth={isSameMonth(day, currentDate)}
                 onTaskClick={handleTaskClick}
                 onAddTask={handleAddTask}
+                onHuddleDoubleClick={handleHuddleDoubleClick}
               />
             );
           })}
@@ -399,8 +510,16 @@ export default function CalendarView() {
           </Box>
         ))}
       </Box>
+
+      {/* Slide-out Flap-Over Panel */}
+      {flapOverOpen && selectedFlapOverTask && (
+        <FlowPresenceFlapOver
+          isOpen={flapOverOpen}
+          onClose={() => setFlapOverOpen(false)}
+          task={selectedFlapOverTask}
+          taskId={selectedFlapOverTask.id}
+        />
+      )}
     </Box>
   );
 }
-
-
