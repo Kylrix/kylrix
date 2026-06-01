@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Drawer,
   TextField,
@@ -78,11 +78,60 @@ export default function TaskDialog() {
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [estimatedTime, setEstimatedTime] = useState('');
   const [selectedAssignees, setSelectedAssignees] = useState<User[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load draft when dialog opens
+  useEffect(() => {
+    if (!taskDialogOpen || typeof window === 'undefined') {
+      setIsHydrated(false);
+      return;
+    }
+    const raw = localStorage.getItem('kylrix:draft:task');
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw);
+        if (draft.title) setTitle(draft.title);
+        if (draft.description) setDescription(draft.description);
+        if (draft.priority) setPriority(draft.priority);
+        if (draft.status) setStatus(draft.status);
+        if (draft.projectId) setProjectId(draft.projectId);
+        if (draft.selectedLabels) setSelectedLabels(draft.selectedLabels);
+        if (draft.dueDate) setDueDate(new Date(draft.dueDate));
+        if (draft.estimatedTime) setEstimatedTime(draft.estimatedTime);
+        if (draft.selectedAssignees) setSelectedAssignees(draft.selectedAssignees);
+      } catch (e) {
+        console.error('Failed to parse task draft', e);
+      }
+    }
+    setIsHydrated(true);
+  }, [taskDialogOpen]);
+
+  // Save draft on fields change
+  useEffect(() => {
+    if (!taskDialogOpen || typeof window === 'undefined' || !isHydrated) return;
+    const draft = {
+      title,
+      description,
+      priority,
+      status,
+      projectId,
+      selectedLabels,
+      dueDate: dueDate ? dueDate.toISOString() : null,
+      estimatedTime,
+      selectedAssignees,
+    };
+    if (title.trim() || description.trim() || selectedLabels.length > 0 || selectedAssignees.length > 0) {
+      localStorage.setItem('kylrix:draft:task', JSON.stringify(draft));
+    } else {
+      localStorage.removeItem('kylrix:draft:task');
+    }
+  }, [taskDialogOpen, isHydrated, title, description, priority, status, projectId, selectedLabels, dueDate, estimatedTime, selectedAssignees]);
 
   const handleClose = () => {
     setTaskDialogOpen(false);
     resetForm();
     setIsExpanded(false);
+    setIsHydrated(false);
   };
 
   const resetForm = () => {
@@ -125,6 +174,9 @@ export default function TaskDialog() {
     });
 
     if (newTask && newTask.id) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:task');
+      }
       setActiveDetail({ type: 'goal', id: newTask.id });
     }
     handleClose();
@@ -157,6 +209,9 @@ export default function TaskDialog() {
       isArchived: false,
     });
 
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('kylrix:draft:task');
+    }
     handleClose();
   };
 

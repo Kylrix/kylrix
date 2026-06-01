@@ -60,6 +60,35 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [formData, setFormData] = useState<Record<string, any>>({});
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    // Load draft when form schema is loaded
+    useEffect(() => {
+        if (!formId || !form || typeof window === 'undefined') {
+            setIsHydrated(false);
+            return;
+        }
+        const raw = localStorage.getItem(`kylrix:draft:form:${formId}`);
+        if (raw) {
+            try {
+                const draft = JSON.parse(raw);
+                setFormData(draft);
+            } catch (e) {
+                console.error('Failed to parse form draft', e);
+            }
+        }
+        setIsHydrated(true);
+    }, [formId, form]);
+
+    // Save draft when formData changes
+    useEffect(() => {
+        if (!formId || typeof window === 'undefined' || !isHydrated) return;
+        if (Object.keys(formData).length > 0) {
+            localStorage.setItem(`kylrix:draft:form:${formId}`, JSON.stringify(formData));
+        } else {
+            localStorage.removeItem(`kylrix:draft:form:${formId}`);
+        }
+    }, [formId, isHydrated, formData]);
 
     useEffect(() => {
         if (!formId) return;
@@ -100,6 +129,9 @@ export function UnifiedFormContent({ formId, onClose }: UnifiedFormContentProps)
 
         try {
             await FormsService.submitForm(formId, JSON.stringify(formData));
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem(`kylrix:draft:form:${formId}`);
+            }
             setSubmitted(true);
         } catch (err: any) {
             setError(err.message || 'Failed to submit form. Please try again.');

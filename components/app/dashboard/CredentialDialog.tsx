@@ -66,6 +66,7 @@ export default function CredentialDialog({
   const handleClose = () => {
     onClose();
     setIsExpanded(false);
+    setIsHydrated(false);
   };
 
   useEffect(() => {
@@ -90,6 +91,40 @@ export default function CredentialDialog({
     cardPIN: "",
     cardType: "",
   });
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load draft when drawer opens
+  useEffect(() => {
+    if (!open || typeof window === 'undefined' || initial) {
+      setIsHydrated(false);
+      return;
+    }
+    const raw = localStorage.getItem('kylrix:draft:secret');
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw);
+        if (draft.form) setForm(draft.form);
+        if (draft.customFields) setCustomFields(draft.customFields);
+      } catch (e) {
+        console.error('Failed to parse secret draft', e);
+      }
+    }
+    setIsHydrated(true);
+  }, [open, initial]);
+
+  // Save draft when form or customFields change
+  useEffect(() => {
+    if (!open || typeof window === 'undefined' || !isHydrated || initial) return;
+    const draft = {
+      form,
+      customFields
+    };
+    if (form.name.trim() || form.username.trim() || form.password.trim() || form.cardNumber.trim() || customFields.length > 0) {
+      localStorage.setItem('kylrix:draft:secret', JSON.stringify(draft));
+    } else {
+      localStorage.removeItem('kylrix:draft:secret');
+    }
+  }, [open, isHydrated, form, customFields, initial]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -262,6 +297,9 @@ export default function CredentialDialog({
       } else {
         saved = await createCredential(credentialData);
       }
+      if (!initial && typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:secret');
+      }
       onSaved();
       handleClose();
     } catch (e: unknown) {
@@ -338,6 +376,9 @@ export default function CredentialDialog({
         saved = await updateCredential(initial.$id, credentialData);
       } else {
         saved = await createCredential(credentialData);
+      }
+      if (!initial && typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:secret');
       }
       onSaved();
       if (saved && (saved.$id || saved.id)) {

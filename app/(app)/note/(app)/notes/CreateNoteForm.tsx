@@ -90,6 +90,46 @@ export default function CreateNoteForm({
   const createdToastShown = useRef(false);
   const persistInFlightRef = useRef<Promise<Notes | null> | null>(null);
 
+  // Load draft on mount
+  useEffect(() => {
+    if (typeof window === 'undefined' || noteId) {
+      setIsHydrated(true);
+      return;
+    }
+    const raw = localStorage.getItem('kylrix:draft:note');
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw);
+        if (draft.title) setTitle(draft.title);
+        if (draft.content) setContent(draft.content);
+        if (draft.tags) setTags(draft.tags);
+        if (draft.format) setFormat(draft.format);
+        if (draft.format === 'doodle') setShowDoodleEditor(true);
+        setIsTitleManuallyEdited(draft.isTitleManuallyEdited || false);
+      } catch (e) {
+        console.error('Failed to parse draft', e);
+      }
+    }
+    setIsHydrated(true);
+  }, [noteId]);
+
+  // Save draft on change
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isHydrated || resolvedNoteId || noteId) return;
+    const draft = {
+      title,
+      content,
+      tags,
+      format,
+      isTitleManuallyEdited
+    };
+    if (title.trim() || content.trim() || tags.length > 0) {
+      localStorage.setItem('kylrix:draft:note', JSON.stringify(draft));
+    } else {
+      localStorage.removeItem('kylrix:draft:note');
+    }
+  }, [title, content, tags, format, isTitleManuallyEdited, resolvedNoteId, noteId, isHydrated]);
+
   // Seamless auto-title logic
   useEffect(() => {
     if (isTitleManuallyEdited) return;
@@ -307,6 +347,9 @@ export default function CreateNoteForm({
           title: generatedTitle,
         })) as Notes;
         setResolvedNoteId(saved.$id);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('kylrix:draft:note');
+        }
         onNoteCreated(saved);
         if (showToast && !createdToastShown.current) {
           createdToastShown.current = true;

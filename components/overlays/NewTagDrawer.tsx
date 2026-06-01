@@ -81,6 +81,35 @@ export function NewTagDrawer() {
     description: '',
     color: '#6366F1',
   });
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load draft when drawer opens
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined' || editingTag) {
+      setIsHydrated(false);
+      return;
+    }
+    const raw = localStorage.getItem('kylrix:draft:tag');
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw);
+        setFormData(draft);
+      } catch (e) {
+        console.error('Failed to parse tag draft', e);
+      }
+    }
+    setIsHydrated(true);
+  }, [isOpen, editingTag]);
+
+  // Save draft on changes
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined' || !isHydrated || editingTag) return;
+    if (formData.name.trim() || formData.description.trim()) {
+      localStorage.setItem('kylrix:draft:tag', JSON.stringify(formData));
+    } else {
+      localStorage.removeItem('kylrix:draft:tag');
+    }
+  }, [isOpen, isHydrated, formData, editingTag]);
 
   useEffect(() => {
     if (isOpen) {
@@ -128,6 +157,9 @@ export function NewTagDrawer() {
         });
       }
       
+      if (!editingTag && typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:tag');
+      }
       if (onSuccess) onSuccess();
       close();
     } catch (err: any) {
@@ -164,6 +196,9 @@ export function NewTagDrawer() {
         });
       }
       
+      if (!editingTag && typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:tag');
+      }
       if (onSuccess) onSuccess();
       if (savedTag) {
         setActiveDetail({ type: 'tag', id: savedTag.$id || savedTag.id || formData.name.trim(), data: savedTag });

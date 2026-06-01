@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Drawer,
   TextField,
@@ -66,6 +66,56 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
   const [visibility, setVisibility] = useState<EventVisibility>('public');
   const [selectedGuests, setSelectedGuests] = useState<User[]>([]);
   const [autoCreateCall, setAutoCreateCall] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load draft when dialog opens
+  useEffect(() => {
+    if (!open || typeof window === 'undefined') {
+      setIsHydrated(false);
+      return;
+    }
+    const raw = localStorage.getItem('kylrix:draft:event');
+    if (raw) {
+      try {
+        const draft = JSON.parse(raw);
+        if (draft.title) setTitle(draft.title);
+        if (draft.description) setDescription(draft.description);
+        if (draft.location) setLocation(draft.location);
+        if (draft.url) setUrl(draft.url);
+        if (draft.coverImage) setCoverImage(draft.coverImage);
+        if (draft.visibility) setVisibility(draft.visibility);
+        if (draft.autoCreateCall !== undefined) setAutoCreateCall(draft.autoCreateCall);
+        if (draft.startTime) setStartTime(new Date(draft.startTime));
+        if (draft.endTime) setEndTime(new Date(draft.endTime));
+        if (draft.guests) setSelectedGuests(draft.guests);
+      } catch (e) {
+        console.error('Failed to parse event draft', e);
+      }
+    }
+    setIsHydrated(true);
+  }, [open]);
+
+  // Save draft on fields change
+  useEffect(() => {
+    if (!open || typeof window === 'undefined' || !isHydrated) return;
+    const draft = {
+      title,
+      description,
+      location,
+      url,
+      coverImage,
+      visibility,
+      autoCreateCall,
+      startTime: startTime ? startTime.toISOString() : null,
+      endTime: endTime ? endTime.toISOString() : null,
+      guests: selectedGuests,
+    };
+    if (title.trim() || description.trim() || location.trim() || url.trim() || selectedGuests.length > 0) {
+      localStorage.setItem('kylrix:draft:event', JSON.stringify(draft));
+    } else {
+      localStorage.removeItem('kylrix:draft:event');
+    }
+  }, [open, isHydrated, title, description, location, url, coverImage, visibility, autoCreateCall, startTime, endTime, selectedGuests]);
 
   const handleSubmit = () => {
     if (!title.trim() || !startTime || !endTime) return;
@@ -83,6 +133,9 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
       autoCreateCall
     });
 
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('kylrix:draft:event');
+    }
     resetForm();
   };
 
@@ -103,6 +156,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
     onClose();
     resetForm();
     setIsExpanded(false);
+    setIsHydrated(false);
   };
 
   const handleMorphToDetail = async () => {
@@ -122,6 +176,9 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
     });
 
     if (result && (result.id || result.$id)) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:event');
+      }
       setActiveDetail({ type: 'event', id: result.id || result.$id, data: result });
     }
     handleClose();
