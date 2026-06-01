@@ -78,10 +78,18 @@ export default async function UserProfilePage({
 }: {
   params: Promise<{ username: string }>;
 }) {
-  const resolvedParams = await params;
+  const { username } = await params;
+  
+  // Parallel Fetch: Profile data + Server-side session check (if needed)
+  // For now, we fetch the profile to pre-hydrate the client component
+  const profile = await UsersService.getProfile(username);
+  
   return (
     <Box sx={{ width: '100%', pointerEvents: 'auto' }}>
-      <Profile username={resolvedParams.username} />
+      <Profile 
+        username={username} 
+        initialProfile={profile ? JSON.parse(JSON.stringify(profile)) : null} 
+      />
     </Box>
   );
 }

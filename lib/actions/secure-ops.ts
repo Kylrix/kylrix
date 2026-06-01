@@ -951,66 +951,73 @@ export async function executeMasterPurgeSecure(jwt?: string) {
   const userId = actor.$id;
   const { databases, users } = createSystemClient();
 
-  // 1. Purge Vault Tier 2 Data (Credentials, TOTP Secrets)
   const vaultDb = APPWRITE_CONFIG.DATABASES.VAULT;
-  const [creds, totps] = await Promise.all([
+  const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
+  const passwordDb = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
+  
+  // Parallel Discovery Sweep: Scan all domains for Tier 2 footprint concurrently
+  const [
+    credsRes, 
+    totpsRes, 
+    memberRowsRes, 
+    identitiesRes, 
+    mappingsRes, 
+    profilesRes
+  ] = await Promise.all([
+    // 1. Vault
     databases.listDocuments(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, [Query.equal('userId', userId), Query.limit(1000)]),
     databases.listDocuments(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', [Query.equal('userId', userId), Query.limit(1000)]).catch(() => ({ documents: [] })),
+    // 2. Connect
+    databases.listDocuments(chatDb, 'conversationMembers', [Query.equal('userId', userId), Query.limit(1000)]),
+    // 3. Keychain
+    databases.listDocuments(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, [Query.equal('userId', userId), Query.limit(100)]),
+    databases.listDocuments(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, [
+        Query.or([Query.equal('grantee', userId), Query.contains('metadata', userId), Query.equal('resourceId', userId)]),
+        Query.limit(1000)
+    ]),
+    // 4. Profiles
+    databases.listDocuments(chatDb, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [Query.equal('userId', userId), Query.limit(1)])
   ]);
 
-  await Promise.all([
-    ...creds.documents.map((c: any) => databases.deleteDocument(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, c.$id)),
-    ...totps.documents.map((t: any) => databases.deleteDocument(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', t.$id))
-  ]);
+  // Parallel Execution Phase: Trigger all deletions and updates concurrently
+  const purgeActions: Promise<any>[] = [];
 
-  // 2. Purge Connect Tier 2 Data (Direct Messages ONLY)
-  const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
-  const convTable = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
-  const membersTable = 'conversationMembers';
-  const msgTable = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
+  // 1. Purge Vault
+  credsRes.documents.forEach((c: any) => purgeActions.push(databases.deleteDocument(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, c.$id)));
+  totpsRes.documents.forEach((t: any) => purgeActions.push(databases.deleteDocument(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', t.$id)));
 
-  const memberRows = await databases.listDocuments(chatDb, membersTable, [Query.equal('userId', userId), Query.limit(1000)]);
-  const conversationIds = Array.from(new Set(memberRows.documents.map((row: any) => row.conversationId).filter(Boolean)));
-  
+  // 2. Purge Connect (Direct Messages)
+  const conversationIds = Array.from(new Set(memberRowsRes.documents.map((row: any) => row.conversationId).filter(Boolean)));
   if (conversationIds.length > 0) {
-    const convsRes = await databases.listDocuments(chatDb, convTable, [Query.equal('$id', conversationIds), Query.equal('type', 'direct')]);
-    for (const conv of convsRes.documents) {
-      const isSelfChat = conv.participants.every((p: string) => p === userId);
-      const msgsRes = await databases.listDocuments(chatDb, msgTable, [Query.equal('conversationId', conv.$id), Query.equal('senderId', userId), Query.limit(1000)]);
-      await Promise.all(msgsRes.documents.map(m => databases.deleteDocument(chatDb, msgTable, m.$id)));
-      if (isSelfChat) await databases.deleteDocument(chatDb, convTable, conv.$id);
-    }
+    // This is still a bit complex for a flat Promise.all, let's keep it sequential or sub-parallel
+    purgeActions.push((async () => {
+        const convsRes = await databases.listDocuments(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, [Query.equal('$id', conversationIds), Query.equal('type', 'direct')]);
+        const subActions: Promise<any>[] = [];
+        for (const conv of convsRes.documents) {
+          const isSelfChat = conv.participants.every((p: string) => p === userId);
+          const msgsRes = await databases.listDocuments(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, [Query.equal('conversationId', conv.$id), Query.equal('senderId', userId), Query.limit(1000)]);
+          msgsRes.documents.forEach(m => subActions.push(databases.deleteDocument(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, m.$id)));
+          if (isSelfChat) subActions.push(databases.deleteDocument(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, conv.$id));
+        }
+        await Promise.all(subActions);
+    })());
   }
 
-  // 3. Purge Keychain (Passwords, Passkeys, and the E2E Identity)
-  const passwordDb = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
-  const identityTable = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
-  const mappingTable = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
+  // 3. Purge Keychain
+  identitiesRes.documents.forEach(id => purgeActions.push(databases.deleteDocument(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, id.$id)));
+  mappingsRes.documents.forEach(m => purgeActions.push(databases.deleteDocument(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, m.$id)));
 
-  const identities = await databases.listDocuments(passwordDb, identityTable, [Query.equal('userId', userId), Query.limit(100)]);
-  await Promise.all(identities.documents.map(id => databases.deleteDocument(passwordDb, identityTable, id.$id)));
+  // 4. Reset Profiles
+  if (profilesRes.total > 0) {
+    purgeActions.push(databases.updateDocument(chatDb, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, profilesRes.documents[0].$id, { publicKey: null, updatedAt: new Date().toISOString() }));
+  }
 
-  const mappings = await databases.listDocuments(passwordDb, mappingTable, [
-    Query.or([Query.equal('grantee', userId), Query.contains('metadata', userId), Query.equal('resourceId', userId)]),
-    Query.limit(1000)
-  ]);
-  await Promise.all(mappings.documents.map(m => databases.deleteDocument(passwordDb, mappingTable, m.$id)));
+  // 5. Update User Prefs
+  purgeActions.push(users.getPrefs(userId).then(async (prefs) => {
+    await users.updatePrefs(userId, { ...(prefs as any), masterpass: false, isPasskey: false });
+  }));
 
-  // 4. Reset profile public keys
-  const profileTable = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
-  try {
-    const profiles = await databases.listDocuments(chatDb, profileTable, [Query.equal('userId', userId), Query.limit(1)]);
-    if (profiles.total > 0) {
-      await databases.updateDocument(chatDb, profileTable, profiles.documents[0].$id, { publicKey: null, updatedAt: new Date().toISOString() });
-    }
-  } catch {}
-
-  // 5. Update User Doc
-  try {
-    const prefs = (await users.getPrefs(userId)) as Record<string, unknown>;
-    await users.updatePrefs(userId, { ...prefs, masterpass: false, isPasskey: false });
-  } catch {}
-
+  await Promise.all(purgeActions);
   return { success: true };
 }
 
