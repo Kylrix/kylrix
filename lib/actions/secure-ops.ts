@@ -922,6 +922,122 @@ export async function getReferralProfileSecure(username: string) {
   };
 }
 
+/**
+ * MASTER PURGE: Wipes all Tier 2 (Zero-Knowledge) data for the authenticated actor.
+ * Triggered upon Master Password Reset.
+ * Replaces legacy POST /api/reset-purge.
+ */
+export async function executeMasterPurgeSecure(jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const userId = actor.$id;
+  const { databases, users } = createSystemClient();
+
+  // 1. Purge Vault Tier 2 Data (Credentials, TOTP Secrets)
+  const vaultDb = APPWRITE_CONFIG.DATABASES.VAULT;
+  const creds = await databases.listDocuments(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, [Query.equal('userId', userId), Query.limit(1000)]);
+  const totps = await databases.listDocuments(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', [Query.equal('userId', userId), Query.limit(1000)]).catch(() => ({ documents: [] }));
+
+  await Promise.all([
+    ...creds.documents.map((c: any) => databases.deleteDocument(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, c.$id)),
+    ...totps.documents.map((t: any) => databases.deleteDocument(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', t.$id))
+  ]);
+
+  // 2. Purge Connect Tier 2 Data (Direct Messages ONLY)
+  const chatDb = APPWRITE_CONFIG.DATABASES.CHAT;
+  const convTable = APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS;
+  const membersTable = 'conversationMembers';
+  const msgTable = APPWRITE_CONFIG.TABLES.CHAT.MESSAGES;
+
+  const memberRows = await databases.listDocuments(chatDb, membersTable, [Query.equal('userId', userId), Query.limit(1000)]);
+  const conversationIds = Array.from(new Set(memberRows.documents.map((row: any) => row.conversationId).filter(Boolean)));
+  
+  if (conversationIds.length > 0) {
+    const convsRes = await databases.listDocuments(chatDb, convTable, [Query.equal('$id', conversationIds), Query.equal('type', 'direct')]);
+    for (const conv of convsRes.documents) {
+      const isSelfChat = conv.participants.every((p: string) => p === userId);
+      const msgsRes = await databases.listDocuments(chatDb, msgTable, [Query.equal('conversationId', conv.$id), Query.equal('senderId', userId), Query.limit(1000)]);
+      await Promise.all(msgsRes.documents.map(m => databases.deleteDocument(chatDb, msgTable, m.$id)));
+      if (isSelfChat) await databases.deleteDocument(chatDb, convTable, conv.$id);
+    }
+  }
+
+  // 3. Purge Keychain (Passwords, Passkeys, and the E2E Identity)
+  const passwordDb = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
+  const identityTable = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES;
+  const mappingTable = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING;
+
+  const identities = await databases.listDocuments(passwordDb, identityTable, [Query.equal('userId', userId), Query.limit(100)]);
+  await Promise.all(identities.documents.map(id => databases.deleteDocument(passwordDb, identityTable, id.$id)));
+
+  const mappings = await databases.listDocuments(passwordDb, mappingTable, [
+    Query.or([Query.equal('grantee', userId), Query.contains('metadata', userId), Query.equal('resourceId', userId)]),
+    Query.limit(1000)
+  ]);
+  await Promise.all(mappings.documents.map(m => databases.deleteDocument(passwordDb, mappingTable, m.$id)));
+
+  // 4. Reset profile public keys
+  const profileTable = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
+  try {
+    const profiles = await databases.listDocuments(chatDb, profileTable, [Query.equal('userId', userId), Query.limit(1)]);
+    if (profiles.total > 0) {
+      await databases.updateDocument(chatDb, profileTable, profiles.documents[0].$id, { publicKey: null, updatedAt: new Date().toISOString() });
+    }
+  } catch {}
+
+  // 5. Update User Doc
+  try {
+    const prefs = (await users.getPrefs(userId)) as Record<string, unknown>;
+    await users.updatePrefs(userId, { ...prefs, masterpass: false, isPasskey: false });
+  } catch {}
+
+  return { success: true };
+}
+
+/**
+ * Fetches cross-app action suggestions.
+ * Replaces legacy GET /api/cross/suggest.
+ */
+export async function getCrossSuggestionsSecure(params: { sourceApp: string; sourceType: string; sourceId: string | null }) {
+  const { sourceApp, sourceType, sourceId } = params;
+  const baseId = sourceId || 'unknown';
+
+  let suggestions = [
+    { id: `note:${baseId}`, label: 'Attach Note', description: 'Expose a note-link action.' },
+    { id: `event:${baseId}`, label: 'Create Event', description: 'Expose an event creation action.' }
+  ];
+
+  if (sourceApp === 'note' || sourceType === 'note') {
+    suggestions = [
+      { id: `task:${baseId}`, label: 'Create Task', description: 'Convert the note into an actionable task.' },
+      { id: `event:${baseId}`, label: 'Create Event', description: 'Turn the note into a scheduled event.' },
+      { id: `followup:${baseId}`, label: 'Add Follow-up', description: 'Generate a follow-up action from this note.' }
+    ];
+  } else if (sourceType === 'task' || sourceApp === 'flow') {
+    suggestions = [
+      { id: `note:${baseId}`, label: 'Attach Note', description: 'Link a source note to this task.' },
+      { id: `event:${baseId}`, label: 'Calendar Event', description: 'Map this task onto a calendar surface.' }
+    ];
+  }
+
+  return { sourceApp, sourceType, sourceId, suggestions };
+}
+
+/**
+ * Verifies if the authenticated actor has admin privileges.
+ * Replaces legacy GET /api/admin/check.
+ */
+export async function verifyAdminSecure(jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+  
+  const admin = isEnvAdminUser(actor);
+  if (!admin) throw new Error('Forbidden: admin privileges required');
+
+  return { success: true, userId: actor.$id };
+}
+
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {
   const requester = await getActor();
   if (!requester) return { success: false, reason: 'Unauthorized' };

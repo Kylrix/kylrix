@@ -27,11 +27,10 @@ export function useAdminGate() {
       const jwtRes = await account.createJWT();
       const token = jwtRes?.jwt;
       if (!token) throw new Error('No token');
-      const check = await fetch('/api/admin/check', { headers: { Authorization: `Bearer ${token}` } });
-      if (!check.ok) {
-        const j = await check.json().catch(()=>({}));
-        throw new Error(j.error || 'Forbidden');
-      }
+      
+      const { verifyAdminSecure } = await import('@/lib/actions/secure-ops');
+      await verifyAdminSecure(token);
+
       setState({ loading: false, authorized: true, error: null, jwt: token });
     } catch (e: any) {
       setState({ loading: false, authorized: false, error: e.message || 'Access denied', jwt: null });

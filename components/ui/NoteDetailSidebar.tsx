@@ -516,8 +516,12 @@ export function NoteDetailSidebar({
       if (!liveNote.$id) return;
       setIsLoadingSuggestions(true);
       try {
-        const res = await fetch(`/note/api/cross/suggest?sourceApp=note&sourceType=note&sourceId=${liveNote.$id}`);
-        const data = await res.json();
+        const { getCrossSuggestionsSecure } = await import('@/lib/actions/secure-ops');
+        const data = await getCrossSuggestionsSecure({
+          sourceApp: 'note',
+          sourceType: 'note',
+          sourceId: liveNote.$id
+        });
         if (active) setCrossSuggestions(data?.suggestions || []);
       } finally { if (active) setIsLoadingSuggestions(false); }
     };

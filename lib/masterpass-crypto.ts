@@ -440,8 +440,9 @@ export class MasterPassCrypto {
       this.lockApplication();
 
       // Trigger server-side purge of Tier 2 data
-      const response = await fetch('/api/reset-purge', { method: 'POST' });
-      if (!response.ok) {
+      const { executeMasterPurgeSecure } = await import('@/lib/actions/secure-ops');
+      const result = await executeMasterPurgeSecure();
+      if (!result.success) {
         logError("Failed to trigger server-side purge during reset");
         return false;
       }
