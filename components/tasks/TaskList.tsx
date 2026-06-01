@@ -331,7 +331,7 @@ export default function TaskList() {
                 '&:hover': { bgcolor: '#1C1A18' },
                 '&.Mui-selected': {
                   bgcolor: '#1C1A18',
-                  color: '#10B981',
+                  color: '#A855F7',
                   '&:hover': { bgcolor: '#1C1A18' }
                 }
               }}
