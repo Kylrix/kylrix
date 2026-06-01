@@ -1195,6 +1195,65 @@ export function ProjectDiscussionSidebar({
                   }
                 }}
                 placeholder={activeThreadParent ? "Reply in thread..." : "Type huddle message..."}
+                onKeyDown={async (e) => {
+                  if (e.key === 'g' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    const currentText = activeThreadParent ? threadInputText : inputText;
+                    const val = currentText.trim();
+                    if (!val) {
+                      showError('Type a message first to secure it.');
+                      return;
+                    }
+                    const setVal = activeThreadParent ? setThreadInputText : setInputText;
+                    setVal('Securing message payload...');
+                    try {
+                      const { AppwriteService } = await import('@/lib/appwrite');
+                      const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+                      
+                      const ghostSecret = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-send`;
+                      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days standard
+                      
+                      const titleEnc = await encryptGhostData('Secure Note');
+                      const contentEnc = await encryptGhostData(val, titleEnc.key);
+                      
+                      const note = await AppwriteService.createSendGhostObject({
+                        title: titleEnc.encrypted,
+                        content: contentEnc.encrypted,
+                        format: 'markdown',
+                        ghostSecret,
+                        expiresAt,
+                        isEncrypted: true,
+                        sendObject: { kind: 'note' }
+                      });
+                      
+                      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                      const url = `${origin}/send/${note.$id}/${titleEnc.key}`;
+                      
+                      // Cache in localStorage stash
+                      try {
+                        const existing = JSON.parse(localStorage.getItem('kylrix_send_sparks') || '[]');
+                        const newSpark = {
+                          id: note.$id,
+                          kind: 'note',
+                          title: 'Secure Note',
+                          url,
+                          expiresAt,
+                        };
+                        localStorage.setItem('kylrix_send_sparks', JSON.stringify([newSpark, ...existing]));
+                      } catch (err) {
+                        console.warn('Failed to cache spark:', err);
+                      }
+                      
+                      setVal(url);
+                      showSuccess('Message secured as Zero-Knowledge Ghost Note!');
+                    } catch (err) {
+                      console.error('Failed to secure message:', err);
+                      setVal(val);
+                      showError('Failed to secure message.');
+                    }
+                    return;
+                  }
+                }}
                 variant="standard"
                 InputProps={{
                   disableUnderline: true,
