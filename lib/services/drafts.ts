@@ -1,10 +1,11 @@
 /**
  * Kylrix Flow - Drafts Intelligence Service
- * Handles localized persistence of uncommitted form designs.
+ * Handles localized persistence of uncommitted form designs using RxDB substrate.
  */
+import { getRxDB } from '@/lib/webrtc/RxDBManager';
 
 const STORAGE_PREFIX = 'kylrix_flow_draft_';
-const METADATA_KEY = 'kylrix_flow_drafts_manifest';
+const MANIFEST_KEY = 'kylrix_flow_drafts_manifest';
 
 export interface FormDraft {
     id: string; // 'new' or Appwrite Document ID
@@ -17,9 +18,9 @@ export interface FormDraft {
 
 export const DraftsService = {
     /**
-     * Save a form draft to local storage and update the manifest
+     * Save a form draft to RxDB substrate and update the manifest
      */
-    saveDraft(id: string, data: Omit<FormDraft, 'id' | 'updatedAt'>) {
+    async saveDraft(id: string, data: Omit<FormDraft, 'id' | 'updatedAt'>) {
         if (typeof window === 'undefined') return;
 
         const draft: FormDraft = {
@@ -28,74 +29,99 @@ export const DraftsService = {
             updatedAt: new Date().toISOString()
         };
 
-        // Store the actual content
-        localStorage.setItem(`${STORAGE_PREFIX}${id}`, JSON.stringify(draft));
+        const db = await getRxDB();
+        
+        // Store the actual content in the general cache
+        await db.cache.upsert({
+            id: `${STORAGE_PREFIX}${id}`,
+            data: draft as any,
+            timestamp: Date.now()
+        });
 
         // Update the manifest for fast lookups
-        const manifest = this.getManifest();
+        const manifest = await this.getManifest();
         manifest[id] = {
             title: draft.title || 'Untitled Portal',
             updatedAt: draft.updatedAt
         };
-        localStorage.setItem(METADATA_KEY, JSON.stringify(manifest));
+        
+        await db.cache.upsert({
+            id: MANIFEST_KEY,
+            data: manifest as any,
+            timestamp: Date.now()
+        });
     },
 
     /**
      * Retrieve a specific draft
      */
-    getDraft(id: string): FormDraft | null {
+    async getDraft(id: string): Promise<FormDraft | null> {
         if (typeof window === 'undefined') return null;
-        const raw = localStorage.getItem(`${STORAGE_PREFIX}${id}`);
-        if (!raw) return null;
-        try {
-            return JSON.parse(raw);
-        } catch (_e) {
-            return null;
-        }
+        
+        const db = await getRxDB();
+        const doc = await db.cache.findOne(`${STORAGE_PREFIX}${id}`).exec();
+        
+        return doc ? (doc.data as FormDraft) : null;
     },
 
     /**
      * Check if a specific form has an unsynced draft
      */
-    hasDraft(id: string): boolean {
-        const manifest = this.getManifest();
+    async hasDraft(id: string): Promise<boolean> {
+        const manifest = await this.getManifest();
         return !!manifest[id];
     },
 
     /**
      * Remove a draft and update the manifest
      */
-    clearDraft(id: string) {
+    async clearDraft(id: string) {
         if (typeof window === 'undefined') return;
-        localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
-        const manifest = this.getManifest();
-        delete manifest[id];
-        localStorage.setItem(METADATA_KEY, JSON.stringify(manifest));
+        
+        const db = await getRxDB();
+        const doc = await db.cache.findOne(`${STORAGE_PREFIX}${id}`).exec();
+        if (doc) await doc.remove();
+
+        const manifest = await this.getManifest();
+        if (manifest[id]) {
+            delete manifest[id];
+            await db.cache.upsert({
+                id: MANIFEST_KEY,
+                data: manifest as any,
+                timestamp: Date.now()
+            });
+        }
     },
 
     /**
      * Get the manifest of all existing drafts
      */
-    getManifest(): Record<string, { title: string, updatedAt: string }> {
+    async getManifest(): Promise<Record<string, { title: string, updatedAt: string }>> {
         if (typeof window === 'undefined') return {};
-        const raw = localStorage.getItem(METADATA_KEY);
-        if (!raw) return {};
-        try {
-            return JSON.parse(raw);
-        } catch (_e) {
-            return {};
-        }
+        
+        const db = await getRxDB();
+        const doc = await db.cache.findOne(MANIFEST_KEY).exec();
+        
+        return doc ? (doc.data as any) : {};
     },
 
     /**
      * Clear all form drafts (useful for master resets)
      */
-    clearAll() {
+    async clearAll() {
         if (typeof window === 'undefined') return;
-        const manifest = this.getManifest();
-        Object.keys(manifest).forEach(id => {
-            localStorage.removeItem(`${STORAGE_PREFIX}${id}`);
+        
+        const db = await getRxDB();
+        const manifest = await this.getManifest();
+        
+        const purgeActions = Object.keys(manifest).map(async (id) => {
+            const doc = await db.cache.findOne(`${STORAGE_PREFIX}${id}`).exec();
+            if (doc) await doc.remove();
         });
-        localStorage.removeItem(METADATA_KEY);
+        
+        await Promise.all(purgeActions);
+        
+        const manifestDoc = await db.cache.findOne(MANIFEST_KEY).exec();
+        if (manifestDoc) await manifestDoc.remove();
     }
 };

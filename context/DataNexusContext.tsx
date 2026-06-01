@@ -2,18 +2,18 @@
 
 import React, { createContext, useContext, useRef, useCallback, useEffect, ReactNode, useState } from 'react';
 import { NEXUS_INVALIDATE_EVENT } from '@/lib/ecosystem/nexus-bridge';
+import { getRxDB, migrateLocalStorageToRxDB } from '@/lib/webrtc/RxDBManager';
 
 /**
- * KYLRIX ECOSYSTEM DATA NEXUS (DUAL-ENGINE)
+ * KYLRIX ECOSYSTEM DATA NEXUS (DUAL-ENGINE V2)
  * Aggressive architectural specification for sub-millisecond execution.
  * 1. Synchronous Mirror: Volatile Map Ref Cache (Hit: 0ms)
- * 2. Local Persistent Substrate: IndexedDB (Bypasses thundering herds)
+ * 2. Local Persistent Substrate: RxDB/IndexedDB (Bypasses thundering herds & 5MB wall)
  */
 
 interface CacheEntry<T> {
     data: T;
     timestamp: number;
-    hash?: string;
 }
 
 interface DataNexusContextType {
@@ -36,8 +36,6 @@ interface DataNexusContextType {
 const DataNexusContext = createContext<DataNexusContextType | undefined>(undefined);
 
 const DEFAULT_TTL = 1000 * 60 * 30; // 30 minutes default TTL
-const DB_NAME = 'kylrix_nexus_v2';
-const STORE_NAME = 'cache';
 
 export function DataNexusProvider({ children }: { children: ReactNode }) {
     // In-memory cache for ultra-fast (0ms) access
@@ -47,23 +45,16 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
     const backgroundRefreshRequests = useRef<Map<string, Promise<void>>>(new Map());
     
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const dbRef = useRef<IDBDatabase | null>(null);
 
-    // Initialize IndexedDB
+    // Initialize RxDB & Run Migrations
     useEffect(() => {
         if (typeof window === 'undefined') return;
         
-        const request = indexedDB.open(DB_NAME, 1);
-        request.onupgradeneeded = (event) => {
-            const db = (event.target as IDBOpenDBRequest).result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        };
-        request.onsuccess = (event) => {
-            dbRef.current = (event.target as IDBOpenDBRequest).result;
-            console.log('[Nexus] IndexedDB substrate initialized.');
-        };
+        (async () => {
+            await getRxDB();
+            await migrateLocalStorageToRxDB();
+            console.log('[Nexus] RxDB substrate initialized and legacy data migrated.');
+        })();
     }, []);
 
     const getCachedData = useCallback(function<T>(key: string, ttl: number = DEFAULT_TTL): T | null {
@@ -75,37 +66,39 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
             return memoryEntry.data;
         }
 
-        // 2. IndexedDB Substrate Fallback (Asynchronous)
-        // Since getCachedData is synchronous, we can't await IDB here.
-        // We rely on the UI component to trigger a fetchOptimized if this returns null.
-        // However, we pre-hydrate memoryCache from IDB on mount/init for critical keys.
+        // 2. RxDB Substrate Fallback (Asynchronous)
+        // Since getCachedData is synchronous, we can't await RxDB here.
+        // We rely on fetchOptimized to handle the async load if mirror misses.
         return null;
     }, []);
 
     const setCachedData = useCallback(async function<T>(key: string, data: T, _ttl?: number) {
-        const entry: CacheEntry<T> = {
-            data,
-            timestamp: Date.now()
-        };
+        const timestamp = Date.now();
+        const entry: CacheEntry<T> = { data, timestamp };
 
         // Update Synchronous Mirror
         memoryCache.current.set(key, entry);
 
-        // Update IndexedDB Substrate
-        if (dbRef.current) {
-            const tx = dbRef.current.transaction(STORE_NAME, 'readwrite');
-            tx.objectStore(STORE_NAME).put(entry, key);
+        // Update RxDB Substrate
+        try {
+            const db = await getRxDB();
+            await db.cache.upsert({ id: key, data: data as any, timestamp });
+        } catch (e) {
+            console.error(`[Nexus] RxDB Persist failed for ${key}:`, e);
         }
     }, []);
 
-    const invalidate = useCallback((key: string) => {
+    const invalidate = useCallback(async (key: string) => {
         memoryCache.current.delete(key);
         activeRequests.current.delete(key);
         backgroundRefreshRequests.current.delete(key);
         
-        if (dbRef.current) {
-            const tx = dbRef.current.transaction(STORE_NAME, 'readwrite');
-            tx.objectStore(STORE_NAME).delete(key);
+        try {
+            const db = await getRxDB();
+            const doc = await db.cache.findOne(key).exec();
+            if (doc) await doc.remove();
+        } catch (e) {
+            console.error(`[Nexus] RxDB Invalidate failed for ${key}:`, e);
         }
     }, []);
 
@@ -114,29 +107,44 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
         console.log('[Nexus] Triggering background delta sync sweep...');
         setIsRefreshing(true);
         
-        // Dispatches a global event for the Topbar indicator to mount
         window.dispatchEvent(new CustomEvent('kylrix:nexus:sync_start'));
 
         try {
             // Section 4: Transaction-Clock Delta Sync
             const localManifest: { id: string; updatedAt: string }[] = [];
-            memoryCache.current.forEach((entry, key) => {
-                if (key.startsWith('note:')) {
-                    localManifest.push({ id: key.replace('note:', ''), updatedAt: new Date(entry.timestamp).toISOString() });
-                }
-            });
+            
+            // We can now query RxDB for a much larger set than memory cache
+            const db = await getRxDB();
+            const allCached = await db.notes.find().exec();
+            
+            for (const doc of allCached) {
+                localManifest.push({ id: doc.id, updatedAt: doc.updatedAt });
+            }
 
             const { syncNotesDelta } = await import('@/lib/ecosystem/delta-sync');
             const result = await syncNotesDelta(localManifest);
 
             // Apply surgical patches
             for (const patch of result.patches) {
-                await setCachedData(`note:${patch.$id}`, patch);
+                // Update RxDB notes collection
+                await db.notes.upsert({
+                    id: patch.$id,
+                    title: patch.title,
+                    content: patch.content,
+                    userId: patch.userId,
+                    metadata: patch.metadata,
+                    updatedAt: patch.$updatedAt,
+                    _deleted: false
+                });
+                // Also update memory mirror if it was there
+                memoryCache.current.set(`note:${patch.$id}`, { data: patch, timestamp: Date.now() });
             }
 
             // Remove deleted items
             for (const id of result.deletedIds) {
-                invalidate(`note:${id}`);
+                const doc = await db.notes.findOne(id).exec();
+                if (doc) await doc.remove();
+                memoryCache.current.delete(`note:${id}`);
             }
 
             console.log(`[Nexus] Delta sync complete. Patched ${result.patches.length} items, removed ${result.deletedIds.length}.`);
@@ -146,7 +154,7 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
             setIsRefreshing(false);
             window.dispatchEvent(new CustomEvent('kylrix:nexus:sync_end'));
         }
-    }, [invalidate, isRefreshing, setCachedData]);
+    }, [isRefreshing]);
 
     const refreshInBackground = useCallback(function<T>(
         key: string,
@@ -192,19 +200,18 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
         const cached = getCachedData<T>(key, ttl);
         if (cached) return cached;
 
-        // 2. Check IndexedDB Substrate (if memory miss)
-        if (dbRef.current) {
-            const dbEntry = await new Promise<CacheEntry<T> | null>((resolve) => {
-                const tx = dbRef.current!.transaction(STORE_NAME, 'readonly');
-                const req = tx.objectStore(STORE_NAME).get(key);
-                req.onsuccess = () => resolve(req.result || null);
-                req.onerror = () => resolve(null);
-            });
-
-            if (dbEntry && (Date.now() - dbEntry.timestamp < ttl)) {
-                memoryCache.current.set(key, dbEntry);
-                return dbEntry.data;
+        // 2. Check RxDB Substrate (if memory miss)
+        try {
+            const db = await getRxDB();
+            const doc = await db.cache.findOne(key).exec();
+            
+            if (doc && (Date.now() - doc.timestamp < ttl)) {
+                const entry = { data: doc.data as T, timestamp: doc.timestamp };
+                memoryCache.current.set(key, entry);
+                return entry.data;
             }
+        } catch (e) {
+            console.warn(`[Nexus] RxDB Substrate read failed for ${key}`, e);
         }
 
         // 3. Deduplication
