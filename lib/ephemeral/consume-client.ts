@@ -1,23 +1,17 @@
 import { account } from '@/lib/appwrite/client';
+import { consumeEphemeralNoteSecure } from '@/lib/actions/secure-ops';
 
 /** Authenticated client → removes ephemeral row after successful import. */
 export async function consumeEphemeralRemote(noteId: string, claimSecret: string): Promise<void> {
-  const jwt = await account.createJWT();
-  const res = await fetch('/api/ephemeral-note/consume', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${jwt.jwt}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ noteId, claimSecret }),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (res.status === 402) {
-    const err = new Error(typeof body.error === 'string' ? body.error : 'Pro required');
-    (err as Error & { code?: string }).code = 'PRO_REQUIRED';
-    throw err;
-  }
-  if (!res.ok) {
-    throw new Error(typeof body.error === 'string' ? body.error : 'Could not remove ephemeral link.');
+  try {
+    const jwt = await account.createJWT();
+    await consumeEphemeralNoteSecure({ noteId, claimSecret }, jwt.jwt);
+  } catch (err: any) {
+    if (err?.code === 'PRO_REQUIRED') {
+      const proErr = new Error(err.message || 'Pro required');
+      (proErr as any).code = 'PRO_REQUIRED';
+      throw proErr;
+    }
+    throw new Error(err instanceof Error ? err.message : 'Could not remove ephemeral link.');
   }
 }

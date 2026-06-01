@@ -807,10 +807,9 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
             return res.rows as unknown as Comments[];
           } catch (sdkError) {
             console.warn('Comments fetch: SDK path failed, trying shared API fallback');
-            const res = await fetch(`/api/shared/${noteId}/comments`);
-            if (!res.ok) throw sdkError;
-            const payload = await res.json();
-            return (payload?.rows || []) as Comments[];
+            const { getPublicNoteCommentsSecure } = await import('@/lib/actions/secure-ops');
+            const res = await getPublicNoteCommentsSecure(noteId);
+            return (res.rows || []) as unknown as Comments[];
           }
         },
         1000 * 60 * 10
@@ -836,15 +835,9 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
           users = await getUsersByIds(uniqueUserIds);
         } catch (_sdkError) {
           console.warn('Comments fetch: SDK profile resolution failed, trying shared API fallback');
-          const profilesRes = await fetch('/api/shared/profiles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userIds: uniqueUserIds }),
-          });
-          if (profilesRes.ok) {
-            const profilesPayload = await profilesRes.json();
-            users = profilesPayload.rows || [];
-          }
+          const { getSharedProfilesSecure } = await import('@/lib/actions/secure-ops');
+          const profilesRes = await getSharedProfilesSecure(uniqueUserIds);
+          users = (profilesRes.documents as any) || [];
         }
 
         await normalizeAndStoreUsers(users);

@@ -12,6 +12,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { getLastActiveApp } from '@/lib/sdk/ecosystem/useLastActiveApp';
 import Logo from '../components/Logo';
 import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
+import { createHandoffSessionSecure } from '@/lib/actions/secure-ops';
 
 const client = new Client();
 if (typeof window !== 'undefined') {
@@ -127,19 +128,12 @@ function LoginContent() {
       if (redirectUri) {
         try {
           const jwt = await account.createJWT();
-          const res = await fetch('/api/auth/session', {
-            headers: {
-              Authorization: `Bearer ${jwt.jwt}`,
-            },
-          });
-          if (res.ok) {
-            const { secret, userId } = await res.json();
-            const target = new URL(redirectUri);
-            target.searchParams.set('secret', secret);
-            target.searchParams.set('userId', userId);
-            router.push(target.toString());
-            return;
-          }
+          const { secret, userId } = await createHandoffSessionSecure(jwt.jwt);
+          const target = new URL(redirectUri);
+          target.searchParams.set('secret', secret);
+          target.searchParams.set('userId', userId);
+          router.push(target.toString());
+          return;
         } catch (e) {
           console.error('Failed to get session secret for redirect', e);
         }

@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
-import { ID, Permission, Query, Role, Databases, TablesDB } from 'node-appwrite';
+import { ID, Permission, Query, Role, Databases, TablesDB, Account } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
@@ -11,12 +11,66 @@ import { createServerClient } from '@/lib/appwrite/server';
 import { InternalKylrixTokenService } from '@/lib/services/internal/kylrix-token';
 import { trackEngagementView, type TrackEngagementInput } from '@/lib/services/internal/engagement-views';
 import { deleteCallIfExpired } from '@/lib/services/internal/calls';
+import { applyPermissionMutation, revokePermissionMutation } from '@/lib/services/internal/permissions';
+import { normalizeTargetUserIds, upsertLockboxRows } from '@/lib/api/permission-updater';
 import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/live-call-presence-reconcile';
+import { executeSessionRuntimeJob, isSessionRuntimeJobId } from '@/lib/runtime-functions/session-jobs';
+import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
 import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { dispatchSecureNotification } from '@/lib/services/internal/notification-dispatcher';
 import { executeCascadeDeleteSecure } from './cascade-delete';
+import { verifyCreatorDeletionProof } from '@/lib/ephemeral/ephemeral-proof';
+
+/**
+ * Updates row-level permissions for a resource.
+ * Replaces legacy POST /api/permissions.
+ */
+export async function mutatePermissionsSecure(body: any, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const action = String(body?.action || 'grant').trim();
+
+  if (action === 'pin_ghost_note') {
+    const noteIds = normalizeTargetUserIds(body?.noteIds || body?.resourceIds || body?.resourceId);
+    const wrappedKey = body?.wrappedKey || body?.ghostSecret;
+    if (noteIds.length === 0) throw new Error('At least one noteId is required');
+    if (!wrappedKey) throw new Error('wrappedKey is required');
+
+    const keyMappings = noteIds.map((noteId) => ({
+      resourceId: noteId,
+      resourceType: body?.resourceType || 'ghost_note',
+      grantee: actor.$id,
+      wrappedKey,
+      metadata: body?.metadata || null,
+    }));
+    const { databases } = createSystemClient();
+    const rows = await upsertLockboxRows(databases, actor.$id, keyMappings);
+    return { success: true, action, rows };
+  }
+
+  const result = await applyPermissionMutation(actor.$id, body);
+  return {
+    success: true,
+    action,
+    rowId: body?.rowId || null,
+    permissions: (result as any)?.permissions || null,
+  };
+}
+
+/**
+ * Revokes row-level permissions for a resource.
+ * Replaces legacy DELETE /api/permissions.
+ */
+export async function revokePermissionsSecure(body: any, targetUserId?: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  await revokePermissionMutation(actor.$id, body, targetUserId);
+  return { success: true, action: 'revoke', rowId: body?.rowId || null };
+}
 
 // Short-lived in-memory cache for row reads during permission checks.
 // Prevents duplicate database fetches within a short timeframe (e.g. 5 seconds).
@@ -434,6 +488,438 @@ export async function recordAnonymizedTelemetrySecure(params: {
     intent: params.intent || null,
     metadata: params.metadata || null
   });
+}
+
+/**
+ * Session-scoped privileged maintenance (current user only).
+ * Replaces legacy /api/me/runtime-functions route.
+ */
+export async function executeSessionRuntimeJobSecure(job: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!isSessionRuntimeJobId(job)) {
+    throw new Error('Unknown or forbidden job');
+  }
+
+  return executeSessionRuntimeJob(job, actor.$id);
+}
+
+/**
+ * Burns an ephemeral ghost / Send row using a per-note deletion secret.
+ * Replaces legacy /api/ephemeral-note/delete.
+ */
+export async function burnEphemeralNoteSecure(params: { noteId: string; deletionSecret: string }) {
+  const noteId = String(params.noteId || '').trim();
+  const deletionSecret = String(params.deletionSecret || '').trim();
+  if (!noteId || !deletionSecret) {
+    throw new Error('noteId and deletionSecret are required');
+  }
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
+  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+
+  const doc = await databases.getDocument(dbId, tableId, noteId).catch(() => null);
+  if (!doc) {
+    throw new Error('Note not found');
+  }
+
+  let meta: Record<string, unknown> = {};
+  try {
+    meta = JSON.parse(String((doc as any).metadata || '{}'));
+  } catch {
+    meta = {};
+  }
+
+  if (!meta.isGhost) {
+    throw new Error('Not an ephemeral note');
+  }
+
+  const expectedHash = String(meta.creatorDeletionProofHash || '').trim();
+  if (!expectedHash) {
+    throw new Error('This note cannot be burned remotely');
+  }
+
+  if (!verifyCreatorDeletionProof(meta, deletionSecret)) {
+    throw new Error('Invalid deletion proof');
+  }
+
+  // Recursive cleanup for storage files, comments, reactions, etc.
+  await executeCascadeDeleteSecure(dbId, tableId, noteId);
+
+  await databases.deleteDocument(dbId, tableId, noteId);
+  return { success: true };
+}
+
+/**
+ * Removes the ghost row (and Send ciphertext file) after successful import.
+ * Replaces legacy /api/ephemeral-note/consume.
+ */
+export async function consumeEphemeralNoteSecure(params: { noteId: string; claimSecret: string }, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const noteId = String(params.noteId || '').trim();
+  const claimSecret = String(params.claimSecret || '').trim();
+  if (!noteId || !claimSecret) {
+    throw new Error('noteId and claimSecret are required');
+  }
+
+  const { databases, storage } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
+  const tableId = APPWRITE_CONFIG.TABLES.NOTE.NOTES;
+
+  const doc = await databases.getDocument(dbId, tableId, noteId).catch(() => null);
+  if (!doc) {
+    throw new Error('Note not found');
+  }
+
+  let meta: Record<string, unknown> = {};
+  try {
+    meta = JSON.parse(String((doc as any).metadata || '{}'));
+  } catch {
+    meta = {};
+  }
+
+  if (!meta.isGhost) {
+    throw new Error('Not an ephemeral note');
+  }
+
+  if (!verifyCreatorDeletionProof(meta, claimSecret)) {
+    throw new Error('Invalid claim proof');
+  }
+
+  const sendObj = meta.send_object as { kind?: string; bucketId?: string; fileId?: string } | undefined;
+  if (sendObj?.kind === 'file' && !hasPaidKylrixPlan(actor)) {
+    const err = new Error('Kylrix Pro is required to claim Send files into your library.');
+    (err as any).code = 'PRO_REQUIRED';
+    throw err;
+  }
+
+  if (sendObj?.kind === 'file' && sendObj.bucketId && sendObj.fileId) {
+    await storage.deleteFile(sendObj.bucketId, sendObj.fileId).catch(() => undefined);
+  }
+
+  await databases.deleteDocument(dbId, tableId, noteId);
+  return { success: true };
+}
+
+/**
+ * Dispatches an unorganic email notification.
+ * Replaces legacy /api/emails route.
+ */
+export async function dispatchEmailSecure(payload: any, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) {
+    // We allow unauthenticated dispatch ONLY if it's a dry run or if there's no actor but we have a recipient email
+    // However, the legacy API was authorized via verifyUser or a secret.
+    // For Server Actions, we'll require an actor for now unless specified.
+    throw new Error('Unauthorized');
+  }
+
+  return dispatchEmail({
+    ...payload,
+    actorId: actor.$id,
+    actorName: actor.name || actor.email || payload.actorName,
+  });
+}
+
+/**
+ * Creates a temporal session token for app handoff.
+ * Replaces legacy /api/auth/session route.
+ */
+export async function createHandoffSessionSecure(jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Session context verification (MFA check)
+  const serverClient = createServerClient();
+  const account = new Account(serverClient);
+  
+  // We use the same client but we need to check sessions and factors
+  // Since we are server-side, we might need a separate client with the user's JWT
+  const { client } = await Registry.getAuth().getAuthenticatedClient(jwt);
+  const userAccount = new Account(client);
+
+  const [session, factors] = await Promise.all([
+    userAccount.getSession('current').catch(() => null),
+    userAccount.listMfaFactors().catch(() => null)
+  ]);
+
+  if (sessionNeedsTotpMfa({
+    session,
+    availableFactors: normalizeMfaFactors(factors),
+  })) {
+    const err = new Error('user_more_factors_required');
+    (err as any).code = 'MFA_REQUIRED';
+    throw err;
+  }
+
+  const { users } = createSystemClient();
+  const sessionToken = await users.createToken(actor.$id);
+
+  return {
+    userId: actor.$id,
+    secret: sessionToken.secret,
+    expire: sessionToken.expire,
+  };
+}
+
+/**
+ * Resolves user names and avatars for a list of user IDs.
+ * Replaces legacy /api/shared/profiles route.
+ */
+export async function getSharedProfilesSecure(userIds: string[]) {
+  if (!Array.isArray(userIds) || userIds.length === 0) {
+    return { documents: [] };
+  }
+
+  // Limit to 100 users per request for safety
+  const targetIds = userIds.slice(0, 100);
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
+
+  const res = await databases.listDocuments(
+    dbId,
+    tableId,
+    [
+      Query.equal('$id', targetIds),
+      Query.limit(targetIds.length),
+      Query.select(['$id', 'username', 'displayName', 'bio', 'avatar', 'walletAddress', 'publicKey'])
+    ]
+  );
+
+  const publicProfiles = res.documents.map(doc => ({
+    $id: doc.$id,
+    name: doc.displayName || doc.username,
+    displayName: doc.displayName || null,
+    username: doc.username,
+    avatar: doc.avatar || null,
+    bio: doc.bio || null,
+    walletAddress: doc.walletAddress || null,
+    publicKey: doc.publicKey || null,
+  }));
+
+  return { documents: publicProfiles };
+}
+
+/**
+ * Fetches a public note and its metadata.
+ * Replaces legacy /api/shared/[noteid] route.
+ */
+export async function getPublicNoteDataSecure(noteId: string) {
+  const note = await validatePublicNoteAccess(noteId);
+  if (!note) return null;
+
+  // Stale call cleanup
+  const metadata = JSON.parse(String((note as any).metadata || '{}'));
+  const huddleCallId = (note as any).huddleCallId || metadata.huddleCallId;
+  if (huddleCallId) {
+    try {
+      const { databases } = createSystemClient();
+      await deleteCallIfExpired(databases as any, huddleCallId);
+    } catch {}
+  }
+
+  return note;
+}
+
+/**
+ * Fetches comments for a public note.
+ * Replaces legacy /api/shared/[noteid]/comments route.
+ */
+export async function getPublicNoteCommentsSecure(noteId: string) {
+  const note = await validatePublicNoteAccess(noteId);
+  if (!note) throw new Error('Note not found or not public');
+
+  const { databases } = createSystemClient();
+  const res = await databases.listDocuments(
+    APPWRITE_CONFIG.DATABASES.NOTE,
+    APPWRITE_CONFIG.TABLES.NOTE.COMMENTS,
+    [
+      Query.equal('noteId', noteId),
+      Query.orderAsc('$createdAt'),
+      Query.limit(200)
+    ]
+  );
+  return { rows: res.documents };
+}
+
+/**
+ * Fetches reactions for a public note or target.
+ * Replaces legacy /api/shared/[noteid]/reactions route.
+ */
+export async function getPublicNoteReactionsSecure(noteId: string, targetId?: string, targetType?: string) {
+  const note = await validatePublicNoteAccess(noteId);
+  if (!note) throw new Error('Note not found or not public');
+
+  const { databases } = createSystemClient();
+  const res = await databases.listDocuments(
+    APPWRITE_CONFIG.DATABASES.NOTE,
+    APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
+    [
+      Query.equal('targetType', targetType || 'note'),
+      Query.equal('targetId', targetId || noteId),
+      Query.orderAsc('$createdAt'),
+      Query.limit(500)
+    ]
+  );
+  return { rows: res.documents };
+}
+
+/**
+ * Fetches referral status and links for the current user.
+ * Replaces legacy GET /api/referrals.
+ */
+export async function getReferralStatusSecure(jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+  
+  const profiles = await databases.listDocuments(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
+    Query.equal('userId', actor.$id),
+    Query.limit(1)
+  ]);
+  const profile = profiles.documents[0] || null;
+
+  const events = await databases.listDocuments(dbId, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, [
+    Query.equal('userId', actor.$id),
+    Query.equal('type', 'referral'),
+    Query.limit(1)
+  ]);
+  const referralEvent = events.documents[0] || null;
+
+  const referrerProfile = referralEvent?.actorId ? await databases.getDocument(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, referralEvent.actorId).catch(() => null) : null;
+
+  const username = profile?.username || actor.prefs?.username || null;
+  const referralLink = username ? `https://www.kylrix.space/referral/${encodeURIComponent(username)}` : null;
+
+  return {
+    success: true,
+    referralLink,
+    currentUsername: username,
+    hasReferral: Boolean(referralEvent),
+    referralEvent: referralEvent || null,
+    referrer: referrerProfile
+      ? {
+          userId: referrerProfile.userId || referrerProfile.$id,
+          username: referrerProfile.username,
+          displayName: referrerProfile.displayName || referrerProfile.username,
+          avatar: referrerProfile.avatar || null,
+        }
+      : null,
+  };
+}
+
+/**
+ * Applies a referral to the current user.
+ * Replaces legacy POST /api/referrals.
+ */
+export async function applyReferralSecure(params: { referrerUsername?: string; referrerUserId?: string }, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const eventsTableId = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
+
+  // Check existing
+  const existing = await databases.listDocuments(dbId, eventsTableId, [
+    Query.equal('userId', actor.$id),
+    Query.equal('type', 'referral'),
+    Query.limit(1)
+  ]);
+  if (existing.total > 0) return { success: true, alreadyReferred: true };
+
+  let referrerProfile = null;
+  if (params.referrerUserId) {
+    referrerProfile = await databases.getDocument(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, params.referrerUserId).catch(() => null);
+  } else if (params.referrerUsername) {
+    const res = await databases.listDocuments(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
+      Query.equal('username', params.referrerUsername),
+      Query.limit(1)
+    ]);
+    referrerProfile = res.documents[0] || null;
+  }
+
+  if (!referrerProfile) throw new Error('Referrer not found');
+  if (referrerProfile.userId === actor.$id || referrerProfile.$id === actor.$id) throw new Error('Self referral not allowed');
+
+  const referrerId = referrerProfile.userId || referrerProfile.$id;
+
+  const event = await databases.createDocument(dbId, eventsTableId, ID.unique(), {
+    userId: actor.$id,
+    type: 'referral',
+    actorId: referrerId,
+    relatedUserId: referrerId,
+    delta: 10,
+    status: 'active',
+    metadata: JSON.stringify({
+      source: 'referral-link',
+      referrerUsername: referrerProfile.username,
+      referrerUserId: referrerId,
+      refereeUserId: actor.$id,
+    }),
+  }, [Permission.read(Role.user(actor.$id))]);
+
+  // Reward referrer
+  await databases.createDocument(dbId, eventsTableId, ID.unique(), {
+    userId: referrerId,
+    type: 'reputation',
+    actorId: actor.$id,
+    relatedUserId: actor.$id,
+    delta: 10,
+    status: 'active',
+    metadata: JSON.stringify({
+      source: 'referral-reward',
+      referrerUsername: referrerProfile.username,
+      referrerUserId: referrerId,
+      refereeUserId: actor.$id,
+    }),
+  }, [Permission.read(Role.user(referrerId))]);
+
+  return { success: true, applied: true, referralEvent: event };
+}
+
+/**
+ * Resolves a referral profile by username.
+ * Replaces legacy GET /api/referrals/[username].
+ */
+export async function getReferralProfileSecure(username: string) {
+  const cleaned = String(username || '').trim().replace(/^@+/, '').toLowerCase();
+  if (!cleaned) throw new Error('Invalid username');
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
+
+  const res = await databases.listDocuments(dbId, tableId, [
+    Query.equal('username', cleaned),
+    Query.limit(1)
+  ]);
+
+  const profile = res.documents[0] || null;
+  if (!profile || !profile.username) throw new Error('Profile not found');
+
+  return {
+    success: true,
+    username: profile.username,
+    displayName: profile.displayName || profile.username,
+    avatar: profile.avatar || null,
+    userId: profile.userId || profile.$id,
+    referralLink: `https://www.kylrix.space/referral/${encodeURIComponent(profile.username)}`,
+  };
 }
 
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {

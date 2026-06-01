@@ -29,8 +29,6 @@ export default function ReferralPage({ params }: { params: { username: string } 
   const [claimed, setClaimed] = useState(false);
   const autoClaimedRef = useRef(false);
 
-  const referralApiBase = useMemo(() => '/api/referrals', []);
-
   // Check if user has an active session (without calling account.get())
   useEffect(() => {
     setIsAuthLoading(true);
@@ -50,27 +48,16 @@ export default function ReferralPage({ params }: { params: { username: string } 
     setMessage(null);
 
     try {
-      const res = await fetch(`${referralApiBase}/${encodeURIComponent(username)}`, {
-        method: 'GET',
-        credentials: 'include',
-        cache: 'no-store',
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        setReferral(null);
-        setMessage(data?.error || 'Referral profile not found.');
-        return;
-      }
-
-      setReferral(data as ReferralLookup);
-    } catch {
+      const { getReferralProfileSecure } = await import('@/lib/actions/secure-ops');
+      const data = await getReferralProfileSecure(username);
+      setReferral(data as any as ReferralLookup);
+    } catch (err: any) {
       setReferral(null);
-      setMessage('Unable to load the referral profile right now.');
+      setMessage(err.message || 'Referral profile not found.');
     } finally {
       setLoading(false);
     }
-  }, [referralApiBase, username]);
+  }, [username]);
 
   const claimReferral = useCallback(async () => {
     if (!referral || !username || claiming || claimed) return;
@@ -79,17 +66,10 @@ export default function ReferralPage({ params }: { params: { username: string } 
     setMessage(null);
 
     try {
-      const res = await fetch(`${referralApiBase}`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
-      });
-
-      const data = await res.json().catch(() => null);
-      if (!res.ok) {
-        throw new Error(data?.error || 'Failed to claim referral.');
-      }
+      const { applyReferralSecure } = await import('@/lib/actions/secure-ops');
+      const { account } = await import('@/lib/appwrite/client');
+      const jwt = await account.createJWT();
+      const data = await applyReferralSecure({ referrerUsername: username }, jwt.jwt);
 
       setClaimed(true);
       setMessage(data?.alreadyReferred ? 'Referral already applied to your account.' : 'Referral applied successfully.');
@@ -98,7 +78,7 @@ export default function ReferralPage({ params }: { params: { username: string } 
     } finally {
       setClaiming(false);
     }
-  }, [claimed, claiming, referral, referralApiBase, username]);
+  }, [claimed, claiming, referral, username]);
 
   useEffect(() => {
     loadReferral();

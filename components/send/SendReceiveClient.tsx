@@ -290,16 +290,10 @@ export function SendReceiveClient({ noteId, keyParam }: Props) {
 
       if (note.userId) {
           try {
-            const profileRes = await fetch('/note/api/shared/profiles', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userIds: [note.userId] }),
-            });
-            if (profileRes.ok) {
-              const profilesPayload = await profileRes.json();
-              const author = profilesPayload.rows?.[0];
-              if (author) setAuthorProfile(author);
-            }
+            const { getSharedProfilesSecure } = await import('@/lib/actions/secure-ops');
+            const profilesRes = await getSharedProfilesSecure([note.userId]);
+            const author = profilesRes.documents?.[0];
+            if (author) setAuthorProfile(author as any);
           } catch (profileErr) {
             console.warn('Failed to resolve author profile:', profileErr);
           }

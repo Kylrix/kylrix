@@ -42,10 +42,9 @@ export default function NoteReactions({ targetId, targetType = TargetType.NOTE, 
           } catch (sdkError) {
             const effectiveNoteId = targetType === TargetType.NOTE ? targetId : noteId;
             if (!effectiveNoteId) throw sdkError;
-            const res = await fetch(`/api/shared/${effectiveNoteId}/reactions?targetId=${targetId}&targetType=${targetType}`);
-            if (!res.ok) throw sdkError;
-            const payload = await res.json();
-            return (payload?.rows || []) as Reactions[];
+            const { getPublicNoteReactionsSecure } = await import('@/lib/actions/secure-ops');
+            const res = await getPublicNoteReactionsSecure(effectiveNoteId, targetId, targetType);
+            return (res.rows || []) as unknown as Reactions[];
           }
         },
         1000 * 60 * 10

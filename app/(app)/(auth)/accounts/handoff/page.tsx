@@ -7,6 +7,7 @@ import { account } from '@/lib/appwrite';
 import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
 import { useSource } from '@/lib/source-context';
 import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
+import { createHandoffSessionSecure } from '@/lib/actions/secure-ops';
 
 function buildLoginUrl(source: string | null, redirectUri: string) {
   const url = new URL('/accounts/login', window.location.origin);
@@ -38,30 +39,15 @@ function AppHandoffContent() {
     setStatus('Creating the app session handoff...');
     try {
       const jwt = await account.createJWT();
-      const response = await fetch('/api/auth/session', {
-        headers: {
-          Authorization: `Bearer ${jwt.jwt}`,
-        },
-      });
+      const { secret, userId } = await createHandoffSessionSecure(jwt.jwt);
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        const message = body?.error || 'Unable to create the app session handoff.';
-        const error = new Error(message) as Error & { type?: string };
-        if (String(message).includes('more_factors_required')) {
-          error.type = 'user_more_factors_required';
-        }
-        throw error;
-      }
-
-      const { secret, userId } = await response.json();
       const target = new URL(redirectUri);
       target.searchParams.set('secret', secret);
       target.searchParams.set('userId', userId);
       router.replace(target.toString());
     } catch (_error) {
       const err = _error as any;
-      if (err?.type === 'user_more_factors_required' || err?.message?.includes('more_factors_required')) {
+      if (err?.code === 'MFA_REQUIRED' || err?.message?.includes('more_factors_required')) {
         try {
           const session = await account.getSession('current');
           setLoginMethod(getLoginMethod((session as any)?.provider));

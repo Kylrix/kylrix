@@ -312,15 +312,14 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     setError(null);
     try {
       const fetcher = async () => {
-        const res = await fetch(`/note/api/shared/${noteId}`, { cache: 'no-store' });
-        if (!res.ok) {
-          const payload = await res.json().catch(() => ({}));
-          const message = payload.error || 'Failed to load shared note';
-          const err: any = new Error(message);
-          err.status = res.status;
+        const { getPublicNoteDataSecure } = await import('@/lib/actions/secure-ops');
+        const note = await getPublicNoteDataSecure(noteId);
+        if (!note) {
+          const err: any = new Error('Note not found or not public');
+          err.status = 404;
           throw err;
         }
-        return await res.json();
+        return note;
       };
 
       // Perform fetch
@@ -357,18 +356,13 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
       setCachedData(CACHE_KEY, note, ttl);
       setVerifiedNote(note);
 
-      if (note.userId) {        try {
-          const profileRes = await fetch('/note/api/shared/profiles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userIds: [note.userId] }),
-          });
-          if (profileRes.ok) {
-            const profilesPayload = await profileRes.json();
-            const author = profilesPayload.rows?.[0];
-            if (author) {
-              setAuthorProfile(author);
-            }
+      if (note.userId) {
+        try {
+          const { getSharedProfilesSecure } = await import('@/lib/actions/secure-ops');
+          const profilesRes = await getSharedProfilesSecure([note.userId]);
+          const author = profilesRes.documents?.[0];
+          if (author) {
+            setAuthorProfile(author as any);
           }
         } catch (profileErr) {
           console.warn('Failed to resolve author profile:', profileErr);

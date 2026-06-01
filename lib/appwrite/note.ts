@@ -77,29 +77,22 @@ async function updateNoteAccessForUser(
   permission: NoteCollaboratorPermission,
   action: PermissionUpdateAction = 'grant'
 ) {
+  const { mutatePermissionsSecure, revokePermissionsSecure } = await import('@/lib/actions/secure-ops');
   const jwt = await account.createJWT();
-  const response = await fetch(`/accounts/api/permissions`, {
-    method: action === 'grant' ? 'POST' : 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${jwt.jwt}`,
-    },
-    body: JSON.stringify({
-      databaseId: APPWRITE_DATABASE_ID,
-      tableId: APPWRITE_TABLE_ID_NOTES,
-      rowId: noteId,
-      targetUserIds: [targetUserId],
-      permission,
-      action,
-    }),
-  });
+  const payload = {
+    databaseId: APPWRITE_DATABASE_ID,
+    tableId: APPWRITE_TABLE_ID_NOTES,
+    rowId: noteId,
+    targetUserIds: [targetUserId],
+    permission,
+    action,
+  };
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Failed to update note permissions');
+  if (action === 'grant') {
+    return mutatePermissionsSecure(payload, jwt.jwt);
+  } else {
+    return revokePermissionsSecure(payload, targetUserId, jwt.jwt);
   }
-
-  return response.json().catch(() => ({}));
 }
 
 async function notifyNoteShare(params: {

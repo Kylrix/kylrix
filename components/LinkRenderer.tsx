@@ -1058,9 +1058,9 @@ export function SendRelayPreviewCard({
 
     setLoading(true);
     try {
-      const res = await fetch(`/note/api/shared/${noteId}`);
-      if (!res.ok) throw new Error('Could not load secure relay.');
-      const data = await res.json() as Notes;
+      const { getPublicNoteDataSecure } = await import('@/lib/actions/secure-ops');
+      const data = await getPublicNoteDataSecure(noteId);
+      if (!data) throw new Error('Could not load secure relay.');
       
       const meta = parseSendGhostMetadata(data.metadata);
       if (meta.expiresAt && new Date(meta.expiresAt) < new Date()) {

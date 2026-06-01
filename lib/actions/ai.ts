@@ -77,7 +77,10 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
 
   try {
     const genAI = new GoogleGenerativeAI(activeKey);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+    const model = genAI.getGenerativeModel({ 
+      model: MODEL_NAME,
+      systemInstruction: payload.systemInstruction || undefined
+    });
     let prompt = "";
 
     // Prompt Engineering Layer
@@ -118,6 +121,10 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
         break;
         
       case 'GENERAL_QUERY':
+        prompt = payload.prompt || "";
+        break;
+
+      case 'GENERIC_CHAT':
         prompt = payload.prompt || "";
         break;
 
@@ -179,9 +186,21 @@ The following anonymized offline environment state has been compiled from the us
 Please utilize this contextual memory to optimize your recommendations if relevant. If a recorded workflow chain is active, interpret the sequence of user action IDs to construct dynamic shortcut suggestions, automated procedures, or guidance tutorials to reproduce these exact steps in Kylrix while maintaining the layman-friendly posture.`;
     }
 
-    const result = await model.generateContent(finalPrompt);
-    const response = await result.response;
-    let text = response.text();
+    let text = "";
+    if (payload.history && payload.history.length > 0) {
+      const chat = model.startChat({
+        history: payload.history.map((h: any) => ({
+          role: h.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: h.content || h.text }]
+        }))
+      });
+      const result = await chat.sendMessage(finalPrompt);
+      text = result.response.text();
+    } else {
+      const result = await model.generateContent(finalPrompt);
+      const response = await result.response;
+      text = response.text();
+    }
     
     // Cleanup markdown if Gemini adds it despite instructions
     text = text.replace(/```json/g, "").replace(/```/g, "").trim();

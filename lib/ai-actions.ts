@@ -1,4 +1,5 @@
 import { Notes } from '@/types/appwrite';
+import { generateAIContent } from '@/lib/actions/ai';
 
 export async function generateAIAction(note: Notes, action: 'summarize' | 'grammar' | 'expand') {
   const systemInstructions = {
@@ -9,22 +10,15 @@ export async function generateAIAction(note: Notes, action: 'summarize' | 'gramm
 
   const prompt = `Note Title: ${note.title}\nNote Content:\n${note.content}`;
 
-  const response = await fetch('/api/ai/generate', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      prompt,
-      systemInstruction: systemInstructions[action]
-    }),
+  const result = await generateAIContent({
+    mode: 'GENERIC_CHAT',
+    prompt,
+    systemInstruction: systemInstructions[action]
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'AI Action failed');
+  if (!result.success) {
+    throw new Error(result.error || 'AI Action failed');
   }
 
-  const data = await response.json();
-  return data.text;
+  return result.data;
 }

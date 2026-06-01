@@ -39,31 +39,25 @@ export const GhostNoteClaimer = () => {
                         ? await ecosystemSecurity.encrypt(secret)
                         : secret;
 
-                    const response = await fetch('/accounts/api/permissions', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${jwt.jwt}`,
+                    const { mutatePermissionsSecure } = await import('@/lib/actions/secure-ops');
+                    const result = await mutatePermissionsSecure({
+                        action: 'pin_ghost_note',
+                        noteIds,
+                        wrappedKey: wrappedSecret,
+                        metadata: {
+                            source: 'ghost-claimer',
+                            noteCount: noteIds.length,
                         },
-                        body: JSON.stringify({
-                            action: 'pin_ghost_note',
-                            noteIds,
-                            wrappedKey: wrappedSecret,
-                            metadata: {
-                                source: 'ghost-claimer',
-                                noteCount: noteIds.length,
-                            },
-                        }),
-                    });
+                    }, jwt.jwt);
 
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error || 'Failed to claim ghost notes');
+                    if (result.success) {
+                        localStorage.removeItem('kylrix:ghost:history');
+                        localStorage.removeItem(GHOST_STORAGE_KEY);
+                        localStorage.removeItem(GHOST_SECRET_KEY);
+                        console.log('[GhostClaimer] Successfully handed off ghost notes.');
+                    } else {
+                        throw new Error('Failed to claim ghost notes');
                     }
-
-                    localStorage.removeItem(GHOST_STORAGE_KEY);
-                    localStorage.removeItem(GHOST_SECRET_KEY);
-                    console.log('[GhostClaimer] Successfully handed off ghost notes to accounts API.');
                 } catch (fnErr: any) {
                     console.error('[GhostClaimer] Failed to claim ghost notes:', fnErr);
                 }
