@@ -1038,6 +1038,75 @@ export async function verifyAdminSecure(jwt?: string) {
   return { success: true, userId: actor.$id };
 }
 
+/**
+ * Creates a report for one or more target users.
+ * Replaces legacy POST /api/reports.
+ */
+export async function createReportSecure(params: any, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const targetUserIds = Array.isArray(params.targetUserIds) ? params.targetUserIds : [params.targetUserId].filter(Boolean);
+  if (targetUserIds.length === 0) throw new Error('At least one target userId is required');
+  if (targetUserIds.includes(actor.$id)) throw new Error('Self reports are not allowed');
+
+  const reason = String(params.reason || params.message || '').trim();
+  if (!reason) throw new Error('reason is required');
+
+  const { databases } = createSystemClient();
+  const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
+  const tableId = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
+
+  const created: any[] = [];
+  for (const targetUserId of targetUserIds) {
+    const payload = {
+      userId: targetUserId,
+      type: 'report',
+      actorId: actor.$id,
+      relatedUserId: targetUserId,
+      status: 'pending',
+      metadata: JSON.stringify({
+        source: 'accounts.reports',
+        sourceApp: params.sourceApp || 'kylrix',
+        report: {
+          reporterId: actor.$id,
+          targetUserId,
+          reason,
+          contextType: params.contextType || 'profile',
+          contextId: params.contextId || null,
+          contextUrl: params.contextUrl || null,
+          notes: params.notes || null,
+          reviewState: 'unverified',
+        },
+      }),
+    };
+
+    const row = await databases.createDocument(dbId, tableId, ID.unique(), payload, [Permission.read(Role.user(actor.$id))]);
+    created.push(row);
+  }
+
+  return { success: true, count: created.length, reports: created };
+}
+
+/**
+ * Lists reports authored by or targeting the authenticated actor.
+ * Replaces legacy GET /api/reports.
+ */
+export async function listReportsSecure(statusFilter?: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const { databases } = createSystemClient();
+  const queries = [
+    Query.equal('type', 'report'),
+    Query.or([Query.equal('actorId', actor.$id), Query.equal('userId', actor.$id)])
+  ];
+  if (statusFilter) queries.push(Query.equal('status', statusFilter.toLowerCase()));
+
+  const result = await databases.listDocuments(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, queries);
+  return { success: true, reports: result.rows };
+}
+
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {
   const requester = await getActor();
   if (!requester) return { success: false, reason: 'Unauthorized' };
