@@ -799,6 +799,14 @@ The following catalog provides a highly detailed engineering breakdown of the 56
 *   **Ecosystem Synergy**: Unifies productive task items with real-time audio/video call meshes and comment discussion threads.
 *   **Next-Gen Optimizations**: Graphical visualizer showing active collaboration energy levels as color temperature shifts in the task pulse.
 
+#### 58. Drawer Spark-to-Ghost Relay Snapshot
+*   **shipped Mechanism & Substrate**: Local hotkey listener (`Ctrl + Shift + S`) configured globally in `components/GlobalShortcuts.tsx` scanning `localStorage` for active drawer creation drafts starting with `kylrix:draft:`.
+*   **Zero-Knowledge Cryptographic Wrapping**: Extracts the raw, uncommitted JSON draft state, encrypts it locally using `encryptGhostData` from `lib/encryption/ghost-crypto.ts`, and registers the encrypted payload as a 7-day Ghost Note using the Server Action `AppwriteService.createSendGhostObject` with dynamic object kinds (e.g. `password`, `note`, `event`, `form`, `tag`).
+*   **Instant Clipboard Sharing**: Instantly copies the resulting `/send/[id]/[key]` sharing URL to the clipboard without closing the drawer, resetting inputs, or dropping the user's active layout momentum.
+*   **Acute Architectural Rationale**: Bypasses premature database row inserts and relational table bloat by transforming local, offline-first draft states into zero-knowledge collaboration assets on the fly for team review.
+*   **Ecosystem Synergy**: Fuses local creation drafts and the Global Unmount Policy with secure polymorphic relays, allowing teammates in a chat to audit or review a configuration before it is officially committed to the database.
+*   **Next-Gen Optimizations**: Single-click draft import, enabling the recipient user to instantly populate their active creation drawer with the decrypted snapshot layout payload.
+
 ---
 
 **Build freely. Work while you sleep.** 🌙
