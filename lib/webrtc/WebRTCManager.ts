@@ -5,6 +5,12 @@ import {
   fetchTurnCredentials, 
   subscribeToCloudflareTracks 
 } from '@/lib/server/api';
+import { ID, Permission, Role, Query } from 'appwrite';
+import { databases, realtime } from '@/lib/appwrite/client';
+import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+
+const DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
+const SIGNALS_TABLE = 'call_signals';
 
 export class WebRTCManager {
   private sfuPeerConnection: RTCPeerConnection | null = null;
@@ -22,6 +28,8 @@ export class WebRTCManager {
   private currentTargetId: string | null = null;
   private sessionId: string | null = null;
   private isSfuMode: boolean = false;
+  private callId: string | null = null;
+  private unsubscribeRealtime: (() => void) | null = null;
 
   private cloudflareSessionToken: string | null = null;
   private screenStream: MediaStream | null = null;
@@ -40,10 +48,75 @@ export class WebRTCManager {
     }
   }
 
-  constructor(events: PeerConnectionEvents) {
+  constructor(events: PeerConnectionEvents, callId?: string) {
     this.events = events;
+    this.callId = callId || null;
     // Pre-fetch TURN servers
     this.initializeTurnServers();
+    
+    if (this.callId) {
+        this.setupRealtimeSignaling();
+    }
+  }
+
+  private setupRealtimeSignaling() {
+      if (typeof window === 'undefined' || !this.callId) return;
+
+      const channel = `databases.${DB_ID}.collections.${SIGNALS_TABLE}.documents`;
+      const unsub = realtime.subscribe(channel, (event) => {
+          const row = event.payload as any;
+          if (row.callId !== this.callId) return;
+          if (!event.events.some(e => e.includes('.create'))) return;
+
+          // We don't have localUserId here directly, but we can check if it's an offer/answer/candidate
+          // and if it's meant for us. In 1:1, any signal from 'the other' is for us.
+          // Note: WebRTCManager will filter out self-signals via its own logic if needed.
+          
+          this.handleAppwriteSignal(row);
+      });
+
+      this.unsubscribeRealtime = () => {
+          if (typeof unsub === 'function') unsub();
+          else if ((unsub as any).unsubscribe) (unsub as any).unsubscribe();
+      };
+  }
+
+  private async handleAppwriteSignal(row: any) {
+      const signal = {
+          type: row.type,
+          payload: row.payload,
+          sender: row.senderId,
+          callId: row.callId
+      };
+
+      // Basic protection against self-signals if we can identify sender
+      // Usually senderId is the peer.
+
+      if (row.type === 'offer') {
+          await this.handleSignal({ type: 'offer', sdp: JSON.parse(row.payload).sdp, sender: row.senderId, target: 'me' });
+      } else if (row.type === 'answer') {
+          await this.handleSignal({ type: 'answer', sdp: JSON.parse(row.payload).sdp, sender: row.senderId, target: 'me' });
+      } else if (row.type === 'candidate') {
+          await this.handleSignal({ type: 'candidate', candidate: JSON.parse(row.payload), sender: row.senderId, target: 'me' });
+      }
+  }
+
+  private async sendAppwriteSignal(type: 'offer' | 'answer' | 'candidate', payload: string, senderId: string, targetId: string) {
+      if (!this.callId) return;
+      try {
+          await databases.createDocument(DB_ID, SIGNALS_TABLE, ID.unique(), {
+              callId: this.callId,
+              senderId: senderId,
+              type,
+              payload
+          }, [
+              Permission.read(Role.user(senderId)),
+              Permission.read(Role.user(targetId)),
+              Permission.write(Role.user(senderId)),
+          ]);
+      } catch (err) {
+          console.error('[WebRTCManager] Failed to send Appwrite signal:', err);
+      }
   }
 
   private async initializeTurnServers() {
@@ -202,6 +275,12 @@ export class WebRTCManager {
     if (!isSfu) {
         pc.onicecandidate = (event) => {
             if (event.candidate && this.currentTargetId) {
+                const signalPayload = JSON.stringify(event.candidate);
+                
+                if (this.callId) {
+                    this.sendAppwriteSignal('candidate', signalPayload, senderId, this.currentTargetId);
+                }
+
                 this.events.onSignal({
                     type: 'candidate',
                     candidate: event.candidate.toJSON(),
@@ -237,6 +316,10 @@ export class WebRTCManager {
 
       const offer = await this.peerConnection.createOffer();
       await this.peerConnection.setLocalDescription(offer);
+
+      if (this.callId) {
+          this.sendAppwriteSignal('offer', JSON.stringify(offer), senderId, targetId);
+      }
 
       this.events.onSignal({
         type: 'offer',
@@ -332,6 +415,11 @@ export class WebRTCManager {
         await this.peerConnection.setLocalDescription(answer);
         
         console.log(`[WebRTCManager] Sending answer to ${signal.sender}`);
+
+        if (this.callId) {
+            this.sendAppwriteSignal('answer', JSON.stringify(answer), signal.target, signal.sender);
+        }
+
         this.events.onSignal({
           type: 'answer',
           sdp: answer.sdp,
@@ -390,7 +478,7 @@ export class WebRTCManager {
     });
   }
 
-  public cleanup() {
+  public async cleanup() {
     this.localStream?.getTracks().forEach(track => track.stop());
     this.peerConnection?.close();
     this.peerConnection = null;
@@ -400,6 +488,28 @@ export class WebRTCManager {
     this.candidateQueue = [];
     this.currentTargetId = null;
     this.updateState('disconnected');
+
+    if (this.unsubscribeRealtime) {
+        this.unsubscribeRealtime();
+    }
+
+    // Section 3: The Self-Cleaning Garbage Collection
+    if (this.callId) {
+        try {
+            const currentUserId = (window as any).__KYLRIX_PULSE__?.$id;
+            const res = await databases.listDocuments(DB_ID, SIGNALS_TABLE, [
+                Query.equal('callId', this.callId)
+            ]);
+            
+            // Concurrent deletions for active signaling blocks
+            await Promise.all(
+                res.documents.map(doc => databases.deleteDocument(DB_ID, SIGNALS_TABLE, doc.$id))
+            );
+            console.log(`[WebRTCManager] Purged ${res.total} signaling rows for call ${this.callId}`);
+        } catch (err) {
+            console.warn('[WebRTCManager] Failed to purge signaling rows:', err);
+        }
+    }
   }
 
   private updateState(newState: PeerState) {

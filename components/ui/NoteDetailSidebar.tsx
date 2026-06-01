@@ -5,7 +5,6 @@ import { Notes } from '@/types/appwrite';
 import dynamic from 'next/dynamic';
 
 const DoodleCanvas = dynamic(() => import('@/components/DoodleCanvas'), { ssr: false });
-const NoteContentDisplay = dynamic(() => import('@/components/NoteContentDisplay'), { ssr: false });
 const NoteContentRenderer = dynamic(() => import('@/components/NoteContentRenderer'), { ssr: false });
 
 import {
@@ -31,11 +30,9 @@ import {
 } from '@mui/material';
 import {
   Delete as TrashIcon,
-  ContentCopy as ClipboardDocumentIcon,
   AttachFile as PaperClipIcon,
   OpenInNew as OpenIcon,
   PushPin as PinIcon,
-  PushPinOutlined as PinOutlinedIcon,
   ArrowBack as BackIcon,
   Link as LinkIcon,
   Lock as LockIcon,
@@ -43,7 +40,6 @@ import {
   Public as PublicIcon,
   Refresh as RefreshIcon,
   Close as CloseIcon,
-  Share as ShareIcon,
   AutoAwesome as ActionIcon,
   VideoCall as VideoCallIcon,
   PlaylistAddCheck as TaskIcon,
@@ -71,12 +67,10 @@ import {
   rotatePublicNoteLink, 
   getShareableUrl, 
   getCurrentPublicNoteShareUrl, 
-  getCurrentPublicNoteDecryptionKey, 
   getNotePublicState, 
   decryptPublicEncryptedNote, 
   createTaskFromNote 
 } from '@/lib/appwrite';
-import { updateNote } from '@/lib/actions/client-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { formatFileSize } from '@/lib/utils';
 import { Mic, Square } from 'lucide-react';
@@ -114,67 +108,6 @@ export function NoteDetailSidebar({
   const { openProUpgrade } = useProUpgrade();
   const { closeSidebar } = useDynamicSidebar();
   const { openCallLauncher } = useCallLauncher();
-
-  // Load hooks and check if loading first
-  if (isLoading) {
-    return (
-      <Box className="note-detail-sidebar-root" sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', overflow: 'hidden' }}>
-        {/* Header */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: { xs: 2, md: 2.5 }, pb: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
-              {onBack && (
-                <IconButton disabled sx={{ color: theme.palette.text.secondary }}>
-                  <BackIcon />
-                </IconButton>
-              )}
-              <Skeleton variant="text" width="60%" height={28} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '4px' }} />
-            </Box>
-            {!onBack && (
-              <IconButton disabled sx={{ color: theme.palette.text.secondary }}>
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} variant="circular" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
-            ))}
-          </Box>
-        </Box>
-
-        {/* Scrollable Content Area */}
-        <Box sx={{ flex: 1, overflowY: 'auto', p: { xs: 2, md: 2.5 }, pt: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {/* Content Card */}
-          <Box sx={{ p: 2.5, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', minHeight: { xs: 340, md: 460 }, height: { xs: 'clamp(340px, 46vh, 460px)', md: 'clamp(460px, 58vh, 760px)' }, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Skeleton variant="text" width="20%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <Skeleton variant="text" width="90%" sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-              <Skeleton variant="text" width="95%" sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-              <Skeleton variant="text" width="80%" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
-              <Skeleton variant="text" width="85%" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
-              <Skeleton variant="text" width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.02)' }} />
-            </Box>
-          </Box>
-
-          {/* Tags Section */}
-          <Box sx={{ px: 1 }}>
-            <Skeleton variant="text" width="15%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 1.5 }} />
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Skeleton variant="rounded" width={60} height={24} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
-              <Skeleton variant="rounded" width={80} height={24} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
-            </Box>
-          </Box>
-
-          {/* Attachments Section */}
-          <Box sx={{ px: 1 }}>
-            <Skeleton variant="text" width="25%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 1.5 }} />
-            <Skeleton variant="rounded" width="100%" height={60} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '18px' }} />
-          </Box>
-        </Box>
-      </Box>
-    );
-  }
 
   const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
   const [realtimeNote, setRealtimeNote] = useState<Notes | null>(null);
@@ -250,100 +183,10 @@ export function NoteDetailSidebar({
     };
   }, []);
 
-  const toggleRecording = async () => {
-    if (isRecording) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      setIsRecording(false);
-    } else {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        let options = { audioBitsPerSecond: 16000 };
-        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-          (options as any).mimeType = 'audio/webm;codecs=opus';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-          (options as any).mimeType = 'audio/ogg;codecs=opus';
-        }
-
-        const mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
-          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
-
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
-
-          stream.getTracks().forEach(track => track.stop());
-
-          try {
-            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
-            insertTextAtCursor(` [voice:${uploaded.$id}] `);
-            showSuccess('Voice note recorded', 'Inserted into your note content.');
-          } catch (error) {
-            console.error('Failed to upload voice note:', error);
-            showError('Recording failed', 'Could not save voice note.');
-          }
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
-        setRecordingDuration(0);
-
-        durationIntervalRef.current = setInterval(() => {
-          setRecordingDuration(prev => prev + 1);
-        }, 1000);
-
-        recordingTimerRef.current = setTimeout(() => {
-          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
-          }
-          setIsRecording(false);
-        }, 120000); // 2 minutes limit
-
-      } catch (err) {
-        console.error("Failed to start recording:", err);
-        showError('Permission denied', 'Microphone access is required to record voice notes.');
-      }
-    }
-  };
-
-  const insertTextAtCursor = (text: string) => {
-    const textarea = contentTextareaRef.current;
-    if (textarea) {
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const nextContent = content.substring(0, start) + text + content.substring(end);
-      setContent(nextContent);
-      
-      const updatedNote = { ...liveNote, content: nextContent };
-      onUpdate(updatedNote);
-
-      setTimeout(() => {
-        textarea.focus();
-        textarea.setSelectionRange(start + text.length, start + text.length);
-      }, 50);
-    } else {
-      const nextContent = content + text;
-      setContent(nextContent);
-      const updatedNote = { ...liveNote, content: nextContent };
-      onUpdate(updatedNote);
-    }
-  };
-
   // ENCRYPTION LOGIC
-  const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
-  const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted;
-  const isT4EncryptedPublicNote = isPublic && isT4Encrypted;
+  const isT4Encrypted = useMemo(() => (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4', [noteMeta]);
+  const isEncryptedNote = useMemo(() => isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted, [isT4Encrypted, noteMeta, isLocallyDecrypted]);
+  const isT4EncryptedPublicNote = useMemo(() => isPublic && isT4Encrypted, [isPublic, isT4Encrypted]);
 
   // Sync local state with liveNote (crucial for auto-decryption healing)
   useEffect(() => {
@@ -545,7 +388,7 @@ export function NoteDetailSidebar({
   });
 
   // Handlers
-  const handlePinToggle = async () => {
+  const handlePinToggle = useCallback(async () => {
     const pinned = isPinned(liveNote.$id);
     try {
       if (pinned) await unpinNote(liveNote.$id);
@@ -558,9 +401,9 @@ export function NoteDetailSidebar({
       }
       showError('Failed to update pin');
     }
-  };
+  }, [isPinned, liveNote.$id, unpinNote, pinNote, showSuccess, openProUpgrade, showError]);
 
-  const handleTogglePublic = async () => {
+  const handleTogglePublic = useCallback(async () => {
     try {
       const updated = await toggleNoteVisibility(liveNote.$id);
       if (updated) {
@@ -576,11 +419,11 @@ export function NoteDetailSidebar({
         showError('Failed to update visibility');
       }
     }
-  };
+  }, [liveNote.$id, toggleNoteVisibility, onUpdate, showSuccess, showError, promptSudo]);
 
-  const rotateNoteLink = () => setShowRotateConfirm(true);
+  const rotateNoteLink = useCallback(() => setShowRotateConfirm(true), []);
 
-  const handleConfirmedRotate = async () => {
+  const handleConfirmedRotate = useCallback(async () => {
     setIsRotating(true);
     try {
       const unlocked = await promptSudo("unlock");
@@ -601,9 +444,9 @@ export function NoteDetailSidebar({
     } finally {
       setIsRotating(false);
     }
-  };
+  }, [promptSudo, liveNote.$id, rotatePublicNoteLink, onUpdate, getShareableUrl, showSuccess, showError]);
 
-  const handleCopyShareLink = async () => {
+  const handleCopyShareLink = useCallback(async () => {
     if (!isPublic) {
       showError('Note is private', 'Make the note public before copying its link.');
       return;
@@ -619,12 +462,12 @@ export function NoteDetailSidebar({
     } else {
       showError('Shared link unavailable', 'Could not resolve the shared note URL.');
     }
-  };
+  }, [isPublic, isT4Encrypted, liveNote.$id, liveNote, getCurrentPublicNoteShareUrl, getShareableUrl, showSuccess, showError]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     onDelete(liveNote.$id);
     setShowDeleteConfirm(false);
-  };
+  }, [onDelete, liveNote.$id]);
 
   const handleCreateTaskFromNote = useCallback(async () => {
     setIsCreatingTaskFromNote(true);
@@ -640,7 +483,7 @@ export function NoteDetailSidebar({
     } finally {
       setIsCreatingTaskFromNote(false);
     }
-  }, [liveNote, onUpdate, showSuccess, showError]);
+  }, [liveNote, onUpdate, showSuccess, showError, createTaskFromNote]);
 
   const handleStartNoteHuddle = useCallback(() => {
     const ownerId = liveNote.userId;
@@ -657,35 +500,35 @@ export function NoteDetailSidebar({
     });
   }, [liveNote, openCallLauncher]);
 
-  const handleDoodleSave = (doodleData: string) => {
+  const handleDoodleSave = useCallback((doodleData: string) => {
     setContent(doodleData);
     setFormat('doodle');
     setShowDoodleEditor(false);
-  };
+  }, []);
 
-  const activateTitleEditing = () => {
+  const activateTitleEditing = useCallback(() => {
     if (isEncryptedNote && !vaultUnlocked) {
         promptSudo();
         return;
     }
     setIsEditingTitle(true);
-  };
+  }, [isEncryptedNote, vaultUnlocked, promptSudo]);
 
-  const activateContentEditing = () => {
+  const activateContentEditing = useCallback(() => {
     if (isEncryptedNote && !vaultUnlocked) {
         promptSudo();
         return;
     }
     setIsEditingContent(true);
-  };
+  }, [isEncryptedNote, vaultUnlocked, promptSudo]);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const displayTitle = isEncryptedNote ? '🔒 Encrypted Note' : (title || liveNote.title || 'Untitled note');
-  const displayContent = isEncryptedNote ? '' : (content || liveNote.content || '');
-  const displayFormat = isEncryptedNote ? 'text' : format;
-  const displayTags = tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+  const displayTitle = useMemo(() => isEncryptedNote ? '🔒 Encrypted Note' : (title || liveNote.title || 'Untitled note'), [isEncryptedNote, title, liveNote.title]);
+  const displayContent = useMemo(() => isEncryptedNote ? '' : (content || liveNote.content || ''), [isEncryptedNote, content, liveNote.content]);
+  const displayFormat = useMemo(() => isEncryptedNote ? 'text' : format, [isEncryptedNote, format]);
+  const displayTags = useMemo(() => tags.split(',').map((t: string) => t.trim()).filter(Boolean), [tags]);
 
   const currentAttachments = useMemo(() => {
       if (liveNote.attachments && Array.isArray(liveNote.attachments)) {
@@ -696,6 +539,157 @@ export function NoteDetailSidebar({
       return [];
   }, [liveNote.attachments]);
 
+  const toggleRecording = useCallback(async () => {
+    if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        let options = { audioBitsPerSecond: 16000 };
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          (options as any).mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
+          (options as any).mimeType = 'audio/ogg;codecs=opus';
+        }
+
+        const mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorderRef.current = mediaRecorder;
+        audioChunksRef.current = [];
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+
+        mediaRecorder.onstop = async () => {
+          if (recordingTimerRef.current) clearTimeout(recordingTimerRef.current);
+          if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioFile = new File([audioBlob], `voice_note_${Date.now()}.webm`, { type: 'audio/webm' });
+
+          stream.getTracks().forEach(track => track.stop());
+
+          try {
+            const uploaded = await StorageService.uploadFile(audioFile, 'voice');
+            insertTextAtCursor(` [voice:${uploaded.$id}] `);
+            showSuccess('Voice note recorded', 'Inserted into your note content.');
+          } catch (error) {
+            console.error('Failed to upload voice note:', error);
+            showError('Recording failed', 'Could not save voice note.');
+          }
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+        setRecordingDuration(0);
+
+        durationIntervalRef.current = setInterval(() => {
+          setRecordingDuration(prev => prev + 1);
+        }, 1000);
+
+        recordingTimerRef.current = setTimeout(() => {
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+          }
+          setIsRecording(false);
+        }, 120000); // 2 minutes limit
+
+      } catch (err) {
+        console.error("Failed to start recording:", err);
+        showError('Permission denied', 'Microphone access is required to record voice notes.');
+      }
+    }
+  }, [isRecording, showSuccess, showError]);
+
+  const insertTextAtCursor = useCallback((text: string) => {
+    const textarea = contentTextareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const nextContent = content.substring(0, start) + text + content.substring(end);
+      setContent(nextContent);
+      
+      const updatedNote = { ...liveNote, content: nextContent };
+      onUpdate(updatedNote);
+
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + text.length, start + text.length);
+      }, 50);
+    } else {
+      const nextContent = content + text;
+      setContent(nextContent);
+      const updatedNote = { ...liveNote, content: nextContent };
+      onUpdate(updatedNote);
+    }
+  }, [content, liveNote, onUpdate]);
+
+  if (isLoading) {
+    return (
+      <Box className="note-detail-sidebar-root" sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', overflow: 'hidden' }}>
+        {/* Header */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: { xs: 2, md: 2.5 }, pb: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
+              {onBack && (
+                <IconButton disabled sx={{ color: theme.palette.text.secondary }}>
+                  <BackIcon />
+                </IconButton>
+              )}
+              <Skeleton variant="text" width="60%" height={28} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '4px' }} />
+            </Box>
+            {!onBack && (
+              <IconButton disabled sx={{ color: theme.palette.text.secondary }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} variant="circular" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
+            ))}
+          </Box>
+        </Box>
+
+        {/* Scrollable Content Area */}
+        <Box sx={{ flex: 1, overflowY: 'auto', p: { xs: 2, md: 2.5 }, pt: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {/* Content Card */}
+          <Box sx={{ p: 2.5, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', minHeight: { xs: 340, md: 460 }, height: { xs: 'clamp(340px, 46vh, 460px)', md: 'clamp(460px, 58vh, 760px)' }, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Skeleton variant="text" width="20%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Skeleton variant="text" width="90%" sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+              <Skeleton variant="text" width="95%" sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+              <Skeleton variant="text" width="80%" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
+              <Skeleton variant="text" width="85%" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
+              <Skeleton variant="text" width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.02)' }} />
+            </Box>
+          </Box>
+
+          {/* Tags Section */}
+          <Box sx={{ px: 1 }}>
+            <Skeleton variant="text" width="15%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 1.5 }} />
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Skeleton variant="rounded" width={60} height={24} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
+              <Skeleton variant="rounded" width={80} height={24} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
+            </Box>
+          </Box>
+
+          {/* Attachments Section */}
+          <Box sx={{ px: 1 }}>
+            <Skeleton variant="text" width="25%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 1.5 }} />
+            <Skeleton variant="rounded" width="100%" height={60} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '18px' }} />
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
+  // --- RENDER ---
   return (
     <Box className="note-detail-sidebar-root" sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', overflow: 'hidden' }}>
       {/* Header (Dual-Row Layout - Fixed at top) */}
@@ -978,9 +972,7 @@ export function NoteDetailSidebar({
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>Created {formatNoteCreatedDate(liveNote)}</Typography>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>Updated {formatNoteUpdatedDate(liveNote)}</Typography>
       </Box>
-    </Box>
 
-      {/* Action Hub Drawer */}
       <Drawer anchor="top" open={showActionHub} onClose={() => setShowActionHub(false)} PaperProps={{ sx: { borderBottomLeftRadius: '32px', borderBottomRightRadius: '32px', bgcolor: '#161412', border: '1px solid #1C1A18', backgroundImage: 'none', p: 3.5 } }}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

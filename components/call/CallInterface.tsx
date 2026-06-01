@@ -522,17 +522,18 @@ export const CallInterface = ({
                 if (conversationId) {
                     const conv = await ChatService.getConversationById(conversationId, user.$id);
                     const memberCount = conv?.participantCount || conv?.participants?.length || 0;
-                    setForceP2p(memberCount <= 4);
+                    // Section 1: 1-on-1 calls use P2P, anything else uses SFU
+                    setForceP2p(memberCount <= 2);
                 } else if (callCode) {
                     const link = await CallService.getCallLink(callCode);
                     if (link?.metadata) {
                         const meta = JSON.parse(link.metadata);
                         const pCount = Array.isArray(meta.participantIds) ? meta.participantIds.length : 0;
-                        setForceP2p(meta.scope !== 'group' || pCount <= 4);
+                        setForceP2p(meta.scope === 'direct' || pCount <= 2);
                     }
                 }
             } catch (_e) {
-                // Default to P2P on error
+                // Default to P2P for direct calls
                 setForceP2p(true);
             }
         };
@@ -558,6 +559,8 @@ export const CallInterface = ({
     useEffect(() => {
         if (!user) return;
 
+        const effectiveCallId = callCode || conversationId;
+
         rtcManager.current = new WebRTCManager({
             onTrack: (stream: MediaStream) => {
                 if (remoteVideoRef.current) {
@@ -571,19 +574,19 @@ export const CallInterface = ({
             },
             onStateChange: (state: string) => setStatus(state),
             onSignal: async (signal: any) => {
-                if (['join_request', 'let_in', 'reject_join', 'yank_member', 'presence', 'chat_message', 'offer', 'answer', 'candidate'].includes(signal.type)) {
+                if (['join_request', 'let_in', 'reject_join', 'yank_member', 'presence', 'chat_message'].includes(signal.type)) {
                     if (signal.target) {
                         try {
-                            await CallService.sendSignal(user.$id, signal.target, { ...signal, callId: callCode || conversationId });
+                            await CallService.sendSignal(user.$id, signal.target, { ...signal, callId: effectiveCallId });
                         } catch (_e) {
                             console.error('Failed to send signal');
                         }
                     }
                     return;
                 }
-                if (['offer', 'answer', 'candidate'].includes(signal.type)) return;
+                // Offer/Answer/Candidate are now handled internally by WebRTCManager via call_signals table
             }
-        });
+        }, effectiveCallId);
 
         const initVideo = !isCompanion && initialMediaSettings.video;
         const initAudio = !isCompanion && initialMediaSettings.audio;
