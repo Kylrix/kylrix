@@ -198,21 +198,19 @@ export function isEmailInAdminList(email?: string | null): boolean {
 
 /**
  * Highly gated Admin Client for strict administrative actions (manual billing, admin panel).
- * Mathematically guaranteed to fail if APPWRITE_API is invalid.
- * If actorEmail is provided, it is strictly validated against the ADMINS env variable.
+ * Mathematically guaranteed to fail if APPWRITE_API is invalid, OR if actorEmail is empty, OR if actorEmail is not listed in the ADMINS env variable.
  */
-export function createAdminClient(actorEmail?: string | null) {
+export function createAdminClient(actorEmail: string) {
   const apiKey = process.env.APPWRITE_API;
   
   if (!apiKey) {
     throw new Error('System API key is missing. Unauthorized action.');
   }
 
-  if (actorEmail !== undefined) {
-    if (!isEmailInAdminList(actorEmail)) {
-      console.warn(`[Admin Client] Gated action blocked. ${actorEmail} is not authorized.`);
-      throw new Error('Forbidden: Unauthorized admin operation.');
-    }
+  const email = String(actorEmail || '').trim().toLowerCase();
+  if (!email || !isEmailInAdminList(email)) {
+    console.warn(`[Admin Client] Gated action blocked. "${email}" is not authorized.`);
+    throw new Error('Forbidden: Unauthorized admin operation.');
   }
 
   const client = new Client()
@@ -244,20 +242,19 @@ export function createAdminClient(actorEmail?: string | null) {
 
 /**
  * Highly gated Admin TablesDB instance.
- * Validates the actor email against the ADMINS env variable.
+ * Mathematically guaranteed to fail if APPWRITE_API is invalid, OR if actorEmail is empty, OR if actorEmail is not listed in the ADMINS env variable.
  */
-export function createAdminTablesDB(actorEmail?: string | null) {
+export function createAdminTablesDB(actorEmail: string) {
   const apiKey = process.env.APPWRITE_API;
 
   if (!apiKey) {
     throw new Error('System API key is missing. Unauthorized action.');
   }
 
-  if (actorEmail !== undefined) {
-    if (!isEmailInAdminList(actorEmail)) {
-      console.warn(`[Admin TablesDB] Gated action blocked. ${actorEmail} is not authorized.`);
-      throw new Error('Forbidden: Unauthorized admin operation.');
-    }
+  const email = String(actorEmail || '').trim().toLowerCase();
+  if (!email || !isEmailInAdminList(email)) {
+    console.warn(`[Admin TablesDB] Gated action blocked. "${email}" is not authorized.`);
+    throw new Error('Forbidden: Unauthorized admin operation.');
   }
 
   const client = new Client()

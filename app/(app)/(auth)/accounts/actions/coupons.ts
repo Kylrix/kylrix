@@ -25,7 +25,7 @@ export async function listCouponsAction() {
   const req = await getRequestLike();
   const user = await verifyUser(req);
   requireAdmin(user);
-  const { databases } = createAdminClient(user?.email);
+  const { databases } = createAdminClient(user.email);
   const result = await databases.listDocuments(CHAT_DB_ID, EVENTS_TABLE_ID, [
     Query.equal('type', 'coupon'),
     Query.orderDesc('$createdAt'),
@@ -45,7 +45,7 @@ export async function createCouponAction(input: {
   const req = await getRequestLike();
   const user = await verifyUser(req);
   requireAdmin(user);
-  const { databases } = createAdminClient(user?.email);
+  const { databases } = createAdminClient(user.email);
   const recipients = (input.userIds || []).map((id) => String(id || '').trim()).filter(Boolean);
   const scope = recipients.length > 0 ? 'targeted' : 'open';
   const targets = recipients.length > 0 ? recipients : [null];

@@ -25,7 +25,7 @@ export function requireAdmin(user: any) {
   }
 }
 
-export async function getAdminStats(actorEmail?: string) {
+export async function getAdminStats(actorEmail: string) {
   // Pass the securely verified email into the gated Admin Client
   const { users, databases } = createAdminClient(actorEmail);
   const userList = await users.list([Query.limit(10), Query.orderDesc('$createdAt')]);
@@ -73,7 +73,7 @@ export async function listAdminUsers(
     limit?: number;
     cursorAfter?: string | null;
   },
-  actorEmail?: string
+  actorEmail: string
 ) {
   const search = (params.search || '').trim().toLowerCase();
   const verifiedOnly = Boolean(params.verifiedOnly);
