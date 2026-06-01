@@ -174,115 +174,20 @@ export function NoteDetailSidebar({
       )}
     </Box>
   );
+// Sync drawer state
+useEffect(() => {
+  setIsDrawerOpen(showRotateConfirm);
+}, [showRotateConfirm, setIsDrawerOpen]);
 
-  useEffect(() => {
-    noteRef.current = note;
-  }, [note]);
-
-  useEffect(() => {
-    setRealtimeNote(null);
-  }, [note.$id]);
-  
-  const noteMeta = useMemo(() => {
-    try {
-      return JSON.parse(liveNote.metadata || '{}');
-    } catch {
-      return {};
-    }
-  }, [liveNote.metadata]);
-
-  // REACTIVE VAULT STATUS
-  const [vaultUnlocked, setVaultUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
-  useEffect(() => {
-    return ecosystemSecurity.onStatusChange((s) => setVaultUnlocked(s.isUnlocked));
-  }, []);
-
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isEditingContent, setIsEditingContent] = useState(false);
-  const isEditing = isEditingTitle || isEditingContent;
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showDoodleEditor, setShowDoodleEditor] = useState(false);
-  
-  const [title, setTitle] = useState(liveNote.title || '');
-  const [content, setContent] = useState(liveNote.content || '');
-  const [format, setFormat] = useState<'text' | 'doodle'>(liveNote.format as 'text' | 'doodle' || 'text');
-  const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
-  const [isPublic, setIsPublic] = useState(getNotePublicState(liveNote));
-
-  const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
-  const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
-  const [isLoadingTasks, setIsLoadingTasks] = useState(false);
-  const [linkedTasks, setLinkedTasks] = useState<any[]>([]);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
-  const [linkedEvents, setLinkedEvents] = useState<any[]>([]);
-  const [isLoadingSecrets, setIsLoadingSecrets] = useState(false);
-  const [linkedSecrets, setLinkedSecrets] = useState<any[]>([]);
-
-  const [showActionHub, setShowActionHub] = useState(false);
-  const [showRotateConfirm, setShowRotateConfirm] = useState(false);
-  const [showProjectLinker, setShowProjectLinker] = useState(false);
-  const [isRotating, setIsRotating] = useState(false);
-  const [isCreatingTaskFromNote, setIsCreatingTaskFromNote] = useState(false);
-  const [crossSuggestions, setCrossSuggestions] = useState<any[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
-
-  // ENCRYPTION LOGIC
-  const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
-  const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted;
-  const isT4EncryptedPublicNote = isPublic && isT4Encrypted;
-
-  // Sync local state with liveNote (crucial for auto-decryption healing)
-  useEffect(() => {
-    if (!isEditing) {
-      setTitle(liveNote.title || '');
-      setContent(liveNote.content || '');
-      setTags(liveNote.tags?.join(', ') || '');
-      setFormat(liveNote.format as 'text' | 'doodle' || 'text');
-      setIsPublic(getNotePublicState(liveNote));
-    }
-  }, [liveNote, isEditing]);
-
-  // Automatically heal T4 encrypted state if vault is unlocked
-  useEffect(() => {
-    if (isEncryptedNote && vaultUnlocked) {
-      const healDecryption = async () => {
-        try {
-          const decrypted = await decryptPublicEncryptedNote(liveNote);
-          if (decrypted) {
-            setTitle(decrypted.title || '');
-            setContent(decrypted.content || '');
-            setTags(decrypted.tags?.join(', ') || '');
-            setFormat(decrypted.format as 'text' | 'doodle' || 'text');
-            setIsLocallyDecrypted(true);
-            setIsEditingContent(false);
-            setIsEditingTitle(false);
-            onUpdate(decrypted);
-            showSuccess('Note decrypted', 'Content is now visible.');
-          }
-        } catch (err) {
-          console.error('[NoteSidebar] Auto-decryption failed:', err);
-        }
-      };
-      void healDecryption();
-    }
-  }, [isEncryptedNote, vaultUnlocked, liveNote, onUpdate, showSuccess]);
-
-  // Sync drawer state
-  useEffect(() => {
-    setIsDrawerOpen(showRotateConfirm);
-  }, [showRotateConfirm, setIsDrawerOpen]);
-
-  // Automatically prompt for vault unlock if opening an encrypted note
-  useEffect(() => {
-    if (isEncryptedNote && !vaultUnlocked) {
-      const timer = setTimeout(() => {
-        promptSudo();
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [isEncryptedNote, vaultUnlocked, promptSudo]);
-
+// Automatically prompt for vault unlock if opening an encrypted note
+useEffect(() => {
+  if (isEncryptedNote && !vaultUnlocked) {
+    const timer = setTimeout(() => {
+      promptSudo();
+    }, 800);
+    return () => clearTimeout(timer);
+  }
+}, [isEncryptedNote, vaultUnlocked, promptSudo]);
   // Linked Content Effects
   const linkedTaskIds = useMemo(() => liveNote.linkedTaskIds || (liveNote.linkedTaskId ? [liveNote.linkedTaskId] : []), [liveNote]);
   const linkedEventIds = useMemo(() => liveNote.linkedEventIds || (liveNote.linkedEventId ? [liveNote.linkedEventId] : []), [liveNote]);
@@ -420,12 +325,6 @@ export function NoteDetailSidebar({
     tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
   }), [liveNote, title, content, format, tags]);
 
-  const { isSaving: isAutosaving } = useAutosave(candidateNote, {
-    onSave: (savedNote: Notes) => {
-      onUpdate(savedNote);
-    },
-    enabled: isEditing,
-  });
 
   // Handlers
   const handlePinToggle = async () => {
