@@ -1145,6 +1145,62 @@ export async function createAccountEventSecure(params: any, jwt?: string) {
   return { success: true, count: created.length, rows: created };
 }
 
+/**
+ * Initializes a new Cloudflare Calls session.
+ * Replaces legacy POST /api/calls/session.
+ */
+export async function initCloudflareCallSessionSecure() {
+  const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API;
+  const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
+
+  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID) {
+    throw new Error('Cloudflare configuration missing');
+  }
+
+  const response = await fetch(`https://rtc.live.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/new`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return await response.json();
+}
+
+/**
+ * Adds tracks to an existing Cloudflare Calls session.
+ * Replaces legacy POST /api/calls/tracks.
+ */
+export async function initCloudflareCallTracksSecure(params: { sessionId: string; tracks: any[] }) {
+  const { sessionId, tracks } = params;
+  const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API;
+  const CLOUDFLARE_APP_ID = process.env.NEXT_PUBLIC_CLOUDFLARE_APP_ID;
+
+  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_APP_ID) {
+    throw new Error('Cloudflare configuration missing');
+  }
+
+  const response = await fetch(`https://rtc.live.cloudflare.com/v1/apps/${CLOUDFLARE_APP_ID}/sessions/${sessionId}/tracks/new`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${CLOUDFLARE_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ tracks }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+
+  return await response.json();
+}
+
 export async function cleanupStaleCallsSecure(input?: { userId?: string; callId?: string | null; cleanupAll?: boolean }) {
   const requester = await getActor();
   if (!requester) return { success: false, reason: 'Unauthorized' };
