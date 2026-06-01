@@ -562,26 +562,36 @@ export default function ProjectDetailPage() {
                 </IconButton>
                 <Box sx={{ minWidth: 0 }}>
                     <Stack direction="row" spacing={1.5} alignItems="center">
-                        <Typography noWrap sx={{ color: '#fff', fontWeight: 900, fontSize: { xs: '1.25rem', md: '1.8rem' }, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
-                            {project.title}
-                        </Typography>
-                        <Chip 
-                            label={project.status} 
-                            size="small" 
-                            sx={{ 
-                                bgcolor: alpha(project.status === 'active' ? '#10B981' : '#F59E0B', 0.1), 
-                                color: project.status === 'active' ? '#10B981' : '#F59E0B', 
-                                fontWeight: 900, 
-                                fontSize: '0.65rem', 
-                                textTransform: 'uppercase',
-                                height: 22,
-                                border: `1px solid ${alpha(project.status === 'active' ? '#10B981' : '#F59E0B', 0.2)}`
-                            }} 
-                        />
+                        {loading ? (
+                          <Skeleton variant="text" width={180} height={32} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+                        ) : (
+                          <>
+                            <Typography noWrap sx={{ color: '#fff', fontWeight: 900, fontSize: { xs: '1.25rem', md: '1.8rem' }, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
+                                {project.title}
+                            </Typography>
+                            <Chip 
+                                label={project.status} 
+                                size="small" 
+                                sx={{ 
+                                    bgcolor: alpha(project.status === 'active' ? '#10B981' : '#F59E0B', 0.1), 
+                                    color: project.status === 'active' ? '#10B981' : '#F59E0B', 
+                                    fontWeight: 900, 
+                                    fontSize: '0.65rem', 
+                                    textTransform: 'uppercase',
+                                    height: 22,
+                                    border: `1px solid ${alpha(project.status === 'active' ? '#10B981' : '#F59E0B', 0.2)}`
+                                }} 
+                            />
+                          </>
+                        )}
                     </Stack>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', fontWeight: 600 }}>
-                        {projectObjects.length} linked ecosystem objects • {collaborators.length + 1} participants
-                    </Typography>
+                    {loading ? (
+                      <Skeleton variant="text" width={240} height={18} sx={{ bgcolor: 'rgba(255,255,255,0.02)', mt: 0.5 }} />
+                    ) : (
+                      <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem', fontWeight: 600 }}>
+                          {projectObjects.length} linked ecosystem objects • {collaborators.length + 1} participants
+                      </Typography>
+                    )}
                 </Box>
             </Stack>
 

@@ -1219,7 +1219,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
               <Button 
                 size="small"
                 onClick={handleInitHuddle}
-                sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 800, py: 0.75, px: 2, borderRadius: '8px', textTransform: 'none', '&:hover': { bgcolor: '#575CF0' } }}
+                sx={{ bgcolor: '#A855F7', color: '#fff', fontWeight: 800, py: 0.75, px: 2, borderRadius: '8px', textTransform: 'none', '&:hover': { bgcolor: '#9333EA' } }}
               >
                 Start Huddle
               </Button>
@@ -1247,7 +1247,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                             borderRadius: '12px',
                             borderTopRightRadius: isSelf ? 0 : '12px',
                             borderTopLeftRadius: isSelf ? '12px' : 0,
-                            bgcolor: isSelf ? '#6366F1' : 'rgba(255,255,255,0.03)',
+                            bgcolor: isSelf ? '#A855F7' : 'rgba(255,255,255,0.03)',
                             border: isSelf ? 'none' : '1px solid rgba(255,255,255,0.04)',
                             color: '#fff',
                             boxShadow: 'none',
@@ -1287,7 +1287,7 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                   size="small"
                   type="submit"
                   disabled={!newComment.trim() || huddleSending}
-                  sx={{ color: '#6366F1', p: 0.5 }}
+                  sx={{ color: '#A855F7', p: 0.5 }}
                 >
                   <SendIcon sx={{ fontSize: 16 }} />
                 </IconButton>
