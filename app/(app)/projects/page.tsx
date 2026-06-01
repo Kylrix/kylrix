@@ -41,7 +41,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
-import ProjectCard from '@/components/projects/ProjectCard';
+import ProjectCard, { ProjectCardSkeleton } from '@/components/projects/ProjectCard';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';
@@ -482,9 +482,13 @@ export default function ProjectsPage() {
         </Typography>
         
         {loading ? (
-          <Box sx={{ display: 'grid', placeItems: 'center', py: 10 }}>
-            <CircularProgress sx={{ color: '#6366F1' }} />
-          </Box>
+          <Grid container spacing={2.5}>
+            {[1, 2, 3, 4, 5, 6].map((idx) => (
+              <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={idx}>
+                <ProjectCardSkeleton />
+              </Grid>
+            ))}
+          </Grid>
         ) : projects.length === 0 ? (
           <Paper
             elevation={0}
