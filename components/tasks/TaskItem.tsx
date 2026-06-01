@@ -139,7 +139,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
 
   const getDueDateColor = () => {
     if (!task.dueDate) return '#A1A1AA';
-    if (task.status === 'done') return '#10b981';
+    if (task.status === 'done') return '#A855F7';
     if (isPast(new Date(task.dueDate)) && !isToday(new Date(task.dueDate))) return '#ef4444';
     if (isToday(new Date(task.dueDate))) return '#f59e0b';
     return '#A1A1AA';
@@ -201,7 +201,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
               color: '#34322F',
               transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               '&.Mui-checked': {
-                color: '#10B981',
+                color: '#A855F7',
               },
               '&:hover': {
                 backgroundColor: 'transparent',
