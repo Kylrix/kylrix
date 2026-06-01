@@ -301,7 +301,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
             animation: 'fadeIn 0.3s ease-out', 
             p: { xs: 2, md: 4 },
             minHeight: '100vh',
-            bgcolor: '#000000'
+            bgcolor: '#0A0908'
         }}>
             <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
             {/* Header / Sub-Header */}
@@ -309,16 +309,16 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <IconButton 
                         {...(onBack ? { onClick: onBack } : { component: Link, href: "/flow/forms" })} 
-                        sx={{ bgcolor: '#161514', color: '#6366F1', '&:hover': { bgcolor: '#1F1D1B' } }}
+                        sx={{ bgcolor: '#161412', color: '#6366F1', border: '1px solid #34322F', '&:hover': { bgcolor: '#1C1A18', borderColor: '#6366F1' } }}
                     >
                         <BackIcon />
                     </IconButton>
                     <Box>
                         <Stack direction="row" spacing={1} alignItems="center">
                             {loading ? (
-                                <Skeleton variant="text" width={220} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '4px' }} />
+                                <Skeleton variant="text" width={220} height={36} sx={{ bgcolor: '#161412', borderRadius: '4px' }} />
                             ) : (
-                                <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.04em' }}>{form.title}</Typography>
+                                <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.04em', fontFamily: 'var(--font-clash)', color: '#FFF' }}>{form.title}</Typography>
                             )}
                             {!loading && (
                                 <Chip 
@@ -329,15 +329,16 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                         fontWeight: 900, 
                                         bgcolor: 'transparent',
                                         color: getStatusColor(form.status || 'draft'),
-                                        border: `1px solid ${getStatusColor(form.status || 'draft')}20`
+                                        border: `1px solid ${getStatusColor(form.status || 'draft')}`,
+                                        fontFamily: 'var(--font-mono)'
                                     }} 
                                 />
                             )}
                         </Stack>
                         {loading ? (
-                            <Skeleton variant="text" width={140} height={18} sx={{ bgcolor: 'rgba(255,255,255,0.03)', mt: 1, borderRadius: '3px' }} />
+                            <Skeleton variant="text" width={140} height={18} sx={{ bgcolor: '#161412', mt: 1, borderRadius: '3px' }} />
                         ) : (
-                            <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>Form ID: {form.$id}</Typography>
+                            <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>Form ID: {form.$id}</Typography>
                         )}
                     </Box>
                 </Box>
@@ -348,7 +349,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                             variant="outlined" 
                             startIcon={<CopyIcon />} 
                             onClick={handleCopyLink}
-                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, borderColor: '#161514', color: 'text.primary', bgcolor: '#161514', '&:hover': { bgcolor: '#1F1D1B' } }}
+                            sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 800, borderColor: '#34322F', color: '#FFF', bgcolor: '#161412', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#1C1A18', borderColor: '#6366F1' } }}
                         >
                             Copy Public Link
                         </Button>
@@ -362,16 +363,15 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                             resourceTitle: form.title,
                             onShared: () => fetchCollaborators()
                         })}
-                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, borderColor: '#161514', color: 'text.primary', bgcolor: '#161514', '&:hover': { bgcolor: '#1F1D1B' } }}
+                        sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 800, borderColor: '#34322F', color: '#FFF', bgcolor: '#161412', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#1C1A18', borderColor: '#6366F1' } }}
                     >
                         Share Form
                     </Button>
                     <Button 
                         variant="contained" 
-                        color="primary" 
                         startIcon={<EditIcon />} 
                         onClick={() => setIsEditing(true)}
-                        sx={{ borderRadius: 2, px: 3, fontWeight: 800, boxShadow: '0 8px 20px rgba(99, 102, 241, 0.3)' }}
+                        sx={{ borderRadius: '12px', px: 3, fontWeight: 800, bgcolor: '#6366F1', color: 'black', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#575CF0' } }}
                     >
                         Edit Design
                     </Button>
@@ -380,10 +380,10 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
 
             {/* Dynamic Status Bar (Only when Published) */}
             {form.status === 'published' && (
-                <Paper sx={{ p: 1.5, mb: 4, borderRadius: 3, bgcolor: '#161514', border: '1px solid rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <Paper sx={{ p: 1.5, mb: 4, borderRadius: '16px', bgcolor: '#161412', border: '1px solid #10B981', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, backgroundImage: 'none', boxShadow: 'none' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 1 }}>
                         <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#10B981', boxShadow: '0 0 8px #10B981' }} />
-                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#10B981', fontSize: '0.75rem', letterSpacing: '0.05em' }}>FORM IS LIVE & ACCEPTING RESPONSES</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#10B981', fontSize: '0.75rem', letterSpacing: '0.05em', fontFamily: 'var(--font-mono)' }}>FORM IS LIVE & ACCEPTING RESPONSES</Typography>
                     </Box>
                     <IconButton size="small" component={Link} href={`/flow/form/${form.$id}`} target="_blank" sx={{ color: '#10B981' }}>
                         <LaunchIcon sx={{ fontSize: 18 }} />
@@ -392,23 +392,19 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
             )}
 
             {/* Tabs */}
-            <Box sx={{ borderBottom: 1, borderColor: 'rgba(255, 255, 255, 0.05)', mb: 4 }}>
-                <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary">
-                    <Tab 
-                        icon={<InsightsIcon sx={{ fontSize: 20 }} />} 
-                        iconPosition="start" 
-                        label={<Typography sx={{ fontWeight: 900, fontSize: '0.8rem', letterSpacing: '0.05em' }}>RESPONSES</Typography>} 
-                    />
-                    <Tab 
-                        icon={<FormIcon sx={{ fontSize: 20 }} />} 
-                        iconPosition="start" 
-                        label={<Typography sx={{ fontWeight: 900, fontSize: '0.8rem', letterSpacing: '0.05em' }}>PREVIEW & SCHEMA</Typography>} 
-                    />
-                    <Tab 
-                        icon={<MessageSquare size={16} />} 
-                        iconPosition="start" 
-                        label={<Typography sx={{ fontWeight: 900, fontSize: '0.8rem', letterSpacing: '0.05em' }}>DISCUSSION</Typography>} 
-                    />
+            <Box sx={{ borderBottom: 1, borderColor: '#34322F', mb: 4 }}>
+                <Tabs 
+                    value={tab} 
+                    onChange={(_, v) => setTab(v)}
+                    sx={{
+                        '& .MuiTab-root': { fontWeight: 800, fontSize: '0.85rem', color: '#9B9691', px: 3, fontFamily: 'var(--font-satoshi)' },
+                        '& .Mui-selected': { color: '#6366F1 !important' },
+                        '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' }
+                    }}
+                >
+                    <Tab label="RESPONSES" icon={<InsightsIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
+                    <Tab label="PREVIEW & SCHEMA" icon={<FormIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
+                    <Tab label="DISCUSSION" icon={<MessageSquare size={16} />} iconPosition="start" />
                 </Tabs>
             </Box>
 
@@ -419,7 +415,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                         {loading ? (
                             <Stack spacing={2}>
                                 {[1, 2, 3].map((i) => (
-                                    <Skeleton key={i} variant="rounded" width="100%" height={80} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px' }} />
+                                    <Skeleton key={i} variant="rounded" width="100%" height={80} sx={{ bgcolor: '#161412', borderRadius: '12px' }} />
                                 ))}
                             </Stack>
                         ) : (
@@ -432,24 +428,24 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
             {tab === 1 && (
                 <Fade in={true}>
                     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' }, gap: 4 }}>
-                        <Paper sx={{ p: 4, borderRadius: 4, bgcolor: '#161514', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                            <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 900, mb: 4, display: 'block' }}>SCHEMA PREVIEW</Typography>
+                        <Paper sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid #34322F', backgroundImage: 'none', boxShadow: 'none' }}>
+                            <Typography variant="overline" sx={{ color: '#9B9691', fontWeight: 900, mb: 4, display: 'block', fontFamily: 'var(--font-mono)' }}>SCHEMA PREVIEW</Typography>
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                 {loading ? (
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                         {[1, 2].map((i) => (
                                             <Box key={i}>
-                                                <Skeleton variant="text" width="30%" height={20} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 1 }} />
-                                                <Skeleton variant="rounded" width="100%" height={56} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
+                                                <Skeleton variant="text" width="30%" height={20} sx={{ bgcolor: '#1C1A18', mb: 1 }} />
+                                                <Skeleton variant="rounded" width="100%" height={56} sx={{ bgcolor: '#161412', borderRadius: '8px' }} />
                                             </Box>
                                         ))}
                                     </Box>
                                 ) : JSON.parse(form.schema || '[]').map((field: any) => (
                                     <Box key={field.id}>
-                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 800, opacity: 0.8 }}>
+                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 800, fontFamily: 'var(--font-satoshi)', color: '#FFF' }}>
                                             {field.label} {field.required && <Box component="span" sx={{ color: '#ff1744' }}>*</Box>}
                                         </Typography>
-                                        <Box sx={{ p: 2, borderRadius: 2, bgcolor: '#1F1D1B', border: '1px solid rgba(255, 255, 255, 0.05)', color: 'text.disabled', fontSize: '0.8rem' }}>
+                                        <Box sx={{ p: 2, borderRadius: '12px', bgcolor: '#0A0908', border: '1px solid #34322F', color: '#9B9691', fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }}>
                                             {field.placeholder || `Input for ${field.type}...`}
                                         </Box>
                                     </Box>
@@ -458,20 +454,20 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                         </Paper>
 
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <Paper sx={{ p: 4, borderRadius: 4, bgcolor: '#161514', border: '1px solid rgba(255, 255, 255, 0.05)', height: 'fit-content' }}>
-                                <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 900, mb: 2, display: 'block' }}>RAW JSON</Typography>
+                            <Paper sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid #34322F', height: 'fit-content', backgroundImage: 'none', boxShadow: 'none' }}>
+                                <Typography variant="overline" sx={{ color: '#9B9691', fontWeight: 900, mb: 2, display: 'block', fontFamily: 'var(--font-mono)' }}>RAW JSON</Typography>
                                 {loading ? (
-                                    <Skeleton variant="rounded" width="100%" height={160} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
+                                    <Skeleton variant="rounded" width="100%" height={160} sx={{ bgcolor: '#161412', borderRadius: '8px' }} />
                                 ) : (
-                                    <Box component="pre" sx={{ fontSize: '0.75rem', color: 'text.secondary', overflow: 'auto', maxHeight: 400, fontFamily: 'var(--font-jetbrains)', bgcolor: '#1F1D1B', p: 2, borderRadius: 2 }}>
+                                    <Box component="pre" sx={{ fontSize: '0.75rem', color: '#9B9691', overflow: 'auto', maxHeight: 400, fontFamily: 'var(--font-mono)', bgcolor: '#0A0908', border: '1px solid #34322F', p: 2, borderRadius: '12px' }}>
                                         {JSON.stringify(JSON.parse(form.schema || '[]'), null, 2)}
                                     </Box>
                                 )}
                             </Paper>
 
-                            <Paper sx={{ p: 4, borderRadius: 4, bgcolor: '#161514', border: '1px solid rgba(255, 255, 255, 0.05)', height: 'fit-content' }}>
+                            <Paper sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid #34322F', height: 'fit-content', backgroundImage: 'none', boxShadow: 'none' }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                                    <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 900 }}>COLLABORATORS</Typography>
+                                    <Typography variant="overline" sx={{ color: '#9B9691', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>COLLABORATORS</Typography>
                                     {!loading && (
                                         <Button 
                                             size="small"
@@ -481,7 +477,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                                 resourceTitle: form.title,
                                                 onShared: () => fetchCollaborators()
                                             })}
-                                            sx={{ color: '#10B981', fontWeight: 800, fontSize: '0.7rem', textTransform: 'none', p: 0, minWidth: 0, '&:hover': { textDecoration: 'underline' } }}
+                                            sx={{ color: '#10B981', fontWeight: 800, fontSize: '0.7rem', textTransform: 'none', p: 0, minWidth: 0, fontFamily: 'var(--font-satoshi)', '&:hover': { textDecoration: 'underline' } }}
                                         >
                                             + Manage
                                         </Button>
@@ -489,11 +485,11 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                 </Box>
                                 
                                 {loading ? (
-                                    <Skeleton variant="rounded" width="100%" height={80} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
+                                    <Skeleton variant="rounded" width="100%" height={80} sx={{ bgcolor: '#161412', borderRadius: '8px' }} />
                                 ) : loadingCollaborators ? (
                                     <CircularProgress size={16} sx={{ color: '#10B981' }} />
                                 ) : collaborators.length === 0 ? (
-                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', display: 'block' }}>
+                                    <Typography variant="caption" sx={{ color: '#9B9691', fontStyle: 'italic', display: 'block', fontFamily: 'var(--font-satoshi)' }}>
                                         No co-collaborators added yet.
                                     </Typography>
                                 ) : (
@@ -514,13 +510,13 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                                     gap: 1.5, 
                                                     p: 1, 
                                                     borderRadius: '12px', 
-                                                    bgcolor: 'rgba(255,255,255,0.02)', 
-                                                    border: '1px solid rgba(255,255,255,0.04)',
+                                                    bgcolor: '#1C1A18', 
+                                                    border: '1px solid #34322F',
                                                     cursor: 'pointer',
                                                     transition: 'all 0.2s ease',
                                                     '&:hover': {
-                                                        borderColor: 'rgba(255,255,255,0.12)',
-                                                        bgcolor: 'rgba(255,255,255,0.04)'
+                                                        borderColor: '#6366F1',
+                                                        bgcolor: '#1C1A18'
                                                     }
                                                 }}
                                             >
@@ -531,10 +527,10 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                                     size={28}
                                                 />
                                                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'white', display: 'block' }} noWrap>
+                                                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'white', display: 'block', fontFamily: 'var(--font-satoshi)' }} noWrap>
                                                         {profile.displayName || profile.username}
                                                     </Typography>
-                                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', fontSize: '9px' }}>
+                                                    <Typography variant="caption" sx={{ color: '#9B9691', display: 'block', fontSize: '9px', fontFamily: 'var(--font-mono)' }}>
                                                         {profile.permissionLevel || 'Viewer'}
                                                     </Typography>
                                                 </Box>
@@ -550,23 +546,23 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
 
             {tab === 2 && (
                 <Fade in={true}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', height: 600, bgcolor: 'rgba(255,255,255,0.01)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.04)', overflow: 'hidden', position: 'relative' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', height: 600, bgcolor: '#161412', borderRadius: '24px', border: '1px solid #34322F', overflow: 'hidden', position: 'relative' }}>
                         {/* Mode Control & Toolbar */}
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.25, borderBottom: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(0,0,0,0.15)' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 900, color: 'white' }}>Public Huddle Thread</Typography>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.25, borderBottom: '1px solid #34322F', bgcolor: '#0A0908' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#FFF', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>Public Huddle Thread</Typography>
                             {isHuddleInit && huddleTimeRemaining && (
                                 <Stack direction="row" spacing={1.5} alignItems="center">
-                                    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: '#F59E0B' }}>
-                                        <Clock size={14} style={{ color: '#F59E0B' }} />
-                                        <Typography variant="caption" sx={{ fontWeight: 800 }}>{huddleTimeRemaining}</Typography>
+                                    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: '#FFB020' }}>
+                                        <Clock size={14} style={{ color: '#FFB020' }} />
+                                        <Typography variant="caption" sx={{ fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{huddleTimeRemaining}</Typography>
                                     </Stack>
                                     <Button
                                         size="small"
                                         startIcon={<FileText size={14} />}
                                         onClick={handleSaveHuddleAsStory}
                                         sx={{
-                                            bgcolor: 'rgba(236, 72, 153, 0.1)', color: '#EC4899', fontWeight: 800, fontSize: '0.75rem', px: 2, py: 0.75, borderRadius: '8px', textTransform: 'none',
-                                            '&:hover': { bgcolor: 'rgba(236, 72, 153, 0.15)' }
+                                            bgcolor: '#1C1A18', color: '#EC4899', border: '1px solid #34322F', fontWeight: 800, fontSize: '0.75rem', px: 2, py: 0.75, borderRadius: '12px', textTransform: 'none', fontFamily: 'var(--font-satoshi)',
+                                            '&:hover': { bgcolor: '#34322F', borderColor: '#EC4899' }
                                         }}
                                     >
                                         Save Story
@@ -578,23 +574,23 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                         {/* Main Viewport */}
                         <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
                             {huddleLoading && (
-                                <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: 'rgba(10,9,8,0.7)', zIndex: 2 }}>
+                                <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: '#0A0908', zIndex: 2 }}>
                                     <CircularProgress size={28} sx={{ color: '#6366F1' }} />
                                 </Box>
                             )}
 
                             {!isHuddleInit ? (
                                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center' }}>
-                                    <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.08)', color: '#6366F1', border: '1px solid rgba(99, 102, 241, 0.15)', mb: 2.5 }}>
+                                    <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: '#1C1A18', color: '#6366F1', border: '1px solid #34322F', mb: 2.5 }}>
                                         <Globe size={26} style={{ color: '#6366F1' }} />
                                     </Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mb: 1 }}>Initialize Public Huddle</Typography>
-                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 360, lineHeight: 1.5, mb: 3 }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#FFF', mb: 1, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>Initialize Public Huddle</Typography>
+                                    <Typography variant="caption" sx={{ color: '#9B9691', maxWidth: 360, lineHeight: 1.5, mb: 3, fontFamily: 'var(--font-satoshi)' }}>
                                         Coordinate form structure, survey target audience, or review field submissions with your collaborators in this temporary real-time public thread. Comments auto-clean in 7 days.
                                     </Typography>
                                     <Button 
                                         onClick={handleInitHuddle}
-                                        sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 800, fontSize: '0.8rem', py: 1.25, px: 3, borderRadius: '10px', textTransform: 'none', '&:hover': { bgcolor: '#575CF0' } }}
+                                        sx={{ bgcolor: '#6366F1', color: 'black', fontWeight: 800, fontSize: '0.8rem', py: 1.25, px: 3, borderRadius: '12px', textTransform: 'none', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#575CF0' } }}
                                     >
                                         Start Huddle
                                     </Button>
@@ -603,15 +599,15 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                 <>
                                     <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
                                         {huddleMessages.length === 0 ? (
-                                            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
-                                                <Typography variant="caption" sx={{ fontStyle: 'italic' }}>No messages yet. Start the discussion!</Typography>
+                                            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#9B9691', fontFamily: 'var(--font-satoshi)' }}>No messages yet. Start the discussion!</Typography>
                                             </Box>
                                         ) : (
                                             huddleMessages.map((msg) => {
                                                 const isSelf = msg.senderId === user?.$id;
                                                 return (
                                                     <Box key={msg.id} sx={{ alignSelf: isSelf ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, display: 'block', mb: 0.5, textAlign: isSelf ? 'right' : 'left' }}>
+                                                        <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, display: 'block', mb: 0.5, textAlign: isSelf ? 'right' : 'left', fontFamily: 'var(--font-satoshi)' }}>
                                                             {msg.senderName}
                                                         </Typography>
                                                         <Paper 
@@ -621,18 +617,18 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                                                 borderRadius: '16px',
                                                                 borderTopRightRadius: isSelf ? 0 : '16px',
                                                                 borderTopLeftRadius: isSelf ? '16px' : 0,
-                                                                bgcolor: isSelf ? '#6366F1' : 'rgba(255,255,255,0.03)',
-                                                                border: isSelf ? 'none' : '1px solid rgba(255,255,255,0.04)',
-                                                                color: '#fff',
+                                                                bgcolor: isSelf ? '#6366F1' : '#1C1A18',
+                                                                border: isSelf ? 'none' : '1px solid #34322F',
+                                                                color: isSelf ? 'black' : '#fff',
                                                                 boxShadow: 'none',
                                                                 backgroundImage: 'none'
                                                             }}
                                                         >
-                                                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word', fontSize: '0.85rem' }}>
+                                                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word', fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }}>
                                                                 {msg.content}
                                                             </Typography>
                                                         </Paper>
-                                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left' }}>
+                                                        <Typography variant="caption" sx={{ color: '#9B9691', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left', fontFamily: 'var(--font-mono)' }}>
                                                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </Typography>
                                                     </Box>
@@ -643,7 +639,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                     </Box>
 
                                     {/* Input Form */}
-                                    <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ p: 2.25, borderTop: '1px solid rgba(255,255,255,0.06)', bgcolor: 'rgba(0,0,0,0.15)' }}>
+                                    <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ p: 2.25, borderTop: '1px solid #34322F', bgcolor: '#0A0908' }}>
                                         <Stack direction="row" spacing={1.5}>
                                             <TextField
                                                 fullWidth
@@ -655,15 +651,16 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                                 InputProps={{
                                                     disableUnderline: true,
                                                     sx: {
-                                                        bgcolor: '#0A0908',
+                                                        bgcolor: '#161412',
                                                         borderRadius: '12px',
                                                         color: 'white',
                                                         px: 2,
                                                         py: 1,
                                                         fontWeight: 600,
                                                         fontSize: '0.85rem',
-                                                        border: '1px solid rgba(255,255,255,0.05)',
-                                                        '&:hover': { borderColor: 'rgba(255,255,255,0.1)' }
+                                                        border: '1px solid #34322F',
+                                                        fontFamily: 'var(--font-satoshi)',
+                                                        '&:hover': { borderColor: '#6366F1' }
                                                     }
                                                 }}
                                             />
@@ -672,15 +669,15 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                                 disabled={!inputText.trim() || huddleSending}
                                                 sx={{
                                                     bgcolor: '#6366F1',
-                                                    color: '#fff',
+                                                    color: 'black',
                                                     borderRadius: '12px',
                                                     width: 40,
                                                     height: 40,
                                                     '&:hover': { bgcolor: '#575CF0' },
-                                                    '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.1)' }
+                                                    '&.Mui-disabled': { bgcolor: '#1C1A18', color: '#34322F' }
                                                 }}
                                             >
-                                                <Send size={16} style={{ color: '#fff' }} />
+                                                <Send size={16} style={{ color: 'inherit' }} />
                                             </IconButton>
                                         </Stack>
                                     </Box>

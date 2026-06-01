@@ -218,15 +218,15 @@ export default function FormsDashboard() {
             animation: 'fadeIn 0.4s ease-out', 
             p: { xs: 2, md: 4 },
             minHeight: '100vh',
-            bgcolor: '#000000'
+            bgcolor: '#0A0908'
         }}>
             <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
                 <Box>
-                    <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, letterSpacing: '-0.04em', fontFamily: 'var(--font-clash)' }}>
+                    <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, letterSpacing: '-0.04em', fontFamily: 'var(--font-clash)', color: '#fff' }}>
                         Forms
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+                    <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
                         Design data collection workflows for the ecosystem.
                     </Typography>
                 </Box>
@@ -234,13 +234,13 @@ export default function FormsDashboard() {
                     variant="contained" 
                     startIcon={<AddIcon />}
                     onClick={handleCreate}
-                    sx={{ borderRadius: 2, px: 3, fontWeight: 800, bgcolor: 'var(--color-primary)', color: 'black', '&:hover': { bgcolor: alpha('#6366F1', 0.9) } }}
+                    sx={{ borderRadius: '12px', px: 3, py: 1.2, fontWeight: 800, bgcolor: '#6366F1', color: 'black', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#575CF0' } }}
                 >
                     Create Form
                 </Button>
             </Box>
 
-            <Box sx={{ borderBottom: 1, borderColor: 'rgba(255,255,255,0.05)', mb: 4 }}>
+            <Box sx={{ borderBottom: 1, borderColor: '#34322F', mb: 4 }}>
                 <Tabs 
                     value={tabValue} 
                     onChange={(_, v) => setTabValue(v)}
@@ -248,9 +248,9 @@ export default function FormsDashboard() {
                     scrollButtons="auto"
                     allowScrollButtonsMobile
                     sx={{
-                        '& .MuiTab-root': { fontWeight: 800, fontSize: '0.85rem', color: 'text.secondary', px: 3 },
-                        '& .Mui-selected': { color: 'var(--color-primary) !important' },
-                        '& .MuiTabs-indicator': { bgcolor: 'var(--color-primary)', height: 3, borderRadius: '3px 3px 0 0' }
+                        '& .MuiTab-root': { fontWeight: 800, fontSize: '0.85rem', color: '#9B9691', px: 3, fontFamily: 'var(--font-satoshi)' },
+                        '& .Mui-selected': { color: '#6366F1 !important' },
+                        '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' }
                     }}
                 >
                     <Tab label="Active Forms" icon={<FormIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
@@ -260,7 +260,7 @@ export default function FormsDashboard() {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 Drafts
                                 {offlineDrafts.length > 0 && (
-                                    <Box sx={{ bgcolor: '#FFB020', color: 'black', borderRadius: '50%', width: 18, height: 18, fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Box sx={{ bgcolor: '#FFB020', color: 'black', borderRadius: '50%', width: 18, height: 18, fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)' }}>
                                         {offlineDrafts.length}
                                     </Box>
                                 )}
@@ -276,21 +276,21 @@ export default function FormsDashboard() {
                 <Grid container spacing={3}>
                     {[1, 2, 3].map((i) => (
                         <Grid size={{ xs: 12, md: 6, lg: 4 }} key={i}>
-                            <Card sx={{ bgcolor: '#161514', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: 3 }}>
-                                <CardContent sx={{ p: 3 }}>
+                            <Card sx={{ bgcolor: '#161412', border: '1px solid #34322F', borderRadius: '24px' }}>
+                                <CardContent sx={{ p: 2.5 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                        <Skeleton variant="rectangular" width={60} height={20} sx={{ borderRadius: 1, bgcolor: '#1F1D1B' }} />
-                                        <Skeleton variant="circular" width={24} height={24} sx={{ bgcolor: '#1F1D1B' }} />
+                                        <Skeleton variant="rectangular" width={60} height={20} sx={{ borderRadius: '6px', bgcolor: '#1C1A18' }} />
+                                        <Skeleton variant="circular" width={24} height={24} sx={{ bgcolor: '#1C1A18' }} />
                                     </Box>
-                                    <Skeleton variant="text" width="80%" height={32} sx={{ mb: 1, bgcolor: '#1F1D1B' }} />
-                                    <Skeleton variant="text" width="100%" height={20} sx={{ bgcolor: '#1F1D1B' }} />
-                                    <Skeleton variant="text" width="60%" height={20} sx={{ mb: 4, bgcolor: '#1F1D1B' }} />
-                                    <Divider sx={{ opacity: 0.05, mb: 3 }} />
+                                    <Skeleton variant="text" width="80%" height={32} sx={{ mb: 1, bgcolor: '#1C1A18' }} />
+                                    <Skeleton variant="text" width="100%" height={20} sx={{ bgcolor: '#1C1A18' }} />
+                                    <Skeleton variant="text" width="60%" height={20} sx={{ mb: 4, bgcolor: '#1C1A18' }} />
+                                    <Divider sx={{ borderColor: '#34322F', mb: 3 }} />
                                     <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: '#1F1D1B' }} />
-                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: '#1F1D1B' }} />
+                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: '#1C1A18' }} />
+                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: '#1C1A18' }} />
                                         <Box sx={{ flexGrow: 1 }} />
-                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: '#1C1A18' }} />
                                     </Box>
                                 </CardContent>
                             </Card>
@@ -303,10 +303,10 @@ export default function FormsDashboard() {
                     {tabValue === 0 && (
                         <>
                             {filteredForms.length === 0 ? (
-                                <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161514', border: '1px dashed rgba(255, 255, 255, 0.1)', borderRadius: 4 }}>
-                                    <FormIcon sx={{ fontSize: 64, opacity: 0.1, mb: 2 }} />
-                                    <Typography variant="h6" sx={{ opacity: 0.6, mb: 4 }}>No active forms.</Typography>
-                                    <Button variant="outlined" startIcon={<AddIcon />} onClick={handleCreate}>Start Building</Button>
+                                <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161412', border: '1px dashed #34322F', borderRadius: '24px' }}>
+                                    <FormIcon sx={{ fontSize: 64, color: '#9B9691', opacity: 0.3, mb: 2 }} />
+                                    <Typography variant="h6" sx={{ color: '#fff', opacity: 0.8, mb: 4, fontFamily: 'var(--font-clash)' }}>No active forms.</Typography>
+                                    <Button variant="outlined" startIcon={<AddIcon />} onClick={handleCreate} sx={{ borderRadius: '12px', border: '1px solid #34322F', color: '#fff', fontFamily: 'var(--font-satoshi)', fontWeight: 800, '&:hover': { bgcolor: '#161412', borderColor: '#6366F1' } }}>Start Building</Button>
                                 </Paper>
                             ) : (
                                 <Grid container spacing={3}>
@@ -322,24 +322,48 @@ export default function FormsDashboard() {
                                                         }
                                                     }}
                                                     sx={{ 
-                                                        bgcolor: '#161514', 
-                                                        border: '1px solid rgba(255, 255, 255, 0.05)', 
-                                                        borderRadius: 3,
+                                                        bgcolor: '#161412', 
+                                                        border: '1px solid #34322F', 
+                                                        borderRadius: '24px',
                                                         cursor: 'pointer',
-                                                        transition: 'all 0.2s ease-in-out',
+                                                        boxShadow: '0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px rgba(37,35,33,0.9)',
+                                                        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                                                         '&:hover': {
-                                                            bgcolor: '#1F1D1B',
-                                                            borderColor: 'rgba(99, 102, 241, 0.3)',
-                                                            transform: 'translateY(-2px)'
+                                                            bgcolor: '#1C1A18',
+                                                            borderColor: '#6366F1',
+                                                            transform: 'translateY(-2px)',
+                                                            boxShadow: '0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px rgba(37,35,33,1.0)'
                                                         }
                                                     }}
                                                 >
-                                                    <CardContent sx={{ p: 3 }}>
+                                                    <CardContent sx={{ p: 2.5 }}>
                                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                                                             <Stack direction="row" spacing={1} alignItems="center">
-                                                                <Chip label={(form.status || 'unknown').toUpperCase()} size="small" sx={{ fontSize: '10px', fontWeight: 900, color: getStatusColor(form.status || 'draft'), border: `1px solid ${getStatusColor(form.status || 'draft')}20`, bgcolor: 'transparent' }} />
+                                                                <Chip 
+                                                                    label={(form.status || 'unknown').toUpperCase()} 
+                                                                    size="small" 
+                                                                    sx={{ 
+                                                                        fontSize: '9px', 
+                                                                        fontWeight: 900, 
+                                                                        color: getStatusColor(form.status || 'draft'), 
+                                                                        border: `1px solid ${getStatusColor(form.status || 'draft')}`, 
+                                                                        bgcolor: 'transparent',
+                                                                        fontFamily: 'var(--font-mono)' 
+                                                                    }} 
+                                                                />
                                                                 {DraftsService.hasDraft(form.$id) && (
-                                                                    <Chip label="UNSYNCED DRAFT" size="small" sx={{ fontSize: '10px', fontWeight: 900, bgcolor: alpha('#FFB020', 0.1), color: '#FFB020', border: '1px solid rgba(255, 176, 32, 0.2)' }} />
+                                                                    <Chip 
+                                                                        label="UNSYNCED DRAFT" 
+                                                                        size="small" 
+                                                                        sx={{ 
+                                                                            fontSize: '9px', 
+                                                                            fontWeight: 900, 
+                                                                            bgcolor: '#1C1A18', 
+                                                                            color: '#FFB020', 
+                                                                            border: '1px solid #FFB020',
+                                                                            fontFamily: 'var(--font-mono)' 
+                                                                        }} 
+                                                                    />
                                                                 )}
                                                             </Stack>
                                                             <Stack direction="row" spacing={0.5} alignItems="center">
@@ -348,8 +372,9 @@ export default function FormsDashboard() {
                                                                         size="small"
                                                                         sx={{
                                                                             color: '#6366F1',
-                                                                            opacity: 0.75,
-                                                                            '&:hover': { opacity: 1, bgcolor: 'rgba(99,102,241,0.08)' }
+                                                                            bgcolor: '#1C1A18',
+                                                                            border: '1px solid #34322F',
+                                                                            '&:hover': { bgcolor: '#34322F', borderColor: '#6366F1' }
                                                                         }}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
@@ -368,7 +393,7 @@ export default function FormsDashboard() {
                                                                         }}
                                                                     >
                                                                         <Box sx={{ position: 'relative', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                            <FolderKanban size={16} strokeWidth={2.5} style={{ color: '#6366F1' }} />
+                                                                            <FolderKanban size={14} strokeWidth={2.5} style={{ color: '#6366F1' }} />
                                                                             <Box sx={{
                                                                                 position: 'absolute',
                                                                                 bottom: -2,
@@ -389,21 +414,21 @@ export default function FormsDashboard() {
                                                                 </Tooltip>
                                                                 <IconButton 
                                                                     size="small" 
-                                                                    sx={{ opacity: 0.4 }}
+                                                                    sx={{ color: '#9B9691', bgcolor: '#1C1A18', border: '1px solid #34322F', '&:hover': { bgcolor: '#34322F' } }}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         handleMenuOpen(e, form);
                                                                     }}
                                                                 >
-                                                                    <MoreIcon />
+                                                                    <MoreIcon fontSize="small" />
                                                                 </IconButton>
                                                             </Stack>
                                                         </Box>
-                                                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#F2F2F2' }}>{form.title}</Typography>
-                                                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4, minHeight: '3em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#FFF', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>{form.title}</Typography>
+                                                        <Typography variant="body2" sx={{ color: '#9B9691', mb: 3, minHeight: '3em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', fontFamily: 'var(--font-satoshi)', fontSize: '0.85rem', lineHeight: 1.5 }}>
                                                             {form.description || 'No description provided.'}
                                                         </Typography>
-                                                        <Divider sx={{ opacity: 0.05, mb: 3 }} />
+                                                        <Divider sx={{ borderColor: '#34322F', mb: 2.5 }} />
                                                         <Box sx={{ display: 'flex', gap: 1 }}>
                                                             <Tooltip title="Preview Public Form">
                                                                 <IconButton 
@@ -412,7 +437,7 @@ export default function FormsDashboard() {
                                                                     href={`/flow/form/${form.$id}`} 
                                                                     target="_blank" 
                                                                     onClick={(e) => e.stopPropagation()}
-                                                                    sx={{ bgcolor: '#161514' }}
+                                                                    sx={{ bgcolor: '#1C1A18', border: '1px solid #34322F', color: '#6366F1', '&:hover': { bgcolor: '#34322F' } }}
                                                                 >
                                                                     <LaunchIcon sx={{ fontSize: 18 }} />
                                                                 </IconButton>
@@ -424,9 +449,9 @@ export default function FormsDashboard() {
                                                                     e.stopPropagation();
                                                                     handleEdit(form);
                                                                 }} 
-                                                                sx={{ opacity: 0.6 }}
+                                                                sx={{ color: '#9B9691', bgcolor: '#1C1A18', border: '1px solid #34322F', '&:hover': { bgcolor: '#34322F', color: 'white' } }}
                                                             >
-                                                                <EditIcon sx={{ fontSize: 18 }} />
+                                                                <EditIcon sx={{ fontSize: 16 }} />
                                                             </IconButton>
                                                             <IconButton 
                                                                 size="small" 
@@ -434,9 +459,9 @@ export default function FormsDashboard() {
                                                                     e.stopPropagation();
                                                                     handleDelete(form);
                                                                 }} 
-                                                                sx={{ color: '#D14343', opacity: 0.6 }}
+                                                                sx={{ color: '#D14343', bgcolor: '#1C1A18', border: '1px solid #34322F', '&:hover': { bgcolor: '#34322F', color: '#ff4444' } }}
                                                             >
-                                                                <DeleteIcon sx={{ fontSize: 18 }} />
+                                                                <DeleteIcon sx={{ fontSize: 16 }} />
                                                             </IconButton>
                                                         </Box>
                                                     </CardContent>
@@ -451,9 +476,9 @@ export default function FormsDashboard() {
 
                     {/* TEMPLATES TAB */}
                     {tabValue === 1 && (
-                        <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161514', border: '1px dashed rgba(255, 255, 255, 0.1)', borderRadius: 4 }}>
-                            <TemplateIcon sx={{ fontSize: 64, opacity: 0.1, mb: 2 }} />
-                            <Typography variant="h6" sx={{ opacity: 0.6 }}>Templates coming soon.</Typography>
+                        <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161412', border: '1px dashed #34322F', borderRadius: '24px' }}>
+                            <TemplateIcon sx={{ fontSize: 64, color: '#9B9691', mb: 2 }} />
+                            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 800, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>Templates coming soon.</Typography>
                         </Paper>
                     )}
 
@@ -461,40 +486,81 @@ export default function FormsDashboard() {
                     {tabValue === 2 && (
                         <>
                             {offlineDrafts.length === 0 ? (
-                                <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161514', border: '1px dashed rgba(255, 255, 255, 0.1)', borderRadius: 4 }}>
-                                    <HistoryIcon sx={{ fontSize: 64, opacity: 0.1, mb: 2 }} />
-                                    <Typography variant="h6" sx={{ opacity: 0.6 }}>No offline drafts found.</Typography>
+                                <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161412', border: '1px dashed #34322F', borderRadius: '24px' }}>
+                                    <HistoryIcon sx={{ fontSize: 64, color: '#9B9691', mb: 2 }} />
+                                    <Typography variant="h6" sx={{ color: '#fff', fontWeight: 800, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>No offline drafts found.</Typography>
                                 </Paper>
                             ) : (
                                 <Grid container spacing={3}>
                                     {offlineDrafts.map((draft) => (
                                         <Grid size={{ xs: 12, md: 6, lg: 4 }} key={draft.id}>
                                             <Fade in={true}>
-                                                <Card sx={{ bgcolor: '#161514', border: '1px solid rgba(255, 176, 32, 0.1)', borderRadius: 3 }}>
-                                                    <CardContent sx={{ p: 3 }}>
+                                                <Card 
+                                                    sx={{ 
+                                                        bgcolor: '#161412', 
+                                                        border: '1px solid #34322F', 
+                                                        borderRadius: '24px',
+                                                        boxShadow: '0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px rgba(37,35,33,0.9)',
+                                                        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+                                                        '&:hover': {
+                                                            bgcolor: '#1C1A18',
+                                                            borderColor: '#FFB020',
+                                                            transform: 'translateY(-2px)',
+                                                            boxShadow: '0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px rgba(37,35,33,1.0)'
+                                                        }
+                                                    }}
+                                                >
+                                                    <CardContent sx={{ p: 2.5 }}>
                                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                                            <Chip label="LOCAL DRAFT" size="small" sx={{ fontSize: '10px', fontWeight: 900, bgcolor: alpha('#FFB020', 0.1), color: '#FFB020', border: '1px solid rgba(255, 176, 32, 0.2)' }} />
-                                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'var(--font-mono)' }}>
+                                                            <Chip 
+                                                                label="LOCAL DRAFT" 
+                                                                size="small" 
+                                                                sx={{ 
+                                                                    fontSize: '9px', 
+                                                                    fontWeight: 900, 
+                                                                    bgcolor: 'transparent', 
+                                                                    color: '#FFB020', 
+                                                                    border: '1px solid #FFB020',
+                                                                    fontFamily: 'var(--font-mono)'
+                                                                }} 
+                                                            />
+                                                            <Typography variant="caption" sx={{ color: '#9B9691', fontFamily: 'var(--font-mono)' }}>
                                                                 {new Date(draft.updatedAt).toLocaleTimeString()}
                                                             </Typography>
                                                         </Box>
-                                                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#F2F2F2' }}>{draft.title || 'Untitled Portal'}</Typography>
-                                                        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4 }}>
+                                                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#FFF', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>{draft.title || 'Untitled Portal'}</Typography>
+                                                        <Typography variant="body2" sx={{ color: '#9B9691', mb: 3, minHeight: '3em', fontFamily: 'var(--font-satoshi)', fontSize: '0.85rem', lineHeight: 1.5 }}>
                                                             Last saved locally. Sync required to publish.
                                                         </Typography>
-                                                        <Divider sx={{ opacity: 0.05, mb: 3 }} />
+                                                        <Divider sx={{ borderColor: '#34322F', mb: 2.5 }} />
                                                         <Box sx={{ display: 'flex', gap: 1 }}>
                                                             <Button 
                                                                 size="small" 
                                                                 variant="outlined" 
                                                                 startIcon={<EditIcon />} 
                                                                 onClick={() => handleEditDraft(draft)}
-                                                                sx={{ borderRadius: 1.5, fontWeight: 800, borderColor: 'rgba(255,255,255,0.1)' }}
+                                                                sx={{ 
+                                                                    color: '#9B9691', 
+                                                                    bgcolor: '#1C1A18', 
+                                                                    border: '1px solid #34322F', 
+                                                                    borderRadius: '12px', 
+                                                                    fontWeight: 800, 
+                                                                    px: 2, 
+                                                                    py: 0.75, 
+                                                                    fontFamily: 'var(--font-satoshi)', 
+                                                                    '&:hover': { bgcolor: '#34322F', color: 'white', borderColor: '#34322F' } 
+                                                                }}
                                                             >
                                                                 Resume
                                                             </Button>
                                                             <Box sx={{ flexGrow: 1 }} />
-                                                            <IconButton size="small" onClick={() => handleDeleteDraft(draft)} sx={{ color: '#D14343', opacity: 0.6 }}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton>
+                                                            <IconButton 
+                                                                size="small" 
+                                                                onClick={() => handleDeleteDraft(draft)} 
+                                                                sx={{ color: '#D14343', bgcolor: '#1C1A18', border: '1px solid #34322F', '&:hover': { bgcolor: '#34322F', color: '#ff4444' } }}
+                                                            >
+                                                                <DeleteIcon sx={{ fontSize: 16 }} />
+                                                            </IconButton>
                                                         </Box>
                                                     </CardContent>
                                                 </Card>
@@ -534,18 +600,19 @@ export default function FormsDashboard() {
                 onClose={handleMenuClose}
                 PaperProps={{
                     sx: {
-                        bgcolor: 'rgba(10, 10, 10, 0.95)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: 2,
+                        bgcolor: '#161412',
+                        border: '1px solid #34322F',
+                        borderRadius: '16px',
                         minWidth: 160,
+                        boxShadow: '0 12px 24px -10px rgba(0,0,0,1)',
                         '& .MuiMenuItem-root': {
                             fontSize: '0.8rem',
                             fontWeight: 800,
                             gap: 1.5,
                             py: 1.2,
-                            color: 'text.secondary',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', color: 'white' }
+                            color: '#9B9691',
+                            fontFamily: 'var(--font-satoshi)',
+                            '&:hover': { bgcolor: '#1C1A18', color: 'white' }
                         }
                     }
                 }}
@@ -571,7 +638,7 @@ export default function FormsDashboard() {
                 <MuiMenuItem onClick={() => { handleMenuClose(); handleTogglePin(menuAnchor!.form); }}>
                     <PinIcon fontSize="small" sx={{ color: menuAnchor?.form.isPinned ? '#F59E0B' : 'inherit' }} /> {menuAnchor?.form.isPinned ? 'Unpin' : 'Pin'} Form
                 </MuiMenuItem>
-                <Divider sx={{ opacity: 0.05, my: 0.5 }} />
+                <Divider sx={{ borderColor: '#34322F', my: 0.5 }} />
                 <MuiMenuItem onClick={() => { handleMenuClose(); handleDelete(menuAnchor!.form); }} sx={{ color: '#D14343 !important' }}>
                     <DeleteIcon fontSize="small" /> Delete Form
                 </MuiMenuItem>
