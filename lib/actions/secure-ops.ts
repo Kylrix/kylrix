@@ -22,6 +22,8 @@ import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
 import { dispatchSecureNotification } from '@/lib/services/internal/notification-dispatcher';
 import { executeCascadeDeleteSecure } from './cascade-delete';
 import { verifyCreatorDeletionProof } from '@/lib/ephemeral/ephemeral-proof';
+import { verifyTurnstileToken } from '@/lib/turnstile';
+import { validatePublicNoteAccess } from '@/lib/appwrite/note';
 
 /**
  * Updates row-level permissions for a resource.
@@ -1200,10 +1202,6 @@ export async function initCloudflareCallTracksSecure(params: { sessionId: string
 
   return await response.json();
 }
-
-import { verifyTurnstileToken } from '@/lib/turnstile';
-
-// ... (rest of imports)
 
 /**
  * Verifies a Cloudflare Turnstile token.
