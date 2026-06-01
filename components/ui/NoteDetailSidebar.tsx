@@ -112,6 +112,67 @@ export function NoteDetailSidebar({
   const { closeSidebar } = useDynamicSidebar();
   const { openCallLauncher } = useCallLauncher();
 
+  // Load hooks and check if loading first
+  if (isLoading) {
+    return (
+      <Box className="note-detail-sidebar-root" sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', overflow: 'hidden' }}>
+        {/* Header */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, p: { xs: 2, md: 2.5 }, pb: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1, minWidth: 0 }}>
+              {onBack && (
+                <IconButton disabled sx={{ color: theme.palette.text.secondary }}>
+                  <BackIcon />
+                </IconButton>
+              )}
+              <Skeleton variant="text" width="60%" height={28} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '4px' }} />
+            </Box>
+            {!onBack && (
+              <IconButton disabled sx={{ color: theme.palette.text.secondary }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} variant="circular" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
+            ))}
+          </Box>
+        </Box>
+
+        {/* Scrollable Content Area */}
+        <Box sx={{ flex: 1, overflowY: 'auto', p: { xs: 2, md: 2.5 }, pt: 3, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {/* Content Card */}
+          <Box sx={{ p: 2.5, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', minHeight: { xs: 340, md: 460 }, height: { xs: 'clamp(340px, 46vh, 460px)', md: 'clamp(460px, 58vh, 760px)' }, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <Skeleton variant="text" width="20%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Skeleton variant="text" width="90%" sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+              <Skeleton variant="text" width="95%" sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+              <Skeleton variant="text" width="80%" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
+              <Skeleton variant="text" width="85%" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
+              <Skeleton variant="text" width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.02)' }} />
+            </Box>
+          </Box>
+
+          {/* Tags Section */}
+          <Box sx={{ px: 1 }}>
+            <Skeleton variant="text" width="15%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 1.5 }} />
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Skeleton variant="rounded" width={60} height={24} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
+              <Skeleton variant="rounded" width={80} height={24} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '8px' }} />
+            </Box>
+          </Box>
+
+          {/* Attachments Section */}
+          <Box sx={{ px: 1 }}>
+            <Skeleton variant="text" width="25%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 1.5 }} />
+            <Skeleton variant="rounded" width="100%" height={60} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '18px' }} />
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
+
   const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
   const [realtimeNote, setRealtimeNote] = useState<Notes | null>(null);
   const noteRef = useRef(note);
@@ -119,18 +180,41 @@ export function NoteDetailSidebar({
     () => (realtimeNote?.$id === note.$id ? realtimeNote : allNotes.find((candidate: any) => candidate.$id === note.$id) || note),
     [allNotes, note, realtimeNote]
   );
+
+  useEffect(() => {
+    noteRef.current = note;
+  }, [note]);
+
+  useEffect(() => {
+    setRealtimeNote(null);
+  }, [note.$id]);
   
+  const noteMeta = useMemo(() => {
+    try {
+      return JSON.parse(liveNote.metadata || '{}');
+    } catch {
+      return {};
+    }
+  }, [liveNote.metadata]);
+
+  // REACTIVE VAULT STATUS
   const [vaultUnlocked, setVaultUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
+  useEffect(() => {
+    return ecosystemSecurity.onStatusChange((s) => setVaultUnlocked(s.isUnlocked));
+  }, []);
+
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingContent, setIsEditingContent] = useState(false);
   const isEditing = isEditingTitle || isEditingContent;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDoodleEditor, setShowDoodleEditor] = useState(false);
+  
   const [title, setTitle] = useState(liveNote.title || '');
   const [content, setContent] = useState(liveNote.content || '');
   const [format, setFormat] = useState<'text' | 'doodle'>(liveNote.format as 'text' | 'doodle' || 'text');
   const [tags, setTags] = useState(liveNote.tags?.join(', ') || '');
   const [isPublic, setIsPublic] = useState(getNotePublicState(liveNote));
+
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(false);
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(false);
@@ -139,6 +223,7 @@ export function NoteDetailSidebar({
   const [linkedEvents, setLinkedEvents] = useState<any[]>([]);
   const [isLoadingSecrets, setIsLoadingSecrets] = useState(false);
   const [linkedSecrets, setLinkedSecrets] = useState<any[]>([]);
+
   const [showActionHub, setShowActionHub] = useState(false);
   const [showRotateConfirm, setShowRotateConfirm] = useState(false);
   const [showProjectLinker, setShowProjectLinker] = useState(false);
@@ -148,46 +233,62 @@ export function NoteDetailSidebar({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [isLocallyDecrypted, setIsLocallyDecrypted] = useState(false);
 
-  const { isSaving: isAutosaving } = useAutosave({
-    ...liveNote,
-    title,
-    content,
-    format,
-    tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-  }, {
-    onSave: (savedNote: Notes) => onUpdate(savedNote),
-    enabled: isEditing,
-  });
+  // ENCRYPTION LOGIC
+  const isT4Encrypted = (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4';
+  const isEncryptedNote = isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted;
+  const isT4EncryptedPublicNote = isPublic && isT4Encrypted;
 
-  return (
-    <Box className="note-detail-sidebar-root" sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#0A0908', overflow: 'hidden' }}>
-      {isLoading ? (
-        <Box sx={{ flex: 1, p: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Skeleton variant="text" width="60%" />
-            <Skeleton variant="rounded" height={400} />
-        </Box>
-      ) : (
-        <>
-            {/* Header (Dual-Row Layout - Fixed at top) */}
-            ...
-        </>
-      )}
-    </Box>
-  );
-// Sync drawer state
-useEffect(() => {
-  setIsDrawerOpen(showRotateConfirm);
-}, [showRotateConfirm, setIsDrawerOpen]);
+  // Sync local state with liveNote (crucial for auto-decryption healing)
+  useEffect(() => {
+    if (!isEditing) {
+      setTitle(liveNote.title || '');
+      setContent(liveNote.content || '');
+      setTags(liveNote.tags?.join(', ') || '');
+      setFormat(liveNote.format as 'text' | 'doodle' || 'text');
+      setIsPublic(getNotePublicState(liveNote));
+    }
+  }, [liveNote, isEditing]);
 
-// Automatically prompt for vault unlock if opening an encrypted note
-useEffect(() => {
-  if (isEncryptedNote && !vaultUnlocked) {
-    const timer = setTimeout(() => {
-      promptSudo();
-    }, 800);
-    return () => clearTimeout(timer);
-  }
-}, [isEncryptedNote, vaultUnlocked, promptSudo]);
+  // Automatically heal T4 encrypted state if vault is unlocked
+  useEffect(() => {
+    if (isEncryptedNote && vaultUnlocked) {
+      const healDecryption = async () => {
+        try {
+          const decrypted = await decryptPublicEncryptedNote(liveNote);
+          if (decrypted) {
+            setTitle(decrypted.title || '');
+            setContent(decrypted.content || '');
+            setTags(decrypted.tags?.join(', ') || '');
+            setFormat(decrypted.format as 'text' | 'doodle' || 'text');
+            setIsLocallyDecrypted(true);
+            setIsEditingContent(false);
+            setIsEditingTitle(false);
+            onUpdate(decrypted);
+            showSuccess('Note decrypted', 'Content is now visible.');
+          }
+        } catch (err) {
+          console.error('[NoteSidebar] Auto-decryption failed:', err);
+        }
+      };
+      void healDecryption();
+    }
+  }, [isEncryptedNote, vaultUnlocked, liveNote, onUpdate, showSuccess]);
+
+  // Sync drawer state
+  useEffect(() => {
+    setIsDrawerOpen(showRotateConfirm);
+  }, [showRotateConfirm, setIsDrawerOpen]);
+
+  // Automatically prompt for vault unlock if opening an encrypted note
+  useEffect(() => {
+    if (isEncryptedNote && !vaultUnlocked) {
+      const timer = setTimeout(() => {
+        promptSudo();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isEncryptedNote, vaultUnlocked, promptSudo]);
+
   // Linked Content Effects
   const linkedTaskIds = useMemo(() => liveNote.linkedTaskIds || (liveNote.linkedTaskId ? [liveNote.linkedTaskId] : []), [liveNote]);
   const linkedEventIds = useMemo(() => liveNote.linkedEventIds || (liveNote.linkedEventId ? [liveNote.linkedEventId] : []), [liveNote]);
@@ -325,6 +426,12 @@ useEffect(() => {
     tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
   }), [liveNote, title, content, format, tags]);
 
+  const { isSaving: isAutosaving } = useAutosave(candidateNote, {
+    onSave: (savedNote: Notes) => {
+      onUpdate(savedNote);
+    },
+    enabled: isEditing,
+  });
 
   // Handlers
   const handlePinToggle = async () => {
