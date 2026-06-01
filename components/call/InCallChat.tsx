@@ -187,7 +187,7 @@ export const InCallChat = ({
                                     opacity: 0.5,
                                     fontWeight: 700 
                                 }}>
-                                    {format(msg.timestamp, 'h:mm a')}
+                                    {formatTime(msg.timestamp, { hour: 'numeric', minute: '2-digit', hour12: true })}
                                 </Typography>
                             </Paper>
                         </Box>

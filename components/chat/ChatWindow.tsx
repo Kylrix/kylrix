@@ -12,7 +12,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { tablesDB, realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { format } from 'date-fns';
+import { formatTime } from '@/lib/time-util';
 import {
     Box,
     Paper,
