@@ -35,7 +35,7 @@ export async function sendAdminEmailsAction(body: SendEmailBody) {
   const actor = await verifyUser(req);
   requireAdmin(actor);
 
-  const { users, messaging } = createAdminClient(actor?.email);
+  const { users, messaging } = createAdminClient(actor.email);
   const templateId = body.templateId?.trim();
   const recipientIds = (body.recipientIds || []).filter(Boolean);
   const recipientEmails = (body.recipientEmails || []).filter(Boolean);
