@@ -15,7 +15,7 @@ This product is dark-only and follows Openbricks 2.0:
 
 ### Core surfaces
 
-- `--ob-shell`: `#0A0908`
+- `--ob-shell`: `#000000`
 - `--ob-surface`: `#161412`
 - `--ob-surface-alt`: `#1C1917`
 - `--ob-border`: `rgba(255,255,255,0.08)`
@@ -41,7 +41,8 @@ This product is dark-only and follows Openbricks 2.0:
 ## Chrome Rules
 
 - No transparent product chrome.
-- No white or pure black panel backgrounds for core app surfaces.
+- Pure black `#000000` is reserved for shell/stage backgrounds.
+- Primary app chrome/components directly on shell must use deep-ash surfaces, not pure black.
 - Topbar and bottom nav must use deep-ash surfaces with visible but soft borders.
 - Mobile app icon rail should prioritize icon-only compact headers where intended.
 
