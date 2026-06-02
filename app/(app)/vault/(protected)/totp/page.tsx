@@ -27,7 +27,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';
-import { authenticator } from 'otplib';
+import { generateTOTP } from '@/lib/totp-util';
 import toast from 'react-hot-toast';
 import NewTotpDialog from '@/components/app/totp/new';
 import { useSudo } from '@/context/SudoContext';
@@ -117,39 +117,6 @@ function TOTPPageContent() {
       .finally(() => setLoading(false));
   }, [user, showNew, isVaultUnlocked]);
 
-  const generateTOTP = (
-    secret: string,
-    period: number = 30,
-    digits: number = 6,
-    algorithm: string = "SHA1",
-  ): string => {
-    try {
-      if (!secret || secret.includes("[DECRYPTION_FAILED]")) return "Locked";
-      const normalized = (secret || "").replace(/\s+/g, "").toUpperCase();
-      if (!normalized) return "------";
-      const algo = (algorithm || "sha1").toLowerCase();
-
-      authenticator.options = {
-        step: period || 30,
-        digits: digits || 6,
-        // @ts-expect-error - types can be strict
-        algorithm: algo,
-        window: 0
-      };
-
-      return authenticator.generate(normalized);
-    } catch (err: unknown) {
-      console.warn("TOTP Generation warning for secret ending in ...", secret?.slice(-4), err);
-      if (algorithm?.toLowerCase() !== 'sha1') {
-        try {
-          // @ts-expect-error - type mismatch
-          authenticator.options = { step: 30, digits: 6, algorithm: 'sha1' };
-          return authenticator.generate((secret || "").replace(/\s+/g, ""));
-        } catch { }
-      }
-      return "Invalid";
-    }
-  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -208,9 +175,10 @@ function TOTPPageContent() {
   const TOTPCard = ({ totp }: { totp: TotpItem }) => {
     const code = generateTOTP(
       totp.secretKey,
-      totp.period || 30,
-      totp.digits || 6,
-      totp.algorithm || "SHA1"
+      {
+        step: totp.period || 30,
+        digits: totp.digits || 6
+      }
     );
 
     const timeRemaining = getTimeRemaining(totp.period || 30);

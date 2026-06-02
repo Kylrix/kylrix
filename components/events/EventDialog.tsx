@@ -30,7 +30,7 @@ import {
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { addHours } from 'date-fns';
+import { addHours } from '@/lib/time-util';
 import { EventVisibility } from '@/lib/permissions';
 import UserSearch from '@/components/UserSearch';
 

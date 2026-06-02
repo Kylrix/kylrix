@@ -1,21 +1,18 @@
 import { ID, Permission, Query, Role } from 'appwrite';
 import { Buffer } from 'buffer';
-import { HDNodeWallet } from 'ethers';
-import * as bip39 from 'bip39';
-import { BIP32Factory } from 'bip32';
-import * as bitcoin from 'bitcoinjs-lib';
-import * as ecc from 'tiny-secp256k1';
-import { derivePath } from 'ed25519-hd-key';
-import { Keypair } from '@solana/web3.js';
-import { Ed25519Keypair as SuiEd25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import * as bip39 from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
+import { HDKey } from '@scure/bip32';
+import { secp256k1 } from '@noble/secp256k1';
+import { ed25519 } from '@noble/ed25519';
+import { base58, bech32 } from '@scure/base';
+import { keccak_256 } from '@noble/hashes/sha3.js';
+import { hash160 } from '@noble/hashes/utils.js';
+import { blake2b } from '@noble/hashes/blake2.js';
 import { tablesDB } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { UsersService } from './users';
-
-bitcoin.initEccLib(ecc);
-
-const bip32 = BIP32Factory(ecc);
 
 const PASSWORD_MANAGER_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 const WALLETS_TABLE = APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS;
@@ -158,7 +155,7 @@ const toWalletSummary = (row: any): WalletSummary => ({
 const createRootEnvelope = (): WalletRootEnvelope => ({
     version: 't4.wallet.root.v1',
     walletId: crypto.randomUUID(),
-    mnemonic: bip39.generateMnemonic(128),
+    mnemonic: bip39.generateMnemonic(wordlist, 128),
     createdAt: new Date().toISOString(),
 });
 
@@ -203,37 +200,46 @@ const deriveAddress = async (
     }
 
     let address = '';
+    const seed = await bip39.mnemonicToSeed(root.mnemonic);
+    const rootKey = HDKey.fromMasterSeed(seed);
 
     switch (NETWORKS[rootChain].family) {
         case 'evm': {
-            address = HDNodeWallet.fromPhrase(root.mnemonic, undefined, "m/44'/60'/0'/0/0").address;
+            // m/44'/60'/0'/0/0
+            const child = rootKey.derive("m/44'/60'/0'/0/0");
+            if (!child.privateKey) throw new Error('Failed to derive EVM key');
+            const pubKey = secp256k1.getPublicKey(child.privateKey, false).slice(1);
+            const hash = keccak_256(pubKey);
+            address = '0x' + Buffer.from(hash.slice(-20)).toString('hex').toLowerCase();
             break;
         }
         case 'solana': {
-            const seed = bip39.mnemonicToSeedSync(root.mnemonic);
-            const derived = derivePath("m/44'/501'/0'/0'", Buffer.from(seed).toString('hex'));
-            const keypair = Keypair.fromSeed(derived.key.slice(0, 32));
-            address = keypair.publicKey.toBase58();
+            // m/44'/501'/0'/0'
+            const child = rootKey.derive("m/44'/501'/0'/0'");
+            if (!child.privateKey) throw new Error('Failed to derive Solana key');
+            const pubKey = await ed25519.getPublicKey(child.privateKey);
+            address = base58.encode(pubKey);
             break;
         }
         case 'bitcoin': {
-            const seed = bip39.mnemonicToSeedSync(root.mnemonic);
-            const node = bip32.fromSeed(seed, bitcoin.networks.bitcoin).derivePath("m/84'/0'/0'/0/0");
-            const payment = bitcoin.payments.p2wpkh({
-                pubkey: Buffer.from(node.publicKey),
-                network: bitcoin.networks.bitcoin,
-            });
-
-            if (!payment.address) {
-                throw new Error('Failed to derive Bitcoin address');
-            }
-
-            address = payment.address;
+            // m/84'/0'/0'/0/0 (Native SegWit P2WPKH)
+            const child = rootKey.derive("m/84'/0'/0'/0/0");
+            if (!child.publicKey) throw new Error('Failed to derive Bitcoin key');
+            const pkh = hash160(child.publicKey);
+            const words = bech32.toWords(pkh);
+            address = bech32.encode('bc', [0, ...words]);
             break;
         }
         case 'sui': {
-            const keypair = SuiEd25519Keypair.deriveKeypair(root.mnemonic, "m/44'/784'/0'/0'/0'");
-            address = keypair.toSuiAddress();
+            // m/44'/784'/0'/0'/0'
+            const child = rootKey.derive("m/44'/784'/0'/0'/0'");
+            if (!child.privateKey) throw new Error('Failed to derive Sui key');
+            const pubKey = await ed25519.getPublicKey(child.privateKey);
+            const tmp = new Uint8Array(33);
+            tmp.set([0x00]); // Flag for Ed25519 in Sui
+            tmp.set(pubKey, 1);
+            const hash = blake2b(tmp, { outputLength: 32 });
+            address = '0x' + Buffer.from(hash).toString('hex').slice(0, 64);
             break;
         }
         default: {

@@ -18,7 +18,7 @@ import {
   Add as AddIcon,
 } from '@mui/icons-material';
 import {
-  format,
+  formatTime,
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
@@ -28,7 +28,7 @@ import {
   subMonths,
   startOfWeek,
   endOfWeek,
-} from 'date-fns';
+} from '@/lib/time-util';
 import { useTask } from '@/context/TaskContext';
 import { useLayout } from '@/context/LayoutContext';
 import { Task, Priority } from '@/types';
@@ -140,7 +140,7 @@ const DayCell = React.memo(function DayCell({
               boxShadow: today ? `0 2px 8px ${alpha('#10B981', 0.4)}` : 'none',
             }}
           >
-            {format(date, 'd')}
+            {date.getDate()}
           </Typography>
           {hasTasks && !today && !cellHasPresence && (
             <Box
@@ -331,7 +331,7 @@ export default function CalendarView() {
     const byDate: Record<string, Task[]> = {};
     tasks.forEach(task => {
       if (task.dueDate && !task.isArchived) {
-        const dateKey = format(new Date(task.dueDate), 'yyyy-MM-dd');
+        const dateKey = new Date(task.dueDate).toISOString().split('T')[0];
         if (!byDate[dateKey]) byDate[dateKey] = [];
         byDate[dateKey].push(task);
       }
@@ -390,7 +390,7 @@ export default function CalendarView() {
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="h4" fontWeight={700}>
-            {format(currentDate, 'MMMM yyyy')}
+            {formatTime(currentDate, { month: 'long', year: 'numeric' })}
           </Typography>
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <IconButton onClick={handlePrevMonth} size="small">
@@ -468,7 +468,7 @@ export default function CalendarView() {
           }}
         >
           {days.map((day) => {
-            const dateKey = format(day, 'yyyy-MM-dd');
+            const dateKey = day.toISOString().split('T')[0];
             return (
               <DayCell
                 key={day.toISOString()}

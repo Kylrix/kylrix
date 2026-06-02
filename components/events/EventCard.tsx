@@ -26,7 +26,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Event } from '@/types';
-import { format, isToday, isTomorrow } from 'date-fns';
+import { formatTime, isToday, isTomorrow } from '@/lib/time-util';
 import { generateEventPattern as generatePattern } from '@/utils/patternGenerator';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -159,7 +159,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
               fontFamily: 'var(--font-mono)'
             }}
           >
-            {format(new Date(event.startTime), 'MMM')}
+            {formatTime(new Date(event.startTime), { month: 'short' })}
           </Typography>
           <Typography 
             variant="h5" 
@@ -170,7 +170,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
               fontFamily: 'var(--font-clash)',
             }}
           >
-            {format(new Date(event.startTime), 'd')}
+            {new Date(event.startTime).getDate()}
           </Typography>
         </Box>
         {/* Today/Tomorrow chip */}
@@ -214,7 +214,7 @@ export default function EventCard({ event, onClick }: EventCardProps) {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9B9691', mb: 0.75 }}>
             <Clock size={14} strokeWidth={1.5} />
             <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
-              {format(new Date(event.startTime), 'h:mm a')} - {format(new Date(event.endTime), 'h:mm a')}
+              {formatTime(new Date(event.startTime), { hour: 'numeric', minute: '2-digit', hour12: true })} - {formatTime(new Date(event.endTime), { hour: 'numeric', minute: '2-digit', hour12: true })}
             </Typography>
           </Box>
           {event.location && (

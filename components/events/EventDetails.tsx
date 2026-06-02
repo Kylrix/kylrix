@@ -19,7 +19,7 @@ import {
   Share as ShareIcon,
   Videocam as MeetingIcon,
 } from '@mui/icons-material';
-import { format } from 'date-fns';
+import { formatTime } from '@/lib/time-util';
 import { useLayout } from '@/context/LayoutContext';
 import { events as eventApi } from '@/lib/kylrixflow';
 import { generateEventPattern } from '@/utils/patternGenerator';
@@ -171,13 +171,13 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
                 <CalendarIcon sx={{ fontSize: 18, color: '#8E8A86' }} />
                 <Typography variant="body2" sx={{ color: 'white', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>
-                    {format(startDate, 'EEEE, MMMM d, yyyy')}
+                    {formatTime(startDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                 </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <TimeIcon sx={{ fontSize: 18, color: '#8E8A86' }} />
                 <Typography variant="body2" sx={{ color: 'white', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>
-                    {format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}
+                    {formatTime(startDate, { hour: 'numeric', minute: '2-digit', hour12: true })} - {formatTime(endDate, { hour: 'numeric', minute: '2-digit', hour12: true })}
                 </Typography>
             </Box>
         </Box>

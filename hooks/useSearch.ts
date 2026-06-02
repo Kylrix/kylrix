@@ -2,7 +2,32 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Query } from 'appwrite';
-import Fuse from 'fuse.js';
+
+// Internal light-weight fuzzy search
+function fuzzySearch<T>(data: T[], query: string, keys: string[]): T[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return data;
+
+  return data
+    .map(item => {
+      let maxScore = -1;
+      for (const key of keys) {
+        const val = String((item as any)[key] || '').toLowerCase();
+        if (val === q) {
+          maxScore = 2; // Exact match
+          break;
+        } else if (val.startsWith(q)) {
+          maxScore = Math.max(maxScore, 1); // Starts with
+        } else if (val.includes(q)) {
+          maxScore = Math.max(maxScore, 0.5); // Includes
+        }
+      }
+      return { item, score: maxScore };
+    })
+    .filter(res => res.score >= 0)
+    .sort((a, b) => b.score - a.score)
+    .map(res => res.item);
+}
 
 export interface SearchConfig {
   searchFields: string[]; // Fields to search in
@@ -96,28 +121,11 @@ export function useSearch<T extends { $id: string; [key: string]: any }>({
     return localSearch || data.length <= threshold;
   }, [localSearch, data.length, threshold]);
   
-  // Memoize the Fuse instance to avoid re-creating it on every render
-  const fuse = useMemo(() => {
-    const fuseOptions = {
-      keys: searchFields,
-      includeScore: true,
-      threshold: 0.4,
-      minMatchCharLength: 2,
-    };
-    return new Fuse(data, fuseOptions);
-  }, [data, searchFields]);
-
-  // Local search function using the memoized Fuse instance
+  // Local search function
   const performLocalSearch = useCallback((query: string) => {
     if (!query.trim()) return data;
-
-    const results = fuse.search(query);
-    const uniqueResults = results.map(result => result.item);
-
-    return uniqueResults.filter((item, index, arr) =>
-      arr.findIndex(i => i.$id === item.$id) === index
-    );
-  }, [fuse, data]);
+    return fuzzySearch(data, query, searchFields);
+  }, [data, searchFields]);
   
   // Backend search function
   const performBackendSearch = useCallback(async (query: string, page: number) => {

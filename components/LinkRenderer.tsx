@@ -12,49 +12,13 @@ import { isSendObjectMeta, parseSendGhostMetadata } from '@/lib/send/metadata';
 import { decryptGhostData, decryptGhostBinaryFromBytes } from '@/lib/encryption/ghost-crypto';
 import { storage } from '@/lib/appwrite/client';
 import type { SendPasswordPayload, SendTotpPayload, SendFilePayload } from '@/lib/send/types';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
-import rehypeSanitize from 'rehype-sanitize';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { HuddleChatWindow } from '@/components/chat/HuddleChatWindow';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { getRowSecure } from '@/lib/actions/secure-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-
-export const generateTOTP = (
-  secret: string,
-  period: number = 30,
-  digits: number = 6,
-  algorithm: string = 'SHA1',
-): string => {
-  try {
-    if (!secret || secret.includes('[DECRYPTION_FAILED]')) return 'Locked';
-    const normalized = (secret || '').replace(/\s+/g, '').toUpperCase();
-    if (!normalized) return '------';
-    const algo = (algorithm || 'sha1').toLowerCase();
-
-    authenticator.options = {
-      step: period || 30,
-      digits: digits || 6,
-      // @ts-expect-error - types can be strict
-      algorithm: algo,
-      window: 0
-    };
-
-    return authenticator.generate(normalized);
-  } catch (err: unknown) {
-    console.warn('TOTP Generation warning for secret ending in ...', secret?.slice(-4), err);
-    if (algorithm?.toLowerCase() !== 'sha1') {
-      try {
-        // @ts-expect-error - type mismatch
-        authenticator.options = { step: 30, digits: 6, algorithm: 'sha1' };
-        return authenticator.generate((secret || '').replace(/\s+/g, ''));
-      } catch { }
-    }
-    return 'Invalid';
-  }
-};
 
 export function VoiceNotePlayer({ fileId }: { fileId: string }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -340,9 +304,10 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
     if (!totpSecret || !totpSecret.secretKey) return '------';
     return generateTOTP(
       totpSecret.secretKey,
-      totpSecret.period || 30,
-      totpSecret.digits || 6,
-      totpSecret.algorithm || 'SHA1'
+      {
+        step: totpSecret.period || 30,
+        digits: totpSecret.digits || 6
+      }
     );
   }, [totpSecret, currentTime]);
 
@@ -644,7 +609,7 @@ export function SendFlapOver({
   useEffect(() => {
     if (!activeTotpSecret) return;
     try {
-      const code = generateTOTP(activeTotpSecret, 30, 6, 'SHA1');
+      const code = generateTOTP(activeTotpSecret);
       setTotpLive(code);
     } catch {
       setTotpLive('—');
@@ -1005,11 +970,8 @@ export function SendFlapOver({
                   '& pre': { bgcolor: 'rgba(0,0,0,0.4)', p: 2, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', overflowX: 'auto', my: 2 },
                   '& pre code': { bgcolor: 'transparent', p: 0, color: 'inherit' }
                 }}
-              >
-                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]} rehypePlugins={[rehypeSanitize]}>
-                  {decryptedContent}
-                </ReactMarkdown>
-              </Box>
+                dangerouslySetInnerHTML={{ __html: typeof window !== 'undefined' ? DOMPurify.sanitize(marked.parse(decryptedContent) as string) : decryptedContent }}
+              />
             )}
           </Box>
         )}

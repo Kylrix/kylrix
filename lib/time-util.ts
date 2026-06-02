@@ -82,3 +82,63 @@ export function isPast(date: Date | string | number): boolean {
     const d = typeof date === 'object' ? date : new Date(date);
     return d.getTime() < Date.now();
 }
+
+export function startOfMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+export function endOfMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+export function startOfWeek(date: Date): Date {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diff = d.getDate() - day;
+    return new Date(d.setDate(diff));
+}
+
+export function endOfWeek(date: Date): Date {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999);
+    const day = d.getDay();
+    const diff = d.getDate() + (6 - day);
+    return new Date(d.setDate(diff));
+}
+
+export function eachDayOfInterval(interval: { start: Date; end: Date }): Date[] {
+    const days = [];
+    let current = new Date(interval.start);
+    while (current <= interval.end) {
+        days.push(new Date(current));
+        current.setDate(current.getDate() + 1);
+    }
+    return days;
+}
+
+export function isSameMonth(date1: Date, date2: Date): boolean {
+    return date1.getFullYear() === date2.getFullYear() && date1.getMonth() === date2.getMonth();
+}
+
+export function isSameDay(date1: Date, date2: Date): boolean {
+    return date1.getFullYear() === date2.getFullYear() && 
+           date1.getMonth() === date2.getMonth() && 
+           date1.getDate() === date2.getDate();
+}
+
+export function addMonths(date: Date, amount: number): Date {
+    const d = new Date(date);
+    d.setMonth(d.getMonth() + amount);
+    return d;
+}
+
+export function subMonths(date: Date, amount: number): Date {
+    return addMonths(date, -amount);
+}
+
+export function addHours(date: Date, amount: number): Date {
+    const d = new Date(date);
+    d.setHours(d.getHours() + amount);
+    return d;
+}

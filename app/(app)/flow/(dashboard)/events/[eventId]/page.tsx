@@ -29,7 +29,7 @@ import { account } from '@/lib/appwrite';
 import { useCallback } from 'react';
 import { events as eventApi, eventGuests as guestApi } from '@/lib/kylrixflow';
 import { Event } from '@/types/kylrixflow';
-import { format } from 'date-fns';
+import { formatTime } from '@/lib/time-util';
 import { Query } from 'appwrite';
 import { createGhostNoteForResource, promoteGhostResourceThreadToStory } from '@/lib/actions/client-ops';
 import { createComment, listComments, getNote } from '@/lib/appwrite/note';
@@ -455,8 +455,8 @@ export default function EventPage() {
             ) : (
               <Paper sx={{ p: 3, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#1C1A18', border: '1px solid #34322F', borderRadius: '16px', backgroundImage: 'none' }}>
                 <Box>
-                  <Typography variant="subtitle1" fontWeight={700} sx={{ color: 'white', fontFamily: 'var(--font-satoshi)' }}>{format(startDate, 'EEEE, MMMM d, yyyy')}</Typography>
-                  <Typography variant="body2" sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>{format(startDate, 'h:mm a')} - {format(endDate, 'h:mm a')}</Typography>
+                  <Typography variant="subtitle1" fontWeight={700} sx={{ color: 'white', fontFamily: 'var(--font-satoshi)' }}>{formatTime(startDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</Typography>
+                  <Typography variant="body2" sx={{ color: '#8E8A86', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>{formatTime(startDate, { hour: 'numeric', minute: '2-digit', hour12: true })} - {formatTime(endDate, { hour: 'numeric', minute: '2-digit', hour12: true })}</Typography>
                 </Box>
                 <Button 
                   variant="contained" 

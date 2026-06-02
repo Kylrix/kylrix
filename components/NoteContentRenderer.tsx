@@ -1,16 +1,18 @@
 'use client';
 
-import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkBreaks from 'remark-breaks';
-import rehypeSanitize from 'rehype-sanitize';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import NoteContentDisplay from '@/components/NoteContentDisplay';
-import { LinkComponent } from '@/components/LinkRenderer';
 import { preProcessMarkdown } from '@/lib/markdown';
+
+// Configure marked for GFM and breaks
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+});
 
 interface NoteContentRendererProps {
   content?: string | null;
@@ -44,6 +46,11 @@ export function NoteContentRenderer({
   if (!trimmed) {
     return <Box>{emptyFallback}</Box>;
   }
+
+  // Pre-process and parse markdown
+  const processed = preProcessMarkdown(trimmed);
+  const rawHtml = marked.parse(processed) as string;
+  const sanitizedHtml = typeof window !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
 
   return (
     <Box 
@@ -118,19 +125,21 @@ export function NoteContentRenderer({
           border: 'none',
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
           my: 6
+        },
+        // Link styling
+        '& a': {
+          color: '#6366F1',
+          textDecoration: 'none',
+          fontWeight: 600,
+          borderBottom: '1px solid transparent',
+          transition: 'all 0.2s ease',
+          '&:hover': {
+            borderBottomColor: '#6366F1',
+          }
         }
       }}
-    >
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
-        rehypePlugins={[rehypeSanitize]}
-        components={{
-          a: LinkComponent,
-        }}
-      >
-        {preProcessMarkdown(trimmed)}
-      </ReactMarkdown>
-    </Box>
+      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+    />
   );
 }
 

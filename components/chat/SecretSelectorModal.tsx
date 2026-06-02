@@ -26,7 +26,7 @@ import { EcosystemService } from '@/lib/services/ecosystem';
 import { useAuth } from '@/lib/auth';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import SudoModal from '../overlays/SudoModal';
-import speakeasy from 'speakeasy';
+import { generateTOTP } from '@/lib/totp-util';
 
 interface SecretSelectorModalProps {
     open: boolean;
@@ -85,10 +85,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
             if (type === 'totp') {
                 // Decrypt and generate code
                 const decryptedSecret = await ecosystemSecurity.decrypt(item.secretKey);
-                const code = speakeasy.totp({
-                    secret: decryptedSecret.replace(/\s+/g, '').toUpperCase(),
-                    encoding: 'base32',
-                });
+                const code = generateTOTP(decryptedSecret.replace(/\s+/g, '').toUpperCase());
                 onSelect({ ...item, currentCode: code }, 'totp');
             } else {
                 onSelect(item, 'secret');
@@ -198,10 +195,7 @@ export const SecretSelectorModal = ({ open, onClose, onSelect, isSelf }: SecretS
                         try {
                             if (type === 'totp') {
                                 const decryptedSecret = await ecosystemSecurity.decrypt(item.secretKey);
-                                const code = speakeasy.totp({ 
-                                    secret: decryptedSecret.replace(/\s+/g, '').toUpperCase(),
-                                    encoding: 'base32'
-                                });
+                                const code = generateTOTP(decryptedSecret.replace(/\s+/g, '').toUpperCase());
                                 onSelect({ ...item, currentCode: code }, 'totp');
                             }
  else {

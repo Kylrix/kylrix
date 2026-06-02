@@ -2,7 +2,6 @@
 
 import { ID, Permission, Query, Role } from 'node-appwrite';
 import { billingManager } from '@/lib/billing/provider-factory';
-import { StripeProvider } from '@/lib/billing/providers/stripe-provider';
 import { CryptoPaymentProvider } from '@/lib/billing/providers/crypto-provider';
 import { PaymentMethod } from '@/lib/billing/types';
 import { registerBlockBeePendingCheckout } from '@/lib/services/internal/blockbee-pending-checkout';
@@ -15,7 +14,6 @@ import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/bi
 import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
 import { applyProSubscriptionWindowToPrefs } from '@/lib/services/internal/subscription-prefs-merge';
 
-billingManager.registerProvider(new StripeProvider());
 billingManager.registerProvider(new CryptoPaymentProvider());
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
