@@ -255,34 +255,48 @@ export const Toolbar = React.forwardRef(({ children, className, sx, ...props }: 
 ));
 Toolbar.displayName = 'Toolbar';
 
-export const Tabs = React.forwardRef(({ children, className, sx, value, onChange, variant, ...props }: any, ref) => (
-  <div
-    ref={ref}
-    className={`flex items-center gap-2 ${className || ''}`}
-    style={cleanSx(sx)}
-    {...props}
-  >
-    {React.Children.map(children, (child) => {
-      if (!React.isValidElement(child)) return child;
-      const childValue = (child.props as any).value ?? (child.props as any).id ?? (child.props as any).label;
-      const selected = childValue === value;
-      return React.cloneElement(child as any, {
-        selected,
-        onClick: (e: any) => {
-          onChange?.(e, childValue);
-          (child.props as any).onClick?.(e);
-        },
-      });
-    })}
-  </div>
-));
+export const Tabs = React.forwardRef(({ children, className, sx, value, onChange, variant, ...props }: any, ref) => {
+  const { root, nested } = splitSx(sx);
+  const tabRootSx = cleanSx(nested['& .MuiTab-root'] || {});
+  const tabSelectedSx = cleanSx((nested['& .MuiTab-root'] || {})['&.Mui-selected'] || {});
+  const tabHoverSx = cleanSx((nested['& .MuiTab-root'] || {})['&:hover:not(.Mui-selected)'] || {});
+  return (
+    <div
+      ref={ref}
+      className={`flex items-center gap-2 ${className || ''}`}
+      style={root}
+      {...props}
+    >
+      {React.Children.map(children, (child, idx) => {
+        if (!React.isValidElement(child)) return child;
+        const childValue = (child.props as any).value ?? idx;
+        const selected = childValue === value;
+        return React.cloneElement(child as any, {
+          selected,
+          fullWidth: variant === 'fullWidth',
+          __tabRootSx: tabRootSx,
+          __tabSelectedSx: tabSelectedSx,
+          __tabHoverSx: tabHoverSx,
+          onClick: (e: any) => {
+            onChange?.(e, childValue);
+            (child.props as any).onClick?.(e);
+          },
+        });
+      })}
+    </div>
+  );
+});
 Tabs.displayName = 'Tabs';
 
-export const Tab = React.forwardRef(({ label, children, className, sx, icon, iconPosition = 'start', selected, ...props }: any, ref) => (
+export const Tab = React.forwardRef(({ label, children, className, sx, icon, iconPosition = 'start', selected, fullWidth, __tabRootSx, __tabSelectedSx, __tabHoverSx, ...props }: any, ref) => (
   <button
     ref={ref}
-    className={`rounded-xl px-4 py-2 text-sm font-medium ${selected ? 'text-white bg-[#1E1B19]' : 'text-stone-300 hover:bg-[#1E1B19]'} ${className || ''}`}
-    style={cleanSx(sx)}
+    className={`rounded-xl px-4 py-2 text-sm font-medium ${selected ? 'text-white bg-[#1E1B19]' : 'text-stone-300 hover:bg-[#1E1B19]'} ${fullWidth ? 'flex-1 min-w-0' : ''} ${className || ''}`}
+    style={{
+      ...__tabRootSx,
+      ...(selected ? __tabSelectedSx : __tabHoverSx),
+      ...cleanSx(sx),
+    }}
     {...props}
   >
     {icon ? (
@@ -403,7 +417,7 @@ export const Typography = React.forwardRef(({ children, className, sx, variant =
 Typography.displayName = 'Typography';
 
 // 8. Grid Component
-export const Grid = React.forwardRef(({ children, container, item, xs, sm, md, lg, spacing, className, sx, ...props }: any, ref) => {
+export const Grid = React.forwardRef(({ children, container, item, size, xs, sm, md, lg, spacing, className, sx, ...props }: any, ref) => {
   let classes = className || '';
   const style: any = { ...cleanSx(sx) };
   if (container) {
@@ -411,8 +425,9 @@ export const Grid = React.forwardRef(({ children, container, item, xs, sm, md, l
     style.gap = normalizeStyleValue('gap', spacing ?? 2);
   }
   
-  if (item) {
-    const span = lg ?? md ?? sm ?? xs;
+  const computedSize = typeof size === 'object' ? size : undefined;
+  if (item || computedSize || xs || sm || md || lg) {
+    const span = (computedSize?.lg ?? lg) ?? (computedSize?.md ?? md) ?? (computedSize?.sm ?? sm) ?? (computedSize?.xs ?? xs);
     if (span && span !== true && span !== 'auto') {
       style.gridColumn = `span ${span} / span ${span}`;
     }
