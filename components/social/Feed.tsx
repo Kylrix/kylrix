@@ -26,8 +26,7 @@ import {
     Stack,
     Fab,
     useMediaQuery,
-    useTheme,
-    Skeleton
+    useTheme
 } from '@/lib/mui-tailwind/material';
 import {
     Heart,
@@ -179,22 +178,7 @@ const writeFeedCache = (view: string, rows: any[], cachedAt: number = Date.now()
     localStorage.setItem(`${CACHE_KEY}_${view}`, JSON.stringify(payload));
 };
 
-const FeedSkeleton = () => (
-    <Stack spacing={3}>
-        {[1, 2, 3].map((i) => (
-                    <Card key={i} sx={{ borderRadius: '20px', background: '#161412 !important', backgroundImage: 'none !important', bgcolor: '#161412 !important', border: '1px solid #34322F', boxShadow: 'none' }} elevation={0}>
-                        <CardHeader
-                    avatar={<Skeleton variant="circular" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
-                    title={<Skeleton width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
-                    subheader={<Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />}
-                />
-                <CardContent>
-                    <Skeleton variant="rectangular" height={100} sx={{ borderRadius: 2, bgcolor: 'rgba(255,255,255,0.05)' }} />
-                </CardContent>
-            </Card>
-        ))}
-    </Stack>
-);
+const FeedSkeleton = () => null;
 
 type ComposerFilePreview = {
     file: File;
@@ -1869,7 +1853,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
             )}
 
             {/* Feed */}
-            {moments.length === 0 && loading && <FeedSkeleton />}
+            {moments.length === 0 && loading && <></>}
 
             {/* Filter out the current user's direct posts (type 'post') from the feed. */}
             {moments

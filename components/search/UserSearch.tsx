@@ -17,7 +17,7 @@ import {
     Typography,
     Paper,
     CircularProgress,
-    Skeleton,
+    
     Stack
 } from '@/lib/mui-tailwind/material';
 import SearchIcon from '@/lib/mui-tailwind/icons';
@@ -181,10 +181,10 @@ export const UserSearch = () => {
                     {[1, 2, 3].map((i) => (
                         <Paper key={i} sx={{ p: 2, borderRadius: '20px', bgcolor: '#161412', border: '1px solid #34322F' }} elevation={0}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Skeleton variant="circular" width={44} height={44} sx={{ borderRadius: '12px', bgcolor: '#34322F' }} />
+                                <></>
                                 <Box sx={{ flex: 1 }}>
-                                    <Skeleton width="40%" height={20} sx={{ bgcolor: '#34322F' }} />
-                                    <Skeleton width="25%" height={15} sx={{ bgcolor: '#34322F', mt: 0.5 }} />
+                                    <></>
+                                    <></>
                                 </Box>
                             </Box>
                         </Paper>

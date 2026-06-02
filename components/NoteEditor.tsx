@@ -7,7 +7,7 @@ import {
   Paper, 
   Stack, 
   Alert,
-  Skeleton,
+  
   Chip,
   alpha,
   useTheme,
@@ -58,7 +58,7 @@ const AttachmentChips: React.FC<{ noteId: string }> = ({ noteId }) => {
     return (
       <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
         {Array.from({length:3}).map((_,i)=>(
-          <Skeleton key={i} variant="rounded" width={80} height={24} sx={{ borderRadius: 12, bgcolor: '#1C1A18' }} />
+          <></>
         ))}
       </Stack>
     );

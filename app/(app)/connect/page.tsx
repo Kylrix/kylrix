@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { Container, Box, Typography, useMediaQuery, useTheme, IconButton, Skeleton, alpha } from '@/lib/mui-tailwind/material';
+import { Container, Box, Typography, useMediaQuery, useTheme, IconButton,  alpha } from '@/lib/mui-tailwind/material';
 import { Feed } from '@/components/social/Feed';
 import { ChatList } from '@/components/chat/ChatList';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -221,10 +221,10 @@ function ConnectHomeContent() {
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       {[1, 2, 3].map((n) => (
                         <Box key={n} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                          <Skeleton variant="rounded" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '10px' }} />
+                          <></>
                           <Box sx={{ flex: 1 }}>
-                            <Skeleton variant="text" width="60%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                            <Skeleton variant="text" width="40%" height={12} sx={{ bgcolor: 'rgba(255,255,255,0.02)' }} />
+                            <></>
+                            <></>
                           </Box>
                         </Box>
                       ))}

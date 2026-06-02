@@ -10,7 +10,7 @@ import {
     Paper,
     Button,
     CircularProgress,
-    Skeleton,
+    
     Stack,
     alpha
 } from '@/lib/mui-tailwind/material';
@@ -327,17 +327,17 @@ export const Profile = ({ username }: ProfileProps) => {
             <Box sx={{ maxWidth: 900, mx: 'auto', p: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 4 } }}>
                 <Paper sx={{ p: { xs: 3, sm: 4 }, borderRadius: '28px', mb: 4, bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.06)' }} elevation={0}>
                     <Stack direction="row" spacing={2} alignItems="center">
-                        <Skeleton variant="rounded" width={140} height={140} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.04)' }} />
+                        <></>
                         <Box sx={{ flex: 1 }}>
-                            <Skeleton width="40%" height={36} sx={{ bgcolor: 'rgba(255,255,255,0.04)', mb: 1 }} />
-                            <Skeleton width="25%" sx={{ bgcolor: 'rgba(255,255,255,0.04)', mb: 2 }} />
-                            <Skeleton width="60%" sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+                            <></>
+                            <></>
+                            <></>
                         </Box>
                     </Stack>
                 </Paper>
                 <Stack spacing={2}>
                     {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} variant="rounded" height={100} sx={{ borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.04)' }} />
+                        <></>
                     ))}
                 </Stack>
             </Box>

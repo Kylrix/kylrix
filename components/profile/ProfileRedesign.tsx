@@ -11,7 +11,7 @@ import {
   Container,
   Divider,
   Paper,
-  Skeleton,
+  
   Stack,
   Tabs,
   Typography,
@@ -161,36 +161,7 @@ function ProfileStatCard({
   );
 }
 
-function ProfileMomentSkeleton() {
-  return (
-    <Stack spacing={1.5}>
-      {Array.from({ length: 3 }).map((_, index) => (
-        <Paper
-          key={index}
-          elevation={0}
-          sx={{
-            p: 2.5,
-            borderRadius: 4,
-            bgcolor: '#151311',
-            border: '1px solid rgba(255,255,255,0.06)',
-          }}
-        >
-          <Stack spacing={1.5}>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Skeleton variant="circular" width={44} height={44} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-              <Box sx={{ flex: 1 }}>
-                <Skeleton width="40%" height={22} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                <Skeleton width="22%" height={18} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-              </Box>
-            </Stack>
-            <Skeleton variant="rounded" height={72} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-            <Skeleton width="30%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-          </Stack>
-        </Paper>
-      ))}
-    </Stack>
-  );
-}
+function ProfileMomentSkeleton() { return null; }
 
 function EmptyState({
   title,
@@ -414,7 +385,7 @@ function FeedPanel({
   onEmptyAction: () => void;
   onOpenMoment: (momentId: string) => void;
 }) {
-  if (loading) return <ProfileMomentSkeleton />;
+  if (loading) return <></>;
 
   if (error) {
     return (
@@ -877,21 +848,21 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
             }}
           >
             <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3}>
-              <Skeleton variant="rounded" width={140} height={140} sx={{ borderRadius: 4, bgcolor: 'rgba(255,255,255,0.04)' }} />
+              <></>
               <Stack spacing={1.5} sx={{ flex: 1 }}>
-                <Skeleton width="38%" height={36} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                <Skeleton width="20%" height={22} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                <Skeleton width="80%" height={22} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                <Skeleton width="66%" height={22} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+                <></>
+                <></>
+                <></>
+                <></>
                 <Stack direction="row" spacing={1.25}>
-                  <Skeleton width={96} height={42} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                  <Skeleton width={96} height={42} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                  <Skeleton width={96} height={42} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
+                  <></>
+                  <></>
+                  <></>
                 </Stack>
               </Stack>
             </Stack>
           </Paper>
-          <ProfileMomentSkeleton />
+          <></>
         </Stack>
       </Container>
     );

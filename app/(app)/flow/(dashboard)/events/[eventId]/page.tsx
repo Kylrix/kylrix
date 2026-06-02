@@ -10,7 +10,7 @@ import {
   AvatarGroup,
   Paper,
   Container,
-  Skeleton,
+  
   useTheme,
   alpha,
   TextField,
@@ -420,7 +420,7 @@ export default function EventPage() {
       <Container maxWidth="md" sx={{ px: { xs: 0, sm: 2 } }}>
         <Paper sx={{ overflow: 'hidden', borderRadius: { xs: 0, sm: '28px' }, mb: 4, bgcolor: '#161412', border: '1px solid #34322F', backgroundImage: 'none' }}>
           {loading ? (
-            <Skeleton variant="rectangular" height={350} sx={{ bgcolor: '#1C1A18' }} />
+            <></>
           ) : (
             <Box sx={{ height: { xs: 250, md: 350 }, position: 'relative', backgroundSize: 'cover', ...coverStyle }}>
               <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
@@ -445,13 +445,13 @@ export default function EventPage() {
 
           <Box sx={{ p: { xs: 3, md: 5 } }}>
             {loading ? (
-              <Skeleton variant="text" width="60%" height={48} sx={{ bgcolor: '#1C1A18', mb: 2, borderRadius: '4px' }} />
+              <></>
             ) : (
               <Typography variant="h3" fontWeight={900} gutterBottom sx={{ fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', color: 'white', fontSize: { xs: '2rem', md: '3rem' } }}>{event.title}</Typography>
             )}
 
             {loading ? (
-              <Skeleton variant="rounded" width="100%" height={88} sx={{ bgcolor: '#1C1A18', mb: 4, borderRadius: '12px' }} />
+              <></>
             ) : (
               <Paper sx={{ p: 3, mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: '#1C1A18', border: '1px solid #34322F', borderRadius: '16px', backgroundImage: 'none' }}>
                 <Box>
@@ -481,9 +481,9 @@ export default function EventPage() {
 
             {loading ? (
               <Box sx={{ mb: 4 }}>
-                <Skeleton variant="text" width="15%" height={24} sx={{ bgcolor: '#1C1A18', mb: 1.5 }} />
-                <Skeleton variant="text" width="100%" sx={{ bgcolor: '#1C1A18' }} />
-                <Skeleton variant="text" width="85%" sx={{ bgcolor: '#1C1A18' }} />
+                <></>
+                <></>
+                <></>
               </Box>
             ) : (
               <Box sx={{ mb: 4 }}>
@@ -512,7 +512,7 @@ export default function EventPage() {
               </Box>
               
               {loading ? (
-                <Skeleton variant="rounded" width={120} height={32} sx={{ bgcolor: '#1C1A18', borderRadius: '16px' }} />
+                <></>
               ) : loadingOrganizers ? (
                 <CircularProgress size={16} sx={{ color: '#F59E0B' }} />
               ) : organizers.length === 0 ? (

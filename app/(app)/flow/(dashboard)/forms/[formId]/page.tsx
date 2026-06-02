@@ -15,8 +15,7 @@ import {
     Tab,
     Stack,
     Snackbar,
-    Alert,
-    Skeleton
+    Alert
 } from '@/lib/mui-tailwind/material';
 import { 
     Edit as EditIcon, 
@@ -316,7 +315,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                     <Box>
                         <Stack direction="row" spacing={1} alignItems="center">
                             {loading ? (
-                                <Skeleton variant="text" width={220} height={36} sx={{ bgcolor: '#161412', borderRadius: '4px' }} />
+                                <></>
                             ) : (
                                 <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.04em', fontFamily: 'var(--font-clash)', color: '#FFF' }}>{form.title}</Typography>
                             )}
@@ -336,7 +335,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                             )}
                         </Stack>
                         {loading ? (
-                            <Skeleton variant="text" width={140} height={18} sx={{ bgcolor: '#161412', mt: 1, borderRadius: '3px' }} />
+                            <></>
                         ) : (
                             <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>Form ID: {form.$id}</Typography>
                         )}
@@ -415,7 +414,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                         {loading ? (
                             <Stack spacing={2}>
                                 {[1, 2, 3].map((i) => (
-                                    <Skeleton key={i} variant="rounded" width="100%" height={80} sx={{ bgcolor: '#161412', borderRadius: '12px' }} />
+                                    <></>
                                 ))}
                             </Stack>
                         ) : (
@@ -435,8 +434,8 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                                         {[1, 2].map((i) => (
                                             <Box key={i}>
-                                                <Skeleton variant="text" width="30%" height={20} sx={{ bgcolor: '#1C1A18', mb: 1 }} />
-                                                <Skeleton variant="rounded" width="100%" height={56} sx={{ bgcolor: '#161412', borderRadius: '8px' }} />
+                                                <></>
+                                                <></>
                                             </Box>
                                         ))}
                                     </Box>
@@ -457,7 +456,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                             <Paper sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid #34322F', height: 'fit-content', backgroundImage: 'none', boxShadow: 'none' }}>
                                 <Typography variant="overline" sx={{ color: '#9B9691', fontWeight: 900, mb: 2, display: 'block', fontFamily: 'var(--font-mono)' }}>RAW JSON</Typography>
                                 {loading ? (
-                                    <Skeleton variant="rounded" width="100%" height={160} sx={{ bgcolor: '#161412', borderRadius: '8px' }} />
+                                    <></>
                                 ) : (
                                     <Box component="pre" sx={{ fontSize: '0.75rem', color: '#9B9691', overflow: 'auto', maxHeight: 400, fontFamily: 'var(--font-mono)', bgcolor: '#000000', border: '1px solid #34322F', p: 2, borderRadius: '12px' }}>
                                         {JSON.stringify(JSON.parse(form.schema || '[]'), null, 2)}
@@ -485,7 +484,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                 </Box>
                                 
                                 {loading ? (
-                                    <Skeleton variant="rounded" width="100%" height={80} sx={{ bgcolor: '#161412', borderRadius: '8px' }} />
+                                    <></>
                                 ) : loadingCollaborators ? (
                                     <CircularProgress size={16} sx={{ color: '#10B981' }} />
                                 ) : collaborators.length === 0 ? (

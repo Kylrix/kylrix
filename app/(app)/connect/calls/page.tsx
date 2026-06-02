@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
-import { Box, Typography, Container, CircularProgress, Paper, TextField, Button, Divider, useTheme, useMediaQuery, Skeleton } from '@/lib/mui-tailwind/material';
+import { Box, Typography, Container, CircularProgress, Paper, TextField, Button, Divider, useTheme, useMediaQuery } from '@/lib/mui-tailwind/material';
 import { Hash, ArrowRight, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -51,10 +51,10 @@ function NotesFeed() {
                                 border: '1px solid rgba(255,255,255,0.03)',
                             }}
                         >
-                            <Skeleton variant="rounded" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.03)', borderRadius: '12px' }} />
+                            <></>
                             <Box sx={{ flex: 1 }}>
-                                <Skeleton variant="text" width="60%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)', mb: 1, borderRadius: '3px' }} />
-                                <Skeleton variant="text" width="30%" height={12} sx={{ bgcolor: 'rgba(255,255,255,0.02)', borderRadius: '2px' }} />
+                                <></>
+                                <></>
                             </Box>
                         </Box>
                     ))}
@@ -233,45 +233,13 @@ function CallsContent() {
     );
 }
 
-function CallHistorySkeleton() {
-    return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            {/* Header / Search bar */}
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
-                <Skeleton variant="text" width={180} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.05)', borderRadius: '4px' }} />
-                <Skeleton variant="rounded" width={400} height={52} sx={{ bgcolor: 'rgba(255,255,255,0.02)', borderRadius: '16px' }} />
-            </Box>
-            {/* History Cards */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {[1, 2, 3, 4].map((i) => (
-                    <Box
-                        key={i}
-                        sx={{
-                            display: 'flex',
-                            gap: 2,
-                            p: 2.5,
-                            borderRadius: '16px',
-                            bgcolor: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.03)',
-                        }}
-                    >
-                        <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
-                        <Box sx={{ flex: 1 }}>
-                            <Skeleton variant="text" width="40%" height={18} sx={{ bgcolor: 'rgba(255,255,255,0.04)', mb: 1, borderRadius: '3px' }} />
-                            <Skeleton variant="text" width="20%" height={14} sx={{ bgcolor: 'rgba(255,255,255,0.02)', borderRadius: '2px' }} />
-                        </Box>
-                    </Box>
-                ))}
-            </Box>
-        </Box>
-    );
-}
+function CallHistorySkeleton() { return null; }
 
 export default function CallsPage() {
     return (
         <Container maxWidth="xl" sx={{ py: 3, position: 'relative', minHeight: '100vh', pointerEvents: 'auto' }}>
             <MultiSectionContainer panels={['projects', 'threads']}>
-                <Suspense fallback={<CallHistorySkeleton />}>
+                <Suspense fallback={<></>}>
                     <CallsContent />
                 </Suspense>
             </MultiSectionContainer>

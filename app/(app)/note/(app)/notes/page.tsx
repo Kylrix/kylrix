@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Typography, Stack, IconButton, Alert, Skeleton, alpha, useMediaQuery, useTheme } from '@/lib/mui-tailwind/material';
+import { Box, Typography, Stack, IconButton, Alert,  alpha, useMediaQuery, useTheme } from '@/lib/mui-tailwind/material';
 import { deleteNote } from '@/lib/actions/client-ops';
 import { useNotes } from '@/context/NotesContext';
 
@@ -907,10 +907,10 @@ export default function NotesPage() {
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                         {[1, 2, 3].map((n) => (
                           <Box key={n} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                            <Skeleton variant="rounded" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '10px' }} />
+                            <></>
                             <Box sx={{ flex: 1 }}>
-                              <Skeleton variant="text" width="60%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                              <Skeleton variant="text" width="40%" height={12} sx={{ bgcolor: 'rgba(255,255,255,0.02)' }} />
+                              <></>
+                              <></>
                             </Box>
                           </Box>
                         ))}
@@ -1004,10 +1004,10 @@ export default function NotesPage() {
                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                         {[1, 2, 3].map((n) => (
                           <Box key={n} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                            <Skeleton variant="rounded" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '10px' }} />
+                            <></>
                             <Box sx={{ flex: 1 }}>
-                              <Skeleton variant="text" width="60%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-                              <Skeleton variant="text" width="40%" height={12} sx={{ bgcolor: 'rgba(255,255,255,0.02)' }} />
+                              <></>
+                              <></>
                             </Box>
                           </Box>
                         ))}

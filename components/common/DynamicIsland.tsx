@@ -16,7 +16,7 @@ import {
   Avatar as _Avatar,
   Divider as _Divider,
   IconButton,
-  Skeleton,
+  
   Stack,
   alpha,
 } from '@/lib/mui-tailwind/material';
@@ -419,17 +419,17 @@ export const ProfilePanelSurface: React.FC<{ onClosePanel: () => void }> = ({ on
           <Box sx={{ width: 56, height: 6, borderRadius: 999, bgcolor: alpha('#fff', 0.14) }} />
         </Box>
         <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-          <Skeleton variant="rounded" width={104} height={104} sx={{ borderRadius: '28px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+          <></>
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Skeleton width="48%" height={34} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-            <Skeleton width="30%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-            <Skeleton width="80%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+            <></>
+            <></>
+            <></>
           </Box>
         </Box>
-        <Skeleton variant="rounded" height={96} sx={{ borderRadius: '22px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+        <></>
         <Box sx={{ display: 'grid', gap: 0.75 }}>
-          <Skeleton variant="rounded" height={48} sx={{ borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.05)' }} />
-          <Skeleton variant="rounded" height={48} sx={{ borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+          <></>
+          <></>
         </Box>
       </Box>
     );

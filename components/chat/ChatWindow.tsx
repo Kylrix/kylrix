@@ -32,8 +32,7 @@ import {
     Stack,
     useTheme,
     useMediaQuery,
-    alpha,
-    Skeleton
+    alpha
 } from '@/lib/mui-tailwind/material';
 import {
     Send,
@@ -1846,14 +1845,14 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
         <Box sx={{ p: 2 }}>
             <Stack spacing={1.5}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Skeleton variant="rounded" width={42} height={42} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    <></>
                     <Box sx={{ flex: 1 }}>
-                        <Skeleton width="32%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                        <Skeleton width="22%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <></>
+                        <></>
                     </Box>
                 </Box>
                 {[1, 2, 3, 4].map((i) => (
-                    <Skeleton key={i} variant="rounded" height={72} sx={{ borderRadius: 3, bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    <></>
                 ))}
             </Stack>
         </Box>
@@ -2100,19 +2099,14 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
                 {loading ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, py: 1 }}>
                         <Stack direction="row" spacing={1.5} alignItems="center">
-                            <Skeleton variant="circular" width={40} height={40} sx={{ bgcolor: '#161412' }} />
+                            <></>
                             <Box sx={{ flex: 1 }}>
-                                <Skeleton width="35%" sx={{ bgcolor: '#161412', height: 20 }} />
-                                <Skeleton width="45%" sx={{ bgcolor: '#161412', height: 16 }} />
+                                <></>
+                                <></>
                             </Box>
                         </Stack>
                         {Array.from({ length: 5 }).map((_, index) => (
-                            <Skeleton
-                                key={index}
-                                variant="rounded"
-                                height={72}
-                                sx={{ borderRadius: '24px', bgcolor: '#161412' }}
-                            />
+                            <></>
                         ))}
                     </Box>
                 ) : (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { Box, Typography, Stack, Button, IconButton, Skeleton, alpha, useTheme, Chip } from '@/lib/mui-tailwind/material';
+import { Box, Typography, Stack, Button, IconButton,  alpha, useTheme, Chip } from '@/lib/mui-tailwind/material';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -289,10 +289,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
       {[1, 2, 3].map((n) => (
         <Box key={n} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-          <Skeleton variant="rounded" width={36} height={36} sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '10px' }} />
+          <></>
           <Box sx={{ flex: 1 }}>
-            <Skeleton variant="text" width="60%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-            <Skeleton variant="text" width="40%" height={12} sx={{ bgcolor: 'rgba(255,255,255,0.02)' }} />
+            <></>
+            <></>
           </Box>
         </Box>
       ))}

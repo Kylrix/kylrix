@@ -24,7 +24,7 @@ import {
     ListItemText,
     useMediaQuery,
     useTheme,
-    Skeleton,
+    
     Paper, TextField, InputAdornment, Alert, Menu, MenuItem 
 } from '@/lib/mui-tailwind/material';
 import ActorsListDrawer from '@/components/social/ActorsListDrawer';
@@ -1448,14 +1448,14 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
         <Box sx={{ maxWidth: 'sm', mx: 'auto', py: 4, px: 2, pointerEvents: 'auto' }}>
             <Stack spacing={2}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                    <></>
                     <Box sx={{ flex: 1 }}>
-                        <Skeleton width="30%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                        <Skeleton width="20%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <></>
+                        <></>
                     </Box>
                 </Box>
-                <Skeleton variant="rounded" height={240} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
-                <Skeleton variant="rounded" height={120} sx={{ borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                <></>
+                <></>
             </Stack>
         </Box>
     );
@@ -1576,19 +1576,19 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                         <Stack spacing={1.25} sx={{ width: '100%', px: 2, py: 1.5 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                                 <Box sx={{ flex: 1 }}>
-                                    <Skeleton variant="rounded" width={96} height={12} sx={{ bgcolor: 'rgba(255,255,255,0.08)', mb: 0.75 }} />
-                                    <Skeleton variant="rounded" width="70%" height={10} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
+                                    <></>
+                                    <></>
                                 </Box>
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
                                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                                    <Skeleton variant="rounded" width="42%" height={12} sx={{ bgcolor: 'rgba(255,255,255,0.08)' }} />
-                                    <Skeleton variant="rounded" width="88%" height={12} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
-                                    <Skeleton variant="rounded" width="76%" height={12} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
+                                    <></>
+                                    <></>
+                                    <></>
                                     <Stack direction="row" spacing={1.2} sx={{ pt: 0.5 }}>
-                                        <Skeleton variant="rounded" width={42} height={18} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
-                                        <Skeleton variant="rounded" width={42} height={18} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
-                                        <Skeleton variant="rounded" width={42} height={18} sx={{ bgcolor: 'rgba(255,255,255,0.06)' }} />
+                                        <></>
+                                        <></>
+                                        <></>
                                     </Stack>
                                 </Box>
                             </Box>

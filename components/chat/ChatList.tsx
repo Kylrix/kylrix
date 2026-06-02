@@ -18,7 +18,7 @@ import {
     Typography,
     Box,
     CircularProgress,
-    Skeleton,
+    
     alpha,
     IconButton,
     Badge,
@@ -1041,10 +1041,10 @@ export const ChatList = ({
             <Stack spacing={1.5}>
                 {[1, 2, 3, 4, 5].map((i) => (
                     <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1 }}>
-                        <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                        <></>
                         <Box sx={{ flex: 1 }}>
-                            <Skeleton width="55%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                            <Skeleton width="35%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                            <></>
+                            <></>
                         </Box>
                     </Box>
                 ))}
@@ -1367,10 +1367,10 @@ export const ChatList = ({
                             <Stack spacing={1.5}>
                                 {[1, 2, 3].map((i) => (
                                     <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 1 }}>
-                                        <Skeleton variant="rounded" width={40} height={40} sx={{ borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.05)' }} />
+                                        <></>
                                         <Box sx={{ flex: 1 }}>
-                                            <Skeleton width="55%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                                            <Skeleton width="35%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                                            <></>
+                                            <></>
                                         </Box>
                                     </Box>
                                 ))}

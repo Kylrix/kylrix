@@ -17,7 +17,7 @@ import {
     Stack,
     Tabs,
     Tab,
-    Skeleton,
+    
     alpha,
     Menu,
     MenuItem as MuiMenuItem,
@@ -283,18 +283,18 @@ export default function FormsDashboard() {
                             <Card sx={{ bgcolor: '#161412', backgroundImage: 'none', border: '1px solid #34322F', borderRadius: '28px', boxShadow: 'none' }}>
                                 <CardContent sx={{ p: 2.5 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                        <Skeleton variant="rectangular" width={60} height={20} sx={{ borderRadius: '6px', bgcolor: '#1C1A18' }} />
-                                        <Skeleton variant="circular" width={24} height={24} sx={{ bgcolor: '#1C1A18' }} />
+                                        <></>
+                                        <></>
                                     </Box>
-                                    <Skeleton variant="text" width="80%" height={32} sx={{ mb: 1, bgcolor: '#1C1A18' }} />
-                                    <Skeleton variant="text" width="100%" height={20} sx={{ bgcolor: '#1C1A18' }} />
-                                    <Skeleton variant="text" width="60%" height={20} sx={{ mb: 4, bgcolor: '#1C1A18' }} />
+                                    <></>
+                                    <></>
+                                    <></>
                                     <Divider sx={{ borderColor: '#34322F', mb: 3 }} />
                                     <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: '#1C1A18' }} />
-                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: '#1C1A18' }} />
+                                        <></>
+                                        <></>
                                         <Box sx={{ flexGrow: 1 }} />
-                                        <Skeleton variant="circular" width={32} height={32} sx={{ bgcolor: '#1C1A18' }} />
+                                        <></>
                                     </Box>
                                 </CardContent>
                             </Card>

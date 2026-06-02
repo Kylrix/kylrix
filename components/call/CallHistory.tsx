@@ -21,7 +21,7 @@ import {
     Stack,
     Divider,
     Badge,
-    Skeleton,
+    
     useTheme,
     useMediaQuery
 } from '@/lib/mui-tailwind/material';
@@ -143,10 +143,10 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
                 {[1, 2, 3].map((i) => (
                     <Paper key={i} sx={{ p: 2, borderRadius: 3, bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }} elevation={0}>
                         <Stack direction="row" spacing={2} alignItems="center">
-                            <Skeleton variant="circular" width={44} height={44} sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                            <></>
                             <Box sx={{ flex: 1 }}>
-                                <Skeleton width="40%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
-                                <Skeleton width="22%" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }} />
+                                <></>
+                                <></>
                             </Box>
                         </Stack>
                     </Paper>
