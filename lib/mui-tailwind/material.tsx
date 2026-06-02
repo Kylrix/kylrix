@@ -661,7 +661,6 @@ export const Reply = ({ children, ...props }: any) => React.createElement('div',
 export const RotateLeft = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Save = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const ShieldOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Skeleton = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const SpeedDial = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const SpeedDialAction = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const SpeedDialIcon = ({ children, ...props }: any) => React.createElement('div', props, children);

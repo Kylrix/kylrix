@@ -2642,33 +2642,29 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
   const projectsToFetch = collabRowsRes.rows.filter(row => !projectsListMap.has(row.resourceId));
   
   if (projectsToFetch.length > 0) {
-    // Parallel Fetch: Details for all collaborated projects
-    const projectDetails = await Promise.all(
-        projectsToFetch.map(async (collabRow) => {
-            try {
-                const proj = await tables.getRow({
-                    databaseId: CHAT_DATABASE_ID,
-                    tableId: 'projects',
-                    rowId: collabRow.resourceId,
-                });
-                return { proj, collabRow };
-            } catch (e) {
-                console.warn(`[listProjectsWithCollaborationsSecure] Failed to fetch project ${collabRow.resourceId}:`, e);
-                return null;
-            }
-        })
-    );
+    // Optimized Batch Fetch: Details for all collaborated projects in one query
+    const targetProjectIds = projectsToFetch.map(r => r.resourceId);
+    
+    try {
+        const collaboratedProjectsRes = await tables.listRows({
+            databaseId: CHAT_DATABASE_ID,
+            tableId: 'projects',
+            queries: [Query.equal('$id', targetProjectIds)],
+        });
 
-    for (const item of projectDetails) {
-        if (item?.proj) {
-            const { proj, collabRow } = item;
-            projectsListMap.set(proj.$id, {
-                ...proj,
-                collabStatus: collabRow.status,
-                isPending: collabRow.status === 'pending' || !collabRow.accepted,
-                role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer'),
-            });
+        for (const proj of collaboratedProjectsRes.rows) {
+            const collabRow = projectsToFetch.find(r => r.resourceId === proj.$id);
+            if (collabRow) {
+                projectsListMap.set(proj.$id, {
+                    ...proj,
+                    collabStatus: collabRow.status,
+                    isPending: collabRow.status === 'pending' || !collabRow.accepted,
+                    role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer'),
+                });
+            }
         }
+    } catch (e) {
+        console.error('[listProjectsWithCollaborationsSecure] Batch project fetch failed:', e);
     }
   }
 
