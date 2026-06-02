@@ -98,7 +98,7 @@ export function TagNotesListSidebar({
         {loading ? (
           <Stack spacing={2}>
             {Array.from({ length: 3 }).map((_, index) => (
-              <NoteCardSkeleton key={index} />
+              <NoteCard key={`skeleton-${index}`} note={{ $id: `skeleton-${index}`, title: 'Loading...', content: '', tags: [], isPublic: false, status: 'loading' } as any} />
             ))}
           </Stack>
         ) : error ? (
