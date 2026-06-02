@@ -108,11 +108,20 @@ const cleanSx = (sx: any) => splitSx(sx).root;
 
 // 1. Box Component
 export const Box = React.forwardRef(({ children, sx, className, component: Component = 'div', display, alignItems, justifyContent, flexWrap, flexDirection, gap, ...props }: any, ref) => {
+  const inlineStyle = {
+    ...(display !== undefined ? { display } : {}),
+    ...(alignItems !== undefined ? { alignItems } : {}),
+    ...(justifyContent !== undefined ? { justifyContent } : {}),
+    ...(flexWrap !== undefined ? { flexWrap } : {}),
+    ...(flexDirection !== undefined ? { flexDirection } : {}),
+    ...(gap !== undefined ? { gap: normalizeStyleValue('gap', gap) } : {}),
+    ...cleanSx(sx),
+  };
   return (
     <Component
       ref={ref}
       className={className}
-      style={cleanSx(sx)}
+      style={inlineStyle}
       {...props}
     >
       {children}
@@ -139,11 +148,13 @@ export const Button = React.forwardRef(({ children, className, sx, variant = 'te
     <button
       ref={ref}
       disabled={disabled}
-      className={`${baseClass} ${className || ''}`}
+      className={`${baseClass} ${fullWidth ? 'w-full' : ''} ${className || ''}`}
       style={cleanSx(sx)}
       {...props}
     >
-      {children}
+      {startIcon ? <span style={{ display: 'inline-flex', marginRight: 8, alignItems: 'center' }}>{startIcon}</span> : null}
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}>{children}</span>
+      {endIcon ? <span style={{ display: 'inline-flex', marginLeft: 8, alignItems: 'center' }}>{endIcon}</span> : null}
     </button>
   );
 });
@@ -152,12 +163,14 @@ Button.displayName = 'Button';
 // 3. IconButton Component
 export const IconButton = React.forwardRef(({ children, className, sx, disabled, size, color, edge, ...props }: any, ref) => {
   const baseClass = "inline-flex items-center justify-center p-2 rounded-xl border border-[#23211F] bg-[#0A0908] text-stone-400 hover:text-stone-200 hover:bg-[#141211] active:scale-95 transition-all";
+  const sizeMap: Record<string, number> = { small: 32, medium: 40, large: 48 };
+  const pixelSize = typeof size === 'string' ? (sizeMap[size] || 40) : 40;
   return (
     <button
       ref={ref}
       disabled={disabled}
       className={`${baseClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className || ''}`}
-      style={cleanSx(sx)}
+      style={{ width: pixelSize, height: pixelSize, ...cleanSx(sx) }}
       {...props}
     >
       {children}
@@ -339,7 +352,11 @@ export const Typography = React.forwardRef(({ children, className, sx, variant =
     <Component
       ref={ref}
       className={`${fontClass} ${className || ''}`}
-      style={cleanSx(sx)}
+      style={{
+        ...(noWrap ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : {}),
+        ...(gutterBottom ? { marginBottom: '0.35em' } : {}),
+        ...cleanSx(sx),
+      }}
       {...props}
     >
       {children}
@@ -351,31 +368,21 @@ Typography.displayName = 'Typography';
 // 8. Grid Component
 export const Grid = React.forwardRef(({ children, container, item, xs, sm, md, lg, spacing, className, sx, ...props }: any, ref) => {
   let classes = className || '';
+  const style: any = { ...cleanSx(sx) };
   if (container) {
-    classes += " grid";
-    if (spacing) {
-      classes += ` gap-${spacing}`;
-    } else {
-      classes += " gap-4";
-    }
-    classes += " grid-cols-12";
+    classes += ' grid grid-cols-12';
+    style.gap = normalizeStyleValue('gap', spacing ?? 2);
   }
   
   if (item) {
-    const getSpan = (val: any) => {
-      if (!val) return '';
-      if (val === true || val === 'auto') return 'col-span-auto';
-      return `col-span-${val}`;
-    };
-    
-    if (xs) classes += ` ${getSpan(xs)}`;
-    if (sm) classes += ` sm:${getSpan(sm)}`;
-    if (md) classes += ` md:${getSpan(md)}`;
-    if (lg) classes += ` lg:${getSpan(lg)}`;
+    const span = lg ?? md ?? sm ?? xs;
+    if (span && span !== true && span !== 'auto') {
+      style.gridColumn = `span ${span} / span ${span}`;
+    }
   }
   
   return (
-    <div ref={ref} className={classes} style={cleanSx(sx)} {...props}>
+    <div ref={ref} className={classes} style={style} {...props}>
       {children}
     </div>
   );
@@ -384,12 +391,19 @@ Grid.displayName = 'Grid';
 
 // 9. Stack Component
 export const Stack = React.forwardRef(({ children, direction = 'column', spacing = 2, className, sx, alignItems, justifyContent, flexWrap, useFlexGap, divider, ...props }: any, ref) => {
-  const flexDir = direction === 'row' ? 'flex-row' : 'flex-col';
+  const flexDirection = direction === 'row' ? 'row' : 'column';
   return (
     <div
       ref={ref}
-      className={`flex ${flexDir} gap-${spacing} ${className || ''}`}
-      style={cleanSx(sx)}
+      className={`flex ${className || ''}`}
+      style={{
+        flexDirection,
+        gap: normalizeStyleValue('gap', spacing),
+        ...(alignItems !== undefined ? { alignItems } : {}),
+        ...(justifyContent !== undefined ? { justifyContent } : {}),
+        ...(flexWrap !== undefined ? { flexWrap } : {}),
+        ...cleanSx(sx),
+      }}
       {...props}
     >
       {children}
@@ -1265,32 +1279,7 @@ export const SpeedDialAction = React.forwardRef(
     const tooltipLabelSx = cleanSx(nested['& .MuiSpeedDialAction-staticTooltipLabel']);
 
     return (
-      <button
-        ref={ref}
-        type="button"
-        disabled={disabled}
-        onClick={onClick}
-        className={`MuiSpeedDialAction-fab ${className || ''}`}
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
-          padding: 0,
-          width: 48,
-          height: 48,
-          borderRadius: 16,
-          border: `1px solid ${OPENBRICKS_TOKENS.borderSoft}`,
-          background: OPENBRICKS_TOKENS.shell,
-          color: OPENBRICKS_TOKENS.textMuted,
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          ...rootSx,
-          ...actionFabSx,
-        }}
-        aria-label={tooltipTitle || 'Speed dial action'}
-        {...props}
-      >
-        {icon}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         {tooltipOpen && open && tooltipTitle ? (
           <span
             className="MuiSpeedDialAction-staticTooltipLabel"
@@ -1314,7 +1303,32 @@ export const SpeedDialAction = React.forwardRef(
             {tooltipTitle}
           </span>
         ) : null}
-      </button>
+        <button
+          ref={ref}
+          type="button"
+          disabled={disabled}
+          onClick={onClick}
+          className={`MuiSpeedDialAction-fab ${className || ''}`}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 48,
+            height: 48,
+            borderRadius: 16,
+            border: `1px solid ${OPENBRICKS_TOKENS.borderSoft}`,
+            background: OPENBRICKS_TOKENS.shell,
+            color: OPENBRICKS_TOKENS.textMuted,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            ...rootSx,
+            ...actionFabSx,
+          }}
+          aria-label={tooltipTitle || 'Speed dial action'}
+          {...props}
+        >
+          {icon}
+        </button>
+      </div>
     );
   }
 );
