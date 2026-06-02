@@ -10,7 +10,6 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Notes } from '@/types/appwrite';
 import NoteCard from '@/components/ui/NoteCard';
-import { NoteGridSkeleton } from '@/components/ui/NoteCardSkeleton';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { useSearch } from '@/hooks/useSearch';
@@ -624,7 +623,15 @@ export default function NotesPage() {
 
       {/* Notes Grid */}
       {isInitialLoading ? (
-        <NoteGridSkeleton count={12} />
+        <Box sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', xl: '1fr 1fr 1fr 1fr' },
+          gap: 3,
+        }}>
+          {Array.from({ length: 12 }).map((_, index) => (
+            <NoteCard key={`skeleton-${index}`} note={{ $id: `skeleton-${index}`, title: 'Loading...', content: '', tags: [], isPublic: false, status: 'loading' } as any} />
+          ))}
+        </Box>
       ) : paginatedNotes.length === 0 ? (
         <Box
           sx={{

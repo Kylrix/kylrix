@@ -7,7 +7,6 @@ import { Box, Typography, IconButton, Stack, Alert } from '@/lib/mui-tailwind/ma
 import { ArrowBack as ArrowBackIcon } from '@/lib/mui-tailwind/icons';
 import { NoteDetailSidebar } from './NoteDetailSidebar';
 import NoteCard from '@/components/ui/NoteCard';
-import { NoteCardSkeleton } from './NoteCardSkeleton';
 import { useNotes } from '@/context/NotesContext';
 
 interface TagNotesListSidebarProps {

@@ -10,7 +10,6 @@ import {
   Chip,
   alpha,
   useTheme,
-  Skeleton,
 } from '@/lib/mui-tailwind/material';
 import {
   MoreVertical,
@@ -195,43 +194,6 @@ export default function ProjectCard({ project, onClick, onDelete, onTogglePin }:
               border: `1px solid ${alpha((project as any).isPending ? '#F59E0B' : getStatusColor(), 0.2)}`
             }} 
           />
-        </Box>
-      </Stack>
-    </Paper>
-  );
-}
-
-export function ProjectCardSkeleton() {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        bgcolor: '#161412',
-        border: '1px solid rgba(255,255,255,0.06)',
-        borderRadius: '28px',
-        p: 3.5,
-        backgroundImage: 'none',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-    >
-      <Stack spacing={2.5}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ width: '100%' }}>
-            <Skeleton variant="rounded" width={48} height={48} sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '16px' }} />
-            <Box sx={{ flex: 1 }}>
-              <Skeleton variant="text" width="60%" height={24} sx={{ bgcolor: 'rgba(255,255,255,0.05)', mb: 0.5 }} />
-              <Skeleton variant="text" width="30%" height={14} sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
-            </Box>
-          </Stack>
-        </Box>
-
-        <Skeleton variant="text" width="100%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-        <Skeleton variant="text" width="80%" height={16} sx={{ bgcolor: 'rgba(255,255,255,0.04)' }} />
-
-        <Box sx={{ pt: 2, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Skeleton variant="text" width="25%" height={14} sx={{ bgcolor: 'rgba(255,255,255,0.03)' }} />
-          <Skeleton variant="rounded" width={60} height={20} sx={{ bgcolor: 'rgba(255,255,255,0.04)', borderRadius: '8px' }} />
         </Box>
       </Stack>
     </Paper>
