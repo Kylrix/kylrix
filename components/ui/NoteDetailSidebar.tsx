@@ -111,6 +111,9 @@ export function NoteDetailSidebar({
   const { openCallLauncher } = useCallLauncher();
 
   const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
+  const isPinnedFunc = typeof isPinned === 'function' ? isPinned : () => false;
+  const pinNoteFunc = typeof pinNote === 'function' ? pinNote : async () => {};
+  const unpinNoteFunc = typeof unpinNote === 'function' ? unpinNote : async () => {};
   const [realtimeNote, setRealtimeNote] = useState<Notes | null>(null);
   const noteRef = useRef(note);
   const liveNote = useMemo(
@@ -390,10 +393,10 @@ export function NoteDetailSidebar({
 
   // Handlers
   const handlePinToggle = useCallback(async () => {
-    const pinned = isPinned(liveNote.$id);
+    const pinned = isPinnedFunc(liveNote.$id);
     try {
-      if (pinned) await unpinNote(liveNote.$id);
-      else await pinNote(liveNote.$id);
+      if (pinned) await unpinNoteFunc(liveNote.$id);
+      else await pinNoteFunc(liveNote.$id);
       showSuccess(pinned ? 'Note unpinned' : 'Note pinned');
     } catch (err: any) {
       if (err.message?.includes('limit reached')) {
@@ -402,7 +405,7 @@ export function NoteDetailSidebar({
       }
       showError('Failed to update pin');
     }
-  }, [isPinned, liveNote.$id, unpinNote, pinNote, showSuccess, openProUpgrade, showError]);
+  }, [isPinnedFunc, liveNote.$id, unpinNoteFunc, pinNoteFunc, showSuccess, openProUpgrade, showError]);
 
   const handleTogglePublic = useCallback(async () => {
     try {
@@ -753,8 +756,8 @@ export function NoteDetailSidebar({
             </Tooltip>
           )}
 
-          <Tooltip title={isPinned(liveNote.$id) ? 'Unpin' : 'Pin'}>
-            <IconButton onClick={handlePinToggle} sx={{ color: isPinned(liveNote.$id) ? theme.palette.primary.main : theme.palette.text.secondary }}>
+          <Tooltip title={isPinnedFunc(liveNote.$id) ? 'Unpin' : 'Pin'}>
+            <IconButton onClick={handlePinToggle} sx={{ color: isPinnedFunc(liveNote.$id) ? theme.palette.primary.main : theme.palette.text.secondary }}>
               <PinIcon fontSize="small" />
             </IconButton>
           </Tooltip>
