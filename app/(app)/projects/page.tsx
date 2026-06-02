@@ -187,6 +187,7 @@ function TemplateCard({ template, onSelect }: { template: typeof projectTemplate
                 
                 <Box>
                     <Typography
+                      component="span"
                       variant="body2"
                       sx={{
                         color: 'rgba(255,255,255,0.62)',
@@ -194,7 +195,7 @@ function TemplateCard({ template, onSelect }: { template: typeof projectTemplate
                         overflow: 'hidden',
                         WebkitLineClamp: expanded ? 'unset' : 2,
                         WebkitBoxOrient: 'vertical',
-                        lineHeight: 1.4,
+                        lineHeight: 1.45,
                         fontWeight: 500,
                         fontSize: '0.85rem',
                         minHeight: expanded ? 'auto' : '2.4em',
@@ -447,7 +448,7 @@ export default function ProjectsPage() {
               }}
             />
           </Stack>
-          <Typography variant="body2" sx={{ mt: 0.5, color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: '0.875rem', maxWidth: 640 }}>
+          <Typography component="span" variant="body2" sx={{ mt: 0.5, color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: '0.875rem', maxWidth: 640, lineHeight: 1.55, display: 'block' }}>
             Record, share, and automate action sequences to boost execution speed. Perfect for repetitive workspace tasks and smart guidance.
           </Typography>
         </Box>
@@ -520,7 +521,7 @@ export default function ProjectsPage() {
               <FolderKanban size={40} />
             </Box>
             <Typography variant="h5" sx={{ color: '#fff', fontWeight: 900, mb: 1 }}>No active projects</Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.5)', mb: 4, maxWidth: 360, mx: 'auto' }}>
+            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', mb: 4, maxWidth: 360, mx: 'auto', lineHeight: 1.55, display: 'block' }}>
               Create a project to combine your context, communications, and secrets into one high-velocity workspace.
             </Typography>
             <Button variant="outlined" onClick={() => openCreateDrawer()} sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}>Start Fresh Project</Button>
@@ -568,7 +569,7 @@ export default function ProjectsPage() {
                   <Typography variant="h1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', fontSize: { xs: '2.5rem', md: '3.5rem' }, lineHeight: 1, letterSpacing: '-0.03em' }}>
                       Active Execution
                   </Typography>
-                  <Typography sx={{ mt: 1.5, color: 'rgba(255,255,255,0.4)', maxWidth: 500, fontSize: '1rem', fontWeight: 500 }}>
+                  <Typography component="span" sx={{ mt: 1.5, color: 'rgba(255,255,255,0.4)', maxWidth: 500, fontSize: '1rem', fontWeight: 500, lineHeight: 1.55, display: 'block' }}>
                       Outcome-aware containers that unite your context, comms, and secrets into a single high-velocity workspace.
                   </Typography>
               </Box>
