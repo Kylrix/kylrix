@@ -54,7 +54,7 @@ export default function NotesPage() {
     isPinned,
     refetchNotes
   } = useNotes();
-  const { openOverlay } = useOverlay();
+  const { openOverlay, closeOverlay } = useOverlay();
   const { setConfiguration, resetConfiguration } = useFAB();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const { isCollapsed, setIsCollapsed } = useSidebar();
@@ -280,17 +280,33 @@ export default function NotesPage() {
     removeNote(noteId);
   }, [removeNote]);
 
-  const handleSharedNoteClick = useCallback((note: any) => {
-    openSidebar(
+  const openNoteDetailSurface = useCallback((note: Notes | any) => {
+    if (isDesktop) {
+      openSidebar(
+        <NoteDetailSidebar
+          note={note}
+          onUpdate={handleNoteUpdated}
+          onDelete={handleNoteDeleted}
+        />,
+        note.$id || null,
+        { hideHeader: true }
+      );
+      return;
+    }
+
+    openOverlay(
       <NoteDetailSidebar
         note={note}
         onUpdate={handleNoteUpdated}
         onDelete={handleNoteDeleted}
-      />,
-      note.$id || null,
-      { hideHeader: true }
+        onBack={closeOverlay}
+      />
     );
-  }, [openSidebar, handleNoteUpdated, handleNoteDeleted]);
+  }, [isDesktop, openSidebar, openOverlay, closeOverlay, handleNoteUpdated, handleNoteDeleted]);
+
+  const handleSharedNoteClick = useCallback((note: any) => {
+    openNoteDetailSurface(note);
+  }, [openNoteDetailSurface]);
 
   const hasReopenedRef = useRef(false);
   useEffect(() => {
@@ -299,17 +315,9 @@ export default function NotesPage() {
     const targetNote = visibleNotes.find((candidate) => candidate.$id === activeContentKey);
     if (targetNote) {
       hasReopenedRef.current = true;
-      openSidebar(
-        <NoteDetailSidebar
-          note={targetNote}
-          onUpdate={handleNoteUpdated}
-          onDelete={handleNoteDeleted}
-        />,
-        targetNote.$id || null,
-        { hideHeader: true }
-      );
+      openNoteDetailSurface(targetNote);
     }
-  }, [activeContentKey, visibleNotes, isDynamicSidebarOpen, openSidebar, handleNoteUpdated, handleNoteDeleted]);
+  }, [activeContentKey, visibleNotes, isDynamicSidebarOpen, openNoteDetailSurface]);
 
   useEffect(() => {
     if (!openNoteIdParam) return;
@@ -328,18 +336,10 @@ export default function NotesPage() {
       return;
     }
 
-    openSidebar(
-      <NoteDetailSidebar
-        note={targetNote}
-        onUpdate={handleNoteUpdated}
-        onDelete={handleNoteDeleted}
-      />,
-      targetNote.$id || null,
-      { hideHeader: true }
-    );
+    openNoteDetailSurface(targetNote);
 
     cleanParams();
-  }, [openNoteIdParam, visibleNotes, openSidebar, handleNoteUpdated, handleNoteDeleted, router]);
+  }, [openNoteIdParam, visibleNotes, openNoteDetailSurface, router]);
 
   const handleCreateNoteClick = () => {
     openOverlay(<CreateNoteForm onNoteCreated={handleNoteCreated} />);
@@ -767,6 +767,7 @@ export default function NotesPage() {
                     note={note}
                     onUpdate={handleNoteUpdated}
                     onDelete={handleNoteDeleted}
+                    onNoteSelect={openNoteDetailSurface}
                   />
                 ))}
               </Box>
@@ -820,6 +821,7 @@ export default function NotesPage() {
                     note={note}
                     onUpdate={handleNoteUpdated}
                     onDelete={handleNoteDeleted}
+                    onNoteSelect={openNoteDetailSurface}
                   />
                 ))}
               </Box>

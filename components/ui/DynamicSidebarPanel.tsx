@@ -1,7 +1,7 @@
 'use client';
 
 import { Box, Drawer, IconButton, Typography } from '@/lib/mui-tailwind/material';
-import { useTheme } from '@/lib/mui-tailwind/material';
+import { useTheme, useMediaQuery } from '@/lib/mui-tailwind/material';
 import { ArrowBack as BackIcon, Close as CloseIcon } from '@/lib/mui-tailwind/icons';
 
 import React from 'react';
@@ -10,6 +10,7 @@ import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 export function DynamicSidebar() {
   const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { isOpen, content, closeSidebar, options } = useDynamicSidebar();
   const panelBg = theme.palette.background.paper;
   const iconHoverBg =
@@ -26,7 +27,7 @@ export function DynamicSidebar() {
 
   return (
     <Drawer
-      anchor="right"
+      anchor={isDesktop ? 'right' : 'bottom'}
       open={isOpen}
       onClose={closeSidebar}
       variant="temporary"
@@ -37,12 +38,16 @@ export function DynamicSidebar() {
         sx: {
           width: {
             xs: '100%',
-            sm: 400,
+            sm: isDesktop ? 400 : '100%',
             md: 450,
             lg: 500,
           },
+          height: isDesktop ? '100vh' : '92dvh',
           bgcolor: panelBg,
-          borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+          borderLeft: isDesktop ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+          borderTop: isDesktop ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+          borderTopLeftRadius: isDesktop ? 0 : '24px',
+          borderTopRightRadius: isDesktop ? 0 : '24px',
           backgroundImage: 'none',
           display: 'flex',
           flexDirection: 'column',
