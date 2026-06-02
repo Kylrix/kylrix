@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.4",
-    "@next/bundle-analyzer": "^15.1.6",
+    "@next/bundle-analyzer": "^16.2.7",
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
