@@ -168,22 +168,34 @@ const NAV_SURFACE = '#161412';
 </Card>
 ```
 
-#### Grid density on `/projects`
+#### Fluid card grids (no breakpoint column counting)
 
-The main column shares width with sidebars (`MultiSectionContainer`). **Never use `lg: 4` / `xl: 4` (three columns)** for project or template cards—it compresses cards in the remaining `1fr` lane.
+Do **not** use `Grid size={{ xs: 12, md: 6, lg: 4 }}` to guess columns. That breaks when the main lane is narrow (e.g. `/projects` beside sidebars) and forces squeezed thirds on wide breakpoints.
+
+Use **CSS auto-fill + minmax** so column count follows **available width**, not hardcoded breakpoints:
 
 ```tsx
-<Grid container spacing={3}>
-  <Grid size={{ xs: 12, md: 6 }} sx={{ display: 'flex', minWidth: 0 }}>
-    <ProjectCard /> {/* width: 100% on Card */}
-  </Grid>
-</Grid>
+const PROJECT_CARD_GRID_SX = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
+  gap: 3,
+  width: '100%',
+  alignItems: 'stretch',
+} as const;
+
+<Box sx={PROJECT_CARD_GRID_SX}>
+  {items.map((item) => (
+    <Box key={item.id} sx={{ minWidth: 0, display: 'flex' }}>
+      <ProjectCard /> {/* Card: width 100%, height 100% */}
+    </Box>
+  ))}
+</Box>
 ```
 
-- **`xs: 12`**: one card per row on phones  
-- **`md: 6`**: two cards per row from tablet up (max two, never three)  
-- **`spacing={3}`**: 24px gutters between cards  
-- **`minWidth: 0`** on grid items: prevents flex overflow squashing text  
+- **`min(100%, 340px)`**: one full-width card per row on narrow viewports (mobile)  
+- **`auto-fill`**: adds another column only when a **340px** track fits—scales across phone, tablet, laptop, ultra-wide, and sidebar layouts  
+- **`minWidth: 0`** on cell wrappers: text truncation/clamp works inside grid children  
+- Tune **`340px`** only if card content needs more horizontal room (not per-breakpoint spans)  
 
 #### Do not (project-card anti-pattern)
 

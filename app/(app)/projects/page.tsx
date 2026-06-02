@@ -7,7 +7,6 @@ import {
   IconButton,
   Button,
   Chip,
-  Grid,
   Paper,
   Card,
   CardHeader,
@@ -139,6 +138,15 @@ const projectTemplates = [
 ];
 
 const NAV_SURFACE = '#161412';
+
+/** Fluid card grid: wraps by available width, never forces 3 squeezed columns. */
+const PROJECT_CARD_GRID_SX = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 340px), 1fr))',
+  gap: 3,
+  width: '100%',
+  alignItems: 'stretch',
+} as const;
 
 function TemplateCard({ template, onSelect }: { template: typeof projectTemplates[0], onSelect: (t: any) => void }) {
     const [expanded, setExpanded] = useState(false);
@@ -435,13 +443,13 @@ export default function ProjectsPage() {
         </Button>
       </Stack>
       
-      <Grid container spacing={3}>
+      <Box sx={PROJECT_CARD_GRID_SX}>
         {displayedTemplates.map((template) => (
-          <Grid size={{ xs: 12, md: 6 }} key={template.title} sx={{ display: 'flex', minWidth: 0 }}>
+          <Box key={template.title} sx={{ minWidth: 0, display: 'flex' }}>
             <TemplateCard template={template} onSelect={openCreateDrawer} />
-          </Grid>
+          </Box>
         ))}
-      </Grid>
+      </Box>
     </Box>
   );
 
@@ -560,17 +568,15 @@ export default function ProjectsPage() {
   );
 
   const projectsListElement = (
-    <Grid container spacing={4}>
-      {/* Main Projects List */}
-      <Grid size={{ xs: 12 }}>
+    <Box>
         <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', mb: 3, display: 'block' }}>
           Projects ({projects.length})
         </Typography>
         
         {loading ? (
-          <Grid container spacing={3}>
+          <Box sx={PROJECT_CARD_GRID_SX}>
             {[1, 2, 3, 4, 5, 6].map((idx) => (
-              <Grid size={{ xs: 12, md: 6 }} key={idx} sx={{ display: 'flex', minWidth: 0 }}>
+              <Box key={idx} sx={{ minWidth: 0, display: 'flex' }}>
                 <ProjectCard 
                   project={{
                     $id: `skeleton-${idx}`,
@@ -582,9 +588,9 @@ export default function ProjectsPage() {
                   onClick={() => {}}
                   onDelete={() => {}}
                 />
-              </Grid>
+              </Box>
             ))}
-          </Grid>
+          </Box>
         ) : projects.length === 0 ? (
           <Paper
             elevation={0}
@@ -607,22 +613,20 @@ export default function ProjectsPage() {
             <Button variant="outlined" onClick={() => openCreateDrawer()} sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}>Start Fresh Project</Button>
           </Paper>
         ) : (
-            <Grid container spacing={3}>
+            <Box sx={PROJECT_CARD_GRID_SX}>
                 {sortedProjects.map(project => (
-                    <Grid size={{ xs: 12, md: 6 }} key={project.$id} sx={{ display: 'flex', minWidth: 0 }}>
+                    <Box key={project.$id} sx={{ minWidth: 0, display: 'flex' }}>
                         <ProjectCard 
                             project={project} 
                             onClick={handleProjectClick}
                             onDelete={() => handleDeleteProject(project)}
                             onTogglePin={handleTogglePin}
                         />
-                    </Grid>
+                    </Box>
                 ))}
-            </Grid>
+            </Box>
         )}
-
-      </Grid>
-    </Grid>
+    </Box>
   );
 
   return (
