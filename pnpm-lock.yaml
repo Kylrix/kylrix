@@ -95,9 +95,6 @@ importers:
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
-      vite:
-        specifier: ^8.0.0
-        version: 8.0.10(@types/node@25.3.0)(jiti@2.7.0)(yaml@2.8.4)
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.3.4
