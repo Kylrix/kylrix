@@ -1,15 +1,56 @@
 # Brand — Kylrix
 
-_Status: deferred_
+_Status: active_
 
-The user chose to defer brand setup. This project is currently using shadcn's default neutral palette and no custom typography. The `frontend-design-guidelines` skill will quietly use defaults and will not prompt again.
+## Openbricks 2.0 Core
 
-To set up a real brand palette, typography, and voice at any time, run:
+This product is dark-only and follows Openbricks 2.0:
 
-    /brand-design
+- Topbar-first command rails
+- Drawer-first interaction model
+- Pitch-black shell + deep-ash active surfaces
+- Layered contrast through borders and nested depth
 
-or say: "pick brand colors"
+## Token Baseline
 
-When `brand-design` runs, it will detect this deferred state, skip the "confirm overwrite" step, and proceed directly to the full brand setup. The resulting palette will be applied to `app/globals.css` and this file will be replaced with the real brand documentation.
+### Core surfaces
 
-_Deferred at: 2026-04-23_
+- `--ob-shell`: `#0A0908`
+- `--ob-surface`: `#161412`
+- `--ob-surface-alt`: `#1C1917`
+- `--ob-border`: `rgba(255,255,255,0.08)`
+- `--ob-border-soft`: `rgba(255,255,255,0.05)`
+
+### Text
+
+- `--ob-text-primary`: `#F5F2ED`
+- `--ob-text-muted`: `rgba(245,242,237,0.68)`
+
+### Accent families
+
+- `--ob-accent-connect`: `#F59E0B`
+- `--ob-accent-primary`: `#6366F1`
+- `--ob-accent-danger`: `#FF4D4D`
+
+## Typography
+
+- Headline/display: Clash family
+- Body/UI text: Satoshi/system sans fallback
+- Technical metadata and compact identity fragments: mono family
+
+## Chrome Rules
+
+- No transparent product chrome.
+- No white or pure black panel backgrounds for core app surfaces.
+- Topbar and bottom nav must use deep-ash surfaces with visible but soft borders.
+- Mobile app icon rail should prioritize icon-only compact headers where intended.
+
+## Interaction Rules
+
+- Mobile-first drawers use bottom anchoring for primary actions where context is page-local.
+- Desktop-first drawers use side anchoring for expanded command/navigation surfaces.
+- Overlays must unmount when closed and never leave invisible click-blocking backdrops.
+
+## Migration Note
+
+This file is now the active source of truth for Openbricks 2.0 migration and should be kept synchronized with shared UI primitives and shell chrome.

@@ -40,6 +40,7 @@ export async function createCouponAction(input: {
   expiresAt?: string;
   title?: string;
   note?: string;
+  redemptionLimit?: number;
   metadata?: Record<string, unknown>;
 }) {
   const req = await getRequestLike();
@@ -63,6 +64,8 @@ export async function createCouponAction(input: {
         status: String(input.status || 'active').toLowerCase(),
         discountPercent: Number(input.discountPercent),
         expiresAt: input.expiresAt || null,
+        redemptionLimit: targetUserId ? 1 : Math.max(1, Number(input.redemptionLimit || 1)),
+        redemptionCount: 0,
         delta: null,
         metadata: JSON.stringify({
           ...(input.metadata || {}),

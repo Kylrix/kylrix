@@ -51,6 +51,7 @@ export default function AdminCouponsPage() {
     expiresAt: '',
     title: '',
     note: '',
+    redemptionLimit: '1',
   });
 
   const loadCoupons = async () => {
@@ -58,7 +59,7 @@ export default function AdminCouponsPage() {
     setError(null);
     try {
       const rows = await listCouponsAction();
-      setCoupons(rows as CouponRow[]);
+      setCoupons(rows as any[]);
     } catch (err: any) {
       setError(err?.message || 'Failed to load coupons');
     } finally {
@@ -83,12 +84,13 @@ export default function AdminCouponsPage() {
         expiresAt: form.expiresAt || undefined,
         title: form.title || undefined,
         note: form.note || undefined,
+        redemptionLimit: Number.parseInt(form.redemptionLimit, 10) || 1,
         metadata: {
           scope: targetUserIds.length > 0 ? 'targeted' : 'open',
         },
       });
       setSuccess(`Created ${data.count || 1} coupon(s).`);
-      setForm((prev) => ({ ...prev, targetUserIds: '', title: '', note: '' }));
+      setForm((prev) => ({ ...prev, targetUserIds: '', title: '', note: '', redemptionLimit: '1' }));
       await loadCoupons();
     } catch (err: any) {
       setError(err?.message || 'Failed to create coupon');
@@ -155,6 +157,14 @@ export default function AdminCouponsPage() {
                 onChange={(event) => setForm((prev) => ({ ...prev, status: event.target.value }))}
                 sx={{ width: { xs: '100%', md: 180 } }}
               />
+              <TextField
+                label="Max Redemptions"
+                type="number"
+                value={form.redemptionLimit}
+                onChange={(event) => setForm((prev) => ({ ...prev, redemptionLimit: event.target.value }))}
+                sx={{ width: { xs: '100%', md: 180 } }}
+                helperText="Required for open links"
+              />
             </Stack>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
               <TextField
@@ -215,6 +225,12 @@ export default function AdminCouponsPage() {
                       </Typography>
                     </Box>
                     <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="flex-end">
+                      <Chip 
+                        label={`${(coupon as any).redemptionCount || 0} / ${(coupon as any).redemptionLimit || 1} uses`} 
+                        variant="outlined" 
+                        size="small" 
+                        sx={{ borderColor: 'rgba(255,255,255,0.1)' }}
+                      />
                       <Chip label={formatScope(coupon)} color={formatScope(coupon) === 'open' ? 'info' : 'default'} size="small" />
                       <Chip label={`${coupon.discountPercent || parseMetadata(coupon.metadata)?.coupon?.discountPercent || 0}%`} color="primary" size="small" />
                       <Chip label={String(coupon.status || 'active')} size="small" />

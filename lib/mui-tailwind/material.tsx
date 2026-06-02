@@ -2,6 +2,18 @@
 
 import React from 'react';
 
+const OPENBRICKS_TOKENS = {
+  shell: '#0A0908',
+  surface: '#161412',
+  surfaceAlt: '#1C1917',
+  border: 'rgba(255,255,255,0.08)',
+  borderSoft: 'rgba(255,255,255,0.05)',
+  text: '#F5F2ED',
+  textMuted: 'rgba(245,242,237,0.68)',
+  connectAccent: '#F59E0B',
+  primary: '#6366F1',
+} as const;
+
 export const alpha = (color: string, value: number) => color;
 export const createTheme = (theme: any) => theme;
 export const ThemeProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
@@ -147,8 +159,12 @@ export const AppBar = React.forwardRef(({ children, className, sx, position = 'f
   return (
     <header
       ref={ref}
-      className={`w-full flex flex-col border-b border-[#23211F] bg-[#0A0908] ${posClass} ${className || ''}`}
-      style={cleanSx(sx)}
+      className={`w-full flex flex-col ${posClass} ${className || ''}`}
+      style={{
+        borderBottom: `1px solid ${OPENBRICKS_TOKENS.borderSoft}`,
+        background: OPENBRICKS_TOKENS.surface,
+        ...cleanSx(sx),
+      }}
       {...props}
     >
       {children}
@@ -730,8 +746,12 @@ export const BottomNavigation = React.forwardRef(({ children, value, onChange, c
   return (
     <div
       ref={ref}
-      className={`flex w-full items-center justify-around h-16 bg-[#161412] ${className || ''}`}
-      style={cleanSx(sx)}
+      className={`flex w-full items-center justify-around h-16 ${className || ''}`}
+      style={{
+        background: OPENBRICKS_TOKENS.surface,
+        borderTop: `1px solid ${OPENBRICKS_TOKENS.borderSoft}`,
+        ...cleanSx(sx),
+      }}
       {...props}
     >
       {React.Children.map(children, (child) => {
@@ -756,9 +776,12 @@ export const BottomNavigationAction = React.forwardRef(({ label, icon, selected,
     <button
       ref={ref}
       className={`flex flex-col items-center justify-center flex-1 py-1 px-3 text-xs font-medium transition-all duration-300 ${
-        selected ? 'text-indigo-400 scale-110' : 'text-stone-400 hover:text-stone-200'
+        selected ? 'scale-110' : 'hover:text-stone-200'
       } ${className || ''}`}
-      style={cleanSx(sx)}
+      style={{
+        color: selected ? OPENBRICKS_TOKENS.connectAccent : OPENBRICKS_TOKENS.textMuted,
+        ...cleanSx(sx),
+      }}
       {...props}
     >
       {icon && <span className={`mb-1 transition-transform duration-300 ${selected ? 'scale-110' : ''}`}>{icon}</span>}
@@ -769,11 +792,65 @@ export const BottomNavigationAction = React.forwardRef(({ label, icon, selected,
 BottomNavigationAction.displayName = 'BottomNavigationAction';
 export const Breadcrumbs = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Brush = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ButtonBase = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const ButtonBase = React.forwardRef(({ children, className, sx, component, ...props }: any, ref) => {
+  const Component = component || 'button';
+  return (
+    <Component
+      ref={ref}
+      className={`${className || ''}`}
+      style={cleanSx(sx)}
+      {...props}
+    >
+      {children}
+    </Component>
+  );
+});
+ButtonBase.displayName = 'ButtonBase';
 export const CalendarMonth = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Campaign = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const CardHeader = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const CardMedia = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const CardHeader = React.forwardRef(({ avatar, action, title, subheader, children, className, sx, ...props }: any, ref) => (
+  <div
+    ref={ref}
+    className={`flex items-start gap-3 p-4 ${className || ''}`}
+    style={cleanSx(sx)}
+    {...props}
+  >
+    {avatar ? <div className="shrink-0">{avatar}</div> : null}
+    <div className="min-w-0 flex-1">
+      {title ? <div className="text-sm font-semibold text-stone-100">{title}</div> : null}
+      {subheader ? <div className="text-xs text-stone-400">{subheader}</div> : null}
+      {children}
+    </div>
+    {action ? <div className="shrink-0">{action}</div> : null}
+  </div>
+));
+CardHeader.displayName = 'CardHeader';
+export const CardMedia = React.forwardRef(({ component, image, src, alt, className, sx, children, ...props }: any, ref) => {
+  const Component = component || 'img';
+  if (Component === 'img' || image || src) {
+    return (
+      <img
+        ref={ref as any}
+        src={image || src}
+        alt={alt || ''}
+        className={`w-full h-auto object-cover ${className || ''}`}
+        style={cleanSx(sx)}
+        {...props}
+      />
+    );
+  }
+  return (
+    <Component
+      ref={ref}
+      className={className}
+      style={cleanSx(sx)}
+      {...props}
+    >
+      {children}
+    </Component>
+  );
+});
+CardMedia.displayName = 'CardMedia';
 export const ChatBubbleOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Circle = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Construction = ({ children, ...props }: any) => React.createElement('div', props, children);
@@ -811,7 +888,22 @@ export const EventNote = ({ children, ...props }: any) => React.createElement('d
 export const ExpandLess = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const ExpandMore = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Extension = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Fab = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const Fab = React.forwardRef(({ children, className, sx, color, ...props }: any, ref) => (
+  <button
+    ref={ref}
+    className={`inline-flex items-center justify-center rounded-full p-3 shadow-xl transition-all active:scale-95 ${className || ''}`}
+    style={{
+      background: color === 'primary' ? OPENBRICKS_TOKENS.connectAccent : OPENBRICKS_TOKENS.surfaceAlt,
+      color: color === 'primary' ? '#111' : OPENBRICKS_TOKENS.text,
+      border: `1px solid ${OPENBRICKS_TOKENS.border}`,
+      ...cleanSx(sx),
+    }}
+    {...props}
+  >
+    {children}
+  </button>
+));
+Fab.displayName = 'Fab';
 export const Fade = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const FiberPin = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const FingerprintOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
@@ -823,7 +915,18 @@ export const FormGroup = ({ children, ...props }: any) => React.createElement('d
 export const Fullscreen = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const FullscreenExit = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const InfoOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const InputBase = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const InputBase = React.forwardRef(({ className, sx, inputRef, endAdornment, startAdornment, ...props }: any, ref) => (
+  <div className={`flex min-w-0 flex-1 items-center gap-2 ${className || ''}`} style={cleanSx(sx)}>
+    {startAdornment}
+    <input
+      ref={inputRef || ref}
+      className="min-w-0 flex-1 bg-transparent text-sm text-stone-100 outline-none placeholder:text-stone-500"
+      {...props}
+    />
+    {endAdornment}
+  </div>
+));
+InputBase.displayName = 'InputBase';
 export const Insights = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Keyboard = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Label = ({ children, ...props }: any) => React.createElement('div', props, children);
@@ -832,7 +935,17 @@ export const LibraryAdd = ({ children, ...props }: any) => React.createElement('
 export const LightbulbOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Link = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const LinkOff = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const ListItemIcon = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const ListItemIcon = React.forwardRef(({ children, className, sx, ...props }: any, ref) => (
+  <div
+    ref={ref}
+    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stone-400 ${className || ''}`}
+    style={cleanSx(sx)}
+    {...props}
+  >
+    {children}
+  </div>
+));
+ListItemIcon.displayName = 'ListItemIcon';
 export const LocalOffer = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const LocalOfferOutlined = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const LocationOn = ({ children, ...props }: any) => React.createElement('div', props, children);

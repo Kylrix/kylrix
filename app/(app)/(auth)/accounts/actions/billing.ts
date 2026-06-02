@@ -352,7 +352,15 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   }
 
   const existingStatus = String(coupon.status || '').toLowerCase();
-  if (['applied', 'redeemed', 'used'].includes(existingStatus)) return { ok: true, claimed: false, message: 'Coupon already claimed' };
+  if (['used', 'revoked', 'expired'].includes(existingStatus)) throw new Error('Coupon is no longer valid');
+  
+  const redemptionLimit = Number(coupon.redemptionLimit || 1);
+  const redemptionCount = Number(coupon.redemptionCount || 0);
+  
+  if (redemptionCount >= redemptionLimit) {
+    throw new Error('Coupon redemption limit reached');
+  }
+
   const metadata = parseMetadata(coupon.metadata);
   const couponMeta = parseMetadata(metadata.coupon);
   const giftMeta = parseMetadata(metadata.gift);
@@ -364,9 +372,12 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   const targetUserId = String(couponMeta.targetUserId || coupon.relatedUserId || '').trim();
   const claimedBy = String(couponMeta.claimedBy || metadata.claimedBy || '').trim();
   const discountPercent = Number(coupon.discountPercent ?? couponMeta.discountPercent ?? metadata.discountPercent ?? 0);
+  
   if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) throw new Error('Invalid coupon discount');
-  if (claimedBy && claimedBy !== user.$id) throw new Error('Coupon is reserved for another account');
   if (targetUserId && targetUserId !== user.$id) throw new Error('Coupon is reserved for another account');
+
+  const newRedemptionCount = redemptionCount + 1;
+  const isLastRedemption = newRedemptionCount >= redemptionLimit;
 
   const { currentPeriodStart, currentPeriodEnd } = await calculateStackedPeriod(databases, user.$id, planId, months);
   const nextMetadata = {
@@ -378,14 +389,18 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       claimedAt: new Date().toISOString(),
       discountPercent,
       targetUserId: targetUserId || null,
+      redemptionIndex: newRedemptionCount,
     },
   };
+
+  // Update coupon state
   await databases.updateDocument(CHAT_DB_ID, ACCOUNT_EVENTS_TABLE_ID, coupon.$id, {
-    status: 'pending',
+    status: discountPercent < 100 ? 'pending' : (isLastRedemption ? 'applied' : 'active'),
     relatedUserId: user.$id,
+    redemptionCount: newRedemptionCount,
     metadata: JSON.stringify({
       ...nextMetadata,
-      coupon: { ...nextMetadata.coupon, claimState: 'pending' },
+      coupon: { ...nextMetadata.coupon, claimState: discountPercent < 100 ? 'pending' : 'applied' },
     }),
   });
 
