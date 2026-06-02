@@ -1120,7 +1120,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                           sx={{
                             display: 'flex',
                             gap: 1.5,
-                            p: 1.5,
+                            p: 2,
                             borderRadius: '16px',
                             bgcolor: 'rgba(255,255,255,0.02)',
                             border: '1px solid rgba(255,255,255,0.03)',
@@ -1134,9 +1134,9 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                           }}
                         >
                           <Box sx={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: '8px',
+                            width: 36,
+                            height: 36,
+                            borderRadius: '10px',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -1144,13 +1144,13 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                             color: t.color,
                             flexShrink: 0,
                           }}>
-                            <FolderKanban size={16} />
+                            <FolderKanban size={17} />
                           </Box>
-                          <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Typography variant="caption" sx={{ fontWeight: 800, color: '#fff', display: 'block' }} noWrap>
+                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.4, pr: 0.25 }}>
+                            <Typography component="span" sx={{ fontWeight: 800, color: '#fff', display: 'block', fontSize: '0.82rem', lineHeight: 1.3 }}>
                               {t.title}
                             </Typography>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px' }} noWrap>
+                            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.74rem', lineHeight: 1.45, fontWeight: 500 }}>
                               {t.summary}
                             </Typography>
                           </Box>

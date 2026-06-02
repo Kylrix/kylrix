@@ -143,7 +143,11 @@ function TemplateCard({ template, onSelect }: { template: typeof projectTemplate
             elevation={0}
             onClick={() => onSelect(template)}
             sx={{
-                p: 2,
+                p: 3,
+                minHeight: 196,
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
                 borderRadius: '24px',
                 bgcolor: '#161412',
                 border: '1px solid rgba(255,255,255,0.06)',
@@ -151,6 +155,7 @@ function TemplateCard({ template, onSelect }: { template: typeof projectTemplate
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                 position: 'relative',
                 overflow: 'hidden',
+                boxSizing: 'border-box',
                 '&:hover': { 
                     bgcolor: '#1C1A18', 
                     borderColor: alpha(template.color, 0.3),
@@ -165,65 +170,80 @@ function TemplateCard({ template, onSelect }: { template: typeof projectTemplate
                     size="small"
                     sx={{ 
                         position: 'absolute', 
-                        top: 12, 
-                        right: 12, 
+                        top: 14, 
+                        right: 14, 
                         bgcolor: alpha(template.color, 0.1), 
                         color: template.color, 
                         fontWeight: 900, 
                         fontSize: '0.6rem',
-                        height: 18,
+                        height: 20,
                         fontFamily: 'var(--font-mono)',
                         border: `1px solid ${alpha(template.color, 0.2)}`
                     }} 
                 />
             )}
-            <Stack spacing={1.5}>
-                <Stack direction="row" spacing={1.5} alignItems="center">
-                    <Box sx={{ width: 36, height: 36, borderRadius: '10px', bgcolor: alpha(template.color, 0.1), color: template.color, display: 'grid', placeItems: 'center' }}>
-                        <template.icon size={18} strokeWidth={2.5} />
+            <Stack spacing={2} sx={{ flex: 1, height: '100%' }}>
+                <Stack direction="row" spacing={1.75} alignItems="flex-start">
+                    <Box sx={{ width: 44, height: 44, borderRadius: '12px', bgcolor: alpha(template.color, 0.1), color: template.color, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                        <template.icon size={20} strokeWidth={2.5} />
                     </Box>
-                    <Typography variant="body1" sx={{ fontWeight: 900, color: '#fff', fontSize: '0.95rem', letterSpacing: '-0.01em' }}>{template.title}</Typography>
+                    <Box sx={{ minWidth: 0, flex: 1, pt: 0.25, pr: template.isPro ? 3.5 : 0 }}>
+                      <Typography
+                        component="span"
+                        variant="body1"
+                        sx={{
+                          fontWeight: 900,
+                          color: '#fff',
+                          fontSize: '1rem',
+                          letterSpacing: '-0.01em',
+                          lineHeight: 1.3,
+                          display: 'block',
+                        }}
+                      >
+                        {template.title}
+                      </Typography>
+                    </Box>
                 </Stack>
                 
-                <Box>
-                    <Typography
-                      component="span"
-                      variant="body2"
-                      sx={{
-                        color: 'rgba(255,255,255,0.62)',
-                        display: '-webkit-box',
-                        overflow: 'hidden',
-                        WebkitLineClamp: expanded ? 'unset' : 2,
-                        WebkitBoxOrient: 'vertical',
-                        lineHeight: 1.45,
-                        fontWeight: 500,
-                        fontSize: '0.85rem',
-                        minHeight: expanded ? 'auto' : '2.4em',
-                      }}
-                    >
-                        {expanded ? template.description : template.summary}
-                    </Typography>
-                </Box>
+                <Typography
+                  component="span"
+                  variant="body2"
+                  sx={{
+                    color: 'rgba(255,255,255,0.66)',
+                    display: '-webkit-box',
+                    overflow: 'hidden',
+                    WebkitLineClamp: expanded ? 'unset' : 3,
+                    WebkitBoxOrient: 'vertical',
+                    lineHeight: 1.55,
+                    fontWeight: 500,
+                    fontSize: '0.875rem',
+                    flex: 1,
+                    minHeight: expanded ? 'auto' : '4.1em',
+                  }}
+                >
+                    {expanded ? template.description : template.summary}
+                </Typography>
 
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 'auto', pt: 0.5 }}>
                     <Button 
                         size="small" 
                         onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
                         sx={{ 
                             p: 0, 
                             minWidth: 0, 
-                            color: 'rgba(255,255,255,0.3)', 
+                            color: 'rgba(255,255,255,0.42)', 
                             textTransform: 'none', 
-                            fontSize: '0.7rem', 
+                            fontSize: '0.75rem', 
                             fontWeight: 800,
+                            lineHeight: 1.3,
                             '&:hover': { color: '#fff', bgcolor: 'transparent' }
                         }}
                     >
                         {expanded ? 'Show Less' : 'Learn More'}
                     </Button>
                     <Stack direction="row" alignItems="center" spacing={0.5} sx={{ color: template.color }}>
-                        <Typography variant="caption" sx={{ fontWeight: 900, fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Activate</Typography>
-                        <Plus size={10} strokeWidth={4} />
+                        <Typography component="span" variant="caption" sx={{ fontWeight: 900, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.2 }}>Activate</Typography>
+                        <Plus size={11} strokeWidth={4} />
                     </Stack>
                 </Stack>
             </Stack>
@@ -377,9 +397,9 @@ export default function ProjectsPage() {
         </Button>
       </Stack>
       
-      <Grid container spacing={2}>
+      <Grid container spacing={2.5}>
         {displayedTemplates.map((template) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={template.title}>
+          <Grid size={{ xs: 12, sm: 6, lg: 6, xl: 4 }} key={template.title} sx={{ display: 'flex' }}>
             <TemplateCard template={template} onSelect={openCreateDrawer} />
           </Grid>
         ))}
@@ -582,7 +602,7 @@ export default function ProjectsPage() {
           {projects.length === 0 ? (
             <>
               {/* Mobile-only templates display at the top when projects are empty */}
-              <Box sx={{ display: { xs: 'block', lg: 'none' }, mb: 8 }}>
+              <Box sx={{ mb: 8 }}>
                 {templatesElement}
               </Box>
               <Box sx={{ mb: 6 }}>
@@ -597,7 +617,7 @@ export default function ProjectsPage() {
               </Box>
               {workflowsCardElement}
               {/* Mobile-only templates display at the bottom when projects exist */}
-              <Box sx={{ display: { xs: 'block', lg: 'none' }, mt: 8 }}>
+              <Box sx={{ mt: 8 }}>
                 {templatesElement}
               </Box>
             </>

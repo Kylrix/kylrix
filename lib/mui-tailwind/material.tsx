@@ -399,10 +399,13 @@ export const ListItemText = ({ primary, secondary, children, className, ...props
 
 // 6. Paper Component
 export const Paper = React.forwardRef(({ children, className, sx, ...props }: any, ref) => {
+  const hasPaddingInSx = sx && typeof sx === 'object' && (
+    'p' in sx || 'padding' in sx || 'px' in sx || 'py' in sx || 'pt' in sx || 'pb' in sx || 'pl' in sx || 'pr' in sx
+  );
   return (
     <div
       ref={ref}
-      className={`rounded-2xl bg-[#0A0908] border border-[#23211F] p-4 ${className || ''}`}
+      className={`rounded-2xl bg-[#0A0908] border border-[#23211F] ${hasPaddingInSx ? '' : 'p-4'} ${className || ''}`}
       style={cleanSx(sx)}
       {...props}
     >
