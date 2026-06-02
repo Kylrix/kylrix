@@ -338,6 +338,15 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "crdt",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": true
                 }
             ],
             "indexes": [
