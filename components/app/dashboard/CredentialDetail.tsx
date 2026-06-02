@@ -18,7 +18,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
   ArrowBack as ArrowBackIcon,
   Close as CloseIcon,
-  Globe as LanguageIcon,
+  Public as LanguageIcon,
   CalendarIcon as CalendarTodayIcon,
   ShieldAlert as GppMaybeIcon,
   ShieldCheck as GppGoodIcon,

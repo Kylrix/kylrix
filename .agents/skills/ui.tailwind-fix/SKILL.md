@@ -234,6 +234,56 @@ const PROJECT_CARD_GRID_SX = {
 
 Refactor to: dismiss in a right `flexShrink: 0` column, title/time stacked or time on its own line, message in the text column with `gap`.
 
+## Vault (`/vault`) patterns
+
+### Credential list rows (`CredentialItem`)
+
+Match the quick-actions row structure (not a single crushed `Stack`):
+
+- Outer `Paper`: `display: 'flex'`, `alignItems: 'center'`, `gap: 1.5`, `px: 2.25`, `py: 1.75`, opaque `#161412`, border `#34322F`.
+- Favicon slot: fixed `52×52`, `flexShrink: 0`.
+- Text column: `flex: 1`, `minWidth: 0`, `flexDirection: 'column'`, `gap: 0.35`.
+- Title + username: separate `Typography` with `component="span"`, `lineHeight: 1.25` / `1.35`.
+- Actions: `flexShrink: 0`; mobile ⋯ menus use `Menu` + `anchorEl` (shim supports `PaperProps` / `slotProps.paper`).
+
+### Vault overview
+
+- Stat tiles: fluid `repeat(auto-fill, minmax(min(100%, 200px), 1fr))` — same rule as project grids.
+- Section `Paper`: opaque `#161412`, **no** `backdropFilter` / translucent shells.
+- Recent-item links: icon slot + stacked text column + chevron (`flexShrink: 0`).
+
+### Vault landing (`/vault`)
+
+- Hero copy: `Typography component="span"`, solid accent color (no gradient text).
+- `PasswordGenerator`: `TextField` with `readOnly` when displaying generated password.
+
+## Icon imports (migration pitfall)
+
+**Never** default-import from `@/lib/mui-tailwind/icons`:
+
+```tsx
+// BAD — default export is a Proxy object, not a component → "Element type is invalid"
+import ContentCopyIcon from '@/lib/mui-tailwind/icons';
+
+// GOOD
+import { ContentCopy as ContentCopyIcon } from '@/lib/mui-tailwind/icons';
+```
+
+## Context menus (three-dot / right-click)
+
+- `openMenu({ x, y, items, appType })` from `ContextMenuContext`.
+- Card ⋯ button: `getBoundingClientRect()` → `y: rect.bottom + 4`, `x: rect.right`, `transformOrigin: { horizontal: 'right' }`.
+- `Menu` shim must honor `anchorReference="anchorPosition"` and `anchorPosition` (not only `anchorEl`).
+
+## Shim props to strip or support
+
+| Prop | Component | Fix |
+|------|-----------|-----|
+| `labelPlacement` | `FormControlLabel` | Handle layout; do not pass to `<label>` |
+| `readOnly` / `InputProps.readOnly` | `TextField` | Set native `readOnly` on `<input>` |
+| `PaperProps.sx` | `Menu` | Merge into menu panel styles |
+| `slotProps.primary.sx` | `ListItemText` | Apply to primary span |
+
 ## Verification
 
 After edits, confirm in DevTools:
