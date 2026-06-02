@@ -111,6 +111,13 @@ const splitSx = (sx: any) => {
 
 const cleanSx = (sx: any) => splitSx(sx).root;
 
+const isRenderableComponentType = (value: any) => {
+  if (!value) return false;
+  if (typeof value === 'function') return true;
+  if (typeof value === 'object' && value.$$typeof) return true;
+  return false;
+};
+
 // 1. Box Component
 export const Box = React.forwardRef(({ children, sx, className, component: Component = 'div', display, alignItems, justifyContent, flexWrap, flexDirection, gap, ...props }: any, ref) => {
   const inlineStyle = {
@@ -248,26 +255,51 @@ export const Toolbar = React.forwardRef(({ children, className, sx, ...props }: 
 ));
 Toolbar.displayName = 'Toolbar';
 
-export const Tabs = React.forwardRef(({ children, className, sx, ...props }: any, ref) => (
+export const Tabs = React.forwardRef(({ children, className, sx, value, onChange, variant, ...props }: any, ref) => (
   <div
     ref={ref}
     className={`flex items-center gap-2 ${className || ''}`}
     style={cleanSx(sx)}
     {...props}
   >
-    {children}
+    {React.Children.map(children, (child) => {
+      if (!React.isValidElement(child)) return child;
+      const childValue = (child.props as any).value ?? (child.props as any).id ?? (child.props as any).label;
+      const selected = childValue === value;
+      return React.cloneElement(child as any, {
+        selected,
+        onClick: (e: any) => {
+          onChange?.(e, childValue);
+          (child.props as any).onClick?.(e);
+        },
+      });
+    })}
   </div>
 ));
 Tabs.displayName = 'Tabs';
 
-export const Tab = React.forwardRef(({ label, children, className, sx, ...props }: any, ref) => (
+export const Tab = React.forwardRef(({ label, children, className, sx, icon, iconPosition = 'start', selected, ...props }: any, ref) => (
   <button
     ref={ref}
-    className={`rounded-xl px-4 py-2 text-sm font-medium text-stone-300 hover:bg-[#1E1B19] ${className || ''}`}
+    className={`rounded-xl px-4 py-2 text-sm font-medium ${selected ? 'text-white bg-[#1E1B19]' : 'text-stone-300 hover:bg-[#1E1B19]'} ${className || ''}`}
     style={cleanSx(sx)}
     {...props}
   >
-    {label ?? children}
+    {icon ? (
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          flexDirection: iconPosition === 'end' ? 'row-reverse' : 'row',
+        }}
+      >
+        {icon}
+        <span>{label ?? children}</span>
+      </span>
+    ) : (
+      label ?? children
+    )}
   </button>
 ));
 Tab.displayName = 'Tab';
@@ -1168,9 +1200,9 @@ export const PaginationItem = React.forwardRef(
         ? <span>{content}</span>
         : React.isValidElement(content)
           ? content
-          : typeof content === 'function'
-            ? React.createElement(content)
-            : content;
+          : isRenderableComponentType(content)
+            ? React.createElement(content as any)
+            : null;
 
     return (
       <button
