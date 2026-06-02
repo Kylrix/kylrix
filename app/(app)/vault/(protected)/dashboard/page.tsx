@@ -11,7 +11,6 @@ import {
 } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
 import CredentialItem from '@/components/app/dashboard/CredentialItem';
-import CredentialSkeleton from '@/components/app/dashboard/CredentialSkeleton';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import CredentialDetail from '@/components/app/dashboard/CredentialDetail';
 import SudoModal from '@/components/overlays/SudoModal';
@@ -260,7 +259,7 @@ function DashboardPageContent() {
           <Stack spacing={1.5} sx={{ maxWidth: 800 }}>
             {loading ? (
               Array.from({ length: 6 }).map((_, i) => (
-                <CredentialSkeleton key={`skeleton-${i}`} />
+                <CredentialItem key={`skeleton-${i}`} credential={{ $id: `skeleton-${i}`, name: 'Loading...', username: '', type: 'password' } as any} />
               ))
             ) : allCredentials.length === 0 ? (
               <Paper elevation={0} sx={{ 
