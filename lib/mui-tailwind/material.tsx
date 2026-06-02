@@ -50,13 +50,51 @@ export const useMediaQuery = (query: string, options?: { noSsr?: boolean }) => {
   return window.matchMedia(query).matches;
 };
 
+const breakpointsPx: Record<string, number> = { xs: 0, sm: 640, md: 768, lg: 1024, xl: 1280 };
+
+const pickResponsiveValue = (value: any) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+  if (typeof window === 'undefined') return value.md ?? value.sm ?? value.xs ?? Object.values(value)[0];
+  const width = window.innerWidth;
+  let picked: any = value.xs ?? Object.values(value)[0];
+  for (const [bp, min] of Object.entries(breakpointsPx)) {
+    if (width >= min && value[bp] !== undefined) picked = value[bp];
+  }
+  return picked;
+};
+
+const normalizeStyleValue = (key: string, value: any) => {
+  if (value === undefined || value === null) return value;
+  const resolved = pickResponsiveValue(value);
+  if (typeof resolved === 'number' && /(padding|margin|top|left|right|bottom|gap|width|height|min|max|borderRadius)/i.test(key)) {
+    return `${resolved}px`;
+  }
+  return resolved;
+};
+
+const sxKeyMap: Record<string, string> = {
+  bgcolor: 'backgroundColor',
+  px: 'paddingInline',
+  py: 'paddingBlock',
+  pt: 'paddingTop',
+  pb: 'paddingBottom',
+  pl: 'paddingLeft',
+  pr: 'paddingRight',
+  mx: 'marginInline',
+  my: 'marginBlock',
+  mt: 'marginTop',
+  mb: 'marginBottom',
+  ml: 'marginLeft',
+  mr: 'marginRight',
+};
+
 const cleanSx = (sx: any) => {
   if (!sx || typeof sx !== 'object') return sx;
   const validSx: any = {};
   for (const key in sx) {
-    if (!key.startsWith('&') && !key.startsWith('@')) {
-      validSx[key] = sx[key];
-    }
+    if (key.startsWith('&') || key.startsWith('@')) continue;
+    const mappedKey = sxKeyMap[key] || key;
+    validSx[mappedKey] = normalizeStyleValue(mappedKey, sx[key]);
   }
   return validSx;
 };
@@ -428,21 +466,24 @@ export const DialogActions = ({ children, className, ...props }: any) => (
 );
 
 // 12. Drawer Component
-export const Drawer = React.forwardRef(({ open, onClose, anchor = 'right', children, PaperProps, keepMounted, disablePortal, ...props }: any, ref) => {
+export const Drawer = React.forwardRef(({ open, onClose, anchor = 'right', children, PaperProps, keepMounted, disablePortal, ModalProps, slotProps, sx, ...props }: any, ref) => {
   if (!open) return null;
-  const justifyClass = anchor === 'left' ? 'justify-start' : 'justify-end';
-  const borderClass = anchor === 'left' ? 'border-r border-[#23211F]' : 'border-l border-[#23211F]';
-  const posClass = anchor === 'left' ? 'left-0' : 'right-0';
+  const isBottom = anchor === 'bottom';
+  const justifyClass = anchor === 'left' ? 'justify-start' : anchor === 'bottom' ? 'items-end justify-center' : 'justify-end';
+  const borderClass = anchor === 'left' ? 'border-r border-[#23211F]' : anchor === 'bottom' ? 'border-t border-[#23211F]' : 'border-l border-[#23211F]';
+  const posClass = anchor === 'left' ? 'left-0' : anchor === 'bottom' ? 'bottom-0 left-0 right-0' : 'right-0';
   
-  const paperSx = { ...(PaperProps?.sx || {}), ...(props.sx || {}) };
+  const drawerRootSx = sx || {};
+  const nestedPaperSx = drawerRootSx?.['& .MuiDrawer-paper'] || {};
+  const paperSx = { ...(PaperProps?.sx || {}), ...nestedPaperSx };
   const paperStyle = cleanSx(paperSx);
   
   return (
-    <div className={`fixed inset-0 z-50 flex ${justifyClass} bg-black/70 backdrop-blur-sm`}>
+    <div className={`fixed inset-0 z-50 flex ${justifyClass} bg-black/70 backdrop-blur-sm`} style={cleanSx(drawerRootSx)}>
       <div className="fixed inset-0" onClick={onClose} />
       <div
         ref={ref}
-        className={`relative z-10 w-80 h-full bg-[#141211] ${borderClass} shadow-2xl p-6 overflow-y-auto ${posClass}`}
+        className={`relative z-10 ${isBottom ? 'w-full h-auto max-h-[86vh] rounded-t-[24px]' : 'w-80 h-full'} bg-[#161412] ${borderClass} shadow-2xl p-6 overflow-y-auto ${posClass}`}
         style={paperStyle}
         {...props}
       >

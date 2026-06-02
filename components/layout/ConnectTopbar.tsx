@@ -1706,16 +1706,27 @@ export default function ConnectTopbar({
                         color: '#fff',
                         bgcolor: '#6366F1',
                         borderRadius: '12px',
-                        minWidth: 98,
+                        minWidth: { xs: 40, md: 98 },
                         height: 40,
-                        px: 2,
+                        px: { xs: 1.25, md: 2 },
                         textTransform: 'none',
                         fontWeight: 800,
                         boxShadow: '0 16px 36px rgba(99, 102, 241, 0.25)',
                         '&:hover': { bgcolor: '#5254E8' }
                       }}
                     >
-                      {isAuthenticating ? <CircularProgress size={16} color="inherit" /> : 'Connect'}
+                      {isAuthenticating ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : (
+                        <>
+                          <Box component="span" sx={{ display: { xs: 'inline-flex', md: 'none' }, alignItems: 'center' }}>
+                            <Sparkles size={15} />
+                          </Box>
+                          <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>
+                            Connect
+                          </Box>
+                        </>
+                      )}
                     </Button>
                   )}
                   {user && (

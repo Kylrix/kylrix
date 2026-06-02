@@ -7,10 +7,12 @@
 @source "../hooks";
 
 :root {
-  --background: #000000;
-  --foreground: #f2f2f2;
-  --surface: #161514;
-  --surface-2: #1F1D1B;
+  --background: #0A0908;
+  --foreground: #F5F2ED;
+  --surface: #161412;
+  --surface-2: #1C1917;
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --surface-border-soft: rgba(255, 255, 255, 0.05);
   /* Alias: components use --color-surface (e.g. DynamicSidebar); must map to real tokens */
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
@@ -57,17 +59,17 @@ a {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: #000000;
+  background: #0A0908;
 }
 
 body[data-ui-mood="focus"] {
-  --surface: #1A1816;
-  --surface-2: #22201D;
+  --surface: #191715;
+  --surface-2: #211E1B;
 }
 
 body[data-ui-mood="serious"] {
-  --surface: #151312;
-  --surface-2: #1C1A18;
+  --surface: #151311;
+  --surface-2: #1B1917;
 }
 
 /* Ultra-smooth scrolling */

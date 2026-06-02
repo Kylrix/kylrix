@@ -134,7 +134,7 @@ function ConnectHomeContent() {
 
   if (isDesktop) {
     return (
-      <Container maxWidth="xl" sx={{ py: 2, pointerEvents: 'auto' }}>
+      <Container maxWidth="xl" sx={{ py: 2, px: { xs: 2, md: 3 }, pointerEvents: 'auto' }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 4, alignItems: 'flex-start' }}>
           {/* Moments Column */}
           <Box>
@@ -292,7 +292,7 @@ function ConnectHomeContent() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 2, pointerEvents: 'auto' }}>
+    <Container maxWidth="md" sx={{ py: 2, px: { xs: 2, sm: 3 }, pointerEvents: 'auto' }}>
       <Feed view="personal" composeIntent={composeIntent} />
     </Container>
   );

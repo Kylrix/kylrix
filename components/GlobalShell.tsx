@@ -172,8 +172,8 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           zIndex: 1,
           pt: '88px', // Exact Topbar height
           pb: isLandingPage ? 0 : { xs: 12, md: 4 },
-          px: { xs: 0, sm: 2, md: 4 },
-          pl: { xs: 0, sm: 2, md: showLeftSidebar ? 'calc(80px + 32px)' : 4 }, // Dynamic desktop offset padding
+          px: { xs: 2, sm: 2, md: 4 },
+          pl: { xs: 2, sm: 2, md: showLeftSidebar ? 'calc(80px + 32px)' : 4 }, // Dynamic desktop offset padding
           maxWidth: 1600,
           mx: 'auto',
           minHeight: '100vh',

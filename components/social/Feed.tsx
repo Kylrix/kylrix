@@ -1802,7 +1802,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
     }
 
     return (
-        <Box sx={{ maxWidth: 600, mx: 'auto', p: { xs: 1, sm: 2 }, position: 'relative' }}>
+        <Box sx={{ maxWidth: 640, mx: 'auto', p: { xs: 2, sm: 2.5 }, position: 'relative' }}>
             {showNewPosts && pendingMoments.length > 0 && (
                 // Exclude user's own direct posts from the new posts widget
                 <NewPostsWidget 
@@ -1873,7 +1873,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                 const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
 
                 return (
-                    <Card key={moment.$id} sx={{ ...momentCardSx, mb: 3 }} elevation={0}>
+                    <Card key={moment.$id} sx={{ ...momentCardSx, mb: { xs: 2.5, md: 3 } }} elevation={0}>
                         <CardHeader
                             sx={{ px: 2, pt: 2, pb: 0.75, '& .MuiCardHeader-content': { minWidth: 0 } }}
                             avatar={
