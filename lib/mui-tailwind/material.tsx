@@ -17,6 +17,21 @@ export const useTheme = () => ({
     text: { primary: '#F8FAFC', secondary: '#9B9691' },
     divider: 'rgba(255, 255, 255, 0.05)',
   },
+  breakpoints: {
+    down: (key: string) => {
+      const map: Record<string, number> = { sm: 640, md: 768, lg: 1024, xl: 1280 };
+      return `(max-width: ${map[key] ?? 768}px)`;
+    },
+    up: (key: string) => {
+      const map: Record<string, number> = { sm: 640, md: 768, lg: 1024, xl: 1280 };
+      return `(min-width: ${map[key] ?? 768}px)`;
+    },
+    between: (start: string, end: string) => {
+      const map: Record<string, number> = { sm: 640, md: 768, lg: 1024, xl: 1280 };
+      return `(min-width: ${map[start] ?? 768}px) and (max-width: ${map[end] ?? 1280}px)`;
+    },
+  },
+  spacing: (...values: number[]) => values.map((value) => `${value * 8}px`).join(' '),
 });
 export const useMediaQuery = (query: string, options?: { noSsr?: boolean }) => {
   if (typeof window === 'undefined') return false;
