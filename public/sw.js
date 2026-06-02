@@ -1,17 +1,10 @@
-// Kylrix Zero-Network Service Worker (The "Reload Annihilator")
-// Version: 1.0.0
+// Kylrix Zero-Network Service Worker (The "Session Worker")
+// Version: 1.0.1
 
-const CACHE_NAME = 'kylrix-shell-v1';
-const SHELL_URL = '/shell.html';
+const CACHE_NAME = 'kylrix-session-v1';
 
-// 1. Install Phase: Cache the static App Shell
+// 1. Install Phase
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching application shell');
-      return cache.addAll([SHELL_URL]);
-    })
-  );
   self.skipWaiting();
 });
 
@@ -32,7 +25,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. Volatile MEK Preservation (The "Session Worker")
+// 3. Volatile MEK Preservation
 // We store the encrypted Master Encryption Key (MEK) and other volatile state in memory here.
 // Since the SW outlives page reloads, this data survives a hard refresh (F5).
 let volatileContext = null;
@@ -54,37 +47,8 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// 4. Navigation Interception (Instant Shell Delivery)
+// 4. Fetch Interception (Standard behavior, no shell hijacking)
 self.addEventListener('fetch', (event) => {
-  const request = event.request;
-
-  // Intercept navigation requests (standard page loads/refreshes)
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      caches.match(SHELL_URL).then((cachedShell) => {
-        if (cachedShell) {
-          console.log('[SW] Serving cached shell for navigation:', request.url);
-          // Return the static shell instantly (0ms TTFB)
-          return cachedShell;
-        }
-        // Fallback to network if shell is missing
-        return fetch(request);
-      })
-    );
-    return;
-  }
-
-  // Optional: Cache-first for static assets (fonts, icons)
-  if (request.destination === 'font' || request.destination === 'image') {
-      event.respondWith(
-          caches.match(request).then((response) => {
-              return response || fetch(request).then((networkResponse) => {
-                  return caches.open(CACHE_NAME).then((cache) => {
-                      cache.put(request, networkResponse.clone());
-                      return networkResponse;
-                  });
-              });
-          })
-      );
-  }
+  // Let everything go to network by default
 });
+
