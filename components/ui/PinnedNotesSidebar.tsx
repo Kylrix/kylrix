@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Box, Typography, Stack, IconButton, useTheme, alpha, Tooltip } from '@mui/material';
-import { Close as CloseIcon, PushPin as PinIcon } from '@mui/icons-material';
+import { Box, Typography, Stack, IconButton, useTheme, alpha, Tooltip } from '@/lib/mui-tailwind/material';
+import { Close as CloseIcon, PushPin as PinIcon } from '@/lib/mui-tailwind/icons';
 import { useNotes } from '@/context/NotesContext';
 import NoteCard from '@/components/ui/NoteCard';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';

@@ -1,7 +1,7 @@
  'use client';
 
 import React from 'react';
-import { alpha, Box, ButtonBase, Paper, Stack, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { alpha, Box, ButtonBase, Paper, Stack, Typography, useMediaQuery, useTheme } from '@/lib/mui-tailwind/material';
 import { ChevronRight } from 'lucide-react';
 
 import Logo from '@/components/Logo';

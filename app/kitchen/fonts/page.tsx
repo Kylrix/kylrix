@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Container, Typography, Paper, Grid, Stack, Divider, Button } from '@mui/material';
+import { Box, Container, Typography, Paper, Grid, Stack, Divider, Button } from '@/lib/mui-tailwind/material';
 import { ArrowLeft, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';

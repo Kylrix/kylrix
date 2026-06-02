@@ -25,7 +25,7 @@ import {
   Chip,
   alpha,
   TextField,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 
 interface UserData {
   email: string;

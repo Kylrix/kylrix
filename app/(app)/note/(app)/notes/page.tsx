@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Typography, Stack, IconButton, Alert, Skeleton, alpha, useMediaQuery, useTheme } from '@mui/material';
+import { Box, Typography, Stack, IconButton, Alert, Skeleton, alpha, useMediaQuery, useTheme } from '@/lib/mui-tailwind/material';
 import { deleteNote } from '@/lib/actions/client-ops';
 import { useNotes } from '@/context/NotesContext';
 
@@ -24,7 +24,7 @@ import {
   FolderSpecial as ProjectIcon,
   Description as NoteIcon,
   Tag as TagIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useFAB } from '@/context/FABContext';
 
 import { ChevronDown, ChevronUp, Maximize2, FolderKanban, Share2 } from 'lucide-react';

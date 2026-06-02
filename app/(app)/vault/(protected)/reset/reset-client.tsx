@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Button, CircularProgress, Paper, Stack, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Paper, Stack, Typography } from '@/lib/mui-tailwind/material';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useSudo } from '@/context/SudoContext';
 import { resetMasterpassAndWipe } from '@/lib/appwrite';

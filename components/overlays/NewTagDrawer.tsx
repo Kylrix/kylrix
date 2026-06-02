@@ -16,7 +16,7 @@ import {
   alpha,
   Tooltip,
   Paper
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   X as CloseIcon,
   Plus as PlusIcon,

@@ -18,7 +18,7 @@ import {
     Button,
     TextField,
     Avatar,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     Search,
     Edit2,

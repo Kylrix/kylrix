@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress } from '@/lib/mui-tailwind/material';
 import { isUserAdmin } from '@/lib/actions/admin/check-admin';
 
 export default function AdminGuard({ children }: { children: React.ReactNode }) {

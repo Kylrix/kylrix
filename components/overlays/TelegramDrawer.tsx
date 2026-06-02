@@ -11,9 +11,9 @@ import {
   Stack,
   Typography,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { CheckCircle2, Copy, ExternalLink, X } from 'lucide-react';
-import TelegramIcon from '@mui/icons-material/Telegram';
+import TelegramIcon from '@/lib/mui-tailwind/icons/Telegram';
 import { initializeTelegramConnection, checkTelegramConnection } from '@/lib/actions/telegram';
 
 interface TelegramDrawerProps {

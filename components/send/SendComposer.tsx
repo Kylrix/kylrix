@@ -24,7 +24,7 @@ import {
   ListItemButton,
   ListItemText,
   ListItemIcon,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Check,

@@ -16,7 +16,7 @@ import {
   Paper,
   alpha,
   Tooltip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Close as CloseIcon, 
   Fullscreen as FullscreenIcon, 
@@ -25,7 +25,7 @@ import {
   Delete as DeleteIcon, 
   Save as SaveIcon,
   PictureInPictureAlt as PipIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 
 interface DoodleCanvasProps {
   initialData?: string;

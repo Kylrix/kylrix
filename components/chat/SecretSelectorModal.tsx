@@ -18,10 +18,10 @@ import {
     Tabs,
     Tab,
     alpha as _alpha
-} from '@mui/material';
-import KeyIcon from '@mui/icons-material/VpnKeyOutlined';
-import ShieldIcon from '@mui/icons-material/ShieldOutlined';
-import SearchIcon from '@mui/icons-material/SearchOutlined';
+} from '@/lib/mui-tailwind/material';
+import KeyIcon from '@/lib/mui-tailwind/icons/VpnKeyOutlined';
+import ShieldIcon from '@/lib/mui-tailwind/icons/ShieldOutlined';
+import SearchIcon from '@/lib/mui-tailwind/icons/SearchOutlined';
 import { EcosystemService } from '@/lib/services/ecosystem';
 import { useAuth } from '@/lib/auth';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';

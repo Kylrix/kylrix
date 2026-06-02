@@ -17,13 +17,13 @@ import {
   Switch,
   FormControlLabel,
   Paper
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Delete as DeleteIcon,
   Save as SaveIcon,
   InfoOutlined as InfoIcon,
   PhotoCamera as PhotoCameraIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { IdentityAvatar, IdentityName, computeIdentityFlags } from './IdentityBadge';
 import { secureUploadFile } from '@/lib/actions/client-ops';
 

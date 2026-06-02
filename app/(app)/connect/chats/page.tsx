@@ -3,7 +3,7 @@
 import { ChatList } from '@/components/chat/ChatList';
 import { useFAB } from '@/context/FABContext';
 import { MessageSquare, Phone, Hash } from 'lucide-react';
-import { Box, IconButton, Typography, Stack, Button, Divider } from '@mui/material';
+import { Box, IconButton, Typography, Stack, Button, Divider } from '@/lib/mui-tailwind/material';
 import { useEffect, Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ChatService } from '@/lib/services/chat';

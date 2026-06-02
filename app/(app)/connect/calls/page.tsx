@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
-import { Box, Typography, Container, CircularProgress, Paper, TextField, Button, Divider, useTheme, useMediaQuery, Skeleton } from '@mui/material';
+import { Box, Typography, Container, CircularProgress, Paper, TextField, Button, Divider, useTheme, useMediaQuery, Skeleton } from '@/lib/mui-tailwind/material';
 import { Hash, ArrowRight, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter, useSearchParams } from 'next/navigation';

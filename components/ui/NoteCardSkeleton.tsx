@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Skeleton, Grid } from '@mui/material';
+import { Box, Skeleton, Grid } from '@/lib/mui-tailwind/material';
 
 export const NoteCardSkeleton: React.FC = () => {
   return (

@@ -13,7 +13,7 @@ import {
   alpha,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { ID, Permission, Role } from 'appwrite';
 import { X } from 'lucide-react';
 import toast from 'react-hot-toast';

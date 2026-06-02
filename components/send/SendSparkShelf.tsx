@@ -13,7 +13,7 @@ import {
   Typography,
   ListItemIcon,
   ListItemText,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Clock, Copy, ExternalLink, Import, MoreVertical, Trash2, FileText, KeyRound, ListTodo, Shield, Upload, MessageSquare, Sparkles } from 'lucide-react';
 
 import type { SendSparkRef, SendKind } from '@/lib/send/types';

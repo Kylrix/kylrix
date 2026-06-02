@@ -17,7 +17,7 @@ import {
   DialogContent, 
   DialogActions,
   alpha
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { useToast } from '@/components/ui/Toast';
 import CommentsSection from '@/app/(app)/note/(app)/notes/Comments';
 import NoteReactions from '@/app/(app)/note/(app)/notes/NoteReactions';

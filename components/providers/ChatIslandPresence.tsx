@@ -1,6 +1,6 @@
 'use client';
 
-import { Avatar, Badge, Box, Typography, alpha } from '@mui/material';
+import { Avatar, Badge, Box, Typography, alpha } from '@/lib/mui-tailwind/material';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Lock, MessageCircle, Video } from 'lucide-react';
 import { useRouter } from 'next/navigation';

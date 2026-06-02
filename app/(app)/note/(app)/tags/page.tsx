@@ -14,14 +14,14 @@ import {
   Chip,
   alpha,
   Skeleton
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Add as AddIcon, 
   Edit as EditIcon, 
   Delete as DeleteIcon, 
   Label as LabelIcon,
   AccessTime as AccessTimeIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { Tags } from '@/types/appwrite';
 import { listTags, deleteTag } from '@/lib/appwrite';
 import { updateNote } from '@/lib/actions/client-ops';

@@ -20,8 +20,8 @@ import {
     MenuItem,
     FormControl,
     IconButton
-} from '@mui/material';
-import { Send as SendIcon, CheckCircleOutline as SuccessIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Send as SendIcon, CheckCircleOutline as SuccessIcon } from '@/lib/mui-tailwind/icons';
 import { Upload as UploadIcon, X as XIcon } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';

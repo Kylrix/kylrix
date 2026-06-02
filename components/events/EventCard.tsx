@@ -15,7 +15,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   MapPin,
   Share2,

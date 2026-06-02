@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { useMediaQuery, useTheme, BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
+import { useMediaQuery, useTheme, BottomNavigation, BottomNavigationAction, Paper } from '@/lib/mui-tailwind/material';
 import { 
   Box, 
   Drawer, 
@@ -13,7 +13,7 @@ import {
   Typography,
   Divider,
   alpha
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   LayoutDashboard, 
   Users, 

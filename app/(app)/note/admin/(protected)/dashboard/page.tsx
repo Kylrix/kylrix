@@ -5,12 +5,12 @@ import {
   Typography, 
   Grid, 
   Paper 
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import Link from 'next/link';
 import { 
   Campaign as BroadcastIcon, 
   Construction as ToolsIcon 
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 
 export default function AdminDashboard() {
   return (

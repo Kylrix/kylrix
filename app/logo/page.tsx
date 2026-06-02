@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Container, Typography, Grid, Paper, Divider, Stack } from '@mui/material';
+import { Box, Container, Typography, Grid, Paper, Divider, Stack } from '@/lib/mui-tailwind/material';
 import Logo, { KylrixApp } from '@/components/Logo';
 
 export default function LogoPage() {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Box, Typography, IconButton, Slider } from '@mui/material';
+import { Box, Typography, IconButton, Slider } from '@/lib/mui-tailwind/material';
 import { Play, Pause } from 'lucide-react';
 
 interface VoiceMessageProps {

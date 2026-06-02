@@ -22,7 +22,7 @@ import {
     alpha,
     Stack, Menu, MenuItem, ListItemIcon, ListItemText, Divider,
     useMediaQuery
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     PhoneOff,
     Mic,

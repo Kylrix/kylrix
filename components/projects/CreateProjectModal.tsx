@@ -18,7 +18,7 @@ import {
   MenuItem,
   Stack,
   Grid,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Rocket, 
   ShieldAlert, 

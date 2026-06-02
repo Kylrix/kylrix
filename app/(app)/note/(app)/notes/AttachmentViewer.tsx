@@ -12,13 +12,13 @@ import {
   alpha, 
   Tooltip,
   CircularProgress
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Delete as DeleteIcon, 
   Download as DownloadIcon, 
   InsertDriveFile as FileIcon,
   Visibility as ViewIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { getNoteAttachment, deleteNoteAttachment, storage, APPWRITE_BUCKET_NOTES_ATTACHMENTS } from '@/lib/appwrite';
 import type { Models } from 'appwrite';
 

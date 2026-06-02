@@ -10,8 +10,8 @@ import {
   Grid, 
   useTheme,
   InputAdornment
-} from '@mui/material';
-import { AutoAwesome as SparklesIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { AutoAwesome as SparklesIcon } from '@/lib/mui-tailwind/icons';
 
 interface AIHeroInputProps {
   onPromptSelectAction: (prompt: string) => void;

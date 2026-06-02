@@ -10,8 +10,8 @@ import {
   IconButton,
   Divider,
   alpha
-} from '@mui/material';
-import { Close as CloseIcon, Keyboard as KeyboardIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Close as CloseIcon, Keyboard as KeyboardIcon } from '@/lib/mui-tailwind/icons';
 
 interface ShortcutProps {
   keys: string[];

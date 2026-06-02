@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Box } from '@mui/material';
+import { Box } from '@/lib/mui-tailwind/material';
 
 interface SidebarContextType {
   isCollapsed: boolean;

@@ -6,7 +6,7 @@ import {
   IconButton,
   Stack,
   Tooltip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Fingerprint, Edit, Trash2 } from 'lucide-react';
 import { AppwriteService } from '@/lib/appwrite';
 import toast from 'react-hot-toast';

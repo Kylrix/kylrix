@@ -10,7 +10,7 @@ import {
   alpha,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Wallet, Zap } from 'lucide-react';
 import Logo from './Logo';
 

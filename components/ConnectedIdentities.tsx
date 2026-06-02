@@ -12,8 +12,8 @@ import {
   Stack,
   Drawer,
   IconButton,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+} from '@/lib/mui-tailwind/material';
+import DeleteIcon from '@/lib/mui-tailwind/icons/Delete';
 import { Models } from 'appwrite';
 
 type Identity = Models.Identity;

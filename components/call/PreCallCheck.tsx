@@ -11,7 +11,7 @@ import {
     alpha,
     Tooltip,
     Avatar
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     Video, 
     VideoOff, 

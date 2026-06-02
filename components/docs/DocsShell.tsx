@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Container } from '@mui/material';
+import { Box, Container } from '@/lib/mui-tailwind/material';
 
 export default function DocsShell({ children }: { children: React.ReactNode }) {
   return (

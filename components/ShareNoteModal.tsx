@@ -25,12 +25,12 @@ import {
   alpha,
   Paper,
   Tooltip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Close as CloseIcon,
   Search as SearchIcon,
   Delete as DeleteIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { 
   account, 
   shareNoteWithUser, 

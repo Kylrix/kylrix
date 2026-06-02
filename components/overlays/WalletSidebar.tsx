@@ -17,7 +17,7 @@ import {
     Paper,
     Switch,
     FormControlLabel,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     X,
     Wallet as WalletIcon,

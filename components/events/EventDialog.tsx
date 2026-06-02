@@ -17,7 +17,7 @@ import {
   useTheme,
   useMediaQuery,
   Stack,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Close as CloseIcon,
   LocationOn,
@@ -26,10 +26,10 @@ import {
   Lock as PrivateIcon,
   LinkOff as UnlistedIcon,
   VideoCall as VideoIcon,
-} from '@mui/icons-material';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+} from '@/lib/mui-tailwind/icons';
+import { DateTimePicker } from '@/lib/mui-tailwind/date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@/lib/mui-tailwind/date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@/lib/mui-tailwind/date-pickers/AdapterDateFns';
 import { addHours } from '@/lib/time-util';
 import { EventVisibility } from '@/lib/permissions';
 import UserSearch from '@/components/UserSearch';

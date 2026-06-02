@@ -13,7 +13,7 @@ import {
   Paper,
   Slider,
   Tooltip,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Info, Sparkles, Globe, ShieldCheck, ArrowRight } from 'lucide-react';
 
 import Logo from '@/components/Logo';

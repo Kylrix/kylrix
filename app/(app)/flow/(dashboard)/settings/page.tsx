@@ -17,13 +17,13 @@ import {
     ListItemIcon,
     ListItemText,
     IconButton
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     LockOutlined as LockIcon, 
     FingerprintOutlined as FingerprintIcon,
     DeleteOutline as DeleteIcon,
     ShieldOutlined as ShieldIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { AppwriteService, getCurrentUser } from '@/lib/appwrite/client';
 import { PasskeySetup } from '@/components/overlays/PasskeySetup';

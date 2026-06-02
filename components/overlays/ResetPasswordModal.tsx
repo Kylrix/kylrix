@@ -14,10 +14,10 @@ import {
   Stack,
   useTheme,
   useMediaQuery
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import MailIcon from '@mui/icons-material/Mail';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
+} from '@/lib/mui-tailwind/material';
+import CloseIcon from '@/lib/mui-tailwind/icons/Close';
+import MailIcon from '@/lib/mui-tailwind/icons/Mail';
+import VpnKeyIcon from '@/lib/mui-tailwind/icons/VpnKey';
 import { createPasswordRecovery, updatePasswordRecovery } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
 

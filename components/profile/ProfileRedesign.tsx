@@ -15,7 +15,7 @@ import {
   Stack,
   Tabs,
   Typography,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   BadgeCheck,
   Edit3,

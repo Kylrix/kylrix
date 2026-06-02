@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Alert, Box, Button, Chip, CircularProgress, Paper, Stack, TextField, Typography, alpha } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Paper, Stack, TextField, Typography, alpha } from '@/lib/mui-tailwind/material';
 import { Copy, RefreshCw, Ticket } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { createCouponAction, listCouponsAction } from '../../actions/coupons';

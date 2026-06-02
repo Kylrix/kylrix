@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Box, TextField, InputAdornment, IconButton, CircularProgress } from '@mui/material';
-import { Search as SearchIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Box, TextField, InputAdornment, IconButton, CircularProgress } from '@/lib/mui-tailwind/material';
+import { Search as SearchIcon, Close as CloseIcon } from '@/lib/mui-tailwind/icons';
 
 interface SearchBarProps {
   searchQuery: string;

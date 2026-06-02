@@ -12,7 +12,7 @@ import {
     Grid,
     Paper,
     Chip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     ArrowLeft,
     Settings,

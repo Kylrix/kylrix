@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextField, TextFieldProps } from '@mui/material';
+import { TextField, TextFieldProps } from '@/lib/mui-tailwind/material';
 
 export type InputProps = TextFieldProps;
 

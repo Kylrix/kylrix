@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Box, Typography, IconButton, Button, Stack, alpha, Switch, FormControlLabel, useTheme, useMediaQuery, Chip, TextField, LinearProgress, CircularProgress } from '@mui/material';
+import { Box, Typography, IconButton, Button, Stack, alpha, Switch, FormControlLabel, useTheme, useMediaQuery, Chip, TextField, LinearProgress, CircularProgress } from '@/lib/mui-tailwind/material';
 import { X, GitBranch, Terminal, Shield, RefreshCw, CheckCircle, ChevronRight, ArrowLeft, AlertCircle, Play, ChevronDown, ChevronUp, Info, GitPullRequest, ArrowUpRight } from 'lucide-react';
-import Drawer from '@mui/material/Drawer';
+import Drawer from '@/lib/mui-tailwind/material/Drawer';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
 import { account } from '@/lib/appwrite';

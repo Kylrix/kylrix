@@ -11,18 +11,18 @@ import {
   Chip,
   Paper,
   Stack
-} from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import CloseIcon from '@mui/icons-material/Close';
-import LanguageIcon from '@mui/icons-material/Language';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import GppMaybeIcon from '@mui/icons-material/GppMaybe';
-import GppGoodIcon from '@mui/icons-material/GppGood';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
-import FolderIcon from '@mui/icons-material/Folder';
+} from '@/lib/mui-tailwind/material';
+import ContentCopyIcon from '@/lib/mui-tailwind/icons/ContentCopy';
+import VisibilityIcon from '@/lib/mui-tailwind/icons/Visibility';
+import VisibilityOffIcon from '@/lib/mui-tailwind/icons/VisibilityOff';
+import ArrowBackIcon from '@/lib/mui-tailwind/icons/ArrowBack';
+import CloseIcon from '@/lib/mui-tailwind/icons/Close';
+import LanguageIcon from '@/lib/mui-tailwind/icons/Language';
+import CalendarTodayIcon from '@/lib/mui-tailwind/icons/CalendarToday';
+import GppMaybeIcon from '@/lib/mui-tailwind/icons/GppMaybe';
+import GppGoodIcon from '@/lib/mui-tailwind/icons/GppGood';
+import OpenInNewIcon from '@/lib/mui-tailwind/icons/OpenInNew';
+import FolderIcon from '@/lib/mui-tailwind/icons/Folder';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { Credentials } from '@/lib/appwrite/types';
 import { storage } from '@/lib/appwrite';

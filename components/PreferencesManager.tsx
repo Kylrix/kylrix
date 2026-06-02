@@ -14,7 +14,7 @@ import {
   CircularProgress,
   Stack,
   Divider,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 
 interface PrefsData {
   language?: string;

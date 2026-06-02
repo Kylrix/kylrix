@@ -14,7 +14,7 @@ import {
   CircularProgress,
   alpha,
   useTheme,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Plus,
   FolderKanban,

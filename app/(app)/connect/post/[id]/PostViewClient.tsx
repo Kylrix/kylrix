@@ -26,7 +26,7 @@ import {
     useTheme,
     Skeleton,
     Paper, TextField, InputAdornment, Alert, Menu, MenuItem 
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import ActorsListDrawer from '@/components/social/ActorsListDrawer';
 import {
     Heart,

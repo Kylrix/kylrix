@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import AutorenewIcon from '@mui/icons-material/Autorenew';
-import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
-import SaveIcon from '@mui/icons-material/Save';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import DeleteIcon from '@mui/icons-material/Delete';
-import LanguageIcon from '@mui/icons-material/Language';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
-import DescriptionIcon from '@mui/icons-material/Description';
-import PersonIcon from '@mui/icons-material/Person';
-import LockIcon from '@mui/icons-material/Lock';
-import CreditCardIcon from '@mui/icons-material/CreditCard';
+import VisibilityIcon from '@/lib/mui-tailwind/icons/Visibility';
+import VisibilityOffIcon from '@/lib/mui-tailwind/icons/VisibilityOff';
+import AutorenewIcon from '@/lib/mui-tailwind/icons/Autorenew';
+import AddIcon from '@/lib/mui-tailwind/icons/Add';
+import CloseIcon from '@/lib/mui-tailwind/icons/Close';
+import SaveIcon from '@/lib/mui-tailwind/icons/Save';
+import CloudUploadIcon from '@/lib/mui-tailwind/icons/CloudUpload';
+import DeleteIcon from '@/lib/mui-tailwind/icons/Delete';
+import LanguageIcon from '@/lib/mui-tailwind/icons/Language';
+import LocalOfferIcon from '@/lib/mui-tailwind/icons/LocalOffer';
+import DescriptionIcon from '@/lib/mui-tailwind/icons/Description';
+import PersonIcon from '@/lib/mui-tailwind/icons/Person';
+import LockIcon from '@/lib/mui-tailwind/icons/Lock';
+import CreditCardIcon from '@/lib/mui-tailwind/icons/CreditCard';
 import { 
   Drawer,
   Button, 
@@ -28,7 +28,7 @@ import {
   Stack,
   Divider,
   CircularProgress
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { createCredential, updateCredential } from '@/lib/appwrite';
 import type { Credentials, CredentialsCreate } from '@/lib/appwrite/types';
 import { useAppwriteVault } from '@/context/appwrite-context';

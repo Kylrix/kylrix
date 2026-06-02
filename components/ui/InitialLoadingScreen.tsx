@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Typography, LinearProgress, Paper } from '@mui/material';
+import { Box, Typography, LinearProgress, Paper } from '@/lib/mui-tailwind/material';
 import Image from 'next/image';
 
 interface InitialLoadingScreenProps {

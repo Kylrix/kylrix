@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, Stack, IconButton, Container } from '@mui/material';
+import { Box, Typography, Stack, IconButton, Container } from '@/lib/mui-tailwind/material';
 import { 
   ArrowBackIosNew as ArrowLeftIcon, 
   ArrowForwardIos as ArrowRightIcon 
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 
 const slides = [
   {

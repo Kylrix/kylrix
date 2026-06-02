@@ -12,14 +12,14 @@ import {
   alpha, 
   CircularProgress,
   Avatar
-} from '@mui/material';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
-import ShieldIcon from '@mui/icons-material/Shield';
-import AccessTimeIcon from '@mui/icons-material/AccessTime';
-import WarningIcon from '@mui/icons-material/Warning';
-import AddIcon from '@mui/icons-material/Add';
-import DownloadIcon from '@mui/icons-material/Download';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+} from '@/lib/mui-tailwind/material';
+import VpnKeyIcon from '@/lib/mui-tailwind/icons/VpnKey';
+import ShieldIcon from '@/lib/mui-tailwind/icons/Shield';
+import AccessTimeIcon from '@/lib/mui-tailwind/icons/AccessTime';
+import WarningIcon from '@/lib/mui-tailwind/icons/Warning';
+import AddIcon from '@/lib/mui-tailwind/icons/Add';
+import DownloadIcon from '@/lib/mui-tailwind/icons/Download';
+import ChevronRightIcon from '@/lib/mui-tailwind/icons/ChevronRight';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import {
   appwriteDatabases,

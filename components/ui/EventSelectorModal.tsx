@@ -13,13 +13,13 @@ import {
   Drawer,
   IconButton,
   Divider
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Search as SearchIcon,
   Event as EventIcon,
   Schedule as TimeIcon,
   Close as CloseIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { listFlowEvents } from '@/lib/appwrite';
 import { useToast } from './Toast';
 

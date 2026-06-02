@@ -13,7 +13,7 @@ import {
   SpeedDialIcon,
   useMediaQuery,
   useTheme
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Plus, X } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { usePathname } from 'next/navigation';

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import SearchIcon from '@mui/icons-material/Search';
-import CloseIcon from '@mui/icons-material/Close';
-import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import SearchIcon from '@/lib/mui-tailwind/icons/Search';
+import CloseIcon from '@/lib/mui-tailwind/icons/Close';
+import AutoAwesomeIcon from '@/lib/mui-tailwind/icons/AutoAwesome';
 import { useAI } from '@/context/AIContext';
 import { 
   Box, 
@@ -11,7 +11,7 @@ import {
   Button,
   alpha,
   useTheme
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 
 export default function SearchBar({
   onSearch,

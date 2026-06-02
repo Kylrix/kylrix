@@ -16,13 +16,13 @@ import {
   TableHead,
   TableRow,
   Chip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { ImportItem, DeduplicationEngine } from '@/lib/import/deduplication';
-import CheckIcon from '@mui/icons-material/Check';
-import CloseIcon from '@mui/icons-material/Close';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import StorageIcon from '@mui/icons-material/Storage';
-import MergeIcon from '@mui/icons-material/Merge';
+import CheckIcon from '@/lib/mui-tailwind/icons/Check';
+import CloseIcon from '@/lib/mui-tailwind/icons/Close';
+import ArrowForwardIcon from '@/lib/mui-tailwind/icons/ArrowForward';
+import StorageIcon from '@/lib/mui-tailwind/icons/Storage';
+import MergeIcon from '@/lib/mui-tailwind/icons/Merge';
 
 interface ImportPreviewModalProps {
   isOpen: boolean;

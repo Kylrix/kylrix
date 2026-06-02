@@ -18,7 +18,7 @@ import {
   TextField,
   Typography,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Check, Copy, Link as LinkIcon, Search } from 'lucide-react';
 import { AppwriteService } from '@/lib/appwrite';
 

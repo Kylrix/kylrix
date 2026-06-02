@@ -18,7 +18,7 @@ import {
   alpha,
   Button,
   Stack
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   TableRows as CSVIcon,
   DataObject as JSONIcon,
@@ -26,7 +26,7 @@ import {
   MarkEmailUnread as UnreadIcon,
   Flag as FlagIcon,
   FlagOutlined as UnflaggedIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { FormsService } from '@/lib/services/forms';
 import { FormSubmissions } from '@/generated/appwrite/types';
 import ResponseDetailSidebar from './ResponseDetailSidebar';

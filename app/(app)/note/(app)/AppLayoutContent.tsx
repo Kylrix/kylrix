@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
-import { Box } from '@mui/material';
+import { Box } from '@/lib/mui-tailwind/material';
 
 export default function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const { isOpen: isDynamicSidebarOpen } = useDynamicSidebar();

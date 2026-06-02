@@ -13,14 +13,14 @@ import {
   useTheme,
   useMediaQuery,
   alpha
-} from '@mui/material';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
-import PersonIcon from '@mui/icons-material/Person';
-import LockIcon from '@mui/icons-material/Lock';
-import PinIcon from '@mui/icons-material/PushPin';
+} from '@/lib/mui-tailwind/material';
+import ContentCopyIcon from '@/lib/mui-tailwind/icons/ContentCopy';
+import EditIcon from '@/lib/mui-tailwind/icons/Edit';
+import DeleteIcon from '@/lib/mui-tailwind/icons/Delete';
+import MoreVertIcon from '@/lib/mui-tailwind/icons/MoreVert';
+import PersonIcon from '@/lib/mui-tailwind/icons/Person';
+import LockIcon from '@/lib/mui-tailwind/icons/Lock';
+import PinIcon from '@/lib/mui-tailwind/icons/PushPin';
 import type { Credentials } from '@/lib/appwrite/types';
 import { Shield, ExternalLink } from 'lucide-react';
 

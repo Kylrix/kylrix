@@ -13,14 +13,14 @@ import {
   Drawer,
   IconButton,
   Divider
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Search as SearchIcon,
   Assignment as TaskIcon,
   CheckCircle as DoneIcon,
   RadioButtonUnchecked as TodoIcon,
   Close as CloseIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { listFlowTasks } from '@/lib/appwrite';
 import { useToast } from './Toast';
 

@@ -13,12 +13,12 @@ import {
     Drawer,
     IconButton,
     Divider
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     Search as SearchIcon,
     Description as NoteIcon,
     Close as CloseIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useNotes } from '@/context/NotesContext';
 
 interface NoteSelectorModalProps {

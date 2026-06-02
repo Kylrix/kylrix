@@ -11,7 +11,7 @@ import {
   alpha,
   Paper,
   Divider,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Download,
   Monitor,

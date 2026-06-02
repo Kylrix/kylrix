@@ -14,7 +14,7 @@ import {
   Avatar,
   CircularProgress,
   Tooltip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Users, 
   Activity, 

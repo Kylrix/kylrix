@@ -14,16 +14,16 @@ import {
   Stack,
   CircularProgress,
   useTheme
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { startRegistration } from '@simplewebauthn/browser';
 import { AppwriteService } from '@/lib/appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import VisibilityIcon from '@/lib/mui-tailwind/icons/Visibility';
+import VisibilityOffIcon from '@/lib/mui-tailwind/icons/VisibilityOff';
+import CheckCircleIcon from '@/lib/mui-tailwind/icons/CheckCircle';
 import { Fingerprint } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 

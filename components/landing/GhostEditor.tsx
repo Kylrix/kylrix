@@ -30,7 +30,7 @@ import {
     RadioGroup,
     FormControlLabel,
     Radio
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     Copy as CopyIcon, 
     Check as CheckIcon,

@@ -7,7 +7,7 @@ import {
   BottomNavigation,
   BottomNavigationAction,
   Paper,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   FileText as NotesIcon,
   Share2 as SharedIcon,

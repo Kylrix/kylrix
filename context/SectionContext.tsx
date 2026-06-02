@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { Box, Divider, useTheme, useMediaQuery, CircularProgress, Typography, Drawer, alpha } from '@mui/material';
+import { Box, Divider, useTheme, useMediaQuery, CircularProgress, Typography, Drawer, alpha } from '@/lib/mui-tailwind/material';
 import { usePathname } from 'next/navigation';
 import { recordAnonymizedTelemetry } from '@/lib/actions/client-ops';
 import DesktopRightSection, { PanelType } from '@/components/layout/DesktopRightSection';

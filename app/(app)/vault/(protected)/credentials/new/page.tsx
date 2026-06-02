@@ -19,15 +19,15 @@ import {
   CircularProgress,
   ToggleButton,
   ToggleButtonGroup
-} from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import VisibilityIcon from '@mui/icons-material/Visibility';
-import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import AddIcon from '@mui/icons-material/Add';
-import CloseIcon from '@mui/icons-material/Close';
-import FolderIcon from '@mui/icons-material/Folder';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
+} from '@/lib/mui-tailwind/material';
+import ArrowBackIcon from '@/lib/mui-tailwind/icons/ArrowBack';
+import VisibilityIcon from '@/lib/mui-tailwind/icons/Visibility';
+import VisibilityOffIcon from '@/lib/mui-tailwind/icons/VisibilityOff';
+import RefreshIcon from '@/lib/mui-tailwind/icons/Refresh';
+import AddIcon from '@/lib/mui-tailwind/icons/Add';
+import CloseIcon from '@/lib/mui-tailwind/icons/Close';
+import FolderIcon from '@/lib/mui-tailwind/icons/Folder';
+import VpnKeyIcon from '@/lib/mui-tailwind/icons/VpnKey';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import {
   createCredential,

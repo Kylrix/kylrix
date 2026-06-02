@@ -7,7 +7,7 @@ import {
   Fade, 
   useMediaQuery,
   useTheme
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { useOverlay } from './OverlayContext';
 
 const Overlay: React.FC = () => {

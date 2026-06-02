@@ -14,7 +14,7 @@ import {
   alpha,
   useTheme,
   Tooltip,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   ChevronLeft,
   X,

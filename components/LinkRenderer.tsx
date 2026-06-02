@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Link, Box, IconButton, Typography, Tooltip, CircularProgress, Button, Drawer, alpha } from '@mui/material';
+import { Link, Box, IconButton, Typography, Tooltip, CircularProgress, Button, Drawer, alpha } from '@/lib/mui-tailwind/material';
 import { Play, Pause, Key, Lock, Shield, Copy, Check, ArrowLeft, X, Eye, EyeOff, Download } from 'lucide-react';
 import { StorageService } from '@/lib/services/storage';
 import { useAppwriteVault } from '@/context/appwrite-context';

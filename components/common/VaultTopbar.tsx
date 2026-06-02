@@ -16,7 +16,7 @@ import {
   CircularProgress,
   Tooltip,
   Typography,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Bot,
   ChevronDown,

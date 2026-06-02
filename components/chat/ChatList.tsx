@@ -31,25 +31,25 @@ import {
     Drawer,
     useTheme,
     useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { useSection } from '@/context/SectionContext';
-import ShieldCheckIcon from '@mui/icons-material/ShieldOutlined';
+import ShieldCheckIcon from '@/lib/mui-tailwind/icons/ShieldOutlined';
 import { showIslandNotification } from '@/lib/island-notification';
 import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { Trash2 } from 'lucide-react';
-import GroupIcon from '@mui/icons-material/GroupWorkOutlined';
-import PersonIcon from '@mui/icons-material/PersonOutlined';
-import BookmarkIcon from '@mui/icons-material/BookmarkOutlined';
-import SearchIcon from '@mui/icons-material/Search';
-import LockIcon from '@mui/icons-material/LockOutlined';
-import ArrowLeftIcon from '@mui/icons-material/ArrowBack';
-import ProjectIcon from '@mui/icons-material/FolderSpecialOutlined';
-import TaskIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
-import EventIcon from '@mui/icons-material/CalendarTodayOutlined';
-import FormIcon from '@mui/icons-material/DescriptionOutlined';
-import TagIcon from '@mui/icons-material/LocalOfferOutlined';
-import NoteIcon from '@mui/icons-material/StickyNote2Outlined';
+import GroupIcon from '@/lib/mui-tailwind/icons/GroupWorkOutlined';
+import PersonIcon from '@/lib/mui-tailwind/icons/PersonOutlined';
+import BookmarkIcon from '@/lib/mui-tailwind/icons/BookmarkOutlined';
+import SearchIcon from '@/lib/mui-tailwind/icons/Search';
+import LockIcon from '@/lib/mui-tailwind/icons/LockOutlined';
+import ArrowLeftIcon from '@/lib/mui-tailwind/icons/ArrowBack';
+import ProjectIcon from '@/lib/mui-tailwind/icons/FolderSpecialOutlined';
+import TaskIcon from '@/lib/mui-tailwind/icons/AssignmentTurnedInOutlined';
+import EventIcon from '@/lib/mui-tailwind/icons/CalendarTodayOutlined';
+import FormIcon from '@/lib/mui-tailwind/icons/DescriptionOutlined';
+import TagIcon from '@/lib/mui-tailwind/icons/LocalOfferOutlined';
+import NoteIcon from '@/lib/mui-tailwind/icons/StickyNote2Outlined';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar } from '../IdentityBadge';
 import { seedIdentityCache, getCachedIdentityById  } from '@/lib/identity-cache';
@@ -60,9 +60,9 @@ import { getConversationReadAt } from '@/lib/chat-read-state';
 import { useChatNotifications } from '../providers/ChatNotificationProvider';
 import ConversationActionsSheet from './ConversationActionsSheet';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
-import LaunchIcon from '@mui/icons-material/Launch';
-import LinkIcon from '@mui/icons-material/Link';
-import TuneIcon from '@mui/icons-material/Tune';
+import LaunchIcon from '@/lib/mui-tailwind/icons/Launch';
+import LinkIcon from '@/lib/mui-tailwind/icons/Link';
+import TuneIcon from '@/lib/mui-tailwind/icons/Tune';
 
 const GlobalSearchAvatar = ({ u }: { u: any }) => {
     const userId = u.userId || u.$id;

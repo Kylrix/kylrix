@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Profile } from '@/components/profile/ProfileRedesign';
-import { Box } from '@mui/material';
+import { Box } from '@/lib/mui-tailwind/material';
 import { UsersService } from '@/lib/services/users';
 
 export async function generateMetadata({

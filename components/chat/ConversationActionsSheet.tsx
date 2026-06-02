@@ -25,7 +25,7 @@ import {
   alpha,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Query } from 'appwrite';
 import { Link as LinkIcon, MessageCircle, Phone, Search, Shield, Trash2, UserMinus, UserPlus, Users, X } from 'lucide-react';
 import toast from 'react-hot-toast';

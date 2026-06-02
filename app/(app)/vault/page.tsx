@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
-import { Box, Container, Stack, Typography, Button, CircularProgress, AppBar, Toolbar } from '@mui/material';
+import { Box, Container, Stack, Typography, Button, CircularProgress, AppBar, Toolbar } from '@/lib/mui-tailwind/material';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useAppwriteVault } from '@/context/appwrite-context';

@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Button, Container, Paper, Stack, Typography } from '@mui/material';
+import { Box, Button, Container, Paper, Stack, Typography } from '@/lib/mui-tailwind/material';
 import { CheckCircle2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 

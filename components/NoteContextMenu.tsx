@@ -15,8 +15,8 @@ import {
   Fade,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
-import { Close as CloseIcon, DragHandle as DragHandleIcon, Check as CheckIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Close as CloseIcon, DragHandle as DragHandleIcon, Check as CheckIcon } from '@/lib/mui-tailwind/icons';
 import type { Notes } from '@/types/appwrite';
 import { updateNote } from '@/lib/actions/client-ops';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';

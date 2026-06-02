@@ -18,7 +18,7 @@ import {
     InputBase,
     useTheme,
     useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     FileText,
     Search,

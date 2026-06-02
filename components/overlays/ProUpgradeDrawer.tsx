@@ -11,7 +11,7 @@ import {
   useTheme,
   useMediaQuery,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Zap, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';

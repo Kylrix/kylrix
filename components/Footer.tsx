@@ -1,8 +1,8 @@
 "use client";
 
-import { Box, Container, Typography, IconButton, Stack, Link as MuiLink } from '@mui/material';
+import { Box, Container, Typography, IconButton, Stack, Link as MuiLink } from '@/lib/mui-tailwind/material';
 import Link from 'next/link';
-import { GitHub, Twitter, LinkedIn, Facebook } from '@mui/icons-material';
+import { GitHub, Twitter, LinkedIn, Facebook } from '@/lib/mui-tailwind/icons';
 import { motion } from 'framer-motion';
 
 const footerLinks = {

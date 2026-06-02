@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@/lib/mui-tailwind/material';
 import { account } from '@/lib/appwrite';
 import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
 import { useSource } from '@/lib/source-context';

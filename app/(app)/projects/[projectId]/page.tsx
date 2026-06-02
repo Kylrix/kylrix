@@ -35,7 +35,7 @@ import {
   ListItemText,
   Switch,
   Skeleton,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Plus,
   Calendar,

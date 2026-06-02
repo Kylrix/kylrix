@@ -10,8 +10,8 @@ import {
   Alert, 
   CircularProgress,
   alpha
-} from '@mui/material';
-import { Apps, CheckCircle, FiberPin } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Apps, CheckCircle, FiberPin } from '@/lib/mui-tailwind/icons';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useTheme } from '@/lib/theme-context';
 import toast from 'react-hot-toast';

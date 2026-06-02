@@ -18,12 +18,12 @@ import {
   Stack,
   Chip,
   IconButton,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import LaptopIcon from '@mui/icons-material/Laptop';
-import PhoneIcon from '@mui/icons-material/Phone';
-import TabletIcon from '@mui/icons-material/Tablet';
+} from '@/lib/mui-tailwind/material';
+import DeleteIcon from '@/lib/mui-tailwind/icons/Delete';
+import RefreshIcon from '@/lib/mui-tailwind/icons/Refresh';
+import LaptopIcon from '@/lib/mui-tailwind/icons/Laptop';
+import PhoneIcon from '@/lib/mui-tailwind/icons/Phone';
+import TabletIcon from '@/lib/mui-tailwind/icons/Tablet';
 import { Models } from 'appwrite';
 
 interface Session extends Models.Session {

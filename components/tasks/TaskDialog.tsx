@@ -19,14 +19,14 @@ import {
   useTheme,
   useMediaQuery,
   Stack,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Close as CloseIcon,
   Flag as FlagIcon,
-} from '@mui/icons-material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+} from '@/lib/mui-tailwind/icons';
+import { DatePicker } from '@/lib/mui-tailwind/date-pickers/DatePicker';
+import { LocalizationProvider } from '@/lib/mui-tailwind/date-pickers/LocalizationProvider';
+import { AdapterDateFns } from '@/lib/mui-tailwind/date-pickers/AdapterDateFns';
 import UserSearch from '@/components/UserSearch';
 import { useTask } from '@/context/TaskContext';
 import { Priority, TaskStatus } from '@/types';

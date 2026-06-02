@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Avatar, Box, Button, Container, Divider, Paper, Stack, Typography, CircularProgress, alpha } from '@mui/material';
+import { Alert, Avatar, Box, Button, Container, Divider, Paper, Stack, Typography, CircularProgress, alpha } from '@/lib/mui-tailwind/material';
 import { ArrowRight, CheckCircle2, Copy, ExternalLink, ShieldCheck, Sparkles, UserRound } from 'lucide-react';
 
 type ReferralLookup = {

@@ -20,14 +20,14 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Add as AddIcon, 
   Search as SearchIcon, 
   Extension as ExtensionIcon,
   Person as PersonIcon,
   Download as DownloadIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { Extensions } from '@/types/appwrite';
 import { listExtensions, createExtension, updateExtension, getCurrentUser } from '@/lib/appwrite';
 

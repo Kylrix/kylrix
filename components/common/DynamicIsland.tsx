@@ -19,7 +19,7 @@ import {
   Skeleton,
   Stack,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { motion, AnimatePresence as _AnimatePresence, useAnimation as _useAnimation } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
@@ -46,7 +46,7 @@ import {
   Star as _ProIcon,
   EmojiObjects as _IdeaIcon,
   Message as _ConnectIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import {
   Search as _SearchIcon,
   ArrowRight as _ArrowRightIcon,

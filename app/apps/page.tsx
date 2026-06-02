@@ -16,7 +16,7 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Shield,
   Waypoints,

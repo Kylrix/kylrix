@@ -2,8 +2,8 @@
 
 import React, { useRef, useEffect, useCallback } from 'react';
 import { DoodleStroke } from '@/types/notes';
-import { Box, Typography, Button, Paper, alpha } from '@mui/material';
-import { Edit as EditIcon, Brush as BrushIcon } from '@mui/icons-material';
+import { Box, Typography, Button, Paper, alpha } from '@/lib/mui-tailwind/material';
+import { Edit as EditIcon, Brush as BrushIcon } from '@/lib/mui-tailwind/icons';
 
 interface DoodleViewerProps {
   data: string;

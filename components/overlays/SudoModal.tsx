@@ -16,7 +16,7 @@ import {
     useMediaQuery,
     useTheme,
     alpha,
-} from "@mui/material";
+} from "@/lib/mui-tailwind/material";
 import {
     Lock,
     Fingerprint,

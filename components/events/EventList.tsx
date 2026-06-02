@@ -9,9 +9,9 @@ import {
   Tab,
   CircularProgress,
   alpha,
-} from '@mui/material';
-import Grid from '@mui/material/Grid';
-import { Add as AddIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import Grid from '@/lib/mui-tailwind/material/Grid';
+import { Add as AddIcon } from '@/lib/mui-tailwind/icons';
 import EventCard from './EventCard';
 import EventDialog from './EventDialog';
 import { Event } from '@/types';

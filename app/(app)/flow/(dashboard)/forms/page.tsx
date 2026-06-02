@@ -27,7 +27,7 @@ import {
     DialogActions as ConfirmActions,
     useTheme,
     useMediaQuery
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     Add as AddIcon, 
     Edit as EditIcon, 
@@ -39,7 +39,7 @@ import {
     History as HistoryIcon,
     Settings as SettingsIcon,
     PushPin as PinIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms } from '@/generated/appwrite/types';

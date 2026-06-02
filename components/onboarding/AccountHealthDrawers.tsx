@@ -19,7 +19,7 @@ import {
     DialogActions,
     Chip,
     Paper,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { X, ShieldAlert, Shield, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 

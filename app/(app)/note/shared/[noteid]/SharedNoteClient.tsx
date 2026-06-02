@@ -13,7 +13,7 @@ import {
   ContentCopy as CopyIcon,
   LibraryAdd as DuplicateIcon,
   Refresh as RefreshIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { 
   Mic,
   Waves
@@ -48,7 +48,7 @@ import {
   alpha,
   Link as MuiLink,
   keyframes
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import NextLink from 'next/link';
 import CommentsSection from '@/app/(app)/note/(app)/notes/Comments';
 import NoteReactions from '@/app/(app)/note/(app)/notes/NoteReactions';

@@ -1,8 +1,8 @@
 "use client";
 
-import { Box, Container, Typography, Button, CircularProgress } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import { Box, Container, Typography, Button, CircularProgress } from '@/lib/mui-tailwind/material';
+import { alpha } from '@/lib/mui-tailwind/material';
+import ChevronRightIcon from '@/lib/mui-tailwind/icons/ChevronRight';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useRouter } from 'next/navigation';
 

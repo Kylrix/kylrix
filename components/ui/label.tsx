@@ -1,5 +1,5 @@
 import React from 'react';
-import { InputLabel, InputLabelProps } from '@mui/material';
+import { InputLabel, InputLabelProps } from '@/lib/mui-tailwind/material';
 
 export interface LabelProps extends InputLabelProps {
   children: React.ReactNode;

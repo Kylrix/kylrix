@@ -13,14 +13,14 @@ import {
   alpha,
   useTheme,
   useMediaQuery
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   CheckCircle as CheckCircleIcon,
   ErrorOutline as ErrorOutlineIcon,
   Mail as MailIcon,
   Home as HomeIcon,
   Settings as SettingsIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { completeEmailVerification } from '@/lib/appwrite';
 
 interface VerifyEmailModalProps {

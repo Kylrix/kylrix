@@ -15,7 +15,7 @@ import {
   ListItemText,
   alpha,
   Button
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Settings,
   LogOut,

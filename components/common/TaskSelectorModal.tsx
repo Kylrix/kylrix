@@ -10,11 +10,11 @@ import {
   CircularProgress, 
   TextField,
   InputAdornment
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Search as SearchIcon,
   Assignment as TaskIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { Dialog } from '../ui/Dialog';
 import { AppwriteService } from '@/lib/appwrite';
 import { useAuth } from '@/hooks/useAuth';

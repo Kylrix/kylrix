@@ -21,7 +21,7 @@ import {
     useMediaQuery,
     Checkbox,
     Chip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { X, Search, ShieldCheck, Users, ArrowRight, Check } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
 import { ChatService } from '@/lib/services/chat';

@@ -25,7 +25,7 @@ import {
     DialogActions,
     InputAdornment,
     ButtonBase
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     ArrowLeft,
     Lock, 
@@ -51,7 +51,7 @@ import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySe
 import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/components/overlays/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
-import TelegramIcon from '@mui/icons-material/Telegram';
+import TelegramIcon from '@/lib/mui-tailwind/icons/Telegram';
 
 export default function SettingsPage() {
     const { user } = useAuth();

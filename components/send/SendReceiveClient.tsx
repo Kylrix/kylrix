@@ -11,7 +11,7 @@ import {
   ContentCopy as CopyIcon,
   Refresh as RefreshIcon,
   ArrowForward as ArrowRightIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { 
   Shield,
   KeyRound,
@@ -54,7 +54,7 @@ import {
   LinearProgress,
   TextField,
   Avatar
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import CommentsSection from '@/app/(app)/note/(app)/notes/Comments';

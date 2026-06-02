@@ -14,7 +14,7 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,

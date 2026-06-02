@@ -1,4 +1,4 @@
-import { Button, Box, Typography, Container } from '@mui/material';
+import { Button, Box, Typography, Container } from '@/lib/mui-tailwind/material';
 
 export default function NotFound() {
   return (

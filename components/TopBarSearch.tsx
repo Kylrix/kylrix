@@ -11,7 +11,7 @@ import { deleteNote } from '@/lib/actions/client-ops';
 import { Button } from '@/components/ui/Button';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 
-import { Box, InputBase, Paper, List, ListItemButton, Typography, Chip, CircularProgress, IconButton } from '@mui/material';
+import { Box, InputBase, Paper, List, ListItemButton, Typography, Chip, CircularProgress, IconButton } from '@/lib/mui-tailwind/material';
 import { Search, X } from 'lucide-react';
 
 export function TopBarSearch() {

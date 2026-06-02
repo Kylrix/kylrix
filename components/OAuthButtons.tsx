@@ -3,7 +3,7 @@
 import { OAuthProvider } from 'appwrite';
 import { account } from '@/lib/appwrite';
 import { useState } from 'react';
-import { Button, Stack, CircularProgress, Alert, AlertTitle, Typography, Box } from '@mui/material';
+import { Button, Stack, CircularProgress, Alert, AlertTitle, Typography, Box } from '@/lib/mui-tailwind/material';
 
 const providers = [
   {

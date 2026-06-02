@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
-import { Drawer as MuiDrawer, IconButton, useTheme, useMediaQuery, Box } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Drawer as MuiDrawer, IconButton, useTheme, useMediaQuery, Box } from '@/lib/mui-tailwind/material';
+import { Close as CloseIcon } from '@/lib/mui-tailwind/icons';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
 export function Drawer({

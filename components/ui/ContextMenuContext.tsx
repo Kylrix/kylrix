@@ -15,7 +15,7 @@ import {
   Folder as FolderIcon,
   Chat as ChatIcon,
   Refresh as RefreshIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 
 type KylrixApp = 'root' | 'accounts' | 'kylrix' | 'vault' | 'flow' | 'note' | 'connect';
 

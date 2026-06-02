@@ -3,7 +3,7 @@
 import { useEffect, Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSource } from '@/lib/source-context';
-import { Box, Button, CircularProgress, Typography, alpha } from '@mui/material';
+import { Box, Button, CircularProgress, Typography, alpha } from '@/lib/mui-tailwind/material';
 import { useColors } from '@/lib/theme-context';
 import { useAuth } from '@/context/auth/AuthContext';
 

@@ -7,9 +7,6 @@ const nextConfig = {
   experimental: {
     taint: true,
     optimizePackageImports: [
-      '@mui/material',
-      '@mui/icons-material',
-      '@mui/x-date-pickers',
       'lucide-react',
       'lodash',
       'date-fns'],

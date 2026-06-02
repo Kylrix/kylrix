@@ -1,4 +1,4 @@
-import { Box, Container, Typography } from '@mui/material';
+import { Box, Container, Typography } from '@/lib/mui-tailwind/material';
 
 export const dynamic = 'force-dynamic';
 

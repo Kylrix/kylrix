@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Container, Typography, Paper, Stack, Divider, IconButton } from '@mui/material';
+import { Box, Container, Typography, Paper, Stack, Divider, IconButton } from '@/lib/mui-tailwind/material';
 import { ChevronRight, ChevronDown, Folder, FileCode, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';

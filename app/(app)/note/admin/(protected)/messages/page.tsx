@@ -17,12 +17,12 @@ import {
   Container,
   Breadcrumbs,
   Link as MuiLink
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Send as SendIcon,
   Preview as PreviewIcon,
   ArrowBack as BackIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import Link from 'next/link';
 
 interface SendState { status: 'idle'|'sending'|'success'|'error'; message?: string; }

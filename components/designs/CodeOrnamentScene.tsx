@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, alpha } from '@mui/material';
+import { Box, alpha } from '@/lib/mui-tailwind/material';
 
 interface CodeOrnamentSceneProps {
   accent: string;

@@ -19,7 +19,7 @@ import {
   useTheme,
   Button,
   Stack,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { X, Search, Plus, FolderKanban } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';

@@ -2,8 +2,8 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button } from './Button';
-import { Box, Typography, Paper, Stack } from '@mui/material';
-import { Warning as WarningIcon, Description as DescriptionIcon } from '@mui/icons-material';
+import { Box, Typography, Paper, Stack } from '@/lib/mui-tailwind/material';
+import { Warning as WarningIcon, Description as DescriptionIcon } from '@/lib/mui-tailwind/icons';
 
 interface Props {
   children: ReactNode;

@@ -16,7 +16,7 @@ import {
   Checkbox,
   FormControlLabel,
   TextField,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   ArrowLeft,
   Trash2,

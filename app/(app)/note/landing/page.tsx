@@ -11,7 +11,7 @@ import {
   Toolbar, 
   Link,
   Avatar
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -19,7 +19,7 @@ import {
   Description as DescriptionIcon,
   CloudUpload as CloudIcon,
   VerifiedUser as ShieldCheckIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/common/Logo';
 

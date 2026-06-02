@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
-import { Box, Typography, Pagination as MuiPagination, PaginationItem } from '@mui/material';
-import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from '@mui/icons-material';
+import { Box, Typography, Pagination as MuiPagination, PaginationItem } from '@/lib/mui-tailwind/material';
+import { ChevronLeft as ChevronLeftIcon, ChevronRight as ChevronRightIcon } from '@/lib/mui-tailwind/icons';
 
 interface PaginationProps {
   currentPage: number;

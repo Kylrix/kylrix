@@ -10,7 +10,7 @@ import {
   CircularProgress,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { account } from '@/lib/appwrite';
 
 interface LogoutDialogProps {

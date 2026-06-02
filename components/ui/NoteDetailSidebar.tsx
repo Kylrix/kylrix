@@ -27,7 +27,7 @@ import {
   useTheme,
   alpha,
   Stack
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Delete as TrashIcon,
   AttachFile as PaperClipIcon,
@@ -45,7 +45,7 @@ import {
   PlaylistAddCheck as TaskIcon,
   EventNote as EventIcon,
   VpnKey as KeyIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useToast } from '@/components/ui/Toast';
 import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';

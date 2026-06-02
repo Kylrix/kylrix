@@ -10,7 +10,7 @@ import {
   Paper,
   alpha,
   Button
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Close as CloseIcon,
   ArrowBack as BackIcon,
@@ -18,7 +18,7 @@ import {
   Person as UserIcon,
   Flag as FlagIcon,
   ContentPaste as DataIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { convertResponseToGoal } from '@/lib/actions/client-ops';

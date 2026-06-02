@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Button, Drawer, Typography, Stack, alpha, useTheme, useMediaQuery } from '@mui/material';
+import { Box, Button, Drawer, Typography, Stack, alpha, useTheme, useMediaQuery } from '@/lib/mui-tailwind/material';
 import { Sparkles, ArrowRight, X } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 

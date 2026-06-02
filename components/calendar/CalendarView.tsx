@@ -10,13 +10,13 @@ import {
   Chip,
   useTheme,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   Today as TodayIcon,
   Add as AddIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import {
   formatTime,
   startOfMonth,

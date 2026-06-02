@@ -13,7 +13,7 @@ import {
   Drawer,
   IconButton,
   Divider
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Search as SearchIcon,
   VpnKey as KeyIcon,
@@ -21,7 +21,7 @@ import {
   CreditCard as CardIcon,
   Security as SecurityIcon,
   Close as CloseIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { listKeepCredentials } from '@/lib/appwrite';
 import { useToast } from './Toast';
 

@@ -7,7 +7,7 @@ import {
   ListItemIcon, 
   ListItemText,
   alpha
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { KYLRIX_COLORS, KYLRIX_APP_TONES, KylrixApp } from '@/lib/sdk/design';
 
 interface ContextMenuProps {

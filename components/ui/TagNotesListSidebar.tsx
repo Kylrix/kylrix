@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Notes, Tags } from '@/types/appwrite';
 import { getNotesByTag } from '@/lib/appwrite';
-import { Box, Typography, IconButton, Stack, Alert } from '@mui/material';
-import { ArrowBack as ArrowBackIcon } from '@mui/icons-material';
+import { Box, Typography, IconButton, Stack, Alert } from '@/lib/mui-tailwind/material';
+import { ArrowBack as ArrowBackIcon } from '@/lib/mui-tailwind/icons';
 import { NoteDetailSidebar } from './NoteDetailSidebar';
 import NoteCard from '@/components/ui/NoteCard';
 import { NoteCardSkeleton } from './NoteCardSkeleton';

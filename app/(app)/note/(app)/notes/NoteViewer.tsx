@@ -10,8 +10,8 @@ import {
   Tab,
   alpha,
   Container
-} from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Close as CloseIcon } from '@/lib/mui-tailwind/icons';
 import type { Notes } from '@/types/appwrite';
 import { useState } from 'react';
 import Comments from './Comments';

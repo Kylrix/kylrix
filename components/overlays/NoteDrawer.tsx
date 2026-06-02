@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { Box, Typography, IconButton } from '@mui/material';
+import { Box, Typography, IconButton } from '@/lib/mui-tailwind/material';
 import { X, Check } from 'lucide-react';
-import Drawer from '@mui/material/Drawer';
+import Drawer from '@/lib/mui-tailwind/material/Drawer';
 import { useNoteDrawer } from '@/context/NoteDrawerContext';
 import { useNotes } from '@/context/NotesContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';

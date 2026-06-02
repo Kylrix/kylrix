@@ -12,7 +12,7 @@ import {
   Button,
   alpha,
   Divider,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { ArrowLeft, Shield, Eye, EyeOff, UserCheck, Server, Activity } from 'lucide-react';
 
 export default function PrivacyPolicyPage() {

@@ -1,10 +1,10 @@
 'use client';
 
-import { Box, Paper, IconButton } from '@mui/material';
+import { Box, Paper, IconButton } from '@/lib/mui-tailwind/material';
 import GlobalSearch from './GlobalSearch';
 import KeyboardShortcuts from './KeyboardShortcuts';
 import { useState } from 'react';
-import { Keyboard as KeyboardIcon } from '@mui/icons-material';
+import { Keyboard as KeyboardIcon } from '@/lib/mui-tailwind/icons';
 
 export default function PageHeader() {
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);

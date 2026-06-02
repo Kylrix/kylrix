@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Button, FormControl, IconButton, MenuItem, Select, Stack, Typography, alpha } from '@mui/material';
+import { Box, Button, FormControl, IconButton, MenuItem, Select, Stack, Typography, alpha } from '@/lib/mui-tailwind/material';
 import { Download, ChevronDown, ZoomIn, ZoomOut, Maximize } from 'lucide-react';
 import type { DesignExportFormat } from './types';
 

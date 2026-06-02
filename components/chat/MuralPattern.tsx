@@ -1,6 +1,6 @@
 'use client';
 
-import { Box } from '@mui/material';
+import { Box } from '@/lib/mui-tailwind/material';
 
 const TILE_WIDTH = 640;
 const TILE_HEIGHT = 456;

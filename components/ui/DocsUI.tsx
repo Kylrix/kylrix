@@ -10,7 +10,7 @@ import {
   alpha, 
   useTheme,
   Button
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { useDocs, DocLanguage } from '@/context/DocsContext';
 import { Terminal, Code, Cpu, Package } from 'lucide-react';
 

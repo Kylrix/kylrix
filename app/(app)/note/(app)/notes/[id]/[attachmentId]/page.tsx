@@ -16,13 +16,13 @@ import {
   CircularProgress,
   Breadcrumbs,
   Link as MuiLink
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   ArrowBack as ArrowLeftIcon, 
   Download as ArrowDownTrayIcon,
   OpenInNew as OpenIcon,
   Description as FileIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { formatFileSize } from '@/lib/utils';
 
 interface AttachmentMeta {

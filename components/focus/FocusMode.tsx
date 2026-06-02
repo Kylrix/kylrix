@@ -20,7 +20,7 @@ import {
   useTheme,
   Chip,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   PlayArrow,
   Pause,
@@ -30,7 +30,7 @@ import {
   CheckCircle,
   RadioButtonUnchecked,
   AutoFixHigh as AutoFixHighIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useTask } from '@/context/TaskContext';
 import { Task } from '@/types';
 import { focusSessions } from '@/lib/kylrixflow';

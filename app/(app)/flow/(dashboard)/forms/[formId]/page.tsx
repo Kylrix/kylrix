@@ -17,7 +17,7 @@ import {
     Snackbar,
     Alert,
     Skeleton
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     Edit as EditIcon, 
     Launch as LaunchIcon,
@@ -25,7 +25,7 @@ import {
     ContentCopy as CopyIcon,
     ArrowBack as BackIcon,
     Insights as InsightsIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import Link from 'next/link';
@@ -41,7 +41,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
 import { account } from '@/lib/appwrite';
 import { MessageSquare, Clock, FileText, Globe, Send, Share2 } from 'lucide-react';
-import { TextField } from '@mui/material';
+import { TextField } from '@/lib/mui-tailwind/material';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 

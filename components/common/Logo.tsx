@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Typography, useTheme, alpha } from '@mui/material';
+import { Box, Typography, useTheme, alpha } from '@/lib/mui-tailwind/material';
 import { motion } from 'framer-motion';
 import { KylrixApp } from '@/lib/sdk';
 

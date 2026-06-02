@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Box, Typography, Button, Paper } from '@mui/material';
-import { ErrorOutline as ErrorIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Box, Typography, Button, Paper } from '@/lib/mui-tailwind/material';
+import { ErrorOutline as ErrorIcon, Refresh as RefreshIcon } from '@/lib/mui-tailwind/icons';
 
 export default function Error({
   error,

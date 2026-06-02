@@ -20,7 +20,7 @@ import {
   InputAdornment,
   Chip,
   CircularProgress
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Search, 
   Mail, 

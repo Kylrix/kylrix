@@ -15,9 +15,9 @@ import {
     Switch,
     Divider,
     Stack
-} from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
+} from '@/lib/mui-tailwind/material';
+import CheckCircleIcon from '@/lib/mui-tailwind/icons/CheckCircle';
+import ErrorIcon from '@/lib/mui-tailwind/icons/Error';
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/lib/auth';
 import { account } from '@/lib/appwrite/client';

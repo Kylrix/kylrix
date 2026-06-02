@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Box, Typography, Button, IconButton, Paper } from '@mui/material';
-import { Close as CloseIcon, LightbulbOutlined as IdeaIcon } from '@mui/icons-material';
+import { Box, Typography, Button, IconButton, Paper } from '@/lib/mui-tailwind/material';
+import { Close as CloseIcon, LightbulbOutlined as IdeaIcon } from '@/lib/mui-tailwind/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useLocalContext } from '@/lib/context-engine';

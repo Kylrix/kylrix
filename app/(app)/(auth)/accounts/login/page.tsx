@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Client, Account, OAuthProvider, ID } from 'appwrite';
-import { Box, Typography, Stack, TextField, Button, Alert, CircularProgress, alpha, InputAdornment } from '@mui/material';
+import { Box, Typography, Stack, TextField, Button, Alert, CircularProgress, alpha, InputAdornment } from '@/lib/mui-tailwind/material';
 import { safeDeleteCurrentSession } from '@/lib/safe-session';
 import { useSource } from '@/lib/source-context';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';

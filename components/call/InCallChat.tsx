@@ -11,7 +11,7 @@ import {
     alpha,
     InputAdornment,
     Tooltip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     Send, 
     X, 

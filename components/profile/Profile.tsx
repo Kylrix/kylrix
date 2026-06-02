@@ -13,7 +13,7 @@ import {
     Skeleton,
     Stack,
     alpha
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     Edit3 as EditIcon, 
     UserPlus as PersonAddIcon, 

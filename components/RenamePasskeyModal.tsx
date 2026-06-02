@@ -9,7 +9,7 @@ import {
   CircularProgress,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { AppwriteService } from '@/lib/appwrite';
 import toast from 'react-hot-toast';
 

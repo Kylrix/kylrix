@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Box, Typography, Button, Paper, Stack, alpha, useTheme } from '@mui/material';
+import { Box, Typography, Button, Paper, Stack, alpha, useTheme } from '@/lib/mui-tailwind/material';
 
 export default function NotFound() {
   const router = useRouter();

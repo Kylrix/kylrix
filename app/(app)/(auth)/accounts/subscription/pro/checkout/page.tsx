@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Container, Typography, CircularProgress, Paper, Button, Stack, Divider } from '@mui/material';
+import { Box, Container, Typography, CircularProgress, Paper, Button, Stack, Divider } from '@/lib/mui-tailwind/material';
 import { Rocket, Heart, Globe, Clock } from 'lucide-react';
 import { calculateSubscriptionPrice, PPP_DATA } from '@/lib/subscription/ppp';
 import { createBillingCheckoutSessionAction } from '../../../actions/billing';

@@ -1,8 +1,8 @@
 'use client';
 
-import { Box, Drawer, IconButton, Typography } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
-import { ArrowBack as BackIcon, Close as CloseIcon } from '@mui/icons-material';
+import { Box, Drawer, IconButton, Typography } from '@/lib/mui-tailwind/material';
+import { useTheme } from '@/lib/mui-tailwind/material';
+import { ArrowBack as BackIcon, Close as CloseIcon } from '@/lib/mui-tailwind/icons';
 
 import React from 'react';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';

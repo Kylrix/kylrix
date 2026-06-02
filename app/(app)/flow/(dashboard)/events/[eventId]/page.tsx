@@ -18,10 +18,10 @@ import {
   Stack,
   IconButton,
   Chip,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   ContentCopy as ContentCopyIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';

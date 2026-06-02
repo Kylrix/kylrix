@@ -19,8 +19,8 @@ import {
   TableRow,
   TablePagination,
   TextField,
-} from '@mui/material';
-import RefreshIcon from '@mui/icons-material/Refresh';
+} from '@/lib/mui-tailwind/material';
+import RefreshIcon from '@/lib/mui-tailwind/icons/Refresh';
 import { Models } from 'appwrite';
 
 interface Log extends Models.Log {

@@ -1,6 +1,6 @@
 import CalendarView from '@/components/calendar/CalendarView';
 import { Suspense } from 'react';
-import { Box, CircularProgress } from '@mui/material';
+import { Box, CircularProgress } from '@/lib/mui-tailwind/material';
 
 export default function CalendarPage() {
   return (

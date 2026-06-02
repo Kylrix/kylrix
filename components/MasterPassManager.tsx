@@ -9,8 +9,8 @@ import {
   Stack, 
   Alert, 
   CircularProgress,
-} from '@mui/material';
-import { Lock, Shield, CheckCircle } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Lock, Shield, CheckCircle } from '@/lib/mui-tailwind/icons';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { AppwriteService } from '@/lib/appwrite';
 import { useTheme } from '@/lib/theme-context';

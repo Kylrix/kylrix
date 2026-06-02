@@ -10,7 +10,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Flag as FlagIcon,
   AccessTime as ScheduleIcon,
@@ -23,8 +23,8 @@ import {
   ContentCopy as CopyIcon,
   VideoCall as VideoCallIcon,
   PushPin as PinIcon,
-} from '@mui/icons-material';
-import { useMediaQuery, useTheme } from '@mui/material';
+} from '@/lib/mui-tailwind/icons';
+import { useMediaQuery, useTheme } from '@/lib/mui-tailwind/material';
 import { formatTime, isToday, isTomorrow, isPast, isThisWeek } from '@/lib/time-util';
 import { Task, Priority } from '@/types';
 import { useTask } from '@/context/TaskContext';

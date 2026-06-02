@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import DoodleCanvas from '@/components/DoodleCanvas';
 import DoodleViewer from '@/components/DoodleViewer';
-import { Box, Typography, Button, TextField, Paper, alpha } from '@mui/material';
-import { Edit as EditIcon, Brush as BrushIcon, TextFields as TextIcon } from '@mui/icons-material';
+import { Box, Typography, Button, TextField, Paper, alpha } from '@/lib/mui-tailwind/material';
+import { Edit as EditIcon, Brush as BrushIcon, TextFields as TextIcon } from '@/lib/mui-tailwind/icons';
 
 interface NoteContentProps {
   format?: 'text' | 'doodle';

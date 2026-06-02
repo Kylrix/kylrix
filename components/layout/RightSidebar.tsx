@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Drawer, Box, IconButton, useTheme, useMediaQuery, alpha } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Drawer, Box, IconButton, useTheme, useMediaQuery, alpha } from '@/lib/mui-tailwind/material';
+import { Close as CloseIcon } from '@/lib/mui-tailwind/icons';
 import { useLayout } from '@/context/LayoutContext';
 import TaskDetails from '@/components/tasks/TaskDetails';
 import EventDetails from '@/components/events/EventDetails';

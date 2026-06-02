@@ -15,7 +15,7 @@ import {
   alpha,
   useTheme,
   Button,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   X, 
   FolderKanban, 

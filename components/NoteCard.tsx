@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, Typography, Box, IconButton, Chip, alpha, useMediaQuery, useTheme } from '@mui/material';
+import { Card, CardContent, CardHeader, Typography, Box, IconButton, Chip, alpha, useMediaQuery, useTheme } from '@/lib/mui-tailwind/material';
 import { useContextMenu } from './ui/ContextMenuContext';
 import { useDynamicSidebar } from './ui/DynamicSidebar';
 import { NoteDetailSidebar } from './ui/NoteDetailSidebar';
@@ -24,7 +24,7 @@ import {
   PlaylistAdd as TodoIcon,
   Summarize as SummarizeIcon,
   Spellcheck as GrammarIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { ShareNoteDrawer } from './overlays/ShareNoteDrawer';
 import { DeleteNoteDrawer } from './overlays/DeleteNoteDrawer';

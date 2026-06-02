@@ -15,7 +15,7 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-} from "@mui/material";
+} from "@/lib/mui-tailwind/material";
 import { X } from "lucide-react";
 import { useSudo } from "@/context/SudoContext";
 import { UsersService } from "@/lib/services/users";

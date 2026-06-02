@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Skeleton, Grid, Stack } from '@mui/material';
+import { Box, Skeleton, Grid, Stack } from '@/lib/mui-tailwind/material';
 
 // Minimal skeleton loading - shows app structure instantly
 export default function Loading() {

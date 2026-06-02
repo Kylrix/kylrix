@@ -28,7 +28,7 @@ import {
     useMediaQuery,
     useTheme,
     Skeleton
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     Heart,
     MessageCircle,

@@ -33,8 +33,8 @@ import {
   useMediaQuery,
   Stack,
   IconButton,
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
+} from '@/lib/mui-tailwind/material';
+import { alpha } from '@/lib/mui-tailwind/material';
 import { ArrowLeft, Plus, Eye, EyeOff } from 'lucide-react';
 
 function DashboardPageContent() {

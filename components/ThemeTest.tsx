@@ -1,6 +1,6 @@
 "use client";
 
-import { Box, Typography, Button, Paper } from '@mui/material';
+import { Box, Typography, Button, Paper } from '@/lib/mui-tailwind/material';
 import { useTheme } from '@/components/ThemeProvider';
 
 export function ThemeTest() {

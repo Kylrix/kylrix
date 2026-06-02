@@ -22,7 +22,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   X, 
   Search, 
@@ -164,7 +164,7 @@ function CreateMomentDialog({
   );
 }
 
-import { DialogActions } from '@mui/material';
+import { DialogActions } from '@/lib/mui-tailwind/material';
 
 export default function ProjectAddObjectModal({ open, onClose, projectId, onAdded }: ProjectAddObjectModalProps) {
   const theme = useTheme();

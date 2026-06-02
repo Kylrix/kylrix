@@ -34,7 +34,7 @@ import {
     useMediaQuery,
     alpha,
     Skeleton
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     Send,
     Phone,

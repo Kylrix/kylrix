@@ -18,7 +18,7 @@ import {
     TextField,
     Stack,
     Badge
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     Video, 
     User, 

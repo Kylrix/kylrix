@@ -13,7 +13,7 @@ import {
   Alert,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 
 interface EditUsernameModalProps {
   isOpen: boolean;

@@ -11,7 +11,7 @@ import {
   Stack,
   Alert,
   CircularProgress,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 
 type Props = {
   email: string;

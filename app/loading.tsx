@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress, Typography } from '@/lib/mui-tailwind/material';
 
 export default function RootLoading() {
   return (

@@ -16,14 +16,14 @@ import {
   CircularProgress,
   useTheme,
   useMediaQuery
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Close as CloseIcon, 
   AutoAwesome as SparklesIcon, 
   Lightbulb as LightBulbIcon, 
   Search as MagnifyingGlassIcon, 
   Edit as PencilIcon 
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 
 interface AIGeneratePromptModalProps {
   onClose: () => void;

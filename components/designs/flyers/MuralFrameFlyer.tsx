@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { Box } from '@mui/material';
+import { Box } from '@/lib/mui-tailwind/material';
 import FlyerShell from './FlyerShell';
 import MuralPattern from './MuralPattern';
 import type { DesignFlyerProps } from '../types';

@@ -1,4 +1,4 @@
-import { Box, Paper, Skeleton } from '@mui/material';
+import { Box, Paper, Skeleton } from '@/lib/mui-tailwind/material';
 
 export default function CredentialSkeleton() {
   return (

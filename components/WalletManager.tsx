@@ -15,8 +15,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-} from '@mui/material';
-import { Link as LinkIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Link as LinkIcon } from '@/lib/mui-tailwind/icons';
 
 interface WalletManagerProps {
   userId: string;

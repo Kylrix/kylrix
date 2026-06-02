@@ -16,12 +16,12 @@ import {
   List,
   ListItem,
   Tooltip,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   ContentCopy as ContentCopyIcon,
   Refresh as RefreshIcon,
   History as HistoryIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { generateRandomPassword } from '@/utils/password';
 import toast from 'react-hot-toast';
 

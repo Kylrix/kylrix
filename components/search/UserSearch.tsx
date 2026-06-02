@@ -19,9 +19,9 @@ import {
     CircularProgress,
     Skeleton,
     Stack
-} from '@mui/material';
-import SearchIcon from '@mui/icons-material/Search';
-import PersonIcon from '@mui/icons-material/Person';
+} from '@/lib/mui-tailwind/material';
+import SearchIcon from '@/lib/mui-tailwind/icons/Search';
+import PersonIcon from '@/lib/mui-tailwind/icons/Person';
 import toast from 'react-hot-toast';
 
 import { useSudo } from '@/context/SudoContext';

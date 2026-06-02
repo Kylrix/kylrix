@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Container, Typography, Grid, Paper, Stack, Button, IconButton, Slider, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, Container, Typography, Grid, Paper, Stack, Button, IconButton, Slider, ToggleButton, ToggleButtonGroup } from '@/lib/mui-tailwind/material';
 import { 
   ArrowLeft, Home, Shield, Lock, KeyRound, Fingerprint, Share2, Link2, Radio, Network,
   MessageSquare, MessageCircle, Mic, Users, Workflow, Cpu, Zap, GitMerge, PlayCircle,

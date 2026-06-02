@@ -19,7 +19,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   X as CloseIcon,
   Plus as PlusIcon,

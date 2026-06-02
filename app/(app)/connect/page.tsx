@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { Container, Box, Typography, useMediaQuery, useTheme, IconButton, Skeleton, alpha } from '@mui/material';
+import { Container, Box, Typography, useMediaQuery, useTheme, IconButton, Skeleton, alpha } from '@/lib/mui-tailwind/material';
 import { Feed } from '@/components/social/Feed';
 import { ChatList } from '@/components/chat/ChatList';
 import { ProjectsService } from '@/lib/appwrite/projects';

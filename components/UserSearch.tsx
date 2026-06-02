@@ -13,11 +13,11 @@ import {
   alpha,
   IconButton,
   Chip
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Search as SearchIcon,
   Close as CloseIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { UsersService } from '@/lib/services/users';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from './common/IdentityBadge';

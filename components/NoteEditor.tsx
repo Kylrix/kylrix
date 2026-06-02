@@ -14,8 +14,8 @@ import {
   TextField,
   Button,
   CircularProgress
-} from '@mui/material';
-import { Save as SaveIcon, Update as UpdateIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Save as SaveIcon, Update as UpdateIcon } from '@/lib/mui-tailwind/icons';
 import AttachmentsManager from '@/components/AttachmentsManager';
 import NoteContent from '@/components/NoteContent';
 import { IdentityAvatar } from './IdentityBadge';

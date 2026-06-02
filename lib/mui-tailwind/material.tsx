@@ -2,6 +2,27 @@
 
 import React from 'react';
 
+export const alpha = (color: string, value: number) => color;
+export const createTheme = (theme: any) => theme;
+export const ThemeProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+export const AppRouterCacheProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+export const styled = (Component: any) => Component;
+export const CssBaseline = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
+export const useTheme = () => ({
+  palette: {
+    mode: 'dark',
+    primary: { main: '#6366F1', dark: '#4F46E5' },
+    secondary: { main: '#EC4899', dark: '#DB2777' },
+    background: { default: '#000000', paper: '#161514' },
+    text: { primary: '#F8FAFC', secondary: '#9B9691' },
+    divider: 'rgba(255, 255, 255, 0.05)',
+  },
+});
+export const useMediaQuery = (query: string, options?: { noSsr?: boolean }) => {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia(query).matches;
+};
+
 // 1. Box Component
 export const Box = React.forwardRef(({ children, sx, className, component: Component = 'div', ...props }: any, ref) => {
   return (
@@ -83,6 +104,70 @@ export const CardContent = ({ children, className, ...props }: any) => (
 );
 export const CardActions = ({ children, className, ...props }: any) => (
   <div className={`flex items-center gap-2 pt-4 ${className || ''}`} {...props}>{children}</div>
+);
+
+export const LinearProgress = ({ value = 0, className, ...props }: any) => (
+  <div className={`h-2 w-full rounded-full bg-[#23211F] ${className || ''}`} {...props}>
+    <div className="h-full rounded-full bg-[#6366F1]" style={{ width: `${Math.max(0, Math.min(100, value))}%` }} />
+  </div>
+);
+
+export const AppBar = ({ children, className, ...props }: any) => (
+  <header className={`flex items-center justify-between border-b border-[#23211F] bg-[#0A0908] ${className || ''}`} {...props}>
+    {children}
+  </header>
+);
+
+export const Toolbar = ({ children, className, ...props }: any) => (
+  <div className={`flex items-center gap-3 px-4 py-3 ${className || ''}`} {...props}>{children}</div>
+);
+
+export const Tabs = ({ children, className, ...props }: any) => (
+  <div className={`flex items-center gap-2 ${className || ''}`} {...props}>{children}</div>
+);
+
+export const Tab = ({ label, children, className, ...props }: any) => (
+  <button className={`rounded-xl px-4 py-2 text-sm font-medium text-stone-300 hover:bg-[#1E1B19] ${className || ''}`} {...props}>
+    {label ?? children}
+  </button>
+);
+
+export const FormControlLabel = ({ control, label, className, ...props }: any) => (
+  <label className={`inline-flex items-center gap-2 ${className || ''}`} {...props}>
+    {control}
+    <span>{label}</span>
+  </label>
+);
+
+export const InputAdornment = ({ children, className, ...props }: any) => (
+  <span className={`inline-flex items-center text-stone-500 ${className || ''}`} {...props}>{children}</span>
+);
+
+export const List = ({ children, className, ...props }: any) => (
+  <div className={`flex flex-col ${className || ''}`} {...props}>{children}</div>
+);
+
+export const ListItem = ({ children, className, ...props }: any) => (
+  <div className={`flex items-center gap-3 rounded-xl px-3 py-2 ${className || ''}`} {...props}>{children}</div>
+);
+
+export const ListItemAvatar = ({ children, className, ...props }: any) => (
+  <div className={`shrink-0 ${className || ''}`} {...props}>{children}</div>
+);
+
+export const ListItemButton = ({ children, className, ...props }: any) => (
+  <button className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-[#1E1B19] ${className || ''}`} {...props}>{children}</button>
+);
+
+export const ListItemText = ({ primary, secondary, children, className, ...props }: any) => (
+  <div className={`flex min-w-0 flex-1 flex-col ${className || ''}`} {...props}>
+    {children ?? (
+      <>
+        <span className="truncate text-sm text-stone-200">{primary}</span>
+        {secondary ? <span className="truncate text-xs text-stone-500">{secondary}</span> : null}
+      </>
+    )}
+  </div>
 );
 
 // 6. Paper Component

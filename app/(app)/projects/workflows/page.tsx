@@ -11,7 +11,7 @@ import {
   IconButton, 
   Divider,
   Alert
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   PlayArrow as PlayIcon, 
   RotateLeft as NegateIcon, 
@@ -21,7 +21,7 @@ import {
   Security as AnonIcon, 
   Circle as DotIcon,
   ToggleOn as DynamicIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useLocalContext } from '@/lib/context-engine';
 import { anonymizeWorkflow, negateWorkflow, WorkflowChain } from '@/lib/workflow-engine';
 import { 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, ButtonBase, Stack, Typography, alpha } from '@mui/material';
+import { Box, ButtonBase, Stack, Typography, alpha } from '@/lib/mui-tailwind/material';
 import { DESIGN_FLYERS } from './flyers';
 
 interface DesignSidebarProps {

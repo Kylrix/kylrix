@@ -17,13 +17,13 @@ import {
   Snackbar,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Close as CloseIcon,
   ContentCopy as CopyIcon,
   EventBusy as ExpiryIcon,
   Public as PublicIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { FormsService } from '@/lib/services/forms';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';
 

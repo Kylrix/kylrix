@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Box, Typography, alpha } from '@mui/material';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Box, Typography, alpha } from '@/lib/mui-tailwind/material';
+import CheckCircleIcon from '@/lib/mui-tailwind/icons/CheckCircle';
 import { UserPresenceState } from '@/lib/services/presence';
 import { storage } from '@/lib/appwrite/client';
 

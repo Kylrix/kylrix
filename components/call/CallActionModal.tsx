@@ -24,7 +24,7 @@ import {
     CircularProgress,
     TextField,
     MenuItem
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     Video,
     Phone,
@@ -55,7 +55,7 @@ import toast from 'react-hot-toast';
 import { 
     FormControlLabel, 
     Switch 
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import type { CallLaunchContext } from '@/context/CallLauncherContext';
 import { updateNote } from '@/lib/actions/client-ops';
 import { tasks as taskApi } from '@/lib/kylrixflow';

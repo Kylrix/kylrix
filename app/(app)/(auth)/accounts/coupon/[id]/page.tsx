@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, alpha } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, alpha } from '@/lib/mui-tailwind/material';
 import { CheckCircle2, Loader2, ShieldCheck, Ticket } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { claimCouponAction } from '../../actions/billing';

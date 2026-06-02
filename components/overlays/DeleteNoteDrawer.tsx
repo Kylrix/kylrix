@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Box, Typography, IconButton, Button, Stack } from '@mui/material';
+import { Box, Typography, IconButton, Button, Stack } from '@/lib/mui-tailwind/material';
 import { X, Trash2 } from 'lucide-react';
-import Drawer from '@mui/material/Drawer';
+import Drawer from '@/lib/mui-tailwind/material/Drawer';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
 

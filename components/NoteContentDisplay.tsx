@@ -2,8 +2,8 @@
 
 import React, { useRef, useEffect, useMemo } from 'react';
 import { DoodleStroke } from '@/types/notes';
-import { Box, Typography, alpha } from '@mui/material';
-import { Brush as BrushIcon } from '@mui/icons-material';
+import { Box, Typography, alpha } from '@/lib/mui-tailwind/material';
+import { Brush as BrushIcon } from '@/lib/mui-tailwind/icons';
 
 interface NoteContentDisplayProps {
   content: string;

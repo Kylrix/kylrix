@@ -9,10 +9,10 @@ import {
     Divider,
     Button,
     Paper
-} from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import DescriptionIcon from '@mui/icons-material/Description';
-import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+} from '@/lib/mui-tailwind/material';
+import CloseIcon from '@/lib/mui-tailwind/icons/Close';
+import DescriptionIcon from '@/lib/mui-tailwind/icons/Description';
+import OpenInNewIcon from '@/lib/mui-tailwind/icons/OpenInNew';
 
 interface NoteViewDrawerProps {
     open: boolean;

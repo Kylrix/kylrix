@@ -23,7 +23,7 @@ import {
   Chip,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
@@ -39,7 +39,7 @@ import {
   Warning as WarningIcon,
   Settings as SettingsIcon,
   UploadFile as FileUploadIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';

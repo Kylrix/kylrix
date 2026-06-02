@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Box, Typography, Stack, CircularProgress } from '@mui/material';
+import { Box, Typography, Stack, CircularProgress } from '@/lib/mui-tailwind/material';
 
 function PopoutContent() {
   const searchParams = useSearchParams();

@@ -16,7 +16,7 @@ import {
   Divider,
   Tabs,
   Tab,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   X,
   Search as SearchIcon,

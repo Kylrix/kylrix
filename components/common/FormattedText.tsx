@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, Typography, Box, alpha } from '@mui/material';
+import { Link, Typography, Box, alpha } from '@/lib/mui-tailwind/material';
 import { ExternalLink, Zap, Lock, MessageSquare, FileText } from 'lucide-react';
 
 interface FormattedTextProps {

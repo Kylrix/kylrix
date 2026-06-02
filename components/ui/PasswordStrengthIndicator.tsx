@@ -9,13 +9,13 @@ import {
   IconButton, 
   InputAdornment,
   Stack
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   Visibility as VisibilityIcon, 
   VisibilityOff as VisibilityOffIcon,
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { validatePasswordStrength, getPasswordStrengthLabel, type PasswordStrength } from '@/lib/passwordUtils';
 
 interface PasswordStrengthIndicatorProps {

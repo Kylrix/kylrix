@@ -10,7 +10,7 @@ import {
     Paper,
     InputBase,
     alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     Search,
     X,

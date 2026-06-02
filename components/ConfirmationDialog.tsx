@@ -8,7 +8,7 @@ import {
   Box,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 
 interface ConfirmationDialogProps {
   open: boolean;

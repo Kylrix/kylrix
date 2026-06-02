@@ -10,7 +10,7 @@ import {
   Divider,
   useTheme,
   CircularProgress,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Close as CloseIcon,
   CalendarToday as CalendarIcon,
@@ -18,7 +18,7 @@ import {
   LocationOn as LocationIcon,
   Share as ShareIcon,
   Videocam as MeetingIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { formatTime } from '@/lib/time-util';
 import { useLayout } from '@/context/LayoutContext';
 import { events as eventApi } from '@/lib/kylrixflow';

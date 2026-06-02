@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, CircularProgress, Typography, alpha, Button } from '@mui/material';
+import { Box, CircularProgress, Typography, alpha, Button } from '@/lib/mui-tailwind/material';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getLastEcosystemRoute } from '@/lib/ecosystem/state-tracker';
 import { getKylrixPulse } from '@/lib/appwrite';

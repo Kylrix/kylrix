@@ -1,11 +1,11 @@
 "use client";
 
-import { Box, Container, Typography, Grid, Paper, Stack, alpha } from '@mui/material';
+import { Box, Container, Typography, Grid, Paper, Stack, alpha } from '@/lib/mui-tailwind/material';
 
 const VAULT_PRIMARY = "#10B981";
-import ShieldIcon from '@mui/icons-material/Shield';
-import LockIcon from '@mui/icons-material/Lock';
-import FingerprintIcon from '@mui/icons-material/Fingerprint';
+import ShieldIcon from '@/lib/mui-tailwind/icons/Shield';
+import LockIcon from '@/lib/mui-tailwind/icons/Lock';
+import FingerprintIcon from '@/lib/mui-tailwind/icons/Fingerprint';
 
 export default function Trust() {
   return (

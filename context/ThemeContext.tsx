@@ -1,8 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { ThemeProvider, createTheme, PaletteMode } from '@mui/material/styles';
-import { getDesignTokens } from '../theme/theme';
+import type { PaletteMode } from '../theme/theme';
 
 type ColorModeContextType = {
   toggleColorMode: () => void;
@@ -42,11 +41,9 @@ export const ThemeModeProvider = ({ children }: { children: React.ReactNode }) =
     [mode]
   );
 
-  const theme = useMemo(() => createTheme(getDesignTokens(mode)), [mode]);
-
   return (
     <ColorModeContext.Provider value={colorMode}>
-      <ThemeProvider theme={theme}>{children}</ThemeProvider>
+      {children}
     </ColorModeContext.Provider>
   );
 };

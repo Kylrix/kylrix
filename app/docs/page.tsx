@@ -1,5 +1,5 @@
 'use client';
-import { Box, Grid, Paper, Stack, Typography, alpha } from '@mui/material';
+import { Box, Grid, Paper, Stack, Typography, alpha } from '@/lib/mui-tailwind/material';
 import DocsShell from '@/components/docs/DocsShell';
 import {
   DOCS_ARTICLES,

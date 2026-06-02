@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Container, Typography, Paper, Button, Stack, CircularProgress } from '@mui/material';
+import { Box, Container, Typography, Paper, Button, Stack, CircularProgress } from '@/lib/mui-tailwind/material';
 import { CheckCircle2, ShieldCheck, Zap, Globe, AlertCircle } from 'lucide-react';
 import NextLink from 'next/link';
 import { useAuth } from '@/context/auth/AuthContext';

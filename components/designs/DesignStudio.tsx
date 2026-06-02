@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Drawer, Fab, IconButton, Menu, MenuItem, Paper, Stack, useMediaQuery, useTheme, Typography } from '@mui/material';
+import { Box, Drawer, Fab, IconButton, Menu, MenuItem, Paper, Stack, useMediaQuery, useTheme, Typography } from '@/lib/mui-tailwind/material';
 import { Download, LayoutList, Maximize, Menu as MenuIcon, MoveHorizontal, X, Home, ZoomIn, ZoomOut } from 'lucide-react';
 import { toPng, toSvg } from 'html-to-image';
 import Logo from '@/components/Logo';

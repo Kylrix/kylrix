@@ -19,7 +19,7 @@ import {
   alpha,
   useTheme,
   Stack,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 import { ID } from 'appwrite';
 import { databases } from '@/lib/appwrite/client';

@@ -14,7 +14,7 @@ import {
   TextField,
   Typography,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { AppwriteService, setMasterpassFlag } from '@/lib/appwrite';
 import toast from 'react-hot-toast';

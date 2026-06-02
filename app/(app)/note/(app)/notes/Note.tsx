@@ -5,8 +5,8 @@ import {
   Card, CardContent, Typography, CardActions, IconButton, Stack, Chip, Box,
   Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions,
   Button
-} from '@mui/material';
-import { Delete, Share, Lock, LockOpen, MoreVert, Analytics } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { Delete, Share, Lock, LockOpen, MoreVert, Analytics } from '@/lib/mui-tailwind/icons';
 import type { Notes } from '@/types/appwrite';
 import { formatNoteUpdatedDate } from '@/lib/date-utils';
 import { isNotePublic } from '@/lib/appwrite';

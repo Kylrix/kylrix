@@ -17,7 +17,7 @@ import {
     IconButton,
     alpha,
     InputBase
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     Phone,
     Video,

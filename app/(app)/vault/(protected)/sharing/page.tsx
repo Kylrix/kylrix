@@ -17,12 +17,12 @@ import {
   CircularProgress,
   IconButton,
   alpha,
-} from '@mui/material';
-import LockOpenIcon from '@mui/icons-material/LockOpen';
-import PersonIcon from '@mui/icons-material/Person';
-import KeyIcon from '@mui/icons-material/VpnKey';
-import ShareIcon from '@mui/icons-material/Share';
-import SearchIcon from '@mui/icons-material/Search';
+} from '@/lib/mui-tailwind/material';
+import LockOpenIcon from '@/lib/mui-tailwind/icons/LockOpen';
+import PersonIcon from '@/lib/mui-tailwind/icons/Person';
+import KeyIcon from '@/lib/mui-tailwind/icons/VpnKey';
+import ShareIcon from '@/lib/mui-tailwind/icons/Share';
+import SearchIcon from '@/lib/mui-tailwind/icons/Search';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { EcosystemSecurity } from '@/lib/ecosystem/security';

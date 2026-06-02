@@ -10,7 +10,7 @@ import {
   IconButton,
   alpha,
   Paper,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Trash2, AlertTriangle, X } from 'lucide-react';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 

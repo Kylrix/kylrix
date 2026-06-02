@@ -19,7 +19,7 @@ import {
     alpha,
     useTheme,
     useMediaQuery
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { X, Search, ShieldCheck, MessageSquare, ArrowRight } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
 import { ChatService } from '@/lib/services/chat';

@@ -24,7 +24,7 @@ import {
   CircularProgress,
   Stack,
   Paper,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Close as CloseIcon,
   Flag as FlagIcon,
@@ -37,15 +37,15 @@ import {
   Send as SendIcon,
   AutoFixHigh as AutoFixHighIcon,
   ArrowBack as BackIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { formatTime } from '@/lib/time-util';
 import { Query } from 'appwrite';
 import { useTask } from '@/context/TaskContext';
 import { Priority, TaskStatus } from '@/types';
 import { useLayout } from '@/context/LayoutContext';
 import { useAI } from '@/hooks/useAI';
-import { useMediaQuery } from '@mui/material';
-import { useTheme } from '@mui/material/styles';
+import { useMediaQuery } from '@/lib/mui-tailwind/material';
+import { useTheme } from '@/lib/mui-tailwind/material';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { notes as noteApi } from '@/lib/kylrixflow';

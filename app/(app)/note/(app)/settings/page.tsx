@@ -20,7 +20,7 @@ import {
     ListItemIcon,
     ListItemText,
     IconButton
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
     Lock,
     Shield,

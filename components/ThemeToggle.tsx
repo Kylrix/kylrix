@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTheme } from '@/components/ThemeProvider';
-import { IconButton, Typography, Stack } from '@mui/material';
+import { IconButton, Typography, Stack } from '@/lib/mui-tailwind/material';
 import { 
   Sun, 
   Moon 

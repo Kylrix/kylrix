@@ -9,8 +9,8 @@ import {
   LinearProgress, 
   IconButton,
   alpha
-} from '@mui/material';
-import { CloudUpload as UploadIcon, Close as CloseIcon } from '@mui/icons-material';
+} from '@/lib/mui-tailwind/material';
+import { CloudUpload as UploadIcon, Close as CloseIcon } from '@/lib/mui-tailwind/icons';
 import { addAttachmentToNote } from '@/lib/appwrite';
 
 interface AttachmentsManagerProps {

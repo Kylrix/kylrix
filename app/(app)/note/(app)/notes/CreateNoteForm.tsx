@@ -14,7 +14,7 @@ import {
   alpha,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Description as DescriptionIcon,
   ExpandLess as ExpandLessIcon,
@@ -23,7 +23,7 @@ import {
   Lock as PrivateIcon,
   Public as PublicIcon,
   Brush as PencilIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { Check, ArrowUpRight, Mic, Square } from 'lucide-react';
 import { StorageService } from '@/lib/services/storage';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';

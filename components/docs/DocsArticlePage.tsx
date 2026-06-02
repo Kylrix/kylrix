@@ -1,5 +1,5 @@
 'use client';
-import { Box, Button, Paper, Stack, Typography } from '@mui/material';
+import { Box, Button, Paper, Stack, Typography } from '@/lib/mui-tailwind/material';
 import NextLink from 'next/link';
 import DocsShell from '@/components/docs/DocsShell';
 import { DocsCard, DocsLandingAction, getDocsArticleBySlug } from '@/components/docs/catalog';

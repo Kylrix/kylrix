@@ -16,7 +16,7 @@ import {
     ListItemIcon,
     ListItemText,
     useTheme
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
     Lock, 
     Shield, 

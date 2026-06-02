@@ -17,13 +17,13 @@ import {
   Chip,
   Stack,
   InputAdornment
-} from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import ShieldIcon from '@mui/icons-material/Shield';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SearchIcon from '@mui/icons-material/Search';
+} from '@/lib/mui-tailwind/material';
+import { alpha } from '@/lib/mui-tailwind/material';
+import ShieldIcon from '@/lib/mui-tailwind/icons/Shield';
+import ContentCopyIcon from '@/lib/mui-tailwind/icons/ContentCopy';
+import EditIcon from '@/lib/mui-tailwind/icons/Edit';
+import DeleteIcon from '@/lib/mui-tailwind/icons/Delete';
+import SearchIcon from '@/lib/mui-tailwind/icons/Search';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';

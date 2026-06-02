@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card as MuiCard, Typography, Box } from '@mui/material';
+import { Card as MuiCard, Typography, Box } from '@/lib/mui-tailwind/material';
 
 const Card = React.forwardRef<
   HTMLDivElement,

@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Typography, IconButton, Button, Stack, alpha, CircularProgress, useTheme, useMediaQuery, Chip, TextField } from '@mui/material';
+import { Box, Typography, IconButton, Button, Stack, alpha, CircularProgress, useTheme, useMediaQuery, Chip, TextField } from '@/lib/mui-tailwind/material';
 import { X, ArrowLeft, Trash2, ChevronDown, ShieldCheck, UserPlus, Link, Copy, Check, Info } from 'lucide-react';
-import Drawer from '@mui/material/Drawer';
+import Drawer from '@/lib/mui-tailwind/material/Drawer';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { grantPermissionSecure, getResourceCollaboratorsSecure, revokePermissionSecure, PermissionLevel } from '@/lib/actions/secure-ops';

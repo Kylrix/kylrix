@@ -13,7 +13,7 @@ import {
   alpha,
   useTheme,
   useMediaQuery,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Flag, ShieldAlert } from 'lucide-react';
 import { getEcosystemUrl } from '@/lib/constants';
 

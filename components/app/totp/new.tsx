@@ -12,7 +12,7 @@ import {
   Checkbox,
   Grid,
   CircularProgress
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { createTotpSecret, updateTotpSecret } from '@/lib/appwrite';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useEffect, useState } from 'react';

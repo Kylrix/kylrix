@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Box, Typography, Button, Paper, Stack, CircularProgress, alpha, Chip, Container } from '@mui/material';
+import { Box, Typography, Button, Paper, Stack, CircularProgress, alpha, Chip, Container } from '@/lib/mui-tailwind/material';
 import { ShieldAlert, CheckCircle, ArrowRight, LogIn, ExternalLink } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { account } from '@/lib/appwrite/client';

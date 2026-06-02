@@ -13,14 +13,14 @@ import {
   Paper,
   Slide,
   type SlideProps
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { 
   AutoAwesome as WandIcon, 
   Close as CloseIcon,
   Send as SendIcon,
   SmartToy as RobotIcon,
   Person as PersonIcon
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 import { useAI, AIChatMessage } from '@/hooks/useAI';
 import { motion, AnimatePresence } from 'framer-motion';
 

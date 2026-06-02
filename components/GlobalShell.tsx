@@ -3,7 +3,7 @@
 import React, { ReactNode, Suspense, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
-import { Box, alpha } from '@mui/material';
+import { Box, alpha } from '@/lib/mui-tailwind/material';
 
 // Core UI Components (Direct Imports for Stability)
 import ConnectTopbar from '@/components/layout/ConnectTopbar';

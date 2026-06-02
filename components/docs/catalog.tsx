@@ -9,7 +9,7 @@ import {
   Stack,
   Typography,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   BookOpen,
   FileCode2,

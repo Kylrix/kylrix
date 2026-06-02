@@ -12,7 +12,7 @@ import {
   ListItemText,
   Divider,
   useTheme,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Add as AddIcon,
   SwapVert as SortIcon,
@@ -23,8 +23,8 @@ import {
   ArrowUpward as AscIcon,
   ArrowDownward as DescIcon,
   CheckCircle as CheckIcon,
-} from '@mui/icons-material';
-import { useMediaQuery } from '@mui/material';
+} from '@/lib/mui-tailwind/icons';
+import { useMediaQuery } from '@/lib/mui-tailwind/material';
 import TaskItem from './TaskItem';
 import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';

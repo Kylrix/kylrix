@@ -12,7 +12,7 @@ import {
   Button,
   alpha,
   Divider,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { ArrowLeft, Scale, Terminal, GitFork, AlertTriangle, FileText, CheckCircle } from 'lucide-react';
 
 export default function TermsOfServicePage() {

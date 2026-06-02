@@ -14,10 +14,10 @@ import {
     Drawer,
     IconButton,
     Divider
-} from '@mui/material';
-import NoteIcon from '@mui/icons-material/DescriptionOutlined';
-import SearchIcon from '@mui/icons-material/SearchOutlined';
-import CloseIcon from '@mui/icons-material/Close';
+} from '@/lib/mui-tailwind/material';
+import NoteIcon from '@/lib/mui-tailwind/icons/DescriptionOutlined';
+import SearchIcon from '@/lib/mui-tailwind/icons/SearchOutlined';
+import CloseIcon from '@/lib/mui-tailwind/icons/Close';
 import { useNotes } from '@/context/NotesContext';
 
 interface NoteSelectorModalProps {

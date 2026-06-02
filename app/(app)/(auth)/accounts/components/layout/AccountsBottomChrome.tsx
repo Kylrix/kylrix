@@ -11,7 +11,7 @@ import {
   SpeedDialAction,
   SpeedDialIcon,
   alpha,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   UserCircle as ProfileIcon,
   ShieldCheck as SecurityIcon,

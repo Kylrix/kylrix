@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Box, Paper, Typography, IconButton, alpha } from '@mui/material';
+import { Box, Paper, Typography, IconButton, alpha } from '@/lib/mui-tailwind/material';
 import { 
   Close as CloseIcon, 
   Remove as MinimizeIcon, 
   OpenInFull as MaximizeIcon 
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 
 interface FloatingContainerProps {
   children: React.ReactNode;

@@ -17,12 +17,12 @@ import {
   CircularProgress,
   Container,
   IconButton
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Search as SearchIcon,
   Public as GlobeAltIcon,
   Person as UserIcon,
-} from '@mui/icons-material';
+} from '@/lib/mui-tailwind/icons';
 
 interface SharedNote extends Notes {
   sharedPermission?: string;

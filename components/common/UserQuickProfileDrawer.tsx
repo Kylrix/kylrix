@@ -14,7 +14,7 @@ import {
   Typography,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import { Copy, MessageCircle, Send, Wallet, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { KylrixApp } from '@/lib/sdk/design';

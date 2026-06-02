@@ -24,17 +24,17 @@ import {
     Skeleton,
     useTheme,
     useMediaQuery
-} from '@mui/material';
-import CallIcon from '@mui/icons-material/Call';
-import VideocamIcon from '@mui/icons-material/Videocam';
-import _CallMissedIcon from '@mui/icons-material/CallMissed';
-import CallReceivedIcon from '@mui/icons-material/CallReceived';
-import CallMadeIcon from '@mui/icons-material/CallMade';
-import AddIcCallIcon from '@mui/icons-material/AddIcCall';
-import DeleteIcon from '@mui/icons-material/Delete';
-import StopIcon from '@mui/icons-material/Stop';
-import RefreshIcon from '@mui/icons-material/Refresh';
-import HistoryIcon from '@mui/icons-material/History';
+} from '@/lib/mui-tailwind/material';
+import CallIcon from '@/lib/mui-tailwind/icons/Call';
+import VideocamIcon from '@/lib/mui-tailwind/icons/Videocam';
+import _CallMissedIcon from '@/lib/mui-tailwind/icons/CallMissed';
+import CallReceivedIcon from '@/lib/mui-tailwind/icons/CallReceived';
+import CallMadeIcon from '@/lib/mui-tailwind/icons/CallMade';
+import AddIcCallIcon from '@/lib/mui-tailwind/icons/AddIcCall';
+import DeleteIcon from '@/lib/mui-tailwind/icons/Delete';
+import StopIcon from '@/lib/mui-tailwind/icons/Stop';
+import RefreshIcon from '@/lib/mui-tailwind/icons/Refresh';
+import HistoryIcon from '@/lib/mui-tailwind/icons/History';
 import toast from 'react-hot-toast';
 import { seedIdentityCache } from '@/lib/identity-cache';
 import { useSection } from '@/context/SectionContext';

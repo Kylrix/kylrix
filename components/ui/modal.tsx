@@ -1,6 +1,6 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, IconButton, Typography, Box, alpha } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Dialog, DialogTitle, DialogContent, IconButton, Typography, Box, alpha } from '@/lib/mui-tailwind/material';
+import { Close as CloseIcon } from '@/lib/mui-tailwind/icons';
 
 export interface ModalProps {
   isOpen: boolean;

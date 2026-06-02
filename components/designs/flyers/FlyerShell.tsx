@@ -1,7 +1,7 @@
 'use client';
 
 import React, { forwardRef } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography } from '@/lib/mui-tailwind/material';
 import Logo from '@/components/Logo';
 import type { DesignFlyerProps } from '../types';
 

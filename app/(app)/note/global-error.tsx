@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Typography, Button, Paper, Container, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
-import { Refresh, Home, ErrorOutline, ExpandMore } from '@mui/icons-material';
+import { Box, Typography, Button, Paper, Container, Accordion, AccordionSummary, AccordionDetails } from '@/lib/mui-tailwind/material';
+import { Refresh, Home, ErrorOutline, ExpandMore } from '@/lib/mui-tailwind/icons';
 
 export default function GlobalError({
   error,

@@ -22,7 +22,7 @@ import {
   Drawer,
   useMediaQuery,
   useTheme,
-} from '@mui/material';
+} from '@/lib/mui-tailwind/material';
 import {
   Bot,
   ChevronDown,
