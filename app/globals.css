@@ -1,4 +1,3 @@
-@config "../tailwind.config.js";
 @import "tailwindcss";
 
 @source "../components/**/*.{js,ts,jsx,tsx,mdx}";
@@ -6,23 +5,42 @@
 @source "../lib/**/*.{js,ts,jsx,tsx,mdx}";
 @source "../context/**/*.{js,ts,jsx,tsx,mdx}";
 @source "../hooks/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../utils/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../theme/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../types/**/*.{js,ts,jsx,tsx,mdx}";
 
-:root {
-  --background: #000000;
-  --foreground: #F5F2ED;
-  --surface: #161412;
-  --surface-2: #1C1917;
-  --surface-border: rgba(255, 255, 255, 0.08);
-  --surface-border-soft: rgba(255, 255, 255, 0.05);
-  /* Alias: components use --color-surface (e.g. DynamicSidebar); must map to real tokens */
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
+@theme {
+  --color-background: #000000;
+  --color-foreground: #F5F2ED;
+  --color-surface: #161412;
+  --color-surface-2: #1C1917;
+  --color-surface-border: rgba(255, 255, 255, 0.08);
+  --color-surface-border-soft: rgba(255, 255, 255, 0.05);
+
   --font-satoshi: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-clash: "Clash Display", "Satoshi", sans-serif;
   --font-clash-display: "Clash Display", "Satoshi", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-outfit: "Outfit", sans-serif;
   --font-space-grotesk: "Space Grotesk", sans-serif;
+}
+
+:root {
+  --background: var(--color-background);
+  --foreground: var(--color-foreground);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --surface-border: var(--color-surface-border);
+  --surface-border-soft: var(--color-surface-border-soft);
+  /* Alias: components use --color-surface (e.g. DynamicSidebar); must map to real tokens */
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --font-satoshi: var(--font-satoshi);
+  --font-clash: var(--font-clash);
+  --font-clash-display: var(--font-clash-display);
+  --font-mono: var(--font-mono);
+  --font-outfit: var(--font-outfit);
+  --font-space-grotesk: var(--font-space-grotesk);
 }
 
 html,
