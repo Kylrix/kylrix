@@ -2,9 +2,7 @@
 
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import Box from '@/lib/mui-tailwind/material';
-import Typography from '@/lib/mui-tailwind/material';
-import { alpha } from '@/lib/mui-tailwind/material';
+import { Box, Typography, alpha } from '@/lib/mui-tailwind/material';
 import NoteContentDisplay from '@/components/NoteContentDisplay';
 import { preProcessMarkdown } from '@/lib/markdown';
 

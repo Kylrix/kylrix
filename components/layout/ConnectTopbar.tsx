@@ -615,8 +615,8 @@ export default function ConnectTopbar({
                               display: 'flex',
                               alignItems: 'center',
                               gap: 1.5,
-                              px: 2,
-                              py: 1.25,
+                              px: 2.25,
+                              py: 1.5,
                               borderRadius: '18px',
                               bgcolor: 'rgba(255,255,255,0.02)',
                               border: '1px solid rgba(255,255,255,0.05)',
@@ -632,8 +632,8 @@ export default function ConnectTopbar({
                             }}
                           >
                             <Box sx={{
-                              width: 34,
-                              height: 34,
+                              width: 38,
+                              height: 38,
                               borderRadius: '12px',
                               display: 'grid',
                               placeItems: 'center',
@@ -643,11 +643,11 @@ export default function ConnectTopbar({
                             }}>
                               <Logo app={action.kind as any} size={16} variant="icon" />
                             </Box>
-                            <Box sx={{ minWidth: 0, flex: 1 }}>
-                              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.2 }}>
+                            <Box sx={{ minWidth: 0, flex: 1, pr: 0.5 }}>
+                              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25 }} noWrap>
                                 {action.title}
                               </Typography>
-                              <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600, fontSize: '0.76rem', mt: 0.25 }}>
+                              <Typography sx={{ color: 'rgba(255,255,255,0.66)', fontWeight: 600, fontSize: '0.76rem', mt: 0.35, lineHeight: 1.35 }}>
                                 {action.description}
                               </Typography>
                             </Box>
@@ -693,7 +693,7 @@ export default function ConnectTopbar({
                           key={notif.id}
                           onClick={() => markNotificationRead(notif.id)}
                           sx={{
-                            p: 1.75,
+                            p: 2,
                             borderRadius: '18px',
                             bgcolor: notif.read ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)',
                             border: '1px solid',
@@ -719,13 +719,14 @@ export default function ConnectTopbar({
                             }} />
                           )}
                           
-                          <Box sx={{ pl: notif.read ? 0 : 2, pr: 3 }}>
+                          <Box sx={{ pl: notif.read ? 0 : 2, pr: 4 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                               <Typography sx={{
                                 color: 'white',
                                 fontWeight: 800,
                                 fontSize: '0.84rem',
-                                opacity: notif.read ? 0.7 : 1
+                                opacity: notif.read ? 0.7 : 1,
+                                pr: 1
                               }}>
                                 {notif.title}
                               </Typography>
@@ -739,9 +740,9 @@ export default function ConnectTopbar({
                               </Typography>
                             </Box>
                             <Typography sx={{
-                              color: 'rgba(255,255,255,0.5)',
+                              color: 'rgba(255,255,255,0.66)',
                               fontSize: '0.76rem',
-                              lineHeight: 1.3,
+                              lineHeight: 1.4,
                               fontWeight: 500
                             }}>
                               {notif.message}
@@ -794,8 +795,8 @@ export default function ConnectTopbar({
                           display: 'flex',
                           alignItems: 'center',
                           gap: 1.25,
-                          px: 1.5,
-                          py: 1.1,
+                          px: 2,
+                          py: 1.25,
                           borderRadius: '18px',
                           bgcolor: 'rgba(255,255,255,0.02)',
                           border: '1px solid rgba(255,255,255,0.05)',
@@ -805,14 +806,14 @@ export default function ConnectTopbar({
                           '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
                         }}
                       >
-                        <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
+                        <Box sx={{ width: 36, height: 36, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
                           <Logo app={action.kind as any} size={16} variant="icon" />
                         </Box>
-                        <Box sx={{ minWidth: 0, flex: 1 }}>
-                          <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                        <Box sx={{ minWidth: 0, flex: 1, pr: 0.5 }}>
+                          <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.2 }} noWrap>
                             {action.title}
                           </Typography>
-                          <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.68)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
                             {action.description}
                           </Typography>
                         </Box>
@@ -849,8 +850,8 @@ export default function ConnectTopbar({
                               display: 'flex',
                               alignItems: 'center',
                               gap: 1.25,
-                              px: 1.5,
-                              py: 1.1,
+                              px: 2,
+                              py: 1.25,
                               borderRadius: '18px',
                               bgcolor: 'rgba(255,255,255,0.02)',
                               border: '1px solid rgba(255,255,255,0.05)',
@@ -862,15 +863,15 @@ export default function ConnectTopbar({
                           >
                             <Avatar
                               src={person.avatar || undefined}
-                              sx={{ width: 32, height: 32, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.08)', color: 'white', fontSize: '0.8rem', fontWeight: 800 }}
+                              sx={{ width: 36, height: 36, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.08)', color: 'white', fontSize: '0.8rem', fontWeight: 800 }}
                             >
                               {(person.displayName || person.name || String(person.username || person.prefs?.username || 'U').replace(/^@+/, '') || 'U')[0].toUpperCase()}
                             </Avatar>
-                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                            <Box sx={{ minWidth: 0, flex: 1, pr: 0.5 }}>
                               <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
                                 {person.displayName || person.name}
                               </Typography>
-                              <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                              <Typography sx={{ color: 'rgba(255,255,255,0.68)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
                                 @{String(person.username || person.prefs?.username || 'user').replace(/^@+/, '')}
                               </Typography>
                             </Box>
@@ -976,7 +977,7 @@ export default function ConnectTopbar({
                 </IconButton>
               </Box>
 
-              <Box sx={{ display: 'grid', gap: 1.25, maxHeight: '58vh', overflowY: 'auto', pr: 0.5, pb: 0.5 }}>
+                <Box sx={{ display: 'grid', gap: 1.5, maxHeight: '58vh', overflowY: 'auto', pr: 0.5, pb: 0.75 }}>
                 <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
                   <Avatar
                     src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
@@ -1029,8 +1030,8 @@ export default function ConnectTopbar({
                   </Box>
                 </Box>
 
-                <Box sx={{ borderRadius: '22px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.02)', p: 1.5 }}>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.75 }}>
+                <Box sx={{ borderRadius: '22px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.02)', p: 2 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1 }}>
                     Identity
                   </Typography>
                   
@@ -1232,7 +1233,7 @@ export default function ConnectTopbar({
 
             {/* System Identification details */}
             <Box sx={{ borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)', p: 2 }}>
-              <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.68)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1.1 }}>
                 System Key
               </Typography>
               
@@ -1419,9 +1420,9 @@ export default function ConnectTopbar({
             {connectApps.map((item) => {
               const appTone = getAppTone(item.app);
               return (
-                <Button
+                <Box
                   key={item.href}
-                  fullWidth
+                  component="button"
                   onClick={() => {
                     handleCloseAll();
                     if (!user && item.app !== 'kylrix') {
@@ -1431,16 +1432,20 @@ export default function ConnectTopbar({
                     }
                   }}
                   sx={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'flex-start',
                     textAlign: 'left',
-                    px: 2,
-                    py: 1.5,
+                    px: 2.25,
+                    py: 1.75,
                     borderRadius: '16px',
                     color: '#fff',
-                    textTransform: 'none',
+                    background: 'transparent',
                     bgcolor: item.selected ? alpha(appTone.secondary, 0.08) : 'rgba(255, 255, 255, 0.01)',
                     border: '1px solid transparent',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer',
                     '&:hover': {
                       bgcolor: alpha(appTone.secondary, 0.12),
                       borderColor: alpha(appTone.secondary, 0.24),
@@ -1449,10 +1454,10 @@ export default function ConnectTopbar({
                   }}
                 >
                   <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
-                    <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
+                    <Box sx={{ width: 36, height: 36, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
                       <Logo app={item.app} size={16} variant="icon" />
                     </Box>
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Box sx={{ minWidth: 0, flex: 1, pr: 0.75 }}>
                       <Typography sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.2 }} noWrap>
                         {item.label}
                       </Typography>
@@ -1461,7 +1466,7 @@ export default function ConnectTopbar({
                       </Typography>
                     </Box>
                   </Stack>
-                </Button>
+                </Box>
               );
             })}
           </Stack>
@@ -1493,9 +1498,9 @@ export default function ConnectTopbar({
               {connectApps.map((item) => {
                 const appTone = getAppTone(item.app);
                 return (
-                  <Button
+                  <Box
                     key={item.href}
-                    fullWidth
+                    component="button"
                     onClick={() => {
                       handleCloseAll();
                       if (!user && item.app !== 'kylrix') {
@@ -1505,14 +1510,19 @@ export default function ConnectTopbar({
                       }
                     }}
                     sx={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
                       justifyContent: 'flex-start',
                       textAlign: 'left',
-                      px: 1.5,
-                      py: 1.1,
+                      px: 2,
+                      py: 1.3,
                       borderRadius: '18px',
                       color: 'white',
+                      background: 'transparent',
                       bgcolor: item.selected ? alpha(appTone.secondary, 0.08) : 'rgba(255,255,255,0.02)',
                       border: '1px solid transparent',
+                      cursor: 'pointer',
                       '&:hover': {
                         bgcolor: alpha(appTone.secondary, 0.12),
                         borderColor: alpha(appTone.secondary, 0.24),
@@ -1520,10 +1530,10 @@ export default function ConnectTopbar({
                     }}
                   >
                     <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
-                      <Box sx={{ width: 32, height: 32, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
+                      <Box sx={{ width: 36, height: 36, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
                         <Logo app={item.app} size={16} variant="icon" />
                       </Box>
-                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Box sx={{ minWidth: 0, flex: 1, pr: 0.5 }}>
                         <Typography sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.2 }} noWrap>
                           {item.label}
                         </Typography>
@@ -1532,7 +1542,7 @@ export default function ConnectTopbar({
                         </Typography>
                       </Box>
                     </Stack>
-                  </Button>
+                  </Box>
                 );
               })}
             </Box>

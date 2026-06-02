@@ -14,7 +14,40 @@ const OPENBRICKS_TOKENS = {
   primary: '#6366F1',
 } as const;
 
-export const alpha = (color: string, value: number) => color;
+export const alpha = (color: string, value: number) => {
+  const a = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 1));
+  const input = (color || '').trim();
+  if (!input) return `rgba(255,255,255,${a})`;
+
+  if (input.startsWith('#')) {
+    const hex = input.slice(1);
+    const normalized = hex.length === 3
+      ? hex.split('').map((char) => char + char).join('')
+      : hex.length === 6
+        ? hex
+        : null;
+    if (!normalized) return input;
+    const r = parseInt(normalized.slice(0, 2), 16);
+    const g = parseInt(normalized.slice(2, 4), 16);
+    const b = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  const rgbMatch = input.match(/^rgba?\(([^)]+)\)$/i);
+  if (rgbMatch) {
+    const parts = rgbMatch[1].split(',').map((part) => part.trim());
+    if (parts.length >= 3) {
+      const r = Number(parts[0]);
+      const g = Number(parts[1]);
+      const b = Number(parts[2]);
+      if ([r, g, b].every((part) => Number.isFinite(part))) {
+        return `rgba(${r},${g},${b},${a})`;
+      }
+    }
+  }
+
+  return input;
+};
 export const createTheme = (theme: any) => theme;
 export const ThemeProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;
 export const AppRouterCacheProvider = ({ children }: { children?: React.ReactNode }) => <>{children}</>;

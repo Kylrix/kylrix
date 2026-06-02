@@ -101,6 +101,7 @@ export function NoteDetailSidebar({
   isLoading = false,
 }: NoteDetailSidebarProps) {
   const theme = useTheme();
+  const successColor = theme.palette?.success?.main || '#10B981';
   const { open: openUnified } = useUnifiedDrawer();
   const { promptSudo } = useSudo();
   const { setIsDrawerOpen } = useDrawerState();
@@ -525,9 +526,16 @@ export function NoteDetailSidebar({
   const titleInputRef = useRef<HTMLInputElement>(null);
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const displayTitle = useMemo(() => isEncryptedNote ? '🔒 Encrypted Note' : (title || liveNote.title || 'Untitled note'), [isEncryptedNote, title, liveNote.title]);
-  const displayContent = useMemo(() => isEncryptedNote ? '' : (content || liveNote.content || ''), [isEncryptedNote, content, liveNote.content]);
-  const displayFormat = useMemo(() => isEncryptedNote ? 'text' : format, [isEncryptedNote, format]);
+  const shouldMaskEncrypted = useMemo(() => isEncryptedNote && !vaultUnlocked, [isEncryptedNote, vaultUnlocked]);
+  const displayTitle = useMemo(
+    () => (shouldMaskEncrypted ? 'Secure Note' : (title || liveNote.title || 'Untitled note')),
+    [shouldMaskEncrypted, title, liveNote.title],
+  );
+  const displayContent = useMemo(
+    () => (shouldMaskEncrypted ? '' : (content || liveNote.content || '')),
+    [shouldMaskEncrypted, content, liveNote.content],
+  );
+  const displayFormat = useMemo(() => (shouldMaskEncrypted ? 'text' : format), [shouldMaskEncrypted, format]);
   const displayTags = useMemo(() => tags.split(',').map((t: string) => t.trim()).filter(Boolean), [tags]);
 
   const currentAttachments = useMemo(() => {
@@ -711,9 +719,9 @@ export function NoteDetailSidebar({
             <IconButton
               onClick={handleTogglePublic}
               sx={{
-                color: isPublic ? theme.palette.success.main : theme.palette.text.secondary,
-                bgcolor: isPublic ? alpha(theme.palette.success.main, 0.12) : alpha(theme.palette.text.primary, 0.04),
-                '&:hover': { bgcolor: isPublic ? alpha(theme.palette.success.main, 0.18) : alpha(theme.palette.text.primary, 0.08) }
+                color: isPublic ? successColor : theme.palette.text.secondary,
+                bgcolor: isPublic ? alpha(successColor, 0.12) : alpha(theme.palette.text.primary, 0.04),
+                '&:hover': { bgcolor: isPublic ? alpha(successColor, 0.18) : alpha(theme.palette.text.primary, 0.08) }
               }}
             >
               {isPublic ? <PublicIcon fontSize="small" /> : <LockIcon fontSize="small" />}
@@ -819,8 +827,17 @@ export function NoteDetailSidebar({
               <Box onClick={() => setShowDoodleEditor(true)} sx={{ height: 200, border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '18px', display: 'grid', placeItems: 'center', cursor: 'pointer', '&:hover': { bgcolor: alpha('#fff', 0.02) } }}><Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>Open Sketchpad</Typography></Box>
             )
           ) : (
-            <Box onClick={activateContentEditing} sx={{ cursor: isEncryptedNote && !vaultUnlocked ? 'pointer' : 'text', minHeight: '100%' }}>
-               <NoteContentRenderer content={displayContent} format={displayFormat} emptyFallback={<Typography variant="body2" sx={{ fontStyle: 'italic', color: theme.palette.text.secondary }}>🔒 Encrypted note content</Typography>} onEditDoodle={displayFormat === 'doodle' ? activateContentEditing : undefined} />
+            <Box onClick={activateContentEditing} sx={{ cursor: shouldMaskEncrypted ? 'pointer' : 'text', minHeight: '100%' }}>
+               <NoteContentRenderer
+                 content={displayContent}
+                 format={displayFormat}
+                 emptyFallback={
+                   <Typography variant="body2" sx={{ fontStyle: 'normal', fontWeight: 700, color: '#9B9691' }}>
+                     Secure content hidden. Unlock your secure space to view this note.
+                   </Typography>
+                 }
+                 onEditDoodle={displayFormat === 'doodle' ? activateContentEditing : undefined}
+               />
             </Box>
           )}
         </Box>

@@ -42,6 +42,7 @@ export function UnifiedBottomBar() {
   const { isDrawerOpen } = useDrawerState();
   const { isOpen: isCallLauncherOpen } = useCallLauncher();
   const { isOpen: isOverlayOpen } = useOverlay();
+  const [pressedTab, setPressedTab] = useState<string | null>(null);
 
   // Determine which app we're in
   const appContext = useMemo(() => {
@@ -232,6 +233,43 @@ export function UnifiedBottomBar() {
   const isConnectChatPage = pathname?.startsWith('/connect/chats') || pathname?.match(/^\/connect\/chat\/[^/]+$/);
   const isProjectsPage = pathname?.startsWith('/projects');
 
+  const currentTab = getCurrentTab();
+  const actions = (() => {
+    if (appContext === 'note') {
+      return [
+        { tab: 'notes', route: '/note/notes', icon: <NotesIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'shared', route: '/note/shared', icon: <SharedIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'tags', route: '/note/tags', icon: <TagsIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'projects', route: '/projects', icon: <ProjectsIcon size={24} strokeWidth={1.5} className="lucide" /> },
+      ];
+    }
+    if (appContext === 'vault') {
+      return [
+        { tab: 'credentials', route: '/vault/dashboard', icon: <VaultIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'sharing', route: '/vault/sharing', icon: <SharedIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'totp', route: '/vault/totp', icon: <TotpIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'projects', route: '/projects', icon: <ProjectsIcon size={24} strokeWidth={1.5} className="lucide" /> },
+      ];
+    }
+    if (appContext === 'flow') {
+      return [
+        { tab: 'goals', route: '/flow', icon: <FlowIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'forms', route: '/flow/forms', icon: <FormIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'events', route: '/flow/events', icon: <EventsIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'projects', route: '/projects', icon: <ProjectsIcon size={24} strokeWidth={1.5} className="lucide" /> },
+      ];
+    }
+    if (appContext === 'connect') {
+      return [
+        { tab: 'home', route: '/connect', icon: <HomeIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'chats', route: '/connect/chats', icon: <ConnectIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'calls', route: '/connect/calls', icon: <CallsIcon size={24} strokeWidth={1.5} className="lucide" /> },
+        { tab: 'projects', route: '/projects', icon: <ProjectsIcon size={24} strokeWidth={1.5} className="lucide" /> },
+      ];
+    }
+    return [];
+  })();
+
   // Accounts: never use unified bottom chrome — `/accounts/settings/*` renders its own bottom nav in layout;
   // billing/success/checkout/login and other interim flows should stay full-bleed with no duplicate empty bar.
   if (pathname?.startsWith('/accounts')) return null;
@@ -277,36 +315,67 @@ export function UnifiedBottomBar() {
           pb: 'max(0.5rem, env(safe-area-inset-bottom))',
         }}
       >
-        <BottomNavigation
-          value={getCurrentTab()}
-          onChange={handleNavChange}
-          showLabels={false}
+        <Box
           sx={{
-            backgroundColor: 'transparent',
             height: 72,
-            '& .MuiBottomNavigationAction-root': {
-              minWidth: 'auto',
-              padding: '0 6px',
-              borderRadius: '12px',
-              color: 'rgba(255, 255, 255, 0.4)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:active': {
-                transform: 'scale(0.97)',
-                backgroundColor: 'rgba(255,255,255,0.08)',
-              },
-              '&.Mui-selected': {
-                color: appColor,
-                backgroundColor: `${appColor}1A`,
-                '& .lucide': {
-                  transform: 'scale(1.2) translateY(-2px)',
-                  filter: `drop-shadow(0 0 8px ${appColor}80)`,
-                }
-              },
-            },
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
           }}
         >
-          {renderNavItems()}
-        </BottomNavigation>
+          {actions.map((a) => {
+            const selected = a.tab === currentTab;
+            const isPressed = pressedTab === a.tab;
+
+            return (
+              <Box
+                key={a.tab}
+                component="button"
+                aria-label={`Open ${a.tab}`}
+                onMouseDown={() => setPressedTab(a.tab)}
+                onMouseUp={() => setPressedTab(null)}
+                onMouseLeave={() => setPressedTab(null)}
+                onClick={() => {
+                  setPressedTab(null);
+                  router.push(a.route);
+                }}
+                sx={{
+                  flex: 1,
+                  height: 56,
+                  padding: '0 6px',
+                  borderRadius: '12px',
+                  border: '1px solid transparent',
+                  cursor: 'pointer',
+                  backgroundColor: isPressed
+                    ? 'rgba(255,255,255,0.08)'
+                    : selected
+                      ? `${appColor}1A`
+                      : 'transparent',
+                  color: selected ? appColor : 'rgba(255, 255, 255, 0.4)',
+                  transform: isPressed ? 'scale(0.97)' : undefined,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'grid',
+                    placeItems: 'center',
+                    transform: selected ? 'scale(1.2) translateY(-2px)' : 'scale(1)',
+                    filter: selected ? `drop-shadow(0 0 8px ${appColor}80)` : 'none',
+                    transition: 'transform 200ms ease, filter 200ms ease',
+                  }}
+                >
+                  {a.icon}
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
       </Paper>
     </Box>
   );
