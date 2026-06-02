@@ -38,13 +38,24 @@ export const useMediaQuery = (query: string, options?: { noSsr?: boolean }) => {
   return window.matchMedia(query).matches;
 };
 
+const cleanSx = (sx: any) => {
+  if (!sx || typeof sx !== 'object') return sx;
+  const validSx: any = {};
+  for (const key in sx) {
+    if (!key.startsWith('&') && !key.startsWith('@')) {
+      validSx[key] = sx[key];
+    }
+  }
+  return validSx;
+};
+
 // 1. Box Component
-export const Box = React.forwardRef(({ children, sx, className, component: Component = 'div', ...props }: any, ref) => {
+export const Box = React.forwardRef(({ children, sx, className, component: Component = 'div', display, alignItems, justifyContent, flexWrap, flexDirection, gap, ...props }: any, ref) => {
   return (
     <Component
       ref={ref}
       className={className}
-      style={sx}
+      style={cleanSx(sx)}
       {...props}
     >
       {children}
@@ -54,7 +65,7 @@ export const Box = React.forwardRef(({ children, sx, className, component: Compo
 Box.displayName = 'Box';
 
 // 2. Button Component
-export const Button = React.forwardRef(({ children, className, sx, variant = 'text', color = 'primary', size = 'medium', disabled, ...props }: any, ref) => {
+export const Button = React.forwardRef(({ children, className, sx, variant = 'text', color = 'primary', size = 'medium', disabled, startIcon, endIcon, fullWidth, disableElevation, disableRipple, disableFocusRipple, disableTouchRipple, component, ...props }: any, ref) => {
   let baseClass = "inline-flex items-center justify-center font-bold font-clash rounded-xl px-5 py-2.5 transition-all duration-300 border border-[#23211F] text-sm active:scale-95";
   if (disabled) {
     baseClass += " opacity-50 cursor-not-allowed bg-stone-900 text-stone-500 border-stone-800";
@@ -72,7 +83,7 @@ export const Button = React.forwardRef(({ children, className, sx, variant = 'te
       ref={ref}
       disabled={disabled}
       className={`${baseClass} ${className || ''}`}
-      style={sx}
+      style={cleanSx(sx)}
       {...props}
     >
       {children}
@@ -82,14 +93,14 @@ export const Button = React.forwardRef(({ children, className, sx, variant = 'te
 Button.displayName = 'Button';
 
 // 3. IconButton Component
-export const IconButton = React.forwardRef(({ children, className, sx, disabled, ...props }: any, ref) => {
+export const IconButton = React.forwardRef(({ children, className, sx, disabled, size, color, edge, ...props }: any, ref) => {
   const baseClass = "inline-flex items-center justify-center p-2 rounded-xl border border-[#23211F] bg-[#0A0908] text-stone-400 hover:text-stone-200 hover:bg-[#141211] active:scale-95 transition-all";
   return (
     <button
       ref={ref}
       disabled={disabled}
       className={`${baseClass} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className || ''}`}
-      style={sx}
+      style={cleanSx(sx)}
       {...props}
     >
       {children}
@@ -104,7 +115,7 @@ export const Card = React.forwardRef(({ children, className, sx, ...props }: any
     <div
       ref={ref}
       className={`rounded-3xl bg-[#141211] border border-[#23211F] shadow-[1px_1px_0px_#23211F,2px_2px_0px_#1E1B19,3px_3px_0px_#161412,4px_4px_0px_#0A0908,5px_5px_0px_#000000] p-6 hover:border-pink-500/40 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-500 ${className || ''}`}
-      style={sx}
+      style={cleanSx(sx)}
       {...props}
     >
       {children}
@@ -191,7 +202,7 @@ export const Paper = React.forwardRef(({ children, className, sx, ...props }: an
     <div
       ref={ref}
       className={`rounded-2xl bg-[#0A0908] border border-[#23211F] p-4 ${className || ''}`}
-      style={sx}
+      style={cleanSx(sx)}
       {...props}
     >
       {children}
@@ -201,7 +212,7 @@ export const Paper = React.forwardRef(({ children, className, sx, ...props }: an
 Paper.displayName = 'Paper';
 
 // 7. Typography Component
-export const Typography = React.forwardRef(({ children, className, sx, variant = 'body1', component, ...props }: any, ref) => {
+export const Typography = React.forwardRef(({ children, className, sx, variant = 'body1', component, noWrap, gutterBottom, ...props }: any, ref) => {
   let Component = component;
   let fontClass = "text-stone-200";
   
@@ -232,7 +243,7 @@ export const Typography = React.forwardRef(({ children, className, sx, variant =
     <Component
       ref={ref}
       className={`${fontClass} ${className || ''}`}
-      style={sx}
+      style={cleanSx(sx)}
       {...props}
     >
       {children}
@@ -268,7 +279,7 @@ export const Grid = React.forwardRef(({ children, container, item, xs, sm, md, l
   }
   
   return (
-    <div ref={ref} className={classes} style={sx} {...props}>
+    <div ref={ref} className={classes} style={cleanSx(sx)} {...props}>
       {children}
     </div>
   );
@@ -276,13 +287,13 @@ export const Grid = React.forwardRef(({ children, container, item, xs, sm, md, l
 Grid.displayName = 'Grid';
 
 // 9. Stack Component
-export const Stack = React.forwardRef(({ children, direction = 'column', spacing = 2, className, sx, ...props }: any, ref) => {
+export const Stack = React.forwardRef(({ children, direction = 'column', spacing = 2, className, sx, alignItems, justifyContent, flexWrap, useFlexGap, divider, ...props }: any, ref) => {
   const flexDir = direction === 'row' ? 'flex-row' : 'flex-col';
   return (
     <div
       ref={ref}
       className={`flex ${flexDir} gap-${spacing} ${className || ''}`}
-      style={sx}
+      style={cleanSx(sx)}
       {...props}
     >
       {children}
@@ -294,7 +305,7 @@ Stack.displayName = 'Stack';
 // 10. TextField Component
 export const TextField = React.forwardRef(({ label, placeholder, value, onChange, type = 'text', fullWidth, disabled, error, helperText, className, sx, ...props }: any, ref) => {
   return (
-    <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${className || ''}`} style={sx}>
+    <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${className || ''}`} style={cleanSx(sx)}>
       {label && (
         <label className="text-xs font-bold text-stone-400 tracking-wide uppercase font-clash">
           {label}
@@ -379,7 +390,7 @@ export const Avatar = ({ src, alt, children, className, sx, ...props }: any) => 
   return (
     <div
       className={`flex items-center justify-center rounded-full bg-stone-800 border border-[#23211F] text-stone-200 font-bold overflow-hidden w-10 h-10 ${className || ''}`}
-      style={sx}
+      style={cleanSx(sx)}
       {...props}
     >
       {src ? <img src={src} alt={alt} className="w-full h-full object-cover" /> : children || alt?.[0]?.toUpperCase()}
@@ -389,7 +400,7 @@ export const Avatar = ({ src, alt, children, className, sx, ...props }: any) => 
 
 // 15. Divider Component
 export const Divider = ({ className, sx, ...props }: any) => (
-  <hr className={`border-t border-[#23211F] my-4 ${className || ''}`} style={sx} {...props} />
+  <hr className={`border-t border-[#23211F] my-4 ${className || ''}`} style={cleanSx(sx)} {...props} />
 );
 
 // 16. Switch Component
@@ -587,7 +598,7 @@ export const CardMedia = ({ children, ...props }: any) => React.createElement('d
 export const ChatBubbleOutline = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Circle = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Construction = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Container = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const Container = ({ children, maxWidth, fixed, disableGutters, ...props }: any) => React.createElement('div', props, children);
 export const ContentPaste = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Dashboard = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const DataObject = ({ children, ...props }: any) => React.createElement('div', props, children);

@@ -3,12 +3,14 @@ import { getRxStorageDexie } from 'rxdb/plugins/storage-dexie';
 import { RxDBcrdtPlugin, getCRDTSchemaPart } from 'rxdb/plugins/crdt';
 import { RxDBCleanupPlugin } from 'rxdb/plugins/cleanup';
 import { RxDBQueryBuilderPlugin } from 'rxdb/plugins/query-builder';
+import { RxDBLeaderElectionPlugin } from 'rxdb/plugins/leader-election';
 
 // Add necessary plugins
 if (typeof window !== 'undefined') {
     addRxPlugin(RxDBcrdtPlugin);
     addRxPlugin(RxDBCleanupPlugin);
     addRxPlugin(RxDBQueryBuilderPlugin);
+    addRxPlugin(RxDBLeaderElectionPlugin);
 }
 
 const DB_NAME = 'kylrix_nexus_db_v2';
