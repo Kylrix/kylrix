@@ -12,7 +12,7 @@ The user values extreme velocity and trust. Skip implementation plans and procee
 1. **No Planning**: Do not create `implementation_plan.md` unless explicitly asked. Go straight to execution.
 2. **Surgical Execution**: Identify the error or feature, fix/implement it with high precision, and move on.
 3. **No Speculation**: Fix exactly what is requested or identified. Do not proactively check for related issues unless they block the current task.
-4. **Maintain Aesthetics**: Always adhere to the "Ultra Premium" design standards (MUI, Vanilla CSS, no Tailwind, sleek animations).
+4. **Maintain Aesthetics**: Always adhere to the "Ultra Premium" design standards (Tailwind CSS, Vanilla CSS, sleek animations).
 5. **Zero Technical Jargon**: Use simple, layman-friendly English in all UI copy.
 
 ## Workflow

@@ -61,7 +61,7 @@ MUI defaults are **not** brand fonts:
 - **Gradient fills** on shells, drawers, nav, cards, buttons (`design.md`).
 - **Translucent fills** (`rgba`, `alpha()`, opacity-scaled backgrounds) on panels, sheets, chrome buttons, chips, icon tiles, inputs — solids only (`design.md` §3 Architectural).
 - **Backdrop blur / glass** on product surfaces.
-- **Tailwind** — MUI + CSS only (`AGENTS.md`).
+- **Tailwind** — Prefer Tailwind CSS per updated AGENTS.md guidelines.
 
 ## Bottom sheets & drawers (UX)
 

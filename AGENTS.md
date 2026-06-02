@@ -14,7 +14,7 @@
 
 ### ⚡ Development Standards
 - **Canonical App**: Only implement against **`kylrix/`**. Legacy trees at repo root are for reference only.
-- **No Tailwind**: Use Material UI (MUI) and Vanilla CSS.
+- **Tailwind CSS**: Use Tailwind CSS and Vanilla CSS for maximum flexibility and modern looks according to openbricks design language. MUI and its co-dependencies are deprecated and must be removed.
 - **Opaque Surfaces**: No gradients or translucent backgrounds on product chrome.
 - **PNPM Only**: Always use `pnpm` for package management. NEVER use `npm` or `yarn`.
 - **Global Unmount Policy**: Strictly use conditional rendering (`{isOpen && <Component />}`) for all overlays (drawers, modals, sidebars) instead of relying on visibility props. This physically removes the component and its invisible backdrops from the DOM when closed, mathematically preventing interaction blocking.
