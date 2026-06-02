@@ -286,11 +286,17 @@ export function UnifiedBottomBar() {
             height: 72,
             '& .MuiBottomNavigationAction-root': {
               minWidth: 'auto',
-              padding: '0',
+              padding: '0 6px',
+              borderRadius: '12px',
               color: 'rgba(255, 255, 255, 0.4)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:active': {
+                transform: 'scale(0.97)',
+                backgroundColor: 'rgba(255,255,255,0.08)',
+              },
               '&.Mui-selected': {
                 color: appColor,
+                backgroundColor: `${appColor}1A`,
                 '& .lucide': {
                   transform: 'scale(1.2) translateY(-2px)',
                   filter: `drop-shadow(0 0 8px ${appColor}80)`,

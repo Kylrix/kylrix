@@ -186,7 +186,20 @@ function TemplateCard({ template, onSelect }: { template: typeof projectTemplate
                 </Stack>
                 
                 <Box>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', lineHeight: 1.4, fontWeight: 500, fontSize: '0.85rem' }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'rgba(255,255,255,0.62)',
+                        display: '-webkit-box',
+                        overflow: 'hidden',
+                        WebkitLineClamp: expanded ? 'unset' : 2,
+                        WebkitBoxOrient: 'vertical',
+                        lineHeight: 1.4,
+                        fontWeight: 500,
+                        fontSize: '0.85rem',
+                        minHeight: expanded ? 'auto' : '2.4em',
+                      }}
+                    >
                         {expanded ? template.description : template.summary}
                     </Typography>
                 </Box>
@@ -321,7 +334,11 @@ export default function ProjectsPage() {
     return [...projects].sort((a: any, b: any) => {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return new Date(b.$updatedAt || b.updatedAt).getTime() - new Date(a.$updatedAt || a.updatedAt).getTime();
+        const bTime = new Date(b.$updatedAt || b.updatedAt || 0).getTime();
+        const aTime = new Date(a.$updatedAt || a.updatedAt || 0).getTime();
+        const timeDiff = (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
+        if (timeDiff !== 0) return timeDiff;
+        return String(a.title || '').localeCompare(String(b.title || ''));
     });
   }, [projects]);
 
@@ -396,18 +413,6 @@ export default function ProjectsPage() {
         }
       }}
     >
-      {/* Accent glow line at top */}
-      <Box 
-        sx={{ 
-          position: 'absolute', 
-          top: 0, 
-          left: 0, 
-          right: 0, 
-          height: '3px', 
-          background: 'linear-gradient(90deg, #6366F1 0%, #A855F7 100%)' 
-        }} 
-      />
-      
       <Stack direction="row" spacing={2.5} alignItems="center">
         <Box
           sx={{

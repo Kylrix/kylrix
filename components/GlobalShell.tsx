@@ -193,7 +193,6 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
             right: 0, 
             zIndex: TOPBAR_Z, 
             pointerEvents: 'none',
-            contain: 'layout size style', // Section 5: Absolute Layout Isolation
             willChange: 'transform'
         }}
       >

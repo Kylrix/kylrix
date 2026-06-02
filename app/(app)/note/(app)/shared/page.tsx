@@ -145,10 +145,10 @@ export default function SharedNotesPage() {
             {/* Tabs */}
             <Box sx={{ 
               mb: 4, 
-              bgcolor: 'rgba(255,255,255,0.03)', 
-              borderRadius: 4, 
+              bgcolor: '#161412',
+              borderRadius: '20px',
               p: 0.5,
-              border: '1px solid rgba(255,255,255,0.05)'
+              border: '1px solid rgba(255,255,255,0.08)'
             }}>
               <Tabs 
                 value={activeTab} 
@@ -157,17 +157,18 @@ export default function SharedNotesPage() {
                 sx={{
                   '& .MuiTabs-indicator': { display: 'none' },
                   '& .MuiTab-root': {
-                    borderRadius: 3.5,
+                    borderRadius: '14px',
                     minHeight: 48,
                     transition: 'all 0.2s',
-                    color: 'text.secondary',
+                    color: 'rgba(255,255,255,0.62)',
+                    fontWeight: 700,
                     '&.Mui-selected': {
-                      bgcolor: 'primary.main',
-                      color: 'background.default',
-                      fontWeight: 700,
+                      bgcolor: 'rgba(236,72,153,0.16)',
+                      color: '#EC4899',
+                      border: '1px solid rgba(236,72,153,0.36)',
                     },
                     '&:hover:not(.Mui-selected)': {
-                      color: 'text.primary',
+                      color: '#fff',
                       bgcolor: 'rgba(255,255,255,0.05)'
                     }
                   }

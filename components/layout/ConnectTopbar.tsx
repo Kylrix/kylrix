@@ -1066,12 +1066,12 @@ export default function ConnectTopbar({
                       minWidth: 0,
                       flex: '1 1 180px',
                       borderRadius: '16px',
-                      bgcolor: alpha(getAppColor('connect'), 0.09),
-                      color: getAppColor('connect'),
+                      bgcolor: alpha(appAccent, 0.09),
+                      color: appAccent,
                       px: 1.5,
                       py: 1.15,
                       textTransform: 'none',
-                      '&:hover': { bgcolor: alpha(getAppColor('connect'), 0.15) },
+                      '&:hover': { bgcolor: alpha(appAccent, 0.15) },
                     }}
                     startIcon={<Wallet size={16} />}
                   >
@@ -1282,7 +1282,7 @@ export default function ConnectTopbar({
                   '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.1)' },
                 }}
               >
-                <Wallet size={18} style={{ color: getAppColor('connect') }} />
+                <Wallet size={18} style={{ color: appAccent }} />
                 Manage Wallet
               </Button>
 
@@ -1453,10 +1453,10 @@ export default function ConnectTopbar({
                       <Logo app={item.app} size={16} variant="icon" />
                     </Box>
                     <Box sx={{ minWidth: 0, flex: 1 }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.15 }} noWrap>
+                      <Typography sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.2 }} noWrap>
                         {item.label}
                       </Typography>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.56)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.74)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
                         {item.description}
                       </Typography>
                     </Box>
@@ -1559,7 +1559,6 @@ export default function ConnectTopbar({
           overflow: 'visible',
           pointerEvents: 'auto',
           height: activePanel ? 'auto' : '88px',
-          contain: 'layout size style', // Section 5: Absolute Layout Isolation
         }}
       >
         <SyncIndicator />
