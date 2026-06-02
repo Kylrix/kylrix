@@ -75,93 +75,106 @@ export default function ProjectCard({ project, onClick, onDelete, onTogglePin }:
       }}
     >
       <Stack spacing={2.5}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Box
-              className="project-icon"
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+          <Box
+            className="project-icon"
+            sx={{
+              width: 48,
+              height: 48,
+              borderRadius: '16px',
+              display: 'grid',
+              placeItems: 'center',
+              bgcolor: alpha('#fff', 0.03),
+              color: 'rgba(255,255,255,0.6)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              transition: 'all 0.3s ease',
+              flexShrink: 0,
+            }}
+          >
+            <LayoutGrid size={22} strokeWidth={1.5} />
+          </Box>
+          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5, pr: 0.5 }}>
+            <Typography
+              component="span"
               sx={{
-                width: 48,
-                height: 48,
-                borderRadius: '16px',
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: alpha('#fff', 0.03),
-                color: 'rgba(255,255,255,0.6)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                transition: 'all 0.3s ease'
+                color: '#fff',
+                fontWeight: 900,
+                fontSize: '1.05rem',
+                fontFamily: 'var(--font-clash)',
+                lineHeight: 1.25,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
               }}
             >
-              <LayoutGrid size={22} strokeWidth={1.5} />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography component="span" noWrap sx={{ color: '#fff', fontWeight: 900, fontSize: '1.05rem', fontFamily: 'var(--font-clash)', display: 'flex', alignItems: 'center', gap: 1, lineHeight: 1.2 }}>
-                {(project as any).isPinned && <Pin size={14} fill="#F59E0B" color="#F59E0B" style={{ transform: 'rotate(45deg)', flexShrink: 0 }} />}
-                <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.title}</Box>
+              {(project as any).isPinned && <Pin size={14} fill="#F59E0B" color="#F59E0B" style={{ transform: 'rotate(45deg)', flexShrink: 0 }} />}
+              <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                {project.title}
+              </Box>
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'rgba(255,255,255,0.3)' }}>
+              {getVisibilityIcon()}
+              <Typography component="span" variant="caption" sx={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', lineHeight: 1.3 }}>
+                {project.visibility}
               </Typography>
-              <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'rgba(255,255,255,0.3)' }}>
-                {getVisibilityIcon()}
-                <Typography variant="caption" sx={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>
-                  {project.visibility}
-                </Typography>
-              </Stack>
             </Box>
-          </Stack>
+            <Typography
+              component="span"
+              sx={{
+                color: 'rgba(255,255,255,0.5)',
+                fontSize: '0.92rem',
+                lineHeight: 1.55,
+                fontWeight: 500,
+                minHeight: 44,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+              }}
+            >
+              {project.summary || 'Unified ecosystem project for coordinating cross-app resources and workflows.'}
+            </Typography>
+          </Box>
           {!(project as any).isPending ? (
-            <Stack direction="row" spacing={0.5} sx={{ mt: -0.5, mr: -0.5 }}>
-              <IconButton 
-                  size="small" 
-                  onClick={(e) => { e.stopPropagation(); onTogglePin?.(project.$id); }}
-                  sx={{ 
-                      color: (project as any).isPinned ? '#F59E0B' : 'rgba(255,255,255,0.2)', 
-                      '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.05) },
-                  }}
+            <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+              <IconButton
+                size="small"
+                onClick={(e) => { e.stopPropagation(); onTogglePin?.(project.$id); }}
+                sx={{
+                  color: (project as any).isPinned ? '#F59E0B' : 'rgba(255,255,255,0.2)',
+                  '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.05) },
+                }}
               >
-                  <Pin size={18} fill={(project as any).isPinned ? '#F59E0B' : 'none'} />
+                <Pin size={18} fill={(project as any).isPinned ? '#F59E0B' : 'none'} />
               </IconButton>
-              <IconButton 
-                  size="small" 
-                  onClick={(e) => { e.stopPropagation(); onDelete(project.$id); }}
-                  sx={{ 
-                      color: 'rgba(255,255,255,0.2)', 
-                      '&:hover': { color: '#FF453A', bgcolor: alpha('#FF453A', 0.05) },
-                  }}
+              <IconButton
+                size="small"
+                onClick={(e) => { e.stopPropagation(); onDelete(project.$id); }}
+                sx={{
+                  color: 'rgba(255,255,255,0.2)',
+                  '&:hover': { color: '#FF453A', bgcolor: alpha('#FF453A', 0.05) },
+                }}
               >
-                  <Trash2 size={18} />
+                <Trash2 size={18} />
               </IconButton>
             </Stack>
           ) : (
-            <Chip 
-              label="INVITED" 
-              size="small" 
-              sx={{ 
-                bgcolor: alpha('#6366F1', 0.1), 
-                color: '#818CF8', 
-                fontWeight: 900, 
-                fontSize: '0.65rem', 
+            <Chip
+              label="INVITED"
+              size="small"
+              sx={{
+                flexShrink: 0,
+                bgcolor: alpha('#6366F1', 0.1),
+                color: '#818CF8',
+                fontWeight: 900,
+                fontSize: '0.65rem',
                 fontFamily: 'var(--font-mono)',
                 border: '1px solid rgba(99, 102, 241, 0.2)',
-                height: 20
-              }} 
+                height: 20,
+              }}
             />
           )}
         </Box>
-
-        <Typography 
-          component="span"
-          sx={{ 
-            color: 'rgba(255,255,255,0.5)', 
-            fontSize: '0.92rem',
-            lineHeight: 1.6,
-            fontWeight: 500,
-            minHeight: 44,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {project.summary || 'Unified ecosystem project for coordinating cross-app resources and workflows.'}
-        </Typography>
 
         <Box sx={{ pt: 2, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ color: 'rgba(255,255,255,0.3)' }}>

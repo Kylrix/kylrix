@@ -682,8 +682,8 @@ export default function ConnectTopbar({
 
                   <Box sx={{ display: 'grid', gap: 1 }}>
                     {notifications.length === 0 ? (
-                      <Box sx={{ p: 2.5, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center' }}>
-                        <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
+                      <Box sx={{ px: 2.25, py: 2, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', lineHeight: 1.45, display: 'block' }}>
                           No diagnostics alerts at the moment. System is stable.
                         </Typography>
                       </Box>
@@ -691,84 +691,115 @@ export default function ConnectTopbar({
                       notifications.map((notif) => (
                         <Box
                           key={notif.id}
+                          component="button"
+                          type="button"
                           onClick={() => markNotificationRead(notif.id)}
                           sx={{
-                            p: 2,
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 1.5,
+                            px: 2.25,
+                            py: 1.5,
                             borderRadius: '18px',
                             bgcolor: notif.read ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)',
                             border: '1px solid',
                             borderColor: notif.read ? 'rgba(255,255,255,0.03)' : alpha(notif.accent, 0.25),
+                            color: 'white',
+                            textAlign: 'left',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
-                            position: 'relative',
                             '&:hover': {
                               bgcolor: 'rgba(255,255,255,0.05)',
                               borderColor: notif.read ? 'rgba(255,255,255,0.08)' : alpha(notif.accent, 0.4),
-                            }
+                            },
                           }}
                         >
-                          {!notif.read && (
-                            <Box sx={{
-                              position: 'absolute',
-                              top: 18,
-                              left: 12,
-                              width: 8,
-                              height: 8,
-                              borderRadius: '999px',
-                              bgcolor: notif.accent
-                            }} />
-                          )}
-                          
-                          <Box sx={{ pl: notif.read ? 0 : 2, pr: 4, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <Typography component="span" sx={{
+                          <Box
+                            sx={{
+                              width: 38,
+                              height: 38,
+                              borderRadius: '12px',
+                              display: 'grid',
+                              placeItems: 'center',
+                              flexShrink: 0,
+                              bgcolor: alpha(notif.accent, notif.read ? 0.06 : 0.14),
+                              color: notif.accent,
+                              position: 'relative',
+                            }}
+                          >
+                            <Bell size={16} />
+                            {!notif.read && (
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  top: 6,
+                                  right: 6,
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '999px',
+                                  bgcolor: notif.accent,
+                                  border: '2px solid #161412',
+                                }}
+                              />
+                            )}
+                          </Box>
+
+                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
+                            <Typography
+                              component="span"
+                              sx={{
                                 color: 'white',
                                 fontWeight: 800,
                                 fontSize: '0.84rem',
                                 lineHeight: 1.25,
                                 opacity: notif.read ? 0.7 : 1,
-                                pr: 1,
-                                minWidth: 0,
-                                flex: 1,
-                              }}>
-                                {notif.title}
-                              </Typography>
-                              <Typography component="span" sx={{
-                                color: 'rgba(255,255,255,0.36)',
+                                display: 'block',
+                              }}
+                            >
+                              {notif.title}
+                            </Typography>
+                            <Typography
+                              component="span"
+                              sx={{
+                                color: 'rgba(255,255,255,0.42)',
                                 fontSize: '0.68rem',
                                 fontWeight: 600,
-                                lineHeight: 1.2,
-                                ml: 'auto',
-                                flexShrink: 0,
-                              }}>
-                                {notif.time}
-                              </Typography>
-                            </Box>
-                            <Typography component="span" sx={{
-                              color: 'rgba(255,255,255,0.66)',
-                              fontSize: '0.76rem',
-                              lineHeight: 1.4,
-                              fontWeight: 500,
-                            }}>
+                                lineHeight: 1.3,
+                                display: 'block',
+                              }}
+                            >
+                              {notif.time}
+                            </Typography>
+                            <Typography
+                              component="span"
+                              sx={{
+                                color: 'rgba(255,255,255,0.66)',
+                                fontSize: '0.76rem',
+                                lineHeight: 1.4,
+                                fontWeight: 500,
+                                display: 'block',
+                              }}
+                            >
                               {notif.message}
                             </Typography>
                           </Box>
 
                           <IconButton
                             size="small"
+                            aria-label="Dismiss alert"
                             onClick={(e) => dismissNotification(notif.id, e)}
                             sx={{
-                              position: 'absolute',
-                              top: 10,
-                              right: 10,
+                              flexShrink: 0,
+                              mt: 0.25,
                               color: 'rgba(255,255,255,0.3)',
-                              width: 24,
-                              height: 24,
+                              width: 28,
+                              height: 28,
                               borderRadius: '8px',
                               '&:hover': {
                                 color: 'white',
-                                bgcolor: 'rgba(255,255,255,0.08)'
-                              }
+                                bgcolor: 'rgba(255,255,255,0.08)',
+                              },
                             }}
                           >
                             <CloseIcon size={12} />

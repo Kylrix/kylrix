@@ -140,20 +140,23 @@ function TemplateCard({ template, onSelect }: { template: typeof projectTemplate
 
     return (
         <Paper
+            component="button"
             elevation={0}
             onClick={() => onSelect(template)}
             sx={{
+                width: '100%',
                 p: 3,
                 minHeight: 196,
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
+                alignItems: 'stretch',
+                textAlign: 'left',
                 borderRadius: '24px',
                 bgcolor: '#161412',
                 border: '1px solid rgba(255,255,255,0.06)',
                 cursor: 'pointer',
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                position: 'relative',
                 overflow: 'hidden',
                 boxSizing: 'border-box',
                 '&:hover': { 
@@ -164,67 +167,68 @@ function TemplateCard({ template, onSelect }: { template: typeof projectTemplate
                 }
             }}
         >
-            {template.isPro && (
-                <Chip 
-                    label="PRO" 
-                    size="small"
-                    sx={{ 
-                        position: 'absolute', 
-                        top: 14, 
-                        right: 14, 
-                        bgcolor: alpha(template.color, 0.1), 
-                        color: template.color, 
-                        fontWeight: 900, 
-                        fontSize: '0.6rem',
-                        height: 20,
-                        fontFamily: 'var(--font-mono)',
-                        border: `1px solid ${alpha(template.color, 0.2)}`
-                    }} 
-                />
-            )}
-            <Stack spacing={2} sx={{ flex: 1, height: '100%' }}>
-                <Stack direction="row" spacing={1.75} alignItems="flex-start">
+            <Stack spacing={2} sx={{ flex: 1, height: '100%', width: '100%' }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.75 }}>
                     <Box sx={{ width: 44, height: 44, borderRadius: '12px', bgcolor: alpha(template.color, 0.1), color: template.color, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
                         <template.icon size={20} strokeWidth={2.5} />
                     </Box>
-                    <Box sx={{ minWidth: 0, flex: 1, pt: 0.25, pr: template.isPro ? 3.5 : 0 }}>
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.5, pr: 0.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                        <Typography
+                          component="span"
+                          variant="body1"
+                          sx={{
+                            fontWeight: 900,
+                            color: '#fff',
+                            fontSize: '1rem',
+                            letterSpacing: '-0.01em',
+                            lineHeight: 1.3,
+                            display: 'block',
+                            flex: 1,
+                            minWidth: 0,
+                          }}
+                        >
+                          {template.title}
+                        </Typography>
+                        {template.isPro && (
+                          <Chip
+                            label="PRO"
+                            size="small"
+                            sx={{
+                              flexShrink: 0,
+                              bgcolor: alpha(template.color, 0.1),
+                              color: template.color,
+                              fontWeight: 900,
+                              fontSize: '0.6rem',
+                              height: 20,
+                              fontFamily: 'var(--font-mono)',
+                              border: `1px solid ${alpha(template.color, 0.2)}`,
+                            }}
+                          />
+                        )}
+                      </Box>
                       <Typography
                         component="span"
-                        variant="body1"
+                        variant="body2"
                         sx={{
-                          fontWeight: 900,
-                          color: '#fff',
-                          fontSize: '1rem',
-                          letterSpacing: '-0.01em',
-                          lineHeight: 1.3,
-                          display: 'block',
+                          color: 'rgba(255,255,255,0.66)',
+                          display: '-webkit-box',
+                          overflow: 'hidden',
+                          WebkitLineClamp: expanded ? 'unset' : 3,
+                          WebkitBoxOrient: 'vertical',
+                          lineHeight: 1.55,
+                          fontWeight: 500,
+                          fontSize: '0.875rem',
+                          flex: 1,
+                          minHeight: expanded ? 'auto' : '4.1em',
                         }}
                       >
-                        {template.title}
+                        {expanded ? template.description : template.summary}
                       </Typography>
                     </Box>
-                </Stack>
-                
-                <Typography
-                  component="span"
-                  variant="body2"
-                  sx={{
-                    color: 'rgba(255,255,255,0.66)',
-                    display: '-webkit-box',
-                    overflow: 'hidden',
-                    WebkitLineClamp: expanded ? 'unset' : 3,
-                    WebkitBoxOrient: 'vertical',
-                    lineHeight: 1.55,
-                    fontWeight: 500,
-                    fontSize: '0.875rem',
-                    flex: 1,
-                    minHeight: expanded ? 'auto' : '4.1em',
-                  }}
-                >
-                    {expanded ? template.description : template.summary}
-                </Typography>
+                </Box>
 
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 'auto', pt: 0.5 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 'auto', pt: 0.75 }}>
                     <Button 
                         size="small" 
                         onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
@@ -434,7 +438,7 @@ export default function ProjectsPage() {
         }
       }}
     >
-      <Stack direction="row" spacing={2.5} alignItems="center">
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2.5, flex: 1, minWidth: 0 }}>
         <Box
           sx={{
             width: 56,
@@ -444,35 +448,36 @@ export default function ProjectsPage() {
             color: '#6366F1',
             display: 'grid',
             placeItems: 'center',
-            flexShrink: 0
+            flexShrink: 0,
           }}
         >
           <Workflow size={28} strokeWidth={2} />
         </Box>
-        <Box>
-          <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexWrap: 'wrap', gap: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', fontSize: '1.2rem', letterSpacing: '-0.02em' }}>
+        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75, pr: 0.5 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1 }}>
+            <Typography component="span" variant="h6" sx={{ fontWeight: 900, color: '#fff', fontSize: '1.2rem', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
               Smart Action Workflows
             </Typography>
             <Chip
               label={`${Object.keys(savedWorkflows || {}).length} SAVED`}
               size="small"
               sx={{
+                flexShrink: 0,
                 bgcolor: 'rgba(99, 102, 241, 0.1)',
                 color: '#818CF8',
                 fontWeight: 900,
                 fontSize: '0.65rem',
                 fontFamily: 'var(--font-mono)',
                 border: '1px solid rgba(99, 102, 241, 0.2)',
-                height: 20
+                height: 20,
               }}
             />
-          </Stack>
-          <Typography component="span" variant="body2" sx={{ mt: 0.5, color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: '0.875rem', maxWidth: 640, lineHeight: 1.55, display: 'block' }}>
+          </Box>
+          <Typography component="span" variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: '0.875rem', maxWidth: 640, lineHeight: 1.55, display: 'block' }}>
             Record, share, and automate action sequences to boost execution speed. Perfect for repetitive workspace tasks and smart guidance.
           </Typography>
         </Box>
-      </Stack>
+      </Box>
       
       <Button
         variant="outlined"
