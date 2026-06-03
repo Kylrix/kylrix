@@ -143,7 +143,7 @@ export const ContextMenuProvider = ({ children }: { children: ReactNode }) => {
         items.push(
           { label: 'Notes Vault', icon: <FolderIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/note/notes') },
           { label: 'Connect Hub', icon: <ChatIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/connect') },
-          { label: 'Vault Crypt', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault') },
+          { label: 'Vault Crypt', icon: <LockIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/vault/dashboard') },
           { label: 'Settings', icon: <SettingsIcon sx={{ fontSize: 16 }} />, onClick: () => router.push('/settings') }
         );
       } else if (isTopbar) {

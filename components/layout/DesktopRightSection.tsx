@@ -795,7 +795,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                     <IconButton onClick={() => togglePanel(panel)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </IconButton>
-                    <IconButton onClick={() => router.push('/vault')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#10B981' } }}>
+                    <IconButton onClick={() => router.push('/vault/dashboard')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#10B981' } }}>
                       <Maximize2 size={14} />
                     </IconButton>
                   </Box>
@@ -814,7 +814,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                         {secrets.map((secret) => (
                           <Box
                             key={secret.$id}
-                            onClick={() => router.push('/vault')}
+                            onClick={() => router.push('/vault/dashboard')}
                             sx={{
                               display: 'flex',
                               gap: 1.5,

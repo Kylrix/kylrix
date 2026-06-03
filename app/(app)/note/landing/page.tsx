@@ -127,12 +127,12 @@ export default function LandingPage() {
                   >
                     Get Started Free
                   </button>
-                  <a 
+                  <NextLink 
                     href="/docs"
                     className="px-8 py-3.5 border border-white/10 hover:border-white/20 hover:bg-white/5 text-white font-black text-sm uppercase tracking-wider rounded-xl transition text-center active:scale-[0.98]"
                   >
                     Documentation
-                  </a>
+                  </NextLink>
                 </div>
               </div>
             </motion.div>
@@ -209,13 +209,13 @@ export default function LandingPage() {
               </div>
 
               <div className="pt-8 border-t border-white/10 mt-8">
-                <a 
+                <NextLink 
                   href="/developers"
                   className="inline-flex items-center gap-2 px-6 py-3 border border-white/10 hover:border-white/20 hover:bg-white/5 text-white font-black text-sm uppercase tracking-wider rounded-xl transition"
                 >
                   <span>Developer Portal</span>
                   <ArrowRight size={16} />
-                </a>
+                </NextLink>
               </div>
             </div>
 
@@ -242,12 +242,12 @@ export default function LandingPage() {
               >
                 Open Accounts
               </button>
-              <a
+              <NextLink
                 href="/pricing"
                 className="px-6 py-3 border border-white/10 hover:border-white/20 hover:bg-white/5 text-white font-black text-xs uppercase tracking-wider rounded-xl transition text-center whitespace-nowrap active:scale-[0.98]"
               >
                 View Pricing
-              </a>
+              </NextLink>
             </div>
           </div>
         </section>
@@ -265,8 +265,8 @@ export default function LandingPage() {
           </div>
           
           <div className="flex items-center gap-6">
-            <a href="/docs" className="text-xs font-black text-white hover:text-[#6366F1] transition font-clash uppercase tracking-wider">Docs</a>
-            <a href="/downloads" className="text-xs font-black text-white hover:text-[#6366F1] transition font-clash uppercase tracking-wider">Downloads</a>
+            <NextLink href="/docs" className="text-xs font-black text-white hover:text-[#6366F1] transition font-clash uppercase tracking-wider">Docs</NextLink>
+            <NextLink href="/downloads" className="text-xs font-black text-white hover:text-[#6366F1] transition font-clash uppercase tracking-wider">Downloads</NextLink>
           </div>
         </div>
         <div className="max-w-7xl mx-auto mt-8 pt-6 border-t border-white/[0.03] text-center">

@@ -64,9 +64,9 @@ function LoginContent() {
   const getPostAuthDefaultUrl = useCallback(() => {
     const lastApp = getLastActiveApp();
     if (lastApp === 'accounts') return '/accounts/settings/profile';
-    if (lastApp === 'note') return '/note';
+    if (lastApp === 'note') return '/note/notes';
     if (lastApp === 'vault') return '/vault/dashboard';
-    if (lastApp === 'flow') return '/flow';
+    if (lastApp === 'flow') return '/flow/tasks';
     return '/connect';
   }, []);
 

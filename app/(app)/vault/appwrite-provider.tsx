@@ -76,9 +76,8 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
             unlocked,
           });
         
-        // Skip masterpass modal on public landing pages (incl. /vault generator)
-        const isVaultLanding = pathname === '/vault' || pathname === '/vault/';
-        const isAuthPage = pathname === '/' || pathname === '/landing' || isVaultLanding;
+        // Skip masterpass modal on public landing pages
+        const isAuthPage = pathname === '/' || pathname === '/landing';
         
         // The crypto lock state is the source of truth for whether the vault is usable.
         // If it's an auth page, we don't need to force the modal.
@@ -93,7 +92,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
           const retryAccount = getCurrentUserSnapshot() ?? await getCurrentUser(true);
           if (retryAccount) {
             setUser(retryAccount);
-            const isLanding = pathname === '/' || pathname === '/landing' || pathname === '/vault' || pathname === '/vault/';
+            const isLanding = pathname === '/' || pathname === '/landing';
             setNeedsMasterPassword(isLanding ? false : !masterPassCrypto.isVaultUnlocked());
             return retryAccount;
           }
@@ -192,7 +191,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
           setUser(account);
           setIsAuthenticating(false);
           if (pathname === "/" || pathname === "/landing") {
-            router.replace("/vault");
+            router.replace("/vault/dashboard");
           }
           return;
       }
@@ -208,7 +207,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
           setUser(account);
           setIsAuthenticating(false);
           if (pathname === "/" || pathname === "/landing") {
-            router.replace("/vault");
+            router.replace("/vault/dashboard");
           }
           return;
       }
@@ -262,7 +261,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
         
         // Redirect to dashboard if authenticated
         if (account) {
-          router.replace("/vault");
+          router.replace("/vault/dashboard");
         }
       }
     };

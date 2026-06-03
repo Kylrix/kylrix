@@ -189,7 +189,7 @@ export default function SettingsPage() {
                                 </Box>
                                 <Button 
                                     variant={isUnlocked ? "outlined" : "contained"}
-                                    onClick={() => isUnlocked ? ecosystemSecurity.lock() : window.open('/vault', '_blank')}
+                                    onClick={() => isUnlocked ? ecosystemSecurity.lock() : window.open('/vault/dashboard', '_blank')}
                                     color={isUnlocked ? "inherit" : "primary"}
                                     startIcon={isUnlocked ? <LockIcon /> : <ShieldIcon />}
                                     sx={{ borderRadius: '12px', fontWeight: 700 }}

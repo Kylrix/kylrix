@@ -13,9 +13,9 @@ export interface EcosystemApp {
 export const NEXT_PUBLIC_DOMAIN = APPWRITE_CONFIG.SYSTEM?.DOMAIN || 'kylrix.space';
 export const APP_BASE_PATHS: Record<string, string> = {
   accounts: '/accounts',
-  note: '/note',
-  vault: '/vault',
-  flow: '/flow',
+  note: '/note/notes',
+  vault: '/vault/dashboard',
+  flow: '/flow/tasks',
   connect: '/connect',
   kylrix: '/',
 };

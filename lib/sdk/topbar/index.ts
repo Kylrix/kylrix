@@ -368,9 +368,9 @@ export function topbarMatches(query: string, terms: string[]) {
 export function getTopbarLogoHref(app: 'accounts' | 'note' | 'vault' | 'flow' | 'connect' | 'kylrix'): string {
   const paths: Record<string, string> = {
     'accounts': '/accounts/settings/profile',
-    'note': '/note',
-    'vault': '/vault',
-    'flow': '/flow',
+    'note': '/note/notes',
+    'vault': '/vault/dashboard',
+    'flow': '/flow/tasks',
     'connect': '/connect',
     'kylrix': '/',
   };

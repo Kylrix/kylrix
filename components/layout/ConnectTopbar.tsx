@@ -300,7 +300,7 @@ export default function ConnectTopbar({
         { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/projects/workflows', kind: 'note', accent: '#A855F7' }
       ],
       flow: [
-        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flow', kind: 'flow', accent: '#A855F7' }
+        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flow/tasks', kind: 'flow', accent: '#A855F7' }
       ],
       vault: [
         { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault/sharing', kind: 'vault', accent: '#10B981' }
@@ -342,7 +342,7 @@ export default function ConnectTopbar({
         id: 'hist-flow',
         title: 'Coordinate Action Items',
         description: 'Manage outstanding roadmaps and deliverables',
-        href: '/flow',
+        href: '/flow/tasks',
         kind: 'flow',
         accent: '#A855F7'
       });

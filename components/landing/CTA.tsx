@@ -40,7 +40,7 @@ export default function CTA() {
           endIcon={isAuthenticating ? <CircularProgress size={20} color="inherit" /> : <ChevronRightIcon sx={{ fontSize: 20 }} />}
           onClick={() => {
             if (user) {
-              router.push("/vault");
+              router.push("/vault/dashboard");
               return;
             }
             try {

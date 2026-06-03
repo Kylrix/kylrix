@@ -42,6 +42,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/flow/tasks', request.url));
   }
 
+  if (pathname === '/vault' || pathname === '/vault/') {
+    return NextResponse.redirect(new URL('/vault/dashboard', request.url));
+  }
+
   // ─── REDIRECT LOOP DEFENSE ────────────────────────────────────────────
   const redirectDepth = parseInt(searchParams.get(REDIRECT_DEPTH_PARAM) || '0', 10);
   if (redirectDepth >= MAX_REDIRECT_DEPTH) {

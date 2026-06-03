@@ -19,7 +19,7 @@ export default function MasterpassResetClient() {
 
   useEffect(() => {
     if (user === null) {
-      router.replace('/vault');
+      router.replace('/vault/dashboard');
     }
   }, [router, user]);
 
@@ -35,7 +35,7 @@ export default function MasterpassResetClient() {
       await resetMasterpassAndWipe(user.$id);
       localStorage.removeItem(`passkey_skip_${user.$id}`);
       toast.success('Vault wiped. Set a new master password.');
-      const target = callbackUrl ? `/dashboard?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/vault';
+      const target = callbackUrl ? `/dashboard?callbackUrl=${encodeURIComponent(callbackUrl)}` : '/vault/dashboard';
       router.replace(target);
     } catch {
       toast.error('Failed to reset master password');

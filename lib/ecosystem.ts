@@ -15,9 +15,9 @@ export const KYLRIX_DOMAIN = 'kylrix.space';
 export const KYLRIX_AUTH_SUBDOMAIN = 'accounts';
 export const APP_BASE_PATHS: Record<string, string> = {
   accounts: '/accounts',
-  note: '/note',
-  vault: '/vault',
-  flow: '/flow',
+  note: '/note/notes',
+  vault: '/vault/dashboard',
+  flow: '/flow/tasks',
   connect: '/connect',
   kylrix: '/',
   send: '/send',

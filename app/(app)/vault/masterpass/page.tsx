@@ -68,7 +68,7 @@ function MasterPassPageInner() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace('/vault');
+      router.replace('/vault/dashboard');
       return;
     }
     if (!user?.$id) return;

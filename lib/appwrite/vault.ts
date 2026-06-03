@@ -2665,7 +2665,7 @@ export async function getAuthenticationNextRoute(
     // User is fully authenticated, check master password
     const hasMp = await hasMasterpass(userId);
     if (!hasMp) {
-      return "/vault";
+      return "/vault/dashboard";
     }
 
     // Check if vault is unlocked
@@ -2674,15 +2674,15 @@ export async function getAuthenticationNextRoute(
         "../masterpass-crypto"
       );
       if (!masterPassCrypto.isVaultUnlocked()) {
-        return "/vault";
+        return "/vault/dashboard";
       }
     } catch {
       // If can't import crypto module, assume needs master password
-      return "/vault";
+      return "/vault/dashboard";
     }
 
     // Everything is ready, go to dashboard
-    return "/vault";
+    return "/vault/dashboard";
   } catch (error: unknown) {
     console.error("Error determining authentication route:", error);
     throw error;
@@ -2707,10 +2707,10 @@ export async function redirectIfAuthenticated(
       // Fallback to original logic if there's an error
       const hasMp = await hasMasterpass(user.$id);
       if (!hasMp || !isVaultUnlocked()) {
-        router.replace("/vault");
+        router.replace("/vault/dashboard");
         return true;
       } else {
-        router.replace("/vault");
+        router.replace("/vault/dashboard");
         return true;
       }
     }
