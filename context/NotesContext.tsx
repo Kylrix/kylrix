@@ -493,19 +493,19 @@ export function NotesProvider({ children }: { children: ReactNode }) {
 
   const isPinned = useCallback((noteId: string) => {
     const note = notes.find(n => n.$id === noteId);
-    if (note) return !!note.isPinned;
+    if (note && note.isPinned) return true;
     return effectivePinnedIds.includes(noteId);
   }, [notes, effectivePinnedIds]);
 
   const sortedNotes = useMemo(() => {
     return [...notes].sort((a, b) => {
-      const aPinned = !!a.isPinned;
-      const bPinned = !!b.isPinned;
+      const aPinned = a.isPinned || effectivePinnedIds.includes(a.$id);
+      const bPinned = b.isPinned || effectivePinnedIds.includes(b.$id);
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  }, [notes]);
+  }, [notes, effectivePinnedIds]);
 
   /**
    * Memoize the context value so consumers (note list, sidebar, search, etc.) don't

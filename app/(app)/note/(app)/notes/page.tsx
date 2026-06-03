@@ -62,7 +62,8 @@ export default function NotesPage() {
     isLoading: isInitialLoading, 
     upsertNote, 
     removeNote,
-    refetchNotes
+    refetchNotes,
+    isPinned
   } = useNotes();
   const { openOverlay, closeOverlay } = useOverlay();
   const { setConfiguration, resetConfiguration } = useFAB();
@@ -145,18 +146,18 @@ export default function NotesPage() {
     });
   }, [allNotes]);
 
-  // Pinned Notes are filtered cleanly using the native boolean column
+  // Pinned Notes are filtered cleanly using the native boolean column and preference/fallback checking
   const pinnedNotes = useMemo(() => {
     if (searchParams.get('query')) return [];
-    return visibleNotes.filter(n => !!n.isPinned);
-  }, [visibleNotes, searchParams]);
+    return visibleNotes.filter(n => isPinned(n.$id));
+  }, [visibleNotes, searchParams, isPinned]);
 
   // Regular source notes exclude pinned notes when there is no active search query
   const regularSourceNotes = useMemo(() => {
     const hasSearch = searchParams.get('query');
     if (hasSearch) return visibleNotes;
-    return visibleNotes.filter(n => !n.isPinned);
-  }, [visibleNotes, searchParams]);
+    return visibleNotes.filter(n => !isPinned(n.$id));
+  }, [visibleNotes, searchParams, isPinned]);
 
   // Fetch notes action for the search hook
   const fetchNotesAction = useCallback(async () => {

@@ -10,7 +10,7 @@ import { Notes } from '@/types/appwrite';
 
 export function PinnedNotesSidebar() {
   const theme = useTheme();
-  const { notes: allNotes, pinnedIds, upsertNote, removeNote } = useNotes();
+  const { notes: allNotes, pinnedIds, upsertNote, removeNote, isPinned } = useNotes();
   const { closeSidebar } = useDynamicSidebar();
 
   const pinnedNotes = useMemo(() => {
@@ -18,12 +18,12 @@ export function PinnedNotesSidebar() {
       try {
         const meta = JSON.parse(n.metadata || '{}');
         const isEncrypted = meta.isEncrypted === true || meta.isEncrypted === 'true' || n.isEncrypted === true;
-        return !!n.isPinned && !isEncrypted;
+        return isPinned(n.$id) && !isEncrypted;
       } catch {
-        return !!n.isPinned && !n.isEncrypted;
+        return isPinned(n.$id) && !n.isEncrypted;
       }
     });
-  }, [allNotes]);
+  }, [allNotes, isPinned]);
 
   const handleNoteUpdated = (updatedNote: Notes) => {
     upsertNote(updatedNote);

@@ -315,11 +315,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         >
           {/* Top Section */}
           <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
-            
-            {/* Left Icon Container */}
-            <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white/3 text-white/60 grid place-items-center border border-white/8 group-hover:scale-105 group-hover:text-[#EC4899] group-hover:bg-[#EC4899]/10 group-hover:border-[#EC4899]/20 transition-all duration-300">
-              <SummarizeIcon size={20} strokeWidth={1.5} />
-            </div>
 
             {/* Grouped Copy Column */}
             <div className="flex-1 min-w-0 flex flex-col gap-1">
@@ -331,10 +326,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                 <h3 className="text-white text-base font-black tracking-tight leading-tight truncate flex-1 min-w-0 font-mono">
                   {isEncryptedNote ? '🔒 Encrypted note' : note.title || 'Untitled Note'}
                 </h3>
-                <span className="flex-shrink-0 bg-white/5 text-white/40 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-white/8 flex items-center gap-1">
-                  {isPublic ? <PublicIcon size={11} /> : <PrivateIcon size={11} />}
-                  {isPublic ? 'public' : 'private'}
-                </span>
               </div>
 
               {/* Summary / Content Preview */}
@@ -386,16 +377,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           </div>
 
           {/* Bottom Action Bar */}
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/4 flex-shrink-0 select-none">
-            {/* Timestamp */}
-            <div className="flex items-center gap-1 text-xs text-white/30 font-medium">
-              <Calendar size={13} />
-              <span>
-                {note.updatedAt || note.$createdAt
-                  ? new Date(note.updatedAt || note.$createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-                  : 'Active'}
-              </span>
-            </div>
+          <div className="flex items-center justify-end mt-3 pt-3 border-t border-white/4 flex-shrink-0 select-none">
 
             {/* Attachments / Tag Badges */}
             <div className="flex items-center gap-1.5 overflow-hidden max-w-[60%] justify-end">
