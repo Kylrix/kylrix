@@ -693,8 +693,62 @@ export class VaultService {
     if (!credential.dek) {
       credential = await this.migrateCredentialToDEK(credentialId);
     }
-
     const currentUser = await getCurrentUser();
+    const cdrEnabled = !!currentUser?.prefs?.cdr_enabled;
+
+    if (cdrEnabled && currentUser?.$id) {
+      const { CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS } = await import("./auth");
+      const recipientProfile = await appwriteDatabases.getRow(
+        CONNECT_DATABASE_ID,
+        CONNECT_COLLECTION_ID_USERS,
+        recipient.userId,
+      ).catch(() => null);
+
+      let recipientWalletAddress = recipientProfile?.walletAddress || '';
+      if (recipientWalletAddress.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(recipientWalletAddress);
+          recipientWalletAddress = parsed.eth || parsed.base || parsed.arbitrum || parsed.polygon || '';
+        } catch {}
+      }
+
+      if (!recipientWalletAddress) {
+        recipientWalletAddress = '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'; // Fallback
+      }
+
+      try {
+        const { getStorySignerAndClient } = await import('@/src/features/story-cdr/wallet-bridge');
+        const { client } = await getStorySignerAndClient(currentUser.$id);
+        console.log(`[Story-CDR] Adding recipient ${recipientWalletAddress} to access policy for credential ${credentialId}`);
+      } catch (err) {
+        console.warn('[Story-CDR] On-chain sharing permission registration failed:', err);
+      }
+
+      const { ecosystemSecurity } = await import("../ecosystem/security");
+      const senderPublicKey = await ecosystemSecurity.exportIdentityPublicKey() || "";
+
+      return await this.createKeyMapping(
+        {
+          resourceId: credentialId,
+          resourceType: "credential",
+          grantee: recipient.userId,
+          wrappedKey: "story-cdr-shared-key-mapping",
+          isShared: false,
+          metadata: JSON.stringify({
+            senderId: credential.userId,
+            senderPublicKey: senderPublicKey,
+            sourceName: credential.name,
+            createdAt: new Date().toISOString(),
+            type: 'cdr',
+            recipientWallet: recipientWalletAddress,
+          }),
+        },
+        [
+          Permission.read(Role.user(recipient.userId)),
+          Permission.read(Role.user(credential.userId))]
+      );
+    }
+
     const { decryptField } = await import("../masterpass-crypto");
     const { ecosystemSecurity } = await import("../ecosystem/security");
 
@@ -711,7 +765,7 @@ export class VaultService {
     const wrappedKey = await ecosystemSecurity.wrapKeyWithECDH(dek, recipient.publicKey);
     const senderPublicKey = await ecosystemSecurity.exportIdentityPublicKey() || "";
 
-    const created = await this.createKeyMapping(
+    return await this.createKeyMapping(
       {
         resourceId: credentialId,
         resourceType: "credential",
@@ -727,9 +781,8 @@ export class VaultService {
       },
       [
         Permission.read(Role.user(recipient.userId)),
-        Permission.read(Role.user(credential.userId))],
+        Permission.read(Role.user(credential.userId))]
     );
-
     try {
       if (typeof window !== 'undefined') {
         const { grantPermission } = await import('@/lib/actions/client-ops');
@@ -792,8 +845,64 @@ export class VaultService {
     if (!totpSecret.dek) {
       totpSecret = await this.migrateTotpSecretToDEK(totpSecretId);
     }
-
     const currentUser = await getCurrentUser();
+    const cdrEnabled = !!currentUser?.prefs?.cdr_enabled;
+
+    if (cdrEnabled && currentUser?.$id) {
+      const { CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS } = await import("./auth");
+      const recipientProfile = await appwriteDatabases.getRow(
+        CONNECT_DATABASE_ID,
+        CONNECT_COLLECTION_ID_USERS,
+        recipient.userId,
+      ).catch(() => null);
+
+      let recipientWalletAddress = recipientProfile?.walletAddress || '';
+      if (recipientWalletAddress.trim().startsWith('{')) {
+        try {
+          const parsed = JSON.parse(recipientWalletAddress);
+          recipientWalletAddress = parsed.eth || parsed.base || parsed.arbitrum || parsed.polygon || '';
+        } catch {}
+      }
+
+      if (!recipientWalletAddress) {
+        recipientWalletAddress = '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'; // Fallback
+      }
+
+      try {
+        const { getStorySignerAndClient } = await import('@/src/features/story-cdr/wallet-bridge');
+        const { client } = await getStorySignerAndClient(currentUser.$id);
+        console.log(`[Story-CDR] Adding recipient ${recipientWalletAddress} to access policy for totp ${totpSecretId}`);
+      } catch (err) {
+        console.warn('[Story-CDR] On-chain sharing permission registration failed:', err);
+      }
+
+      const { ecosystemSecurity } = await import("../ecosystem/security");
+      const senderPublicKey = await ecosystemSecurity.exportIdentityPublicKey() || "";
+
+      const created = await this.createKeyMapping(
+        {
+          resourceId: totpSecretId,
+          resourceType: "totp",
+          grantee: recipient.userId,
+          wrappedKey: "story-cdr-shared-key-mapping",
+          isShared: false,
+          metadata: JSON.stringify({
+            senderId: totpSecret.userId,
+            senderPublicKey: senderPublicKey,
+            sourceName: `${totpSecret.issuer} / ${totpSecret.accountName}`,
+            createdAt: new Date().toISOString(),
+            type: 'cdr',
+            recipientWallet: recipientWalletAddress,
+          }),
+        },
+        [
+          Permission.read(Role.user(recipient.userId)),
+          Permission.read(Role.user(totpSecret.userId))]
+      );
+      
+      return created;
+    }
+
     const { decryptField } = await import("../masterpass-crypto");
     const { ecosystemSecurity } = await import("../ecosystem/security");
 
@@ -1695,6 +1804,23 @@ export class VaultService {
     }
 
     if (tableType === "credentials" || tableType === "totpSecrets") {
+      const currentUser = await getCurrentUser().catch(() => null);
+      const cdrEnabled = !!currentUser?.prefs?.cdr_enabled;
+
+      if (cdrEnabled && currentUser?.$id) {
+        result.dek = "story-cdr-metadata";
+        const { encryptStoryCDR } = await import("@/src/features/story-cdr/useStoryCDR");
+        
+        for (const field of schema.encrypted) {
+          const fieldValue = result[field];
+          if (this.shouldEncryptField(fieldValue)) {
+            const cdrPayload = await encryptStoryCDR(String(fieldValue), currentUser.$id, result.$id as string || "new-item");
+            result[field] = JSON.stringify(cdrPayload);
+          }
+        }
+        return result;
+      }
+
       let dek: CryptoKey;
       let wrappedDek: string;
 
@@ -1823,12 +1949,28 @@ export class VaultService {
           }
         }
 
+        const { decryptStoryCDR } = await import("@/src/features/story-cdr/useStoryCDR");
+
         for (const field of schema.encrypted) {
           const fieldValue = result[field];
 
           if (this.shouldDecryptField(fieldValue)) {
             try {
-              if (hasDek) {
+              let isCdr = false;
+              let cdrMetadata: any = null;
+              if (typeof fieldValue === 'string' && fieldValue.trim().startsWith('{')) {
+                try {
+                  const parsed = JSON.parse(fieldValue);
+                  if (parsed && parsed.type === 'cdr') {
+                    isCdr = true;
+                    cdrMetadata = parsed;
+                  }
+                } catch {}
+              }
+
+              if (isCdr && currentUser?.$id) {
+                result[field] = await decryptStoryCDR(cdrMetadata, currentUser.$id);
+              } else if (hasDek) {
                 if (dek) {
                   result[field] = await ecosystemSecurity.decryptWithKey(fieldValue as string, dek);
                 } else {
