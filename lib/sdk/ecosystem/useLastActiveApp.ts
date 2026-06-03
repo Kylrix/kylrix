@@ -69,9 +69,9 @@ export function getLastActiveAppRedirectUrl(baseUrl: string): string {
   // Map each app to its dashboard equivalent
   const dashboards: Record<AppName, string> = {
     accounts: '/accounts/settings/profile',
-    note: '/note',
-    vault: '/vault',
-    flow: '/flow',
+    note: '/note/notes',
+    vault: '/vault/dashboard',
+    flow: '/flow/tasks',
     connect: '/connect',
   };
 

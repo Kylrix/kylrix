@@ -31,7 +31,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       const path = pathname || '';
       const isPublic = 
         path === '/' ||
-        path === '/vault' ||
         path.startsWith('/send') ||
         path.startsWith('/note/shared') ||
         path.startsWith('/i/') ||
