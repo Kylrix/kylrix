@@ -57,6 +57,7 @@ import { MultiSectionContainer } from '@/context/SectionContext';
 import { useLocalContext } from '@/lib/context-engine';
 import { useAuth } from '@/lib/auth';
 import { hasPaidKylrixPlan } from '@/lib/utils';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 
 const projectTemplates = [
   { 
@@ -348,6 +349,7 @@ export default function ProjectsPage() {
   const { open } = useUnifiedDrawer();
   const { savedWorkflows } = useLocalContext();
   const { user } = useAuth();
+  const { openProUpgrade } = useProUpgrade();
   
   const [projects, setProjects] = useState<Projects[]>([]);
   const [loading, setLoading] = useState(true);
@@ -372,11 +374,15 @@ export default function ProjectsPage() {
   }, []);
 
   const openCreateDrawer = useCallback((template?: typeof projectTemplates[0]) => {
+    if (template?.isPro && !hasPaidKylrixPlan(user)) {
+      openProUpgrade(`The "${template.title}" template`);
+      return;
+    }
     open('new-project', { 
         onCreated: handleCreated,
         template: template 
     });
-  }, [open, handleCreated]);
+  }, [open, handleCreated, user, openProUpgrade]);
 
   const openCreateDrawerRef = useRef(openCreateDrawer);
   useEffect(() => {
