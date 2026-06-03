@@ -48,6 +48,10 @@ export default function LandingPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.has('stay')) {
+      return;
+    }
     if (isAuthenticated) {
       router.replace('/note/notes');
       return;

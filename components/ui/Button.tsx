@@ -1,8 +1,16 @@
 import React from 'react';
-import { Button as MuiButton, ButtonProps as MuiButtonProps, CircularProgress } from '@/lib/mui-tailwind/material';
+import { Button as MuiButton, CircularProgress } from '@/lib/mui-tailwind/material';
 
-export interface ButtonProps extends MuiButtonProps {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
+  children?: React.ReactNode;
+  variant?: 'contained' | 'outlined' | 'text';
+  color?: 'primary' | 'secondary' | 'inherit';
+  size?: 'small' | 'medium' | 'large';
+  sx?: any;
+  startIcon?: React.ReactNode;
+  endIcon?: React.ReactNode;
+  fullWidth?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(

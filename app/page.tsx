@@ -2,16 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, CircularProgress, Typography, alpha, Button } from '@/lib/mui-tailwind/material';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getLastEcosystemRoute } from '@/lib/ecosystem/state-tracker';
 import { getKylrixPulse } from '@/lib/appwrite';
-import { Sparkles, ArrowRight } from 'lucide-react';
+import LandingPage from '@/app/(app)/note/landing/page';
 
 export default function RootLanding() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
-  const [init, setInit] = useState(false);
   const [stayActive, setStayActive] = useState(false);
 
   useEffect(() => {
@@ -19,7 +17,6 @@ export default function RootLanding() {
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.has('stay')) {
       setStayActive(true);
-      setInit(true);
       return;
     }
 
@@ -40,7 +37,6 @@ export default function RootLanding() {
           router.replace('/connect/chats'); // Default fallback for authenticated
         }
       }
-      setInit(true);
     };
 
     // Use a zero timeout to ensure Next.js router is ready and mounting is complete
@@ -49,75 +45,8 @@ export default function RootLanding() {
     return () => clearTimeout(timeoutId);
   }, [router]);
 
-  // Stay fallback UI
   if (stayActive) {
-    return (
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: '#0A0908',
-          color: '#fff',
-          p: 3,
-          textAlign: 'center'
-        }}
-      >
-        <Box
-          sx={{
-            width: 80,
-            height: 80,
-            borderRadius: '24px',
-            bgcolor: alpha('#F59E0B', 0.1),
-            color: '#F59E0B',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            mb: 4,
-            border: '1px solid rgba(245, 158, 11, 0.2)',
-            boxShadow: '0 0 40px rgba(245, 158, 11, 0.05)'
-          }}
-        >
-          <Sparkles size={40} />
-        </Box>
-        <Typography variant="h4" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', mb: 1, letterSpacing: '-0.02em' }}>
-          Kylrix Sandbox
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 600, mb: 4, maxWidth: 320 }}>
-          Landing page bypass suspended. Stay-mode is active.
-        </Typography>
-        <Button
-          variant="outlined"
-          onClick={() => {
-            if (isAuthenticated) {
-              const lastState = getLastEcosystemRoute();
-              router.push(lastState?.path || '/connect/chats');
-            } else {
-              router.push('/send');
-            }
-          }}
-          endIcon={<ArrowRight size={16} />}
-          sx={{
-            borderRadius: '14px',
-            borderColor: 'rgba(255,255,255,0.1)',
-            color: '#fff',
-            textTransform: 'none',
-            fontWeight: 800,
-            px: 4,
-            py: 1.5,
-            fontSize: '0.9rem',
-            '&:hover': {
-              borderColor: '#fff',
-              bgcolor: 'rgba(255,255,255,0.05)'
-            }
-          }}
-        >
-          Enter Sandbox
-        </Button>
-      </Box>
-    );
+    return <LandingPage />;
   }
 
   return null;
