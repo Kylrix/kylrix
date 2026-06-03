@@ -1641,7 +1641,7 @@ export default function ConnectTopbar({
                 position: 'relative',
               }}
             >
-              <Logo app={activeApp} size={32} />
+              <Logo app={activeApp} size={32} variant={isDesktop ? 'full' : 'icon'} />
             </Box>
 
             {user ? (

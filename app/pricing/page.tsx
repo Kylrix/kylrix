@@ -2,19 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Box, 
-  Container, 
-  Typography, 
-  Button, 
-  Stack, 
-  Grid, 
-  alpha,
-  Paper,
-  Slider,
-  Tooltip,
-} from '@/lib/mui-tailwind/material';
-import { Info, Sparkles, Globe, ShieldCheck, ArrowRight } from 'lucide-react';
+import { Info, Sparkles, Globe, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react';
 
 import Logo from '@/components/Logo';
 import PaymentMethodDrawer from '@/components/PaymentMethodDrawer';
@@ -60,183 +48,146 @@ export default function PricingPage() {
     router.push(checkoutUrl);
   };
 
-  const pppSavings = useMemo(() => {
-    const standardUsd = months >= 12 ? 100 : 10;
-    const diff = standardUsd - (totalPrice / (months >= 12 ? Math.floor(months/12) : 1));
-    return diff > 0.5 ? diff : 0;
-  }, [totalPrice, months]);
-
   return (
-    <Box component="main" sx={{ minHeight: '100vh', bgcolor: '#000000', color: 'white' }}>
+    <div className="min-h-screen bg-black text-white relative pt-12 pb-20 px-4 md:px-6">
+      
+      {/* Conditionally Render Drawer (Global Unmount Policy) */}
+      {paymentDrawerOpen && (
+        <PaymentMethodDrawer
+          onClose={() => setPaymentDrawerOpen(false)}
+          months={months}
+          totalPrice={totalPrice}
+          onPaymentMethodSelect={handlePaymentMethodSelect}
+        />
+      )}
 
-      <PaymentMethodDrawer
-        open={paymentDrawerOpen}
-        onClose={() => setPaymentDrawerOpen(false)}
-        months={months}
-        totalPrice={totalPrice}
-        onPaymentMethodSelect={handlePaymentMethodSelect}
-      />
-
-      <Container maxWidth="md" sx={{ py: { xs: 8, md: 12 }, position: 'relative', zIndex: 1 }}>
-        <Box sx={{ textAlign: 'center', mb: 8 }}>
-          <Typography variant="h1" sx={{ fontWeight: 900, fontSize: { xs: '2.5rem', md: '4.5rem' }, fontFamily: 'Clash Display', mb: 2 }}>
-            Kylrix Pro
-          </Typography>
-          <Typography sx={{ opacity: 0.6, fontSize: '1.1rem', maxWidth: 600, mx: 'auto', fontFamily: 'Satoshi' }}>
-            Get full access to the ecosystem with a plan that scales with you and respects your local economy.
-          </Typography>
-        </Box>
-
-        <Paper 
-          elevation={0}
-          sx={{
-            p: { xs: 4, md: 6 },
-            borderRadius: '24px',
-            background: '#161514',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-          }}
+      <div className="max-w-4xl mx-auto relative z-10">
+        
+        {/* Back Button */}
+        <button
+          onClick={() => router.back()}
+          className="w-11 h-11 mb-6 bg-[#161412] text-white border border-white/6 rounded-[14px] flex items-center justify-center hover:bg-[#1C1A18] hover:-translate-x-0.5 transition-all"
         >
-          <Grid container spacing={6} alignItems="center">
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={4}>
-                <Box>
-                  <Typography sx={{ color: '#6366F1', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', tracking: '0.1em', mb: 1 }}>
-                    Duration
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 900, mb: 3, fontFamily: 'Clash Display' }}>
-                    {months} {months === 1 ? 'Month' : 'Months'}
-                  </Typography>
-                  <Slider
-                    value={months}
-                    min={1}
-                    max={24}
-                    onChange={(_, val) => setMonths(val as number)}
-                    sx={{
-                      color: '#6366F1',
-                      '& .MuiSlider-thumb': {
-                        width: 24,
-                        height: 24,
-                        backgroundColor: '#fff',
-                        border: '2px solid #6366F1',
-                      },
-                      '& .MuiSlider-rail': { opacity: 0.1 },
-                    }}
-                  />
-                  {isYearly && (
-                    <Box sx={{ mt: 2, p: 1.5, borderRadius: '12px', bgcolor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-                      <Sparkles size={16} color="#10b981" />
-                      <Typography sx={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 700 }}>
-                        Yearly Discount: 2 Months Free applied
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+          <ArrowLeft size={18} />
+        </button>
 
-                <Stack spacing={2}>
-                  {[
-                    { icon: ShieldCheck, text: 'Unlimited Vault & Notes storage' },
-                    { icon: Globe, text: 'Universal Identity across all apps' },
-                    { icon: Sparkles, text: 'Full AI Neural Graph access' }
-                  ].map((feat, i) => (
-                    <Stack key={i} direction="row" spacing={2} alignItems="center">
-                      <feat.icon size={18} color="#6366F1" />
-                      <Typography sx={{ fontSize: '0.95rem', opacity: 0.8 }}>{feat.text}</Typography>
-                    </Stack>
-                  ))}
-                </Stack>
-              </Stack>
-            </Grid>
+        {/* Header Section */}
+        <div className="text-center mb-10 md:mb-14">
+          <h1 className="text-white font-black text-4xl md:text-6xl tracking-tight leading-tight mb-3 font-mono">
+            Kylrix Pro
+          </h1>
+          <p className="text-white/60 text-sm md:text-base font-medium max-w-xl mx-auto leading-relaxed">
+            Get full access to the ecosystem with a plan that scales with you and respects your local economy.
+          </p>
+        </div>
 
-            <Grid size={{ xs: 12, md: 6 }}>
-                <Box sx={{ p: 4, borderRadius: '24px', bgcolor: '#1F1D1B', border: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
-                <Typography sx={{ opacity: 0.5, fontSize: '0.85rem', mb: 1 }}>Total Amount</Typography>
-                <Typography sx={{ fontSize: '4rem', fontWeight: 900, fontFamily: 'JetBrains Mono', lineHeight: 1 }}>
-                  ${totalPrice.toFixed(2)}
-                </Typography>
-
+        {/* Main Box Card */}
+        <div className="bg-[#161514] border border-white/8 rounded-[28px] p-6 md:p-10 shadow-2xl">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
+            
+            {/* Left Options/Features */}
+            <div className="flex flex-col gap-6">
+              <div>
+                <span className="text-[10px] text-[#6366F1] font-black uppercase tracking-wider block mb-2 font-mono">
+                  Plan Duration
+                </span>
+                <h3 className="text-white text-xl md:text-2xl font-black tracking-tight leading-tight mb-4">
+                  {months} {months === 1 ? 'Month' : 'Months'}
+                </h3>
                 
-                {detectedRegion.countryCode !== 'US' && (
-                  <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-                    <Typography sx={{ color: '#6366F1', fontWeight: 700, fontSize: '0.9rem' }}>
-                      Regional Price Applied ({detectedRegion.name})
-                    </Typography>
-                    <Typography sx={{ opacity: 0.4, fontSize: '0.75rem' }}>
-                      Prices are adjusted to be fair everywhere.
-                    </Typography>
-                  </Box>
+                {/* Native Custom Styled Slider */}
+                <input
+                  type="range"
+                  min={1}
+                  max={24}
+                  value={months}
+                  onChange={(e) => setMonths(Number(e.target.value))}
+                  className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#6366F1] focus:outline-none"
+                />
+                
+                {isYearly && (
+                  <div className="mt-4 p-3 rounded-[12px] bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 inline-flex">
+                    <Sparkles size={16} className="text-emerald-400 flex-shrink-0" />
+                    <span className="text-emerald-400 text-xs font-black">
+                      Yearly Discount: 2 Months Free applied
+                    </span>
+                  </div>
                 )}
+              </div>
 
-                <Button 
-                  onClick={handleSubscribe}
-                  fullWidth
-                  disabled={isRedirecting}
-                  variant="contained"
-                  sx={{
-                    mt: 4,
-                    py: 2,
-                    borderRadius: '16px',
-                    fontWeight: 900,
-                    bgcolor: 'white',
-                    color: 'black',
-                    fontSize: '1.1rem',
-                    '&:hover': { bgcolor: '#f0f0f0' }
-                  }}
-                >
-                  {isRedirecting ? 'Redirecting...' : 'Continue to Checkout'}
-                </Button>
-                
-                <Typography sx={{ mt: 3, opacity: 0.4, fontSize: '0.75rem', px: 2 }}>
-                  Your subscription time is calculated based on your contribution. Any payment amount is automatically converted into active Pro time.
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </Paper>
+              {/* Feature Checklist */}
+              <div className="flex flex-col gap-3.5 pt-2">
+                {[
+                  { icon: ShieldCheck, text: 'Unlimited Vault & Notes storage' },
+                  { icon: Globe, text: 'Universal Identity across all apps' },
+                  { icon: Sparkles, text: 'Full AI Neural Graph access' }
+                ].map((feat, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <feat.icon size={18} className="text-[#6366F1] flex-shrink-0" />
+                    <span className="text-sm font-bold text-white/80">{feat.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        <Box sx={{ mt: 6, textAlign: 'center' }}>
-          <Paper
-            elevation={0}
-            sx={{
-              display: 'inline-flex',
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: 'center',
-              gap: { xs: 1, sm: 3 },
-              px: { xs: 3, sm: 4 },
-              py: 2.5,
-              borderRadius: '30px',
-              background: '#1F1D1B',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-            }}
-          >
-            <Typography sx={{ fontSize: '0.95rem', fontWeight: 600, fontFamily: 'Satoshi', color: 'white' }}>
+            {/* Right Pricing Summary Box */}
+            <div className="p-6 rounded-[24px] bg-[#1F1D1B] border border-white/8 text-center flex flex-col items-center justify-center gap-4">
+              <div>
+                <span className="text-white/40 text-[11px] font-bold block mb-1">
+                  Total Amount
+                </span>
+                <span className="text-4xl md:text-5xl font-black text-white font-mono leading-none tracking-tight">
+                  ${totalPrice.toFixed(2)}
+                </span>
+              </div>
+
+              {detectedRegion.countryCode !== 'US' && (
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-[#6366F1] font-black text-xs">
+                    Regional Price Applied ({detectedRegion.name})
+                  </span>
+                  <span className="text-[10px] text-white/40 font-semibold">
+                    Prices are adjusted to be fair everywhere.
+                  </span>
+                </div>
+              )}
+
+              <button 
+                onClick={handleSubscribe}
+                disabled={isRedirecting}
+                className="w-full py-3.5 mt-4 bg-white hover:bg-neutral-200 disabled:opacity-40 text-black font-black text-sm md:text-base rounded-[16px] transition-all shadow-[0_4px_12px_rgba(255,255,255,0.05)]"
+              >
+                {isRedirecting ? 'Redirecting...' : 'Continue to Checkout'}
+              </button>
+              
+              <p className="text-[10px] text-white/30 font-medium leading-normal px-2 mt-2">
+                Your subscription time is calculated based on your contribution. Any payment amount is automatically converted into active Pro time.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Free Plan Callout */}
+        <div className="mt-8 text-center">
+          <div className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-6 px-6 py-3.5 rounded-full bg-[#1F1D1B] border border-white/8">
+            <span className="text-sm font-bold text-white">
               Kylrix Free is free forever. No pressure.
-            </Typography>
+            </span>
             
-            <Box sx={{ display: { xs: 'none', sm: 'block' }, width: '1px', height: '24px', bgcolor: 'rgba(255, 255, 255, 0.1)' }} />
+            <div className="hidden sm:block w-px h-5 bg-white/10" />
             
-            <Button
-              href="/"
-              endIcon={<ArrowRight size={18} />}
-              sx={{
-                textTransform: 'none',
-                color: '#000',
-                fontWeight: 900,
-                fontFamily: 'Clash Display',
-                fontSize: '1rem',
-                bgcolor: '#6366F1',
-                '&:hover': {
-                  bgcolor: alpha('#6366F1', 0.85),
-                  transform: 'translateX(4px)'
-                },
-                transition: 'all 0.3s ease'
-              }}
+            <button
+              onClick={() => router.push('/')}
+              className="inline-flex items-center gap-1.5 text-black bg-[#6366F1] hover:bg-[#6366F1]/90 font-black text-xs px-4 py-2 rounded-full transition-all group"
             >
-              Continue Free
-            </Button>
-          </Paper>
-        </Box>
+              <span>Continue Free</span>
+              <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </div>
+        </div>
 
-      </Container>
-    </Box>
+      </div>
+    </div>
   );
 }
