@@ -146,14 +146,9 @@ export function NewTagDrawer() {
         });
       } else {
         await createTag({
-          id: ID.unique(),
-          userId: user.$id,
           name: formData.name.trim(),
           description: formData.description.trim(),
           color: formData.color,
-          notes: [],
-          usageCount: 0,
-          createdAt: new Date().toISOString(),
         });
       }
       
@@ -185,14 +180,9 @@ export function NewTagDrawer() {
         });
       } else {
         savedTag = await createTag({
-          id: ID.unique(),
-          userId: user.$id,
           name: formData.name.trim(),
           description: formData.description.trim(),
           color: formData.color,
-          notes: [],
-          usageCount: 0,
-          createdAt: new Date().toISOString(),
         });
       }
       

@@ -984,41 +984,81 @@ export async function createTag(data: Partial<Tags>) {
   const user = await getCurrentUser();
   if (!user || !user.$id) throw new Error("User not authenticated");
   
-  // Create tag with proper timestamps
+  const name = data.name?.trim();
+  if (!name) throw new Error("Tag name is required");
+
+  // Prepare metadata for non-schema fields
+  const metadata: Record<string, any> = {};
+  if (data.color) metadata.color = data.color;
+  if (data.description) metadata.description = data.description;
+  
+  // Create tag with proper schema fields
   const now = new Date().toISOString();
-  const cleanData = cleanRowData(data);
   const doc = await databases.createRow(
     APPWRITE_DATABASE_ID,
     APPWRITE_TABLE_ID_TAGS,
     ID.unique(),
     {
-      ...cleanData,
+      name,
+      nameLower: name.toLowerCase(),
       userId: user.$id,
-      id: null, // id will be set after creation
+      metadata: Object.keys(metadata).length > 0 ? JSON.stringify(metadata) : null,
+      isPublic: !!data.isPublic,
+      isGuest: !!data.isGuest,
+      usageCount: 0,
       createdAt: now
     }
   );
   
-  // Patch the tag to set id = $id (Appwrite does not set this automatically)
-  await databases.updateRow(
-    APPWRITE_DATABASE_ID,
-    APPWRITE_TABLE_ID_TAGS,
-    doc.$id,
-    { id: doc.$id }
-  );
-  
-  // Return the updated row as Tags type
-  return await getTag(doc.$id);
+  // Return the updated row
+  return hydrateTagMetadata(doc as unknown as Tags);
+}
+
+function hydrateTagMetadata(tag: Tags): Tags {
+    if (!tag) return tag;
+    const t = tag as any;
+    if (t.metadata) {
+        try {
+            const extra = JSON.parse(t.metadata);
+            if (extra && typeof extra === 'object') {
+                Object.assign(t, extra);
+            }
+        } catch { /* ignore */ }
+    }
+    return t as Tags;
 }
 
 export async function getTag(tagId: string): Promise<Tags> {
-  return databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId) as unknown as Promise<Tags>;
+  const doc = await databases.getRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId);
+  return hydrateTagMetadata(doc as unknown as Tags);
 }
 
 export async function updateTag(tagId: string, data: Partial<Tags>) {
-  // Do not allow updating id or userId directly
-  const { id, userId, ...rest } = data;
-  return databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId, cleanRowData(rest));
+  // Get existing for metadata merge
+  const existing = await getTag(tagId);
+  
+  const name = data.name?.trim() || existing.name;
+  
+  const metadata: Record<string, any> = {};
+  try {
+      if ((existing as any).metadata) {
+          Object.assign(metadata, JSON.parse((existing as any).metadata));
+      }
+  } catch {}
+  
+  if (data.color) metadata.color = data.color;
+  if (data.description) metadata.description = data.description;
+
+  const update: any = {
+    name,
+    nameLower: name.toLowerCase(),
+    metadata: Object.keys(metadata).length > 0 ? JSON.stringify(metadata) : null,
+    isPublic: data.isPublic !== undefined ? !!data.isPublic : existing.isPublic,
+    isGuest: data.isGuest !== undefined ? !!data.isGuest : existing.isGuest,
+  };
+
+  const doc = await databases.updateRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId, update);
+  return hydrateTagMetadata(doc as unknown as Tags);
 }
 
 export async function deleteTag(tagId: string) {
@@ -1048,7 +1088,10 @@ export async function listTags(queries: any[] = [], limit: number = 100) {
   
   // Cast rows to Tags[]
   const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, finalQueries);
-  return { ...res, rows: res.rows as unknown as Tags[] };
+  return { 
+      ...res, 
+      rows: (res.rows as unknown as Tags[]).map(t => hydrateTagMetadata(t)) 
+  };
 }
 
 // New function to get all tags with cursor pagination
@@ -1074,7 +1117,7 @@ export async function getAllTags(): Promise<{ rows: Tags[], total: number }> {
     }
     
     const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, queries);
-    const tags = res.rows as unknown as Tags[];
+    const tags = (res.rows as unknown as Tags[]).map(t => hydrateTagMetadata(t));
     
     allTags = [...allTags, ...tags];
     
@@ -1783,11 +1826,15 @@ export async function getNotesByTag(tagId: string): Promise<Notes[]> {
         const pivotResForHydration = await databases.listRows(
           APPWRITE_DATABASE_ID,
           noteTagsTable,
-          [Query.equal('noteId', notes.map((n: any) => n.$id || (n as any).id).filter(Boolean)), Query.limit(Math.min(1000, notes.length * 10))] as any
+          [
+            Query.equal('resourceId', notes.map((n: any) => n.$id || (n as any).id).filter(Boolean)),
+            Query.equal('resourceType', 'note'),
+            Query.limit(Math.min(1000, notes.length * 10))
+          ] as any
         );
         const tagsByNoteId: { [noteId: string]: Set<string> } = {};
         pivotResForHydration.rows.forEach((p: any) => {
-          const noteId = p.noteId;
+          const noteId = p.resourceId;
           if (noteId) {
             if (!tagsByNoteId[noteId]) {
               tagsByNoteId[noteId] = new Set();

@@ -118,16 +118,18 @@ export default function ProjectCard({ project, onClick, onDelete, onTogglePin }:
                   {project.title}
                 </Box>
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'rgba(255,255,255,0.3)' }}>
-                {getVisibilityIcon()}
-                <Typography
-                  component="span"
-                  variant="caption"
-                  sx={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', lineHeight: 1.3 }}
-                >
-                  {project.visibility}
-                </Typography>
-              </Box>
+              {project.visibility === 'public' && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'rgba(255,255,255,0.3)' }}>
+                  {getVisibilityIcon()}
+                  <Typography
+                    component="span"
+                    variant="caption"
+                    sx={{ textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em', lineHeight: 1.3 }}
+                  >
+                    {project.visibility}
+                  </Typography>
+                </Box>
+              )}
             </Box>
             {!(project as any).isPending ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
