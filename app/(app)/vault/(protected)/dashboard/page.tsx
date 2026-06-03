@@ -20,7 +20,7 @@ import { MultiSectionContainer, useSection } from '@/context/SectionContext';
 import { ArrowLeft, Plus, Eye, EyeOff } from 'lucide-react';
 
 function DashboardPageContent() {
-  const { user, needsMasterPassword, isVaultUnlocked } = useAppwriteVault();
+  const { user, needsMasterPassword, isVaultUnlocked, isVaultBlurEnabled, setVaultBlurEnabled } = useAppwriteVault();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { registerCreateModal } = useAI();
@@ -33,7 +33,6 @@ function DashboardPageContent() {
   
   // State for all credentials, fetched once
   const [allCredentials, setAllCredentials] = useState<Credentials[]>([]);
-  const [isBlurEnabled, setIsBlurEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [dialogType, setDialogType] = useState<string>("login");
@@ -215,12 +214,12 @@ function DashboardPageContent() {
                   Secrets
                 </h1>
                 <button
-                  onClick={() => setIsBlurEnabled(!isBlurEnabled)}
+                  onClick={() => setVaultBlurEnabled(!isVaultBlurEnabled)}
                   className={`p-2 border border-[#1C1A18] rounded-xl transition-colors ${
-                    isBlurEnabled ? 'text-white/40 bg-[#161412]' : 'text-[#10B981] bg-[#161412]'
+                    isVaultBlurEnabled ? 'text-white/40 bg-[#161412]' : 'text-[#10B981] bg-[#161412]'
                   } hover:bg-[#1C1A18]`}
                 >
-                  {isBlurEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {isVaultBlurEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
 
@@ -248,7 +247,7 @@ function DashboardPageContent() {
                       onEdit={() => handleEdit(cred)}
                       onDelete={() => openDeleteModal(cred)}
                       onTogglePin={() => handleTogglePin(cred.$id)}
-                      isBlurEnabled={isBlurEnabled}
+                      isBlurEnabled={isVaultBlurEnabled}
                       onClick={() => {
                         setSelectedCredential(cred);
                         setActiveDetail({ type: 'secret', id: cred.$id, data: cred });

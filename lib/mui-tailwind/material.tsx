@@ -853,44 +853,57 @@ export const TextField = React.forwardRef(({
   ...props
 }: any, ref) => {
   const readOnly = InputProps?.readOnly ?? props.readOnly;
+  const startAdornment = InputProps?.startAdornment;
+  const endAdornment = InputProps?.endAdornment;
+  
   const inputStyle = cleanSx(InputProps?.sx);
-  const inputClass = `w-full bg-[#0A0908] border ${error ? 'border-red-500' : 'border-[#23211F]'} text-stone-200 rounded-xl px-4 py-2.5 text-sm font-space-grotesk outline-none focus:border-indigo-500 transition-all ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${readOnly ? 'cursor-default' : ''}`;
+  const inputClass = `w-full bg-transparent text-stone-200 text-sm font-space-grotesk outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${readOnly ? 'cursor-default' : ''}`;
+  
+  const containerClass = `flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${className || ''}`;
+  const wrapperClass = `flex items-center gap-2 bg-[#0A0908] border ${error ? 'border-red-500' : 'border-[#23211F]'} rounded-xl px-4 py-2.5 transition-all focus-within:border-indigo-500`;
+
   const inputProps = { ...props };
   delete inputProps.readOnly;
+
   return (
-    <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''} ${className || ''}`} style={cleanSx(sx)}>
+    <div className={containerClass} style={cleanSx(sx)}>
       {label && (
         <label className="text-xs font-bold text-stone-400 tracking-wide uppercase font-clash">
           {label}
         </label>
       )}
-      {multiline ? (
-        <textarea
-          ref={inputRef || ref}
-          value={value}
-          onChange={onChange}
-          readOnly={readOnly}
-          disabled={disabled}
-          placeholder={placeholder}
-          rows={rows ?? minRows ?? 3}
-          className={inputClass}
-          style={inputStyle}
-          {...inputProps}
-        />
-      ) : (
-        <input
-          ref={inputRef || ref}
-          type={type}
-          value={value}
-          onChange={onChange}
-          readOnly={readOnly}
-          disabled={disabled}
-          placeholder={placeholder}
-          className={inputClass}
-          style={inputStyle}
-          {...inputProps}
-        />
-      )}
+      <div className={wrapperClass}>
+        {startAdornment}
+        {multiline ? (
+          <textarea
+            ref={inputRef || ref}
+            value={value}
+            onChange={onChange}
+            readOnly={readOnly}
+            disabled={disabled}
+            placeholder={placeholder}
+            rows={rows ?? minRows ?? 3}
+            className={inputClass}
+            style={inputStyle}
+            {...inputProps}
+          />
+        ) : (
+          <input
+            ref={inputRef || ref}
+            type={type}
+            value={value}
+            onChange={onChange}
+            readOnly={readOnly}
+            disabled={disabled}
+            placeholder={placeholder}
+            className={inputClass}
+            style={inputStyle}
+            autoComplete="off"
+            {...inputProps}
+          />
+        )}
+        {endAdornment}
+      </div>
       {helperText && (
         <span className={`text-xs ${error ? 'text-red-500' : 'text-stone-500'} font-mono`}>
           {helperText}

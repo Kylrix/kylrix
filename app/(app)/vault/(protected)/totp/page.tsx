@@ -17,7 +17,7 @@ function TOTPPageContent() {
   const [search, setSearch] = useState("");
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { user, isVaultUnlocked } = useAppwriteVault();
+  const { user, isVaultUnlocked, isVaultBlurEnabled } = useAppwriteVault();
   
   type TotpItem = {
     $id: string;
@@ -205,7 +205,10 @@ function TOTPPageContent() {
             <div className="text-[1.05rem] font-extrabold text-white font-clash leading-tight truncate">
               {totp.issuer || "Smart Code"}
             </div>
-            <div className="text-sm font-medium text-[#9B9691] font-satoshi mt-0.5 truncate">
+            <div 
+              className="text-sm font-medium text-[#9B9691] font-satoshi mt-0.5 truncate transition-[filter] duration-300"
+              style={{ filter: isVaultBlurEnabled ? 'blur(4.5px)' : 'none' }}
+            >
               {totp.accountName || "No account info"}
             </div>
             
@@ -228,7 +231,10 @@ function TOTPPageContent() {
         <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 w-full sm:w-auto mt-5 sm:mt-0 pt-5 sm:pt-0 border-t sm:border-t-0 border-white/5">
           {/* 6-Digit Code & Copy Button */}
           <div className="flex items-center gap-3">
-            <span className="text-xl font-black font-mono tracking-wider text-emerald-500">
+            <span 
+              className="text-xl font-black font-mono tracking-wider text-emerald-500 transition-[filter] duration-300"
+              style={{ filter: isVaultBlurEnabled ? 'blur(6px)' : 'none' }}
+            >
               {code.substring(0, 3)} {code.substring(3)}
             </span>
             <button 

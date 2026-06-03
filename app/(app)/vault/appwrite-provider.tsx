@@ -38,17 +38,18 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(!initialUser);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [needsMasterPassword, setNeedsMasterPassword] = useState(false);
+  const [isVaultBlurEnabled, setIsVaultBlurEnabled] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [idmWindowOpen, setIDMWindowOpen] = useState(false);
-  const idmWindowRef = useRef<Window | null>(null);
-  const router = useRouter();
-  const pathname = usePathname();
   const verbose = process.env.NODE_ENV === "development";
-
+  const pathname = usePathname();
   const fetchUserRef = useRef<
     ((isRetry?: boolean, retryCount?: number) => Promise<Models.User<Models.Preferences> | null | undefined>) | undefined
   >(undefined);
+
   const attemptSilentAuthRef = useRef<() => Promise<void>>(async () => undefined);
+
+  // ... (existing state)
 
   // Fetch current user and check master password status
   const fetchUser = useCallback(async (isRetry = false, retryCount = 0) => {
@@ -64,12 +65,13 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
         // Update user state first
         setUser(account);
 
-        // Clear the auth=success param from URL if it exists
-        if (window.location.search.includes('auth=success')) {
-          const url = new URL(window.location.href);
-          url.searchParams.delete('auth');
-          window.history.replaceState({}, '', url.toString());
+        // Load blur preference
+        if (account.prefs?.vault_blur_enabled !== undefined) {
+            setIsVaultBlurEnabled(!!account.prefs.vault_blur_enabled);
         }
+
+        // Clear the auth=success param from URL if it exists
+        // ... (existing logic)
 
         const unlocked = masterPassCrypto.isVaultUnlocked();
         if (verbose)
@@ -383,6 +385,19 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     return unlocked;
   }, [verbose]);
 
+  const setVaultBlurEnabled = async (enabled: boolean) => {
+    setIsVaultBlurEnabled(enabled);
+    if (user?.$id) {
+        try {
+            const { account } = await import('@/lib/appwrite/client');
+            const currentPrefs = user.prefs || {};
+            await account.updatePrefs({ ...currentPrefs, vault_blur_enabled: enabled });
+        } catch (err) {
+            console.error("[Vault] Failed to persist blur preference", err);
+        }
+    }
+  };
+
   const contextValue = useMemo(() => ({
     user,
     loading,
@@ -397,7 +412,9 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     openIDMWindow,
     closeIDMWindow,
     idmWindowOpen,
-  }), [user, loading, isAuthenticating, isAuthReady, isVaultUnlocked, needsMasterPassword, logout, resetMasterpass, refresh, openIDMWindow, closeIDMWindow, idmWindowOpen]);
+    isVaultBlurEnabled,
+    setVaultBlurEnabled,
+  }), [user, loading, isAuthenticating, isAuthReady, isVaultUnlocked, needsMasterPassword, logout, resetMasterpass, refresh, openIDMWindow, closeIDMWindow, idmWindowOpen, isVaultBlurEnabled]);
 
   return (
     <AppwriteContext.Provider

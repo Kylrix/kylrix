@@ -17,6 +17,8 @@ export interface AppwriteContextType {
   openIDMWindow: () => Promise<void>;
   closeIDMWindow: () => void;
   idmWindowOpen: boolean;
+  isVaultBlurEnabled: boolean;
+  setVaultBlurEnabled: (enabled: boolean) => Promise<void>;
 }
 
 export const AppwriteContext = createContext<AppwriteContextType | undefined>(

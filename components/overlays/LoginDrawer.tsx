@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { Box, Typography, Button, Divider, IconButton, TextField, Stack, CircularProgress, alpha, useTheme, useMediaQuery } from '@/lib/mui-tailwind/material';
+import { Box, Typography, Button, Divider, IconButton, TextField, Stack, CircularProgress, alpha, useTheme, useMediaQuery, Drawer } from '@/lib/mui-tailwind/material';
 import { X, Mail, ArrowLeft, Fingerprint } from 'lucide-react';
-import Drawer from '@/lib/mui-tailwind/material';
 import { useAuth } from '@/context/auth/AuthContext';
 import OAuthButtons from '@/components/OAuthButtons';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
