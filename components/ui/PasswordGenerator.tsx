@@ -1,28 +1,47 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Copy, Check, RefreshCw, History } from 'lucide-react';
 import { generateRandomPassword } from '@/utils/password';
 import toast from 'react-hot-toast';
 
 interface PasswordGeneratorProps {
   onPasswordSelect?: (password: string) => void;
+  currentPassword?: string;
 }
 
-export default function PasswordGenerator({ onPasswordSelect }: PasswordGeneratorProps) {
+export default function PasswordGenerator({ onPasswordSelect, currentPassword }: PasswordGeneratorProps) {
   const [length, setLength] = useState(16);
-  const [password, setPassword] = useState(() => generateRandomPassword(16));
+  const [password, setPassword] = useState(() => currentPassword || generateRandomPassword(16));
   const [copied, setCopied] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<{ value: string; ts: number }[]>([]);
+  const isFirstMount = useRef(true);
 
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      // On mount, if parent is empty, auto-generate and select
+      if (!currentPassword) {
+        const newPassword = generateRandomPassword(length);
+        setPassword(newPassword);
+        if (onPasswordSelect) {
+          onPasswordSelect(newPassword);
+        }
+      } else {
+        // If parent already has password, use it internally
+        setPassword(currentPassword);
+      }
+      return;
+    }
+
+    // On subsequent length changes, generate new
     const newPassword = generateRandomPassword(length);
     setPassword(newPassword);
     if (onPasswordSelect) {
       onPasswordSelect(newPassword);
     }
-  }, [length, onPasswordSelect]);
+  }, [length]);
 
   const handleGenerate = () => {
     const newPassword = generateRandomPassword(length);

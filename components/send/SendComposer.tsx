@@ -28,6 +28,7 @@ import {
 import MuralPattern from '@/components/chat/MuralPattern';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 import { FastDraftInput, type FastDraftInputHandle } from '@/components/common/FastDraftInput';
+import PasswordGenerator from '@/components/ui/PasswordGenerator';
 
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -1016,6 +1017,10 @@ export function SendComposer() {
                         onChange={(e) => setUsername(e.target.value)}
                         className="w-full bg-transparent text-sm font-mono text-white py-1 border-b border-dashed border-[#34322F] focus:border-[#10B981] focus:outline-none placeholder-white/20"
                       />
+                    </div>
+
+                    <div className="flex flex-col gap-1 my-1">
+                      <PasswordGenerator onPasswordSelect={(pwd) => setPassword(pwd)} currentPassword={password} />
                     </div>
 
                     <div className="flex flex-col gap-1">
