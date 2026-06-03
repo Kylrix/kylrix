@@ -106,48 +106,6 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-[#0A0908] text-white/90 flex flex-col font-satoshi relative overflow-hidden">
-      {/* Top Header */}
-      <header className="sticky top-0 z-[100] bg-[#0A0908]/80 backdrop-blur border-b border-white/5 h-20 flex items-center px-6 md:px-12">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-          <Logo 
-            app="note" 
-            size={36} 
-            variant="full" 
-            href="/note"
-            component="a"
-            className="hover:opacity-80 transition"
-          />
-
-          <nav className="hidden md:flex items-center gap-8">
-            {['Product', 'Solutions', 'Resources', 'Pricing'].map((item) => (
-              <a
-                key={item}
-                href="#"
-                className="text-[10px] font-black uppercase tracking-widest text-white/50 hover:text-[#6366F1] transition font-clash"
-              >
-                {item}
-              </a>
-            ))}
-          </nav>
-
-          <div>
-            {isAuthenticated ? (
-              <div className="w-9 h-9 rounded-full bg-[#6366F1] text-black flex items-center justify-center text-sm font-black font-clash">
-                {getUserInitials(user)}
-              </div>
-            ) : (
-              <button 
-                onClick={() => openIDMWindow()}
-                disabled={isAuthenticating}
-                className="text-[10px] font-black uppercase tracking-widest text-[#6366F1] hover:text-[#5254E8] transition font-clash disabled:opacity-50"
-              >
-                Login
-              </button>
-            )}
-          </div>
-        </div>
-      </header>
-
       {/* Main Body */}
       <main className="flex-1 relative z-10">
         
