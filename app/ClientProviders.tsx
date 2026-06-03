@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { AuthProvider } from '@/context/auth/AuthContext';
+import { AppwriteProvider } from '@/app/(app)/vault/appwrite-provider';
 import { ThemeProvider } from '@/lib/theme-context';
 import { ToastProvider } from '@/components/ui/Toast';
 import { UnifiedDrawerProvider } from '@/context/UnifiedDrawerContext';
@@ -47,10 +48,12 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
  * Lightweight UI-state providers that don't block hydration with heavy data fetching.
  */
 const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
+  DrawerStateProvider,
+  AuthProvider,
+  AppwriteProvider,
+  SudoProvider,
   LocalContextProvider,
   AppChromeProvider,
-  DrawerStateProvider,
-  SudoProvider,
   CallLauncherProvider,
   ThemeProvider,
   ToastProvider,
@@ -67,9 +70,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   LoginDrawerProvider,
   TokenOpsProvider,
   AIProvider,
-  AuthProvider,
 ];
-
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
     <>

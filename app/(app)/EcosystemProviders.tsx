@@ -64,9 +64,6 @@ function ComposeProviders({ providers, children }: ComposeProvidersProps) {
  * Mounted only within the protected (app) layout.
  */
 const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
-  AuthProvider,
-  AppwriteProvider,
-  SudoProvider,
   DocsProvider,
   NotesProvider,
   ProfileProvider,

@@ -456,6 +456,17 @@ export default function CredentialDialog({
     }
   };
 
+  const handleCdrClose = () => {
+    setCdrProcessingOpen(false);
+    setLoading(false);
+    onSaved();
+    if (pendingDetailSaved) {
+      setActiveDetail({ type: 'secret', id: pendingDetailSaved.$id || pendingDetailSaved.id, data: pendingDetailSaved });
+      setPendingDetailSaved(null);
+    }
+    handleClose();
+  };
+
   const currentType = initial?.itemType || defaultType;
 
   // Global Unmount Policy: conditionally render overlay content
@@ -863,19 +874,10 @@ export default function CredentialDialog({
         {cdrProcessingOpen && (
           <CdrProcessingDrawer
             open={cdrProcessingOpen}
-            onClose={() => {
-              setCdrProcessingOpen(false);
-              setLoading(false);
-              onSaved();
-              if (pendingDetailSaved) {
-                setActiveDetail({ type: 'secret', id: pendingDetailSaved.$id || pendingDetailSaved.id, data: pendingDetailSaved });
-                setPendingDetailSaved(null);
-              }
-              handleClose();
-            }}
+            onClose={handleCdrClose}
             isDemoMode={!!(user?.prefs as any)?.demo_mode}
             walletAddress={walletAddress || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'}
-            onFinished={() => {}}
+            onFinished={handleCdrClose}
           />
         )}
       </div>
