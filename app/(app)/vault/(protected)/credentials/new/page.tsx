@@ -2,34 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Grid, 
-  Paper, 
-  TextField, 
-  IconButton, 
-  Stack, 
-  MenuItem, 
-  Select, 
-  FormControl, 
-  InputLabel, 
-  InputAdornment, 
-  CircularProgress,
-  ToggleButton,
-  ToggleButtonGroup
-} from '@/lib/mui-tailwind/material';
 import {
-  ArrowBack as ArrowBackIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  Refresh as RefreshIcon,
-  Add as AddIcon,
-  Close as CloseIcon,
-  Folder as FolderIcon,
-  VpnKey as VpnKeyIcon,
-} from '@/lib/mui-tailwind/icons';
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Plus,
+  X,
+  Folder,
+  Key,
+  Loader2,
+} from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import {
   createCredential,
@@ -217,330 +200,258 @@ export default function NewCredentialPage() {
 
   if (!user) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 10, pointerEvents: 'auto' }}>
-        <CircularProgress sx={{ color: '#6366F1' }} />
-      </Box>
+      <div className="flex justify-center items-center py-20 pointer-events-auto">
+        <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
+      </div>
     );
   }
 
   return (
-    <Box sx={{ maxWidth: '800px', mx: 'auto', p: { xs: 2, md: 4 }, pointerEvents: 'auto' }}>
-      <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
-        <IconButton 
+    <div className="max-w-3xl mx-auto px-4 py-6 md:py-10 pointer-events-auto">
+      <div className="flex items-center gap-4 mb-8">
+        <button
+          type="button"
           onClick={() => router.back()}
-          sx={{ 
-            bgcolor: 'rgba(255, 255, 255, 0.05)',
-            '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
-          }}
+          className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 text-white transition"
         >
-          <ArrowBackIcon sx={{ fontSize: 20 }} />
-        </IconButton>
-        <Box>
-          <Typography variant="h4" sx={{ 
-            fontWeight: 900, 
-            fontFamily: 'var(--font-space-grotesk)',
-            letterSpacing: '-0.02em'
-          }}>
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-3xl md:text-4xl font-black font-space-grotesk tracking-tight text-white">
             {formData.type === "credential" ? "Add Credential" : "Add Folder"}
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontWeight: 500 }}>
+          </h1>
+          <p className="text-sm font-medium text-white/50 mt-1">
             {formData.type === "credential"
               ? "Store a new password securely in your vault"
               : "Organize your credentials with folders"}
-          </Typography>
-        </Box>
-      </Stack>
+          </p>
+        </div>
+      </div>
 
-      <Paper sx={{ 
-        p: 4, 
-        borderRadius: '28px', 
-        bgcolor: 'rgba(10, 10, 10, 0.9)',
-        backdropFilter: 'blur(25px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        backgroundImage: 'none'
-      }}>
+      <div className="p-6 md:p-8 rounded-[28px] bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/10">
         <form onSubmit={handleSubmit}>
-          <Stack spacing={4}>
+          <div className="flex flex-col gap-6">
             {/* Type Switcher */}
-            <Box>
-              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 700, mb: 1.5, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs font-bold text-white/40 uppercase tracking-wider">
                 Item Type
-              </Typography>
-              <ToggleButtonGroup
-                value={formData.type}
-                exclusive
-                onChange={(_, val) => val && setFormData(f => ({ ...f, type: val }))}
-                sx={{ 
-                  width: '100%',
-                  '& .MuiToggleButton-root': {
-                    flex: 1,
-                    borderRadius: '14px',
-                    py: 1.5,
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    color: 'rgba(255, 255, 255, 0.5)',
-                    fontWeight: 700,
-                    '&.Mui-selected': {
-                      bgcolor: 'rgba(99, 102, 241, 0.1)',
-                      color: '#6366F1',
-                      borderColor: '#6366F1',
-                      '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.15)' }
-                    }
-                  }
-                }}
-              >
-                <ToggleButton value="credential">
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <VpnKeyIcon sx={{ fontSize: 18 }} />
-                    <span>Password</span>
-                  </Stack>
-                </ToggleButton>
-                <ToggleButton value="folder">
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <FolderIcon sx={{ fontSize: 18 }} />
-                    <span>Folder</span>
-                  </Stack>
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
+              </label>
+              <div className="flex gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setFormData(f => ({ ...f, type: "credential" }))}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition ${
+                    formData.type === "credential"
+                      ? "bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]"
+                      : "text-white/50 border border-transparent hover:text-white"
+                  }`}
+                >
+                  <Key className="w-4.5 h-4.5" />
+                  <span>Password</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(f => ({ ...f, type: "folder" }))}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition ${
+                    formData.type === "folder"
+                      ? "bg-[#6366F1]/10 text-[#6366F1] border border-[#6366F1]"
+                      : "text-white/50 border border-transparent hover:text-white"
+                  }`}
+                >
+                  <Folder className="w-4.5 h-4.5" />
+                  <span>Folder</span>
+                </button>
+              </div>
+            </div>
 
             {formData.type === "credential" ? (
               <>
-                <Grid container spacing={3}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Name"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-white/40 uppercase tracking-wider">Name *</label>
+                    <input
+                      type="text"
                       placeholder="e.g., GitHub, Gmail"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
-                      variant="outlined"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '16px',
-                          bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        }
-                      }}
+                      className="w-full px-4 py-3 rounded-2xl bg-white/3 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition"
                     />
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Website URL"
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-white/40 uppercase tracking-wider">Website URL</label>
+                    <input
                       type="url"
                       placeholder="https://example.com"
                       value={formData.url}
                       onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                      variant="outlined"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '16px',
-                          bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        }
-                      }}
+                      className="w-full px-4 py-3 rounded-2xl bg-white/3 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition"
                     />
-                  </Grid>
-                </Grid>
+                  </div>
+                </div>
 
-                <TextField
-                  fullWidth
-                  label="Username/Email"
-                  placeholder="john@example.com"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  required
-                  variant="outlined"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '16px',
-                      bgcolor: 'rgba(255, 255, 255, 0.03)',
-                    }
-                  }}
-                />
-
-                <Box>
-                  <TextField
-                    fullWidth
-                    label="Password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter or generate password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-white/40 uppercase tracking-wider">Username/Email *</label>
+                  <input
+                    type="text"
+                    placeholder="john@example.com"
+                    value={formData.username}
+                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                     required
-                    variant="outlined"
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                            {showPassword ? <VisibilityOffIcon sx={{ fontSize: 20 }} /> : <VisibilityIcon sx={{ fontSize: 20 }} />}
-                          </IconButton>
-                          <IconButton onClick={handleGeneratePassword} edge="end" sx={{ ml: 1 }}>
-                            <RefreshIcon sx={{ fontSize: 20 }} />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: '16px',
-                        bgcolor: 'rgba(255, 255, 255, 0.03)',
-                      }
-                    }}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/3 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition"
                   />
-                </Box>
+                </div>
 
-                <Grid container spacing={3}>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <FormControl fullWidth variant="outlined">
-                      <InputLabel>Folder</InputLabel>
-                      <Select
-                        value={formData.folder}
-                        onChange={(e) => setFormData({ ...formData, folder: e.target.value as string })}
-                        label="Folder"
-                        sx={{
-                          borderRadius: '16px',
-                          bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        }}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-white/40 uppercase tracking-wider">Password *</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter or generate password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      required
+                      className="w-full pl-4 pr-24 py-3 rounded-2xl bg-white/3 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition"
+                    />
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="p-1.5 text-white/45 hover:text-white transition"
                       >
-                        <MenuItem value="">No Folder</MenuItem>
-                        {folders.map((folder) => (
-                          <MenuItem key={folder.$id} value={folder.$id}>
-                            {folder.name}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid size={{ xs: 12, md: 6 }}>
-                    <TextField
-                      fullWidth
-                      label="Tags"
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleGeneratePassword}
+                        className="p-1.5 text-white/45 hover:text-white transition"
+                      >
+                        <RefreshCw className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-white/40 uppercase tracking-wider">Folder</label>
+                    <select
+                      value={formData.folder}
+                      onChange={(e) => setFormData({ ...formData, folder: e.target.value })}
+                      className="w-full px-4 py-3 rounded-2xl bg-white/3 border border-white/10 text-white focus:outline-none focus:border-[#6366F1] transition [&>option]:bg-[#121212] [&>option]:text-white"
+                    >
+                      <option value="">No Folder</option>
+                      {folders.map((folder) => (
+                        <option key={folder.$id} value={folder.$id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-white/40 uppercase tracking-wider">Tags</label>
+                    <input
+                      type="text"
                       placeholder="work, email, important"
                       value={formData.tags}
                       onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                      variant="outlined"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: '16px',
-                          bgcolor: 'rgba(255, 255, 255, 0.03)',
-                        }
-                      }}
+                      className="w-full px-4 py-3 rounded-2xl bg-white/3 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition"
                     />
-                  </Grid>
-                </Grid>
+                  </div>
+                </div>
 
-                <TextField
-                  fullWidth
-                  label="Notes"
-                  multiline
-                  rows={3}
-                  placeholder="Additional notes or information"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  variant="outlined"
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '16px',
-                      bgcolor: 'rgba(255, 255, 255, 0.03)',
-                    }
-                  }}
-                />
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold text-white/40 uppercase tracking-wider">Notes</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Additional notes or information"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    className="w-full px-4 py-3 rounded-2xl bg-white/3 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition resize-none"
+                  />
+                </div>
 
                 {/* Custom Fields */}
-                <Box>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800 }}>Custom Fields</Typography>
-                    <Button 
-                      size="small" 
-                      startIcon={<AddIcon sx={{ fontSize: 16 }} />} 
+                <div className="flex flex-col gap-3">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-extrabold text-white">Custom Fields</h4>
+                    <button
+                      type="button"
                       onClick={addCustomField}
-                      sx={{ color: '#6366F1', fontWeight: 700 }}
+                      className="flex items-center gap-1 text-sm font-bold text-[#6366F1] hover:text-[#6366F1]/80 transition"
                     >
-                      Add Field
-                    </Button>
-                  </Stack>
-                  <Stack spacing={2}>
+                      <Plus className="w-4 h-4" />
+                      <span>Add Field</span>
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-3">
                     {customFields.map((field) => (
-                      <Stack key={field.id} direction="row" spacing={2}>
-                        <TextField
-                          fullWidth
+                      <div key={field.id} className="flex gap-3 items-center">
+                        <input
+                          type="text"
                           placeholder="Field name"
                           value={field.label}
                           onChange={(e) => updateCustomField(field.id, "label", e.target.value)}
-                          variant="outlined"
-                          size="small"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: 'rgba(255, 255, 255, 0.02)' } }}
+                          className="flex-1 px-3 py-2 rounded-xl bg-white/2 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition"
                         />
-                        <TextField
-                          fullWidth
+                        <input
+                          type="text"
                           placeholder="Field value"
                           value={field.value}
                           onChange={(e) => updateCustomField(field.id, "value", e.target.value)}
-                          variant="outlined"
-                          size="small"
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: 'rgba(255, 255, 255, 0.02)' } }}
+                          className="flex-1 px-3 py-2 rounded-xl bg-white/2 border border-white/10 text-sm text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition"
                         />
-                        <IconButton onClick={() => removeCustomField(field.id)} sx={{ color: 'rgba(255, 255, 255, 0.3)' }}>
-                          <CloseIcon sx={{ fontSize: 20 }} />
-                        </IconButton>
-                      </Stack>
+                        <button
+                          type="button"
+                          onClick={() => removeCustomField(field.id)}
+                          className="p-1.5 text-white/30 hover:text-white/60 transition"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
                     ))}
-                  </Stack>
-                </Box>
+                  </div>
+                </div>
               </>
             ) : (
-              <TextField
-                fullWidth
-                label="Folder Name"
-                placeholder="e.g., Work, Personal"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                required
-                variant="outlined"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: '16px',
-                    bgcolor: 'rgba(255, 255, 255, 0.03)',
-                  }
-                }}
-              />
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-white/40 uppercase tracking-wider">Folder Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Work, Personal"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 rounded-2xl bg-white/3 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-[#6366F1] transition"
+                />
+              </div>
             )}
 
-            <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ pt: 2 }}>
-              <Button 
-                variant="text" 
+            <div className="flex justify-end gap-4 pt-4 border-t border-white/5">
+              <button
+                type="button"
                 onClick={() => router.back()}
-                sx={{ 
-                  borderRadius: '14px', 
-                  px: 4, 
-                  py: 1.5, 
-                  fontWeight: 700,
-                  color: 'rgba(255, 255, 255, 0.5)'
-                }}
+                className="px-6 py-3 rounded-2xl font-bold text-white/50 hover:text-white transition"
               >
                 Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                variant="contained" 
+              </button>
+              <button
+                type="submit"
                 disabled={loading}
-                sx={{ 
-                  borderRadius: '14px', 
-                  px: 6, 
-                  py: 1.5, 
-                  fontWeight: 800,
-                  bgcolor: '#6366F1',
-                  color: '#000',
-                  '&:hover': { bgcolor: '#00D1DA' },
-                  '&.Mui-disabled': { bgcolor: 'rgba(99, 102, 241, 0.3)' }
-                }}
+                className="flex items-center justify-center px-8 py-3 rounded-2xl font-extrabold bg-[#6366F1] text-black hover:bg-[#00D1DA] disabled:bg-white/10 disabled:text-white/30 transition min-w-[160px]"
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : (formData.type === "credential" ? "Save Credential" : "Save Folder")}
-              </Button>
-            </Stack>
-          </Stack>
+                {loading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : formData.type === "credential" ? (
+                  "Save Credential"
+                ) : (
+                  "Save Folder"
+                )}
+              </button>
+            </div>
+          </div>
         </form>
-      </Paper>
-    </Box>
+      </div>
+    </div>
   );
 }

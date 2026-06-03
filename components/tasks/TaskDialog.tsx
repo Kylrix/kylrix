@@ -1,37 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Drawer,
-  TextField,
-  Button,
-  Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Chip,
-  IconButton,
-  Typography,
-  Divider,
-  alpha,
-  Autocomplete,
-  useTheme,
-  useMediaQuery,
-  Stack,
-} from '@/lib/mui-tailwind/material';
-import {
-  Close as CloseIcon,
-  Flag as FlagIcon,
-} from '@/lib/mui-tailwind/icons';
-import { DatePicker } from '@/lib/mui-tailwind/date-pickers';
-import { LocalizationProvider } from '@/lib/mui-tailwind/date-pickers';
-import { AdapterDateFns } from '@/lib/mui-tailwind/date-pickers';
 import UserSearch from '@/components/UserSearch';
 import { useTask } from '@/context/TaskContext';
 import { Priority, TaskStatus } from '@/types';
-
-import { ArrowUpRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { ArrowUpRight, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useSection } from '@/context/SectionContext';
 
 interface User {
@@ -55,10 +28,10 @@ const statusOptions: { value: TaskStatus; label: string }[] = [
   { value: 'done', label: 'Done' }];
 
 export default function TaskDialog() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { setActiveDetail } = useSection();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  
   const {
     taskDialogOpen,
     setTaskDialogOpen,
@@ -79,6 +52,15 @@ export default function TaskDialog() {
   const [estimatedTime, setEstimatedTime] = useState('');
   const [selectedAssignees, setSelectedAssignees] = useState<User[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load draft when dialog opens
   useEffect(() => {
@@ -221,338 +203,228 @@ export default function TaskDialog() {
     }
   };
 
+  if (!taskDialogOpen) return null;
+
   return (
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Drawer
-        anchor={isMobile ? 'bottom' : 'right'}
-        open={taskDialogOpen}
-        onClose={handleClose}
-        ModalProps={{ keepMounted: false }}
-        PaperProps={{
-          sx: {
-            width: isMobile ? '100%' : 'min(100vw, 640px)',
-            maxWidth: '100%',
-            height: isMobile ? (isExpanded ? '100dvh' : '60dvh') : '100%',
-            transition: 'height 0.3s ease-in-out',
-            maxHeight: '100dvh',
-            borderTopLeftRadius: isMobile ? '26px' : 0,
-            borderTopRightRadius: isMobile ? '26px' : 0,
-            backgroundImage: 'none',
-            backgroundColor: '#161412',
-            borderLeft: isMobile ? 'none' : '1px solid #1C1A18',
-            boxShadow: '0 24px 48px rgba(0, 0, 0, 0.9)',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-          },
-        }}
+    <>
+      {/* 1. Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 ease-in-out cursor-default"
+        onClick={handleClose}
+      />
+      
+      {/* 2. Slide-up Panel Container */}
+      <div 
+        className={`fixed bottom-0 md:bottom-auto md:top-0 right-0 z-[100] bg-[#161412] text-white p-6 md:p-8 flex flex-col gap-6 shadow-[0_24px_48px_rgba(0,0,0,0.9)] transition-all duration-300 overflow-y-auto w-full max-w-full md:w-[640px] md:h-full md:max-h-full md:border-l md:border-[#1C1A18] ${
+          isMobile 
+            ? (isExpanded ? 'h-[100dvh] rounded-t-0' : 'h-[60dvh] rounded-t-[26px]') 
+            : 'h-full'
+        }`}
       >
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            px: 3,
-            pt: 3,
-            pb: 2,
-            borderBottom: '1px solid #1C1A18',
-            flexShrink: 0,
-          }}
-        >
-          <Box>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, letterSpacing: '-0.02em', color: '#F5F2ED' }}>
-                NEW GOAL
-            </Typography>
-            <Typography variant="caption" sx={{ fontFamily: 'var(--font-satoshi)', color: '#9B9691', fontWeight: 600, letterSpacing: '0.05em' }}>
-                INITIALIZE EXECUTION TRACK
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={0.5} alignItems="center">
+        {/* Decorative drag handle bar for mobile */}
+        {isMobile && (
+          <div className="w-10 h-1 bg-white/12 rounded-[2px] mx-auto mb-2 flex-shrink-0" />
+        )}
+        
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-[#1C1A18] flex-shrink-0">
+          <div>
+            <h3 className="text-white text-lg font-black tracking-tight font-clash leading-none">NEW GOAL</h3>
+            <p className="text-[#9B9691] text-[10px] font-bold mt-1 tracking-wider uppercase">INITIALIZE EXECUTION TRACK</p>
+          </div>
+          <div className="flex items-center gap-1.5">
             {title.trim().length > 0 && (
-              <IconButton onClick={handleMorphToDetail} size="small" sx={{ color: '#F59E0B', '&:hover': { color: 'white' } }} title="Go Full Detail">
+              <button
+                type="button"
+                onClick={handleMorphToDetail}
+                className="p-1.5 text-[#F59E0B] hover:text-white rounded-lg hover:bg-white/5 transition-all"
+                title="Go Full Detail"
+              >
                 <ArrowUpRight size={20} />
-              </IconButton>
+              </button>
             )}
             {isMobile && (
-              <IconButton onClick={() => setIsExpanded(!isExpanded)} size="small" sx={{ color: '#9B9691', '&:hover': { color: '#F5F2ED' } }}>
+              <button
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-1.5 text-[#9B9691] hover:text-[#F5F2ED] rounded-lg hover:bg-white/5 transition-all"
+              >
                 {isExpanded ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
-              </IconButton>
+              </button>
             )}
-            <IconButton onClick={handleClose} size="small" sx={{ color: '#9B9691', '&:hover': { color: '#F5F2ED' } }}>
-              <CloseIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Stack>
-        </Box>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="p-1.5 text-[#9B9691] hover:text-[#F5F2ED] rounded-lg hover:bg-white/5 transition-all"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
 
-        <Box sx={{ px: 3, py: 2, flex: 1, overflowY: 'auto' }}>
-          <Box
-            component="form"
-            onKeyDown={handleKeyDown}
-            sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}
-          >
-            {/* Title */}
-            <TextField
-              autoFocus
-              placeholder="What's the primary objective?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              fullWidth
-              required
-              variant="standard"
-              InputProps={{
-                disableUnderline: true,
-                sx: { 
-                    fontFamily: 'var(--font-satoshi)',
-                    fontSize: '1.5rem', 
-                    fontWeight: 700,
-                    letterSpacing: '-0.02em',
-                    color: '#F5F2ED',
-                    padding: 0,
-                    '&::placeholder': {
-                        opacity: 0.3,
-                    }
-                },
-              }}
-            />
+        {/* Content Form */}
+        <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-6" onKeyDown={handleKeyDown}>
+          {/* Title Input */}
+          <input
+            autoFocus
+            type="text"
+            placeholder="What's the primary objective?"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-transparent text-2xl font-bold tracking-tight text-[#F5F2ED] placeholder:opacity-30 focus:outline-none"
+            required
+          />
 
-            <Divider sx={{ borderColor: '#1C1A18' }} />
+          <hr className="border-[#1C1A18]" />
 
-            {/* Description */}
-            <TextField
-              placeholder="Detailed parameters and context..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              fullWidth
-              multiline
-              rows={3}
-              variant="standard"
-              InputProps={{
-                disableUnderline: true,
-                sx: { 
-                    fontFamily: 'var(--font-satoshi)',
-                    fontSize: '0.95rem',
-                    color: '#9B9691',
-                    lineHeight: 1.6,
-                },
-              }}
-            />
+          {/* Description Input */}
+          <textarea
+            placeholder="Detailed parameters and context..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            className="w-full bg-transparent text-sm text-[#9B9691] placeholder:opacity-40 focus:outline-none resize-none leading-relaxed"
+          />
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, p: 2.5, borderRadius: '24px', bgcolor: '#1C1A18', border: '1px solid #2C2A28' }}>
-                {/* Project & Priority Row */}
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                {/* Project */}
-                <FormControl variant="filled" fullWidth size="small" sx={{ bgcolor: '#161412', borderRadius: '12px', border: '1px solid #2C2A28', '& .MuiFilledInput-root': { bgcolor: 'transparent', '&:hover': { bgcolor: 'transparent' }, '&.Mui-focused': { bgcolor: 'transparent' } } }}>
-                    <InputLabel sx={{ fontFamily: 'var(--font-clash)', fontSize: '0.75rem', fontWeight: 800, color: '#9B9691', letterSpacing: '0.05em' }}>PROJECT</InputLabel>
-                    <Select
-                      value={projectId}
-                      onChange={(e) => setProjectId(e.target.value)}
-                      disableUnderline
-                      sx={{ borderRadius: '12px', bgcolor: 'transparent', color: '#F5F2ED', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}
-                      renderValue={(selected) => {
-                          const project = projects.find(p => p.id === selected);
-                          return (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: project?.color }} />
-                                  <Typography sx={{ fontFamily: 'var(--font-satoshi)', fontSize: '0.9rem', fontWeight: 600, color: '#F5F2ED' }}>{project?.name}</Typography>
-                              </Box>
-                          );
-                      }}
-                    >
-                    {projects.map((project) => (
-                        <MenuItem key={project.id} value={project.id} sx={{ py: 1.5, fontFamily: 'var(--font-satoshi)', color: '#F5F2ED' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <Box
-                              sx={{
-                                  width: 10,
-                                  height: 10,
-                                  borderRadius: '50%',
-                                  backgroundColor: project.color,
-                              }}
-                            />
-                            <Typography sx={{ fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>{project.name}</Typography>
-                        </Box>
-                        </MenuItem>
-                    ))}
-                    </Select>
-                </FormControl>
-
-                {/* Priority */}
-                <FormControl variant="filled" fullWidth size="small" sx={{ bgcolor: '#161412', borderRadius: '12px', border: '1px solid #2C2A28', '& .MuiFilledInput-root': { bgcolor: 'transparent', '&:hover': { bgcolor: 'transparent' }, '&.Mui-focused': { bgcolor: 'transparent' } } }}>
-                    <InputLabel sx={{ fontFamily: 'var(--font-clash)', fontSize: '0.75rem', fontWeight: 800, color: '#9B9691', letterSpacing: '0.05em' }}>PRIORITY</InputLabel>
-                    <Select
-                      value={priority}
-                      onChange={(e) => setPriority(e.target.value as Priority)}
-                      disableUnderline
-                      sx={{ borderRadius: '12px', bgcolor: 'transparent', color: '#F5F2ED', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}
-                      renderValue={(selected) => (
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <FlagIcon sx={{ fontSize: 16, color: priorityOptions.find(p => p.value === selected)?.color }} />
-                              <Typography sx={{ fontFamily: 'var(--font-mono)', fontSize: '0.9rem', fontWeight: 700, color: priorityOptions.find(p => p.value === selected)?.color }}>{priorityOptions.find(p => p.value === selected)?.label.toUpperCase()}</Typography>
-                          </Box>
-                      )}
-                    >
-                    {priorityOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontFamily: 'var(--font-satoshi)', color: '#F5F2ED' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                            <FlagIcon sx={{ fontSize: 18, color: option.color }} />
-                            <Typography sx={{ fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>{option.label}</Typography>
-                        </Box>
-                        </MenuItem>
-                    ))}
-                    </Select>
-                </FormControl>
-                </Box>
-
-                {/* Due Date & Status Row */}
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                {/* Due Date */}
-                <DatePicker
-                    label="DEADLINE"
-                    value={dueDate}
-                    onChange={(newValue) => setDueDate(newValue)}
-                    slotProps={{
-                    textField: {
-                        fullWidth: true,
-                        variant: 'filled',
-                        size: 'small',
-                        InputProps: { disableUnderline: true },
-                        sx: {
-                          bgcolor: '#161412',
-                          borderRadius: '12px',
-                          border: '1px solid #2C2A28',
-                          '& .MuiFilledInput-root': { bgcolor: 'transparent', '&:hover': { bgcolor: 'transparent' }, '&.Mui-focused': { bgcolor: 'transparent' } },
-                          '& .MuiInputLabel-root': { fontFamily: 'var(--font-clash)', fontSize: '0.75rem', fontWeight: 800, color: '#9B9691', letterSpacing: '0.05em' },
-                          '& .MuiInputBase-input': { fontFamily: 'var(--font-satoshi)', fontWeight: 600, color: '#F5F2ED' }
-                        }
-                    },
-                    }}
-                />
-
-                {/* Status */}
-                <FormControl variant="filled" fullWidth size="small" sx={{ bgcolor: '#161412', borderRadius: '12px', border: '1px solid #2C2A28', '& .MuiFilledInput-root': { bgcolor: 'transparent', '&:hover': { bgcolor: 'transparent' }, '&.Mui-focused': { bgcolor: 'transparent' } } }}>
-                    <InputLabel sx={{ fontFamily: 'var(--font-clash)', fontSize: '0.75rem', fontWeight: 800, color: '#9B9691', letterSpacing: '0.05em' }}>STATUS</InputLabel>
-                    <Select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                      disableUnderline
-                      sx={{ borderRadius: '12px', bgcolor: 'transparent', color: '#F5F2ED', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}
-                    >
-                    {statusOptions.map((option) => (
-                        <MenuItem key={option.value} value={option.value} sx={{ py: 1.5, fontFamily: 'var(--font-satoshi)', color: '#F5F2ED' }}>
-                            {option.label}
-                        </MenuItem>
-                    ))}
-                    </Select>
-                </FormControl>
-                </Box>
-            </Box>
-
-            {/* Labels */}
-            <Autocomplete
-              multiple
-              options={labels}
-              value={labels.filter((l) => selectedLabels.includes(l.id))}
-              onChange={(_, newValue) => setSelectedLabels(newValue.map((l) => l.id))}
-              getOptionLabel={(option) => option.name}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="TAGS"
-                  variant="standard"
-                  placeholder="Categorize task..."
-                  InputLabelProps={{ sx: { fontFamily: 'var(--font-clash)', fontSize: '0.75rem', fontWeight: 800, color: '#9B9691', letterSpacing: '0.05em' } }}
-                  InputProps={{ ...params.InputProps, disableUnderline: true, sx: { fontFamily: 'var(--font-satoshi)', color: '#F5F2ED' } }}
-                />
-              )}
-              renderTags={(value, getTagProps) =>
-                value.map((option, index) => (
-                  <Chip
-                    {...getTagProps({ index })}
-                    key={option.id}
-                    label={option.name.toUpperCase()}
-                    size="small"
-                    sx={{
-                      backgroundColor: '#1C1A18',
-                      color: option.color,
-                      fontWeight: 800,
-                      fontSize: '0.65rem',
-                      fontFamily: 'var(--font-mono)',
-                      borderRadius: '6px',
-                      border: `1px solid ${option.color}`,
-                    }}
-                  />
-                ))
-              }
-              renderOption={(props, option) => (
-                <Box
-                  component="li"
-                  {...props}
-                  key={option.id}
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1.5, fontFamily: 'var(--font-satoshi)', color: '#F5F2ED' }}
+          {/* Settings Container */}
+          <div className="flex flex-col gap-5 p-5 rounded-[24px] bg-[#1C1A18] border border-[#2C2A28]">
+            {/* Project & Priority Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Project Select */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">PROJECT</label>
+                <select
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  className="w-full bg-[#161412] border border-[#2C2A28] rounded-xl px-3 py-2.5 text-sm text-[#F5F2ED] font-semibold focus:outline-none focus:border-[#A855F7] transition-colors cursor-pointer"
                 >
-                  <Box sx={{ width: 4, height: 16, borderRadius: 1, bgcolor: option.color }} />
-                  <Typography sx={{ fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>{option.name}</Typography>
-                </Box>
-              )}
-            />
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            <Divider sx={{ borderColor: '#1C1A18' }} />
+              {/* Priority Select */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">PRIORITY</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as Priority)}
+                  className="w-full bg-[#161412] border border-[#2C2A28] rounded-xl px-3 py-2.5 text-sm font-semibold focus:outline-none focus:border-[#A855F7] transition-colors cursor-pointer"
+                  style={{ color: priorityOptions.find(p => p.value === priority)?.color }}
+                >
+                  {priorityOptions.map((option) => (
+                    <option key={option.value} value={option.value} style={{ color: option.color }}>
+                      {option.label.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-            {/* Assignees */}
-            <UserSearch
-              label="ASSIGNEES"
-              selectedUsers={selectedAssignees}
-              onSelect={(user) => setSelectedAssignees(prev => [...prev, user])}
-              onRemove={(userId) => setSelectedAssignees(prev => prev.filter(u => u.id !== userId))}
-              excludeIds={creatorId ? [creatorId] : []}
-            />
-          </Box>
-        </Box>
+            {/* Due Date & Status Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Due Date */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">DEADLINE</label>
+                <input
+                  type="date"
+                  value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value) : null)}
+                  className="w-full bg-[#161412] border border-[#2C2A28] rounded-xl px-3 py-2.5 text-sm text-[#F5F2ED] font-semibold focus:outline-none focus:border-[#A855F7] transition-colors cursor-pointer"
+                />
+              </div>
 
-        <Box sx={{ px: 3, py: 3, gap: 2, display: 'flex', borderTop: '1px solid #1C1A18', flexShrink: 0 }}>
-          <Button 
-            onClick={handleClose} 
-            sx={{ 
-                color: '#9B9691',
-                fontFamily: 'var(--font-satoshi)',
-                fontWeight: 700,
-                letterSpacing: '0.05em',
-                fontSize: '0.75rem',
-                textTransform: 'none',
-                '&:hover': { color: '#F5F2ED' }
-            }}
+              {/* Status Select */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">STATUS</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as TaskStatus)}
+                  className="w-full bg-[#161412] border border-[#2C2A28] rounded-xl px-3 py-2.5 text-sm text-[#F5F2ED] font-semibold focus:outline-none focus:border-[#A855F7] transition-colors cursor-pointer"
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Labels Selection */}
+          <div className="flex flex-col gap-2">
+            <label className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">TAGS</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {selectedLabels.map((labelId) => {
+                const label = labels.find(l => l.id === labelId);
+                if (!label) return null;
+                return (
+                  <span
+                    key={labelId}
+                    onClick={() => setSelectedLabels(prev => prev.filter(id => id !== labelId))}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#1C1A18] text-[10px] font-extrabold font-mono rounded-lg border cursor-pointer hover:bg-[#2C2A28] transition-colors"
+                    style={{ color: label.color, borderColor: label.color }}
+                  >
+                    {label.name.toUpperCase()}
+                    <X size={10} />
+                  </span>
+                );
+              })}
+            </div>
+            <select
+              value=""
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val && !selectedLabels.includes(val)) {
+                  setSelectedLabels(prev => [...prev, val]);
+                }
+              }}
+              className="w-full bg-[#161412] border border-[#1C1A18] rounded-xl px-3 py-2.5 text-sm text-[#9B9691] font-semibold focus:outline-none focus:border-[#A855F7] transition-colors cursor-pointer"
+            >
+              <option value="" disabled>Add tags...</option>
+              {labels.filter(l => !selectedLabels.includes(l.id)).map((label) => (
+                <option key={label.id} value={label.id}>
+                  {label.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <hr className="border-[#1C1A18]" />
+
+          {/* Assignees */}
+          <UserSearch
+            label="ASSIGNEES"
+            selectedUsers={selectedAssignees}
+            onSelect={(user) => setSelectedAssignees(prev => [...prev, user])}
+            onRemove={(userId) => setSelectedAssignees(prev => prev.filter(u => u.id !== userId))}
+            excludeIds={creatorId ? [creatorId] : []}
+          />
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#1C1A18] flex-shrink-0">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="px-4 py-2.5 text-sm text-[#9B9691] font-bold hover:text-white transition-colors"
           >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
+            type="button"
             onClick={handleSubmit}
-            variant="contained"
             disabled={!title.trim()}
-            sx={{
-                px: 3,
-                py: 1.2,
-                borderRadius: '12px',
-                fontFamily: 'var(--font-satoshi)',
-                fontWeight: 700,
-                fontSize: '0.75rem',
-                textTransform: 'none',
-                bgcolor: '#A855F7',
-                color: '#0A0908',
-                boxShadow: '0 4px 12px rgba(168, 85, 247, 0.2)',
-                '&:hover': {
-                    bgcolor: '#9333EA',
-                },
-                '&.Mui-disabled': {
-                    bgcolor: '#1C1A18',
-                    color: '#34322F',
-                    boxShadow: 'none'
-                }
-            }}
+            className="px-6 py-2.5 text-sm text-[#0A0908] bg-[#A855F7] hover:bg-[#9333EA] disabled:bg-[#1C1A18] disabled:text-[#34322F] font-bold rounded-xl transition-all shadow-[0_4px_12px_rgba(168, 85, 247, 0.2)] disabled:shadow-none"
           >
             Create Goal
-          </Button>
-        </Box>
-      </Drawer>
-    </LocalizationProvider>
+          </button>
+        </div>
+      </div>
+    </>
   );
 }

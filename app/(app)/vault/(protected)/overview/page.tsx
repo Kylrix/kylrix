@@ -2,26 +2,16 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Grid, 
-  Paper, 
-  Stack, 
-  alpha, 
-  CircularProgress,
-  Avatar
-} from '@/lib/mui-tailwind/material';
 import {
-  VpnKey as VpnKeyIcon,
-  Shield as ShieldIcon,
-  AccessTime as AccessTimeIcon,
-  Warning as WarningIcon,
-  Add as AddIcon,
-  Download as DownloadIcon,
-  ChevronRight as ChevronRightIcon,
-} from '@/lib/mui-tailwind/icons';
+  Key,
+  Shield,
+  Clock,
+  AlertTriangle,
+  Plus,
+  Download,
+  ChevronRight,
+  Loader2,
+} from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import {
   appwriteDatabases,
@@ -177,7 +167,7 @@ export default function OverviewPage() {
               $id: String((d as Record<string, unknown>)["$id"]),
               name:
                 ((d as Record<string, unknown>)["name"] as string) ??
-                ((d as Record<string, unknown>)["title"] as string) ??
+                 ((d as Record<string, unknown>)["title"] as string) ??
                 "Untitled",
               username: (d as Record<string, unknown>)["username"] as
                 | string
@@ -207,324 +197,166 @@ export default function OverviewPage() {
   if (!user) return null;
 
   return (
-    <Box sx={{ 
-      width: '100%', 
-      minHeight: '100vh', 
-      bgcolor: 'transparent',
-      display: 'flex',
-      justifyContent: 'center',
-      p: { xs: 2, md: 4 }
-    }}>
-      <Box sx={{ width: '100%', maxWidth: '1100px' }}>
+    <div className="w-full min-h-screen bg-transparent flex justify-center p-4 md:p-8">
+      <div className="w-full max-w-6xl">
         {/* Header */}
-        <Stack 
-          direction={{ xs: 'column', sm: 'row' }} 
-          justifyContent="space-between" 
-          alignItems={{ xs: 'flex-start', sm: 'center' }} 
-          spacing={2}
-          sx={{ mb: 5 }}
-        >
-          <Box>
-            <Typography component="span" variant="h4" sx={{ 
-              display: 'block',
-              fontWeight: 900, 
-              fontFamily: 'var(--font-clash)',
-              letterSpacing: '-0.04em',
-              mb: 0.5,
-              lineHeight: 1.2,
-            }}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-black font-clash tracking-tight text-white mb-1">
               Overview
-            </Typography>
-            <Typography component="span" variant="body2" sx={{ display: 'block', color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500, lineHeight: 1.45 }}>
+            </h1>
+            <p className="text-sm font-medium text-white/40">
               A quick snapshot of your secure vault.
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1.5}>
-            <Button 
-              component={Link}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Link
               href="/credentials/new"
-              variant="contained" 
-              startIcon={<AddIcon sx={{ fontSize: 18 }} />}
-              sx={{ 
-                borderRadius: '14px', 
-                px: 3, 
-                py: 1.2, 
-                fontWeight: 800,
-                bgcolor: '#6366F1',
-                color: '#000',
-                '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
-              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-extrabold bg-[#6366F1] text-black hover:bg-[#6366F1]/80 transition text-sm"
             >
-              Add Credential
-            </Button>
-            <Button 
-              component={Link}
+              <Plus className="w-4.5 h-4.5" />
+              <span>Add Credential</span>
+            </Link>
+            <Link
               href="/import"
-              variant="outlined" 
-              startIcon={<DownloadIcon sx={{ fontSize: 18 }} />}
-              sx={{ 
-                borderRadius: '14px', 
-                px: 3, 
-                py: 1.2, 
-                fontWeight: 700,
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-                color: '#fff',
-                '&:hover': { borderColor: 'rgba(255, 255, 255, 0.2)', bgcolor: 'rgba(255, 255, 255, 0.05)' }
-              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold border border-white/10 text-white hover:border-white/20 hover:bg-white/5 transition text-sm"
             >
-              Import
-            </Button>
-          </Stack>
-        </Stack>
+              <Download className="w-4.5 h-4.5" />
+              <span>Import</span>
+            </Link>
+          </div>
+        </div>
 
         {locked && (
-          <Paper sx={{ 
-            p: 2.5, 
-            mb: 4, 
-            borderRadius: '20px', 
-            bgcolor: alpha('#FFB000', 0.05),
-            border: '1px solid',
-            borderColor: alpha('#FFB000', 0.2),
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2
-          }}>
-            <WarningIcon sx={{ fontSize: 24, color: "#FFB000" }} />
-            <Typography variant="body2" sx={{ color: '#FFB000', fontWeight: 600 }}>
+          <div className="p-4 mb-6 rounded-2xl bg-[#FFB000]/5 border border-[#FFB000]/20 flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-[#FFB000] flex-shrink-0" />
+            <p className="text-sm font-semibold text-[#FFB000]">
               Your vault is locked. Unlock to view full statistics and recent activity.
-            </Typography>
-          </Paper>
+            </p>
+          </div>
         )}
 
-        {/* Stats Grid — fluid auto-fill (see ui.tailwind-fix) */}
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))',
-            gap: 3,
-            mb: 4,
-            width: '100%',
-          }}
-        >
+        {/* Stats Grid */}
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,200px),1fr))] gap-6 mb-8 w-full">
           {[
-            { label: 'Total Credentials', value: stats.totalCreds, icon: VpnKeyIcon, color: '#6366F1' },
-            { label: 'TOTP Codes', value: stats.totpCount, icon: ShieldIcon, color: '#10B981' },
-            { label: 'Recent Activity', value: Math.min(stats.totalCreds, 5), icon: AccessTimeIcon, color: '#A855F7' },
-            { label: 'Security Alerts', value: 0, icon: WarningIcon, color: '#F59E0B' },
+            { label: 'Total Credentials', value: stats.totalCreds, icon: Key, color: 'text-[#6366F1]', bg: 'bg-[#6366F1]/8', border: 'border-[#6366F1]/15 hover:border-[#6366F1]/35' },
+            { label: 'TOTP Codes', value: stats.totpCount, icon: Shield, color: 'text-[#10B981]', bg: 'bg-[#10B981]/8', border: 'border-[#10B981]/15 hover:border-[#10B981]/35' },
+            { label: 'Recent Activity', value: Math.min(stats.totalCreds, 5), icon: Clock, color: 'text-[#A855F7]', bg: 'bg-[#A855F7]/8', border: 'border-[#A855F7]/15 hover:border-[#A855F7]/35' },
+            { label: 'Security Alerts', value: 0, icon: AlertTriangle, color: 'text-[#F59E0B]', bg: 'bg-[#F59E0B]/8', border: 'border-[#F59E0B]/15 hover:border-[#F59E0B]/35' },
           ].map((stat, i) => (
-            <Paper
+            <div
               key={i}
-              sx={{
-                p: 2.5,
-                borderRadius: '24px',
-                bgcolor: '#161412',
-                border: '1px solid #34322F',
-                backgroundImage: 'none',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                gap: 1.5,
-                transition: 'border-color 0.2s ease',
-                '&:hover': { borderColor: alpha(stat.color, 0.35) },
-              }}
+              className={`p-6 rounded-[24px] bg-[#161412] border border-[#34322F] flex flex-col justify-between gap-4 transition duration-200 ${stat.border}`}
             >
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.35, minWidth: 0 }}>
-                <Typography
-                  component="span"
-                  sx={{
-                    color: 'rgba(255, 255, 255, 0.4)',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.1em',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '0.65rem',
-                    lineHeight: 1.25,
-                  }}
-                >
+              <div className="flex flex-col gap-1 min-w-0">
+                <span className="text-white/40 font-bold uppercase tracking-widest font-mono text-[10px] leading-tight">
                   {stat.label}
-                </Typography>
-                <Typography
-                  component="span"
-                  sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', fontSize: '1.75rem', lineHeight: 1.15 }}
-                >
-                  {loading ? <CircularProgress size={20} thickness={6} sx={{ color: 'rgba(255, 255, 255, 0.2)' }} /> : stat.value}
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '12px',
-                  bgcolor: alpha(stat.color, 0.08),
-                  border: `1px solid ${alpha(stat.color, 0.15)}`,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <stat.icon sx={{ fontSize: 20, color: stat.color }} />
-              </Box>
-            </Paper>
+                </span>
+                <span className="text-3xl font-black font-clash tracking-tight text-white leading-none">
+                  {loading ? <Loader2 className="w-5 h-5 text-white/20 animate-spin" /> : stat.value}
+                </span>
+              </div>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${stat.bg} border border-white/5`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+              </div>
+            </div>
           ))}
-        </Box>
+        </div>
 
-        <Grid container spacing={3}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Recent Items */}
-          <Grid size={{ xs: 12, md: 7 }}>
-            <Paper sx={{ 
-              p: 2.5, 
-              borderRadius: '28px', 
-              bgcolor: '#161412',
-              border: '1px solid #34322F',
-              backgroundImage: 'none',
-              height: '100%',
-            }}>
-              <Typography component="span" variant="h6" sx={{ display: 'block', fontWeight: 900, mb: 2.5, fontFamily: 'var(--font-space-grotesk)', lineHeight: 1.25 }}>
+          <div className="lg:col-span-7">
+            <div className="p-6 rounded-[28px] bg-[#161412] border border-[#34322F] h-full flex flex-col">
+              <h3 className="text-lg font-black font-space-grotesk text-white mb-6">
                 Recent Items
-              </Typography>
-              <Stack spacing={1.5}>
+              </h3>
+              <div className="flex flex-col gap-3 flex-1 justify-start">
                 {loading ? (
-                  <Box sx={{ py: 4, textAlign: 'center' }}>
-                    <CircularProgress size={32} sx={{ color: '#6366F1' }} />
-                  </Box>
+                  <div className="flex justify-center items-center py-10">
+                    <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
+                  </div>
                 ) : recent.length === 0 ? (
-                  <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.3)', py: 4, textAlign: 'center' }}>
+                  <p className="text-sm text-white/30 py-10 text-center">
                     No items found in your vault.
-                  </Typography>
+                  </p>
                 ) : (
                   recent.map((item) => (
-                    <Box 
+                    <Link
                       key={item.$id}
-                      component={Link}
                       href={`/dashboard?focus=${item.$id}`}
-                      sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 1.5,
-                        px: 2.25,
-                        py: 1.5,
-                        borderRadius: '18px',
-                        bgcolor: 'rgba(255, 255, 255, 0.02)',
-                        border: '1px solid transparent',
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          bgcolor: 'rgba(255, 255, 255, 0.05)',
-                          borderColor: 'rgba(255, 255, 255, 0.1)',
-                        },
-                      }}
+                      className="flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-white/2 border border-transparent hover:bg-white/5 hover:border-white/10 text-white transition min-w-0"
                     >
-                      <Avatar sx={{ 
-                        width: 40, 
-                        height: 40, 
-                        borderRadius: '12px', 
-                        bgcolor: 'rgba(255, 255, 255, 0.05)',
-                        fontSize: '1rem',
-                        fontWeight: 800,
-                        color: '#6366F1',
-                        flexShrink: 0,
-                      }}>
+                      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-base font-extrabold text-[#6366F1] flex-shrink-0">
                         {item.name?.[0]?.toUpperCase() ?? "?"}
-                      </Avatar>
-                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                        <Typography component="span" sx={{ fontWeight: 700, fontSize: '0.9rem', lineHeight: 1.25 }} noWrap>{item.name}</Typography>
+                      </div>
+                      <div className="flex-1 min-w-0 flex flex-col">
+                        <span className="font-extrabold text-sm text-white truncate leading-tight">{item.name}</span>
                         {item.username && (
-                          <Typography component="span" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                          <span className="text-xs text-white/40 truncate mt-0.5 leading-normal">
                             {item.username}
-                          </Typography>
+                          </span>
                         )}
-                      </Box>
-                      <ChevronRightIcon sx={{ fontSize: 18, color: 'rgba(255, 255, 255, 0.3)', flexShrink: 0 }} />
-                    </Box>
+                      </div>
+                      <ChevronRight className="w-4.5 h-4.5 text-white/30 flex-shrink-0" />
+                    </Link>
                   ))
                 )}
-              </Stack>
-            </Paper>
-          </Grid>
+              </div>
+            </div>
+          </div>
 
           {/* Duplicate Items */}
-          <Grid size={{ xs: 12, md: 5 }}>
-            <Paper sx={{ 
-              p: 2.5, 
-              borderRadius: '28px', 
-              bgcolor: '#161412',
-              border: '1px solid #34322F',
-              backgroundImage: 'none',
-              height: '100%',
-            }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
-                <Typography component="span" variant="h6" sx={{ display: 'block', fontWeight: 900, fontFamily: 'var(--font-space-grotesk)', lineHeight: 1.25 }}>
+          <div className="lg:col-span-5">
+            <div className="p-6 rounded-[28px] bg-[#161412] border border-[#34322F] h-full flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-black font-space-grotesk text-white">
                   Duplicates
-                </Typography>
-                <Box sx={{ 
-                  px: 1.5, 
-                  py: 0.5, 
-                  borderRadius: '10px', 
-                  bgcolor: alpha('#6366F1', 0.1),
-                  color: '#6366F1',
-                  fontSize: '0.75rem',
-                  fontWeight: 800
-                }}>
+                </h3>
+                <span className="px-3 py-1 rounded-lg bg-[#6366F1]/10 text-[#6366F1] text-[10px] font-extrabold tracking-wider uppercase">
                   {dupGroups.length} GROUPS
-                </Box>
-              </Stack>
+                </span>
+              </div>
 
-              <Stack spacing={2}>
+              <div className="flex flex-col gap-4 flex-1">
                 {loading ? (
-                  <Box sx={{ py: 4, textAlign: 'center' }}>
-                    <CircularProgress size={32} sx={{ color: '#6366F1' }} />
-                  </Box>
+                  <div className="flex justify-center items-center py-10">
+                    <Loader2 className="w-8 h-8 text-[#6366F1] animate-spin" />
+                  </div>
                 ) : dupGroups.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <ShieldIcon sx={{ fontSize: 40, color: "rgba(255, 255, 255, 0.1)", mb: '12px' }} />
-                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.3)' }}>
+                  <div className="flex flex-col items-center justify-center py-10 gap-3 text-center">
+                    <Shield className="w-10 h-10 text-white/10" />
+                    <p className="text-sm text-white/30">
                       No duplicates detected.
-                    </Typography>
-                  </Box>
+                    </p>
+                  </div>
                 ) : (
                   dupGroups.map((g, idx) => (
-                    <Paper key={g.key} sx={{ 
-                      p: 2.5, 
-                      borderRadius: '20px', 
-                      bgcolor: 'rgba(255, 255, 255, 0.02)',
-                      border: '1px solid rgba(255, 255, 255, 0.05)'
-                    }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 800 }}>
+                    <div key={g.key} className="p-4 rounded-2xl bg-white/2 border border-white/5 flex flex-col gap-3">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-sm font-extrabold text-white">
                           Group #{idx + 1}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 700 }}>
+                        </h4>
+                        <span className="text-xs font-bold text-[#6366F1]">
                           {g.count} matches
-                        </Typography>
-                      </Stack>
-                      <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', display: 'block', mb: 2 }}>
+                        </span>
+                      </div>
+                      <p className="text-xs text-white/40 leading-normal">
                         Matching: {g.fields.join(", ")}
-                      </Typography>
-                      <Button 
-                        component={Link}
+                      </p>
+                      <Link 
                         href={`/dashboard?focus=${g.ids[0]}`}
-                        fullWidth 
-                        variant="outlined" 
-                        size="small"
-                        sx={{ 
-                          borderRadius: '12px', 
-                          fontWeight: 700,
-                          borderColor: 'rgba(255, 255, 255, 0.1)',
-                          color: '#fff'
-                        }}
+                        className="w-full py-2 rounded-xl text-xs font-bold border border-white/10 text-white hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition text-center"
                       >
                         Review Group
-                      </Button>
-                    </Paper>
+                      </Link>
+                    </div>
                   ))
                 )}
-              </Stack>
-            </Paper>
-          </Grid>
-        </Grid>
-      </Box>
-    </Box>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -441,10 +441,11 @@ export function DetailSectionWrapper({ detail, onClose }: { detail: ActiveDetail
 }
 
 /**
- * MobileDetailDrawer
- * 100dvh full-screen bottom drawer overlay representing target screens on mobile devices.
+ * GlobalDetailDrawer
+ * 100dvh full-screen drawer overlay representing target screens.
+ * Overlays EVERYTHING including Topbar.
  */
-export function MobileDetailDrawer({ activeDetail, onClose }: { activeDetail: ActiveDetail | null; onClose: () => void }) {
+export function GlobalDetailDrawer({ activeDetail, onClose }: { activeDetail: ActiveDetail | null; onClose: () => void }) {
   const isOpen = activeDetail !== null;
 
   return (
@@ -455,18 +456,18 @@ export function MobileDetailDrawer({ activeDetail, onClose }: { activeDetail: Ac
       variant="temporary"
       ModalProps={{
         keepMounted: false,
-        disablePortal: true, // Physical unmount physical containment as per policy
+        disablePortal: true,
       }}
       PaperProps={{
         sx: {
-          height: '100dvh', // The ONLY exception to the traditional 60% drawer rule
+          height: '100dvh',
           width: '100%',
           bgcolor: '#000000',
           backgroundImage: 'none',
           boxShadow: 'none',
           boxSizing: 'border-box',
           overflowY: 'auto',
-          zIndex: 9999,
+          zIndex: 9999, // Overlay Topbar
         }
       }}
     >
@@ -513,6 +514,11 @@ export function MultiSectionContainer({ children, panels, contextId }: MultiSect
     return calculated;
   }, [pathname, getLayoutForRoute, panels]);
 
+  // Certain types should ALWAYS be full screen (overlaying everything)
+  const isFullScreenDetail = useMemo(() => {
+    return activeDetail?.type === 'secret';
+  }, [activeDetail?.type]);
+
   // Compute CSS Grid columns style
   const gridTemplateColumns = useMemo(() => {
     return layout.sections.map(s => s.width).join(' ');
@@ -522,69 +528,76 @@ export function MultiSectionContainer({ children, panels, contextId }: MultiSect
     return (
       <Box sx={{ width: '100%', px: { xs: 2, lg: 4, xl: 6 }, boxSizing: 'border-box' }}>
         {children}
-        <MobileDetailDrawer activeDetail={activeDetail} onClose={() => setActiveDetail(null)} />
+        <GlobalDetailDrawer activeDetail={activeDetail} onClose={() => setActiveDetail(null)} />
       </Box>
     );
   }
 
   return (
-    <Box 
-      sx={{ 
-        display: 'grid', 
-        gridTemplateColumns, 
-        gap: 4, 
-        alignItems: 'flex-start',
-        width: '100%',
-        maxWidth: '100%',
-        margin: '0 auto',
-        // Premium margin padding positioning sides of the screen
-        px: { xs: 2, lg: 4, xl: 6 },
-        boxSizing: 'border-box'
-      }}
-    >
-      {layout.sections.map((section) => {
-        if (section.type === 'original') {
+    <Box sx={{ position: 'relative', width: '100%' }}>
+      <Box 
+        sx={{ 
+          display: 'grid', 
+          gridTemplateColumns, 
+          gap: 4, 
+          alignItems: 'flex-start',
+          width: '100%',
+          maxWidth: '100%',
+          margin: '0 auto',
+          // Premium margin padding positioning sides of the screen
+          px: { xs: 2, lg: 4, xl: 6 },
+          boxSizing: 'border-box'
+        }}
+      >
+        {layout.sections.map((section) => {
+          if (section.type === 'original') {
+            return (
+              <Box key={section.id} sx={{ minWidth: 0, width: '100%' }}>
+                {children}
+              </Box>
+            );
+          }
+
+          if (!section.panels || section.panels.length === 0) return null;
+
+          const isRightmostPanel = section.id === layout.sections[layout.sections.length - 1].id;
+
           return (
-            <Box key={section.id} sx={{ minWidth: 0, width: '100%' }}>
-              {children}
+            <Box 
+              key={section.id} 
+              sx={{ 
+                display: { xs: 'none', md: 'block' },
+                position: 'sticky',
+                top: '108px',
+                height: 'calc(100vh - 120px)',
+                overflowY: 'hidden',
+                width: section.width,
+                minWidth: section.width,
+                boxSizing: 'border-box'
+              }}
+            >
+              {isRightmostPanel && activeDetail && !isFullScreenDetail ? (
+                <Box sx={{ 
+                  height: '100%', 
+                  bgcolor: '#161412', 
+                  border: '1px solid rgba(255,255,255,0.08)', 
+                  borderRadius: '26px',
+                  overflow: 'hidden'
+                }}>
+                  <DetailSectionWrapper detail={activeDetail} onClose={() => setActiveDetail(null)} />
+                </Box>
+              ) : (
+                <DesktopRightSection panels={section.panels} contextId={contextId} />
+              )}
             </Box>
           );
-        }
+        })}
+      </Box>
 
-        if (!section.panels || section.panels.length === 0) return null;
-
-        const isRightmostPanel = section.id === layout.sections[layout.sections.length - 1].id;
-
-        return (
-          <Box 
-            key={section.id} 
-            sx={{ 
-              display: { xs: 'none', md: 'block' },
-              position: 'sticky',
-              top: '108px',
-              height: 'calc(100vh - 120px)',
-              overflowY: 'hidden',
-              width: section.width,
-              minWidth: section.width,
-              boxSizing: 'border-box'
-            }}
-          >
-            {isRightmostPanel && activeDetail ? (
-              <Box sx={{ 
-                height: '100%', 
-                bgcolor: '#161412', 
-                border: '1px solid rgba(255,255,255,0.08)', 
-                borderRadius: '26px',
-                overflow: 'hidden'
-              }}>
-                <DetailSectionWrapper detail={activeDetail} onClose={() => setActiveDetail(null)} />
-              </Box>
-            ) : (
-              <DesktopRightSection panels={section.panels} contextId={contextId} />
-            )}
-          </Box>
-        );
-      })}
+      {/* Full-screen detail overlay (z-index 9999) */}
+      {isFullScreenDetail && (
+        <GlobalDetailDrawer activeDetail={activeDetail} onClose={() => setActiveDetail(null)} />
+      )}
     </Box>
   );
 }
