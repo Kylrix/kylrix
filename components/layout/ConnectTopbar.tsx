@@ -967,8 +967,11 @@ export default function ConnectTopbar({
         sx={{
           width: '100%',
           borderTop: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '0 0 28px 28px',
           bgcolor: '#161412',
           overflow: 'hidden',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
         }}
       >
         {searchContent}
@@ -1414,8 +1417,11 @@ export default function ConnectTopbar({
         sx={{
           width: '100%',
           borderTop: '1px solid rgba(255,255,255,0.04)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '0 0 28px 28px',
           bgcolor: '#161412',
           overflow: 'hidden',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
         }}
       >
         {profileContent}
