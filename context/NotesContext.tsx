@@ -117,7 +117,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || !user?.$id || !effectivePinnedIds.length) return;
 
-    const missingIds = effectivePinnedIds.filter(id => !notesRef.current.some(n => n.$id === id));
+    const missingIds = effectivePinnedIds.filter(id => !notes.some(n => n.$id === id));
     if (missingIds.length === 0) return;
 
     const hydratePinnedNotes = async () => {
@@ -146,7 +146,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     };
 
     void hydratePinnedNotes();
-  }, [effectivePinnedIds, isAuthenticated, user?.$id, setCachedData]);
+  }, [effectivePinnedIds, isAuthenticated, user?.$id, setCachedData, notes]);
 
   const PINNED_CACHE_KEY = useMemo(() => user?.$id ? `pinned_ids_${user.$id}` : null, [user?.$id]);
   const INITIAL_NOTES_CACHE_KEY = useMemo(() => user?.$id ? `initial_notes_${user.$id}` : null, [user?.$id]);

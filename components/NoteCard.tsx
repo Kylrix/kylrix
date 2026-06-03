@@ -321,7 +321,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
 
             {/* Grouped Copy Column */}
-            <div className="flex-1 min-w-0 flex flex-col gap-1">
+            <div className="flex-1 min-w-0 flex flex-col gap-2.5">
               {/* Header Row */}
               <div className="flex items-center gap-2 flex-wrap">
                 {pinned && (
@@ -333,7 +333,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
               </div>
 
               {/* Summary / Content Preview */}
-              <div className="text-sm text-white/50 font-medium leading-relaxed mt-1 overflow-hidden">
+              <div className="text-sm text-white/50 font-medium leading-relaxed mt-2 overflow-hidden">
                 {note.format === 'doodle' ? (
                   <div className="w-full h-[64px] rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden relative">
                     <canvas
