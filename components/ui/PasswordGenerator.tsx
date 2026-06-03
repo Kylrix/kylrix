@@ -41,7 +41,7 @@ export default function PasswordGenerator({ onPasswordSelect, currentPassword }:
     if (onPasswordSelect) {
       onPasswordSelect(newPassword);
     }
-  }, [length]);
+  }, [length, currentPassword, onPasswordSelect]);
 
   const handleGenerate = () => {
     const newPassword = generateRandomPassword(length);
