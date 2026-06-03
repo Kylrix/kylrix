@@ -151,13 +151,15 @@ function ConnectHomeContent() {
           </div>
 
           {/* Sticky Interactive Dashboard Side column */}
-          <div className="h-[calc(100vh-120px)] flex flex-col gap-6 lg:sticky lg:top-[108px]">
+          <div className="max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 flex flex-col gap-6 lg:sticky lg:top-[108px]">
             
             {/* Section 1: Huddle Threads */}
             <div 
-              className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden transition-[flex] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden transition-[height,max-height] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]"
               style={{
-                flex: threadsOpen && projectsOpen ? '1 1 50%' : threadsOpen ? '1 1 100%' : '0 0 68px',
+                flex: '0 0 auto',
+                height: threadsOpen ? 'auto' : '68px',
+                maxHeight: threadsOpen ? '380px' : '68px',
               }}
             >
               {/* Threads Header */}
@@ -190,9 +192,11 @@ function ConnectHomeContent() {
 
             {/* Section 2: Projects Accordion */}
             <div 
-              className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden transition-[flex] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden transition-[height,max-height] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]"
               style={{
-                flex: threadsOpen && projectsOpen ? '1 1 50%' : projectsOpen ? '1 1 100%' : '0 0 68px',
+                flex: '0 0 auto',
+                height: projectsOpen ? 'auto' : '68px',
+                maxHeight: projectsOpen ? '380px' : '68px',
               }}
             >
               {/* Projects Header */}

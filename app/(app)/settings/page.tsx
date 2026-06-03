@@ -28,6 +28,7 @@ import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySe
 import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/components/overlays/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
+import { MultiSectionContainer } from '@/context/SectionContext';
 
 // Inline Custom Telegram Icon SVG for lucide alignment
 function TelegramIcon({ className = "w-5 h-5" }: { className?: string }) {
@@ -209,7 +210,8 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="relative w-full max-w-[1200px] mx-auto pt-4 md:pt-6 pb-12 px-4 md:px-6 z-10 select-none">
+        <MultiSectionContainer>
+            <div className="relative w-full max-w-[1200px] mx-auto pt-4 md:pt-6 pb-12 px-4 md:px-6 z-10 select-none">
             
             {/* Back Button */}
             <button
@@ -559,6 +561,7 @@ export default function SettingsPage() {
                 />
             )}
 
-        </div>
+            </div>
+        </MultiSectionContainer>
     );
 }

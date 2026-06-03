@@ -425,23 +425,23 @@ export default function ConnectTopbar({
           }}
           sx={{
             width: '100%',
-            px: isDesktop ? 0 : { xs: 2, md: 4 },
-            py: isDesktop ? 0 : 1.5,
-            maxHeight: isDesktop ? 'none' : TOPBAR_LAYOUT.searchDockMaxHeight,
+            px: isDesktop ? 0 : { xs: 2.25, md: 4 },
+            py: isDesktop ? 0 : 1.25,
+            maxHeight: isDesktop ? 'none' : '45vh',
             overflowY: isDesktop ? 'visible' : 'auto',
           }}
         >
           {!isDesktop && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-              <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                <Logo app={activeApp} size={18} variant="icon" />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', mb: 2 }}>
+              <Box sx={{ width: 36, height: 36, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                <Logo app={activeApp} size={16} variant="icon" />
               </Box>
               <TextField
                 id="topbar-search-field"
                 inputRef={searchInputRef}
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search notes, tags, shared links, people"
+                placeholder="Search ecosystem"
                 variant="standard"
                 fullWidth
                 autoFocus
@@ -450,12 +450,12 @@ export default function ConnectTopbar({
                   sx: {
                     color: 'white',
                     fontWeight: 800,
-                    fontSize: '0.98rem',
-                    '& input::placeholder': { color: 'rgba(255,255,255,0.42)', opacity: 1 },
+                    fontSize: '0.94rem',
+                    '& input::placeholder': { color: 'rgba(255,255,255,0.38)', opacity: 1 },
                   },
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Typography sx={{ color: 'rgba(255,255,255,0.42)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mr: 0.5 }}>
+                      <Typography sx={{ color: 'rgba(255,255,255,0.38)', fontWeight: 800, fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', mr: 0.5 }}>
                         Search
                       </Typography>
                     </InputAdornment>
@@ -463,7 +463,7 @@ export default function ConnectTopbar({
                   endAdornment: searchQuery ? (
                     <InputAdornment position="end">
                       <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)' }}>
-                        <CloseIcon size={16} />
+                        <CloseIcon size={14} />
                       </IconButton>
                     </InputAdornment>
                   ) : null,
@@ -478,69 +478,69 @@ export default function ConnectTopbar({
             </Box>
           )}
 
-          <Stack spacing={2} sx={{ mt: isDesktop ? 0 : 2 }}>
+          <Stack spacing={2} sx={{ mt: isDesktop ? 0 : 1.5 }}>
             {!hasQuery ? (
               <Box
                 sx={{
                   display: 'grid',
                   gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' },
-                  gap: 3,
+                  gap: 2.5,
                 }}
               >
                 {/* Left Column: Contextual Action Flow & Proactive Insights */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {/* Proactive Confident AI Suggestions if any */}
                   {suggestions.length > 0 && (
                     <Box sx={{ display: 'grid', gap: 1 }}>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        <Sparkles size={13} style={{ color: '#6366F1' }} />
-                        Smart Assistant Insights
+                      <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75, px: 0.5 }}>
+                        <Sparkles size={11} style={{ color: '#6366F1' }} />
+                        Smart Insights
                       </Typography>
-                      <Box sx={{ display: 'grid', gap: 1.25 }}>
+                      <Box sx={{ display: 'grid', gap: 1 }}>
                         {suggestions.map((suggestion) => (
                           <Box
                             key={suggestion.id}
                             sx={{
-                              p: 2,
-                              borderRadius: '20px',
-                              bgcolor: 'rgba(99, 102, 241, 0.05)',
-                              border: '1px solid rgba(99, 102, 241, 0.15)',
+                              p: 1.75,
+                              borderRadius: '22px',
+                              bgcolor: 'rgba(99, 102, 241, 0.04)',
+                              border: '1px solid rgba(99, 102, 241, 0.12)',
                               display: 'flex',
                               flexDirection: 'column',
-                              gap: 1.5,
+                              gap: 1.25,
                               position: 'relative',
                               overflow: 'hidden',
                               transition: 'all 0.2s',
                               '&:hover': {
-                                bgcolor: 'rgba(99, 102, 241, 0.08)',
-                                borderColor: 'rgba(99, 102, 241, 0.25)',
+                                bgcolor: 'rgba(99, 102, 241, 0.06)',
+                                borderColor: 'rgba(99, 102, 241, 0.2)',
                               }
                             }}
                           >
-                            <Box sx={{ display: 'flex', gap: 1.5 }}>
+                            <Box sx={{ display: 'flex', gap: 1.25 }}>
                               <Box sx={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: '12px',
-                                bgcolor: 'rgba(99, 102, 241, 0.12)',
+                                width: 34,
+                                height: 34,
+                                borderRadius: '10px',
+                                bgcolor: 'rgba(99, 102, 241, 0.1)',
                                 color: '#6366F1',
                                 display: 'grid',
                                 placeItems: 'center',
                                 flexShrink: 0
                               }}>
-                                <Bot size={18} />
+                                <Bot size={16} />
                               </Box>
-                              <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
-                                <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.25 }}>
+                              <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
+                                <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.84rem', lineHeight: 1.2 }}>
                                   {suggestion.title}
                                 </Typography>
-                                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.76rem', lineHeight: 1.35 }}>
+                                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.74rem', lineHeight: 1.3 }}>
                                   {suggestion.description}
                                 </Typography>
                               </Box>
                             </Box>
                             
-                            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', zIndex: 1 }}>
+                            <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'flex-end', zIndex: 1 }}>
                               <Button
                                 size="small"
                                 onClick={(e) => {
@@ -548,13 +548,13 @@ export default function ConnectTopbar({
                                   dismissSuggestion(suggestion.id);
                                 }}
                                 sx={{
-                                  color: 'rgba(255,255,255,0.42)',
+                                  color: 'rgba(255,255,255,0.35)',
                                   textTransform: 'none',
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.7rem',
                                   fontWeight: 700,
-                                  borderRadius: '10px',
-                                  px: 1.5,
-                                  '&:hover': { color: '#FF4D4D', bgcolor: 'rgba(255, 77, 77, 0.08)' }
+                                  borderRadius: '9px',
+                                  px: 1.25,
+                                  '&:hover': { color: '#FF4D4D', bgcolor: 'rgba(255, 77, 77, 0.06)' }
                                 }}
                               >
                                 Cancel
@@ -571,14 +571,14 @@ export default function ConnectTopbar({
                                     bgcolor: '#6366F1',
                                     color: 'white',
                                     textTransform: 'none',
-                                    fontSize: '0.74rem',
+                                    fontSize: '0.7rem',
                                     fontWeight: 800,
-                                    borderRadius: '10px',
-                                    px: 2,
+                                    borderRadius: '9px',
+                                    px: 1.75,
                                     '&:hover': { bgcolor: '#5254E8' }
                                   }}
                                 >
-                                  {suggestion.actionLabel || 'Run Action'}
+                                  {suggestion.actionLabel || 'Run'}
                                 </Button>
                               )}
                             </Box>
@@ -589,16 +589,16 @@ export default function ConnectTopbar({
                   )}
 
                   {/* Contextual Suggestions */}
-                  <Box sx={{ display: 'grid', gap: 1 }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Activity size={13} style={{ color: '#F59E0B' }} />
-                      Contextual Quick Actions
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75, px: 0.5 }}>
+                      <Activity size={11} style={{ color: '#F59E0B' }} />
+                      Quick Actions
                     </Typography>
-                    <Box sx={{ display: 'grid', gap: 1 }}>
+                    <Box sx={{ display: 'grid', gap: 0.75 }}>
                       {dynamicQuickActions.length === 0 ? (
-                        <Box sx={{ p: 2, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center' }}>
-                          <Typography sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem' }}>
-                            No live suggestions available yet. Explore the apps to build context!
+                        <Box sx={{ p: 2, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                          <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem' }}>
+                            Explore to build context!
                           </Typography>
                         </Box>
                       ) : (
@@ -614,40 +614,40 @@ export default function ConnectTopbar({
                               width: '100%',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: 1.5,
-                              px: 2.25,
-                              py: 1.5,
-                              borderRadius: '18px',
-                              bgcolor: 'rgba(255,255,255,0.02)',
-                              border: '1px solid rgba(255,255,255,0.05)',
+                              gap: 1.25,
+                              px: 2,
+                              py: 1.25,
+                              borderRadius: '20px',
+                              bgcolor: 'rgba(255,255,255,0.01)',
+                              border: '1px solid rgba(255,255,255,0.04)',
                               color: 'white',
                               textAlign: 'left',
                               cursor: 'pointer',
                               transition: 'all 0.2s',
                               '&:hover': {
-                                bgcolor: 'rgba(255,255,255,0.05)',
-                                borderColor: 'rgba(255,255,255,0.1)',
-                                transform: 'translateX(3px)'
+                                bgcolor: 'rgba(255,255,255,0.03)',
+                                borderColor: 'rgba(255,255,255,0.08)',
+                                transform: 'translateX(2px)'
                               }
                             }}
                           >
                             <Box sx={{
-                              width: 38,
-                              height: 38,
-                              borderRadius: '12px',
+                              width: 36,
+                              height: 36,
+                              borderRadius: '10px',
                               display: 'grid',
                               placeItems: 'center',
-                              bgcolor: `${action.accent}14`,
+                              bgcolor: `${action.accent}12`,
                               color: action.accent,
                               flexShrink: 0
                             }}>
-                              <Logo app={action.kind as any} size={16} variant="icon" />
+                              <Logo app={action.kind as any} size={15} variant="icon" />
                             </Box>
-                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
-                              <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25 }} noWrap>
+                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
+                              <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                                 {action.title}
                               </Typography>
-                              <Typography component="span" sx={{ color: 'rgba(255,255,255,0.66)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }}>
+                              <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
                                 {action.description}
                               </Typography>
                             </Box>
@@ -659,20 +659,20 @@ export default function ConnectTopbar({
                 </Box>
 
                 {/* Right Column: Platform Alerts & Notifications */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 0.5 }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Bell size={13} style={{ color: '#EC4899' }} />
-                      Diagnostics & Alerts
+                    <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Bell size={11} style={{ color: '#EC4899' }} />
+                      Alerts
                     </Typography>
                     {notifications.filter(n => !n.read).length > 0 && (
                       <Box sx={{
-                        px: 1,
-                        py: 0.25,
-                        borderRadius: '8px',
+                        px: 0.75,
+                        py: 0.1,
+                        borderRadius: '6px',
                         bgcolor: '#6366F1',
                         color: 'white',
-                        fontSize: '0.68rem',
+                        fontSize: '0.64rem',
                         fontWeight: 900
                       }}>
                         {notifications.filter(n => !n.read).length} New
@@ -680,11 +680,11 @@ export default function ConnectTopbar({
                     )}
                   </Box>
 
-                  <Box sx={{ display: 'grid', gap: 1 }}>
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
                     {notifications.length === 0 ? (
-                      <Box sx={{ px: 2.25, py: 2, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.08)', textAlign: 'center' }}>
-                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8rem', lineHeight: 1.45, display: 'block' }}>
-                          No diagnostics alerts at the moment. System is stable.
+                      <Box sx={{ px: 2, py: 1.5, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.06)', textAlign: 'center' }}>
+                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', lineHeight: 1.4, display: 'block' }}>
+                          System stable.
                         </Typography>
                       </Box>
                     ) : (
@@ -697,62 +697,62 @@ export default function ConnectTopbar({
                             width: '100%',
                             display: 'flex',
                             alignItems: 'flex-start',
-                            gap: 1.5,
-                            px: 2.25,
-                            py: 1.5,
-                            borderRadius: '18px',
-                            bgcolor: notif.read ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.03)',
+                            gap: 1.25,
+                            px: 2,
+                            py: 1.25,
+                            borderRadius: '20px',
+                            bgcolor: notif.read ? 'rgba(255,255,255,0.005)' : 'rgba(255,255,255,0.015)',
                             border: '1px solid',
-                            borderColor: notif.read ? 'rgba(255,255,255,0.03)' : alpha(notif.accent, 0.25),
+                            borderColor: notif.read ? 'rgba(255,255,255,0.02)' : alpha(notif.accent, 0.18),
                             color: 'white',
                             textAlign: 'left',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                             '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.05)',
-                              borderColor: notif.read ? 'rgba(255,255,255,0.08)' : alpha(notif.accent, 0.4),
+                              bgcolor: 'rgba(255,255,255,0.03)',
+                              borderColor: notif.read ? 'rgba(255,255,255,0.05)' : alpha(notif.accent, 0.3),
                             },
                           }}
                         >
                           <Box
                             sx={{
-                              width: 38,
-                              height: 38,
-                              borderRadius: '12px',
+                              width: 34,
+                              height: 34,
+                              borderRadius: '10px',
                               display: 'grid',
                               placeItems: 'center',
                               flexShrink: 0,
-                              bgcolor: alpha(notif.accent, notif.read ? 0.06 : 0.14),
+                              bgcolor: alpha(notif.accent, notif.read ? 0.04 : 0.1),
                               color: notif.accent,
                               position: 'relative',
                             }}
                           >
-                            <Bell size={16} />
+                            <Bell size={14} />
                             {!notif.read && (
                               <Box
                                 sx={{
                                   position: 'absolute',
-                                  top: 6,
-                                  right: 6,
-                                  width: 8,
-                                  height: 8,
+                                  top: 4,
+                                  right: 4,
+                                  width: 7,
+                                  height: 7,
                                   borderRadius: '999px',
                                   bgcolor: notif.accent,
-                                  border: '2px solid #161412',
+                                  border: '1.5px solid #161412',
                                 }}
                               />
                             )}
                           </Box>
 
-                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
+                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
                             <Typography
                               component="span"
                               sx={{
                                 color: 'white',
                                 fontWeight: 800,
-                                fontSize: '0.84rem',
-                                lineHeight: 1.25,
-                                opacity: notif.read ? 0.7 : 1,
+                                fontSize: '0.82rem',
+                                lineHeight: 1.2,
+                                opacity: notif.read ? 0.65 : 1,
                                 display: 'block',
                               }}
                             >
@@ -761,8 +761,8 @@ export default function ConnectTopbar({
                             <Typography
                               component="span"
                               sx={{
-                                color: 'rgba(255,255,255,0.42)',
-                                fontSize: '0.68rem',
+                                color: 'rgba(255,255,255,0.38)',
+                                fontSize: '0.66rem',
                                 fontWeight: 600,
                                 lineHeight: 1.3,
                                 display: 'block',
@@ -773,11 +773,12 @@ export default function ConnectTopbar({
                             <Typography
                               component="span"
                               sx={{
-                                color: 'rgba(255,255,255,0.66)',
-                                fontSize: '0.76rem',
-                                lineHeight: 1.4,
+                                color: 'rgba(255,255,255,0.58)',
+                                fontSize: '0.74rem',
+                                lineHeight: 1.35,
                                 fontWeight: 500,
                                 display: 'block',
+                                mt: 0.5
                               }}
                             >
                               {notif.message}
@@ -790,18 +791,18 @@ export default function ConnectTopbar({
                             onClick={(e) => dismissNotification(notif.id, e)}
                             sx={{
                               flexShrink: 0,
-                              mt: 0.25,
-                              color: 'rgba(255,255,255,0.3)',
-                              width: 28,
-                              height: 28,
+                              mt: -0.25,
+                              color: 'rgba(255,255,255,0.25)',
+                              width: 26,
+                              height: 26,
                               borderRadius: '8px',
                               '&:hover': {
                                 color: 'white',
-                                bgcolor: 'rgba(255,255,255,0.08)',
+                                bgcolor: 'rgba(255,255,255,0.06)',
                               },
                             }}
                           >
-                            <CloseIcon size={12} />
+                            <CloseIcon size={11} />
                           </IconButton>
                         </Box>
                       ))
@@ -811,12 +812,12 @@ export default function ConnectTopbar({
               </Box>
             ) : (
               /* If hasQuery is true, show Search Results */
-              <Box sx={{ display: 'grid', gap: 2 }}>
-                <Box sx={{ display: 'grid', gap: 0.75 }}>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              <Box sx={{ display: 'grid', gap: 1.5 }}>
+                <Box sx={{ display: 'grid', gap: 0.5 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
                     {searchSurface.searchAcrossLabel}
                   </Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', sm: '1fr 1fr' }, gap: 1 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', sm: '1fr 1fr' }, gap: 0.75 }}>
                     {searchSurface.searchTargets.slice(0, 4).map((action) => (
                       <Box
                         key={action.id}
@@ -830,25 +831,25 @@ export default function ConnectTopbar({
                           display: 'flex',
                           alignItems: 'center',
                           gap: 1.25,
-                          px: 2.25,
-                          py: 1.5,
-                          borderRadius: '18px',
-                          bgcolor: 'rgba(255,255,255,0.02)',
-                          border: '1px solid rgba(255,255,255,0.05)',
+                          px: 2,
+                          py: 1.25,
+                          borderRadius: '20px',
+                          bgcolor: 'rgba(255,255,255,0.01)',
+                          border: '1px solid rgba(255,255,255,0.04)',
                           color: 'white',
                           textAlign: 'left',
                           cursor: 'pointer',
-                          '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
                         }}
                       >
-                        <Box sx={{ width: 38, height: 38, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}1F`, color: action.accent, flexShrink: 0 }}>
-                          <Logo app={action.kind as any} size={16} variant="icon" />
+                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}>
+                          <Logo app={action.kind as any} size={15} variant="icon" />
                         </Box>
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
-                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25 }} noWrap>
+                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
+                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                             {action.title}
                           </Typography>
-                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.68)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
                             {action.description}
                           </Typography>
                         </Box>
@@ -858,16 +859,16 @@ export default function ConnectTopbar({
                 </Box>
 
                 {(searchingPeople || peopleResults.length > 0) && (
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.74rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  <Box sx={{ display: 'grid', gap: 0.5 }}>
+                    <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
                       People
                     </Typography>
                     {searchingPeople ? (
-                      <Typography sx={{ color: 'rgba(255,255,255,0.52)', fontSize: '0.84rem' }}>
-                        Searching people...
+                      <Typography sx={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.8rem', px: 0.5 }}>
+                        Searching...
                       </Typography>
                     ) : (
-                      <Box sx={{ display: 'grid', gap: 1 }}>
+                      <Box sx={{ display: 'grid', gap: 0.75 }}>
                         {peopleResults.slice(0, 3).map((person) => (
                           <Box
                             key={person.$id || person.id}
@@ -885,28 +886,28 @@ export default function ConnectTopbar({
                               display: 'flex',
                               alignItems: 'center',
                               gap: 1.25,
-                              px: 2.25,
-                              py: 1.5,
-                              borderRadius: '18px',
-                              bgcolor: 'rgba(255,255,255,0.02)',
-                              border: '1px solid rgba(255,255,255,0.05)',
+                              px: 2,
+                              py: 1.25,
+                              borderRadius: '20px',
+                              bgcolor: 'rgba(255,255,255,0.01)',
+                              border: '1px solid rgba(255,255,255,0.04)',
                               color: 'white',
                               textAlign: 'left',
                               cursor: 'pointer',
-                              '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' }
+                              '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
                             }}
                           >
                             <Avatar
                               src={person.avatar || undefined}
-                              sx={{ width: 38, height: 38, borderRadius: '12px', bgcolor: 'rgba(255,255,255,0.08)', color: 'white', fontSize: '0.8rem', fontWeight: 800 }}
+                              sx={{ width: 36, height: 36, borderRadius: '10px', bgcolor: 'rgba(255,255,255,0.06)', color: 'white', fontSize: '0.75rem', fontWeight: 800 }}
                             >
                               {(person.displayName || person.name || String(person.username || person.prefs?.username || 'U').replace(/^@+/, '') || 'U')[0].toUpperCase()}
                             </Avatar>
-                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
-                              <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25 }} noWrap>
+                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
+                              <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                                 {person.displayName || person.name}
                               </Typography>
-                              <Typography component="span" sx={{ color: 'rgba(255,255,255,0.68)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                              <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
                                 @{String(person.username || person.prefs?.username || 'user').replace(/^@+/, '')}
                               </Typography>
                             </Box>
@@ -933,10 +934,10 @@ export default function ConnectTopbar({
           PaperProps={{
             sx: {
               bgcolor: '#161412',
-              width: 380,
+              width: 360,
               height: '100vh',
-              borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-              p: 3,
+              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              p: 2.75,
               display: 'flex',
               flexDirection: 'column',
               boxSizing: 'border-box',
@@ -944,16 +945,16 @@ export default function ConnectTopbar({
           }}
         >
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.75 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
               Search Ecosystem
             </Typography>
-            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
-              <CloseIcon size={18} />
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+              <CloseIcon size={16} />
             </IconButton>
           </Box>
           
-          <Box sx={{ flex: 1, overflowY: 'auto', mx: -3, px: 3 }}>
+          <Box sx={{ flex: 1, overflowY: 'auto', mx: -2.75, px: 2.75 }}>
             {searchContent}
           </Box>
         </Drawer>
@@ -980,49 +981,49 @@ export default function ConnectTopbar({
 
     const profileContent = (
       <Box
-        sx={{ px: { xs: 2, md: 4 }, py: 1.5, maxHeight: isDesktop ? 'calc(100vh - 120px)' : TOPBAR_LAYOUT.searchDockMaxHeight, overflowY: 'auto' }}
+        sx={{ px: { xs: 2.25, md: 4 }, py: 1.25, maxHeight: isDesktop ? 'calc(100vh - 120px)' : '45vh', overflowY: 'auto' }}
       >
           <Paper
             elevation={0}
             sx={{
               width: '100%',
-              borderRadius: '30px',
+              borderRadius: '26px',
               bgcolor: '#161412',
-              border: `1px solid ${alpha(appAccent, 0.28)}`,
+              border: `1px solid ${alpha(appAccent, 0.22)}`,
               overflow: 'hidden',
             }}
           >
-            <Box sx={{ p: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1.25 }}>
+            <Box sx={{ p: 1.25 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, px: 0.5, mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 38, height: 38, borderRadius: '14px', display: 'grid', placeItems: 'center', color: appAccent, bgcolor: alpha(appAccent, 0.08), border: `1px solid ${alpha(appAccent, 0.24)}` }}>
-                    <Logo app={activeApp} size={18} variant="icon" />
+                  <Box sx={{ width: 34, height: 34, borderRadius: '12px', display: 'grid', placeItems: 'center', color: appAccent, bgcolor: alpha(appAccent, 0.06), border: `1px solid ${alpha(appAccent, 0.18)}` }}>
+                    <Logo app={activeApp} size={16} variant="icon" />
                   </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.35, minWidth: 0 }}>
-                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0 }}>
+                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.86rem', lineHeight: 1.2 }}>
                       {profileName}
                     </Typography>
-                    <Typography component="span" variant="caption" sx={{ color: alpha('#fff', 0.52), fontWeight: 700, lineHeight: 1.35 }}>
-                      Profile & Messaging
+                    <Typography component="span" variant="caption" sx={{ color: alpha('#fff', 0.45), fontWeight: 700, lineHeight: 1.3 }}>
+                      Profile
                     </Typography>
                   </Box>
                 </Box>
-                <IconButton onClick={handleCloseAll} size="small" sx={{ width: 34, height: 34, borderRadius: '999px', color: alpha('#fff', 0.9), bgcolor: alpha('#fff', 0.06), border: '1px solid rgba(255,255,255,0.08)' }}>
+                <IconButton onClick={handleCloseAll} size="small" sx={{ width: 30, height: 30, borderRadius: '999px', color: alpha('#fff', 0.8), bgcolor: alpha('#fff', 0.05), border: '1px solid rgba(255,255,255,0.06)' }}>
                   ✕
                 </IconButton>
               </Box>
 
-                <Box sx={{ display: 'grid', gap: 1.5, maxHeight: '58vh', overflowY: 'auto', pr: 0.5, pb: 0.75 }}>
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
+                <Box sx={{ display: 'grid', gap: 1.25, maxHeight: '58vh', overflowY: 'auto', pr: 0.5, pb: 0.5 }}>
+                <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', p: 0.75 }}>
                   <Avatar
                     src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
-                    sx={{ width: 104, height: 104, bgcolor: tone.secondary, color: '#fff', fontWeight: 900, borderRadius: '28px', flexShrink: 0 }}
+                    sx={{ width: 88, height: 88, bgcolor: tone.secondary, color: '#fff', fontWeight: 900, borderRadius: '24px', flexShrink: 0 }}
                   >
                     {profileName.slice(0, 1).toUpperCase()}
                   </Avatar>
-                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                      <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1.15, minWidth: 0, flex: 1 }} noWrap>
+                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
+                      <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1.15, minWidth: 0, flex: 1 }} noWrap>
                         {profileName}
                       </Typography>
                       <IconButton
@@ -1031,18 +1032,18 @@ export default function ConnectTopbar({
                         size="small"
                         sx={{
                           flexShrink: 0,
-                          width: 32,
-                          height: 32,
-                          color: 'rgba(255, 255, 255, 0.6)',
-                          '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' },
-                          '&.Mui-disabled': { color: 'rgba(255,255,255,0.3)' }
+                          width: 28,
+                          height: 28,
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' },
+                          '&.Mui-disabled': { color: 'rgba(255,255,255,0.25)' }
                         }}
                       >
-                        <UserIcon size={18} />
+                        <UserIcon size={16} />
                       </IconButton>
                     </Box>
-                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                      <Typography component="span" sx={{ color: alpha('#fff', 0.62), fontWeight: 700, fontSize: '0.86rem', lineHeight: 1.35, minWidth: 0, flex: 1 }} noWrap>
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Typography component="span" sx={{ color: alpha('#fff', 0.58), fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.35, minWidth: 0, flex: 1 }} noWrap>
                         {profileUsername ? `@${String(profileUsername).replace(/^@+/, '')}` : 'profile'}
                       </Typography>
                       {profileUsername && (
@@ -1052,27 +1053,27 @@ export default function ConnectTopbar({
                           title={copyState === 'copied-username' ? 'Copied!' : 'Copy username'}
                           sx={{
                             flexShrink: 0,
-                            width: 28,
-                            height: 28,
-                            color: copyState === 'copied-username' ? '#10B981' : 'rgba(255, 255, 255, 0.4)',
-                            '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' }
+                            width: 26,
+                            height: 26,
+                            color: copyState === 'copied-username' ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
+                            '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }
                           }}
                         >
-                          <CopyIcon size={14} />
+                          <CopyIcon size={12} />
                         </IconButton>
                       )}
                     </Box>
                   </Box>
                 </Box>
 
-                <Box sx={{ borderRadius: '22px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.02)', p: 2.25 }}>
-                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1, display: 'block', lineHeight: 1.3 }}>
-                    Identity
+                <Box sx={{ borderRadius: '20px', border: '1px solid rgba(255,255,255,0.04)', bgcolor: 'rgba(255,255,255,0.01)', p: 2 }}>
+                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.75, display: 'block', lineHeight: 1.3 }}>
+                    Identity Key
                   </Typography>
                   
                   {/* UserId section with copy button */}
                   <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                    <Typography component="span" sx={{ color: 'white', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', fontWeight: 600, minWidth: 0, flex: 1, wordBreak: 'break-all', lineHeight: 1.45 }}>
+                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', fontWeight: 600, minWidth: 0, flex: 1, wordBreak: 'break-all', lineHeight: 1.45 }}>
                       {shortenUserId(profileSeed.userId) || 'No ID'}
                     </Typography>
                     <IconButton
@@ -1081,13 +1082,13 @@ export default function ConnectTopbar({
                       title={copyState === 'copied-userid' ? 'Copied!' : 'Copy user ID'}
                       sx={{
                         flexShrink: 0,
-                        width: 28,
-                        height: 28,
-                        color: copyState === 'copied-userid' ? '#10B981' : 'rgba(255, 255, 255, 0.4)',
-                        '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' }
+                        width: 26,
+                        height: 26,
+                        color: copyState === 'copied-userid' ? '#10B981' : 'rgba(255, 255, 255, 0.35)',
+                        '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }
                       }}
                     >
-                      <CopyIcon size={14} />
+                      <CopyIcon size={12} />
                     </IconButton>
                   </Box>
                 </Box>
@@ -1100,16 +1101,17 @@ export default function ConnectTopbar({
                     }}
                     sx={{
                       minWidth: 0,
-                      flex: '1 1 180px',
-                      borderRadius: '16px',
-                      bgcolor: alpha(appAccent, 0.09),
+                      flex: '1 1 120px',
+                      borderRadius: '14px',
+                      bgcolor: alpha(appAccent, 0.06),
                       color: appAccent,
-                      px: 1.5,
-                      py: 1.15,
+                      px: 1.25,
+                      py: 1,
+                      fontSize: '0.84rem',
                       textTransform: 'none',
-                      '&:hover': { bgcolor: alpha(appAccent, 0.15) },
+                      '&:hover': { bgcolor: alpha(appAccent, 0.12) },
                     }}
-                    startIcon={<Wallet size={16} />}
+                    startIcon={<Wallet size={14} />}
                   >
                     Wallet
                   </Button>
@@ -1120,14 +1122,15 @@ export default function ConnectTopbar({
                     }}
                     sx={{
                       minWidth: 0,
-                      flex: '1 1 180px',
-                      borderRadius: '16px',
-                      bgcolor: 'rgba(255,255,255,0.03)',
+                      flex: '1 1 120px',
+                      borderRadius: '14px',
+                      bgcolor: 'rgba(255,255,255,0.02)',
                       color: 'white',
-                      px: 1.5,
-                      py: 1.15,
+                      px: 1.25,
+                      py: 1,
+                      fontSize: '0.84rem',
                       textTransform: 'none',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.06)' },
                     }}
                   >
                     Settings
@@ -1139,14 +1142,15 @@ export default function ConnectTopbar({
                     }}
                     sx={{
                       minWidth: 0,
-                      flex: '1 1 180px',
-                      borderRadius: '16px',
-                      bgcolor: 'rgba(255, 77, 77, 0.08)',
+                      flex: '1 1 120px',
+                      borderRadius: '14px',
+                      bgcolor: 'rgba(255, 77, 77, 0.06)',
                       color: '#FF4D4D',
-                      px: 1.5,
-                      py: 1.15,
+                      px: 1.25,
+                      py: 1,
+                      fontSize: '0.84rem',
                       textTransform: 'none',
-                      '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.14)' },
+                      '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.12)' },
                     }}
                   >
                     Sign out
@@ -1159,15 +1163,16 @@ export default function ConnectTopbar({
                   variant="contained"
                   sx={{
                     width: '100%',
-                    borderRadius: '16px',
+                    borderRadius: '14px',
                     px: 2,
-                    py: 1.25,
+                    py: 1.15,
                     textTransform: 'none',
                     fontWeight: 900,
+                    fontSize: '0.88rem',
                     bgcolor: appAccent,
                     color: '#000',
                     '&:hover': { bgcolor: alpha(appAccent, 0.86) },
-                    '&.Mui-disabled': { bgcolor: alpha(appAccent, 0.28), color: 'rgba(255,255,255,0.6)' },
+                    '&.Mui-disabled': { bgcolor: alpha(appAccent, 0.22), color: 'rgba(255,255,255,0.5)' },
                   }}
                 >
                   See full profile
@@ -1191,8 +1196,8 @@ export default function ConnectTopbar({
               bgcolor: '#161412',
               width: 320,
               height: '100vh',
-              borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-              p: 3,
+              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              p: 2.75,
               display: 'flex',
               flexDirection: 'column',
               boxSizing: 'border-box',
@@ -1200,23 +1205,23 @@ export default function ConnectTopbar({
           }}
         >
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', letterSpacing: '0.02em' }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3.5 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', letterSpacing: '0.02em', fontSize: '1.1rem' }}>
               Secure Space
             </Typography>
-            <IconButton onClick={() => setProfileMenuAnchorEl(null)} sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' } }}>
-              <CloseIcon size={18} />
+            <IconButton onClick={() => setProfileMenuAnchorEl(null)} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 32, height: 32 }}>
+              <CloseIcon size={16} />
             </IconButton>
           </Box>
 
           {/* Scrollable Content */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3.5, overflowY: 'auto' }}>
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3, overflowY: 'auto', mx: -2.75, px: 2.75 }}>
             {/* User Profile Info Card */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 2, p: 2, borderRadius: '24px', bgcolor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1.75, p: 2, borderRadius: '26px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)' }}>
               <Box sx={{ position: 'relative' }}>
                 <Avatar
                   src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
-                  sx={{ width: 96, height: 96, bgcolor: tone.secondary, color: '#fff', fontWeight: 900, fontSize: '2rem', borderRadius: '28px', border: `2px solid ${alpha(appAccent, 0.2)}` }}
+                  sx={{ width: 88, height: 88, bgcolor: tone.secondary, color: '#fff', fontWeight: 900, fontSize: '1.75rem', borderRadius: '26px', border: `1.5px solid ${alpha(appAccent, 0.15)}` }}
                 >
                   {profileName.slice(0, 1).toUpperCase()}
                 </Avatar>
@@ -1224,19 +1229,19 @@ export default function ConnectTopbar({
                 <Box
                   sx={{
                     position: 'absolute',
-                    bottom: -2,
-                    right: -2,
-                    width: 16,
-                    height: 16,
+                    bottom: -1,
+                    right: -1,
+                    width: 14,
+                    height: 14,
                     borderRadius: '50%',
                     bgcolor: '#10B981',
-                    border: '3px solid #161412',
+                    border: '2.5px solid #161412',
                   }}
                 />
               </Box>
 
-              <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1.25rem', lineHeight: 1.15 }}>
+              <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1.15rem', lineHeight: 1.15 }}>
                   {profileName}
                 </Typography>
                 
@@ -1246,34 +1251,35 @@ export default function ConnectTopbar({
                     sx={{
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: 0.75,
-                      px: 1.5,
-                      py: 0.5,
+                      alignSelf: 'center',
+                      gap: 0.5,
+                      px: 1.25,
+                      py: 0.35,
                       borderRadius: '999px',
-                      bgcolor: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      bgcolor: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.06)',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' }
                     }}
                   >
-                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 700, fontSize: '0.82rem', lineHeight: 1.35 }}>
+                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, fontSize: '0.78rem', lineHeight: 1.35 }}>
                       @{String(profileUsername).replace(/^@+/, '')}
                     </Typography>
-                    <CopyIcon size={12} style={{ color: copyState === 'copied-username' ? '#10B981' : 'rgba(255, 255, 255, 0.4)' }} />
+                    <CopyIcon size={11} style={{ color: copyState === 'copied-username' ? '#10B981' : 'rgba(255, 255, 255, 0.3)' }} />
                   </Box>
                 )}
               </Box>
             </Box>
 
             {/* System Identification details */}
-            <Box sx={{ borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)', p: 2.25 }}>
-                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.68)', fontSize: '0.72rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 1.1, display: 'block', lineHeight: 1.3 }}>
+            <Box sx={{ borderRadius: '22px', border: '1px solid rgba(255,255,255,0.04)', bgcolor: 'rgba(255,255,255,0.005)', p: 2 }}>
+                    <Typography component="span" sx={{ color: 'rgba(255,255,255,0.42)', fontSize: '0.68rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', mb: 0.75, display: 'block', lineHeight: 1.3 }}>
                 System Key
               </Typography>
               
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.85)', fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600, minWidth: 0, flex: 1, wordBreak: 'break-all', lineHeight: 1.45 }}>
+                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.75)', fontFamily: 'var(--font-mono)', fontSize: '0.74rem', fontWeight: 600, minWidth: 0, flex: 1, wordBreak: 'break-all', lineHeight: 1.45 }}>
                   {profileSeed.userId || 'No ID'}
                 </Typography>
                 <IconButton
@@ -1281,20 +1287,20 @@ export default function ConnectTopbar({
                   size="small"
                   sx={{
                     flexShrink: 0,
-                    width: 28,
-                    height: 28,
-                    bgcolor: 'rgba(255,255,255,0.04)',
-                    color: copyState === 'copied-userid' ? '#10B981' : 'rgba(255, 255, 255, 0.4)',
-                    '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.08)' }
+                    width: 26,
+                    height: 26,
+                    bgcolor: 'rgba(255,255,255,0.03)',
+                    color: copyState === 'copied-userid' ? '#10B981' : 'rgba(255, 255, 255, 0.3)',
+                    '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }
                   }}
                 >
-                  <CopyIcon size={13} />
+                  <CopyIcon size={12} />
                 </IconButton>
               </Box>
             </Box>
 
             {/* Large styled navigation lists */}
-            <Stack spacing={1.5}>
+            <Stack spacing={1.25}>
               <Button
                 fullWidth
                 onClick={() => {
@@ -1304,21 +1310,21 @@ export default function ConnectTopbar({
                 variant="contained"
                 sx={{
                   borderRadius: '16px',
-                  bgcolor: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255,255,255,0.05)',
+                  bgcolor: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255,255,255,0.04)',
                   color: 'white',
-                  py: 1.5,
-                  px: 2.5,
+                  py: 1.25,
+                  px: 2.25,
                   textTransform: 'none',
                   fontWeight: 800,
-                  fontSize: '0.92rem',
+                  fontSize: '0.9rem',
                   display: 'flex',
                   justifyContent: 'flex-start',
-                  gap: 2,
-                  '&:hover': { bgcolor: 'rgba(255,255,255,0.08)', borderColor: 'rgba(255,255,255,0.1)' },
+                  gap: 1.75,
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.08)', transform: 'translateX(2px)' },
                 }}
               >
-                <Wallet size={18} style={{ color: appAccent }} />
+                <Wallet size={16} style={{ color: appAccent }} />
                 Manage Wallet
               </Button>
 
@@ -1331,21 +1337,21 @@ export default function ConnectTopbar({
                 variant="contained"
                 sx={{
                   borderRadius: '16px',
-                  bgcolor: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255,255,255,0.05)',
+                  bgcolor: 'rgba(255, 255, 255, 0.02)',
+                  border: '1px solid rgba(255,255,255,0.04)',
                   color: 'white',
-                  py: 1.5,
-                  px: 2.5,
+                  py: 1.25,
+                  px: 2.25,
                   textTransform: 'none',
                   fontWeight: 800,
-                  fontSize: '0.92rem',
+                  fontSize: '0.9rem',
                   display: 'flex',
                   justifyContent: 'flex-start',
-                  gap: 2,
-                  '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255,255,255,0.1)' },
+                  gap: 1.75,
+                  '&:hover': { bgcolor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.08)', transform: 'translateX(2px)' },
                 }}
               >
-                <UserIcon size={18} style={{ color: '#F59E0B' }} />
+                <UserIcon size={16} style={{ color: '#F59E0B' }} />
                 Account Settings
               </Button>
 
@@ -1358,15 +1364,16 @@ export default function ConnectTopbar({
                   borderRadius: '16px',
                   bgcolor: appAccent,
                   color: '#000',
-                  py: 1.5,
-                  px: 2.5,
+                  py: 1.35,
+                  px: 2.25,
+                  mt: 1,
                   textTransform: 'none',
                   fontWeight: 900,
-                  fontSize: '0.92rem',
+                  fontSize: '0.9rem',
                   display: 'flex',
                   justifyContent: 'center',
-                  '&:hover': { bgcolor: alpha(appAccent, 0.86) },
-                  '&.Mui-disabled': { bgcolor: alpha(appAccent, 0.15), color: 'rgba(255,255,255,0.3)' },
+                  '&:hover': { bgcolor: alpha(appAccent, 0.86), transform: 'translateY(-1px)' },
+                  '&.Mui-disabled': { bgcolor: alpha(appAccent, 0.12), color: 'rgba(255,255,255,0.25)' },
                 }}
               >
                 See Full Profile
@@ -1375,7 +1382,7 @@ export default function ConnectTopbar({
           </Box>
 
           {/* Sign Out Button strictly aligned at the bottom */}
-          <Box sx={{ mt: 'auto', pt: 3, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <Box sx={{ mt: 'auto', pt: 2.5, borderTop: '1px solid rgba(255,255,255,0.04)' }}>
             <Button
               fullWidth
               onClick={() => {
@@ -1384,15 +1391,15 @@ export default function ConnectTopbar({
               }}
               variant="contained"
               sx={{
-                borderRadius: '14px',
-                bgcolor: 'rgba(255, 77, 77, 0.08)',
-                border: '1px solid rgba(255, 77, 77, 0.15)',
+                borderRadius: '12px',
+                bgcolor: 'rgba(255, 77, 77, 0.05)',
+                border: '1px solid rgba(255, 77, 77, 0.12)',
                 color: '#FF4D4D',
-                py: 1.25,
+                py: 1.15,
                 textTransform: 'none',
                 fontWeight: 800,
-                fontSize: '0.88rem',
-                '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.16)', borderColor: 'rgba(255, 77, 77, 0.25)' },
+                fontSize: '0.86rem',
+                '&:hover': { bgcolor: 'rgba(255, 77, 77, 0.12)', borderColor: 'rgba(255, 77, 77, 0.2)' },
               }}
             >
               Sign Out
@@ -1406,7 +1413,7 @@ export default function ConnectTopbar({
       <Box
         sx={{
           width: '100%',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
+          borderTop: '1px solid rgba(255,255,255,0.04)',
           bgcolor: '#161412',
           overflow: 'hidden',
         }}
@@ -1432,8 +1439,8 @@ export default function ConnectTopbar({
               bgcolor: '#161412',
               width: 320,
               height: '100vh',
-              borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-              p: 3,
+              borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+              p: 2.75,
               display: 'flex',
               flexDirection: 'column',
               boxSizing: 'border-box',
@@ -1441,17 +1448,17 @@ export default function ConnectTopbar({
           }}
         >
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff' }}>
-              Ecosystem Apps
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.75 }}>
+            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
+              Ecosystem
             </Typography>
-            <IconButton onClick={() => setAppMenuAnchorEl(null)} sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: 'white' } }}>
-              <CloseIcon size={18} />
+            <IconButton onClick={() => setAppMenuAnchorEl(null)} sx={{ color: 'rgba(255, 255, 255, 0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+              <CloseIcon size={16} />
             </IconButton>
           </Box>
           
           {/* App List */}
-          <Stack spacing={1.5} sx={{ overflowY: 'auto', flex: 1 }}>
+          <Stack spacing={1.25} sx={{ overflowY: 'auto', flex: 1, mx: -2.75, px: 2.75 }}>
             {connectApps.map((item) => {
               const appTone = getAppTone(item.app);
               return (
@@ -1473,30 +1480,31 @@ export default function ConnectTopbar({
                     justifyContent: 'flex-start',
                     textAlign: 'left',
                     px: 2.25,
-                    py: 1.75,
+                    py: 1.5,
                     borderRadius: '16px',
                     color: '#fff',
                     background: 'transparent',
-                    bgcolor: item.selected ? alpha(appTone.secondary, 0.08) : 'rgba(255, 255, 255, 0.01)',
-                    border: '1px solid transparent',
+                    bgcolor: item.selected ? alpha(appTone.secondary, 0.06) : 'rgba(255, 255, 255, 0.005)',
+                    border: '1px solid',
+                    borderColor: item.selected ? alpha(appTone.secondary, 0.15) : 'rgba(255, 255, 255, 0.03)',
                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
                     '&:hover': {
-                      bgcolor: alpha(appTone.secondary, 0.12),
-                      borderColor: alpha(appTone.secondary, 0.24),
-                      transform: 'translateX(4px)',
+                      bgcolor: alpha(appTone.secondary, 0.1),
+                      borderColor: alpha(appTone.secondary, 0.2),
+                      transform: 'translateX(3px)',
                     }
                   }}
                 >
                   <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
-                    <Box sx={{ width: 36, height: 36, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
-                      <Logo app={item.app} size={16} variant="icon" />
+                    <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
+                      <Logo app={item.app} size={15} variant="icon" />
                     </Box>
-                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.75 }}>
-                      <Typography component="span" sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25 }} noWrap>
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
+                      <Typography component="span" sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                         {item.label}
                       </Typography>
-                      <Typography component="span" sx={{ color: 'rgba(255,255,255,0.74)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                      <Typography component="span" sx={{ color: 'rgba(255,255,255,0.62)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
                         {item.description}
                       </Typography>
                     </Box>
@@ -1527,7 +1535,7 @@ export default function ConnectTopbar({
                 handleCloseAll();
               }
             }}
-            sx={{ px: { xs: 2, md: 4 }, py: 1.5, maxHeight: TOPBAR_LAYOUT.searchDockMaxHeight, overflowY: 'auto' }}
+            sx={{ px: { xs: 2.25, md: 4 }, py: 1.25, maxHeight: '45vh', overflowY: 'auto' }}
           >
             <Box sx={{ display: 'grid', gap: 0.75 }}>
               {connectApps.map((item) => {
@@ -1552,27 +1560,29 @@ export default function ConnectTopbar({
                       textAlign: 'left',
                       px: 2.25,
                       py: 1.5,
-                      borderRadius: '18px',
+                      borderRadius: '20px',
                       color: 'white',
                       background: 'transparent',
-                      bgcolor: item.selected ? alpha(appTone.secondary, 0.08) : 'rgba(255,255,255,0.02)',
-                      border: '1px solid transparent',
+                      bgcolor: item.selected ? alpha(appTone.secondary, 0.06) : 'rgba(255,255,255,0.01)',
+                      border: '1px solid',
+                      borderColor: item.selected ? alpha(appTone.secondary, 0.15) : 'rgba(255,255,255,0.04)',
                       cursor: 'pointer',
+                      transition: 'all 0.2s',
                       '&:hover': {
-                        bgcolor: alpha(appTone.secondary, 0.12),
-                        borderColor: alpha(appTone.secondary, 0.24),
+                        bgcolor: alpha(appTone.secondary, 0.1),
+                        borderColor: alpha(appTone.secondary, 0.2),
                       },
                     }}
                   >
                     <Stack direction="row" spacing={1.25} alignItems="center" sx={{ width: '100%' }}>
-                      <Box sx={{ width: 36, height: 36, borderRadius: '12px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
-                        <Logo app={item.app} size={16} variant="icon" />
+                      <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: alpha(appTone.secondary, 0.08), color: appTone.secondary, flexShrink: 0 }}>
+                        <Logo app={item.app} size={15} variant="icon" />
                       </Box>
-                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35, pr: 0.5 }}>
-                        <Typography component="span" sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.88rem', lineHeight: 1.25 }} noWrap>
+                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
+                        <Typography component="span" sx={{ color: '#F3F2F0', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                           {item.label}
                         </Typography>
-                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.74)', fontWeight: 600, fontSize: '0.76rem', lineHeight: 1.35 }} noWrap>
+                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.62)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
                           {item.description}
                         </Typography>
                       </Box>

@@ -625,16 +625,12 @@ export default function NotesPage() {
             </div>
 
             {/* Right Pane: Sticky side column */}
-            <div className="h-[calc(100vh-120px)] flex flex-col gap-6 sticky top-[108px]">
+            <div className="max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 flex flex-col gap-6 sticky top-[108px]">
               
               {/* Section 1: Shared Notes Accordion */}
               <div 
-                className={`bg-[#161412] border border-white/5 p-5 rounded-[24px] flex flex-col overflow-hidden transition-all duration-300 ${
-                  sharedNotesOpen && projectsOpen 
-                    ? 'flex-1 h-[50%]' 
-                    : sharedNotesOpen 
-                      ? 'flex-1 h-full' 
-                      : 'h-[68px] flex-none'
+                className={`bg-[#161412] border border-white/5 p-5 rounded-[24px] flex flex-col overflow-hidden transition-all duration-300 flex-none ${
+                  sharedNotesOpen ? 'h-auto max-h-[380px]' : 'h-[68px]'
                 }`}
               >
                 <div className="flex justify-between items-center mb-4 flex-shrink-0 select-none">
@@ -706,12 +702,8 @@ export default function NotesPage() {
 
               {/* Section 2: Projects Accordion */}
               <div 
-                className={`bg-[#161412] border border-white/5 p-5 rounded-[24px] flex flex-col overflow-hidden transition-all duration-300 ${
-                  sharedNotesOpen && projectsOpen 
-                    ? 'flex-1 h-[50%]' 
-                    : projectsOpen 
-                      ? 'flex-1 h-full' 
-                      : 'h-[68px] flex-none'
+                className={`bg-[#161412] border border-white/5 p-5 rounded-[24px] flex flex-col overflow-hidden transition-all duration-300 flex-none ${
+                  projectsOpen ? 'h-auto max-h-[380px]' : 'h-[68px]'
                 }`}
               >
                 <div className="flex justify-between items-center mb-4 flex-shrink-0 select-none">
