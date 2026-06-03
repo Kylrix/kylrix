@@ -1532,7 +1532,16 @@ export default function ConnectTopbar({
         transition={appPanelMotion.transition}
         style={{ width: '100%', transformOrigin: 'top center' }}
       >
-        <Box sx={{ width: '100%', bgcolor: '#161412', overflow: 'hidden' }}>
+        <Box 
+          sx={{ 
+            width: '100%', 
+            bgcolor: '#161412', 
+            overflow: 'hidden',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '0 0 28px 28px',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.35)',
+          }}
+        >
           <Box
             onWheel={(event) => {
               const node = event.currentTarget;
