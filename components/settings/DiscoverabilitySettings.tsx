@@ -2,24 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-    Box,
-    Typography,
-    Paper,
-    Stack,
-    Switch,
-    Divider,
-    CircularProgress,
-    alpha,
-    IconButton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    TextField,
-    Avatar,
-} from '@/lib/mui-tailwind/material';
-import {
     Search,
     Edit2,
     Check,
@@ -29,6 +11,7 @@ import {
     Image as ImageIcon,
     Globe,
     MessageSquare,
+    Loader2 as SpinnerIcon
 } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -42,6 +25,26 @@ import SudoModal from '@/components/overlays/SudoModal';
 const ACCENT_CONNECT = '#F59E0B';
 const ACCENT_AVATAR = '#10B981';
 const ACCENT_MESSAGE = '#6366F1';
+
+// Custom tailwind switch
+function Switch({ checked, onChange, disabled }: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed ${
+        checked ? 'bg-[#6366F1]' : 'bg-white/10'
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+          checked ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  );
+}
 
 export const DiscoverabilitySettings = () => {
     const { user } = useAuth();
@@ -330,390 +333,291 @@ export const DiscoverabilitySettings = () => {
 
     if (!user?.$id) {
         return (
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            <p className="text-white/50 text-sm font-semibold font-sans">
                 Sign in to manage discoverability.
-            </Typography>
+            </p>
         );
     }
 
     if (loading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                <CircularProgress size={24} sx={{ color: ACCENT_CONNECT }} />
-            </Box>
+            <div className="flex justify-center p-4">
+                <SpinnerIcon className="animate-spin text-[#F59E0B]" size={24} />
+            </div>
         );
     }
 
     const isDiscoverable = profile?.isPublic !== false && profile?.isGuest !== false;
-
     const isContactable = !!profile?.publicKey;
 
-    const paperSurface = {
-        p: 3,
-        borderRadius: '24px',
-        bgcolor: '#161412',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
-        backgroundImage: 'none',
-        boxShadow: 'none',
-    } as const;
-
     return (
-        <Box>
-            <Typography
-                variant="h6"
-                sx={{
-                    fontWeight: 800,
-                    mb: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    color: '#F5F3F0',
-                    fontFamily: 'var(--font-clash)',
-                }}
-            >
-                <Search size={20} color={ACCENT_CONNECT} aria-hidden /> Discoverability
-            </Typography>
-            <Paper sx={paperSurface}>
-                <Stack spacing={3}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', minWidth: 0 }}>
-                            <Box
-                                sx={{
-                                    p: 1,
-                                    borderRadius: '12px',
-                                    bgcolor: alpha(ACCENT_CONNECT, 0.12),
-                                    color: ACCENT_CONNECT,
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <Globe size={18} aria-hidden />
-                            </Box>
-                            <Box sx={{ minWidth: 0 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#F5F3F0' }}>
-                                    Global search discoverability
-                                </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.55, fontSize: '0.8125rem' }}>
-                                    Allow others to find your profile via global search across Kylrix
-                                </Typography>
-                            </Box>
-                        </Box>
-                        <Switch
-                            checked={!!isDiscoverable}
-                            onChange={(e) => handleToggleDiscoverability(e.target.checked)}
-                            disabled={savingDiscoverable}
-                            sx={{
-                                '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT_CONNECT },
-                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: alpha(ACCENT_CONNECT, 0.5) },
-                            }}
-                        />
-                    </Box>
+        <div className="flex flex-col gap-6">
+            <h3 className="text-[#F5F3F0] font-black text-lg tracking-tight leading-tight flex items-center gap-2 mb-2 font-mono">
+                <Search size={20} className="text-[#F59E0B]" />
+                <span>Discoverability</span>
+            </h3>
 
-                    <Divider sx={{ opacity: 0.06 }} />
+            <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-6">
+                
+                {/* Discoverability Switch */}
+                <div className="flex items-center justify-between gap-4 flex-wrap select-none">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/20 text-[#F59E0B] flex items-center justify-center flex-shrink-0">
+                            <Globe size={18} />
+                        </div>
+                        <div className="min-w-0">
+                            <span className="block text-white font-extrabold text-sm truncate">
+                                Global search discoverability
+                            </span>
+                            <span className="block text-white/40 text-[11px] font-semibold font-sans mt-0.5">
+                                Allow others to find your profile via global search across Kylrix
+                            </span>
+                        </div>
+                    </div>
+                    <Switch
+                        checked={!!isDiscoverable}
+                        onChange={handleToggleDiscoverability}
+                        disabled={savingDiscoverable}
+                    />
+                </div>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', minWidth: 0 }}>
-                            <Box
-                                sx={{
-                                    p: 1,
-                                    borderRadius: '12px',
-                                    bgcolor: alpha(ACCENT_AVATAR, 0.12),
-                                    color: ACCENT_AVATAR,
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <ImageIcon size={18} aria-hidden />
-                            </Box>
-                            <Box sx={{ minWidth: 0 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#F5F3F0' }}>
-                                    Profile picture visibility
-                                </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.55, fontSize: '0.8125rem' }}>
-                                    Let your universal avatar render for others where your profile is shown
-                                </Typography>
-                            </Box>
-                        </Box>
-                        <Switch
-                            checked={resolvedAvatarFileId ? profile?.isAvatar !== false : false}
-                            onChange={(e) => handleToggleAvatarVisibility(e.target.checked)}
-                            disabled={savingAvatar || !resolvedAvatarFileId}
-                            sx={{
-                                '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT_AVATAR },
-                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: alpha(ACCENT_AVATAR, 0.45) },
-                            }}
-                        />
-                    </Box>
+                <div className="h-[1px] bg-white/5 w-full" />
 
-                    <Divider sx={{ opacity: 0.06 }} />
+                {/* Avatar Visibility Switch */}
+                <div className="flex items-center justify-between gap-4 flex-wrap select-none">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20 text-[#10B981] flex items-center justify-center flex-shrink-0">
+                            <ImageIcon size={18} />
+                        </div>
+                        <div className="min-w-0">
+                            <span className="block text-white font-extrabold text-sm truncate">
+                                Profile picture visibility
+                            </span>
+                            <span className="block text-white/40 text-[11px] font-semibold font-sans mt-0.5">
+                                Let your universal avatar render for others where your profile is shown
+                            </span>
+                        </div>
+                    </div>
+                    <Switch
+                        checked={resolvedAvatarFileId ? profile?.isAvatar !== false : false}
+                        onChange={handleToggleAvatarVisibility}
+                        disabled={savingAvatar || !resolvedAvatarFileId}
+                    />
+                </div>
 
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', minWidth: 0 }}>
-                            <Box
-                                sx={{
-                                    p: 1,
-                                    borderRadius: '12px',
-                                    bgcolor: alpha(ACCENT_MESSAGE, 0.12),
-                                    color: ACCENT_MESSAGE,
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <MessageSquare size={18} aria-hidden />
-                            </Box>
-                            <Box sx={{ minWidth: 0 }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#F5F3F0' }}>
-                                    Allow people to contact you
-                                </Typography>
-                                <Typography variant="body2" sx={{ opacity: 0.55, fontSize: '0.8125rem' }}>
-                                    Publish your secure messaging key so others can DM you encrypted
-                                </Typography>
-                            </Box>
-                        </Box>
-                        <Switch
-                            checked={isContactable}
-                            onChange={(e) => handleToggleContact(e.target.checked)}
-                            disabled={savingContact}
-                            sx={{
-                                '& .MuiSwitch-switchBase.Mui-checked': { color: ACCENT_MESSAGE },
-                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: alpha(ACCENT_MESSAGE, 0.45) },
-                            }}
-                        />
-                    </Box>
+                <div className="h-[1px] bg-white/5 w-full" />
 
-                    <Divider sx={{ opacity: 0.06 }} />
+                {/* Secure Contact Switch */}
+                <div className="flex items-center justify-between gap-4 flex-wrap select-none">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                            <MessageSquare size={18} />
+                        </div>
+                        <div className="min-w-0">
+                            <span className="block text-white font-extrabold text-sm truncate">
+                                Allow people to contact you
+                            </span>
+                            <span className="block text-white/40 text-[11px] font-semibold font-sans mt-0.5">
+                                Publish your secure messaging key so others can DM you encrypted
+                            </span>
+                        </div>
+                    </div>
+                    <Switch
+                        checked={isContactable}
+                        onChange={handleToggleContact}
+                        disabled={savingContact}
+                    />
+                </div>
 
-                    {profile && !profile.publicKey && (
-                        <Box
-                            sx={{
-                                p: 2,
-                                borderRadius: '16px',
-                                bgcolor: alpha(ACCENT_CONNECT, 0.06),
-                                border: `1px solid ${alpha(ACCENT_CONNECT, 0.22)}`,
-                            }}
-                        >
-                            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-                                <Box
-                                    sx={{
-                                        p: 1,
-                                        borderRadius: '12px',
-                                        bgcolor: alpha(ACCENT_CONNECT, 0.12),
-                                        color: ACCENT_CONNECT,
-                                        display: 'flex',
-                                    }}
-                                >
-                                    <ShieldAlert size={20} aria-hidden />
-                                </Box>
-                                <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
-                                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: ACCENT_CONNECT }}>
+                {profile && !profile.publicKey && (
+                    <>
+                        <div className="h-[1px] bg-white/5 w-full" />
+                        <div className="p-4 rounded-2xl bg-[#F59E0B]/5 border border-[#F59E0B]/20 flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 text-[#F59E0B] flex items-center justify-center flex-shrink-0">
+                                    <ShieldAlert size={20} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <span className="block text-sm font-extrabold text-[#F59E0B] truncate">
                                         Messaging keys not published
-                                    </Typography>
-                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', display: 'block', mt: 0.25 }}>
+                                    </span>
+                                    <span className="block text-[11px] text-white/40 font-semibold font-sans mt-0.5">
                                         Unlock the vault and sync so others can reach you securely.
-                                    </Typography>
-                                </Box>
-                                <Button
-                                    size="small"
-                                    variant="contained"
-                                    onClick={handleSyncE2E}
-                                    disabled={saving}
-                                    sx={{
-                                        bgcolor: ACCENT_CONNECT,
-                                        color: '#0A0908',
-                                        fontWeight: 800,
-                                        textTransform: 'none',
-                                        borderRadius: '10px',
-                                        '&:hover': { bgcolor: alpha(ACCENT_CONNECT, 0.92) },
-                                    }}
-                                >
-                                    {saving ? <CircularProgress size={16} color="inherit" /> : 'Sync keys'}
-                                </Button>
-                            </Stack>
-                            {syncError ? (
-                                <Typography variant="caption" sx={{ color: '#F87171', mt: 1.5, display: 'block' }}>
-                                    {syncError}
-                                </Typography>
-                            ) : null}
-                        </Box>
-                    )}
-
-                    <Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            <User size={14} color="rgba(255, 255, 255, 0.38)" aria-hidden />
-                            <Typography
-                                variant="subtitle2"
-                                sx={{
-                                    fontWeight: 800,
-                                    color: 'rgba(255, 255, 255, 0.45)',
-                                    textTransform: 'uppercase',
-                                    fontSize: '0.68rem',
-                                    letterSpacing: '0.06em',
-                                }}
+                                    </span>
+                                </div>
+                            </div>
+                            <button
+                                onClick={handleSyncE2E}
+                                disabled={saving}
+                                className="h-8 px-4 rounded-lg bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-black font-extrabold text-xs flex items-center justify-center transition-all"
                             >
-                                Universal handle
-                            </Typography>
-                        </Box>
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 2,
-                                p: '2px 2px 2px 16px',
-                                borderRadius: '18px',
-                                bgcolor: '#0A0908',
-                                border: '1px solid rgba(255, 255, 255, 0.06)',
-                                transition: 'border-color 0.2s ease',
-                                '&:focus-within': {
-                                    borderColor: alpha(ACCENT_CONNECT, 0.35),
-                                },
-                            }}
-                        >
-                            <Box sx={{ flex: 1, py: 1.25, minWidth: 0 }}>
-                                {isEditing ? (
-                                    <Box>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            variant="standard"
+                                {saving ? <SpinnerIcon className="animate-spin text-black" size={14} /> : 'Sync keys'}
+                            </button>
+                        </div>
+                        {syncError && (
+                            <span className="text-red-400 text-xs font-semibold block mt-1">
+                                {syncError}
+                            </span>
+                        )}
+                    </>
+                )}
+
+                <div className="h-[1px] bg-white/5 w-full" />
+
+                {/* Username handle */}
+                <div>
+                    <div className="flex items-center gap-1.5 mb-2 select-none">
+                        <User size={14} className="text-white/40" />
+                        <span className="text-[10px] font-black uppercase tracking-wider text-white/40 font-mono">
+                            Universal handle
+                        </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 p-1 pl-4 rounded-2xl bg-[#0A0908] border border-white/5 focus-within:border-[#F59E0B]/40 transition-colors">
+                        <div className="flex-1 py-2.5 min-w-0">
+                            {isEditing ? (
+                                <div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-[#F59E0B] font-black text-sm font-mono">@</span>
+                                        <input
+                                            type="text"
                                             value={newUsername}
                                             onChange={(e) => setNewUsername(e.target.value)}
                                             placeholder="your_handle"
                                             autoFocus
-                                            InputProps={{
-                                                disableUnderline: true,
-                                                startAdornment: (
-                                                    <Typography sx={{ color: ACCENT_CONNECT, fontWeight: 900, mr: 0.5, fontSize: '1.05rem' }}>
-                                                        @
-                                                    </Typography>
-                                                ),
-                                                endAdornment: (
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pr: 0.75 }}>
-                                                        {checkingAvailability && (
-                                                            <CircularProgress size={14} sx={{ color: ACCENT_CONNECT }} />
-                                                        )}
-                                                        {!checkingAvailability && isAvailable === true ? (
-                                                            <Check size={16} color={ACCENT_CONNECT} strokeWidth={3} aria-hidden />
-                                                        ) : null}
-                                                        {!checkingAvailability && isAvailable === false ? (
-                                                            <X size={16} color="#F87171" strokeWidth={3} aria-hidden />
-                                                        ) : null}
-                                                    </Box>
-                                                ),
-                                                sx: {
-                                                    fontFamily: 'var(--font-mono)',
-                                                    fontWeight: 800,
-                                                    fontSize: '0.98rem',
-                                                    color: '#F5F3F0',
-                                                },
-                                            }}
+                                            className="bg-transparent border-none outline-none font-mono font-extrabold text-sm text-white flex-1 min-w-0"
                                         />
-                                        {isAvailable === false ? (
-                                            <Typography
-                                                variant="caption"
-                                                sx={{ color: '#F87171', fontWeight: 700, mt: 0.5, display: 'block', letterSpacing: '0.04em' }}
-                                            >
-                                                Handle unavailable
-                                            </Typography>
-                                        ) : null}
-                                    </Box>
-                                ) : (
-                                    <>
-                                        <Typography
-                                            sx={{
-                                                fontFamily: 'var(--font-mono)',
-                                                fontWeight: 800,
-                                                fontSize: '1.05rem',
-                                                letterSpacing: '-0.02em',
-                                                opacity: isDiscoverable || !profile ? 1 : 0.45,
-                                                color: !profile ? ACCENT_CONNECT : '#F5F3F0',
-                                            }}
-                                        >
-                                            @{username || 'not_set'}
-                                        </Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.4, display: 'block', mt: 0.25, fontWeight: 600 }}>
-                                            {!profile
-                                                ? 'Set a handle to activate discovery toggles'
-                                                : isDiscoverable
-                                                  ? 'Visible in ecosystem search'
-                                                  : 'Discoverability off'}
-                                        </Typography>
-                                    </>
-                                )}
-                            </Box>
+                                        <div className="flex items-center gap-1 pr-1 flex-shrink-0">
+                                            {checkingAvailability && (
+                                                <SpinnerIcon className="animate-spin text-[#F59E0B]" size={14} />
+                                            )}
+                                            {!checkingAvailability && isAvailable === true && (
+                                                <Check size={16} className="text-[#F59E0B]" strokeWidth={3} />
+                                            )}
+                                            {!checkingAvailability && isAvailable === false && (
+                                                <X size={16} className="text-red-400" strokeWidth={3} />
+                                            )}
+                                        </div>
+                                    </div>
+                                    {isAvailable === false && (
+                                        <span className="text-red-400 text-[10px] font-bold mt-1 block">
+                                            Handle unavailable
+                                        </span>
+                                    )}
+                                </div>
+                            ) : (
+                                <>
+                                    <span className={`block font-mono font-extrabold text-sm tracking-tight ${
+                                        isDiscoverable || !profile ? 'text-white' : 'text-white/40'
+                                    }`}>
+                                        @{username || 'not_set'}
+                                    </span>
+                                    <span className="block text-[10px] text-white/40 font-semibold mt-0.5">
+                                        {!profile
+                                            ? 'Set a handle to activate discovery toggles'
+                                            : isDiscoverable
+                                              ? 'Visible in ecosystem search'
+                                              : 'Discoverability off'}
+                                    </span>
+                                </>
+                            )}
+                        </div>
 
-                            <Box sx={{ display: 'flex', gap: 0.5, pr: 0.5, flexShrink: 0 }}>
-                                {isEditing ? (
-                                    <>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => {
-                                                setIsEditing(false);
-                                                setNewUsername(username);
-                                                setIsAvailable(null);
-                                            }}
-                                            sx={{
-                                                color: 'rgba(255, 255, 255, 0.38)',
-                                                bgcolor: '#161412',
-                                                borderRadius: '12px',
-                                                border: '1px solid rgba(255,255,255,0.06)',
-                                                '&:hover': { bgcolor: alpha('#F87171', 0.12), color: '#F87171' },
-                                            }}
-                                            aria-label="Cancel handle edit"
-                                        >
-                                            <X size={18} strokeWidth={2.5} />
-                                        </IconButton>
-                                        <IconButton
-                                            size="small"
-                                            onClick={() => setShowConfirm(true)}
-                                            disabled={
-                                                saving ||
-                                                !newUsername ||
-                                                isAvailable === false ||
-                                                checkingAvailability ||
-                                                (newUsername === username && !!profile)
-                                            }
-                                            sx={{
-                                                color: '#0A0908',
-                                                bgcolor: ACCENT_CONNECT,
-                                                borderRadius: '12px',
-                                                '&:hover': { bgcolor: alpha(ACCENT_CONNECT, 0.9) },
-                                                '&.Mui-disabled': { bgcolor: '#1C1A18', color: 'rgba(255,255,255,0.2)' },
-                                            }}
-                                            aria-label="Save handle"
-                                        >
-                                            <Check size={18} strokeWidth={3} />
-                                        </IconButton>
-                                    </>
-                                ) : (
-                                    <Button
-                                        size="small"
-                                        onClick={() => setIsEditing(true)}
-                                        startIcon={<Edit2 size={14} strokeWidth={2.5} />}
-                                        sx={{
-                                            color: !profile ? '#0A0908' : ACCENT_CONNECT,
-                                            bgcolor: !profile ? ACCENT_CONNECT : alpha(ACCENT_CONNECT, 0.08),
-                                            borderRadius: '12px',
-                                            px: 1.75,
-                                            py: 0.75,
-                                            fontWeight: 800,
-                                            textTransform: 'none',
-                                            fontSize: '0.8rem',
-                                            border: '1px solid',
-                                            borderColor: !profile ? ACCENT_CONNECT : alpha(ACCENT_CONNECT, 0.2),
-                                            '&:hover': {
-                                                bgcolor: !profile ? alpha(ACCENT_CONNECT, 0.92) : alpha(ACCENT_CONNECT, 0.14),
-                                                borderColor: ACCENT_CONNECT,
-                                            },
+                        <div className="flex gap-1.5 pr-1.5 flex-shrink-0">
+                            {isEditing ? (
+                                <>
+                                    <button
+                                        onClick={() => {
+                                            setIsEditing(false);
+                                            setNewUsername(username);
+                                            setIsAvailable(null);
                                         }}
+                                        className="w-8 h-8 rounded-lg bg-[#161412] hover:bg-red-500/10 text-white/40 hover:text-red-400 border border-white/5 flex items-center justify-center transition-all"
+                                        aria-label="Cancel edit"
                                     >
-                                        {profile ? 'Edit' : 'Set up'}
-                                    </Button>
-                                )}
-                            </Box>
-                        </Box>
-                        <Typography variant="caption" sx={{ mt: 1, display: 'block', opacity: 0.38 }}>
-                            Same handle everywhere in the Kylrix ecosystem.
-                        </Typography>
-                    </Box>
-                </Stack>
-            </Paper>
+                                        <X size={16} strokeWidth={2.5} />
+                                    </button>
+                                    <button
+                                        onClick={() => setShowConfirm(true)}
+                                        disabled={
+                                            saving ||
+                                            !newUsername ||
+                                            isAvailable === false ||
+                                            checkingAvailability ||
+                                            (newUsername === username && !!profile)
+                                        }
+                                        className="w-8 h-8 rounded-lg bg-[#F59E0B] hover:bg-[#F59E0B]/90 text-black flex items-center justify-center transition-all disabled:opacity-20"
+                                        aria-label="Save handle"
+                                    >
+                                        <Check size={16} strokeWidth={3} />
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={() => setIsEditing(true)}
+                                    className={`h-8 px-4 rounded-lg font-extrabold text-xs flex items-center gap-1.5 border transition-all ${
+                                        !profile
+                                            ? 'bg-[#F59E0B] border-[#F59E0B] text-black hover:bg-[#F59E0B]/90'
+                                            : 'bg-[#F59E0B]/5 border-[#F59E0B]/20 text-[#F59E0B] hover:bg-[#F59E0B]/10 hover:border-[#F59E0B]/40'
+                                    }`}
+                                >
+                                    <Edit2 size={12} strokeWidth={2.5} />
+                                    <span>{profile ? 'Edit' : 'Set up'}</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Profile image preview box */}
+            <div className="p-4 bg-[#161412] border border-white/5 rounded-2xl flex items-center gap-3 shadow-xl select-none">
+                <div className="w-12 h-12 rounded-full border border-white/8 bg-[#1C1A18] overflow-hidden flex items-center justify-center font-black text-lg select-none text-white/80">
+                    {previewUrl ? (
+                        <img src={previewUrl} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                        (username || user.name || '?').slice(0, 1).toUpperCase()
+                    )}
+                </div>
+                <div>
+                    <h4 className="text-white font-extrabold text-sm leading-none mb-1">Preview</h4>
+                    <p className="text-white/40 text-[10px] font-semibold leading-none">Roughly how you appear in discovery and chats</p>
+                </div>
+            </div>
+
+            {/* Confirm Dialog Modal */}
+            {showConfirm && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                <div className="bg-[#161412] border border-white/5 p-6 rounded-[28px] max-w-sm w-full shadow-2xl relative select-none animate-in fade-in zoom-in duration-200">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ShieldAlert className="text-[#F59E0B]" size={20} />
+                    <h3 className="text-white text-base font-black tracking-tight leading-none font-mono">Confirm handle</h3>
+                  </div>
+                  <p className="text-xs text-white/50 font-medium leading-relaxed mb-4">
+                    Your universal handle affects how people find you in search and mentions. Pick something you intend to keep.
+                  </p>
+                  <div className="p-3 bg-[#0A0908] rounded-xl border border-dashed border-white/10 mb-6">
+                    <span className="block text-[9px] font-black uppercase tracking-wider text-white/40 mb-1 font-mono">NEW HANDLE</span>
+                    <span className="font-mono font-extrabold text-[#F59E0B]">@{newUsername.toLowerCase().trim()}</span>
+                  </div>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowConfirm(false)}
+                      className="px-4 py-2 text-xs font-bold text-white/50 hover:text-white transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveUsername}
+                      disabled={saving}
+                      className="px-5 py-2.5 text-xs font-extrabold text-black bg-[#F59E0B] hover:bg-[#F59E0B]/90 rounded-xl transition-all disabled:opacity-50"
+                    >
+                      {saving ? 'Saving...' : 'Save'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <SudoModal
                 isOpen={isSudoOpen}
@@ -724,104 +628,6 @@ export const DiscoverabilitySettings = () => {
                     void handleToggleContact(true);
                 }}
             />
-
-            <Box
-                sx={{
-                    mt: 3,
-                    p: 2,
-                    borderRadius: '16px',
-                    bgcolor: '#161412',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    backgroundImage: 'none',
-                    boxShadow: 'none',
-                }}
-            >
-                <Avatar
-                    src={previewUrl || undefined}
-                    alt="Profile preview"
-                    sx={{
-                        width: 48,
-                        height: 48,
-                        border: '1px solid rgba(255,255,255,0.08)',
-                        bgcolor: '#1C1A18',
-                        fontFamily: 'var(--font-satoshi)',
-                        fontWeight: 800,
-                    }}
-                >
-                    {(username || user.name || '?').slice(0, 1).toUpperCase()}
-                </Avatar>
-                <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 800, color: '#F5F3F0' }}>
-                        Preview
-                    </Typography>
-                    <Typography variant="caption" sx={{ opacity: 0.5 }}>
-                        Roughly how you appear in discovery and chats
-                    </Typography>
-                </Box>
-            </Box>
-
-            <Dialog
-                open={showConfirm}
-                onClose={() => setShowConfirm(false)}
-                PaperProps={{
-                    sx: {
-                        borderRadius: '24px',
-                        bgcolor: '#161412',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        backgroundImage: 'none',
-                        boxShadow: 'none',
-                        maxWidth: '400px',
-                        width: '100%',
-                    },
-                }}
-            >
-                <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5, fontWeight: 800, color: '#F5F3F0' }}>
-                    <ShieldAlert color={ACCENT_CONNECT} size={22} aria-hidden /> Confirm handle
-                </DialogTitle>
-                <DialogContent>
-                    <Typography variant="body2" sx={{ opacity: 0.72, mb: 2, color: '#C7C2BC' }}>
-                        Your universal handle affects how people find you in search and mentions. Pick something you intend to keep.
-                    </Typography>
-                    <Box
-                        sx={{
-                            p: 2,
-                            borderRadius: '12px',
-                            bgcolor: '#0A0908',
-                            border: '1px dashed rgba(255,255,255,0.12)',
-                        }}
-                    >
-                        <Typography variant="caption" sx={{ opacity: 0.45, display: 'block', mb: 0.5 }}>
-                            NEW HANDLE
-                        </Typography>
-                        <Typography sx={{ fontFamily: 'var(--font-mono)', fontWeight: 800, color: ACCENT_CONNECT }}>
-                            @{newUsername.toLowerCase().trim()}
-                        </Typography>
-                    </Box>
-                </DialogContent>
-                <DialogActions sx={{ p: 2.5, pt: 0 }}>
-                    <Button onClick={() => setShowConfirm(false)} sx={{ color: 'rgba(255,255,255,0.5)', textTransform: 'none' }}>
-                        Cancel
-                    </Button>
-                    <Button
-                        onClick={handleSaveUsername}
-                        variant="contained"
-                        disabled={saving}
-                        sx={{
-                            borderRadius: '12px',
-                            bgcolor: ACCENT_CONNECT,
-                            color: '#0A0908',
-                            fontWeight: 800,
-                            textTransform: 'none',
-                            '&:hover': { bgcolor: alpha(ACCENT_CONNECT, 0.92) },
-                        }}
-                    >
-                        {saving ? <CircularProgress size={20} color="inherit" /> : 'Save'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+        </div>
     );
 };

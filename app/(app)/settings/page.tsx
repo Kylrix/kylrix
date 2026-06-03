@@ -1,31 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-    Box, 
-    Typography, 
-    Paper, 
-    Button, 
-    Stack, 
-    Switch, 
-    FormControlLabel, 
-    Divider,
-    CircularProgress,
-    alpha,
-    useTheme,
-    IconButton,
-    List,
-    ListItem,
-    ListItemIcon,
-    ListItemText,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    InputAdornment,
-    ButtonBase
-} from '@/lib/mui-tailwind/material';
 import { 
     ArrowLeft,
     Lock, 
@@ -39,7 +15,8 @@ import {
     Key,
     Bot,
     Lightbulb,
-    Link
+    Link,
+    Loader2 as SpinnerIcon
 } from 'lucide-react';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAuth } from '@/lib/auth';
@@ -51,12 +28,38 @@ import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySe
 import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/components/overlays/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
-import { Telegram as TelegramIcon } from '@/lib/mui-tailwind/icons';
+
+// Inline Custom Telegram Icon SVG for lucide alignment
+function TelegramIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.53-1.39.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.46-.42-1.4-.88.03-.24.37-.49 1.02-.75 3.98-1.73 6.64-2.88 7.98-3.45 3.79-1.63 4.58-1.91 5.09-1.92.11 0 .36.03.52.16.14.12.18.28.2.43-.02.07-.02.16-.02.25z"/>
+    </svg>
+  );
+}
+
+// Reuseable custom Switch
+function Switch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+        checked ? 'bg-[#6366F1]' : 'bg-white/10'
+      }`}
+    >
+      <span
+        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+          checked ? 'translate-x-5' : 'translate-x-0'
+        }`}
+      />
+    </button>
+  );
+}
 
 export default function SettingsPage() {
     const { user } = useAuth();
     const router = useRouter();
-    const _muiTheme = useTheme();
     const { requestSudo } = useSudo();
     const { open: openDrawer } = useUnifiedDrawer();
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
@@ -70,11 +73,13 @@ export default function SettingsPage() {
   
     // Passkey state
     const [passkeyEntries, setPasskeyEntries] = useState<any[]>([]);
-    const [_loadingPasskeys, setLoadingPasskeys] = useState(true);
+    const [loadingPasskeys, setLoadingPasskeys] = useState(true);
+
+    // Switches preferences state
+    const [pushEnabled, setPushEnabled] = useState(true);
+    const [statusEnabled, setStatusEnabled] = useState(true);
 
     const FEATURE_FORM_ID = '6a19dc99002634bd33ae';
-
-
 
     const handleManualMint = async () => {
         setMinting(true);
@@ -95,7 +100,6 @@ export default function SettingsPage() {
                 jwt: jwt
             });
 
-          
           if (response?.accepted) {
             toast.success('Tokens minted successfully!');
           } else {
@@ -108,7 +112,7 @@ export default function SettingsPage() {
         }
     };
 
-    const loadPasskeys = React.useCallback(async () => {
+    const loadPasskeys = useCallback(async () => {
         if (!user?.$id) return;
         try {
             const entries = await KeychainService.listKeychainEntries(user.$id);
@@ -170,8 +174,6 @@ export default function SettingsPage() {
                     setHasMasterpass(null);
                 }
             })();
-
-
         }
 
         return unsubscribe;
@@ -207,462 +209,331 @@ export default function SettingsPage() {
     };
 
     return (
-        <>
-            <Box
-                sx={{
-                    maxWidth: 1200,
-                    mx: 'auto',
-                    pt: { xs: 2, md: 2.5 },
-                    pb: { xs: 3, md: 4 },
-                    px: { xs: 2, md: 3 },
-                    pointerEvents: 'auto',
-                    position: 'relative',
-                    zIndex: 1
-                }}
+        <div className="relative w-full max-w-[1200px] mx-auto pt-4 md:pt-6 pb-12 px-4 md:px-6 z-10 select-none">
+            
+            {/* Back Button */}
+            <button
+                onClick={handleBack}
+                className="mb-6 h-9 px-4 rounded-xl border border-white/10 hover:border-white/20 bg-white/2 hover:bg-white/5 text-white/80 font-bold text-xs flex items-center justify-center gap-1.5 transition-all select-none"
             >
-                <Button
-                    variant="outlined"
-                    onClick={handleBack}
-                    startIcon={<ArrowLeft size={16} />}
-                    sx={{
-                        mb: 2.5,
-                        borderRadius: '12px',
-                        textTransform: 'none',
-                        fontWeight: 700,
-                        color: 'rgba(255,255,255,0.78)',
-                        borderColor: 'rgba(255,255,255,0.15)',
-                        '&:hover': {
-                            borderColor: 'rgba(255,255,255,0.3)',
-                            bgcolor: 'rgba(255,255,255,0.04)',
-                        },
-                    }}
-                >
-                    Back
-                </Button>
-                <Box sx={{ mb: 4 }}>
-                    <Typography
-                        variant="overline"
-                        sx={{
-                            letterSpacing: '0.16em',
-                            color: 'rgba(255,255,255,0.45)',
-                            fontWeight: 800,
-                            fontFamily: 'var(--font-mono)'
-                        }}
-                    >
-                        KYLRIX CONTROL PANEL
-                    </Typography>
-                    <Typography variant="h4" sx={{ fontWeight: 900, mt: 0.5, fontFamily: 'var(--font-clash)', color: 'white' }}>
-                        Settings
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 1, maxWidth: 560 }}>
-                        Manage identity discoverability, encryption access, passkeys, and device preferences.
-                    </Typography>
-                </Box>
+                <ArrowLeft size={16} />
+                <span>Back</span>
+            </button>
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.1fr 1fr' }, gap: 4, alignItems: 'flex-start' }}>
-                    {/* Left Column: Discoverability, Integrations & Feedback */}
-                    <Stack spacing={4}>
-                        <DiscoverabilitySettings />
+            {/* Header Title Section */}
+            <header className="mb-8">
+                <span className="text-[10px] font-black tracking-widest uppercase text-white/40 font-mono block mb-1">
+                    KYLRIX CONTROL PANEL
+                </span>
+                <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight leading-tight mb-1 font-mono tracking-tighter">
+                    Settings
+                </h1>
+                <p className="text-white/40 text-xs font-semibold leading-normal font-sans max-w-[560px]">
+                    Manage identity discoverability, encryption access, passkeys, and device preferences.
+                </p>
+            </header>
 
-                        {/* Integrations Category - GitHub */}
-                        <Box id="github-workspace-settings" sx={{ transition: 'all 0.5s ease', borderRadius: '28px', border: '1px solid transparent' }}>
-                            <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
-                                <svg viewBox="0 0 24 24" width="20" height="20" style={{ marginRight: 8, fill: 'white' }}>
-                                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                                </svg>
-                                Connected Integrations
-                            </Typography>
-                            
-                            <Paper sx={{ 
-                                p: { xs: 2.25, md: 3 }, 
-                                borderRadius: '28px', 
-                                bgcolor: '#161412', 
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                backgroundImage: 'none',
-                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)'
-                            }}>
-                                 <Stack spacing={3}>
-                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                         <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', pr: 2 }}>
-                                             <Box sx={{ mt: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '10px', bgcolor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.05)', flexShrink: 0, color: 'white' }}>
-                                                 <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
-                                                     <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
-                                                 </svg>
-                                             </Box>
-                                             <Box>
-                                                 <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>GitHub Integration</Typography>
-                                                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mt: 0.5 }}>Connect your GitHub profile to sync code, tasks, issues, and PR boards.</Typography>
-                                             </Box>
-                                         </Box>
-                                         <Button 
-                                             variant="contained"
-                                             onClick={() => openDrawer('github-integration')}
-                                             sx={{ 
-                                                 borderRadius: '12px',
-                                                 textTransform: 'none',
-                                                 fontWeight: 700,
-                                                 minWidth: 132,
-                                                 bgcolor: '#24292F', '&:hover': { bgcolor: '#1F2328' }
-                                             }}
-                                         >
-                                             Configure
-                                         </Button>
-                                     </Box>
-                                 </Stack>
-                            </Paper>
-                        </Box>
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-[1.1fr_1fr] gap-8 items-start">
+                
+                {/* Left Column: Discoverability, Integrations & Feedback */}
+                <div className="flex flex-col gap-8">
+                    
+                    {/* Discoverability Section */}
+                    <DiscoverabilitySettings />
 
-                        {/* Daily Token Mint */}
-                        <Box sx={{ bgcolor: '#161412', borderRadius: '28px', p: 3, border: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                            <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>Daily Token Mint</Typography>
-                            <Typography sx={{ color: '#9B9691', mb: 2, fontSize: '0.9rem' }}>Manually trigger your daily token minting reward.</Typography>
-                            <Button 
-                                variant="contained" 
-                                startIcon={minting ? <CircularProgress size={18} /> : <RefreshCw size={18}/>} 
-                                onClick={handleManualMint} 
-                                disabled={minting}
-                                sx={{ borderRadius: '12px', fontWeight: 700, px: 3, py: 1.2, bgcolor: '#6366F1' }}
-                            >
-                                {minting ? 'Minting...' : 'Mint Daily Tokens'}
-                            </Button>
-                        </Box>
-
-                        {/* Feature Requests section */}
-                        <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
-                                <Lightbulb size={20} color="#6366F1" /> Feedback & Intelligence
-                            </Typography>
-                            
-                            <Paper sx={{ 
-                                p: { xs: 2.25, md: 3 }, 
-                                borderRadius: '28px', 
-                                bgcolor: '#161412', 
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                backgroundImage: 'none',
-                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                    bgcolor: '#1C1A18',
-                                    borderColor: 'rgba(255, 255, 255, 0.1)'
-                                }
-                            }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Feature Request & Bug Report</Typography>
-                                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.</Typography>
-                                    </Box>
-                                    <Button 
-                                        variant="contained"
-                                        onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
-                                        sx={{ 
-                                            borderRadius: '12px',
-                                            textTransform: 'none',
-                                            fontWeight: 700,
-                                            minWidth: 132,
-                                            bgcolor: '#6366F1',
-                                            '&:hover': { bgcolor: '#5458E8' }
-                                        }}
-                                    >
-                                        Open Portal
-                                    </Button>
-                                </Box>
-                            </Paper>
-                        </Box>
-                    </Stack>
-
-                    {/* Right Column: Account settings, Smart Assistants, Telegram & Security */}
-                    <Stack spacing={4}>
-                        {/* Go to account settings */}
-                        <ButtonBase 
-                            onClick={() => router.push('/accounts')}
-                            sx={{ 
-                                width: '100%', 
-                                textAlign: 'left', 
-                                borderRadius: '28px',
-                                display: 'block' 
-                            }}
-                        >
-                            <Box sx={{ 
-                                bgcolor: '#161412', 
-                                borderRadius: '28px', 
-                                p: 3, 
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                    bgcolor: '#1C1A18',
-                                    borderColor: 'rgba(255, 255, 255, 0.1)'
-                                }
-                            }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
-                                        <User size={24} />
-                                    </Box>
-                                    <Box>
-                                        <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
-                                            Go to account settings
-                                        </Typography>
-                                        <Typography sx={{ color: '#9B9691', fontSize: '0.85rem' }}>
-                                            Manage your unified identity, WebAuthn passkeys, and connected apps.
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                                <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
-                            </Box>
-                        </ButtonBase>
-
-                        {/* Smart Assistants Card */}
-                        <ButtonBase 
-                            onClick={() => router.push('/settings/agents')}
-                            sx={{ 
-                                width: '100%', 
-                                textAlign: 'left', 
-                                borderRadius: '28px',
-                                display: 'block' 
-                            }}
-                        >
-                            <Box sx={{ 
-                                bgcolor: '#161412', 
-                                borderRadius: '28px', 
-                                p: 3, 
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                    bgcolor: '#1C1A18',
-                                    borderColor: 'rgba(255, 255, 255, 0.1)',
-                                    transform: 'translateY(-2px)'
-                                }
-                            }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1' }}>
-                                        <Bot size={24} />
-                                    </Box>
-                                    <Box>
-                                        <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
-                                            Smart Assistants
-                                        </Typography>
-                                        <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
-                                            Configure private AI keys, automated assistant systems, and active workspaces.
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                                <ChevronRight size={20} color="rgba(255,255,255,0.3)" />
-                            </Box>
-                        </ButtonBase>
-
-                        {/* Telegram Notifications */}
-                        <Box sx={{ 
-                            bgcolor: '#161412', 
-                            borderRadius: '28px', 
-                            p: 3, 
-                            border: '1px solid rgba(255, 255, 255, 0.05)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                                bgcolor: '#1C1A18',
-                                borderColor: 'rgba(255, 255, 255, 0.1)'
-                            }
-                        }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ p: 1.5, borderRadius: '12px', bgcolor: 'rgba(0, 136, 204, 0.1)', color: '#0088cc', display: 'flex' }}>
-                                    <TelegramIcon sx={{ fontSize: 24 }} />
-                                </Box>
-                                <Box>
-                                    <Typography sx={{ fontWeight: 900, fontSize: '1.1rem', color: '#fff', fontFamily: 'var(--font-clash)' }}>
-                                        Telegram Notifications
-                                    </Typography>
-                                    <Typography sx={{ color: '#9B9691', fontSize: '0.85rem', mt: 0.5 }}>
-                                        Receive push notifications for calls and active chat threads.
-                                    </Typography>
-                                </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Button
-                                    variant="contained"
-                                    onClick={() => setTgDrawerOpen(true)}
-                                    sx={{
-                                        bgcolor: '#6366F1',
-                                        color: 'white',
-                                        fontSize: '0.85rem',
-                                        fontWeight: 700,
-                                        textTransform: 'none',
-                                        borderRadius: '12px',
-                                        px: 3,
-                                        py: 1,
-                                        '&:hover': {
-                                            bgcolor: '#4F46E5',
-                                        }
-                                    }}
+                    {/* GitHub Integration panel */}
+                    <div id="github-workspace-settings" className="transition-all duration-300">
+                        <h3 className="text-white font-black text-lg tracking-tight leading-tight flex items-center gap-2 mb-3 font-mono">
+                            <svg viewBox="0 0 24 24" width="20" height="20" className="fill-white">
+                              <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                            </svg>
+                            <span>Connected Integrations</span>
+                        </h3>
+                        <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl">
+                            <div className="flex items-start md:items-center justify-between gap-4 flex-wrap">
+                                <div className="flex items-start gap-3 min-w-0 pr-2">
+                                    <div className="w-9 h-9 rounded-xl bg-white/3 border border-white/8 flex items-center justify-center flex-shrink-0 text-white mt-0.5 md:mt-0">
+                                        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24">
+                                            <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <h4 className="text-white font-extrabold text-sm truncate">
+                                            GitHub Integration
+                                        </h4>
+                                        <p className="text-white/40 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
+                                            Connect your GitHub profile to sync code, tasks, issues, and PR boards.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => openDrawer('github-integration')}
+                                    className="h-10 px-5 rounded-xl bg-[#24292F] hover:bg-[#1F2328] border border-white/5 text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto"
                                 >
-                                    Manage
-                                </Button>
-                            </Box>
-                        </Box>
+                                    Configure
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                        {/* Security & Privacy card */}
-                        <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1.25, color: 'white' }}>
-                                <Shield size={20} color="#6366F1" /> Security & Privacy
-                            </Typography>
+                    {/* Daily Token Mint */}
+                    <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-3">
+                        <h4 className="text-white font-black text-base font-mono">Daily Token Mint</h4>
+                        <p className="text-white/40 text-xs font-semibold leading-relaxed">
+                            Manually trigger your daily token minting reward.
+                        </p>
+                        <button
+                            onClick={handleManualMint}
+                            disabled={minting}
+                            className="h-11 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all select-none disabled:opacity-40 w-fit"
+                        >
+                            {minting ? <SpinnerIcon className="animate-spin text-white" size={16} /> : <RefreshCw size={16} />}
+                            <span>{minting ? 'Minting...' : 'Mint Daily Tokens'}</span>
+                        </button>
+                    </div>
+
+                    {/* Feature Requests Section */}
+                    <div>
+                        <h3 className="text-white font-black text-lg tracking-tight leading-tight flex items-center gap-2 mb-3 font-mono">
+                            <Lightbulb size={20} className="text-[#6366F1]" />
+                            <span>Feedback & Intelligence</span>
+                        </h3>
+                        <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl hover:border-white/10 hover:bg-[#1C1A18] transition-all duration-300">
+                            <div className="flex items-center justify-between gap-4 flex-wrap">
+                                <div className="min-w-0">
+                                    <h4 className="text-white font-extrabold text-sm truncate">
+                                        Feature Request & Bug Report
+                                    </h4>
+                                    <p className="text-white/40 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
+                                        Help us improve the Kylrix ecosystem by reporting issues or suggesting new features.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => openDrawer('form', { formId: FEATURE_FORM_ID })}
+                                    className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-extrabold text-xs flex items-center justify-center transition-all w-full md:w-auto"
+                                >
+                                    Open Portal
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* Right Column: Account settings, Smart Assistants, Telegram & Security */}
+                <div className="flex flex-col gap-8">
+                    
+                    {/* Go to account settings */}
+                    <button
+                        onClick={() => router.push('/accounts')}
+                        className="w-full text-left p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group"
+                    >
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                <User size={22} />
+                            </div>
+                            <div className="min-w-0">
+                                <h4 className="text-white font-black text-base leading-tight font-mono">
+                                    Go to account settings
+                                </h4>
+                                <p className="text-white/40 text-xs font-semibold mt-0.5 leading-relaxed">
+                                    Manage your unified identity, WebAuthn passkeys, and connected apps.
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors" />
+                    </button>
+
+                    {/* Smart Assistants */}
+                    <button
+                        onClick={() => router.push('/settings/agents')}
+                        className="w-full text-left p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300 group"
+                    >
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                <Bot size={22} />
+                            </div>
+                            <div className="min-w-0">
+                                <h4 className="text-white font-black text-base leading-tight font-mono">
+                                    Smart Assistants
+                                </h4>
+                                <p className="text-white/40 text-xs font-semibold mt-0.5 leading-relaxed">
+                                    Configure private AI keys, automated assistant systems, and active workspaces.
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight size={20} className="text-white/30 group-hover:text-white transition-colors" />
+                    </button>
+
+                    {/* Telegram Notifications */}
+                    <div className="p-6 bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-[#1C1A18] rounded-[28px] shadow-2xl flex items-center justify-between gap-4 transition-all duration-300">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-11 h-11 rounded-xl bg-[#0088cc]/10 text-[#0088cc] flex items-center justify-center flex-shrink-0">
+                                <TelegramIcon className="w-6 h-6" />
+                            </div>
+                            <div className="min-w-0">
+                                <h4 className="text-white font-black text-base leading-tight font-mono">
+                                    Telegram Notifications
+                                </h4>
+                                <p className="text-white/40 text-xs font-semibold mt-0.5 leading-relaxed">
+                                    Receive push notifications for calls and active chat threads.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setTgDrawerOpen(true)}
+                            className="h-10 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-bold text-xs flex items-center justify-center transition-all select-none"
+                        >
+                            Manage
+                        </button>
+                    </div>
+
+                    {/* Security & Privacy card */}
+                    <div>
+                        <h3 className="text-white font-black text-lg tracking-tight leading-tight flex items-center gap-2 mb-3 font-mono">
+                            <Shield size={20} className="text-[#6366F1]" />
+                            <span>Security & Privacy</span>
+                        </h3>
+                        
+                        <div className="p-6 bg-[#161412] border border-white/5 rounded-[28px] shadow-2xl flex flex-col gap-6">
                             
-                            <Paper sx={{ 
-                                p: { xs: 2.25, md: 3 }, 
-                                borderRadius: '28px', 
-                                bgcolor: '#161412', 
-                                border: '1px solid rgba(255, 255, 255, 0.05)',
-                                backgroundImage: 'none',
-                                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 22px 44px rgba(0,0,0,0.42)'
-                            }}>
-                                <Stack spacing={3}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Box>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Vault Status</Typography>
-                                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: 0.5 }}>Current encryption state of your session</Typography>
-                                            
-                                            {hasMasterpass && (
-                                                <Typography variant="caption" sx={{ 
-                                                    fontFamily: 'var(--font-mono)', 
-                                                    fontWeight: 700, 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    gap: 0.75,
-                                                    fontSize: '0.65rem',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.05em',
-                                                    color: isArgon ? '#10B981' : '#F59E0B'
-                                                }}>
-                                                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'currentColor' }} />
-                                                    {isArgon ? 'Vault upgraded to T5 core' : 'Unlock to upgrade to Argon2id'}
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                        <Button 
-                                            variant={isUnlocked ? 'outlined' : 'contained'}
-                                            onClick={() =>
-                                              isUnlocked
-                                                ? ecosystemSecurity.lock()
-                                                : requestSudo({ onSuccess: () => {} })
-                                            }
-                                            color={isUnlocked ? 'inherit' : 'primary'}
-                                            startIcon={isUnlocked ? <Lock size={16} /> : <Shield size={16} />}
-                                            sx={{ 
-                                                borderRadius: '12px',
-                                                textTransform: 'none',
-                                                fontWeight: 700,
-                                                minWidth: 132,
-                                                ...(isUnlocked
-                                                    ? { borderColor: 'rgba(255,255,255,0.2)', color: 'rgba(255,255,255,0.85)' }
-                                                    : { bgcolor: '#6366F1', '&:hover': { bgcolor: '#5458E8' } })
-                                            }}
-                                        >
-                                            {isUnlocked ? "Lock Vault" : (hasMasterpass === false ? "Setup" : "Unlock Vault")}
-                                        </Button>
-                                    </Box>
+                            {/* Vault Status */}
+                            <div className="flex items-center justify-between gap-4 flex-wrap">
+                                <div className="min-w-0">
+                                    <h4 className="text-white font-extrabold text-sm">Vault Status</h4>
+                                    <p className="text-white/40 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
+                                        Current encryption state of your session
+                                    </p>
+                                    {hasMasterpass && (
+                                        <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider font-mono mt-1.5 ${
+                                            isArgon ? 'text-[#10B981]' : 'text-[#F59E0B]'
+                                        }`}>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-currentColor" />
+                                            <span>{isArgon ? 'Vault upgraded to T5 core' : 'Unlock to upgrade to Argon2id'}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <button
+                                    onClick={() =>
+                                      isUnlocked
+                                        ? ecosystemSecurity.lock()
+                                        : requestSudo({ onSuccess: () => {} })
+                                    }
+                                    className={`h-10 px-5 rounded-xl font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all w-full sm:w-auto ${
+                                        isUnlocked
+                                            ? 'border border-white/10 hover:border-white/20 bg-white/2 hover:bg-white/5 text-white/80'
+                                            : 'bg-[#6366F1] hover:bg-[#5458E8] text-white'
+                                    }`}
+                                >
+                                    {isUnlocked ? <Lock size={14} /> : <Shield size={14} />}
+                                    <span>{isUnlocked ? "Lock Vault" : (hasMasterpass === false ? "Setup" : "Unlock Vault")}</span>
+                                </button>
+                            </div>
 
-                                    <Divider sx={{ opacity: 0.05 }} />
+                            <div className="h-[1px] bg-white/5 w-full" />
 
-                                    {/* Passkey Section */}
-                                    <Box>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                                            <Box>
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'white' }}>Passkeys</Typography>
-                                                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>
-                                                    Use biometrics to unlock your secure session.
-                                                </Typography>
-                                            </Box>
-                                            <Button 
-                                                variant="contained" 
-                                                size="small" 
-                                                startIcon={<Fingerprint size={16} />}
-                                                onClick={() => setPasskeySetupOpen(true)}
-                                                disabled={hasMasterpass === false}
-                                                sx={{ 
-                                                    borderRadius: '10px',
-                                                    bgcolor: '#6366F1',
-                                                    textTransform: 'none',
-                                                    fontWeight: 700,
-                                                    '&:hover': { bgcolor: '#5458E8' }
-                                                }}
+                            {/* Passkeys */}
+                            <div>
+                                <div className="flex items-center justify-between gap-4 mb-4 select-none">
+                                    <div className="min-w-0">
+                                        <h4 className="text-white font-extrabold text-sm">Passkeys</h4>
+                                        <p className="text-white/40 text-xs font-semibold font-sans mt-0.5 leading-relaxed">
+                                            Use biometrics to unlock your secure session.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setPasskeySetupOpen(true)}
+                                        disabled={hasMasterpass === false}
+                                        className="h-9 px-4 rounded-xl bg-[#6366F1] hover:bg-[#5458E8] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        <Fingerprint size={14} />
+                                        <span>Add Passkey</span>
+                                    </button>
+                                </div>
+
+                                <div className="bg-[#0A0908] border border-white/5 rounded-2xl p-2 flex flex-col gap-1.5">
+                                    {passkeyEntries.length === 0 ? (
+                                        <div className="p-4 text-center text-white/40 text-xs font-bold font-sans">
+                                            No passkeys registered.
+                                        </div>
+                                    ) : (
+                                        passkeyEntries.map((pk, idx) => (
+                                            <div 
+                                                key={pk.$id}
+                                                className="flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-white/[0.02] transition-colors"
                                             >
-                                                Add Passkey
-                                            </Button>
-                                        </Box>
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="w-8 h-8 rounded-lg bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                                                        <Fingerprint size={16} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="block text-white font-extrabold text-xs truncate">
+                                                            {pk.params?.name || `Passkey ${idx + 1}`}
+                                                        </span>
+                                                        <span className="block text-[#10B981] text-[9px] font-black uppercase tracking-wider font-mono">
+                                                            Active
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRemovePasskey(pk.$id)}
+                                                    className="w-8 h-8 rounded-lg text-white/20 hover:text-red-500 hover:bg-red-500/10 flex items-center justify-center transition-all"
+                                                    title="Remove Passkey"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
 
-                                        <List sx={{ bgcolor: '#0A0908', borderRadius: '18px', p: 0, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                            {passkeyEntries.length === 0 ? (
-                                                <Box sx={{ p: 2, textAlign: 'center', opacity: 0.6 }}>
-                                                    <Typography variant="body2">No passkeys registered.</Typography>
-                                                </Box>
-                                            ) : (
-                                                passkeyEntries.map((pk, idx) => (
-                                                    <React.Fragment key={pk.$id}>
-                                                        <ListItem 
-                                                            secondaryAction={
-                                                                <IconButton edge="end" color="error" onClick={() => handleRemovePasskey(pk.$id)}>
-                                                                    <Trash2 size={18} />
-                                                                </IconButton>
-                                                            }
-                                                            sx={{ py: 1.25 }}
-                                                        >
-                                                            <ListItemIcon>
-                                                                <Fingerprint size={20} color="#6366F1" />
-                                                            </ListItemIcon>
-                                                            <ListItemText 
-                                                                primary={pk.params?.name || `Passkey ${idx + 1}`}
-                                                                secondary="Active"
-                                                                primaryTypographyProps={{ fontWeight: 700, fontSize: '0.9rem', color: 'white' }}
-                                                                secondaryTypographyProps={{ fontSize: '0.75rem', color: alpha('#10B981', 0.9) }}
-                                                            />
-                                                        </ListItem>
-                                                        {idx < passkeyEntries.length - 1 && <Divider sx={{ opacity: 0.05 }} />}
-                                                    </React.Fragment>
-                                                ))
-                                            )}
-                                        </List>
-                                    </Box>
+                            <div className="h-[1px] bg-white/5 w-full" />
 
-                                    {/* App Preferences */}
-                                    <Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 2, display: 'flex', alignItems: 'center', gap: 1, color: 'white' }}>
-                                            <Smartphone size={18} color="#6366F1" /> App Preferences
-                                        </Typography>
-                                        <Stack spacing={2}>
-                                            <FormControlLabel
-                                                control={<Switch defaultChecked color="primary" />}
-                                                label={
-                                                    <Box>
-                                                        <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Push Notifications</Typography>
-                                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Get notified of new messages</Typography>
-                                                    </Box>
-                                                }
-                                                sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                            />
-                                            <Divider sx={{ opacity: 0.05 }} />
-                                            <FormControlLabel
-                                                control={<Switch defaultChecked color="primary" />}
-                                                label={
-                                                    <Box>
-                                                        <Typography variant="body1" sx={{ fontWeight: 700, color: 'white' }}>Active Status</Typography>
-                                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>Show when you are online</Typography>
-                                                    </Box>
-                                                }
-                                                sx={{ justifyContent: 'space-between', width: '100%', ml: 0, flexDirection: 'row-reverse' }}
-                                            />
-                                        </Stack>
-                                    </Box>
-                                </Stack>
-                            </Paper>
-                        </Box>
-                    </Stack>
-                </Box>
-            </Box>
+                            {/* App Preferences Switches */}
+                            <div>
+                                <h4 className="text-white font-extrabold text-sm flex items-center gap-1.5 mb-4 font-mono select-none">
+                                    <Smartphone size={16} className="text-[#6366F1]" />
+                                    <span>App Preferences</span>
+                                </h4>
+
+                                <div className="flex flex-col gap-4">
+                                    {/* Push Notifications Switch */}
+                                    <div className="flex items-center justify-between gap-4 select-none">
+                                        <div>
+                                            <span className="block text-white font-extrabold text-xs">Push Notifications</span>
+                                            <span className="block text-white/40 text-[10px] font-semibold font-sans mt-0.5">Get notified of new messages</span>
+                                        </div>
+                                        <Switch 
+                                            checked={pushEnabled}
+                                            onChange={() => setPushEnabled(!pushEnabled)}
+                                        />
+                                    </div>
+
+                                    <div className="h-[1px] bg-white/5 w-full" />
+
+                                    {/* Active Status Switch */}
+                                    <div className="flex items-center justify-between gap-4 select-none">
+                                        <div>
+                                            <span className="block text-white font-extrabold text-xs">Active Status</span>
+                                            <span className="block text-white/40 text-[10px] font-semibold font-sans mt-0.5">Show when you are online</span>
+                                        </div>
+                                        <Switch 
+                                            checked={statusEnabled}
+                                            onChange={() => setStatusEnabled(!statusEnabled)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
 
             {/* Conditionally unmounted overlays/drawers mathematically preventing click blocking */}
             {passkeySetupOpen && (
@@ -687,6 +558,7 @@ export default function SettingsPage() {
                     }}
                 />
             )}
-        </>
+
+        </div>
     );
 }

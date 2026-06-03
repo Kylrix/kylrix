@@ -1,26 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Stack, 
-  Button, 
-  Grid, 
-  CircularProgress, 
-  Container,
-  Card,
-  CardContent,
-  Chip,
-  alpha
-} from '@/lib/mui-tailwind/material';
-import { 
-  Add as AddIcon, 
-  Edit as EditIcon, 
-  Delete as DeleteIcon, 
-  Label as LabelIcon,
-  AccessTime as AccessTimeIcon
-} from '@/lib/mui-tailwind/icons';
 import { Tags } from '@/types/appwrite';
 import { listTags, deleteTag } from '@/lib/appwrite';
 import { updateNote } from '@/lib/actions/client-ops';
@@ -29,6 +9,14 @@ import { formatDateWithFallback } from '@/lib/date-utils';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
+import { 
+  Plus as PlusIcon, 
+  Edit2 as EditIcon, 
+  Trash2 as TrashIcon, 
+  Tag as TagIcon,
+  Clock as ClockIcon,
+  Loader2 as SpinnerIcon
+} from 'lucide-react';
 
 export default function TagsPage() {
   const { user, isAuthenticated, openIDMWindow } = useAuth();
@@ -95,84 +83,73 @@ export default function TagsPage() {
 
   if (!isAuthenticated) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Stack spacing={2} alignItems="center">
-          <CircularProgress sx={{ color: '#6366F1' }} />
-          <Typography sx={{ color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>Please log in to manage your tags</Typography>
-        </Stack>
-      </Box>
+      <div className="min-h-screen bg-[#0A0908] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <SpinnerIcon className="animate-spin text-[#6366F1]" size={36} />
+          <p className="text-white/40 text-sm font-semibold font-sans">Please log in to manage your tags</p>
+        </div>
+      </div>
     );
   }
 
   if (selectedTag) {
     return (
-      <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908' }}>
-        <Grid container sx={{ height: '100vh' }}>
-          <Grid size={{ xs: 12, lg: 6 }} sx={{ display: { xs: 'none', lg: 'block' }, borderRight: '1px solid rgba(255, 255, 255, 0.05)', p: 4, overflowY: 'auto' }}>
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h3" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 1, letterSpacing: '-0.02em' }}>
+      <div className="min-h-screen bg-[#0A0908] text-white">
+        <div className="flex h-screen w-full">
+          {/* Left Column - Desktop Only */}
+          <div className="hidden lg:block lg:w-1/2 border-r border-white/5 p-8 overflow-y-auto">
+            <div className="mb-6">
+              <h1 className="text-white font-black text-3xl tracking-tight leading-tight mb-1 font-mono">
                 Tags Management
-              </Typography>
-              <Typography sx={{ color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'var(--font-satoshi)', fontWeight: 500 }}>Organize your notes with custom tags and colors</Typography>
-            </Box>
+              </h1>
+              <p className="text-white/40 text-xs font-semibold leading-normal font-sans">
+                Organize your notes with custom tags and colors
+              </p>
+            </div>
 
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
-              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 800, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <span className="text-[10px] font-black tracking-wider uppercase text-white/30 font-mono">
                 {tags.length} tag{tags.length !== 1 ? 's' : ''} total
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
+              </span>
+              <button
                 onClick={handleCreateNew}
-                sx={{
-                  bgcolor: '#6366F1',
-                  color: 'black',
-                  fontWeight: 900,
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)',
-                  '&:hover': { bgcolor: alpha('#6366F1', 0.8), transform: 'translateY(-2px)' }
-                }}
+                className="h-10 px-4 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/20 hover:border-[#6366F1]/40 flex items-center justify-center text-[#818CF8] font-bold text-xs gap-1.5 transition-all"
               >
-                Create New Tag
-              </Button>
-            </Stack>
+                <PlusIcon size={16} />
+                <span>Create New</span>
+              </button>
+            </div>
 
-            <Stack spacing={2}>
+            <div className="flex flex-col gap-3">
               {tags.map((tag) => (
-                <Card
+                <button
                   key={tag.$id}
                   onClick={() => setSelectedTag(tag)}
-                  sx={{
-                    bgcolor: selectedTag?.$id === tag.$id ? '#1C1A18' : '#161412',
-                    border: '1px solid',
-                    borderColor: selectedTag?.$id === tag.$id ? alpha('#6366F1', 0.4) : 'rgba(255, 255, 255, 0.05)',
-                    borderRadius: '20px',
-                    cursor: 'pointer',
-                    backgroundImage: 'none',
-                    boxShadow: selectedTag?.$id === tag.$id ? '0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)' : 'none',
-                    transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-                    '&:hover': { borderColor: alpha('#6366F1', 0.4), bgcolor: '#1C1A18', transform: 'translateX(4px)' }
-                  }}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl border text-left transition-all duration-300 ${
+                    selectedTag?.$id === tag.$id
+                      ? 'bg-[#1C1A18] border-[#6366F1]/40 shadow-xl'
+                      : 'bg-[#161412] border-white/5 hover:border-[#6366F1]/40 hover:bg-[#1C1A18] hover:translate-x-1'
+                  }`}
                 >
-                  <CardContent sx={{ p: 3 }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Stack direction="row" spacing={2} alignItems="center">
-                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: tag.color || '#6366F1', boxShadow: `0 0 10px ${alpha(tag.color || '#6366F1', 0.4)}` }} />
-                        <Typography sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>{tag.name}</Typography>
-                      </Stack>
-                      <Chip 
-                        label={`${tag.usageCount || 0} notes`} 
-                        size="small" 
-                        sx={{ bgcolor: 'rgba(255, 255, 255, 0.03)', color: 'rgba(255, 255, 255, 0.4)', fontWeight: 800, fontSize: '0.65rem', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }} 
-                      />
-                    </Stack>
-                  </CardContent>
-                </Card>
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span 
+                      style={{ backgroundColor: tag.color || '#6366F1' }} 
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                    />
+                    <span className="font-extrabold text-sm text-white truncate">
+                      {tag.name}
+                    </span>
+                  </div>
+                  <span className="flex-shrink-0 bg-white/3 text-white/40 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-white/8 font-mono">
+                    {tag.usageCount || 0} notes
+                  </span>
+                </button>
               ))}
-            </Stack>
-          </Grid>
+            </div>
+          </div>
 
-          <Grid size={{ xs: 12, lg: 6 }} sx={{ height: '100vh', overflow: 'hidden' }}>
+          {/* Right Column - Note List Sidebar */}
+          <div className="w-full lg:w-1/2 h-screen overflow-hidden">
             <TagNotesListSidebar
               tag={selectedTag!}
               onBack={() => setSelectedTag(null)}
@@ -187,263 +164,158 @@ export default function TagsPage() {
                 console.log('Note deleted:', noteId);
               }}
             />
-          </Grid>
-        </Grid>
-      </Box>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: 'white', p: { xs: 2, md: 6 } }}>
-      <Container maxWidth="xl">
+    <div className="min-h-screen bg-[#0A0908] text-white p-4 md:p-8">
+      <div className="max-w-[1440px] mx-auto w-full">
         <MultiSectionContainer panels={['note', 'huddles', 'projects']}>
-            {/* Header */}
-            <Box sx={{ mb: 6 }}>
-              <Typography 
-                variant="h1" 
-                sx={{ 
-                  fontWeight: 900, 
-                  fontFamily: 'var(--font-clash)',
-                  background: 'linear-gradient(to bottom, #FFF 0%, rgba(255,255,255,0.7) 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  fontSize: { xs: '2.5rem', md: '4rem' },
-                  letterSpacing: '-0.02em',
-                  mb: 1
-                }}
-              >
+          
+          {/* Header */}
+          <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 mb-8 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none">
+            <div className="absolute top-[-1px] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-[#EC4899] to-transparent" />
+            <div>
+              <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight leading-tight mb-1 font-mono tracking-tighter">
                 Tags Management
-              </Typography>
-              <Typography variant="h6" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500, fontFamily: 'var(--font-satoshi)' }}>
+              </h1>
+              <p className="text-white/40 text-xs font-semibold leading-normal font-sans">
                 Organize your notes with custom tags and colors
-              </Typography>
-            </Box>
+              </p>
+            </div>
+            
+            <button 
+              onClick={handleCreateNew}
+              className="h-10 px-4 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/20 hover:border-[#6366F1]/40 flex items-center justify-center text-[#818CF8] font-bold text-xs gap-1.5 transition-all"
+            >
+              <PlusIcon size={16} />
+              <span>Create Tag</span>
+            </button>
+          </header>
 
-            {error && (
-              <Box sx={{ mb: 4, p: 2, bgcolor: alpha('#ff4444', 0.05), border: '1px solid rgba(255, 68, 68, 0.2)', borderRadius: '12px' }}>
-                <Typography color="#ff4444" sx={{ fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>{error}</Typography>
-              </Box>
-            )}
+          {error && (
+            <div className="p-4 mb-6 rounded-2xl bg-red-500/10 border border-red-500/20 text-[#ff4444] text-sm font-semibold">
+              {error}
+            </div>
+          )}
 
-            {/* Action Bar */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 6 }}>
-              <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 800, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                {tags.length} tag{tags.length !== 1 ? 's' : ''} total
-              </Typography>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
+          {/* Action / Count Bar */}
+          <div className="flex items-center justify-between gap-4 mb-6 select-none">
+            <span className="text-[10px] font-black tracking-widest uppercase text-white/30 font-mono leading-none">
+              {tags.length} tag{tags.length !== 1 ? 's' : ''} total
+            </span>
+          </div>
+
+          {/* Tags Grid */}
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div 
+                  key={i} 
+                  className="p-6 rounded-[32px] bg-[#161412] border border-white/5 animate-pulse min-h-[180px]"
+                />
+              ))}
+            </div>
+          ) : tags.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center select-none">
+              <div className="w-24 h-24 bg-white/5 border border-white/10 rounded-[28px] flex items-center justify-center mb-6 shadow-2xl">
+                <TagIcon size={38} className="text-white/30" />
+              </div>
+              <h4 className="text-white font-black text-lg tracking-tight mb-2">No Tags Yet</h4>
+              <p className="text-white/40 text-xs font-semibold max-w-xs leading-relaxed mb-6">
+                Create your first tag to start organizing your notes
+              </p>
+              <button
                 onClick={handleCreateNew}
-                sx={{
-                  bgcolor: '#6366F1',
-                  color: 'black',
-                  fontWeight: 900,
-                  px: 4,
-                  py: 1.5,
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 16px rgba(99, 102, 241, 0.2)',
-                  '&:hover': { bgcolor: alpha('#6366F1', 0.8), transform: 'translateY(-2px)' }
-                }}
+                className="h-10 px-6 rounded-xl bg-[#6366F1] text-black font-extrabold text-xs transition-all hover:bg-[#6366F1]/80 hover:translate-y-[-1px]"
               >
-                Create New Tag
-              </Button>
-            </Stack>
-
-            {/* Tags Grid */}
-            {loading ? (
-              <Grid container spacing={4}>
-                {[1, 2, 3, 4].map((i) => (
-                  <Grid size={{ xs: 12, md: 6, lg: 6 }} key={i}>
-                    <Card
-                      sx={{
-                        bgcolor: '#161412',
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        borderRadius: '32px',
-                        backgroundImage: 'none',
-                      }}
-                    >
-                      <CardContent sx={{ p: 4 }}>
-                        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
-                          <></>
-                          <Box sx={{ flex: 1 }}>
-                            <></>
-                            <></>
-                          </Box>
-                        </Stack>
-                        <></>
-                        <></>
-                        <Stack direction="row" spacing={2}>
-                          <></>
-                          <></>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            ) : tags.length === 0 ? (
-              <Box sx={{ textAlign: 'center', py: 12 }}>
-                <Box 
-                  sx={{ 
-                    width: 140, 
-                    height: 140, 
-                    bgcolor: '#161412', 
-                    borderRadius: '48px', 
-                    mx: 'auto', 
-                    mb: 4, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontSize: '4rem',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)'
-                  }}
+                Create First Tag
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {tags.map((tag) => (
+                <div
+                  key={tag.$id}
+                  onClick={() => setSelectedTag(tag)}
+                  className="p-6 rounded-[32px] bg-[#161412] border border-white/5 shadow-2xl hover:border-white/10 hover:bg-[#1C1A18] hover:translate-y-[-2px] transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between min-h-[196px] group"
                 >
-                  🏷️
-                </Box>
-                <Typography variant="h4" sx={{ fontWeight: 900, mb: 1, fontFamily: 'var(--font-clash)', letterSpacing: '-0.01em' }}>No tags yet</Typography>
-                <Typography sx={{ color: 'rgba(255, 255, 255, 0.4)', mb: 4, fontFamily: 'var(--font-satoshi)', fontWeight: 500 }}>Create your first tag to start organizing your notes</Typography>
-                <Button
-                  variant="contained"
-                  onClick={handleCreateNew}
-                  sx={{
-                    bgcolor: '#6366F1',
-                    color: 'black',
-                    fontWeight: 900,
-                    px: 6,
-                    py: 2,
-                    borderRadius: '16px',
-                    boxShadow: '0 8px 24px rgba(99, 102, 241, 0.2)',
-                    '&:hover': { bgcolor: alpha('#6366F1', 0.8), transform: 'translateY(-2px)' }
-                  }}
-                >
-                  Create First Tag
-                </Button>
-              </Box>
-            ) : (
-              <Grid container spacing={4}>
-                {tags.map((tag) => (
-                  <Grid size={{ xs: 12, md: 6, lg: 6 }} key={tag.$id}>
-                    <Card
-                      onClick={() => setSelectedTag(tag)}
-                      sx={{
-                        bgcolor: '#161412',
-                        border: '1px solid rgba(255, 255, 255, 0.05)',
-                        borderRadius: '32px',
-                        cursor: 'pointer',
-                        backgroundImage: 'none',
-                        boxShadow: '0 20px 40px -15px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.05), inset 0 -1px 0 rgba(0,0,0,0.5)',
-                        transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-                        '&:hover': { 
-                          transform: 'translateY(-8px) scale(1.01)', 
-                          borderColor: alpha(tag.color || '#6366F1', 0.4),
-                          boxShadow: `0 40px 80px -20px rgba(0,0,0,0.9), 0 0 20px ${alpha(tag.color || '#6366F1', 0.15)}, inset 0 1px 1px ${alpha('#FFFFFF', 0.1)}`
-                        }
-                      }}
-                    >
-                      <CardContent sx={{ p: 4 }}>
-                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
-                          <Stack direction="row" spacing={2} alignItems="center">
-                            <Box 
-                              sx={{ 
-                                width: 48, 
-                                height: 48, 
-                                borderRadius: '16px', 
-                                bgcolor: alpha(tag.color || '#6366F1', 0.1),
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: tag.color || '#6366F1',
-                                border: `1px solid ${alpha(tag.color || '#6366F1', 0.2)}`
-                              }}
-                            >
-                              <LabelIcon />
-                            </Box>
-                            <Box>
-                              <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>
-                                {tag.name}
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.3)', fontWeight: 800, fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
-                                {tag.usageCount || 0} notes
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </Stack>
+                  <div>
+                    {/* Top Row: Name and Count */}
+                    <div className="flex items-start gap-4 mb-3 w-full justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div 
+                          style={{ 
+                            backgroundColor: `${tag.color || '#6366F1'}1a`,
+                            color: tag.color || '#6366F1',
+                            borderColor: `${tag.color || '#6366F1'}33`
+                          }}
+                          className="w-12 h-12 rounded-2xl border flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform"
+                        >
+                          <TagIcon size={20} />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-white text-base font-black tracking-tight leading-tight truncate font-mono">
+                            {tag.name}
+                          </h3>
+                          <span className="block text-[9px] font-black uppercase tracking-wider text-white/30 font-mono mt-0.5">
+                            {tag.usageCount || 0} notes
+                          </span>
+                        </div>
+                      </div>
+                    </div>
 
-                        {tag.description && (
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: 'rgba(255, 255, 255, 0.5)', 
-                              fontFamily: 'var(--font-satoshi)',
-                              lineHeight: 1.6,
-                              mb: 3, 
-                              minHeight: 44,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden'
-                            }}
-                          >
-                            {tag.description}
-                          </Typography>
-                        )}
+                    {/* Description */}
+                    {tag.description && (
+                      <p className="text-xs text-white/50 font-medium leading-relaxed mb-4 line-clamp-2 select-text">
+                        {tag.description}
+                      </p>
+                    )}
+                  </div>
 
-                        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 4, color: 'rgba(255, 255, 255, 0.2)' }}>
-                          <AccessTimeIcon sx={{ fontSize: 14 }} />
-                          <Typography variant="caption" sx={{ fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>
-                            Created {formatDateWithFallback(tag.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
-                          </Typography>
-                        </Stack>
+                  <div>
+                    {/* Access time metadata */}
+                    <div className="flex items-center gap-1.5 text-white/20 text-[10px] font-bold font-mono uppercase mb-4">
+                      <ClockIcon size={12} />
+                      <span>
+                        Created {formatDateWithFallback(tag.createdAt, { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
 
-                        <Stack direction="row" spacing={2}>
-                          <Button
-                            fullWidth
-                            size="small"
-                            startIcon={<EditIcon />}
-                            onClick={ (e) => {
-                              e.stopPropagation();
-                              handleEdit(tag);
-                            }}
-                            sx={{
-                              bgcolor: '#1C1A18',
-                              color: 'white',
-                              fontWeight: 800,
-                              borderRadius: '12px',
-                              border: '1px solid rgba(255, 255, 255, 0.05)',
-                              '&:hover': { bgcolor: '#252220', borderColor: 'rgba(255, 255, 255, 0.1)' }
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            fullWidth
-                            size="small"
-                            startIcon={<DeleteIcon />}
-                            onClick={ (e) => {
-                              e.stopPropagation();
-                              handleDelete(tag);
-                            }}
-                            sx={{
-                              bgcolor: alpha('#ff4444', 0.05),
-                              color: '#ff4444',
-                              fontWeight: 800,
-                              borderRadius: '12px',
-                              border: '1px solid rgba(255, 68, 68, 0.1)',
-                              '&:hover': { bgcolor: alpha('#ff4444', 0.1), borderColor: alpha('#ff4444', 0.3) }
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </Stack>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            )}
+                    {/* Bottom Row Actions */}
+                    <div className="flex gap-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(tag);
+                        }}
+                        className="flex-1 py-2 px-3 rounded-xl border border-white/5 bg-[#1C1A18] hover:bg-[#252220] hover:border-white/10 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <EditIcon size={14} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(tag);
+                        }}
+                        className="flex-1 py-2 px-3 rounded-xl border border-red-500/10 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/20 text-red-500 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <TrashIcon size={14} />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
         </MultiSectionContainer>
-      </Container>
-    </Box>
+      </div>
+    </div>
   );
 }
