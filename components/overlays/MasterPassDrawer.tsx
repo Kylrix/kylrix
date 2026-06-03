@@ -569,6 +569,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                       letterSpacing: '0.5em',
                       fontSize: '1.5rem',
                       textAlign: 'center',
+                      WebkitTextSecurity: 'disc',
                     }
                   }
                 }}
@@ -618,6 +619,9 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                     borderRadius: '16px',
                     bgcolor: alpha(VAULT_PRIMARY, 0.05),
                     border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`,
+                  },
+                  '& input': {
+                    WebkitTextSecurity: showPassword ? 'none' : 'disc',
                   }
                 }}
               />
@@ -649,6 +653,9 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
                       borderRadius: '16px',
                       bgcolor: alpha(VAULT_PRIMARY, 0.05),
                       border: `1px solid ${alpha(VAULT_PRIMARY, 0.2)}`,
+                    },
+                    '& input': {
+                      WebkitTextSecurity: showConfirmPassword ? 'none' : 'disc',
                     }
                   }}
                 />
