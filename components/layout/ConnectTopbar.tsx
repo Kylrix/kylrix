@@ -172,7 +172,7 @@ export default function ConnectTopbar({
   const profileName = user?.name || user?.email || 'User';
   const profileUsername = (user as any)?.username || (user as any)?.prefs?.username || null;
   
-  const [isClient, setIsClient] = useState(false);
+  const [isClient, setIsClient] = useState(true);
   useEffect(() => setIsClient(true), []);
 
   const profileSeed = useMemo(
