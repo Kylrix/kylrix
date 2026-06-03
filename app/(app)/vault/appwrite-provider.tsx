@@ -43,6 +43,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
   const [idmWindowOpen, setIDMWindowOpen] = useState(false);
   const verbose = process.env.NODE_ENV === "development";
   const pathname = usePathname();
+  const router = useRouter();
   const fetchUserRef = useRef<
     ((isRetry?: boolean, retryCount?: number) => Promise<Models.User<Models.Preferences> | null | undefined>) | undefined
   >(undefined);
