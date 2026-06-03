@@ -570,7 +570,7 @@ export default function SettingsPage() {
                                     <div className="flex items-center justify-between gap-4 select-none">
                                         <div>
                                             <span className="block text-white font-extrabold text-xs">Confidential Data Rails (Beta)</span>
-                                            <span className="block text-white/40 text-[10px] font-semibold font-sans mt-0.5">Route sensitive credentials through Story Aeneid TEE enclaves</span>
+                                            <span className="block text-white/40 text-[10px] font-semibold font-sans mt-0.5">Route credentials securely through the Story network</span>
                                         </div>
                                         <Switch 
                                             checked={cdrEnabled}

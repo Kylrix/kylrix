@@ -417,4 +417,24 @@ export const WalletService = {
 
         return allWallets.map(toWalletSummary);
     },
+
+    async derivePrivateKey(userId: string, chain: SupportedWalletChain): Promise<string> {
+        if (!ecosystemSecurity.status.isUnlocked || !ecosystemSecurity.getMasterKey()) {
+            throw new Error('Wallet vault is locked');
+        }
+        const existingRows = await listWalletRows(userId);
+        if (!existingRows.length) {
+            throw new Error('No wallets found to derive private key');
+        }
+        const root = await parseRootEnvelope(existingRows[0].encryptedSecret);
+        const seed = await bip39.mnemonicToSeed(root.mnemonic);
+        const rootKey = HDKey.fromMasterSeed(seed);
+
+        if (chain === 'eth') {
+            const child = rootKey.derive("m/44'/60'/0'/0/0");
+            if (!child.privateKey) throw new Error('Failed to derive EVM key');
+            return Buffer.from(child.privateKey).toString('hex');
+        }
+        throw new Error(`Derivation for chain ${chain} not implemented`);
+    },
 };
