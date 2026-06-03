@@ -120,14 +120,15 @@ export const EventViewDrawer = ({ open, onClose, event }: EventViewDrawerProps) 
                     </Typography>
                 </Paper>
 
+import NextLink from 'next/link';
+...
                 <Box sx={{ mt: 'auto', display: 'flex', gap: 2 }}>
                     <Button 
                         fullWidth 
                         variant="contained" 
                         color="primary"
-                        component="a"
+                        component={NextLink}
                         href={`/flow/events/${event.$id || event.id}`}
-                        target="_blank"
                         sx={{ borderRadius: 3, py: 1.5, fontWeight: 800, color: 'black' }}
                     >
                         Open in Flow
