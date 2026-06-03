@@ -101,16 +101,21 @@ const normalizeStyleValue = (key: string, value: any) => {
   const resolved = pickResponsiveValue(value);
   if (typeof resolved === 'number') {
     // Unitless numeric styles (MUI ratios / weights) — never append px.
-    if (key === 'lineHeight' || key === 'opacity' || key === 'zIndex' || key === 'fontWeight' || key === 'flex') {
+    if (/lineHeight/i.test(key) || key === 'opacity' || key === 'zIndex' || key === 'fontWeight' || key === 'flex') {
       return resolved;
     }
     if (/(padding|margin|gap)/i.test(key)) {
       return `${resolved * 8}px`;
     }
+    // Scale numeric border radius values by standard 4px MUI shape.borderRadius base unit.
+    if (/Radius$/i.test(key)) {
+      if (resolved > 50) return `${resolved}px`;
+      return `${resolved * 4}px`;
+    }
     // Match dimensional keys exactly; avoid substring hits like lineHeight → "height".
     if (
-      /^(width|height|minWidth|minHeight|maxWidth|maxHeight|top|left|right|bottom|fontSize|borderRadius)$/i.test(key) ||
-      /(Width|Height|Top|Left|Right|Bottom|Radius)$/i.test(key)
+      /^(width|height|minWidth|minHeight|maxWidth|maxHeight|top|left|right|bottom|fontSize)$/i.test(key) ||
+      /(Width|Height|Top|Left|Right|Bottom)$/i.test(key)
     ) {
       return `${resolved}px`;
     }
@@ -306,13 +311,24 @@ export const Card = React.forwardRef(({ children, className, sx, ...props }: any
   const hasPaddingInSx = sx && typeof sx === 'object' && (
     'p' in sx || 'padding' in sx || 'px' in sx || 'py' in sx || 'pt' in sx || 'pb' in sx || 'pl' in sx || 'pr' in sx
   );
+  const childrenArray = React.Children.toArray(children);
+  const hasLayoutComponents = childrenArray.some((child: any) =>
+    child && child.type && (
+      child.type.displayName === 'CardHeader' ||
+      child.type.displayName === 'CardContent' ||
+      child.type.displayName === 'CardActions' ||
+      child.type.name === 'CardHeader' ||
+      child.type.name === 'CardContent' ||
+      child.type.name === 'CardActions'
+    )
+  );
   const hoverClasses = !hasCustomHover
     ? "hover:border-pink-500/40 hover:-translate-y-1 hover:scale-[1.01] transition-all duration-500"
     : "transition-all duration-300";
   return (
     <div
       ref={ref}
-      className={`rounded-3xl bg-[#141211] border border-[#23211F] shadow-[1px_1px_0px_#23211F,2px_2px_0px_#1E1B19,3px_3px_0px_#161412,4px_4px_0px_#0A0908,5px_5px_0px_#000000] ${hasPaddingInSx ? '' : 'p-6'} ${hoverClasses} ${className || ''}`}
+      className={`rounded-3xl bg-[#141211] border border-[#23211F] shadow-[1px_1px_0px_#23211F,2px_2px_0px_#1E1B19,3px_3px_0px_#161412,4px_4px_0px_#0A0908,5px_5px_0px_#000000] ${(hasPaddingInSx || hasLayoutComponents) ? '' : 'p-6'} ${hoverClasses} ${className || ''}`}
       style={cleanSx(sx)}
       {...props}
     >
@@ -493,10 +509,21 @@ export const Paper = React.forwardRef(({ children, className, sx, component: Com
   const hasPaddingInSx = sx && typeof sx === 'object' && (
     'p' in sx || 'padding' in sx || 'px' in sx || 'py' in sx || 'pt' in sx || 'pb' in sx || 'pl' in sx || 'pr' in sx
   );
+  const childrenArray = React.Children.toArray(children);
+  const hasLayoutComponents = childrenArray.some((child: any) =>
+    child && child.type && (
+      child.type.displayName === 'Table' ||
+      child.type.displayName === 'TableContainer' ||
+      child.type.displayName === 'List' ||
+      child.type.name === 'Table' ||
+      child.type.name === 'TableContainer' ||
+      child.type.name === 'List'
+    )
+  );
   return (
     <Component
       ref={ref}
-      className={`rounded-2xl bg-[#0A0908] border border-[#23211F] ${hasPaddingInSx ? '' : 'p-4'} ${className || ''}`}
+      className={`rounded-2xl bg-[#0A0908] border border-[#23211F] ${(hasPaddingInSx || hasLayoutComponents) ? '' : 'p-4'} ${className || ''}`}
       style={cleanSx(sx)}
       {...props}
     >
@@ -1742,13 +1769,155 @@ export const Stop = ({ children, ...props }: any) => React.createElement('div', 
 export const Summarize = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const SwapVert = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Sync = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Table = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const TableBody = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const TableCell = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const TableContainer = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const TableHead = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const TablePagination = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const TableRow = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const TableContainer = React.forwardRef(({ children, className, sx, component: Component = 'div', ...props }: any, ref) => {
+  return (
+    <Component
+      ref={ref}
+      className={`overflow-x-auto w-full ${className || ''}`}
+      style={cleanSx(sx)}
+      {...props}
+    >
+      {children}
+    </Component>
+  );
+});
+TableContainer.displayName = 'TableContainer';
+
+export const Table = React.forwardRef(({ children, className, sx, ...props }: any, ref) => (
+  <table
+    ref={ref}
+    className={`w-full border-collapse text-left ${className || ''}`}
+    style={cleanSx(sx)}
+    {...props}
+  >
+    {children}
+  </table>
+));
+Table.displayName = 'Table';
+
+export const TableHead = React.forwardRef(({ children, className, sx, ...props }: any, ref) => (
+  <thead
+    ref={ref}
+    className={`${className || ''}`}
+    style={cleanSx(sx)}
+    {...props}
+  >
+    {children}
+  </thead>
+));
+TableHead.displayName = 'TableHead';
+
+export const TableBody = React.forwardRef(({ children, className, sx, ...props }: any, ref) => (
+  <tbody
+    ref={ref}
+    className={`${className || ''}`}
+    style={cleanSx(sx)}
+    {...props}
+  >
+    {children}
+  </tbody>
+));
+TableBody.displayName = 'TableBody';
+
+export const TableRow = React.forwardRef(({ children, className, sx, ...props }: any, ref) => (
+  <tr
+    ref={ref}
+    className={`border-b border-[#23211F] hover:bg-[#1E1B19]/30 transition-colors ${className || ''}`}
+    style={cleanSx(sx)}
+    {...props}
+  >
+    {children}
+  </tr>
+));
+TableRow.displayName = 'TableRow';
+
+export const TableCell = React.forwardRef(({ children, className, sx, align, ...props }: any, ref) => {
+  const alignClass = align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left';
+  return (
+    <td
+      ref={ref}
+      className={`px-6 py-4 text-sm align-middle ${alignClass} ${className || ''}`}
+      style={cleanSx(sx)}
+      {...props}
+    >
+      {children}
+    </td>
+  );
+});
+TableCell.displayName = 'TableCell';
+
+export const TablePagination = React.forwardRef(({
+  count,
+  page,
+  rowsPerPage,
+  onPageChange,
+  onRowsPerPageChange,
+  rowsPerPageOptions = [5, 10, 25],
+  component: Component = 'div',
+  sx,
+  className,
+  ...props
+}: any, ref) => {
+  const from = count === 0 ? 0 : page * rowsPerPage + 1;
+  const to = Math.min(count, (page + 1) * rowsPerPage);
+
+  const handleBack = (e: any) => {
+    if (page > 0) onPageChange?.(e, page - 1);
+  };
+
+  const handleNext = (e: any) => {
+    if ((page + 1) * rowsPerPage < count) onPageChange?.(e, page + 1);
+  };
+
+  return (
+    <Component
+      ref={ref}
+      className={`flex items-center justify-end gap-6 px-6 py-3 text-xs font-satoshi text-stone-400 select-none ${className || ''}`}
+      style={cleanSx(sx)}
+      {...props}
+    >
+      <div className="flex items-center gap-2">
+        <span>Rows per page:</span>
+        <select
+          value={rowsPerPage}
+          onChange={(e) => onRowsPerPageChange?.(e)}
+          className="bg-transparent border-0 text-stone-200 outline-none cursor-pointer font-bold"
+        >
+          {rowsPerPageOptions.map((opt: any) => (
+            <option key={opt} value={opt} className="bg-[#141211] text-stone-200">
+              {opt}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        {from}-{to} of {count}
+      </div>
+
+      <div className="flex items-center gap-1">
+        <button
+          onClick={handleBack}
+          disabled={page === 0}
+          className="p-1 rounded hover:bg-[#1E1B19] text-stone-200 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
+          type="button"
+        >
+          ‹
+        </button>
+        <button
+          onClick={handleNext}
+          disabled={(page + 1) * rowsPerPage >= count}
+          className="p-1 rounded hover:bg-[#1E1B19] text-stone-200 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer disabled:cursor-not-allowed"
+          type="button"
+        >
+          ›
+        </button>
+      </div>
+    </Component>
+  );
+});
+TablePagination.displayName = 'TablePagination';
+
 export const TableRows = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Tag = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const Today = ({ children, ...props }: any) => React.createElement('div', props, children);
