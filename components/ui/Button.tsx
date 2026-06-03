@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { Button as MuiButton, CircularProgress } from '@/lib/mui-tailwind/material';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
