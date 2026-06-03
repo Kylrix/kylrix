@@ -1,30 +1,31 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Card, CardContent, CardHeader, Typography, Box, IconButton, Chip, alpha } from '@/lib/mui-tailwind/material';
+import { 
+  Pin as PinIcon, 
+  Paperclip as AttachFileIcon, 
+  Link as LinkIcon, 
+  MoreHorizontal as MoreHorizIcon,
+  Trash2 as TrashIcon,
+  Copy as DuplicateIcon,
+  Share2 as ShareIcon,
+  Lock as PrivateIcon,
+  Globe as PublicIcon,
+  RefreshCw as RefreshIcon,
+  Tag as LocalOfferIcon,
+  FileText as SummarizeIcon,
+  CheckSquare as GrammarIcon,
+  PlusSquare as TodoIcon,
+  Calendar,
+  Unlock
+} from 'lucide-react';
+
 import { useContextMenu } from './ContextMenuContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { NoteDetailSidebar } from './NoteDetailSidebar';
 import { useNotes } from '@/context/NotesContext';
 import type { Notes } from '@/types/appwrite';
 import { DoodleStroke } from '@/types/notes';
-import {
-  Delete as TrashIcon,
-  AttachFile as AttachFileIcon,
-  PushPin as PinIcon,
-  PushPinOutlined as PinOutlinedIcon,
-  ContentCopy as DuplicateIcon,
-  Share as ShareIcon,
-  Lock as PrivateIcon,
-  LockOpen as PublicIcon,
-  Link as LinkIcon,
-  Refresh as RefreshIcon,
-  LocalOffer as LocalOfferIcon,
-  MoreHoriz as MoreHorizIcon,
-  PlaylistAdd as TodoIcon,
-  Summarize as SummarizeIcon,
-  Spellcheck as GrammarIcon,
-} from '@/lib/mui-tailwind/icons';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSection } from '@/context/SectionContext';
@@ -73,7 +74,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   useEffect(() => setMounted(true), []);
 
-  const NAV_SURFACE = '#161412';
   const isPublic = getNotePublicState(note);
   const isPro = hasPaidKylrixPlan(user);
   const noteMeta = (() => {
@@ -276,18 +276,18 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   };
 
   const contextMenuItems = [
-    { label: pinned ? 'Unpin' : 'Pin', icon: pinned ? <PinIcon sx={{ fontSize: 18 }} /> : <PinOutlinedIcon sx={{ fontSize: 18 }} />, onClick: () => { handlePinToggle(); } },
-    ...(isPublic ? [{ label: 'Copy Share Link', icon: <LinkIcon sx={{ fontSize: 18 }} />, onClick: () => { handleCopyShareLink(); } }, { label: 'Change Public Link', icon: <RefreshIcon sx={{ fontSize: 18 }} />, onClick: () => { handleRotatePublicLink(); } }] : []),
-    { label: isPublic ? 'Make Private' : 'Make Public', icon: isPublic ? <PrivateIcon sx={{ fontSize: 18 }} /> : <PublicIcon sx={{ fontSize: 18 }} />, onClick: () => { handleTogglePublic(); } },
-    { label: 'Duplicate', icon: <DuplicateIcon sx={{ fontSize: 18 }} />, onClick: () => { handleDuplicate(); } },
-    { label: 'Add Paywall', icon: <LocalOfferIcon sx={{ fontSize: 18, color: '#EC4899' }} />, onClick: () => { setIsPaywallDialogOpen(true); } },
+    { label: pinned ? 'Unpin' : 'Pin', icon: <PinIcon size={16} className={pinned ? 'rotate-45 text-[#EC4899]' : ''} />, onClick: () => { handlePinToggle(); } },
+    ...(isPublic ? [{ label: 'Copy Share Link', icon: <LinkIcon size={16} />, onClick: () => { handleCopyShareLink(); } }, { label: 'Change Public Link', icon: <RefreshIcon size={16} />, onClick: () => { handleRotatePublicLink(); } }] : []),
+    { label: isPublic ? 'Make Private' : 'Make Public', icon: isPublic ? <PrivateIcon size={16} /> : <Unlock size={16} />, onClick: () => { handleTogglePublic(); } },
+    { label: 'Duplicate', icon: <DuplicateIcon size={16} />, onClick: () => { handleDuplicate(); } },
+    { label: 'Add Paywall', icon: <LocalOfferIcon size={16} className="text-[#EC4899]" />, onClick: () => { setIsPaywallDialogOpen(true); } },
     ...(isPro ? [
-      { label: 'AI Summarize', icon: <SummarizeIcon sx={{ fontSize: 18, color: 'primary.main' }} />, onClick: () => { handleAIAction('summarize'); } },
-      { label: 'AI Fix Grammar', icon: <GrammarIcon sx={{ fontSize: 18, color: 'primary.main' }} />, onClick: () => { handleAIAction('grammar'); } },
-      { label: 'Convert To Todo', icon: <TodoIcon sx={{ fontSize: 18, color: 'primary.main' }} />, onClick: () => { handleCreateTodo(); } }
+      { label: 'AI Summarize', icon: <SummarizeIcon size={16} className="text-[#6366F1]" />, onClick: () => { handleAIAction('summarize'); } },
+      { label: 'AI Fix Grammar', icon: <GrammarIcon size={16} className="text-[#6366F1]" />, onClick: () => { handleAIAction('grammar'); } },
+      { label: 'Convert To Todo', icon: <TodoIcon size={16} className="text-[#6366F1]" />, onClick: () => { handleCreateTodo(); } }
     ] : []),
-    { label: 'Share with...', icon: <ShareIcon sx={{ fontSize: 18 }} />, onClick: openShare },
-    { label: 'Delete', icon: <TrashIcon sx={{ fontSize: 18 }} />, onClick: openDelete, variant: 'destructive' as const }
+    { label: 'Share with...', icon: <ShareIcon size={16} />, onClick: openShare },
+    { label: 'Delete', icon: <TrashIcon size={16} className="text-red-500" />, onClick: openDelete, variant: 'destructive' as const }
   ];
 
   const openCardActionsMenu = (e: React.MouseEvent) => {
@@ -305,241 +305,122 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   return (
     <>
       {!mounted ? (
-        <Box sx={{ height: 200 }} />
+        <div className="h-[200px]" />
       ) : (
-        <Card
-            {...sidebarIgnoreProps}
-            onClick={handleClick}
-            onContextMenu={handleRightClick}
-            sx={{
-              height: { xs: 160, sm: 180, md: 200, lg: 220 },
-              display: 'flex',
-              flexDirection: 'column',
-              cursor: 'pointer',
-              position: 'relative',
-              overflow: 'hidden',
-              bgcolor: NAV_SURFACE,
-              backgroundImage: 'none',
-              border: '1px solid',
-              borderColor: '#34322F',
-              borderRadius: '28px',
-              boxShadow: 'none',
-              transform: 'none',
-              transition: 'border-color 0.2s ease',
-              '&:hover': {
-                transform: 'none',
-                borderColor: (theme) => alpha(theme.palette.secondary.main, 0.5),
-                bgcolor: NAV_SURFACE,
-                boxShadow: 'none',
-              }
-            }}
-          >
-            <CardHeader
-              sx={{ pb: 0.5, p: 2.5 }}
-              title={
-                <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
-                  <Typography 
-                    component="span"
-                    variant="h4" 
-                    sx={{ 
-                      fontSize: { xs: '0.875rem', sm: '1rem' }, 
-                      fontWeight: 900,
-                      fontFamily: 'var(--font-clash-display)',
-                      color: 'secondary.main',
-                      letterSpacing: '-0.02em',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      flex: 1,
-                      lineHeight: 1.2,
-                    }}
-                  >
-                {isEncryptedNote ? '🔒 Encrypted note' : note.title}
-                  </Typography>
+        <div
+          {...sidebarIgnoreProps}
+          onClick={handleClick}
+          onContextMenu={handleRightClick}
+          className="relative flex flex-col justify-between p-6 w-full min-h-[196px] rounded-[28px] bg-[#161412] border border-[#34322F] hover:border-[#EC4899]/40 hover:bg-[#1C1A18] transition-all duration-300 ease-out cursor-pointer overflow-hidden group select-none max-w-full"
+        >
+          {/* Top Section */}
+          <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
+            
+            {/* Left Icon Container */}
+            <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white/3 text-white/60 grid place-items-center border border-white/8 group-hover:scale-105 group-hover:text-[#EC4899] group-hover:bg-[#EC4899]/10 group-hover:border-[#EC4899]/20 transition-all duration-300">
+              <SummarizeIcon size={20} strokeWidth={1.5} />
+            </div>
 
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    {isPublic && (
-                      <IconButton
-                        size="small"
-                        onClick={handleCopyShareLink}
-                        sx={{
-                          p: 0.5,
-                          color: 'text.secondary',
-                          opacity: 0.6,
-                          borderRadius: '8px',
-                          '&:hover': {
-                            color: 'primary.main',
-                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
-                            opacity: 1
-                          }
-                        }}
-                      >
-                        <LinkIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    )}
-                    <IconButton
-                      size="small"
-                      onClick={handlePinToggle}
-                      sx={{ 
-                        p: 0.5,
-                        color: pinned ? 'primary.main' : 'text.secondary',
-                        opacity: pinned ? 1 : 0.4,
-                        borderRadius: '8px',
-                        '&:hover': {
-                          color: 'primary.main',
-                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
-                          opacity: 1
-                        }
-                      }}
-                    >
-                      {pinned ? <PinIcon sx={{ fontSize: 16 }} /> : <PinOutlinedIcon sx={{ fontSize: 16 }} />}
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      aria-label="Note actions"
-                      onClick={openCardActionsMenu}
-                      sx={{
-                        p: 0.5,
-                        color: 'text.secondary',
-                        opacity: 0.55,
-                        borderRadius: '8px',
-                        '&:hover': {
-                          color: 'primary.main',
-                          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
-                          opacity: 1,
-                        },
-                      }}
-                    >
-                      <MoreHorizIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
+            {/* Grouped Copy Column */}
+            <div className="flex-1 min-w-0 flex flex-col gap-1">
+              {/* Header Row */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {pinned && (
+                  <PinIcon size={14} className="text-[#EC4899] fill-[#EC4899] rotate-45 flex-shrink-0" />
+                )}
+                <h3 className="text-white text-base font-black tracking-tight leading-tight truncate flex-1 min-w-0 font-mono">
+                  {isEncryptedNote ? '🔒 Encrypted note' : note.title || 'Untitled Note'}
+                </h3>
+                <span className="flex-shrink-0 bg-white/5 text-white/40 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-white/8 flex items-center gap-1">
+                  {isPublic ? <PublicIcon size={11} /> : <PrivateIcon size={11} />}
+                  {isPublic ? 'public' : 'private'}
+                </span>
+              </div>
 
-                    {note.attachments && note.attachments.length > 0 && (
-                      <Box sx={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 0.3, 
-                        px: 1, 
-                        py: 0.4, 
-                        borderRadius: '8px', 
-                        bgcolor: 'rgba(99, 102, 241, 0.05)',
-                        color: 'primary.main',
-                        fontSize: '10px',
-                        fontWeight: 800,
-                        border: '1px solid rgba(99, 102, 241, 0.1)',
-                        fontFamily: 'var(--font-jetbrains-mono)'
-                      }}>
-                        <AttachFileIcon sx={{ fontSize: 10 }} />
-                        {note.attachments.length}
-                      </Box>
-                    )}
-                  </Box>
-                </Box>
-              }
-            />
-
-            <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 0, position: 'relative', p: 2.5, pt: 0 }}>
-              {note.format === 'doodle' ? (
-                <Box sx={{ 
-                  flex: 1, 
-                  borderRadius: '16px', 
-                  border: '1.5px solid',
-                  borderColor: 'divider',
-                  overflow: 'hidden', 
-                  bgcolor: (theme) => alpha(theme.palette.background.paper, theme.palette.mode === 'dark' ? 0.3 : 0.6),
-                  position: 'relative'
-                }}>
-                  <canvas
-                    ref={canvasRef}
-                    width={300}
-                    height={200}
-                    style={{ width: '100%', height: '100%', display: 'block' }}
-                  />
-                </Box>
-              ) : (
-                isEncryptedNote ? (
-                  <Typography
-                    component="span"
-                    variant="body2"
-                    sx={{
-                      color: 'text.secondary',
-                      fontFamily: 'var(--font-satoshi)',
-                      fontSize: '0.85rem',
-                      lineHeight: 1.6,
-                      fontStyle: 'italic',
-                      opacity: 0.75,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      '@media (min-width: 600px)': {
-                        WebkitLineClamp: 4,
-                      },
-                      '@media (min-width: 900px)': {
-                        WebkitLineClamp: 5,
-                      },
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      whiteSpace: 'pre-wrap',
-                    }}
-                  >
-                    🔒 Encrypted note
-                  </Typography>
+              {/* Summary / Content Preview */}
+              <div className="text-sm text-white/50 font-medium leading-relaxed mt-1 overflow-hidden">
+                {note.format === 'doodle' ? (
+                  <div className="w-full h-[64px] rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden relative">
+                    <canvas
+                      ref={canvasRef}
+                      width={300}
+                      height={200}
+                      className="w-full h-full block object-contain"
+                    />
+                  </div>
                 ) : (
-                  <Typography 
-                    component="span"
-                    variant="body2" 
-                    sx={{ 
-                      color: 'text.secondary',
-                      fontFamily: 'var(--font-satoshi)',
-                      fontSize: '0.85rem',
-                      lineHeight: 1.6,
-                      fontWeight: 500,
-                      display: '-webkit-box',
-                      WebkitLineClamp: 3,
-                      '@media (min-width: 600px)': {
-                        WebkitLineClamp: 4,
-                      },
-                      '@media (min-width: 900px)': {
-                        WebkitLineClamp: 5,
-                      },
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden',
-                      whiteSpace: 'pre-wrap',
-                    }}
-                  >
-                    {note.content}
-                  </Typography>
-                )
+                  <p className="line-clamp-2 break-words select-text">
+                    {isEncryptedNote ? '🔒 Encrypted note' : note.content}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Top-Right Inline Actions (Pin, Menu) */}
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {isPublic && (
+                <button
+                  onClick={handleCopyShareLink}
+                  className="p-1.5 rounded-lg text-white/20 hover:text-[#EC4899] hover:bg-[#EC4899]/5 transition-all duration-200"
+                  title="Copy Share Link"
+                >
+                  <LinkIcon size={16} />
+                </button>
               )}
-              
-              <Box sx={{ mt: 1.5, display: 'flex', flexWrap: 'wrap', gap: 0.8, overflow: 'hidden' }}>
-                {note.tags && note.tags.slice(0, 2).map((tag: string, index: number) => (
-                  <Chip
-                    key={index}
-                    label={tag}
-                    size="small"
-                    sx={{ 
-                      height: 22, 
-                      fontSize: '10px', 
-                      fontWeight: 800,
-                      fontFamily: 'var(--font-jetbrains-mono)',
-                      textTransform: 'uppercase',
-                      bgcolor: (theme) => alpha(theme.palette.text.primary, 0.03),
-                      color: 'text.secondary',
-                      border: '1.5px solid',
-                      borderColor: 'divider',
-                      borderRadius: '8px',
-                      '& .MuiChip-label': { px: 1 }
-                    }}
-                  />
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
+              <button
+                onClick={handlePinToggle}
+                className="p-1.5 rounded-lg text-white/20 hover:text-[#EC4899] hover:bg-[#EC4899]/5 transition-all duration-200"
+                title={pinned ? 'Unpin' : 'Pin'}
+              >
+                <PinIcon size={16} className={pinned ? 'fill-[#EC4899]' : ''} />
+              </button>
+              <button
+                onClick={openCardActionsMenu}
+                className="p-1.5 rounded-lg text-white/20 hover:text-white hover:bg-white/5 transition-all duration-200"
+                title="More Actions"
+              >
+                <MoreHorizIcon size={16} />
+              </button>
+            </div>
+
+          </div>
+
+          {/* Bottom Action Bar */}
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/4 flex-shrink-0 select-none">
+            {/* Timestamp */}
+            <div className="flex items-center gap-1 text-xs text-white/30 font-medium">
+              <Calendar size={13} />
+              <span>
+                {note.updatedAt || note.$createdAt
+                  ? new Date(note.updatedAt || note.$createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                  : 'Active'}
+              </span>
+            </div>
+
+            {/* Attachments / Tag Badges */}
+            <div className="flex items-center gap-1.5 overflow-hidden max-w-[60%] justify-end">
+              {note.attachments && note.attachments.length > 0 && (
+                <span className="flex-shrink-0 bg-[#6366F1]/10 text-[#818CF8] text-[9px] font-black font-mono px-2 py-0.5 rounded border border-[#6366F1]/20 flex items-center gap-1">
+                  <AttachFileIcon size={10} />
+                  {note.attachments.length}
+                </span>
+              )}
+              {note.tags && note.tags.slice(0, 2).map((tag: string, index: number) => (
+                <span
+                  key={index}
+                  className="text-[9px] font-black font-mono uppercase tracking-wider bg-white/3 text-white/40 border border-white/8 px-2 py-0.5 rounded"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+        </div>
       )}
     </>
   );
 });
-
 
 NoteCard.displayName = 'NoteCard';
 

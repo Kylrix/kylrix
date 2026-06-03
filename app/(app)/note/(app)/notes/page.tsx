@@ -367,19 +367,6 @@ export default function NotesPage() {
     openOverlay(<CreateNoteForm onNoteCreated={handleNoteCreated} />);
   };
 
-  const gridStyle = useMemo(() => {
-    let minWidth = '280px';
-    if (!isCollapsed && isDynamicSidebarOpen) {
-      minWidth = '200px';
-    } else if (!isCollapsed || isDynamicSidebarOpen) {
-      minWidth = '220px';
-    }
-    return {
-      display: 'grid',
-      gap: '20px',
-      gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}, 1fr))`,
-    };
-  }, [isCollapsed, isDynamicSidebarOpen]);
 
   const tags = useMemo(() => {
     const existingTags = Array.from(new Set(visibleNotes.flatMap(note => note.tags || [])));
@@ -490,7 +477,7 @@ export default function NotesPage() {
 
       {/* Notes Grid */}
       {isInitialLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {Array.from({ length: 12 }).map((_, index) => (
             <NoteCard key={`skeleton-${index}`} note={{ $id: `skeleton-${index}`, title: 'Loading...', content: '', tags: [], isPublic: false, status: 'loading' } as any} />
           ))}
@@ -553,7 +540,7 @@ export default function NotesPage() {
                 )}
               </div>
               
-              <div style={gridStyle}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {pinnedNotes.slice(0, 3).map((note) => (
                   <NoteCard
                     key={note.$id}
@@ -581,7 +568,7 @@ export default function NotesPage() {
                 </div>
               )}
               
-              <div style={gridStyle}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {regularNotes.map((note) => (
                   <NoteCard
                     key={note.$id}
@@ -595,9 +582,9 @@ export default function NotesPage() {
             </div>
           )}
           
-          {hasMore && !isInitialLoading && !hasSearchResults && (
+          {hasNextPage && !isInitialLoading && !hasSearchResults && (
             <div className="flex justify-center mt-2">
-              <Button variant="outlined" onClick={loadMore}>
+              <Button variant="outlined" onClick={nextPage}>
                 Load More
               </Button>
             </div>
