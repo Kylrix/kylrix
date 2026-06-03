@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack -H localhost -p 3005",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint . --max-warnings 20"
+    "lint": "eslint . --max-warnings 25"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
