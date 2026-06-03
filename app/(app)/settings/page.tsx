@@ -29,6 +29,7 @@ import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/components/overlays/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
 import { MultiSectionContainer } from '@/context/SectionContext';
+import { CdrConfirmDrawer } from '@/src/features/story-cdr/CdrConfirmDrawer';
 
 // Inline Custom Telegram Icon SVG for lucide alignment
 function TelegramIcon({ className = "w-5 h-5" }: { className?: string }) {
@@ -59,7 +60,7 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: () => void 
 }
 
 export default function SettingsPage() {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const router = useRouter();
     const { requestSudo } = useSudo();
     const { open: openDrawer } = useUnifiedDrawer();
@@ -79,6 +80,41 @@ export default function SettingsPage() {
     // Switches preferences state
     const [pushEnabled, setPushEnabled] = useState(true);
     const [statusEnabled, setStatusEnabled] = useState(true);
+    const [cdrEnabled, setCdrEnabled] = useState(false);
+    const [cdrDrawerOpen, setCdrDrawerOpen] = useState(false);
+
+    useEffect(() => {
+        if (user?.prefs) {
+            setCdrEnabled(!!user.prefs.cdr_enabled);
+        }
+    }, [user]);
+
+    const handleCdrToggle = async () => {
+        if (cdrEnabled) {
+            if (!window.confirm("Are you sure you want to deactivate Confidential Data Rails? This will switch credentials storage back to local E2EE.")) {
+                return;
+            }
+            try {
+                const { account, invalidateCurrentUserCache } = await import('@/lib/appwrite');
+                const currentPrefs = await account.getPrefs();
+                await account.updatePrefs({ ...currentPrefs, cdr_enabled: false });
+                invalidateCurrentUserCache();
+                await refreshUser(true);
+                setCdrEnabled(false);
+                toast.success("Confidential Data Rails deactivated");
+            } catch (err: any) {
+                toast.error(err.message || "Failed to deactivate");
+            }
+        } else {
+            setCdrDrawerOpen(true);
+        }
+    };
+
+    const handleCdrSuccess = async () => {
+        await refreshUser(true);
+        setCdrEnabled(true);
+        setCdrDrawerOpen(false);
+    };
 
     const FEATURE_FORM_ID = '6a19dc99002634bd33ae';
 
@@ -527,6 +563,20 @@ export default function SettingsPage() {
                                             onChange={() => setStatusEnabled(!statusEnabled)}
                                         />
                                     </div>
+
+                                    <div className="h-[1px] bg-white/5 w-full" />
+
+                                    {/* Confidential Data Rails (Beta) Switch */}
+                                    <div className="flex items-center justify-between gap-4 select-none">
+                                        <div>
+                                            <span className="block text-white font-extrabold text-xs">Confidential Data Rails (Beta)</span>
+                                            <span className="block text-white/40 text-[10px] font-semibold font-sans mt-0.5">Route sensitive credentials through Story Aeneid TEE enclaves</span>
+                                        </div>
+                                        <Switch 
+                                            checked={cdrEnabled}
+                                            onChange={handleCdrToggle}
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -558,6 +608,14 @@ export default function SettingsPage() {
                     onSuccess={() => {
                         setTgDrawerOpen(false);
                     }}
+                />
+            )}
+
+            {cdrDrawerOpen && (
+                <CdrConfirmDrawer
+                    open={cdrDrawerOpen}
+                    onClose={() => setCdrDrawerOpen(false)}
+                    onSuccess={handleCdrSuccess}
                 />
             )}
 
