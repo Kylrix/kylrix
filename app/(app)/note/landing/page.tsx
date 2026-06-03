@@ -94,16 +94,6 @@ export default function LandingPage() {
     }
   }, [isAuthenticated, router]);
 
-  const getUserInitials = (user: any): string => {
-    if (user?.name) {
-      return user.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-    }
-    if (user?.email) {
-      return user.email.slice(0, 2).toUpperCase();
-    }
-    return 'U';
-  };
-
   return (
     <div className="min-h-screen bg-[#0A0908] text-white/90 flex flex-col font-satoshi relative overflow-hidden">
       {/* Main Body */}
