@@ -1,23 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Tabs,
-  Tab,
-  CircularProgress,
-  alpha,
-} from '@/lib/mui-tailwind/material';
-import Grid from '@/lib/mui-tailwind/material';
-import { Add as AddIcon } from '@/lib/mui-tailwind/icons';
+import { Plus } from 'lucide-react';
 import EventCard from './EventCard';
 import EventDialog from './EventDialog';
 import { Event } from '@/types';
 import { events as eventApi } from '@/lib/kylrixflow';
 import { useTask } from '@/context/TaskContext';
-import { useLayout } from '@/context/LayoutContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { permissions, EventVisibility } from '@/lib/permissions';
 import { CallService } from '@/lib/services/call';
@@ -33,10 +22,6 @@ export default function EventList() {
   const { projects, userId } = useTask();
   const { setActiveDetail } = useSection();
   const { isAuthenticated, openIDMWindow } = useAuth();
-
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -159,146 +144,83 @@ export default function EventList() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-        <CircularProgress />
-      </Box>
+      <div className="flex justify-center items-center h-screen bg-black">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6366F1]" />
+      </div>
     );
   }
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#000000', minHeight: '100vh', p: { xs: 2, md: 4 } }}>
+    <div className="h-full flex flex-col bg-black min-h-screen p-4 md:p-8">
       <MultiSectionContainer panels={['note', 'huddles', 'goals']} contextId="event">
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          mb: 4,
-          flexWrap: 'wrap',
-          gap: 2,
-          p: 1,
-        }}
-      >
-        <Box>
-          <Typography 
-            variant="h4" 
-            fontWeight="900"
-            sx={{ 
-              fontFamily: 'var(--font-clash)',
-              letterSpacing: '-0.03em',
-              color: 'white',
-              mb: 0.5
-            }}
-          >
-            Events
-          </Typography>
-          <Typography 
-            variant="body2" 
-            sx={{ 
-              color: '#8E8A86',
-              fontWeight: 600,
-              letterSpacing: '0.01em',
-              fontFamily: 'var(--font-satoshi)'
-            }}
-          >
-            Discover and manage your schedule
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon sx={{ fontSize: 20 }} />}
-          sx={{ 
-            borderRadius: '14px', 
-            px: 3, 
-            py: 1.2,
-            bgcolor: '#6366F1',
-            color: 'white',
-            fontWeight: 800,
-            textTransform: 'none',
-            fontSize: '0.9rem',
-            fontFamily: 'var(--font-satoshi)',
-            '&:hover': {
-              bgcolor: '#4F46E5',
-              transform: 'translateY(-2px)',
-            },
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-          onClick={() => {
-            if (!isAuthenticated) {
-              openIDMWindow();
-              return;
-            }
-            setIsDialogOpen(true);
-          }}
-        >
-          {isAuthenticated ? 'Create Event' : 'Sign in to Create'}
-        </Button>
-      </Box>
-
-      <Box sx={{ 
-        mb: 4, 
-        bgcolor: '#161412', 
-        borderRadius: '28px', 
-        p: 0.5,
-        width: 'fit-content',
-        border: '1px solid #34322F',
-        backgroundImage: 'none'
-      }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange} 
-          aria-label="event tabs"
-          sx={{
-            minHeight: 40,
-            '& .MuiTabs-indicator': {
-              display: 'none',
-            },
-            '& .MuiTab-root': {
-              minHeight: 40,
-              borderRadius: '24px',
-              textTransform: 'none',
-              fontWeight: 700,
-              fontSize: '0.85rem',
-              fontFamily: 'var(--font-satoshi)',
-              color: '#8E8A86',
-              px: 3,
-              transition: 'all 0.2s ease',
-              '&.Mui-selected': {
-                color: 'white',
-                bgcolor: '#1C1A18',
-              },
-              '&:hover': {
-                color: 'white',
-                bgcolor: '#1C1A18',
+        <div className="flex items-center justify-between mb-8 flex-wrap gap-4 p-1">
+          <div>
+            <h1 className="text-3xl font-black font-clash text-white tracking-tight mb-1">
+              Events
+            </h1>
+            <p className="text-[#8E8A86] font-semibold font-satoshi text-sm tracking-wide">
+              Discover and manage your schedule
+            </p>
+          </div>
+          <button
+            type="button"
+            className="flex items-center gap-2 px-5 py-3 font-bold rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white hover:text-white font-satoshi transition-all hover:-translate-y-0.5 cursor-pointer text-sm"
+            onClick={() => {
+              if (!isAuthenticated) {
+                openIDMWindow();
+                return;
               }
-            }
-          }}
-        >
-          <Tab label="Upcoming" />
-          <Tab label="Past" />
-          {isAuthenticated && <Tab label="My Events" />}
-        </Tabs>
-      </Box>
+              setIsDialogOpen(true);
+            }}
+          >
+            <Plus className="h-5 w-5" />
+            <span>{isAuthenticated ? 'Create Event' : 'Sign in to Create'}</span>
+          </button>
+        </div>
 
-      <Grid container spacing={3}>
-        {events.map((event) => (
-          <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={event.id}>
-            <EventCard 
-              event={event} 
-              onClick={() => setActiveDetail({ type: 'event', id: event.id, data: event })} 
-            />
-          </Grid>
-        ))}
-      </Grid>
+        {/* Tab Selector */}
+        <div className="mb-8 bg-[#161412] rounded-[28px] p-1 border border-[#34322F] flex gap-1 w-fit">
+          {['Upcoming', 'Past', ...(isAuthenticated ? ['My Events'] : [])].map((tab, idx) => {
+            const isActive = tabValue === idx;
+            return (
+              <button
+                key={tab}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setTabValue(idx);
+                }}
+                className={`rounded-full px-5 py-2 font-bold text-xs sm:text-sm font-satoshi transition-all cursor-pointer ${
+                  isActive 
+                    ? 'bg-[#1C1A18] text-white' 
+                    : 'text-[#8E8A86] hover:text-white hover:bg-[#1C1A18]/50'
+                }`}
+              >
+                {tab}
+              </button>
+            );
+          })}
+        </div>
 
-      {isDialogOpen && (
-        <EventDialog
-          open={isDialogOpen}
-          onClose={() => setIsDialogOpen(false)}
-          onSubmit={handleCreateEvent}
-        />
-      )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {events.map((event) => (
+            <div key={event.id}>
+              <EventCard 
+                event={event} 
+                onClick={() => setActiveDetail({ type: 'event', id: event.id, data: event })} 
+              />
+            </div>
+          ))}
+        </div>
+
+        {isDialogOpen && (
+          <EventDialog
+            open={isDialogOpen}
+            onClose={() => setIsDialogOpen(false)}
+            onSubmit={handleCreateEvent}
+          />
+        )}
       </MultiSectionContainer>
-    </Box>
+    </div>
   );
 }

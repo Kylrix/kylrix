@@ -2,29 +2,20 @@
 
 import React, { useState } from 'react';
 import {
-  Box,
-  Checkbox,
-  Typography,
-  IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-} from '@/lib/mui-tailwind/material';
-import {
-  Flag as FlagIcon,
-  AccessTime as ScheduleIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  MoreVert as MoreIcon,
-  List as SubtaskIcon,
-  ChatBubbleOutline as CommentIcon,
-  Archive as ArchiveIcon,
-  ContentCopy as CopyIcon,
-  VideoCall as VideoCallIcon,
-  PushPin as PinIcon,
-} from '@/lib/mui-tailwind/icons';
-import { useMediaQuery, useTheme } from '@/lib/mui-tailwind/material';
+  Flag,
+  Clock,
+  Edit,
+  Trash2,
+  MoreVertical,
+  ListTodo,
+  MessageSquare,
+  Archive,
+  Copy,
+  Video,
+  Pin,
+  Check,
+  UserPlus as AssignIcon
+} from 'lucide-react';
 import { formatTime, isToday, isTomorrow, isPast, isThisWeek } from '@/lib/time-util';
 import { Task, Priority } from '@/types';
 import { useTask } from '@/context/TaskContext';
@@ -33,7 +24,6 @@ import { useSection } from '@/context/SectionContext';
 import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { UserPlus as AssignIcon } from 'lucide-react';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { FlowPresenceFlapOver } from '@/components/LinkRenderer';
 
@@ -58,15 +48,13 @@ const priorityLabels: Record<Priority, string> = {
 };
 
 export default React.memo(function TaskItem({ task, onClick, compact = false }: TaskItemProps) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { completeTask, deleteTask, updateTask, labels, projects, selectTask, togglePinTask } = useTask();
   const { openSecondarySidebar } = useLayout();
   const { setActiveDetail } = useSection();
   const { openCallLauncher } = useCallLauncher();
   const { user } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [anchorEl, setAnchorEl] = useState<boolean>(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isFlapOverOpen, setIsFlapOverOpen] = useState(false);
   const { resourcePresence } = usePresence();
@@ -82,11 +70,11 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
-    setAnchorEl(event.currentTarget);
+    setAnchorEl(!anchorEl);
   };
 
   const handleMenuClose = () => {
-    setAnchorEl(null);
+    setAnchorEl(false);
   };
 
   const handleComplete = (event: React.MouseEvent) => {
@@ -131,10 +119,10 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   const handleAssignGoal = () => {
     handleMenuClose();
     openUnified('share-note', {
-        resourceId: task.id,
-        resourceType: 'goal',
-        resourceTitle: task.title,
-        actorName: user?.name || 'A Kylrix User'
+      resourceId: task.id,
+      resourceType: 'goal',
+      resourceTitle: task.title,
+      actorName: user?.name || 'A Kylrix User'
     });
   };
 
@@ -155,8 +143,16 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
 
   return (
     <>
-      <Box
-        className="task-list-item"
+      <div
+        className={`task-list-item cursor-pointer rounded-3xl transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] relative group ${
+          compact
+            ? (isHovered ? 'bg-[#22201E] border-[#3E3C3A]' : 'bg-[#1C1A18] border-[#2C2A28]')
+            : (isHovered ? 'bg-[#1C1A18] border-[#34322F]' : 'bg-[#161412] border-[#1C1A18]')
+        } ${
+          compact ? 'p-4' : 'p-4 sm:p-5'
+        } ${
+          task.status === 'done' ? 'opacity-60' : 'opacity-100'
+        } border shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9)] hover:shadow-[0_8px_10px_-8px_rgba(0,0,0,1)] hover:-translate-y-0.5 mb-3`}
         onClick={() => {
           selectTask(task.id);
           setActiveDetail({ type: 'goal', id: task.id, data: task });
@@ -164,332 +160,210 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        sx={{
-          p: compact || isMobile ? 2 : 2.5,
-          mb: 1.5,
-          cursor: 'pointer',
-          borderRadius: '24px',
-          backgroundColor: compact
-            ? (isHovered ? '#22201E' : '#1C1A18')
-            : (isHovered ? '#1C1A18' : '#161412'),
-          border: '1px solid',
-          borderColor: compact
-            ? (isHovered ? '#3E3C3A' : '#2C2A28')
-            : (isHovered ? '#34322F' : '#1C1A18'),
-          opacity: task.status === 'done' ? 0.6 : 1,
-          boxShadow: isHovered
-            ? '0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px rgba(37,35,33,1.0)'
-            : '0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px rgba(37,35,33,0.9)',
-          transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-          position: 'relative',
-          '&:hover': {
-            transform: isMobile ? 'none' : 'translateY(-2px)',
-          },
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            left: 0,
-            top: '15%',
-            bottom: '15%',
-            width: 4,
-            borderRadius: '0 4px 4px 0',
-            backgroundColor: priorityColors[task.priority],
-            opacity: isHovered || isMobile ? 1 : 0.6,
-            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-          }
-        }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 1.5 : 2 }}>
+        {/* Priority Left Ribbon Indicator */}
+        <div 
+          className="absolute left-0 top-[15%] bottom-[15%] w-1 rounded-r-md transition-all duration-400 opacity-60 group-hover:opacity-100" 
+          style={{ backgroundColor: priorityColors[task.priority] }}
+        />
+
+        <div className="flex items-start gap-3 sm:gap-4 pl-1">
           {/* Checkbox */}
-          <Checkbox
-            checked={task.status === 'done'}
+          <button
+            type="button"
             onClick={handleComplete}
-            sx={{
-              p: 0,
-              mt: 0.25,
-              color: '#34322F',
-              transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              '&.Mui-checked': {
-                color: '#A855F7',
-              },
-              '&:hover': {
-                backgroundColor: 'transparent',
-                transform: 'scale(1.15)',
-              }
-            }}
-          />
+            className={`flex items-center justify-center h-5 w-5 mt-0.5 rounded border transition-all duration-200 hover:scale-115 cursor-pointer shrink-0 ${
+              task.status === 'done'
+                ? 'border-[#A855F7] bg-[#A855F7] text-[#0A0908]'
+                : 'border-[#34322F] text-[#9B9691]'
+            }`}
+          >
+            {task.status === 'done' && (
+              <Check className="h-3.5 w-3.5 stroke-[3]" />
+            )}
+          </button>
 
           {/* Main Content */}
-          <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.75 }}>
-                {/* Title */}
-                <Typography 
-                    variant="body1"
-                    sx={{
-                        fontFamily: 'var(--font-satoshi)',
-                        fontWeight: 700,
-                        fontSize: isMobile ? '0.95rem' : '1.05rem',
-                        color: task.status === 'done' ? '#9B9691' : '#F5F2ED',
-                        textDecoration: task.status === 'done' ? 'line-through' : 'none',
-                        letterSpacing: '-0.01em',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                    }}
-                >
-                    {task.isPinned && <PinIcon sx={{ fontSize: 14, color: '#F59E0B', transform: 'rotate(45deg)' }} />}
-                    {task.title}
-                    {hasPresence && (
-                      <Box
-                        component="span"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          setIsFlapOverOpen(true);
-                        }}
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bgcolor: '#A1A1AA', // ash color
-                          boxShadow: '0 0 6px rgba(161, 161, 170, 0.6)',
-                          display: 'inline-block',
-                          ml: 1,
-                          cursor: 'pointer',
-                          animation: 'ashPresencePulse 2s infinite',
-                          '@keyframes ashPresencePulse': {
-                            '0%': {
-                              boxShadow: '0 0 0 0 rgba(161, 161, 170, 0.4)',
-                            },
-                            '70%': {
-                              boxShadow: '0 0 0 6px rgba(161, 161, 170, 0)',
-                            },
-                            '100%': {
-                              boxShadow: '0 0 0 0 rgba(161, 161, 170, 0)',
-                            }
-                          }
-                        }}
-                      />
-                    )}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                    {/* Indicators */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: isMobile ? 1 : 1.5, mr: 1 }}>
-                        {totalSubtasks > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#9B9691', opacity: 0.8 }}>
-                            <SubtaskIcon sx={{ fontSize: 14 }} />
-                            <Typography variant="caption" sx={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{completedSubtasks}/{totalSubtasks}</Typography>
-                        </Box>
-                        )}
-                        {!isMobile && task.comments.length > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: '#9B9691', opacity: 0.8 }}>
-                            <CommentIcon sx={{ fontSize: 13 }} />
-                            <Typography variant="caption" sx={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{task.comments.length}</Typography>
-                        </Box>
-                        )}
-                    </Box>
-
-                    {/* Menu Trigger */}
-                    <IconButton 
-                        size="small" 
-                        onClick={handleMenuClick}
-                        sx={{ 
-                            p: 0.5, 
-                            color: '#9B9691',
-                            opacity: isHovered || isMobile ? 1 : 0,
-                            transition: 'opacity 0.2s',
-                            '&:hover': { color: '#F5F2ED' }
-                        }}
-                    >
-                        <MoreIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                </Box>
-            </Box>
-
-            {/* Description (if not compact and not mobile) */}
-            {!compact && !isMobile && task.description && (
-              <Typography
-                variant="body2"
-                sx={{
-                  fontFamily: 'var(--font-satoshi)',
-                  color: '#9B9691',
-                  fontSize: '0.875rem',
-                  lineHeight: 1.5,
-                  mb: 2,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                }}
+          <div className="flex-grow min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              {/* Title */}
+              <div 
+                className={`font-satoshi font-bold text-sm sm:text-base tracking-tight truncate flex items-center gap-1.5 ${
+                  task.status === 'done' ? 'text-[#9B9691] line-through' : 'text-[#F5F2ED]'
+                }`}
               >
+                {task.isPinned && (
+                  <Pin className="h-3.5 w-3.5 text-[#F59E0B] rotate-45 shrink-0" style={{ color: '#F59E0B' }} />
+                )}
+                <span className="truncate">{task.title}</span>
+                {hasPresence && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      setIsFlapOverOpen(true);
+                    }}
+                    className="inline-block w-2 h-2 rounded-full bg-[#A1A1AA] shadow-[0_0_6px_rgba(161,161,170,0.6)] cursor-pointer animate-pulse ml-1 shrink-0"
+                  />
+                )}
+              </div>
+
+              <div className="flex gap-1 items-center shrink-0 relative">
+                {/* Indicators */}
+                <div className="flex items-center gap-2 sm:gap-3 mr-1.5 text-[#9B9691] opacity-80">
+                  {totalSubtasks > 0 && (
+                    <div className="flex items-center gap-1">
+                      <ListTodo className="h-3.5 w-3.5" />
+                      <span className="font-mono text-xs font-bold">{completedSubtasks}/{totalSubtasks}</span>
+                    </div>
+                  )}
+                  {task.comments.length > 0 && (
+                    <div className="hidden sm:flex items-center gap-1">
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      <span className="font-mono text-xs font-bold">{task.comments.length}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Menu Trigger */}
+                <button
+                  type="button"
+                  onClick={handleMenuClick}
+                  className="p-1 rounded-full text-[#9B9691] hover:text-[#F5F2ED] transition-colors"
+                >
+                  <MoreVertical className="h-4.5 w-4.5" />
+                </button>
+
+                {/* Dropdown Menu */}
+                {anchorEl && (
+                  <>
+                    <div className="fixed inset-0 z-40 bg-transparent cursor-default" onClick={handleMenuClose} />
+                    <div 
+                      className="absolute right-0 top-full mt-1 w-48 rounded-xl bg-[#0F0D0C] border border-[#222222] shadow-2xl py-1.5 z-50 font-satoshi text-left"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          selectTask(task.id);
+                          openSecondarySidebar('task', task.id);
+                          handleMenuClose();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
+                      >
+                        <Edit className="h-4 w-4 text-[#A1A1AA]" />
+                        <span>Edit Task</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleMenuClose}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
+                      >
+                        <Copy className="h-4 w-4 text-[#A1A1AA]" />
+                        <span>Duplicate</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleArchive}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
+                      >
+                        <Archive className="h-4 w-4 text-[#A1A1AA]" />
+                        <span>Archive</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleTogglePin}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
+                      >
+                        <Pin className={`h-4 w-4 ${task.isPinned ? 'text-[#F59E0B]' : 'text-[#A1A1AA]'}`} />
+                        <span>{task.isPinned ? "Unpin Goal" : "Pin Goal"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAssignGoal}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
+                      >
+                        <AssignIcon className="h-4 w-4 text-[#A1A1AA]" />
+                        <span>Assign Goal</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleStartTaskHuddle}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
+                      >
+                        <Video className="h-4 w-4 text-[#A1A1AA]" />
+                        <span>Start Huddle</span>
+                      </button>
+                      <div className="my-1 border-t border-[#222222]" />
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#ef4444] hover:bg-red-500/5 transition-colors font-semibold"
+                      >
+                        <Trash2 className="h-4 w-4 text-[#ef4444]" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Description */}
+            {!compact && task.description && (
+              <p className="hidden sm:block text-xs sm:text-sm font-satoshi text-[#9B9691] leading-relaxed mb-3 line-clamp-2">
                 {task.description}
-              </Typography>
+              </p>
             )}
 
             {/* Meta Footer */}
-            <Box
-              sx={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                alignItems: 'center',
-                gap: isMobile ? 1.5 : 2,
-              }}
-            >
+            <div className="flex flex-wrap items-center gap-2 mt-2">
               {/* Project Badge */}
               {project && project.id !== 'inbox' && (
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 1,
-                    bgcolor: compact ? '#2C2A28' : '#1C1A18',
-                    border: '1px solid',
-                    borderColor: compact ? '#3E3C3A' : '#2C2A28',
-                    borderRadius: '8px',
-                    px: 1,
-                    py: 0.25
-                  }}
-                >
-                    <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: project.color }} />
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        fontFamily: 'var(--font-mono)',
-                        fontWeight: 700, 
-                        color: '#9B9691', 
-                        letterSpacing: '0.05em', 
-                        fontSize: isMobile ? '0.65rem' : '0.7rem' 
-                      }}
-                    >
-                        {project.name.toUpperCase()}
-                    </Typography>
-                </Box>
+                <div className={`flex items-center gap-1.5 rounded-lg border px-2 py-0.5 transition-colors ${
+                  compact ? 'bg-[#2C2A28] border-[#3E3C3A]' : 'bg-[#1C1A18] border-[#2C2A28]'
+                }`}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: project.color }} />
+                  <span className="font-mono font-bold text-[9px] text-[#9B9691] tracking-wider">
+                    {project.name.toUpperCase()}
+                  </span>
+                </div>
               )}
 
               {/* Priority Indicator */}
-              <Box 
-                sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 0.75,
-                  bgcolor: compact ? '#2C2A28' : '#1C1A18',
-                  border: '1px solid',
-                  borderColor: compact ? '#3E3C3A' : '#2C2A28',
-                  borderRadius: '8px',
-                  px: 1,
-                  py: 0.25
-                }}
-              >
-                   <FlagIcon sx={{ fontSize: 12, color: priorityColors[task.priority] }} />
-                   <Typography 
-                     variant="caption" 
-                     sx={{ 
-                       fontFamily: 'var(--font-mono)',
-                       color: priorityColors[task.priority], 
-                       fontWeight: 700, 
-                       fontSize: isMobile ? '0.65rem' : '0.7rem' 
-                     }}
-                   >
-                        {priorityLabels[task.priority]}
-                   </Typography>
-              </Box>
+              <div className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 transition-colors ${
+                compact ? 'bg-[#2C2A28] border-[#3E3C3A]' : 'bg-[#1C1A18] border-[#2C2A28]'
+              }`}>
+                <Flag className="h-3 w-3" style={{ color: priorityColors[task.priority] }} />
+                <span className="font-mono font-bold text-[9px] tracking-wider" style={{ color: priorityColors[task.priority] }}>
+                  {priorityLabels[task.priority]}
+                </span>
+              </div>
 
               {/* Deadline */}
               {task.dueDate && (
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: 0.75,
-                    bgcolor: compact ? '#2C2A28' : '#1C1A18',
-                    border: '1px solid',
-                    borderColor: compact ? '#3E3C3A' : '#2C2A28',
-                    borderRadius: '8px',
-                    px: 1,
-                    py: 0.25
-                  }}
-                >
-                  <ScheduleIcon sx={{ fontSize: 12, color: getDueDateColor() }} />
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      fontFamily: 'var(--font-mono)',
-                      color: getDueDateColor(), 
-                      fontWeight: 700, 
-                      fontSize: isMobile ? '0.65rem' : '0.7rem' 
-                    }}
-                  >
+                <div className={`flex items-center gap-1 rounded-lg border px-2 py-0.5 transition-colors ${
+                  compact ? 'bg-[#2C2A28] border-[#3E3C3A]' : 'bg-[#1C1A18] border-[#2C2A28]'
+                }`}>
+                  <Clock className="h-3 w-3" style={{ color: getDueDateColor() }} />
+                  <span className="font-mono font-bold text-[9px] tracking-wider" style={{ color: getDueDateColor() }}>
                     {formatDueDate(new Date(task.dueDate)).toUpperCase()}
-                  </Typography>
-                </Box>
+                  </span>
+                </div>
               )}
 
-              {/* Space for labels if any */}
-              {taskLabels.length > 0 && !isMobile && (
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      {taskLabels.slice(0, 2).map(l => (
-                          <Box key={l.id} sx={{ height: 4, width: 12, borderRadius: 2, bgcolor: l.color, opacity: 0.6 }} />
-                      ))}
-                  </Box>
+              {/* Label Pills */}
+              {taskLabels.length > 0 && (
+                <div className="hidden sm:flex gap-1">
+                  {taskLabels.slice(0, 2).map((l) => (
+                    <span key={l.id} className="h-1.5 w-4 rounded-full opacity-60" style={{ backgroundColor: l.color }} />
+                  ))}
+                </div>
               )}
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Context Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        PaperProps={{
-          sx: { 
-            minWidth: 180, 
-            borderRadius: 2,
-            backgroundColor: '#0F0D0C',
-            border: '1px solid #222222',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-          },
-        }}
-      >
-        <MenuItem onClick={() => { 
-          selectTask(task.id); 
-          openSecondarySidebar('task', task.id);
-          handleMenuClose(); 
-        }}>
-          <ListItemIcon><EditIcon sx={{ fontSize: 16, color: '#A1A1AA' }} /></ListItemIcon>
-          <ListItemText primary="Edit Task" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <ListItemIcon><CopyIcon sx={{ fontSize: 16, color: '#A1A1AA' }} /></ListItemIcon>
-          <ListItemText primary="Duplicate" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
-        </MenuItem>
-        <MenuItem onClick={handleArchive}>
-          <ListItemIcon><ArchiveIcon sx={{ fontSize: 16, color: '#A1A1AA' }} /></ListItemIcon>
-          <ListItemText primary="Archive" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
-        </MenuItem>
-        <MenuItem onClick={handleTogglePin}>
-          <ListItemIcon><PinIcon sx={{ fontSize: 16, color: task.isPinned ? '#F59E0B' : '#A1A1AA' }} /></ListItemIcon>
-          <ListItemText primary={task.isPinned ? "Unpin Goal" : "Pin Goal"} primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
-        </MenuItem>
-        <MenuItem onClick={handleAssignGoal}>
-          <ListItemIcon><AssignIcon size={16} color="#A1A1AA" /></ListItemIcon>
-          <ListItemText primary="Assign Goal" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
-        </MenuItem>
-        <MenuItem onClick={handleStartTaskHuddle}>
-          <ListItemIcon><VideoCallIcon sx={{ fontSize: 16, color: '#A1A1AA' }} /></ListItemIcon>
-          <ListItemText primary="Start Huddle" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 500 }} />
-        </MenuItem>
-        <Box sx={{ my: 0.5, height: '1px', backgroundColor: '#222222' }} />
-        <MenuItem onClick={handleDelete} sx={{ color: '#ef4444' }}>
-          <ListItemIcon><DeleteIcon sx={{ fontSize: 16, color: '#ef4444' }} /></ListItemIcon>
-          <ListItemText primary="Delete" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }} />
-        </MenuItem>
-      </Menu>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {isFlapOverOpen && (
         <FlowPresenceFlapOver

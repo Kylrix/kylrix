@@ -3,7 +3,6 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { CallHistory } from '@/components/call/CallHistory';
 import { CallActionModal } from '@/components/call/CallActionModal';
-import { Box, Typography, Container, CircularProgress, Paper, TextField, Button, Divider, useTheme, useMediaQuery } from '@/lib/mui-tailwind/material';
 import { Hash, ArrowRight, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -34,101 +33,69 @@ function NotesFeed() {
 
     if (loading) {
         return (
-            <Box sx={{ mt: 6 }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', mb: 3 }}>
+            <div className="mt-6">
+                <h3 className="text-lg font-black font-clash text-white mb-6">
                     Recent Notes
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                </h3>
+                <div className="flex flex-col gap-4">
                     {[1, 2, 3].map((i) => (
-                        <Box
+                        <div
                             key={i}
-                            sx={{
-                                display: 'flex',
-                                gap: 2,
-                                p: 2,
-                                borderRadius: '16px',
-                                bgcolor: 'rgba(255,255,255,0.02)',
-                                border: '1px solid rgba(255,255,255,0.03)',
-                            }}
+                            className="flex gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.03]"
                         >
-                            <></>
-                            <Box sx={{ flex: 1 }}>
-                                <></>
-                                <></>
-                            </Box>
-                        </Box>
+                            <div className="w-10 h-10 rounded-xl bg-white/5 animate-pulse flex-shrink-0" />
+                            <div className="flex-1 flex flex-col gap-1 justify-center">
+                                <div className="h-4 bg-white/5 rounded w-2/3 animate-pulse" />
+                                <div className="h-3 bg-white/5 rounded w-1/2 animate-pulse" />
+                            </div>
+                        </div>
                     ))}
-                </Box>
-            </Box>
+                </div>
+            </div>
         );
     }
 
     return (
-        <Box sx={{ mt: 6 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+        <div className="mt-6">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-black font-clash text-white">
                     Recent Notes
-                </Typography>
-                <Button 
-                    size="small" 
+                </h3>
+                <button 
                     onClick={() => router.push('/note/notes')} 
-                    sx={{ color: '#F59E0B', textTransform: 'none', fontWeight: 700 }}
+                    className="text-sm text-[#F59E0B] hover:text-[#d98105] font-bold transition-colors"
                 >
                     View All
-                </Button>
-            </Box>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                </button>
+            </div>
+            <div className="flex flex-col gap-4">
                 {notes.length === 0 ? (
-                    <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', py: 2 }}>
+                    <p className="text-sm text-white/40 text-center py-4">
                         No recent notes.
-                    </Typography>
+                    </p>
                 ) : (
                     notes.map((note) => (
-                        <Box
+                        <div
                             key={note.$id}
                             onClick={() => router.push(`/note/notes/${note.$id}`)}
-                            sx={{
-                                display: 'flex',
-                                gap: 2,
-                                p: 2,
-                                borderRadius: '16px',
-                                bgcolor: 'rgba(255,255,255,0.02)',
-                                border: '1px solid rgba(255,255,255,0.03)',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                    bgcolor: 'rgba(255,255,255,0.04)',
-                                    borderColor: 'rgba(255,255,255,0.08)',
-                                    transform: 'translateX(4px)',
-                                }
-                            }}
+                            className="flex gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.03] cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.08] hover:translate-x-1 transition-all duration-200"
                         >
-                            <Box sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: '12px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                bgcolor: 'rgba(236, 72, 153, 0.1)',
-                                color: '#EC4899',
-                                flexShrink: 0,
-                            }}>
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-pink-500/10 text-pink-500 flex-shrink-0">
                                 <FileText size={20} />
-                            </Box>
-                            <Box sx={{ minWidth: 0, flex: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }} noWrap>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="text-sm font-extrabold text-white truncate">
                                     {note.title || 'Untitled Note'}
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }} noWrap>
+                                </div>
+                                <div className="text-xs text-white/40 truncate mt-0.5">
                                     {note.content ? note.content.substring(0, 60) + '...' : 'Empty Note'}
-                                </Typography>
-                            </Box>
-                        </Box>
+                                </div>
+                            </div>
+                        </div>
                     ))
                 )}
-            </Box>
-        </Box>
+            </div>
+        </div>
     );
 }
 
@@ -138,9 +105,16 @@ function CallsContent() {
     const [joinInput, setJoinId] = useState('');
     const [refreshKey, setRefreshKey] = useState(0);
     const router = useRouter();
-    const theme = useTheme();
-    const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
     const { setActiveDetail } = useSection();
+
+    const [isDesktop, setIsDesktop] = useState(false);
+    useEffect(() => {
+        const media = window.matchMedia("(min-width: 1024px)");
+        setIsDesktop(media.matches);
+        const listener = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+        media.addEventListener("change", listener);
+        return () => media.removeEventListener("change", listener);
+    }, []);
 
     useEffect(() => {
         if (searchParams.get('start') === '1') {
@@ -176,73 +150,51 @@ function CallsContent() {
 
     return (
         <>
-            <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'center', justifyContent: 'space-between' }}>
-                <Typography variant="h5" fontWeight="bold">Call History</Typography>
+            <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Call History</h2>
                 
-                <Paper sx={{ 
-                    p: 1, 
-                    pl: 2,
-                    bgcolor: 'rgba(255, 255, 255, 0.02)', 
-                    border: '1px solid rgba(255, 255, 255, 0.05)', 
-                    borderRadius: '16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    width: { xs: '100%', md: '400px' }
-                }}>
-                    <Hash size={18} style={{ opacity: 0.3 }} />
-                    <TextField 
-                        variant="standard"
+                <div className="p-1 pl-4 bg-white/[0.02] border border-white/[0.05] rounded-2xl flex items-center gap-2 w-full md:w-[400px]">
+                    <Hash size={18} className="opacity-30 text-white" />
+                    <input 
+                        type="text"
                         placeholder="Join with ID or Link..."
                         value={joinInput}
                         onChange={(e) => setJoinId(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-                        InputProps={{ 
-                            disableUnderline: true,
-                            sx: { fontSize: '0.9rem', fontWeight: 700, color: 'white' }
-                        }}
-                        sx={{ flex: 1 }}
+                        className="bg-transparent border-none text-sm font-bold text-white placeholder-white/30 focus:outline-none flex-1 py-1"
                     />
-                    <Button 
-                        variant="contained" 
-                        size="small"
+                    <button 
                         onClick={handleJoin}
-                        sx={{ 
-                            bgcolor: '#6366F1', 
-                            borderRadius: '10px', 
-                            minWidth: '40px', 
-                            height: '36px',
-                            p: 0
-                        }}
+                        className="bg-[#6366F1] hover:bg-[#5053df] text-white rounded-xl w-10 h-9 flex items-center justify-center transition-colors flex-shrink-0"
                     >
                         <ArrowRight size={18} />
-                    </Button>
-                </Paper>
-            </Box>
+                    </button>
+                </div>
+            </div>
             
             <CallHistory key={refreshKey} onNewCall={() => setModalOpen(true)} />
 
-            <CallActionModal 
-                open={modalOpen} 
-                onClose={() => {
-                    setModalOpen(false);
-                    setRefreshKey(prev => prev + 1);
-                }} 
-            />
+            {modalOpen && (
+                <CallActionModal 
+                    open={modalOpen} 
+                    onClose={() => {
+                        setModalOpen(false);
+                        setRefreshKey(prev => prev + 1);
+                    }} 
+                />
+            )}
         </>
     );
 }
 
-function CallHistorySkeleton() { return null; }
-
 export default function CallsPage() {
     return (
-        <Container maxWidth="xl" sx={{ py: 3, position: 'relative', minHeight: '100vh', pointerEvents: 'auto' }}>
+        <div className="max-w-7xl mx-auto py-6 px-4 relative min-h-screen pointer-events-auto">
             <MultiSectionContainer panels={['projects', 'threads']}>
-                <Suspense fallback={<></>}>
+                <Suspense fallback={null}>
                     <CallsContent />
                 </Suspense>
             </MultiSectionContainer>
-        </Container>
+        </div>
     );
 }

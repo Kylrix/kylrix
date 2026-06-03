@@ -1,30 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-  useTheme,
-} from '@/lib/mui-tailwind/material';
-import {
-  Add as AddIcon,
-  SwapVert as SortIcon,
-  FilterList as FilterIcon,
-  List as ListIcon,
-  Dashboard as BoardIcon,
-  CalendarMonth as CalendarIcon,
-  ArrowUpward as AscIcon,
-  ArrowDownward as DescIcon,
-  CheckCircle as CheckIcon,
-} from '@/lib/mui-tailwind/icons';
-import { useMediaQuery } from '@/lib/mui-tailwind/material';
+import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2 } from 'lucide-react';
 import TaskItem from './TaskItem';
 import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
@@ -33,8 +10,6 @@ import { ViewMode, SortField, TaskStatus } from '@/types';
 import { MultiSectionContainer } from '@/context/SectionContext';
 
 export default function TaskList() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const {
     getFilteredTasks,
     viewMode,
@@ -55,14 +30,14 @@ export default function TaskList() {
       isVisible: true,
       mainColor: '#A855F7',
       actions: [
-        { id: 'new-goal', label: 'NEW GOAL', icon: <AddIcon />, onClick: () => setTaskDialogOpen(true) },
-        { id: 'focus', label: 'FOCUS MODE', icon: <CalendarIcon />, onClick: () => window.location.href = '/flow/focus' }]
+        { id: 'new-goal', label: 'NEW GOAL', icon: <Plus className="h-5 w-5" />, onClick: () => setTaskDialogOpen(true) },
+        { id: 'focus', label: 'FOCUS MODE', icon: <Calendar className="h-5 w-5" />, onClick: () => window.location.href = '/flow/focus' }]
     });
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, setTaskDialogOpen]);
 
-  const [sortAnchorEl, setSortAnchorEl] = useState<null | HTMLElement>(null);
-  const [filterAnchorEl, setFilterAnchorEl] = useState<null | HTMLElement>(null);
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const tasks = getFilteredTasks();
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
@@ -76,18 +51,10 @@ export default function TaskList() {
     { field: 'status', label: 'Status' }];
 
   const statusFilters: { status: TaskStatus; label: string; color: string }[] = [
-    { status: 'todo', label: 'To Do', color: theme.palette.grey?.[500] || '#9E9E9E' },
-    { status: 'in-progress', label: 'In Progress', color: theme.palette.info?.main || '#0288D1' },
-    { status: 'done', label: 'Done', color: theme.palette.success?.main || '#2E7D32' },
-    { status: 'blocked', label: 'Blocked', color: theme.palette.error?.main || '#D32F2F' }];
-
-  const handleSortClick = (event: React.MouseEvent<HTMLElement>) => {
-    setSortAnchorEl(event.currentTarget);
-  };
-
-  const handleSortClose = () => {
-    setSortAnchorEl(null);
-  };
+    { status: 'todo', label: 'To Do', color: '#9E9E9E' },
+    { status: 'in-progress', label: 'In Progress', color: '#0288D1' },
+    { status: 'done', label: 'Done', color: '#2E7D32' },
+    { status: 'blocked', label: 'Blocked', color: '#D32F2F' }];
 
   const handleSortChange = (field: SortField) => {
     if (sort.field === field) {
@@ -95,15 +62,6 @@ export default function TaskList() {
     } else {
       setSort({ field, direction: 'asc' });
     }
-    handleSortClose();
-  };
-
-  const handleFilterClick = (event: React.MouseEvent<HTMLElement>) => {
-    setFilterAnchorEl(event.currentTarget);
-  };
-
-  const handleFilterClose = () => {
-    setFilterAnchorEl(null);
   };
 
   const handleStatusFilterToggle = (status: TaskStatus) => {
@@ -147,412 +105,253 @@ export default function TaskList() {
   };
 
   return (
-    <Box sx={{ animation: 'fadeIn 0.4s ease-out', minHeight: '100vh', bgcolor: '#0A0908', p: { xs: 2, md: 4 }, pointerEvents: 'auto' }}>
+    <div className="animate-fadeIn min-h-screen bg-[#0A0908] p-4 md:p-8 pointer-events-auto">
       <MultiSectionContainer panels={['forms', 'huddles', 'projects']}>
         {/* Header */}
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: isMobile ? 'flex-start' : 'center',
-            justifyContent: 'space-between',
-            mb: isMobile ? 3 : 5,
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: isMobile ? 2 : 3,
-          }}
-        >
-          <Box>
-            <Typography variant={isMobile ? "h4" : "h3"} sx={{ mb: 1, fontFamily: 'var(--font-clash)', fontWeight: 800, letterSpacing: '-0.02em', color: '#F5F2ED' }}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-10 gap-4 sm:gap-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-clash font-extrabold text-[#F5F2ED] tracking-tight mb-1">
               {getViewTitle()}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: '#A855F7', boxShadow: '0 0 8px #A855F7' }} />
-              <Typography variant="caption" sx={{ fontFamily: 'var(--font-satoshi)', color: '#9B9691', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                  {tasks.length} {tasks.length === 1 ? 'Goal' : 'Goals'}
-              </Typography>
-            </Box>
-          </Box>
+            </h1>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#A855F7] shadow-[0_0_8px_#A855F7]" />
+              <span className="font-satoshi text-xs font-semibold text-[#9B9691] uppercase tracking-wider">
+                {tasks.length} {tasks.length === 1 ? 'Goal' : 'Goals'}
+              </span>
+            </div>
+          </div>
 
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: isMobile ? 1 : 2,
-              width: isMobile ? '100%' : 'auto',
-              justifyContent: isMobile ? 'space-between' : 'flex-end'
-            }}
-          >
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
             {/* View Mode Toggle */}
-            <Box 
-              sx={{ 
-                  display: 'flex', 
-                  bgcolor: '#161412', 
-                  p: 0.5, 
-                  borderRadius: '12px',
-                  border: '1px solid #1C1A18'
-              }}
-            >
+            <div className="flex bg-[#161412] p-1 rounded-xl border border-[#1C1A18]">
               {[
-                  { id: 'list', icon: ListIcon, label: 'List' },
-                  { id: 'board', icon: BoardIcon, label: 'Board' },
-                  { id: 'calendar', icon: CalendarIcon, label: 'Calendar' }
+                { id: 'list', icon: List, label: 'List' },
+                { id: 'board', icon: LayoutGrid, label: 'Board' },
+                { id: 'calendar', icon: Calendar, label: 'Calendar' }
               ].map((mode) => (
-                  <IconButton
-                      key={mode.id}
-                      size="small"
-                      onClick={() => setViewMode(mode.id as ViewMode)}
-                      sx={{
-                          borderRadius: '8px',
-                          px: isMobile ? 1 : 1.5,
-                          color: viewMode === mode.id ? '#A855F7' : '#9B9691',
-                          bgcolor: viewMode === mode.id ? '#1C1A18' : 'transparent',
-                          '&:hover': { bgcolor: '#1C1A18' }
-                      }}
-                  >
-                      <mode.icon sx={{ fontSize: isMobile ? 18 : 20 }} />
-                  </IconButton>
+                <button
+                  key={mode.id}
+                  type="button"
+                  onClick={() => setViewMode(mode.id as ViewMode)}
+                  className={`rounded-lg px-2 sm:px-3 py-1 transition-colors ${
+                    viewMode === mode.id
+                      ? 'bg-[#1C1A18] text-[#A855F7]'
+                      : 'text-[#9B9691] hover:bg-[#1C1A18]'
+                  }`}
+                >
+                  <mode.icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
+                </button>
               ))}
-            </Box>
+            </div>
 
-            {!isMobile && <Divider orientation="vertical" flexItem sx={{ mx: 1, borderColor: '#1C1A18' }} />}
+            <div className="hidden sm:block h-6 w-[1px] bg-[#1C1A18]" />
 
             {/* Sort & Filter Group */}
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={handleSortClick}
-                  sx={{ 
-                    borderRadius: '12px',
-                    minWidth: isMobile ? 'auto' : 80,
-                    px: isMobile ? 1.5 : 2,
-                    py: 0.75,
-                    bgcolor: '#161412',
-                    border: '1px solid #1C1A18',
-                    color: '#F5F2ED',
-                    fontFamily: 'var(--font-satoshi)',
-                    fontWeight: 700,
-                    textTransform: 'none',
-                    '&:hover': {
-                      bgcolor: '#1C1A18',
-                      borderColor: '#34322F'
-                    }
+            <div className="flex gap-2">
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSortOpen(!isSortOpen);
+                    setIsFilterOpen(false);
                   }}
-              >
-                  {isMobile ? <SortIcon fontSize="small" /> : 'Sort'}
-              </Button>
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-bold bg-[#161412] border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] rounded-xl transition-colors font-satoshi"
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sort</span>
+                </button>
+                {isSortOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsSortOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-[#161412] border border-[#1C1A18] shadow-2xl p-2 z-50 font-satoshi text-left">
+                      {sortOptions.map((option) => (
+                        <button
+                          key={option.field}
+                          type="button"
+                          onClick={() => {
+                            handleSortChange(option.field);
+                            setIsSortOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between px-3 py-2.5 text-sm rounded-xl transition-colors ${
+                            sort.field === option.field
+                              ? 'bg-[#1C1A18] text-[#A855F7] font-bold'
+                              : 'text-[#F5F2ED] hover:bg-[#1C1A18] font-semibold'
+                          }`}
+                        >
+                          <span>{option.label}</span>
+                          {sort.field === option.field && (
+                            sort.direction === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
 
-              <Button
-                  size="small"
-                  variant="outlined"
-                  onClick={handleFilterClick}
-                  sx={{ 
-                    borderRadius: '12px',
-                    minWidth: isMobile ? 'auto' : 80,
-                    px: isMobile ? 1.5 : 2,
-                    py: 0.75,
-                    bgcolor: '#161412',
-                    border: '1px solid #1C1A18',
-                    color: '#F5F2ED',
-                    fontFamily: 'var(--font-satoshi)',
-                    fontWeight: 700,
-                    textTransform: 'none',
-                    '&:hover': {
-                      bgcolor: '#1C1A18',
-                      borderColor: '#34322F'
-                    }
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFilterOpen(!isFilterOpen);
+                    setIsSortOpen(false);
                   }}
-              >
-                  {isMobile ? <FilterIcon fontSize="small" /> : 'Filter'}
-                  {(filter.status?.length || filter.labels?.length) && (
-                  <Box sx={{ ml: 1, width: 18, height: 18, borderRadius: '50%', bgcolor: '#A855F7', color: '#0A0908', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+                  className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-bold bg-[#161412] border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] rounded-xl transition-colors font-satoshi"
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filter</span>
+                  {((filter.status?.length || 0) + (filter.labels?.length || 0)) > 0 && (
+                    <span className="ml-1 w-4.5 h-4.5 rounded-full bg-[#A855F7] text-[#0A0908] text-[10px] flex items-center justify-center font-black font-mono">
                       {(filter.status?.length || 0) + (filter.labels?.length || 0)}
-                  </Box>
+                    </span>
                   )}
-              </Button>
-            </Box>
+                </button>
+                {isFilterOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFilterOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-[#161412] border border-[#1C1A18] shadow-2xl p-4 z-50 font-satoshi text-left">
+                      <div className="px-2 mb-2 text-[10px] font-extrabold text-[#9B9691] tracking-wider uppercase font-clash">
+                        STATUS FILTERS
+                      </div>
+                      {statusFilters.map((item) => (
+                        <button
+                          key={item.status}
+                          type="button"
+                          onClick={() => handleStatusFilterToggle(item.status)}
+                          className="w-full flex items-center justify-between px-2.5 py-2.5 mb-1 text-sm rounded-xl text-[#F5F2ED] hover:bg-[#1C1A18] transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                            <span>{item.label}</span>
+                          </div>
+                          {filter.status?.includes(item.status) && (
+                            <CheckCircle2 className="h-4.5 w-4.5 text-[#A855F7]" />
+                          )}
+                        </button>
+                      ))}
+                      <div className="my-2 border-t border-[#1C1A18]" />
+                      <button
+                        type="button"
+                        onClick={() => setFilter({ ...filter, showCompleted: !filter.showCompleted })}
+                        className="w-full flex items-center justify-between px-2.5 py-2.5 text-sm rounded-xl text-[#F5F2ED] hover:bg-[#1C1A18] transition-colors"
+                      >
+                        <span>Include Completed</span>
+                        {filter.showCompleted && <CheckCircle2 className="h-4.5 w-4.5 text-[#A855F7]" />}
+                      </button>
+                      <div className="my-2 border-t border-[#1C1A18]" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilter({ showCompleted: true, showArchived: false });
+                          setIsFilterOpen(false);
+                        }}
+                        className="w-full text-center px-2.5 py-2.5 text-sm rounded-xl text-[#EF4444] font-bold hover:bg-red-500/5 transition-colors"
+                      >
+                        Reset to Defaults
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
 
-            {/* Add Task (Desktop) */}
-            {!isMobile && (
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => setTaskDialogOpen(true)}
-                sx={{ 
-                    borderRadius: '12px',
-                    px: 3,
-                    py: 1,
-                    bgcolor: '#A855F7',
-                    color: '#0A0908',
-                    fontFamily: 'var(--font-satoshi)',
-                    fontWeight: 700,
-                    textTransform: 'none',
-                    boxShadow: '0 4px 12px rgba(168, 85, 247, 0.2)',
-                    '&:hover': {
-                      bgcolor: '#9333EA',
-                      boxShadow: '0 6px 16px rgba(168, 85, 247, 0.3)'
-                    }
-                }}
-              >
-                New Task
-              </Button>
-            )}
-          </Box>
-        </Box>
-
-        {/* Sort Menu */}
-        <Menu
-          anchorEl={sortAnchorEl}
-          open={Boolean(sortAnchorEl)}
-          onClose={handleSortClose}
-          PaperProps={{
-            sx: {
-              minWidth: 200,
-              mt: 1,
-              bgcolor: '#161412',
-              border: '1px solid #1C1A18',
-              borderRadius: '16px',
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6)',
-              backgroundImage: 'none',
-              p: 1
-            }
-          }}
-        >
-          {sortOptions.map((option) => (
-            <MenuItem
-              key={option.field}
-              onClick={() => handleSortChange(option.field)}
-              selected={sort.field === option.field}
-              sx={{
-                borderRadius: '8px',
-                gap: 2,
-                fontFamily: 'var(--font-satoshi)',
-                color: '#F5F2ED',
-                mb: 0.5,
-                '&:hover': { bgcolor: '#1C1A18' },
-                '&.Mui-selected': {
-                  bgcolor: '#1C1A18',
-                  color: '#A855F7',
-                  '&:hover': { bgcolor: '#1C1A18' }
-                }
-              }}
+            {/* Add Task Button (Desktop) */}
+            <button
+              type="button"
+              onClick={() => setTaskDialogOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 px-5 py-2.5 bg-[#A855F7] text-[#0A0908] font-bold rounded-xl transition-all shadow-[0_4px_12px_rgba(168,85,247,0.2)] hover:bg-[#9333EA] hover:shadow-[0_6px_16px_rgba(168,85,247,0.3)] font-satoshi"
             >
-              <ListItemText primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>{option.label}</ListItemText>
-              {sort.field === option.field && (
-                  sort.direction === 'asc' ? <AscIcon sx={{ fontSize: 16 }} /> : <DescIcon sx={{ fontSize: 16 }} />
-              )}
-            </MenuItem>
-          ))}
-        </Menu>
-
-        {/* Filter Menu */}
-        <Menu
-          anchorEl={filterAnchorEl}
-          open={Boolean(filterAnchorEl)}
-          onClose={handleFilterClose}
-          PaperProps={{
-            sx: {
-              minWidth: 240,
-              mt: 1,
-              p: 1.5,
-              bgcolor: '#161412',
-              border: '1px solid #1C1A18',
-              borderRadius: '16px',
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.6)',
-              backgroundImage: 'none'
-            }
-          }}
-        >
-          <Typography variant="subtitle2" sx={{ px: 1, mb: 1.5, fontFamily: 'var(--font-clash)', fontWeight: 800, fontSize: '0.75rem', color: '#9B9691', letterSpacing: '0.05em' }}>
-            STATUS FILTERS
-          </Typography>
-          {statusFilters.map((item) => (
-            <MenuItem
-              key={item.status}
-              onClick={() => handleStatusFilterToggle(item.status)}
-              sx={{
-                borderRadius: '8px',
-                mb: 0.5,
-                fontFamily: 'var(--font-satoshi)',
-                color: '#F5F2ED',
-                '&:hover': { bgcolor: '#1C1A18' },
-                '&.Mui-selected': {
-                  bgcolor: '#1C1A18',
-                  '&:hover': { bgcolor: '#1C1A18' }
-                }
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: item.color }} />
-              </ListItemIcon>
-              <ListItemText primaryTypographyProps={{ fontSize: '0.875rem', fontFamily: 'var(--font-satoshi)' }}>{item.label}</ListItemText>
-              {filter.status?.includes(item.status) && (
-                <CheckIcon sx={{ fontSize: 18, color: '#A855F7' }} />
-              )}
-            </MenuItem>
-          ))}
-          <Divider sx={{ my: 1.5, borderColor: '#1C1A18' }} />
-          <MenuItem
-            onClick={() => setFilter({ ...filter, showCompleted: !filter.showCompleted })}
-            sx={{
-              borderRadius: '8px',
-              fontFamily: 'var(--font-satoshi)',
-              color: '#F5F2ED',
-              '&:hover': { bgcolor: '#1C1A18' }
-            }}
-          >
-            <ListItemText primaryTypographyProps={{ fontSize: '0.875rem', fontFamily: 'var(--font-satoshi)' }}>Include Completed</ListItemText>
-            {filter.showCompleted && <CheckIcon sx={{ fontSize: 18, color: '#A855F7' }} />}
-          </MenuItem>
-          <Divider sx={{ my: 1.5, borderColor: '#1C1A18' }} />
-          <MenuItem
-            onClick={() => {
-              setFilter({ showCompleted: true, showArchived: false });
-              handleFilterClose();
-            }}
-            sx={{
-              borderRadius: '8px',
-              color: '#EF4444',
-              fontFamily: 'var(--font-satoshi)',
-              '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.05)' }
-            }}
-          >
-            <ListItemText primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 700, fontFamily: 'var(--font-satoshi)' }}>Reset to Defaults</ListItemText>
-          </MenuItem>
-        </Menu>
+              <Plus className="h-4.5 w-4.5" />
+              <span>New Task</span>
+            </button>
+          </div>
+        </div>
 
         {/* Grid Content */}
-        <Box sx={{ minHeight: '60vh' }}>
-        {/* Task List View */}
-        {viewMode === 'list' && (
-          <Box>
-            {tasks.length === 0 ? (
-              <Box
-                sx={{
-                  textAlign: 'center',
-                  py: 12,
-                  color: '#9B9691',
-                }}
-              >
-                <Typography variant="h5" gutterBottom sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, letterSpacing: '-0.02em', color: '#F5F2ED', mb: 1 }}>
-                  A Clear Void
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 4, fontFamily: 'var(--font-satoshi)', color: '#9B9691' }}>
-                  {filter.search
-                    ? 'No action items match your parameters.'
-                    : 'Establish order. Bring structure to your goals.'}
-                </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={() => setTaskDialogOpen(true)}
-                  sx={{
-                    borderRadius: '12px',
-                    border: '1px solid #1C1A18',
-                    color: '#F5F2ED',
-                    fontFamily: 'var(--font-satoshi)',
-                    fontWeight: 700,
-                    px: 3,
-                    textTransform: 'none',
-                    '&:hover': {
-                      bgcolor: '#161412',
-                      borderColor: '#34322F'
-                    }
-                  }}
-                >
-                  Add Your First Goal
-                </Button>
-              </Box>
-            ) : (
-              tasks.map((task) => <TaskItem key={task.id} task={task} />)
-            )}
-          </Box>
-        )}
+        <div className="min-h-[60vh]">
+          {/* Task List View */}
+          {viewMode === 'list' && (
+            <div>
+              {tasks.length === 0 ? (
+                <div className="text-center py-24 text-[#9B9691]">
+                  <h3 className="font-clash font-extrabold text-[#F5F2ED] text-xl tracking-tight mb-2">
+                    A Clear Void
+                  </h3>
+                  <p className="font-satoshi text-sm mb-6 text-[#9B9691]">
+                    {filter.search
+                      ? 'No action items match your parameters.'
+                      : 'Establish order. Bring structure to your goals.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setTaskDialogOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 border border-[#1C1A18] hover:border-[#34322F] text-[#F5F2ED] font-bold rounded-xl hover:bg-[#161412] transition-colors font-satoshi text-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Add Your First Goal</span>
+                  </button>
+                </div>
+              ) : (
+                tasks.map((task) => <TaskItem key={task.id} task={task} />)
+              )}
+            </div>
+          )}
 
-        {/* Board View (Kanban) */}
-        {viewMode === 'board' && (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' },
-              gap: 3,
-              minHeight: 400,
-            }}
-          >
-            {(['todo', 'in-progress', 'blocked', 'done'] as const).map((status) => (
-              <Box
-                key={status}
-                sx={{
-                  backgroundColor: '#161412',
-                  borderRadius: '24px',
-                  p: 2.5,
-                  minHeight: 450,
-                  border: '1px solid #1C1A18',
-                  boxShadow: '0 4px 4px -4px rgba(0,0,0,0.9)'
-                }}
-              >
-                <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    mb: 3,
-                  }}
+          {/* Board View (Kanban) */}
+          {viewMode === 'board' && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 min-h-[400px]">
+              {(['todo', 'in-progress', 'blocked', 'done'] as const).map((status) => (
+                <div
+                  key={status}
+                  className="bg-[#161412] rounded-[24px] p-5 min-h-[450px] border border-[#1C1A18] shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9)]"
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Box
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        bgcolor:
-                          statusFilters.find((s) => s.status === status)?.color ||
-                          theme.palette.grey[500],
-                        boxShadow: `0 0 8px ${statusFilters.find((s) => s.status === status)?.color}`
-                      }}
-                    />
-                    <Typography variant="subtitle2" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, color: '#F5F2ED', fontSize: '0.9rem' }}>
-                      {statusFilters.find((s) => s.status === status)?.label}
-                    </Typography>
-                  </Box>
-                  <IconButton size="small" onClick={() => setTaskDialogOpen(true)} sx={{ color: '#9B9691', '&:hover': { color: '#F5F2ED' } }}>
-                    <AddIcon sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  {groupedTasks[status].map((task) => (
-                    <TaskItem key={task.id} task={task} compact />
-                  ))}
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_currentColor]"
+                        style={{ 
+                          color: statusFilters.find((s) => s.status === status)?.color || '#9E9E9E',
+                          backgroundColor: statusFilters.find((s) => s.status === status)?.color || '#9E9E9E' 
+                        }}
+                      />
+                      <span className="font-clash font-extrabold text-[#F5F2ED] text-sm">
+                        {statusFilters.find((s) => s.status === status)?.label}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setTaskDialogOpen(true)}
+                      className="text-[#9B9691] hover:text-[#F5F2ED] transition-colors p-1"
+                    >
+                      <Plus className="h-4.5 w-4.5" />
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-3">
+                    {groupedTasks[status].map((task) => (
+                      <TaskItem key={task.id} task={task} compact />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-        {/* Calendar View Placeholder */}
-        {viewMode === 'calendar' && (
-          <Box
-            sx={{
-              textAlign: 'center',
-              py: 12,
-              color: '#9B9691',
-              backgroundColor: '#161412',
-              borderRadius: '24px',
-              border: '1px dashed #1C1A18'
-            }}
-          >
-            <Box sx={{ mb: 3, opacity: 0.3 }}>
-              <CalendarIcon sx={{ fontSize: 80, color: '#A855F7' }} />
-            </Box>
-            <Typography variant="h5" gutterBottom sx={{ fontFamily: 'var(--font-clash)', fontWeight: 800, color: '#F5F2ED', letterSpacing: '-0.02em' }}>
-              Time Dimension
-            </Typography>
-            <Typography variant="body2" sx={{ maxWidth: 400, mx: 'auto', color: '#9B9691', fontFamily: 'var(--font-satoshi)' }}>
-              The visual calendar interface is currently being optimized for the Kylrix ecosystem. 
-            </Typography>
-          </Box>
-        )}
-        </Box>
+          {/* Calendar View Placeholder */}
+          {viewMode === 'calendar' && (
+            <div className="text-center py-24 text-[#9B9691] bg-[#161412] rounded-[24px] border border-dashed border-[#1C1A18]">
+              <div className="mb-4 opacity-30 flex justify-center">
+                <Calendar className="h-20 w-20 text-[#A855F7]" />
+              </div>
+              <h3 className="font-clash font-extrabold text-[#F5F2ED] text-xl tracking-tight mb-2">
+                Time Dimension
+              </h3>
+              <p className="max-w-xs mx-auto text-sm text-[#9B9691] font-satoshi leading-relaxed">
+                The visual calendar interface is currently being optimized for the Kylrix ecosystem.
+              </p>
+            </div>
+          )}
+        </div>
       </MultiSectionContainer>
-    </Box>
+    </div>
   );
 }

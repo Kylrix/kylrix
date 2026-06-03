@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
-import { Container, Box, Typography, useMediaQuery, useTheme, IconButton,  alpha } from '@/lib/mui-tailwind/material';
 import { Feed } from '@/components/social/Feed';
 import { ChatList } from '@/components/chat/ChatList';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -34,6 +33,16 @@ function ConnectHomeContent() {
   // Projects data state
   const [projects, setProjects] = useState<any[]>(() => cachedProjects || []);
   const [projectsLoading, setProjectsLoading] = useState(() => !cachedProjects);
+
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(media.matches);
+    const listener = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, []);
 
   useEffect(() => {
     setConfiguration({
@@ -129,172 +138,146 @@ function ConnectHomeContent() {
     router.replace(next ? `${pathname}?${next}` : pathname);
   }, [pathname, router, searchParams, shouldCompose]);
 
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-
   if (isDesktop) {
     return (
-      <Container maxWidth="xl" sx={{ py: 2, px: { xs: 2, md: 3 }, pointerEvents: 'auto' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 4, alignItems: 'flex-start' }}>
+      <div className="max-w-7xl mx-auto py-4 px-4 md:px-6 pointer-events-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 items-start">
           {/* Moments Column */}
-          <Box>
-            <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', mb: 3 }}>
+          <div>
+            <h2 className="text-2xl font-black font-clash text-white mb-6">
               Moments
-            </Typography>
+            </h2>
             <Feed view="personal" composeIntent={composeIntent} />
-          </Box>
+          </div>
 
           {/* Sticky Interactive Dashboard Side column */}
-          <Box sx={{
-            height: 'calc(100vh - 120px)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3,
-            position: 'sticky',
-            top: '108px',
-          }}>
+          <div className="h-[calc(100vh-120px)] flex flex-col gap-6 lg:sticky lg:top-[108px]">
             
             {/* Section 1: Huddle Threads */}
-            <Box sx={{
-              bgcolor: '#161412',
-              borderRadius: '24px',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              p: 2.5,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-              flex: threadsOpen && projectsOpen ? '1 1 50%' : threadsOpen ? '1 1 100%' : '0 0 68px',
-            }}>
+            <div 
+              className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden transition-[flex] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              style={{
+                flex: threadsOpen && projectsOpen ? '1 1 50%' : threadsOpen ? '1 1 100%' : '0 0 68px',
+              }}
+            >
               {/* Threads Header */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: threadsOpen ? 2 : 0 }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+              <div className={`flex justify-between items-center ${threadsOpen ? 'mb-4' : 'mb-0'}`}>
+                <h3 className="text-lg font-black font-clash text-white">
                   Threads
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  <IconButton onClick={() => setThreadsOpen(!threadsOpen)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+                </h3>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => setThreadsOpen(!threadsOpen)} 
+                    className="p-1.5 text-white/40 hover:text-white rounded-lg transition-colors"
+                  >
                     {threadsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </IconButton>
-                  <IconButton onClick={() => router.push('/connect/chats')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#F59E0B' } }}>
+                  </button>
+                  <button 
+                    onClick={() => router.push('/connect/chats')} 
+                    className="p-1.5 text-white/40 hover:text-[#F59E0B] rounded-lg transition-colors"
+                  >
                     <Maximize2 size={14} />
-                  </IconButton>
-                </Box>
-              </Box>
+                  </button>
+                </div>
+              </div>
 
               {threadsOpen && (
-                <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+                <div className="flex-1 overflow-y-auto pr-1">
                   <ChatList activeTab="public" hideTabs={true} />
-                </Box>
+                </div>
               )}
-            </Box>
+            </div>
 
             {/* Section 2: Projects Accordion */}
-            <Box sx={{
-              bgcolor: '#161412',
-              borderRadius: '24px',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              p: 2.5,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-              flex: threadsOpen && projectsOpen ? '1 1 50%' : projectsOpen ? '1 1 100%' : '0 0 68px',
-            }}>
+            <div 
+              className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden transition-[flex] duration-400 ease-[cubic-bezier(0.16,1,0.3,1)]"
+              style={{
+                flex: threadsOpen && projectsOpen ? '1 1 50%' : projectsOpen ? '1 1 100%' : '0 0 68px',
+              }}
+            >
               {/* Projects Header */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: projectsOpen ? 2 : 0 }}>
-                <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+              <div className={`flex justify-between items-center ${projectsOpen ? 'mb-4' : 'mb-0'}`}>
+                <h3 className="text-lg font-black font-clash text-white">
                   Projects
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 0.5 }}>
-                  <IconButton onClick={() => setProjectsOpen(!projectsOpen)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+                </h3>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => setProjectsOpen(!projectsOpen)} 
+                    className="p-1.5 text-white/40 hover:text-white rounded-lg transition-colors"
+                  >
                     {projectsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                  </IconButton>
-                  <IconButton onClick={() => router.push('/projects')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#F59E0B' } }}>
+                  </button>
+                  <button 
+                    onClick={() => router.push('/projects')} 
+                    className="p-1.5 text-white/40 hover:text-[#F59E0B] rounded-lg transition-colors"
+                  >
                     <Maximize2 size={14} />
-                  </IconButton>
-                </Box>
-              </Box>
+                  </button>
+                </div>
+              </div>
 
               {projectsOpen && (
-                <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+                <div className="flex-1 overflow-y-auto pr-1">
                   {projectsLoading ? (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <div className="flex flex-col gap-3.5">
                       {[1, 2, 3].map((n) => (
-                        <Box key={n} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                          <></>
-                          <Box sx={{ flex: 1 }}>
-                            <></>
-                            <></>
-                          </Box>
-                        </Box>
+                        <div key={n} className="flex gap-3.5 p-3.5 rounded-2xl bg-white/[0.01] border border-white/[0.03]">
+                          <div className="w-9 h-9 rounded-lg bg-white/5 animate-pulse" />
+                          <div className="flex-1 flex flex-col gap-1 justify-center">
+                            <div className="h-4 bg-white/5 rounded w-2/3 animate-pulse" />
+                            <div className="h-3 bg-white/5 rounded w-1/2 animate-pulse" />
+                          </div>
+                        </div>
                       ))}
-                    </Box>
+                    </div>
                   ) : projects.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                      <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                    <div className="text-center py-8">
+                      <p className="text-sm text-white/40">
                         No active projects.
-                      </Typography>
-                    </Box>
+                      </p>
+                    </div>
                   ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <div className="flex flex-col gap-3">
                       {projects.map((proj) => (
-                        <Box
+                        <div
                           key={proj.$id}
                           onClick={() => router.push(`/projects/${proj.$id}`)}
-                          sx={{
-                            display: 'flex',
-                            gap: 1.5,
-                            p: 1.5,
-                            borderRadius: '16px',
-                            bgcolor: 'rgba(255,255,255,0.02)',
-                            border: '1px solid rgba(255,255,255,0.03)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.04)',
-                              borderColor: 'rgba(255,255,255,0.08)',
-                              transform: 'translateX(3px)',
-                            }
-                          }}
+                          className="flex gap-3.5 p-3.5 rounded-2xl bg-white/[0.02] border border-white/[0.03] cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.08] hover:translate-x-1 transition-all duration-200"
                         >
-                          <Box sx={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: alpha(proj.color || '#6366F1', 0.12),
-                            color: proj.color || '#6366F1',
-                            flexShrink: 0,
-                          }}>
+                          <div 
+                            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{
+                              backgroundColor: `${proj.color || '#6366F1'}1F`,
+                              color: proj.color || '#6366F1'
+                            }}
+                          >
                             <FolderKanban size={18} />
-                          </Box>
-                          <Box sx={{ minWidth: 0, flex: 1 }}>
-                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }} noWrap>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-extrabold text-white truncate">
                               {proj.name}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }} noWrap>
+                            </div>
+                            <div className="text-[10px] text-white/40 font-mono uppercase truncate mt-0.5">
                               STATUS: {(proj.status || 'Active').toUpperCase()}
-                            </Typography>
-                          </Box>
-                        </Box>
+                            </div>
+                          </div>
+                        </div>
                       ))}
-                    </Box>
+                    </div>
                   )}
-                </Box>
+                </div>
               )}
-            </Box>
-          </Box>
-        </Box>
-      </Container>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 2, px: { xs: 2, sm: 3 }, pointerEvents: 'auto' }}>
+    <div className="max-w-3xl mx-auto py-4 px-4 sm:px-6 pointer-events-auto">
       <Feed view="personal" composeIntent={composeIntent} />
-    </Container>
+    </div>
   );
 }
 

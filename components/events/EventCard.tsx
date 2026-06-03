@@ -1,22 +1,6 @@
 'use client';
 
 import {
-  Card,
-  CardContent,
-  CardMedia,
-  Typography,
-  Box,
-  Avatar,
-  AvatarGroup,
-  IconButton,
-  Chip,
-  Divider,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-} from '@/lib/mui-tailwind/material';
-import {
   MapPin,
   Share2,
   Clock,
@@ -41,7 +25,7 @@ interface EventCardProps {
 
 export default function EventCard({ event, onClick }: EventCardProps) {
   const pattern = generatePattern(event.id);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
 
@@ -59,11 +43,11 @@ export default function EventCard({ event, onClick }: EventCardProps) {
   const handleMenuClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    setAnchorEl(e.currentTarget as HTMLElement);
+    setIsMenuOpen(!isMenuOpen);
   };
 
   const handleMenuClose = () => {
-    setAnchorEl(null);
+    setIsMenuOpen(false);
   };
 
   const handleShareEvent = () => {
@@ -91,226 +75,141 @@ export default function EventCard({ event, onClick }: EventCardProps) {
   };
 
   return (
-    <Card
-      elevation={0}
+    <div
       onContextMenu={handleMenuClick}
-      sx={{
-        border: '1px solid #34322F',
-        borderRadius: '28px',
-        cursor: 'pointer',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflow: 'hidden',
-        boxShadow: 'none',
-        backgroundImage: 'none',
-        bgcolor: '#161412',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: '0 12px 24px rgba(0, 0, 0, 0.5)',
-          borderColor: '#6366F1',
-          bgcolor: '#1C1A18',
-          '& .event-image': {
-            transform: 'scale(1.05)',
-          },
-        },
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
       onClick={onClick}
+      className="group flex flex-col bg-[#161412] hover:bg-[#1C1A18] border border-[#34322F] hover:border-[#6366F1] rounded-[28px] cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] h-full"
     >
-      <Box sx={{ position: 'relative', overflow: 'hidden' }}>
-        <CardMedia
-          component="img"
-          height="140"
-          image={event.coverImage || undefined}
-          alt={event.title}
-          className="event-image"
-          sx={{
-            transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-            background: !event.coverImage ? pattern : undefined,
-            objectFit: 'cover',
-          }}
-        />
-        {/* Date badge */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 12,
-            left: 12,
-            bgcolor: '#000000',
-            borderRadius: '12px',
-            px: 1.5,
-            py: 0.75,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            minWidth: 48,
-            border: '1px solid #34322F',
-          }}
-        >
-          <Typography 
-            variant="caption" 
-            fontWeight="800" 
-            sx={{ 
-              textTransform: 'uppercase',
-              color: '#6366F1',
-              fontSize: '0.65rem',
-              letterSpacing: '0.05em',
-              fontFamily: 'var(--font-mono)'
-            }}
-          >
-            {formatTime(new Date(event.startTime), { month: 'short' })}
-          </Typography>
-          <Typography 
-            variant="h5" 
-            fontWeight="900" 
-            sx={{ 
-              lineHeight: 1,
-              color: 'white',
-              fontFamily: 'var(--font-clash)',
-            }}
-          >
-            {new Date(event.startTime).getDate()}
-          </Typography>
-        </Box>
-        {/* Today/Tomorrow chip */}
-        {dateLabel && (
-          <Chip
-            label={dateLabel}
-            size="small"
-            sx={{
-              position: 'absolute',
-              top: 12,
-              right: 12,
-              bgcolor: dateLabel === 'Today' ? '#10B981' : '#3B82F6',
-              color: 'black',
-              border: '1px solid #34322F',
-              fontWeight: 800,
-              fontSize: '0.65rem',
-              height: 22,
-              textTransform: 'uppercase',
-              fontFamily: 'var(--font-mono)'
-            }}
+      <div className="relative overflow-hidden aspect-[16/9] w-full shrink-0">
+        {event.coverImage ? (
+          <img
+            src={event.coverImage}
+            alt={event.title}
+            className="w-full h-full object-cover transition-transform duration-400 group-hover:scale-105"
+          />
+        ) : (
+          <div 
+            className="w-full h-full transition-transform duration-400 group-hover:scale-105"
+            style={{ background: pattern }}
           />
         )}
-      </Box>
+        
+        {/* Date badge */}
+        <div className="absolute top-3 left-3 bg-black/85 rounded-xl px-2.5 py-1.5 flex flex-col items-center min-w-[48px] border border-[#34322F]/60">
+          <span className="text-[10px] font-extrabold font-mono text-[#6366F1] uppercase tracking-wider leading-none mb-1">
+            {formatTime(new Date(event.startTime), { month: 'short' })}
+          </span>
+          <span className="text-lg font-black font-clash text-white leading-none">
+            {new Date(event.startTime).getDate()}
+          </span>
+        </div>
 
-      <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', gap: 1.5, p: 2.5 }}>
-        <Box>
-          <Typography 
-            variant="h6" 
-            fontWeight="800" 
-            gutterBottom 
-            noWrap
-            sx={{
-              fontSize: '1rem',
-              lineHeight: 1.3,
-              fontFamily: 'var(--font-clash)',
-              color: 'white',
-            }}
-          >
-            {event.title}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9B9691', mb: 0.75 }}>
-            <Clock size={14} strokeWidth={1.5} />
-            <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
-              {formatTime(new Date(event.startTime), { hour: 'numeric', minute: '2-digit', hour12: true })} - {formatTime(new Date(event.endTime), { hour: 'numeric', minute: '2-digit', hour12: true })}
-            </Typography>
-          </Box>
-          {event.location && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9B9691' }}>
-              <MapPin size={14} strokeWidth={1.5} />
-              <Typography variant="body2" noWrap sx={{ fontSize: '0.75rem', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
-                {event.location}
-              </Typography>
-            </Box>
-          )}
-        </Box>
-
-        <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', pt: 1 }}>
-          {event.attendees.length > 0 ? (
-            <AvatarGroup 
-              max={4} 
-              sx={{ 
-                '& .MuiAvatar-root': { 
-                  width: 28, 
-                  height: 28, 
-                  fontSize: 11,
-                  border: '2px solid #34322F',
-                  bgcolor: '#1C1A18',
-                  color: 'white',
-                  fontFamily: 'var(--font-mono)'
-                } 
-              }}
-            >
-              {event.attendees.map((id) => (
-                <Avatar key={id} alt="User" src={`https://i.pravatar.cc/150?u=${id}`} />
-              ))}
-            </AvatarGroup>
-          ) : (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9B9691' }}>
-              <Users size={14} strokeWidth={1.5} />
-              <Typography variant="caption" sx={{ fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>No attendees</Typography>
-            </Box>
-          )}
-          <IconButton 
-            size="small" 
-            onClick={handleMenuClick}
-            sx={{
-              color: '#9B9691',
-              border: '1px solid #34322F',
-              bgcolor: '#1C1A18',
-              '&:hover': {
-                color: 'white',
-                bgcolor: '#34322F',
-              },
-            }}
-          >
-            <MoreVertical size={16} strokeWidth={1.5} />
-          </IconButton>
-        </Box>
-      </CardContent>
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        PaperProps={{
-          sx: { 
-            minWidth: 180, 
-            borderRadius: '16px',
-            bgcolor: '#161412',
-            border: '1px solid #34322F',
-            boxShadow: '0 12px 24px -10px rgba(0,0,0,1)',
-            backgroundImage: 'none',
-            '& .MuiMenuItem-root': {
-              py: 1.2,
-              gap: 1.5,
-              color: '#9B9691',
-              fontFamily: 'var(--font-satoshi)',
-              '&:hover': { bgcolor: '#1C1A18', color: 'white' }
-            }
-          },
-        }}
-      >
-        <MenuItem onClick={handleShareEvent}>
-          <ListItemIcon sx={{ minWidth: 'auto !important', color: 'inherit' }}><Share2 size={16} strokeWidth={1.5} /></ListItemIcon>
-          <ListItemText primary="Share Event" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 800 }} />
-        </MenuItem>
-        {isCreator && (
-          <>
-            <MenuItem onClick={handleEditEvent}>
-              <ListItemIcon sx={{ minWidth: 'auto !important', color: 'inherit' }}><Edit size={16} strokeWidth={1.5} /></ListItemIcon>
-              <ListItemText primary="Edit Event" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 800 }} />
-            </MenuItem>
-            <Divider sx={{ borderColor: '#34322F', my: 0.5 }} />
-            <MenuItem onClick={handleDeleteEvent} sx={{ '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.1) !important', color: '#EF4444 !important' } }}>
-              <ListItemIcon sx={{ minWidth: 'auto !important', color: 'inherit' }}><Trash2 size={16} strokeWidth={1.5} /></ListItemIcon>
-              <ListItemText primary="Delete Event" primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 800 }} />
-            </MenuItem>
-          </>
+        {/* Today/Tomorrow chip */}
+        {dateLabel && (
+          <span className={`absolute top-3 right-3 text-[10px] font-bold font-mono px-2.5 py-1 rounded-full border border-[#34322F] tracking-wider text-black ${
+            dateLabel === 'Today' ? 'bg-[#10B981]' : 'bg-[#3B82F6]'
+          }`}>
+            {dateLabel.toUpperCase()}
+          </span>
         )}
-      </Menu>
-    </Card>
+      </div>
+
+      <div className="flex-grow p-6 flex flex-col justify-between gap-4">
+        <div>
+          <h2 className="text-base font-bold font-clash text-white tracking-tight leading-snug line-clamp-2 mb-2">
+            {event.title}
+          </h2>
+          <div className="flex items-center gap-2 text-[#9B9691] mb-1.5">
+            <Clock size={14} className="shrink-0" />
+            <span className="text-[11px] font-semibold font-satoshi">
+              {formatTime(new Date(event.startTime), { hour: 'numeric', minute: '2-digit', hour12: true })} - {formatTime(new Date(event.endTime), { hour: 'numeric', minute: '2-digit', hour12: true })}
+            </span>
+          </div>
+          {event.location && (
+            <div className="flex items-center gap-2 text-[#9B9691]">
+              <MapPin size={14} className="shrink-0" />
+              <span className="text-[11px] font-semibold font-satoshi truncate">
+                {event.location}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-[#34322F]/30 pt-3 mt-auto">
+          {event.attendees.length > 0 ? (
+            <div className="flex -space-x-1.5 overflow-hidden">
+              {event.attendees.slice(0, 4).map((id) => (
+                <img
+                  key={id}
+                  className="inline-block h-7 w-7 rounded-full ring-2 ring-[#34322F] bg-[#1C1A18] object-cover"
+                  src={`https://i.pravatar.cc/150?u=${id}`}
+                  alt="Attendee"
+                />
+              ))}
+              {event.attendees.length > 4 && (
+                <span className="flex items-center justify-center h-7 w-7 rounded-full ring-2 ring-[#34322F] bg-[#1C1A18] text-white font-mono text-[9px] font-bold">
+                  +{event.attendees.length - 4}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-[#9B9691]">
+              <Users size={14} />
+              <span className="text-xs font-semibold font-satoshi">No attendees</span>
+            </div>
+          )}
+
+          <div className="relative">
+            <button 
+              type="button" 
+              onClick={handleMenuClick}
+              className="p-1.5 text-[#9B9691] border border-[#34322F] bg-[#1C1A18] hover:text-white hover:bg-[#34322F] rounded-xl transition-colors cursor-pointer"
+            >
+              <MoreVertical size={16} strokeWidth={1.5} />
+            </button>
+            
+            {isMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40 bg-transparent cursor-default" onClick={handleMenuClose} />
+                <div 
+                  className="absolute right-0 bottom-full mb-1.5 w-44 rounded-2xl bg-[#161412] border border-[#34322F] shadow-2xl p-1.5 z-50 font-satoshi text-left cursor-default"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    onClick={handleShareEvent}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white rounded-xl transition-colors font-semibold"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span>Share Event</span>
+                  </button>
+                  {isCreator && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleEditEvent}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white rounded-xl transition-colors font-semibold"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span>Edit Event</span>
+                      </button>
+                      <div className="my-1 border-t border-[#34322F]" />
+                      <button
+                        type="button"
+                        onClick={handleDeleteEvent}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#D14343] hover:bg-red-500/5 rounded-xl transition-colors font-bold"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Delete Event</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -2,44 +2,19 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { 
-    Box, 
-    Typography, 
-    Button, 
-    Grid, 
-    Card, 
-    CardContent, 
-    Chip, 
-    IconButton, 
-    Tooltip,
-    Fade,
-    Paper,
-    Divider,
-    Stack,
-    Tabs,
-    Tab,
-    
-    alpha,
-    Menu,
-    MenuItem as MuiMenuItem,
-    Dialog as ConfirmDialog,
-    DialogTitle as ConfirmTitle,
-    DialogContent as ConfirmContent,
-    DialogActions as ConfirmActions,
-    useTheme,
-    useMediaQuery
-} from '@/lib/mui-tailwind/material';
-import { 
-    Add as AddIcon, 
-    Edit as EditIcon, 
-    Delete as DeleteIcon, 
-    Launch as LaunchIcon,
-    Assignment as FormIcon,
-    MoreVert as MoreIcon,
-    AutoAwesome as TemplateIcon,
-    History as HistoryIcon,
-    Settings as SettingsIcon,
-    PushPin as PinIcon
-} from '@/lib/mui-tailwind/icons';
+    Plus, 
+    Edit, 
+    Trash2, 
+    ExternalLink, 
+    FileText, 
+    MoreVertical, 
+    Sparkles, 
+    History, 
+    Settings, 
+    Pin, 
+    Share2, 
+    FolderKanban 
+} from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { DraftsService, FormDraft } from '@/lib/services/drafts';
 import { Forms } from '@/generated/appwrite/types';
@@ -52,7 +27,6 @@ import { useDataNexus } from '@/context/DataNexusContext';
 import { toast } from 'react-hot-toast';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { FolderKanban, Share2 } from 'lucide-react';
 import { useSection, MultiSectionContainer } from '@/context/SectionContext';
 
 export default function FormsDashboard() {
@@ -60,8 +34,6 @@ export default function FormsDashboard() {
     const router = useRouter();
     const { fetchOptimized, invalidate } = useDataNexus();
     const { open: openDrawer } = useUnifiedDrawer();
-    const theme = useTheme();
-    const isDesktop = useMediaQuery(theme.breakpoints.up('lg'));
     const { setActiveDetail } = useSection();
     const [forms, setForms] = useState<Forms[]>([]);
     const [offlineDrafts, setOfflineDrafts] = useState<FormDraft[]>([]);
@@ -74,7 +46,15 @@ export default function FormsDashboard() {
     const [formDraftStatus, setFormDraftStatus] = useState<Record<string, boolean>>({});
     
     // UI States
-    const [menuAnchor, setMenuAnchor] = useState<{ element: HTMLElement, form: Forms } | null>(null);
+    const [activeMenuFormId, setActiveMenuFormId] = useState<string | null>(null);
+    const [isDesktop, setIsDesktop] = useState(false);
+
+    useEffect(() => {
+        const checkSize = () => setIsDesktop(window.innerWidth >= 1024);
+        checkSize();
+        window.addEventListener('resize', checkSize);
+        return () => window.removeEventListener('resize', checkSize);
+    }, []);
 
     const formsLengthRef = useRef(forms.length);
     useEffect(() => {
@@ -175,16 +155,7 @@ export default function FormsDashboard() {
         });
     };
 
-    const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, form: Forms) => {
-        setMenuAnchor({ element: event.currentTarget, form });
-    };
-
-    const handleMenuClose = () => {
-        setMenuAnchor(null);
-    };
-
     const handleOpenSettings = (form: Forms) => {
-        handleMenuClose();
         setSelectedForm(form);
         setSelectedDraft(null);
         setSettingsOpen(true);
@@ -211,445 +182,388 @@ export default function FormsDashboard() {
             case 'published': return '#10B981';
             case 'draft': return '#FFB020';
             case 'archived': return '#D14343';
-            default: return 'text.secondary';
+            default: return '#9B9691';
         }
     };
 
     const filteredForms = forms; // Active forms (published/draft on server)
 
     return (
-        <Box sx={{ 
-            animation: 'fadeIn 0.4s ease-out', 
-            p: { xs: 2, md: 4 },
-            minHeight: '100vh',
-            bgcolor: '#000000'
-        }}>
+        <div className="animate-fadeIn p-4 md:p-8 min-h-screen bg-black">
             <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-                <Box>
-                    <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, letterSpacing: '-0.04em', fontFamily: 'var(--font-clash)', color: '#fff' }}>
-                        Forms
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>
-                        Design data collection workflows for the ecosystem.
-                    </Typography>
-                </Box>
-                <Button 
-                    variant="contained" 
-                    startIcon={<AddIcon />}
-                    onClick={handleCreate}
-                    sx={{ borderRadius: '12px', px: 3, py: 1.2, fontWeight: 800, bgcolor: '#6366F1', color: 'black', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#575CF0' } }}
-                >
-                    Create Form
-                </Button>
-            </Box>
+                <div className="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 className="text-3xl font-black mb-1 tracking-tight font-clash text-white">
+                            Forms
+                        </h1>
+                        <p className="text-[#9B9691] font-semibold font-satoshi text-sm">
+                            Design data collection workflows for the ecosystem.
+                        </p>
+                    </div>
+                    <button 
+                        type="button"
+                        onClick={handleCreate}
+                        className="flex items-center gap-1.5 px-5 py-2.5 font-bold rounded-xl bg-[#6366F1] text-black font-satoshi hover:bg-[#575CF0] transition-colors cursor-pointer text-sm"
+                    >
+                        <Plus className="h-4 w-4" />
+                        <span>Create Form</span>
+                    </button>
+                </div>
 
-            <Box sx={{ borderBottom: 1, borderColor: '#34322F', mb: 4 }}>
-                <Tabs 
-                    value={tabValue} 
-                    onChange={(_, v) => setTabValue(v)}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    allowScrollButtonsMobile
-                    sx={{
-                        '& .MuiTab-root': { fontWeight: 800, fontSize: '0.85rem', color: '#9B9691', px: 3, fontFamily: 'var(--font-satoshi)' },
-                        '& .Mui-selected': { color: '#6366F1 !important' },
-                        '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' }
-                    }}
-                >
-                    <Tab label="Active Forms" icon={<FormIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-                    <Tab label="Templates" icon={<TemplateIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-                    <Tab 
-                        label={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                Drafts
-                                {offlineDrafts.length > 0 && (
-                                    <Box sx={{ bgcolor: '#FFB020', color: 'black', borderRadius: '50%', width: 18, height: 18, fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)' }}>
-                                        {offlineDrafts.length}
-                                    </Box>
-                                )}
-                            </Box>
-                        } 
-                        icon={<HistoryIcon sx={{ fontSize: 18 }} />} 
-                        iconPosition="start" 
-                    />
-                </Tabs>
-            </Box>
+                {/* Custom Tab Switcher */}
+                <div className="flex border-b border-[#34322F] mb-8 overflow-x-auto whitespace-nowrap scrollbar-none gap-8">
+                    {[
+                        { label: 'Active Forms', icon: FileText },
+                        { label: 'Templates', icon: Sparkles },
+                        { 
+                            label: (
+                                <div className="flex items-center gap-1.5">
+                                    <span>Drafts</span>
+                                    {offlineDrafts.length > 0 && (
+                                        <span className="bg-[#FFB020] text-black rounded-full w-4.5 h-4.5 text-[10px] flex items-center justify-center font-bold font-mono">
+                                            {offlineDrafts.length}
+                                        </span>
+                                    )}
+                                </div>
+                            ),
+                            icon: History 
+                        }
+                    ].map((tab, idx) => {
+                        const Icon = tab.icon;
+                        const isActive = tabValue === idx;
+                        return (
+                            <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setTabValue(idx)}
+                                className={`flex items-center gap-2 pb-3 border-b-2 font-bold text-sm transition-all font-satoshi cursor-pointer ${
+                                    isActive 
+                                        ? 'border-[#6366F1] text-[#6366F1]' 
+                                        : 'border-transparent text-[#9B9691] hover:text-white'
+                                }`}
+                            >
+                                <Icon className="h-4.5 w-4.5" />
+                                <span>{tab.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
 
-            {loading ? (
-                <Grid container spacing={3}>
-                    {[1, 2, 3].map((i) => (
-                        <Grid size={{ xs: 12, md: 6, lg: 4 }} key={i}>
-                            <Card sx={{ bgcolor: '#161412', backgroundImage: 'none', border: '1px solid #34322F', borderRadius: '28px', boxShadow: 'none' }}>
-                                <CardContent sx={{ p: 2.5 }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                        <></>
-                                        <></>
-                                    </Box>
-                                    <></>
-                                    <></>
-                                    <></>
-                                    <Divider sx={{ borderColor: '#34322F', mb: 3 }} />
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                        <></>
-                                        <></>
-                                        <Box sx={{ flexGrow: 1 }} />
-                                        <></>
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
-            ) : (
-                <Box>
-                    {/* ACTIVE FORMS TAB */}
-                    {tabValue === 0 && (
-                        <>
-                            {filteredForms.length === 0 ? (
-                                <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161412', border: '1px dashed #34322F', borderRadius: '24px' }}>
-                                    <FormIcon sx={{ fontSize: 64, color: '#9B9691', opacity: 0.3, mb: 2 }} />
-                                    <Typography variant="h6" sx={{ color: '#fff', opacity: 0.8, mb: 4, fontFamily: 'var(--font-clash)' }}>No active forms.</Typography>
-                                    <Button variant="outlined" startIcon={<AddIcon />} onClick={handleCreate} sx={{ borderRadius: '12px', border: '1px solid #34322F', color: '#fff', fontFamily: 'var(--font-satoshi)', fontWeight: 800, '&:hover': { bgcolor: '#161412', borderColor: '#6366F1' } }}>Start Building</Button>
-                                </Paper>
-                            ) : (
-                                <Grid container spacing={3}>
-                                    {filteredForms.map((form) => (
-                                        <Grid size={{ xs: 12, md: 6, lg: 4 }} key={form.$id}>
-                                            <Fade in={true}>
-                                                <Card 
-                                                    onClick={() => {
-                                                        if (isDesktop) {
-                                                            setActiveDetail({ type: 'form', id: form.$id, data: form });
-                                                        } else {
-                                                            router.push(`/flow/forms/${form.$id}`);
-                                                        }
-                                                    }}
-                                                    sx={{ 
-                                                        bgcolor: '#161412', 
-                                                        backgroundImage: 'none',
-                                                        border: '1px solid #34322F', 
-                                                        borderRadius: '28px',
-                                                        cursor: 'pointer',
-                                                        boxShadow: 'none',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        '&:hover': {
-                                                            bgcolor: '#1C1A18',
-                                                            borderColor: '#6366F1',
-                                                            transform: 'translateY(-2px)',
-                                                            boxShadow: '0 12px 24px rgba(0, 0, 0, 0.5)'
-                                                        }
-                                                    }}
-                                                >
-                                                    <CardContent sx={{ p: 2.5 }}>
-                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                                            <Stack direction="row" spacing={1} alignItems="center">
-                                                                <Chip 
-                                                                    label={(form.status || 'unknown').toUpperCase()} 
-                                                                    size="small" 
-                                                                    sx={{ 
-                                                                        fontSize: '9px', 
-                                                                        fontWeight: 900, 
-                                                                        color: getStatusColor(form.status || 'draft'), 
-                                                                        border: `1px solid ${getStatusColor(form.status || 'draft')}`, 
-                                                                        bgcolor: 'transparent',
-                                                                        fontFamily: 'var(--font-mono)' 
-                                                                    }} 
-                                                                />
-                                                                {formDraftStatus[form.$id] && (
-                                                                    <Chip 
-                                                                        label="UNSYNCED DRAFT" 
-                                                                        size="small" 
-                                                                        sx={{ 
-                                                                            fontSize: '9px', 
-                                                                            fontWeight: 900, 
-                                                                            bgcolor: '#1C1A18', 
-                                                                            color: '#FFB020', 
-                                                                            border: '1px solid #FFB020',
-                                                                            fontFamily: 'var(--font-mono)' 
-                                                                        }} 
-                                                                    />
-                                                                )}
-                                                            </Stack>
-                                                            <Stack direction="row" spacing={0.5} alignItems="center">
-                                                                <Tooltip title="Activate Form-to-Project Workflow">
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        sx={{
-                                                                            color: '#6366F1',
-                                                                            bgcolor: '#1C1A18',
-                                                                            border: '1px solid #34322F',
-                                                                            '&:hover': { bgcolor: '#34322F', borderColor: '#6366F1' }
-                                                                        }}
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            openDrawer('new-project', {
-                                                                                template: {
-                                                                                    id: 'form-to-project',
-                                                                                    title: 'Analyze Responses', 
-                                                                                    summary: 'Convert intake forms into context and auto-spin execution tasks.',
-                                                                                    color: '#6366F1'
-                                                                                },
-                                                                                formId: form.$id,
-                                                                                selectedResourceId: form.$id,
-                                                                                formTitle: form.title,
-                                                                                formDescription: form.description || ''
-                                                                            });
-                                                                        }}
-                                                                    >
-                                                                        <Box sx={{ position: 'relative', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                                            <FolderKanban size={14} strokeWidth={2.5} style={{ color: '#6366F1' }} />
-                                                                            <Box sx={{
-                                                                                position: 'absolute',
-                                                                                bottom: -2,
-                                                                                right: -2,
-                                                                                bgcolor: '#000',
-                                                                                borderRadius: '4px',
-                                                                                p: '1px',
-                                                                                display: 'flex',
-                                                                                alignItems: 'center',
-                                                                                justifyContent: 'center',
-                                                                                border: '1px solid rgba(255,255,255,0.15)',
-                                                                                lineHeight: 0
-                                                                            }}>
-                                                                                <FormIcon sx={{ fontSize: 9, color: '#10B981' }} />
-                                                                            </Box>
-                                                                        </Box>
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                                <IconButton 
-                                                                    size="small" 
-                                                                    sx={{ color: '#9B9691', bgcolor: '#1C1A18', border: '1px solid #34322F', '&:hover': { bgcolor: '#34322F' } }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleMenuOpen(e, form);
-                                                                    }}
-                                                                >
-                                                                    <MoreIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </Stack>
-                                                        </Box>
-                                                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#FFF', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>{form.title}</Typography>
-                                                        <Typography variant="body2" sx={{ color: '#9B9691', mb: 3, minHeight: '3em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', fontFamily: 'var(--font-satoshi)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                                                            {form.description || 'No description provided.'}
-                                                        </Typography>
-                                                        <Divider sx={{ borderColor: '#34322F', mb: 2.5 }} />
-                                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                                            <Tooltip title="Preview Public Form">
-                                                                <IconButton 
-                                                                    size="small" 
-                                                                    component={Link} 
-                                                                    href={`/flow/form/${form.$id}`} 
-                                                                    target="_blank" 
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    sx={{ bgcolor: '#1C1A18', border: '1px solid #34322F', color: '#6366F1', '&:hover': { bgcolor: '#34322F' } }}
-                                                                >
-                                                                    <LaunchIcon sx={{ fontSize: 18 }} />
-                                                                </IconButton>
-                                                            </Tooltip>
-                                                            <Box sx={{ flexGrow: 1 }} />
-                                                            <IconButton 
-                                                                size="small" 
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleEdit(form);
-                                                                }} 
-                                                                sx={{ color: '#9B9691', bgcolor: '#1C1A18', border: '1px solid #34322F', '&:hover': { bgcolor: '#34322F', color: 'white' } }}
-                                                            >
-                                                                <EditIcon sx={{ fontSize: 16 }} />
-                                                            </IconButton>
-                                                            <IconButton 
-                                                                size="small" 
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDelete(form);
-                                                                }} 
-                                                                sx={{ color: '#D14343', bgcolor: '#1C1A18', border: '1px solid #34322F', '&:hover': { bgcolor: '#34322F', color: '#ff4444' } }}
-                                                            >
-                                                                <DeleteIcon sx={{ fontSize: 16 }} />
-                                                            </IconButton>
-                                                        </Box>
-                                                    </CardContent>
-                                                </Card>
-                                            </Fade>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            )}
-                        </>
-                    )}
-
-                    {/* TEMPLATES TAB */}
-                    {tabValue === 1 && (
-                        <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161412', border: '1px dashed #34322F', borderRadius: '24px' }}>
-                            <TemplateIcon sx={{ fontSize: 64, color: '#9B9691', mb: 2 }} />
-                            <Typography variant="h6" sx={{ color: '#fff', fontWeight: 800, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>Templates coming soon.</Typography>
-                        </Paper>
-                    )}
-
-                    {/* OFFLINE DRAFTS TAB */}
-                    {tabValue === 2 && (
-                        <>
-                            {offlineDrafts.length === 0 ? (
-                                <Paper sx={{ py: 12, textAlign: 'center', bgcolor: '#161412', border: '1px dashed #34322F', borderRadius: '24px' }}>
-                                    <HistoryIcon sx={{ fontSize: 64, color: '#9B9691', mb: 2 }} />
-                                    <Typography variant="h6" sx={{ color: '#fff', fontWeight: 800, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>No offline drafts found.</Typography>
-                                </Paper>
-                            ) : (
-                                <Grid container spacing={3}>
-                                    {offlineDrafts.map((draft) => (
-                                        <Grid size={{ xs: 12, md: 6, lg: 4 }} key={draft.id}>
-                                            <Fade in={true}>
-                                                <Card 
-                                                    sx={{ 
-                                                        bgcolor: '#161412', 
-                                                        backgroundImage: 'none',
-                                                        border: '1px solid #34322F', 
-                                                        borderRadius: '28px',
-                                                        boxShadow: 'none',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        '&:hover': {
-                                                            bgcolor: '#1C1A18',
-                                                            borderColor: '#FFB020',
-                                                            transform: 'translateY(-2px)',
-                                                            boxShadow: '0 12px 24px rgba(0, 0, 0, 0.5)'
-                                                        }
-                                                    }}
-                                                >
-                                                    <CardContent sx={{ p: 2.5 }}>
-                                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                                            <Chip 
-                                                                label="LOCAL DRAFT" 
-                                                                size="small" 
-                                                                sx={{ 
-                                                                    fontSize: '9px', 
-                                                                    fontWeight: 900, 
-                                                                    bgcolor: 'transparent', 
-                                                                    color: '#FFB020', 
-                                                                    border: '1px solid #FFB020',
-                                                                    fontFamily: 'var(--font-mono)'
-                                                                }} 
-                                                            />
-                                                            <Typography variant="caption" sx={{ color: '#9B9691', fontFamily: 'var(--font-mono)' }}>
-                                                                {new Date(draft.updatedAt).toLocaleTimeString()}
-                                                            </Typography>
-                                                        </Box>
-                                                        <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, color: '#FFF', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>{draft.title || 'Untitled Portal'}</Typography>
-                                                        <Typography variant="body2" sx={{ color: '#9B9691', mb: 3, minHeight: '3em', fontFamily: 'var(--font-satoshi)', fontSize: '0.85rem', lineHeight: 1.5 }}>
-                                                            Last saved locally. Sync required to publish.
-                                                        </Typography>
-                                                        <Divider sx={{ borderColor: '#34322F', mb: 2.5 }} />
-                                                        <Box sx={{ display: 'flex', gap: 1 }}>
-                                                            <Button 
-                                                                size="small" 
-                                                                variant="outlined" 
-                                                                startIcon={<EditIcon />} 
-                                                                onClick={() => handleEditDraft(draft)}
-                                                                sx={{ 
-                                                                    color: '#9B9691', 
-                                                                    bgcolor: '#1C1A18', 
-                                                                    border: '1px solid #34322F', 
-                                                                    borderRadius: '12px', 
-                                                                    fontWeight: 800, 
-                                                                    px: 2, 
-                                                                    py: 0.75, 
-                                                                    fontFamily: 'var(--font-satoshi)', 
-                                                                    '&:hover': { bgcolor: '#34322F', color: 'white', borderColor: '#34322F' } 
+                {loading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="bg-[#161412] border border-[#34322F] rounded-[28px] p-6 animate-pulse">
+                                <div className="flex justify-between mb-4">
+                                    <div className="h-5 w-20 bg-neutral-800 rounded-md" />
+                                    <div className="h-8 w-8 bg-neutral-800 rounded-md" />
+                                </div>
+                                <div className="h-6 w-3/4 bg-neutral-800 rounded-md mb-2" />
+                                <div className="h-4 w-full bg-neutral-800 rounded-md mb-2" />
+                                <div className="h-4 w-5/6 bg-neutral-800 rounded-md mb-6" />
+                                <hr className="border-[#34322F] mb-6" />
+                                <div className="flex gap-2">
+                                    <div className="h-8 w-8 bg-neutral-800 rounded-md" />
+                                    <div className="ml-auto h-8 w-8 bg-neutral-800 rounded-md" />
+                                    <div className="h-8 w-8 bg-neutral-800 rounded-md" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div>
+                        {/* ACTIVE FORMS TAB */}
+                        {tabValue === 0 && (
+                            <>
+                                {filteredForms.length === 0 ? (
+                                    <div className="py-24 text-center bg-[#161412] border border-dashed border-[#34322F] rounded-[24px]">
+                                        <FileText className="h-16 w-16 mx-auto text-[#9B9691] opacity-35 mb-4" />
+                                        <h3 className="text-lg font-clash text-white opacity-85 mb-6">No active forms.</h3>
+                                        <button 
+                                            type="button" 
+                                            onClick={handleCreate} 
+                                            className="inline-flex items-center gap-1.5 px-5 py-2.5 border border-[#34322F] hover:border-[#6366F1] text-white font-bold rounded-xl hover:bg-[#161412] transition-colors font-satoshi text-sm cursor-pointer"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            <span>Start Building</span>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {filteredForms.map((form) => (
+                                            <div 
+                                                key={form.$id}
+                                                onClick={() => {
+                                                    if (isDesktop) {
+                                                        setActiveDetail({ type: 'form', id: form.$id, data: form });
+                                                    } else {
+                                                        router.push(`/flow/forms/${form.$id}`);
+                                                    }
+                                                }}
+                                                className="bg-[#161412] border border-[#34322F] hover:border-[#6366F1] rounded-[28px] cursor-pointer p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] flex flex-col justify-between h-full"
+                                            >
+                                                <div>
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <span 
+                                                                className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border tracking-wider" 
+                                                                style={{ 
+                                                                    color: getStatusColor(form.status || 'draft'),
+                                                                    borderColor: getStatusColor(form.status || 'draft')
                                                                 }}
                                                             >
-                                                                Resume
-                                                            </Button>
-                                                            <Box sx={{ flexGrow: 1 }} />
-                                                            <IconButton 
-                                                                size="small" 
-                                                                onClick={() => handleDeleteDraft(draft)} 
-                                                                sx={{ color: '#D14343', bgcolor: '#1C1A18', border: '1px solid #34322F', '&:hover': { bgcolor: '#34322F', color: '#ff4444' } }}
+                                                                {(form.status || 'draft').toUpperCase()}
+                                                            </span>
+                                                            {formDraftStatus[form.$id] && (
+                                                                <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border bg-[#1C1A18] text-[#FFB020] border-[#FFB020] tracking-wider">
+                                                                    UNSYNCED DRAFT
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            {/* Workflow Trigger */}
+                                                            <button
+                                                                type="button"
+                                                                className="p-1.5 text-[#6366F1] bg-[#1C1A18] border border-[#34322F] hover:border-[#6366F1] hover:bg-[#34322F] rounded-xl transition-all relative cursor-pointer"
+                                                                title="Activate Form-to-Project Workflow"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    openDrawer('new-project', {
+                                                                        template: {
+                                                                            id: 'form-to-project',
+                                                                            title: 'Analyze Responses', 
+                                                                            summary: 'Convert intake forms into context and auto-spin execution tasks.',
+                                                                            color: '#6366F1'
+                                                                        },
+                                                                        formId: form.$id,
+                                                                        selectedResourceId: form.$id,
+                                                                        formTitle: form.title,
+                                                                        formDescription: form.description || ''
+                                                                    });
+                                                                }}
                                                             >
-                                                                <DeleteIcon sx={{ fontSize: 16 }} />
-                                                            </IconButton>
-                                                        </Box>
-                                                    </CardContent>
-                                                </Card>
-                                            </Fade>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            )}
-                        </>
-                    )}
-                </Box>
-            )}
+                                                                <div className="relative w-5.5 h-5.5 flex items-center justify-center">
+                                                                    <FolderKanban className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                                                    <div className="absolute -bottom-1 -right-1 bg-black rounded p-0.5 border border-white/10 flex items-center justify-center">
+                                                                        <FileText className="h-2 w-2 text-[#10B981]" />
+                                                                    </div>
+                                                                </div>
+                                                            </button>
+                                                            
+                                                            {/* More Menu Dropdown Wrapper */}
+                                                            <div className="relative">
+                                                                <button 
+                                                                    type="button"
+                                                                    className="p-1.5 rounded-xl text-[#9B9691] bg-[#1C1A18] border border-[#34322F] hover:bg-[#34322F] hover:text-white transition-colors cursor-pointer"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setActiveMenuFormId(form.$id);
+                                                                    }}
+                                                                >
+                                                                    <MoreVertical className="h-4.5 w-4.5" />
+                                                                </button>
+                                                                {activeMenuFormId === form.$id && (
+                                                                    <>
+                                                                        <div className="fixed inset-0 z-40 bg-transparent cursor-default" onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setActiveMenuFormId(null);
+                                                                        }} />
+                                                                        <div 
+                                                                            className="absolute right-0 top-full mt-1.5 w-44 rounded-2xl bg-[#161412] border border-[#34322F] shadow-2xl p-1.5 z-50 font-satoshi text-left cursor-default"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => { setActiveMenuFormId(null); handleEdit(form); }}
+                                                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white rounded-xl transition-colors font-semibold"
+                                                                            >
+                                                                                <Edit className="h-4 w-4" />
+                                                                                <span>Edit Schema</span>
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => { setActiveMenuFormId(null); handleOpenSettings(form); }}
+                                                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white rounded-xl transition-colors font-semibold"
+                                                                            >
+                                                                                <Settings className="h-4 w-4" />
+                                                                                <span>Settings</span>
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => { 
+                                                                                    setActiveMenuFormId(null); 
+                                                                                    openDrawer('share-note', {
+                                                                                        resourceId: form.$id,
+                                                                                        resourceType: 'form',
+                                                                                        resourceTitle: form.title
+                                                                                    });
+                                                                                }}
+                                                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white rounded-xl transition-colors font-semibold"
+                                                                            >
+                                                                                <Share2 className="h-4 w-4" />
+                                                                                <span>Share Form</span>
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => { setActiveMenuFormId(null); handleTogglePin(form); }}
+                                                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white rounded-xl transition-colors font-semibold"
+                                                                            >
+                                                                                <Pin className={`h-4 w-4 ${form.isPinned ? 'text-[#F59E0B]' : ''}`} />
+                                                                                <span>{form.isPinned ? 'Unpin Form' : 'Pin Form'}</span>
+                                                                            </button>
+                                                                            <div className="my-1 border-t border-[#34322F]" />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => { setActiveMenuFormId(null); handleDelete(form); }}
+                                                                                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-[#D14343] hover:bg-red-500/5 rounded-xl transition-colors font-bold"
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                                <span>Delete Form</span>
+                                                                            </button>
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <h2 className="text-lg font-bold mb-1 text-white font-clash tracking-tight truncate">
+                                                        {form.title}
+                                                    </h2>
+                                                    <p className="text-[#9B9691] text-xs sm:text-sm font-satoshi leading-relaxed mb-4 min-h-[3em] line-clamp-2">
+                                                        {form.description || 'No description provided.'}
+                                                    </p>
+                                                </div>
+                                                
+                                                <div>
+                                                    <hr className="border-[#34322F] mb-4" />
+                                                    <div className="flex gap-2 items-center">
+                                                        <Link 
+                                                            href={`/flow/form/${form.$id}`} 
+                                                            target="_blank" 
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="p-1.5 bg-[#1C1A18] border border-[#34322F] hover:bg-[#34322F] text-[#6366F1] rounded-xl transition-colors inline-flex items-center justify-center cursor-pointer"
+                                                            title="Preview Public Form"
+                                                        >
+                                                            <ExternalLink className="h-4.5 w-4.5" />
+                                                        </Link>
+                                                        <div className="flex-grow" />
+                                                        <button 
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEdit(form);
+                                                            }} 
+                                                            className="p-1.5 text-[#9B9691] bg-[#1C1A18] border border-[#34322F] hover:bg-[#34322F] hover:text-white rounded-xl transition-colors inline-flex items-center justify-center cursor-pointer"
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDelete(form);
+                                                            }} 
+                                                            className="p-1.5 text-[#D14343] bg-[#1C1A18] border border-[#34322F] hover:bg-[#34322F] hover:text-[#ff4444] rounded-xl transition-colors inline-flex items-center justify-center cursor-pointer"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
 
-            {dialogOpen && (
-                <FormDialog 
-                    open={dialogOpen} 
-                    onClose={() => setDialogOpen(false)} 
-                    form={selectedForm}
-                    initialDraft={selectedDraft || undefined}
-                    onSaved={() => fetchForms(false)} 
-                />
-            )}
+                        {/* TEMPLATES TAB */}
+                        {tabValue === 1 && (
+                            <div className="py-24 text-center bg-[#161412] border border-dashed border-[#34322F] rounded-[24px]">
+                                <Sparkles className="h-16 w-16 mx-auto text-[#9B9691] opacity-35 mb-4" />
+                                <h3 className="text-lg font-bold font-clash text-white tracking-tight">Templates coming soon.</h3>
+                            </div>
+                        )}
 
-            {settingsOpen && (
-                <FormSettingsDialog
-                    open={settingsOpen}
-                    onClose={() => setSettingsOpen(false)}
-                    form={selectedForm}
-                    onSaved={() => fetchForms(false)}
-                />
-            )}
+                        {/* OFFLINE DRAFTS TAB */}
+                        {tabValue === 2 && (
+                            <>
+                                {offlineDrafts.length === 0 ? (
+                                    <div className="py-24 text-center bg-[#161412] border border-dashed border-[#34322F] rounded-[24px]">
+                                        <History className="h-16 w-16 mx-auto text-[#9B9691] opacity-35 mb-4" />
+                                        <h3 className="text-lg font-bold font-clash text-white tracking-tight">No offline drafts found.</h3>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {offlineDrafts.map((draft) => (
+                                            <div 
+                                                key={draft.id}
+                                                className="bg-[#161412] border border-[#34322F] rounded-[28px] p-6 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] transition-all duration-300 hover:border-[#FFB020] hover:-translate-y-0.5 flex flex-col justify-between h-full"
+                                            >
+                                                <div>
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <span className="text-[9px] font-bold font-mono px-2 py-0.5 rounded border bg-transparent text-[#FFB020] border-[#FFB020] tracking-wider">
+                                                            LOCAL DRAFT
+                                                        </span>
+                                                        <span className="text-xs text-[#9B9691] font-mono">
+                                                            {new Date(draft.updatedAt).toLocaleTimeString()}
+                                                        </span>
+                                                    </div>
+                                                    <h2 className="text-lg font-bold mb-1 text-white font-clash tracking-tight truncate">
+                                                        {draft.title || 'Untitled Portal'}
+                                                    </h2>
+                                                    <p className="text-[#9B9691] text-xs sm:text-sm font-satoshi leading-relaxed mb-4 min-h-[3em]">
+                                                        Last saved locally. Sync required to publish.
+                                                    </p>
+                                                </div>
 
-            {/* ACTION MENU */}
-            <Menu
-                anchorEl={menuAnchor?.element}
-                open={Boolean(menuAnchor)}
-                onClose={handleMenuClose}
-                PaperProps={{
-                    sx: {
-                        bgcolor: '#161412',
-                        border: '1px solid #34322F',
-                        borderRadius: '16px',
-                        minWidth: 160,
-                        boxShadow: '0 12px 24px -10px rgba(0,0,0,1)',
-                        '& .MuiMenuItem-root': {
-                            fontSize: '0.8rem',
-                            fontWeight: 800,
-                            gap: 1.5,
-                            py: 1.2,
-                            color: '#9B9691',
-                            fontFamily: 'var(--font-satoshi)',
-                            '&:hover': { bgcolor: '#1C1A18', color: 'white' }
-                        }
-                    }
-                }}
-                transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-            >
-                <MuiMenuItem onClick={() => { handleMenuClose(); handleEdit(menuAnchor!.form); }}>
-                    <EditIcon fontSize="small" /> Edit Schema
-                </MuiMenuItem>
-                <MuiMenuItem onClick={() => handleOpenSettings(menuAnchor!.form)}>
-                    <SettingsIcon fontSize="small" /> Settings
-                </MuiMenuItem>
-                <MuiMenuItem onClick={() => { 
-                    handleMenuClose(); 
-                    openDrawer('share-note', {
-                        resourceId: menuAnchor!.form.$id,
-                        resourceType: 'form',
-                        resourceTitle: menuAnchor!.form.title
-                    });
-                }}>
-                    <Share2 size={16} /> Share Form
-                </MuiMenuItem>
-                <MuiMenuItem onClick={() => { handleMenuClose(); handleTogglePin(menuAnchor!.form); }}>
-                    <PinIcon fontSize="small" sx={{ color: menuAnchor?.form.isPinned ? '#F59E0B' : 'inherit' }} /> {menuAnchor?.form.isPinned ? 'Unpin' : 'Pin'} Form
-                </MuiMenuItem>
-                <Divider sx={{ borderColor: '#34322F', my: 0.5 }} />
-                <MuiMenuItem onClick={() => { handleMenuClose(); handleDelete(menuAnchor!.form); }} sx={{ color: '#D14343 !important' }}>
-                    <DeleteIcon fontSize="small" /> Delete Form
-                </MuiMenuItem>
-            </Menu>
-          </MultiSectionContainer>
-        </Box>
-  );
+                                                <div>
+                                                    <hr className="border-[#34322F] mb-4" />
+                                                    <div className="flex gap-2 items-center">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleEditDraft(draft)}
+                                                            className="flex items-center gap-1.5 px-4 py-2 bg-[#1C1A18] border border-[#34322F] hover:bg-[#34322F] text-white hover:text-white rounded-xl transition-all font-satoshi text-xs font-bold cursor-pointer"
+                                                        >
+                                                            <Edit className="h-3.5 w-3.5" />
+                                                            <span>Resume</span>
+                                                        </button>
+                                                        <div className="flex-grow" />
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => handleDeleteDraft(draft)} 
+                                                            className="p-1.5 text-[#D14343] bg-[#1C1A18] border border-[#34322F] hover:bg-[#34322F] hover:text-[#ff4444] rounded-xl transition-colors inline-flex items-center justify-center cursor-pointer"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                )}
+
+                {dialogOpen && (
+                    <FormDialog 
+                        open={dialogOpen} 
+                        onClose={() => setDialogOpen(false)} 
+                        form={selectedForm}
+                        initialDraft={selectedDraft || undefined}
+                        onSaved={() => fetchForms(false)} 
+                    />
+                )}
+
+                {settingsOpen && (
+                    <FormSettingsDialog
+                        open={settingsOpen}
+                        onClose={() => setSettingsOpen(false)}
+                        form={selectedForm}
+                        onSaved={() => fetchForms(false)}
+                    />
+                )}
+            </MultiSectionContainer>
+        </div>
+    );
 }

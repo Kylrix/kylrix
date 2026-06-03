@@ -2,31 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  Paper, 
-  IconButton, 
-  TextField, 
-  CircularProgress, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  Chip,
-  Stack,
-  InputAdornment
-} from '@/lib/mui-tailwind/material';
-import { alpha } from '@/lib/mui-tailwind/material';
-import {
-  Shield as ShieldIcon,
-  ContentCopy as ContentCopyIcon,
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Search as SearchIcon,
-} from '@/lib/mui-tailwind/icons';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Shield, Copy, Pencil, Trash2, Search } from 'lucide-react';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { listTotpSecrets, deleteTotpSecret, listFolders } from '@/lib/appwrite';
 import { generateTOTP } from '@/lib/totp-util';
@@ -119,7 +95,6 @@ function TOTPPageContent() {
       .finally(() => setLoading(false));
   }, [user, showNew, isVaultUnlocked]);
 
-
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(Date.now());
@@ -189,350 +164,206 @@ function TOTPPageContent() {
     const faviconUrl = getFaviconUrl(totp.url);
     const issuerInitials = totp.issuer ? totp.issuer.trim().charAt(0).toUpperCase() : "?";
 
+    const isSelected = selectedTotp?.$id === totp.$id;
+
+    // SVG variables
+    const radius = 10;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference - (progress / 100) * circumference;
+
     return (
-      <Paper
+      <div
         onClick={() => setSelectedTotp(totp)}
-        elevation={0}
-        sx={{
-          p: 2.5,
-          borderRadius: '24px',
-          bgcolor: selectedTotp?.$id === totp.$id ? '#1C1A18' : '#161412',
-          border: '1px solid',
-          borderColor: selectedTotp?.$id === totp.$id ? alpha('#10B981', 0.4) : '#1C1A18',
-          transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-          boxShadow: '0 4px 4px -4px rgba(0,0,0,0.9), 0 2px 3px -3px rgba(37,35,33,0.9)',
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          justifyContent: 'space-between',
-          backgroundImage: 'none',
-          cursor: 'pointer',
-          '&:hover': {
-            bgcolor: '#1C1A18',
-            borderColor: alpha('#10B981', 0.2),
-            transform: 'translateY(-2px)',
-            boxShadow: '0 8px 10px -8px rgba(0,0,0,1), 0 6px 8px -6px rgba(37,35,33,1)',
-            '& .fav-box': { borderColor: alpha('#10B981', 0.2), bgcolor: alpha('#10B981', 0.05) }
-          }
-        }}
+        className={`p-5 rounded-3xl transition-all duration-300 flex flex-col sm:flex-row sm:items-center sm:justify-between cursor-pointer border ${
+          isSelected 
+            ? 'bg-[#1C1A18] border-emerald-500/40' 
+            : 'bg-[#161412] border-[#1C1A18] hover:bg-[#1C1A18] hover:border-emerald-500/20'
+        } hover:-translate-y-0.5 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)]`}
       >
         {/* Left Side: Logo/Avatar & Info */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, minWidth: 0, width: { xs: '100%', sm: 'auto' } }}>
+        <div className="flex items-center gap-3.5 min-w-0 w-full sm:w-auto">
           {faviconUrl ? (
-            <Box 
-              className="fav-box"
-              sx={{
-                width: 52,
-                height: 52,
-                borderRadius: '16px',
-                bgcolor: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <Box 
-                component="img" 
+            <div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors">
+              <img 
                 src={faviconUrl} 
                 alt={totp.issuer || 'app favicon'}
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = 'none';
                 }}
-                sx={{ width: 28, height: 28, borderRadius: '6px' }} 
+                className="w-7 h-7 rounded-md" 
               />
-            </Box>
+            </div>
           ) : (
-            <Box 
-              className="fav-box"
-              sx={{ 
-                width: 52, 
-                height: 52, 
-                borderRadius: '16px', 
-                bgcolor: 'rgba(255, 255, 255, 0.02)', 
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                flexShrink: 0
-              }}
-            >
-              <Typography sx={{ fontWeight: 900, color: '#10B981', fontSize: '1.25rem', fontFamily: 'var(--font-clash)' }}>
+            <div className="w-[52px] h-[52px] rounded-2xl bg-white/2 border border-white/5 flex items-center justify-center flex-shrink-0 transition-colors">
+              <span className="font-black text-emerald-500 text-xl font-clash">
                 {issuerInitials}
-              </Typography>
-            </Box>
+              </span>
+            </div>
           )}
 
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="subtitle1" noWrap sx={{ fontWeight: 800, color: '#fff', fontFamily: 'var(--font-clash)', fontSize: '1.05rem', lineHeight: 1.2 }}>
+          <div className="min-w-0 flex-1">
+            <div className="text-[1.05rem] font-extrabold text-white font-clash leading-tight truncate">
               {totp.issuer || "Smart Code"}
-            </Typography>
-            <Typography variant="body2" noWrap sx={{ color: '#9B9691', mt: 0.5, fontWeight: 500, fontFamily: 'var(--font-satoshi)', fontSize: '0.9rem' }}>
+            </div>
+            <div className="text-sm font-medium text-[#9B9691] font-satoshi mt-0.5 truncate">
               {totp.accountName || "No account info"}
-            </Typography>
+            </div>
             
-            <Stack direction="row" spacing={1} sx={{ mt: 1, flexWrap: 'wrap', gap: 0.5 }}>
+            <div className="flex flex-wrap gap-1 mt-2">
               {folderName && (
-                <Chip 
-                  label={folderName} 
-                  size="small" 
-                  sx={{ 
-                    height: 18, 
-                    fontSize: '0.6rem', 
-                    fontWeight: 900, 
-                    bgcolor: 'rgba(255, 255, 255, 0.04)',
-                    color: '#9B9691',
-                    borderRadius: '4px',
-                    textTransform: 'uppercase'
-                  }} 
-                />
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-white/4 text-[#9B9691] uppercase tracking-wider">
+                  {folderName}
+                </span>
               )}
               {totp.sharedFrom && (
-                <Chip
-                  label={`Received`}
-                  size="small"
-                  sx={{
-                    height: 18,
-                    fontSize: '0.6rem',
-                    fontWeight: 900,
-                    bgcolor: alpha('#10B981', 0.08),
-                    color: '#10B981',
-                    borderRadius: '4px',
-                    textTransform: 'uppercase'
-                  }}
-                />
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-black bg-emerald-500/10 text-emerald-500 uppercase tracking-wider">
+                  Received
+                </span>
               )}
-            </Stack>
-          </Box>
-        </Box>
+            </div>
+          </div>
+        </div>
 
         {/* Right Side: Code, Timer & Actions */}
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: { xs: 2, sm: 3 }, 
-            width: { xs: '100%', sm: 'auto' }, 
-            justifyContent: { xs: 'space-between', sm: 'flex-end' },
-            mt: { xs: 2.5, sm: 0 },
-            pt: { xs: 2.5, sm: 0 },
-            borderTop: { xs: '1px solid rgba(255, 255, 255, 0.04)', sm: 'none' }
-          }}
-        >
+        <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 w-full sm:w-auto mt-5 sm:mt-0 pt-5 sm:pt-0 border-t sm:border-t-0 border-white/5">
           {/* 6-Digit Code & Copy Button */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', color: '#10B981' }}>
+          <div className="flex items-center gap-3">
+            <span className="text-xl font-black font-mono tracking-wider text-emerald-500">
               {code.substring(0, 3)} {code.substring(3)}
-            </Typography>
-            <IconButton 
-              size="small" 
-              onClick={() => copyToClipboard(code)} 
-              sx={{ 
-                color: '#10B981', 
-                bgcolor: 'rgba(16, 185, 129, 0.05)',
-                border: '1px solid rgba(16, 185, 129, 0.1)',
-                borderRadius: '10px',
-                p: 1,
-                '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.1)' }
-              }}
+            </span>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                copyToClipboard(code);
+              }} 
+              className="p-2 text-emerald-500 bg-emerald-500/5 border border-emerald-500/10 rounded-xl hover:bg-emerald-500/10 transition-colors"
             >
-              <ContentCopyIcon sx={{ fontSize: 15 }} />
-            </IconButton>
-          </Box>
+              <Copy className="h-[15px] w-[15px]" />
+            </button>
+          </div>
 
           {/* Time Countdown Indicator */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Typography variant="caption" sx={{ fontWeight: 800, color: timeRemaining <= 5 ? '#EF4444' : '#9B9691', minWidth: '22px', textAlign: 'right' }}>
+          <div className="flex items-center gap-3">
+            <span className={`text-xs font-black min-w-[22px] text-right ${
+              timeRemaining <= 5 ? 'text-red-500' : 'text-[#9B9691]'
+            }`}>
               {timeRemaining}s
-            </Typography>
-            <Box sx={{ position: 'relative', display: 'inline-flex' }}>
-              <CircularProgress
-                variant="determinate"
-                value={progress}
-                size={28}
-                thickness={6}
-                sx={{
-                  color: timeRemaining <= 5 ? '#EF4444' : '#10B981',
-                  '& .MuiCircularProgress-circle': {
-                    strokeLinecap: 'round',
-                  },
-                }}
-              />
-              <CircularProgress
-                variant="determinate"
-                value={100}
-                size={28}
-                thickness={6}
-                sx={{
-                  color: 'rgba(255, 255, 255, 0.04)',
-                  position: 'absolute',
-                  left: 0,
-                }}
-              />
-            </Box>
-          </Box>
+            </span>
+            <div className="relative inline-flex items-center justify-center">
+              <svg className="w-7 h-7 transform -rotate-90">
+                <circle
+                  cx="14"
+                  cy="14"
+                  r={radius}
+                  className="stroke-white/5 fill-transparent"
+                  strokeWidth="2.5"
+                />
+                <circle
+                  cx="14"
+                  cy="14"
+                  r={radius}
+                  className={`fill-transparent transition-[stroke-dashoffset] duration-1000 ${
+                    timeRemaining <= 5 ? 'stroke-[#EF4444]' : 'stroke-[#10B981]'
+                  }`}
+                  strokeWidth="2.5"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+          </div>
 
           {/* Action Buttons */}
-          <Box sx={{ display: 'flex', gap: 0.75 }}>
-            <IconButton 
-              size="small" 
-              onClick={() => openEditDialog(totp)} 
-              sx={{ 
-                color: '#9B9691', 
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-                borderRadius: '10px',
-                p: 1,
-                '&:hover': { color: '#fff', bgcolor: 'rgba(255, 255, 255, 0.05)' }
-              }}
+          <div className="flex gap-2">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                openEditDialog(totp);
+              }} 
+              className="p-2 text-[#9B9691] border border-white/5 rounded-xl hover:text-white hover:bg-white/5 transition-colors"
             >
-              <EditIcon sx={{ fontSize: 15 }} />
-            </IconButton>
-            <IconButton 
-              size="small" 
-              onClick={() => openDeleteDialog(totp.$id)} 
-              sx={{ 
-                color: '#9B9691', 
-                border: '1px solid rgba(255, 255, 255, 0.04)',
-                borderRadius: '10px',
-                p: 1,
-                '&:hover': { color: '#EF4444', bgcolor: 'rgba(239, 68, 68, 0.05)', borderColor: 'rgba(239, 68, 68, 0.2)' }
-              }}
+              <Pencil className="h-[15px] w-[15px]" />
+            </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                openDeleteDialog(totp.$id);
+              }} 
+              className="p-2 text-[#9B9691] border border-white/5 rounded-xl hover:text-red-500 hover:bg-red-500/5 hover:border-red-500/20 transition-colors"
             >
-              <DeleteIcon sx={{ fontSize: 15 }} />
-            </IconButton>
-          </Box>
-        </Box>
-      </Paper>
+              <Trash2 className="h-[15px] w-[15px]" />
+            </button>
+          </div>
+        </div>
+      </div>
     );
   };
 
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      minHeight: '100vh', 
-      pb: 10,
-      bgcolor: '#0A0908',
-      pt: { xs: 2, md: 4 }
-    }}>
+    <div className="flex flex-col min-h-screen pb-10 bg-[#0A0908] pt-4 md:pt-8">
       <MultiSectionContainer panels={['secrets', 'secret_chat']} contextId={selectedTotp?.issuer || selectedTotp?.accountName || undefined}>
       {/* Header & Back Action */}
-      <Box sx={{ px: { xs: 2, md: 6 } }}>
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
-          <IconButton 
+      <div className="px-4 md:px-12">
+        <div className="flex items-center gap-3.5 mb-8">
+          <button 
             onClick={() => router.back()} 
-            sx={{ 
-              color: '#fff', 
-              bgcolor: '#161412',
-              border: '1px solid #1C1A18',
-              '&:hover': { bgcolor: '#1C1A18' }
-            }}
+            className="p-2 text-white bg-[#161412] border border-[#1C1A18] rounded-xl hover:bg-[#1C1A18] transition-colors"
           >
             <ArrowLeft size={20} />
-          </IconButton>
-          <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+          </button>
+          <h1 className="text-2xl font-black font-clash text-white">
             Smart Codes
-          </Typography>
-        </Stack>
+          </h1>
+        </div>
 
         {/* Filter/Search Bar & Add Button Stack */}
-        <Stack 
-          direction={{ xs: 'column', sm: 'row' }} 
-          spacing={2} 
-          justifyContent="space-between" 
-          alignItems={{ xs: 'stretch', sm: 'center' }} 
-          sx={{ mb: 4, maxWidth: 800 }}
-        >
-          <TextField
-            fullWidth
-            placeholder="Search codes..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            variant="filled"
-            InputProps={{
-              disableUnderline: true,
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: "rgba(255,255,255,0.3)", fontSize: 18 }} />
-                </InputAdornment>
-              ),
-              sx: { 
-                borderRadius: '16px', 
-                bgcolor: '#161412', 
-                border: '1px solid #1C1A18',
-                height: 48,
-                '& input': { color: '#fff' }
-              }
-            }}
-            sx={{ maxWidth: { xs: '100%', sm: 400 }, flexGrow: 1 }}
-          />
-          <Button 
-            variant="contained" 
-            startIcon={<Plus size={18} />} 
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-8 max-w-3xl">
+          <div className="relative w-full sm:max-w-[400px] flex-grow">
+            <span className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <Search className="text-white/30 h-[18px] w-[18px]" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search codes..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-12 pl-11 pr-4 rounded-2xl bg-[#161412] border border-[#1C1A18] text-white placeholder-white/30 focus:outline-none focus:border-emerald-500 transition-colors"
+            />
+          </div>
+          <button 
             onClick={() => setShowNew(true)}
-            sx={{ 
-              borderRadius: '16px', 
-              fontWeight: 900, 
-              px: 4,
-              height: 48,
-              bgcolor: '#10B981',
-              color: '#000',
-              textTransform: 'none',
-              fontSize: '0.95rem',
-              '&:hover': { bgcolor: '#059669' },
-              boxShadow: '0 8px 16px rgba(16, 185, 129, 0.1)'
-            }}
+            className="flex items-center justify-center gap-2 px-8 h-12 font-black bg-[#10B981] text-black hover:bg-[#059669] rounded-2xl transition-colors shadow-[0_8px_16px_rgba(16, 185, 129, 0.1)]"
           >
+            <Plus size={18} />
             Add Code
-          </Button>
-        </Stack>
+          </button>
+        </div>
 
         {/* Main List Area */}
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 12, maxWidth: 800 }}>
-            <CircularProgress color="primary" />
-          </Box>
+          <div className="flex justify-center py-24 max-w-3xl">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+          </div>
         ) : totpCodes.length === 0 ? (
-          <Paper 
-            elevation={0}
-            sx={{ 
-              p: 10, 
-              textAlign: 'center', 
-              borderRadius: '32px', 
-              bgcolor: '#161412', 
-              border: '1px dashed #1C1A18',
-              maxWidth: 800,
-              backgroundImage: 'none'
-            }}
-          >
-            <ShieldIcon sx={{ fontSize: 64, display: 'block', mx: 'auto', mb: 3, color: 'rgba(255, 255, 255, 0.05)' }} />
-            <Typography variant="h6" sx={{ fontWeight: 900, color: '#fff', mb: 1, fontFamily: 'var(--font-clash)' }}>
+          <div className="p-24 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18] max-w-3xl">
+            <Shield className="h-16 w-16 mx-auto mb-6 text-white/5" />
+            <h2 className="text-xl font-black text-white mb-2 font-clash">
               No Smart Codes
-            </Typography>
-            <Typography variant="body2" sx={{ color: '#9B9691', maxWidth: 320, mx: 'auto', mb: 4 }}>
+            </h2>
+            <p className="text-[#9B9691] max-w-xs mx-auto mb-8 text-sm">
               Your secure vault is ready to manage two-step verification codes.
-            </Typography>
-            <Button 
-              variant="contained" 
-              startIcon={<Plus size={18} />} 
+            </p>
+            <button 
               onClick={() => setShowNew(true)} 
-              sx={{ 
-                borderRadius: '16px', 
-                fontWeight: 900, 
-                px: 4,
-                height: 48,
-                bgcolor: '#10B981',
-                color: '#000',
-                textTransform: 'none',
-                '&:hover': { bgcolor: '#059669' }
-              }}
+              className="inline-flex items-center gap-2 px-6 h-12 bg-[#10B981] hover:bg-[#059669] text-black font-black rounded-2xl transition-colors"
             >
+              <Plus size={18} />
               Add Code
-            </Button>
-          </Paper>
+            </button>
+          </div>
         ) : (
-          <Stack spacing={1.5} sx={{ maxWidth: 800 }}>
+          <div className="flex flex-col gap-3.5 max-w-3xl">
             {totpCodes
               .filter((totp) => {
                 const q = search.trim().toLowerCase();
@@ -546,9 +377,9 @@ function TOTPPageContent() {
               .map((totp) => (
                 <TOTPCard key={totp.$id} totp={totp} />
               ))}
-          </Stack>
+          </div>
         )}
-      </Box>
+      </div>
 
       {/* Dialogs */}
       {showNew && (
@@ -563,95 +394,61 @@ function TOTPPageContent() {
       )}
 
       {deleteDialog.open && (
-        <Dialog
-          open={deleteDialog.open}
-          onClose={() => setDeleteDialog({ open: false, id: null })}
-          keepMounted={false}
-          disablePortal={true}
-          PaperProps={{
-            sx: {
-              borderRadius: '24px',
-              bgcolor: '#161412',
-              border: '1px solid #1C1A18',
-              backgroundImage: 'none',
-              p: 2,
-              maxWidth: 400,
-              width: '100%'
-            }
-          }}
-        >
-          <DialogTitle sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', px: 3, pt: 3 }}>
-            Delete Smart Code
-          </DialogTitle>
-          <DialogContent sx={{ px: 3 }}>
-            <Typography variant="body2" sx={{ color: '#9B9691', mb: 3, lineHeight: 1.6 }}>
-              Are you sure you want to delete this verification code? This action cannot be undone.
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: 2.5, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid rgba(255,255,255,0.03)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 rounded-[24px] bg-[#161412] border border-[#1C1A18] shadow-[0_40px_80px_rgba(0,0,0,0.6)] animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-2xl font-black font-clash text-white mb-3">
+              Delete Smart Code
+            </h3>
+            <div className="mb-4">
+              <p className="text-sm text-[#9B9691] leading-relaxed">
+                Are you sure you want to delete this verification code? This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-2.5 p-4 rounded-2xl bg-[#0A0908] border border-white/5 mb-6">
               {(() => {
                 const selected = totpCodes.find((t) => t.$id === deleteDialog.id);
                 if (!selected) return null;
                 return (
                   <>
-                    <Box>
-                      <Typography variant="caption" sx={{ color: '#9B9691', display: 'block', mb: 0.5, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Issuer</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>{selected.issuer || "—"}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" sx={{ color: '#9B9691', display: 'block', mb: 0.5, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }}>{selected.accountName || "—"}</Typography>
-                    </Box>
+                    <div>
+                      <span className="text-[10px] text-[#9B9691] block mb-0.5 font-black uppercase tracking-wider">Issuer</span>
+                      <span className="text-sm font-extrabold text-white">{selected.issuer || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-[#9B9691] block mb-0.5 font-black uppercase tracking-wider">Account</span>
+                      <span className="text-sm font-extrabold text-white">{selected.accountName || "—"}</span>
+                    </div>
                   </>
                 );
               })()}
-            </Box>
-          </DialogContent>
-          <DialogActions sx={{ p: 3, gap: 1.5, justifyContent: 'space-between' }}>
-            <Button 
-              fullWidth 
-              variant="outlined" 
-              onClick={() => setDeleteDialog({ open: false, id: null })}
-              sx={{ 
-                borderRadius: '14px', 
-                borderColor: 'rgba(255, 255, 255, 0.1)', 
-                color: '#fff',
-                textTransform: 'none',
-                fontWeight: 800,
-                '&:hover': {
-                  borderColor: '#fff',
-                  bgcolor: 'rgba(255, 255, 255, 0.05)'
-                }
-              }}
-            >
-              Cancel
-            </Button>
-            <Button 
-              fullWidth 
-              variant="contained" 
-              color="error"
-              onClick={() => {
-                if (deleteDialog.id) {
-                  requestSudo({
-                    onSuccess: () => handleDelete(deleteDialog.id!)
-                  });
-                }
-              }}
-              sx={{ 
-                borderRadius: '14px', 
-                bgcolor: '#EF4444',
-                color: '#fff',
-                textTransform: 'none',
-                fontWeight: 800,
-                '&:hover': { bgcolor: '#DC2626' }
-              }}
-            >
-              Delete
-            </Button>
-          </DialogActions>
-        </Dialog>
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeleteDialog({ open: false, id: null })}
+                className="w-1/2 py-3 px-4 border border-white/10 text-white font-extrabold rounded-xl hover:border-white hover:bg-white/5 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  if (deleteDialog.id) {
+                    requestSudo({
+                      onSuccess: () => handleDelete(deleteDialog.id!)
+                    });
+                  }
+                }}
+                className="w-1/2 py-3 px-4 bg-[#EF4444] text-white font-extrabold rounded-xl hover:bg-[#DC2626] transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       </MultiSectionContainer>
-    </Box>
+    </div>
   );
 }
 
@@ -659,13 +456,12 @@ export default function TOTPPage() {
   return (
     <Suspense
       fallback={
-        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#0A0908' }}>
-          <CircularProgress color="primary" />
-        </Box>
+        <div className="flex items-center justify-center min-h-screen bg-[#0A0908]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+        </div>
       }
     >
       <TOTPPageContent />
     </Suspense>
   );
 }
-
