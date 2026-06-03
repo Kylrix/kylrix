@@ -301,7 +301,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
 
   return (
     <Box sx={{
-      height: 'calc(100vh - 120px)',
+      maxHeight: 'calc(100vh - 140px)',
       display: 'flex',
       flexDirection: 'column',
       gap: 3,
@@ -309,6 +309,13 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
       top: '108px',
       width: '100%',
       pointerEvents: 'auto',
+      overflowY: 'auto',
+      pr: '4px',
+      msOverflowStyle: 'none',
+      scrollbarWidth: 'none',
+      '&::-webkit-scrollbar': {
+        display: 'none'
+      }
     }}>
       {panels.map((panel) => {
         const isOpen = !!openStates[panel];
@@ -324,8 +331,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
@@ -411,8 +420,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
@@ -508,8 +519,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
@@ -595,8 +608,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
@@ -630,8 +645,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
@@ -692,8 +709,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -784,8 +803,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
@@ -871,8 +892,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
@@ -962,8 +985,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
@@ -1053,8 +1078,10 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: isOpen ? '1 1 auto' : '0 0 68px',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                flex: '0 0 auto',
+                height: isOpen ? 'auto' : '68px',
+                maxHeight: isOpen ? '380px' : '68px',
               }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: isOpen ? 2 : 0 }}>
                   <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1090,8 +1117,8 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
             return (
               <div 
                 key={panel} 
-                className={`bg-[#161412] rounded-[24px] border border-white/5 p-5 flex flex-col overflow-hidden transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  isOpen ? 'flex-[1_1_auto]' : 'flex-[0_0_68px] h-[68px]'
+                className={`bg-[#161412] rounded-[24px] border border-white/5 p-5 flex flex-col overflow-hidden transition-all duration-300 ease-out flex-none ${
+                  isOpen ? 'h-auto max-h-[380px]' : 'h-[68px]'
                 }`}
               >
                 <div className={`flex justify-between items-center ${isOpen ? 'mb-2' : ''}`}>
@@ -1156,8 +1183,8 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
             return (
               <div 
                 key={panel} 
-                className={`bg-[#161412] rounded-[24px] border border-white/5 p-5 flex flex-col overflow-hidden transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                  isOpen ? 'flex-[1_1_auto]' : 'flex-[0_0_68px] h-[68px]'
+                className={`bg-[#161412] rounded-[24px] border border-white/5 p-5 flex flex-col overflow-hidden transition-all duration-300 ease-out flex-none ${
+                  isOpen ? 'h-auto max-h-[380px]' : 'h-[68px]'
                 }`}
               >
                 <div className={`flex justify-between items-center ${isOpen ? 'mb-2' : ''}`}>
@@ -1173,31 +1200,67 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                 </div>
 
                 {isOpen && (
-                  <div className="space-y-4 mt-3">
-                    <div className="flex gap-3">
-                      <div className="flex-1 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                        <span className="text-[9px] text-white/40 font-black uppercase tracking-wider block mb-1">
+                  <div className="space-y-4 mt-3 flex-1 overflow-y-auto pr-0.5 scrollbar-thin">
+                    <div className="space-y-2">
+                      <span className="text-[9px] text-[#10B981] font-black uppercase tracking-wider block mb-1.5 font-mono">
+                        Quick Execution Deck
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => openUnified('note')}
+                          className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/10 text-left transition-all group"
+                        >
+                          <FileText size={15} className="text-[#EC4899] group-hover:scale-110 transition-transform" />
+                          <span className="text-[11px] font-bold text-white leading-tight">Draft Note</span>
+                        </button>
+                        <button
+                          onClick={() => openUnified('new-project')}
+                          className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/10 text-left transition-all group"
+                        >
+                          <Plus size={15} className="text-[#6366F1] group-hover:scale-110 transition-transform" />
+                          <span className="text-[11px] font-bold text-white leading-tight">New Project</span>
+                        </button>
+                        <button
+                          onClick={() => openUnified('new-chat')}
+                          className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/10 text-left transition-all group"
+                        >
+                          <MessageSquare size={15} className="text-[#F59E0B] group-hover:scale-110 transition-transform" />
+                          <span className="text-[11px] font-bold text-white leading-tight">New Chat</span>
+                        </button>
+                        <button
+                          onClick={() => openUnified('github-integration')}
+                          className="flex items-center gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04] hover:bg-white/[0.06] hover:border-white/10 text-left transition-all group"
+                        >
+                          <Send size={15} className="text-[#10B981] group-hover:scale-110 transition-transform" />
+                          <span className="text-[11px] font-bold text-white leading-tight">Link Github</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <div className="flex-1 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                        <span className="text-[9px] text-white/40 font-black uppercase tracking-wider block mb-0.5">
                           Total
                         </span>
-                        <span className="text-2xl font-black text-white font-mono">
+                        <span className="text-lg font-black text-white font-mono">
                           {totalProjects}
                         </span>
                       </div>
-                      <div className="flex-1 p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                        <span className="text-[9px] text-white/40 font-black uppercase tracking-wider block mb-1">
+                      <div className="flex-1 p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                        <span className="text-[9px] text-white/40 font-black uppercase tracking-wider block mb-0.5">
                           Pinned
                         </span>
-                        <span className="text-2xl font-black text-[#F59E0B] font-mono">
+                        <span className="text-lg font-black text-[#F59E0B] font-mono">
                           {pinnedProjects}
                         </span>
                       </div>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.04]">
-                      <span className="text-[9px] text-white/40 font-black uppercase tracking-wider block mb-3">
+                    <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+                      <span className="text-[9px] text-white/40 font-black uppercase tracking-wider block mb-2">
                         Status Distribution
                       </span>
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {Object.entries(statusSpreads).length === 0 ? (
                           <span className="text-[11px] text-white/40 italic">
                             No status data available.
@@ -1208,7 +1271,7 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
                               <span className="text-xs text-white/70 capitalize font-bold">
                                 {status}
                               </span>
-                              <span className="px-2 py-0.5 rounded-md bg-[#6366F1]/10 text-[#6366F1] font-black font-mono text-[10px]">
+                              <span className="px-2 py-0.5 rounded-md bg-[#6366F1]/10 text-[#6366F1] font-black font-mono text-[9px]">
                                 {count}
                               </span>
                             </div>

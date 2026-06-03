@@ -47,6 +47,14 @@ import {
   Lock,
   Globe,
   LayoutGrid,
+  FileText,
+  Activity,
+  Play,
+  RotateCcw,
+  UserCheck,
+  Terminal,
+  Loader2,
+  CheckCircle2,
 } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -58,6 +66,13 @@ import { useLocalContext } from '@/lib/context-engine';
 import { useAuth } from '@/lib/auth';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { createNote } from '@/lib/appwrite/note';
+import { anonymizeWorkflow, negateWorkflow, WorkflowChain } from '@/lib/workflow-engine';
+import { 
+  saveWorkflowAction, 
+  listWorkflowsAction, 
+  deleteWorkflowAction 
+} from '@/lib/actions/workflows';
 
 const projectTemplates = [
   { 
@@ -251,15 +266,34 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin }: {
   };
 
   const statusColor = getStatusColor();
+  const projColor = (project as any).color || '#6366F1';
 
   return (
     <div
       onClick={() => onClick(project.$id)}
-      className="relative flex flex-col justify-between gap-5 p-6 w-full min-h-[196px] rounded-[28px] bg-[#161412] border border-[#34322F] hover:border-[#6366F1]/40 hover:bg-[#1C1A18] transition-all duration-300 ease-out cursor-pointer overflow-hidden group select-none max-w-full"
+      className="relative flex flex-col justify-between gap-5 p-6 w-full min-h-[196px] rounded-[28px] bg-[#161412] border transition-all duration-300 ease-out cursor-pointer overflow-hidden group select-none max-w-full"
+      style={{
+        borderColor: 'rgba(255, 255, 255, 0.06)',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = `${projColor}66`;
+        e.currentTarget.style.boxShadow = `0 0 20px ${projColor}08`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
     >
       <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
         {/* Left Icon */}
-        <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-white/3 text-white/60 grid place-items-center border border-white/8 group-hover:scale-105 group-hover:text-[#6366F1] group-hover:bg-[#6366F1]/10 group-hover:border-[#6366F1]/20 transition-all duration-300">
+        <div 
+          className="flex-shrink-0 w-12 h-12 rounded-2xl grid place-items-center border transition-all duration-300 group-hover:scale-105"
+          style={{
+            backgroundColor: `${projColor}1A`,
+            color: projColor,
+            borderColor: `${projColor}33`,
+          }}
+        >
           <LayoutGrid size={20} strokeWidth={1.5} />
         </div>
 
@@ -349,7 +383,13 @@ export default function ProjectsPage() {
   const router = useRouter();
   const { showSuccess, showError } = useToast();
   const { open } = useUnifiedDrawer();
-  const { savedWorkflows } = useLocalContext();
+  const { 
+    savedWorkflows,
+    isRecording, 
+    startRecording, 
+    stopRecording, 
+    updateWorkflow 
+  } = useLocalContext();
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
   
@@ -366,6 +406,122 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Projects[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
+
+  // Live Draft Cockpit States
+  const [draftTitle, setDraftTitle] = useState('');
+  const [draftText, setDraftText] = useState('');
+  const [drafting, setDrafting] = useState(false);
+
+  // Workflow Simulator States
+  const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null);
+  const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
+
+  // Recorder states
+  const [wfName, setWfName] = useState('');
+  const [wfDesc, setWfDesc] = useState('');
+
+  // Sync workflows from Appwrite database on mount
+  useEffect(() => {
+    const syncDb = async () => {
+      try {
+        const res = await listWorkflowsAction();
+        if (res.success && res.data) {
+          res.data.forEach(wf => {
+            updateWorkflow(wf.id, wf);
+          });
+        }
+      } catch (e) {
+        console.error('Failed syncing workflows:', e);
+      }
+    };
+    syncDb();
+  }, [updateWorkflow]);
+
+  const handleSaveDraft = async () => {
+    if (!draftText.trim()) {
+      showError('Draft content cannot be empty');
+      return;
+    }
+    setDrafting(true);
+    try {
+      const title = draftTitle.trim() || 'Untitled Quick Draft';
+      await createNote({ title, content: draftText });
+      showSuccess(`Draft "${title}" saved secure!`);
+      setDraftText('');
+      setDraftTitle('');
+    } catch (e: any) {
+      showError('Failed to save draft', e.message);
+    } finally {
+      setDrafting(false);
+    }
+  };
+
+  const simulateWorkflow = async (wf: any) => {
+    setRunningWorkflow(wf.id);
+    setCurrentStepIndex(0);
+    for (let i = 0; i < wf.steps.length; i++) {
+      setCurrentStepIndex(i);
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+    setRunningWorkflow(null);
+    setCurrentStepIndex(-1);
+    showSuccess(`Trace "${wf.name}" executed successfully!`);
+  };
+
+  const handleTogglePrivacy = async (id: string, wf: WorkflowChain) => {
+    const updated = {
+      ...wf,
+      isPublic: !wf.isPublic
+    };
+    updateWorkflow(id, updated);
+    await saveWorkflowAction(updated);
+    showSuccess(updated.isPublic ? "Workflow is now public" : "Workflow is now private");
+  };
+
+  const handleAnonymize = async (id: string, wf: WorkflowChain) => {
+    const anon = anonymizeWorkflow(wf);
+    updateWorkflow(id, anon);
+    await saveWorkflowAction(anon);
+    showSuccess("Workflow securely anonymized");
+  };
+
+  const handleNegate = async (id: string, wf: WorkflowChain) => {
+    const res = negateWorkflow(wf);
+    if (!res.success || !res.workflow) {
+      showError(res.error || 'Failed to invert workflow.');
+      return;
+    }
+    updateWorkflow(res.workflow.id, res.workflow);
+    await saveWorkflowAction(res.workflow);
+    showSuccess("Inversion flow created!");
+  };
+
+  const handleDeleteWorkflow = async (id: string) => {
+    await deleteWorkflowAction(id);
+    const nextSaved = { ...savedWorkflows };
+    delete nextSaved[id];
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('kylrix_saved_workflows', JSON.stringify(nextSaved));
+    }
+    showSuccess("Workflow deleted");
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  };
+
+  const handleStopRecording = () => {
+    const name = wfName.trim() || 'Custom Flow';
+    const desc = wfDesc.trim() || 'Automated chain';
+    stopRecording(name, desc, 'workspace');
+    showSuccess(`Workflow "${name}" saved!`);
+    setWfName('');
+    setWfDesc('');
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  };
+
+  const workflowsList = Object.values(savedWorkflows || {});
 
   const fetchProjects = useCallback(async (force = false) => {
     setLoading(true);
@@ -516,48 +672,97 @@ export default function ProjectsPage() {
   );
 
   const workflowsCardElement = (
-    <div
-      onClick={() => router.push('/projects/workflows')}
-      className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-5 p-6 w-full rounded-[28px] bg-[#161412] border border-white/6 hover:border-[#6366F1]/30 hover:bg-[#1C1A18] transition-all duration-300 ease-out cursor-pointer overflow-hidden mb-6 group select-none max-w-full"
-    >
-      <div className="flex items-start gap-4 flex-1 min-w-0 w-full">
-        {/* Left Icon (Workflow) */}
-        <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-[#6366F1]/8 text-[#6366F1] grid place-items-center">
-          <Workflow size={28} strokeWidth={2} />
-        </div>
-
-        {/* Grouped Copy Column */}
-        <div className="flex-1 min-w-0 flex flex-col gap-1">
-          {/* Header Row */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h3 className="text-white text-lg font-black tracking-tight leading-tight">
-              Smart Action Workflows
-            </h3>
-            <span className="flex-shrink-0 bg-[#6366F1]/10 text-[#818CF8] text-[10px] font-black font-mono px-2 py-0.5 rounded border border-[#6366F1]/20">
-              {Object.keys(savedWorkflows || {}).length} SAVED
-            </span>
-          </div>
-
-          {/* Description Content */}
-          <p className="text-sm text-white/40 font-medium leading-relaxed break-words mt-1 max-w-[640px]">
-            Record, share, and automate action sequences to boost execution speed. Perfect for repetitive workspace tasks and smart guidance.
-          </p>
-        </div>
+    <div className="bg-[#161412] rounded-[32px] border border-white/6 p-6 mb-6 space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-white text-base font-black tracking-tight leading-tight flex items-center gap-2 font-mono select-none">
+          <Workflow size={18} className="text-[#6366F1]" />
+          Smart Automation Traces
+        </h3>
+        <span className="text-[10px] text-[#6366F1] font-black font-mono bg-[#6366F1]/10 px-2 py-0.5 rounded border border-[#6366F1]/20 uppercase select-none">
+          {workflowsList.length} Trace{workflowsList.length === 1 ? '' : 's'} Ready
+        </span>
       </div>
 
-      {/* Action Button */}
-      <div className="flex-shrink-0 w-full md:w-auto mt-3 md:mt-0 flex justify-end">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            router.push('/projects/workflows');
-          }}
-          className="flex items-center justify-center gap-2 rounded-xl border border-white/8 text-white px-5 py-2.5 text-xs font-extrabold bg-white/2 hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all duration-200 w-full md:w-auto"
-        >
-          Manage Workflows
-          <ArrowUpRight size={16} />
-        </button>
-      </div>
+      {workflowsList.length === 0 ? (
+        <div className="text-center py-6 text-white/40 text-xs">
+          No automation traces recorded yet. Hit &quot;Record New Flow&quot; above to capture execution paths.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {workflowsList.map((wf) => (
+            <div 
+              key={wf.id}
+              className="bg-[#0A0908]/60 border border-white/5 hover:border-[#6366F1]/30 rounded-2xl p-4 flex flex-col justify-between gap-4 transition-all"
+            >
+              <div className="space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="min-w-0">
+                    <h4 className="text-white font-extrabold text-sm truncate">{wf.name}</h4>
+                    <p className="text-white/40 text-[11px] leading-relaxed truncate">{wf.description || 'Automated action sequence'}</p>
+                  </div>
+                  <span className="bg-[#6366F1]/10 text-[#818CF8] text-[9px] font-black font-mono px-2 py-0.5 rounded border border-[#6366F1]/20 flex-shrink-0">
+                    {wf.steps.length} STEP{wf.steps.length === 1 ? '' : 'S'}
+                  </span>
+                </div>
+                
+                {/* Collapsible/Mini Step Indicators */}
+                <div className="flex flex-wrap gap-1">
+                  {wf.steps.map((step: any, idx: number) => (
+                    <span 
+                      key={idx} 
+                      title={step.actionId}
+                      className="text-[9px] font-mono text-white/40 bg-white/5 px-1.5 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors"
+                    >
+                      {step.actionId.substring(0, 12)}...
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-3 border-t border-white/4 gap-2 flex-wrap">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleTogglePrivacy(wf.id, wf)}
+                    title={wf.isPublic ? "Make Private" : "Make Public"}
+                    className="p-1.5 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                  >
+                    {wf.isPublic ? <Globe size={13} /> : <Lock size={13} />}
+                  </button>
+                  <button
+                    onClick={() => handleAnonymize(wf.id, wf)}
+                    title="Anonymize Metadata"
+                    className="p-1.5 rounded-lg text-white/40 hover:text-[#10B981] hover:bg-[#10B981]/5 transition-all"
+                  >
+                    <UserCheck size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleNegate(wf.id, wf)}
+                    title="Negate Trace Inversion"
+                    className="p-1.5 rounded-lg text-white/40 hover:text-[#6366F1] hover:bg-[#6366F1]/5 transition-all"
+                  >
+                    <RotateCcw size={13} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteWorkflow(wf.id)}
+                    title="Delete Trace"
+                    className="p-1.5 rounded-lg text-white/40 hover:text-[#FF453A] hover:bg-[#FF453A]/5 transition-all"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => simulateWorkflow(wf)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#6366F1] text-white hover:bg-[#4F46E5] transition-all"
+                >
+                  <Play size={10} fill="currentColor" />
+                  <span>Run Simulation</span>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -625,6 +830,61 @@ export default function ProjectsPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff', pt: { xs: 4, md: 6 }, pb: 10 }}>
+      {runningWorkflow && (
+        <div className="fixed inset-0 bg-[#0A0908]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#161412] border border-white/10 rounded-[32px] p-8 max-w-md w-full text-center space-y-6 shadow-2xl">
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 rounded-full border-4 border-[#6366F1]/20 animate-pulse"></div>
+              <div className="absolute inset-0 rounded-full border-t-4 border-[#6366F1] animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Zap className="text-[#6366F1] animate-bounce" size={32} />
+              </div>
+            </div>
+            
+            <div>
+              <h4 className="text-white text-xl font-black">Running Trace Pipeline</h4>
+              <p className="text-white/40 text-xs mt-1 font-mono uppercase tracking-wider">
+                {workflowsList.find(w => w.id === runningWorkflow)?.name || 'Workflow'}
+              </p>
+            </div>
+            
+            <div className="bg-[#0A0908] rounded-2xl p-4 border border-white/5 space-y-2 max-h-[160px] overflow-y-auto">
+              {workflowsList.find(w => w.id === runningWorkflow)?.steps.map((step: any, idx: number) => {
+                const isCurrent = idx === currentStepIndex;
+                const isCompleted = idx < currentStepIndex;
+                return (
+                  <div 
+                    key={idx} 
+                    className={`flex items-center gap-3 text-left transition-all duration-200 ${
+                      isCurrent ? 'scale-[1.02] translate-x-1' : ''
+                    }`}
+                  >
+                    <div className={`w-2 h-2 rounded-full ${
+                      isCurrent ? 'bg-[#6366F1] animate-ping' : isCompleted ? 'bg-[#10B981]' : 'bg-white/10'
+                    }`} />
+                    <span className={`text-xs font-mono truncate flex-1 ${
+                      isCurrent ? 'text-white font-extrabold' : isCompleted ? 'text-white/60' : 'text-white/20'
+                    }`}>
+                      {step.actionId}
+                    </span>
+                    {isCurrent && (
+                      <span className="text-[9px] font-black text-[#6366F1] animate-pulse">ACTIVE</span>
+                    )}
+                    {isCompleted && (
+                      <span className="text-[9px] font-black text-[#10B981]">OK</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <p className="text-[11px] text-white/50 font-medium">
+              Executing local trace logic safely...
+            </p>
+          </div>
+        </div>
+      )}
+
       <MultiSectionContainer panels={['projects_stats', 'projects_templates']}>
         <Box sx={{ width: '100%' }}>
           {/* Back Button */}
@@ -672,6 +932,166 @@ export default function ProjectsPage() {
                 </Button>
               </Box>
           </Stack>
+
+          {/* Flagship Workspace Cockpit Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Quick Draft Note & Actions */}
+            <div className="bg-[#161412] rounded-[32px] border border-white/6 p-6 flex flex-col justify-between min-h-[260px] relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#EC4899]/5 rounded-full filter blur-3xl pointer-events-none group-hover:bg-[#EC4899]/8 transition-all duration-500" />
+              
+              <div className="space-y-4 flex-1">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-white text-sm font-black tracking-tight leading-tight flex items-center gap-2 font-mono select-none">
+                    <FileText size={18} className="text-[#EC4899]" />
+                    Instant Draft Cockpit
+                  </h3>
+                  <span className="text-[9px] text-[#EC4899] font-black font-mono uppercase bg-[#EC4899]/10 px-2 py-0.5 rounded border border-[#EC4899]/20 select-none">
+                    SECURE AES-256
+                  </span>
+                </div>
+                
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={draftTitle}
+                    onChange={(e) => setDraftTitle(e.target.value)}
+                    placeholder="Enter Draft Title (Optional)..."
+                    className="w-full bg-[#0A0908]/60 border border-white/5 rounded-xl px-4 py-2 text-xs font-bold text-white placeholder-white/20 focus:outline-none focus:border-[#EC4899]/50 transition-all font-sans"
+                  />
+                  <textarea
+                    value={draftText}
+                    onChange={(e) => setDraftText(e.target.value)}
+                    placeholder="Draft thoughts, tasks, or secrets... Save instantly on the spot."
+                    rows={4}
+                    className="w-full bg-[#0A0908]/60 border border-white/5 rounded-2xl p-4 text-xs font-medium text-white placeholder-white/20 focus:outline-none focus:border-[#EC4899]/50 resize-none transition-all font-sans"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/4">
+                <span className="text-[10px] text-white/30 font-medium">
+                  Direct connection to your Secure Notes list.
+                </span>
+                <button
+                  onClick={handleSaveDraft}
+                  disabled={drafting || !draftText.trim()}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white hover:bg-[#D0357F] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {drafting ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Saving Secure...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={13} strokeWidth={3} />
+                      <span>Save Draft Note</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Live Telemetry & Workflow Recorder */}
+            <div className="bg-[#161412] rounded-[32px] border border-white/6 p-6 flex flex-col justify-between min-h-[260px] relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#6366F1]/5 rounded-full filter blur-3xl pointer-events-none group-hover:bg-[#6366F1]/8 transition-all duration-500" />
+              
+              <div className="space-y-4 flex-1">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-white text-sm font-black tracking-tight leading-tight flex items-center gap-2 font-mono select-none">
+                    <Terminal size={18} className="text-[#6366F1]" />
+                    Ecosystem Telemetry
+                  </h3>
+                  <div className="flex items-center gap-1.5 bg-[#6366F1]/10 px-2 py-0.5 rounded border border-[#6366F1]/20 select-none">
+                    <div className={`w-2 h-2 rounded-full ${isRecording ? 'bg-[#FF453A] animate-pulse' : 'bg-[#10B981]'}`} />
+                    <span className="text-[9px] text-white/70 font-black font-mono uppercase">
+                      {isRecording ? 'RECORDING ACTIVE' : 'RECORDER READY'}
+                    </span>
+                  </div>
+                </div>
+                
+                {isRecording ? (
+                  <div className="bg-[#0A0908]/60 border border-[#FF453A]/20 rounded-2xl p-4 space-y-3">
+                    <p className="text-xs text-white/60 font-semibold leading-relaxed">
+                      Currently recording telemetry interactions. Go anywhere in the app to record actions, then customize below:
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={wfName}
+                        onChange={(e) => setWfName(e.target.value)}
+                        placeholder="Workflow Name..."
+                        className="w-full bg-[#0A0908] border border-white/5 rounded-xl px-3 py-2 text-xs font-bold text-white placeholder-white/20 focus:outline-none focus:border-[#FF453A]/50 transition-all"
+                      />
+                      <input
+                        type="text"
+                        value={wfDesc}
+                        onChange={(e) => setWfDesc(e.target.value)}
+                        placeholder="Description..."
+                        className="w-full bg-[#0A0908] border border-white/5 rounded-xl px-3 py-2 text-xs font-bold text-white placeholder-white/20 focus:outline-none focus:border-[#FF453A]/50 transition-all"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 text-xs text-white/50 leading-relaxed font-sans select-none">
+                    <div className="flex justify-between items-center py-1 border-b border-white/[0.02]">
+                      <span className="font-bold">Ecosystem Status:</span>
+                      <span className="text-[#10B981] font-mono font-black">100% ONLINE</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-white/[0.02]">
+                      <span className="font-bold">Huddles Launcher:</span>
+                      <span className="text-white/70 font-mono">STANDBY (P2P Mesh)</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-white/[0.02]">
+                      <span className="font-bold">Vault Security:</span>
+                      <span className="text-[#10B981] font-mono font-black">LOCKED & PRIVILEGED</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1">
+                      <span className="font-bold">Pinned Shortcuts:</span>
+                      <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                        {sortedProjects.filter(p => (p as any).isPinned).length === 0 ? (
+                          <span className="italic text-white/30 text-[10px]">No pinned projects</span>
+                        ) : (
+                          sortedProjects.filter(p => (p as any).isPinned).map(p => (
+                            <button 
+                              key={p.$id}
+                              onClick={() => handleProjectClick(p.$id)}
+                              className="text-[9px] font-black bg-white/5 px-2 py-0.5 rounded border border-white/10 hover:border-[#6366F1]/50 hover:bg-[#6366F1]/10 text-white transition-all font-mono"
+                            >
+                              {p.title.toUpperCase()}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/4">
+                <span className="text-[10px] text-white/30 font-medium">
+                  {isRecording ? 'Stop to bundle interaction steps.' : 'Capture actions to create a custom smart macro.'}
+                </span>
+                {isRecording ? (
+                  <button
+                    onClick={handleStopRecording}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#FF453A] text-white hover:bg-[#DC352C]"
+                  >
+                    <CheckCircle2 size={13} strokeWidth={3} />
+                    <span>Save Recorded Flow</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={startRecording}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#6366F1] text-white hover:bg-[#4F46E5]"
+                  >
+                    <Zap size={13} strokeWidth={3} />
+                    <span>Record New Flow</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
 
           {projects.length === 0 ? (
             <>
