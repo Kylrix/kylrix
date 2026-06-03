@@ -111,9 +111,9 @@ export function NoteDetailSidebar({
   const { openCallLauncher } = useCallLauncher();
 
   const { notes: allNotes, isPinned, pinNote, unpinNote } = useNotes();
-  const isPinnedFunc = typeof isPinned === 'function' ? isPinned : () => false;
-  const pinNoteFunc = typeof pinNote === 'function' ? pinNote : async () => {};
-  const unpinNoteFunc = typeof unpinNote === 'function' ? unpinNote : async () => {};
+  const isPinnedFunc = useMemo(() => typeof isPinned === 'function' ? isPinned : () => false, [isPinned]);
+  const pinNoteFunc = useMemo(() => typeof pinNote === 'function' ? pinNote : async () => {}, [pinNote]);
+  const unpinNoteFunc = useMemo(() => typeof unpinNote === 'function' ? unpinNote : async () => {}, [unpinNote]);
   const [realtimeNote, setRealtimeNote] = useState<Notes | null>(null);
   const noteRef = useRef(note);
   const liveNote = useMemo(
