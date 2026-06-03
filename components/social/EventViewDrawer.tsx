@@ -12,6 +12,7 @@ import {
     Stack,
     Link as MuiLink
 } from '@/lib/mui-tailwind/material';
+import NextLink from 'next/link';
 import CloseIcon from '@/lib/mui-tailwind/icons';
 import EventIcon from '@/lib/mui-tailwind/icons';
 import LocationOnIcon from '@/lib/mui-tailwind/icons';
@@ -118,11 +119,9 @@ export const EventViewDrawer = ({ open, onClose, event }: EventViewDrawerProps) 
                     <Typography variant="body2" sx={{ color: 'text.secondary', lineHeight: 1.7 }}>
                         {event.description || 'No description provided.'}
                     </Typography>
-                </Paper>
+                    </Paper>
 
-import NextLink from 'next/link';
-...
-                <Box sx={{ mt: 'auto', display: 'flex', gap: 2 }}>
+                    <Box sx={{ mt: 'auto', display: 'flex', gap: 2 }}>
                     <Button 
                         fullWidth 
                         variant="contained" 
