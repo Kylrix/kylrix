@@ -83,7 +83,7 @@ export default function NewTotpDialog({
     setLoading(true);
     try {
       if (!user) throw new Error("Not authenticated");
-      const cdrActive = !!user?.prefs?.cdr_enabled;
+      const cdrActive = !!(user?.prefs as any)?.cdr_enabled;
 
       if (cdrActive) {
         setCdrProcessingOpen(true);
@@ -286,7 +286,7 @@ export default function NewTotpDialog({
               setLoading(false);
               onClose();
             }}
-            isDemoMode={!!user?.prefs?.demo_mode}
+            isDemoMode={!!(user?.prefs as any)?.demo_mode}
             walletAddress={walletAddress || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'}
             onFinished={() => {}}
           />

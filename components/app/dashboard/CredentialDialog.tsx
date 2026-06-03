@@ -310,7 +310,7 @@ export default function CredentialDialog({
       if (customFields.length > 0)
         credentialData.customFields = JSON.stringify(customFields) as string;
 
-      const cdrActive = !!user?.prefs?.cdr_enabled;
+      const cdrActive = !!(user?.prefs as any)?.cdr_enabled;
 
       if (cdrActive) {
         setCdrProcessingOpen(true);
@@ -411,7 +411,7 @@ export default function CredentialDialog({
       if (customFields.length > 0)
         credentialData.customFields = JSON.stringify(customFields) as string;
 
-      const cdrActive = !!user?.prefs?.cdr_enabled;
+      const cdrActive = !!(user?.prefs as any)?.cdr_enabled;
 
       if (cdrActive) {
         setCdrProcessingOpen(true);
@@ -873,7 +873,7 @@ export default function CredentialDialog({
               }
               handleClose();
             }}
-            isDemoMode={!!user?.prefs?.demo_mode}
+            isDemoMode={!!(user?.prefs as any)?.demo_mode}
             walletAddress={walletAddress || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'}
             onFinished={() => {}}
           />
