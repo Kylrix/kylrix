@@ -27,6 +27,7 @@ import { listNotes, listTags, listKeepCredentials } from '@/lib/appwrite';
 import { listTotpSecrets } from '@/lib/appwrite/vault';
 import { ChatList } from '@/components/chat/ChatList';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { SendSparkShelf } from '@/components/send/SendSparkShelf';
 import toast from 'react-hot-toast';
 
 interface PanelState {
@@ -50,7 +51,8 @@ export type PanelType =
   | 'settings_integrations'
   | 'settings_accounts'
   | 'projects_templates'
-  | 'projects_stats';
+  | 'projects_stats'
+  | 'stash';
 
 interface DesktopRightSectionProps {
   panels: PanelType[];
@@ -283,6 +285,40 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
     }, 1000);
     return () => clearInterval(interval);
   }, [panels]);
+
+  // Load Send Sparks (stash)
+  const [sendSparks, setSendSparks] = useState<any[]>([]);
+  const [, setSendSparksLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!panels.includes('stash')) return;
+    const load = () => {
+      try {
+        const raw = localStorage.getItem('send_sparks');
+        if (raw) {
+          setSendSparks(JSON.parse(raw));
+        } else {
+          setSendSparks([]);
+        }
+      } catch (e) {
+        console.error('Failed to load sparks in DesktopRightSection', e);
+      }
+      setSendSparksLoaded(true);
+    };
+    load();
+    window.addEventListener('storage', load);
+    return () => window.removeEventListener('storage', load);
+  }, [panels]);
+
+  const saveSendSparks = (next: any[]) => {
+    try {
+      localStorage.setItem('send_sparks', JSON.stringify(next));
+      setSendSparks(next);
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // Render list panel skeleton helper
   const renderSkeletonList = () => (
@@ -1284,6 +1320,34 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
               </div>
             );
           }
+
+          case 'stash':
+            return (
+              <div 
+                key={panel} 
+                className={`bg-[#161412] rounded-[24px] border border-white/5 p-5 flex flex-col overflow-hidden transition-all duration-300 ease-out flex-none ${
+                  isOpen ? 'h-auto max-h-[380px]' : 'h-[68px]'
+                }`}
+              >
+                <div className={`flex justify-between items-center ${isOpen ? 'mb-2' : ''}`}>
+                  <h3 className="text-white text-base font-black tracking-tight leading-tight flex items-center gap-1.5 font-mono select-none">
+                    <Clock size={18} className="text-[#6366F1]" /> Stash
+                  </h3>
+                  <button 
+                    onClick={() => togglePanel(panel)} 
+                    className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                  >
+                    {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                  </button>
+                </div>
+
+                {isOpen && (
+                  <div className="flex-1 overflow-y-auto pr-0.5 mt-2 scrollbar-thin">
+                    <SendSparkShelf sparks={sendSparks} onSaveSparks={saveSendSparks} />
+                  </div>
+                )}
+              </div>
+            );
 
           default:
             return null;

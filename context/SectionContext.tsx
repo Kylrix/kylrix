@@ -77,6 +77,7 @@ const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
 
 export function SectionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { isAuthenticated } = useAuth();
   const [activeDetail, setActiveDetail] = useState<ActiveDetail | null>(null);
   
   const [overrides, setOverrides] = useState<Record<string, Partial<SectionConfig>>>(() => {
@@ -147,7 +148,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
 
     // /send page fallback: split composition, Sparks history, security Context
     if (cleanRoute.startsWith('/send')) {
-      return ['note', 'secrets', 'huddles'];
+      return isAuthenticated ? ['note', 'secrets', 'huddles'] : ['stash'];
     }
 
     // /projects/[projectId] fallback: display relevant execution panels
@@ -224,7 +225,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     };
 
     return finalConfig;
-    }, [overrides, screenWidth]);
+    }, [overrides, screenWidth, isAuthenticated]);
 
   const contextValue = useMemo<SectionContextType>(() => ({
     getLayoutForRoute,

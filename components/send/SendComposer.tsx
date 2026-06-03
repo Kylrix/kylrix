@@ -1351,7 +1351,7 @@ export function SendComposer() {
 
         {/* Spark shelf / history shelf */}
         {sendSparks.length > 0 && (
-          <div className="mt-8">
+          <div className="mt-8 md:hidden">
             <div className="rounded-[24px] bg-[#161412] border border-[#34322F] p-6 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),_0_2px_3px_-3px_rgba(37,35,33,0.9)]">
               <SendSparkShelf sparks={sendSparks} onSaveSparks={saveSendSparks} onClaim={handleClaimSendSpark} />
             </div>
