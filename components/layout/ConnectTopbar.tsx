@@ -691,8 +691,7 @@ export default function ConnectTopbar({
                       notifications.map((notif) => (
                         <Box
                           key={notif.id}
-                          component="button"
-                          type="button"
+                          component="div"
                           onClick={() => markNotificationRead(notif.id)}
                           sx={{
                             width: '100%',
