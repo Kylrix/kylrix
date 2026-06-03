@@ -1,62 +1,72 @@
 "use client";
 
 import React, { useEffect, useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Typography, Stack, IconButton, Alert,  alpha, useMediaQuery, useTheme } from '@/lib/mui-tailwind/material';
 import { deleteNote } from '@/lib/actions/client-ops';
 import { useNotes } from '@/context/NotesContext';
-
 import { useOverlay } from '@/components/ui/OverlayContext';
-
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Notes } from '@/types/appwrite';
 import NoteCard from '@/components/ui/NoteCard';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { useSearch } from '@/hooks/useSearch';
-import {
-  Search as MagnifyingGlassIcon,
-  AddCircleOutline as PlusCircleIcon,
-  Logout as ArrowLeftOnRectangleIcon,
-  Login as ArrowRightOnRectangleIcon,
-  PushPin as PinIcon,
-  Refresh as RefreshIcon,
-  FolderSpecial as ProjectIcon,
-  Description as NoteIcon,
-  Tag as TagIcon,
-} from '@/lib/mui-tailwind/icons';
 import { useFAB } from '@/context/FABContext';
-
-import { ChevronDown, ChevronUp, Maximize2, FolderKanban, Share2 } from 'lucide-react';
+import { 
+  Search as SearchIcon, 
+  PlusCircle as PlusCircleIcon, 
+  ArrowLeft as ArrowLeftIcon, 
+  ArrowRight as ArrowRightIcon, 
+  Pin as PinIcon, 
+  RefreshCw as RefreshIcon, 
+  FolderKanban as ProjectIcon, 
+  FileText as NoteIcon, 
+  Tag as TagIcon,
+  ChevronDown, 
+  ChevronUp, 
+  Maximize2, 
+  Share2,
+  Info
+} from 'lucide-react';
 import { getSharedNotes } from '@/lib/appwrite';
 import { ProjectsService } from '@/lib/appwrite/projects';
-
-// Client-side persistence cache to resist reload flicker
-let cachedSharedNotes: any[] | null = null;
-let cachedProjects: any[] | null = null;
 import CreateNoteForm from './CreateNoteForm';
 import { useSidebar } from '@/components/ui/SidebarContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
-
 import { NotesErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
+
+// Client-side persistence cache to resist reload flicker
+let cachedSharedNotes: any[] | null = null;
+let cachedProjects: any[] | null = null;
+
+// Lightweight custom hook to track responsive breakpoint without MUI
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia('(min-width: 768px)');
+    const listener = () => setIsDesktop(media.matches);
+    listener();
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, []);
+  return isDesktop;
+}
 
 export default function NotesPage() {
   const { 
     notes: allNotes, 
     totalNotes, 
     isLoading: isInitialLoading, 
-    hasMore, 
-    loadMore, 
     upsertNote, 
     removeNote,
-    isPinned,
     refetchNotes
   } = useNotes();
   const { openOverlay, closeOverlay } = useOverlay();
   const { setConfiguration, resetConfiguration } = useFAB();
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { isCollapsed, setIsCollapsed } = useSidebar();
   const { isOpen: isDynamicSidebarOpen, openSidebar, activeContentKey } = useDynamicSidebar();
   
@@ -64,8 +74,7 @@ export default function NotesPage() {
   const router = useRouter();
   const openNoteIdParam = searchParams.get('openNoteId');
 
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const isDesktop = useIsDesktop();
 
   // Collapsible accordion state for the desktop right pane
   const [sharedNotesOpen, setSharedNotesOpen] = useState(true);
@@ -122,6 +131,7 @@ export default function NotesPage() {
       mounted = false;
     };
   }, []);
+
   const visibleNotes = useMemo(() => {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
     return safeNotes.filter((n: any) => {
@@ -135,14 +145,27 @@ export default function NotesPage() {
     });
   }, [allNotes]);
 
+  // Pinned Notes are filtered cleanly using the native boolean column
+  const pinnedNotes = useMemo(() => {
+    if (searchParams.get('query')) return [];
+    return visibleNotes.filter(n => !!n.isPinned);
+  }, [visibleNotes, searchParams]);
+
+  // Regular source notes exclude pinned notes when there is no active search query
+  const regularSourceNotes = useMemo(() => {
+    const hasSearch = searchParams.get('query');
+    if (hasSearch) return visibleNotes;
+    return visibleNotes.filter(n => !n.isPinned);
+  }, [visibleNotes, searchParams]);
+
   // Fetch notes action for the search hook
   const fetchNotesAction = useCallback(async () => {
-    const safeNotes = Array.isArray(visibleNotes) ? visibleNotes : [];
+    const safeNotes = Array.isArray(regularSourceNotes) ? regularSourceNotes : [];
     return {
       documents: safeNotes,
       total: safeNotes.length
     };
-  }, [visibleNotes]);
+  }, [regularSourceNotes]);
 
   // Search and pagination configuration
   const searchConfig = useMemo(() => ({
@@ -183,16 +206,15 @@ export default function NotesPage() {
     previousPage,
     clearSearch
   } = useSearch({
-    data: visibleNotes,
+    data: regularSourceNotes,
     fetchDataAction: fetchNotesAction,
     searchConfig,
     paginationConfig
   });
 
-  const regularSourceNotes = useMemo(() => {
-    if (hasSearchResults) return visibleNotes;
-    return visibleNotes.filter(n => !n.isPinned);
-  }, [visibleNotes, hasSearchResults]);
+  const regularNotes = useMemo(() => {
+    return paginatedNotes;
+  }, [paginatedNotes]);
 
   const handleNoteCreated = useCallback((newNote: Notes) => {
     upsertNote(newNote);
@@ -218,9 +240,10 @@ export default function NotesPage() {
         isVisible: true,
         mainColor: '#EC4899',
         actions: [
-          { id: 'new-note', label: 'NEW NOTE', icon: <NoteIcon />, onClick: () => openComposer('note') },
-          { id: 'new-project', label: 'NEW PROJECT', icon: <ProjectIcon />, onClick: () => openComposer('project') },
-          { id: 'manage-tags', label: 'MANAGE TAGS', icon: <TagIcon />, onClick: () => router.push('/note/tags') }]
+          { id: 'new-note', label: 'NEW NOTE', icon: <NoteIcon size={16} />, onClick: () => openComposer('note') },
+          { id: 'new-project', label: 'NEW PROJECT', icon: <ProjectIcon size={16} />, onClick: () => openComposer('project') },
+          { id: 'manage-tags', label: 'MANAGE TAGS', icon: <TagIcon size={16} />, onClick: () => router.push('/note/tags') }
+        ]
       });
     }
     return () => resetConfiguration();
@@ -337,7 +360,6 @@ export default function NotesPage() {
     }
 
     openNoteDetailSurface(targetNote);
-
     cleanParams();
   }, [openNoteIdParam, visibleNotes, openNoteDetailSurface, router]);
 
@@ -345,36 +367,18 @@ export default function NotesPage() {
     openOverlay(<CreateNoteForm onNoteCreated={handleNoteCreated} />);
   };
 
-  const gridSx = useMemo(() => {
+  const gridStyle = useMemo(() => {
+    let minWidth = '280px';
     if (!isCollapsed && isDynamicSidebarOpen) {
-      return {
-        display: 'grid',
-        gap: 2,
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-        perspective: '1200px'
-      };
+      minWidth = '200px';
     } else if (!isCollapsed || isDynamicSidebarOpen) {
-      return {
-        display: 'grid',
-        gap: 2,
-        gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-        perspective: '1200px'
-      };
-    } else {
-      return {
-        display: 'grid',
-        gap: 2,
-        perspective: '1200px',
-        '@media (min-width: 600px)': { gap: 2.5 },
-        gridTemplateColumns: {
-          xs: 'repeat(2, 1fr)',
-          sm: 'repeat(auto-fill, minmax(260px, 1fr))',
-          md: 'repeat(auto-fill, minmax(280px, 1fr))',
-          lg: 'repeat(auto-fill, minmax(300px, 1fr))',
-          xl: 'repeat(auto-fill, minmax(320px, 1fr))'
-        }
-      };
+      minWidth = '220px';
     }
+    return {
+      display: 'grid',
+      gap: '20px',
+      gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}, 1fr))`,
+    };
   }, [isCollapsed, isDynamicSidebarOpen]);
 
   const tags = useMemo(() => {
@@ -382,213 +386,85 @@ export default function NotesPage() {
     return existingTags.length > 0 ? existingTags.slice(0, 8) : ['Personal', 'Work', 'Ideas', 'To-Do'];
   }, [visibleNotes]);
 
-  const pinnedNotes = useMemo(() => {
-    if (hasSearchResults) return [];
-    return visibleNotes.filter(n => !!n.isPinned);
-  }, [visibleNotes, hasSearchResults]);
-
-  const regularNotes = useMemo(() => {
-    return paginatedNotes;
-  }, [paginatedNotes]);
-
   const mainNotesContent = (
-    <>
+    <div className="flex flex-col gap-6">
       {/* Desktop Header */}
-      <Box
-        component="header"
-        sx={{
-          display: { xs: 'none', md: 'flex' },
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          mb: 6,
-          p: 4,
-          bgcolor: 'rgba(255, 255, 255, 0.01)',
-          borderRadius: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: '-1px',
-            left: '10%',
-            right: '10%',
-            height: '1px',
-            background: 'linear-gradient(90deg, transparent, secondary.main, primary.main, transparent)',
-          }
-        }}
-      >
-        <Box>
-          <Typography
-            variant="h3"
-            sx={{
-              fontWeight: 900,
-              fontFamily: 'var(--font-clash-display)',
-              color: 'text.primary',
-              mb: 1,
-              letterSpacing: '-0.04em',
-            }}
-          >
+      <header className="hidden md:flex items-center justify-between p-5 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none">
+        <div className="absolute top-[-1px] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-[#EC4899] to-transparent" />
+        <div>
+          <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight leading-tight mb-1 font-mono tracking-tighter">
             Notes
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: 'text.secondary',
-              fontWeight: 500,
-              fontFamily: 'var(--font-satoshi)',
-              opacity: 0.8
-            }}
-          >
+          </h1>
+          <p className="text-white/40 text-xs font-semibold leading-normal font-sans">
             {visibleNotes.length < totalNotes && !hasSearchResults ? (
-              <>Syncing <Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{visibleNotes.length}</Box> of <Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, fontSize: '0.85rem' }}>{totalNotes}</Box> notes</>
+              <span>Syncing <span className="font-mono font-bold text-[#EC4899]">{visibleNotes.length}</span> of <span className="font-mono font-bold">{totalNotes}</span> notes</span>
             ) : (
               hasSearchResults ? (
-                <><Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{totalCount}</Box> {totalCount === 1 ? 'result' : 'results'} found</>
+                <span><span className="font-mono font-bold text-[#EC4899]">{totalCount}</span> {totalCount === 1 ? 'result' : 'results'} found</span>
               ) : (
-                <><Box component="span" sx={{ fontFamily: 'var(--font-jetbrains-mono)', fontWeight: 700, color: 'secondary.main', fontSize: '0.85rem' }}>{totalNotes}</Box> {totalNotes === 1 ? 'note' : 'notes'}</>
+                <span><span className="font-mono font-bold text-[#EC4899]">{totalNotes}</span> {totalNotes === 1 ? 'note' : 'notes'}</span>
               )
             )}
-          </Typography>
-        </Box>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <IconButton
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <button
             onClick={handleManualRefresh}
-            {...sidebarIgnoreProps}
-            sx={{ 
-              color: isRefreshing ? 'secondary.main' : 'text.secondary',
-              bgcolor: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: 'rgba(255, 255, 255, 0.15)',
-              },
-              transition: 'all 0.3s ease',
-              '& svg': {
-                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
-                '@keyframes spin': {
-                  '0%': { transform: 'rotate(0deg)' },
-                  '100%': { transform: 'rotate(360deg)' }
-                }
-              }
-            }}
             disabled={isRefreshing}
+            className="w-10 h-10 rounded-xl bg-white/3 border border-white/8 hover:border-white/15 flex items-center justify-center transition-all duration-300 disabled:opacity-40"
           >
-            <RefreshIcon />
-          </IconButton>
-          <IconButton
+            <RefreshIcon size={16} className={`transition-all ${isRefreshing ? 'animate-spin text-[#EC4899]' : 'text-white/60'}`} />
+          </button>
+          <button
             onClick={handleToggleSidebar}
             aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            {...sidebarIgnoreProps}
-            sx={{ 
-              color: 'text.secondary',
-              bgcolor: 'rgba(255, 255, 255, 0.03)',
-              borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: 'rgba(255, 255, 255, 0.15)',
-              }
-            }}
+            className="w-10 h-10 rounded-xl bg-white/3 border border-white/8 hover:border-white/15 flex items-center justify-center text-white/60 hover:text-white transition-all"
           >
-            {isCollapsed ? (
-              <ArrowRightOnRectangleIcon />
-            ) : (
-              <ArrowLeftOnRectangleIcon />
-            )}
-          </IconButton>
-          <IconButton 
-            onClick={handleCreateNoteClick} 
-            {...sidebarIgnoreProps} 
-            sx={{ 
-              color: 'primary.main',
-              bgcolor: 'rgba(99, 102, 241, 0.05)',
-              borderRadius: '12px',
-              border: '1px solid rgba(99, 102, 241, 0.1)',
-              px: 2,
-              '&:hover': {
-                bgcolor: 'rgba(99, 102, 241, 0.1)',
-                borderColor: 'rgba(99, 102, 241, 0.2)',
-              }
-            }}
+            {isCollapsed ? <ArrowRightIcon size={16} /> : <ArrowLeftIcon size={16} />}
+          </button>
+          <button 
+            onClick={handleCreateNoteClick}
+            className="h-10 px-4 rounded-xl bg-[#6366F1]/10 hover:bg-[#6366F1]/20 border border-[#6366F1]/20 hover:border-[#6366F1]/40 flex items-center justify-center text-[#818CF8] font-bold text-xs gap-1.5 transition-all"
           >
-            <PlusCircleIcon />
-          </IconButton>
-        </Stack>
-      </Box>
+            <PlusCircleIcon size={16} />
+            <span>Create</span>
+          </button>
+        </div>
+      </header>
 
       {/* Tags Filter */}
       {tags.length > 0 && (
-        <Stack
-          direction="row"
-          spacing={1.5}
-          sx={{
-            mb: 6,
-            overflowX: 'auto',
-            p: 1.5,
-            bgcolor: 'rgba(255, 255, 255, 0.01)',
-            borderRadius: '24px',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-            alignItems: 'center',
-            '&::-webkit-scrollbar': { display: 'none' },
-            msOverflowStyle: 'none',
-            scrollbarWidth: 'none'
-          }}
-        >
+        <div className="overflow-x-auto scrollbar-none p-2 bg-white/[0.01] border border-white/5 rounded-[24px] flex items-center gap-2 select-none">
           {tags.map((tag, index) => (
-            <Button
+            <button
               key={index}
-              variant={searchQuery === tag ? 'contained' : 'outlined'}
-              size="small"
-              sx={{ 
-                whiteSpace: 'nowrap',
-                borderRadius: '12px',
-                fontFamily: 'var(--font-satoshi)',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                textTransform: 'none',
-                py: 1,
-                px: 2.5,
-                bgcolor: searchQuery === tag ? 'secondary.main' : 'rgba(255, 255, 255, 0.03)',
-                borderColor: searchQuery === tag ? 'secondary.main' : 'rgba(255, 255, 255, 0.08)',
-                color: searchQuery === tag ? '#fff' : 'rgba(255, 255, 255, 0.6)',
-                '&:hover': {
-                  bgcolor: searchQuery === tag ? 'secondary.light' : 'rgba(255, 255, 255, 0.05)',
-                  borderColor: searchQuery === tag ? 'secondary.light' : 'rgba(255, 255, 255, 0.15)',
-                }
-              }}
               aria-pressed={searchQuery === tag}
               onClick={() => searchQuery === tag ? clearSearch() : setSearchQuery(tag)}
-              {...sidebarIgnoreProps}
+              className={`whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                searchQuery === tag 
+                  ? 'bg-[#EC4899] border-[#EC4899] text-white shadow-[0_4px_12px_rgba(236,72,153,0.2)]' 
+                  : 'bg-white/3 border-white/8 text-white/60 hover:text-white hover:border-white/15'
+              }`}
             >
               {tag}
-            </Button>
+            </button>
           ))}
 
           {hasSearchResults && (
-            <Button 
-              variant="text" 
-              size="small" 
+            <button 
               onClick={clearSearch} 
-              sx={{ 
-                ml: 1, 
-                color: 'primary.main',
-                fontFamily: 'var(--font-jetbrains-mono)',
-                fontSize: '0.75rem',
-                letterSpacing: '0.05em'
-              }} 
-              {...sidebarIgnoreProps}
+              className="ml-2 px-3 py-1.5 text-xs text-[#EC4899] hover:text-[#f472b6] font-mono font-bold tracking-wider"
             >
               Clear
-            </Button>
+            </button>
           )}
-        </Stack>
+        </div>
       )}
 
       {/* Top Pagination */}
       {totalPages > 1 && (
-        <Box sx={{ mb: 3 }}>
+        <div className="mb-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -601,166 +477,83 @@ export default function NotesPage() {
             pageSize={paginationConfig.pageSize}
             compact={false}
           />
-        </Box>
+        </div>
       )}
 
       {/* Error State */}
       {error && (
-        <Alert
-          severity="error"
-          sx={{
-            mb: 3,
-            borderRadius: '16px',
-            bgcolor: 'rgba(211, 47, 47, 0.1)',
-            color: '#ff5252',
-            border: '1px solid rgba(211, 47, 47, 0.2)',
-            '& .MuiAlert-icon': { color: '#ff5252' }
-          }}
-        >
-          {error}
-        </Alert>
+        <div className="p-4 rounded-[16px] bg-red-500/10 border border-red-500/20 text-[#ff5252] text-sm font-bold flex items-center gap-2">
+          <Info size={16} />
+          <span>{error}</span>
+        </div>
       )}
 
       {/* Notes Grid */}
       {isInitialLoading ? (
-        <Box sx={{
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr', xl: '1fr 1fr 1fr 1fr' },
-          gap: 3,
-        }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array.from({ length: 12 }).map((_, index) => (
             <NoteCard key={`skeleton-${index}`} note={{ $id: `skeleton-${index}`, title: 'Loading...', content: '', tags: [], isPublic: false, status: 'loading' } as any} />
           ))}
-        </Box>
+        </div>
       ) : paginatedNotes.length === 0 ? (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            py: 10,
-            textAlign: 'center'
-          }}
-        >
-          <Box
-            sx={{
-              width: 96,
-              height: 96,
-              bgcolor: 'rgba(255, 255, 255, 0.05)',
-              borderRadius: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              mb: 3,
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)'
-            }}
-          >
+        <div className="flex flex-col items-center justify-center py-20 text-center select-none">
+          <div className="w-24 h-24 bg-white/5 border border-white/10 rounded-[28px] flex items-center justify-center mb-6 shadow-2xl">
             {hasSearchResults ? (
-              <MagnifyingGlassIcon sx={{ fontSize: 48, color: 'text.disabled', opacity: 0.5 }} />
+              <SearchIcon size={38} className="text-white/30" />
             ) : (
-              <PlusCircleIcon sx={{ fontSize: 48, color: 'text.disabled', opacity: 0.5 }} />
+              <PlusCircleIcon size={38} className="text-white/30" />
             )}
-          </Box>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 900,
-              fontFamily: 'var(--font-space-grotesk)',
-              color: 'text.primary',
-              mb: 1.5
-            }}
-          >
-            {hasSearchResults ? 'No Results' : 'Empty'}
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: 'text.secondary',
-              mb: 4,
-              maxWidth: 400,
-              fontWeight: 500
-            }}
-          >
+          </div>
+          <h4 className="text-white font-black text-lg tracking-tight mb-2">
+            {hasSearchResults ? 'No Results' : 'No Notes Yet'}
+          </h4>
+          <p className="text-white/40 text-xs font-semibold max-w-xs leading-relaxed mb-6">
             {hasSearchResults
-              ? `No matches found for "${searchQuery}". Try a different search term.`
-              : 'Capture your thoughts and ideas here. Your notes are private and secure.'
+              ? `No matches found for "${searchQuery}". Try adjusting your query.`
+              : 'Capture your thoughts and tasks here. Notes are securely sealed in your vault.'
             }
-          </Typography>
+          </p>
           {hasSearchResults ? (
-            <Stack direction="row" spacing={2}>
+            <div className="flex items-center gap-3">
               <Button variant="outlined" onClick={clearSearch}>
                 Clear Search
               </Button>
-              <Button onClick={handleCreateNoteClick} startIcon={<PlusCircleIcon />}>
+              <Button onClick={handleCreateNoteClick}>
                 New Note
               </Button>
-            </Stack>
+            </div>
           ) : (
-            <Button onClick={handleCreateNoteClick} startIcon={<PlusCircleIcon />}>
+            <Button onClick={handleCreateNoteClick}>
               Open Composer
             </Button>
           )}
-        </Box>
+        </div>
       ) : (
-        <Stack spacing={4}>
+        <div className="flex flex-col gap-8">
+          {/* Pinned Notes Section */}
           {pinnedNotes.length > 0 && (
-            <Box 
-              sx={{ 
-                p: { xs: 2, md: 3 }, 
-                bgcolor: 'rgba(255, 255, 255, 0.01)', 
-                borderRadius: '32px', 
-                border: '1px solid rgba(255, 255, 255, 0.05)' 
-              }}
-            >
-              <Stack direction="row" spacing={1.5} alignItems="center" justifyContent="space-between" sx={{ mb: 3, px: 1 }}>
-                <Stack direction="row" spacing={1.5} alignItems="center">
-                  <Box 
-                    sx={{ 
-                      p: 1, 
-                      bgcolor: 'rgba(236, 72, 153, 0.05)', 
-                      borderRadius: '10px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      border: '1px solid rgba(236, 72, 153, 0.1)'
-                    }}
-                  >
-                    <PinIcon sx={{ fontSize: 16, color: 'secondary.main', transform: 'rotate(45deg)' }} />
-                  </Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 800, 
-                      fontFamily: 'var(--font-clash-display)', 
-                      textTransform: 'uppercase', 
-                      letterSpacing: '0.15em', 
-                      fontSize: '0.75rem', 
-                      color: 'secondary.main',
-                    }}
-                  >
+            <div className="p-5 md:p-6 bg-white/[0.01] border border-white/5 rounded-[32px] shadow-lg">
+              <div className="flex items-center justify-between gap-4 mb-5 px-1 select-none">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-[#EC4899]/10 border border-[#EC4899]/20 rounded-xl flex items-center justify-center text-[#EC4899]">
+                    <PinIcon size={14} className="rotate-45" />
+                  </div>
+                  <span className="font-black text-[10px] tracking-widest uppercase text-[#EC4899] font-mono leading-none">
                     Pinned Notes
-                  </Typography>
-                </Stack>
+                  </span>
+                </div>
 
                 {pinnedNotes.length > 3 && (
-                  <Button 
-                    size="small" 
+                  <button 
                     onClick={() => openSidebar(<PinnedNotesSidebar />, 'pinned-notes')}
-                    sx={{ 
-                      color: 'secondary.main', 
-                      fontWeight: 800, 
-                      textTransform: 'none',
-                      fontSize: '0.75rem',
-                      '&:hover': { bgcolor: 'rgba(236, 72, 153, 0.05)' }
-                    }}
+                    className="text-xs font-black text-[#EC4899] hover:text-[#f472b6] bg-[#EC4899]/5 hover:bg-[#EC4899]/10 border border-[#EC4899]/10 hover:border-[#EC4899]/20 px-3 py-1.5 rounded-xl transition-all"
                   >
                     See More ({pinnedNotes.length - 3})
-                  </Button>
+                  </button>
                 )}
-              </Stack>
-              <Box sx={gridSx}>
+              </div>
+              
+              <div style={gridStyle}>
                 {pinnedNotes.slice(0, 3).map((note) => (
                   <NoteCard
                     key={note.$id}
@@ -770,51 +563,25 @@ export default function NotesPage() {
                     onNoteSelect={openNoteDetailSurface}
                   />
                 ))}
-              </Box>
-            </Box>
+              </div>
+            </div>
           )}
 
+          {/* Regular Notes Section */}
           {regularNotes.length > 0 && (
-            <Box 
-              sx={{ 
-                p: { xs: 2, md: 3 }, 
-                bgcolor: 'rgba(255, 255, 255, 0.01)', 
-                borderRadius: '32px', 
-                border: '1px solid rgba(255, 255, 255, 0.05)' 
-              }}
-            >
+            <div className="p-5 md:p-6 bg-white/[0.01] border border-white/5 rounded-[32px] shadow-lg">
               {pinnedNotes.length > 0 && (
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3, px: 1 }}>
-                  <Box 
-                    sx={{ 
-                      p: 1, 
-                      bgcolor: 'rgba(255, 255, 255, 0.03)', 
-                      borderRadius: '10px', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      border: '1px solid rgba(255, 255, 255, 0.08)'
-                    }}
-                  >
-                    <MagnifyingGlassIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                  </Box>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 800, 
-                      fontFamily: 'var(--font-clash-display)', 
-                      textTransform: 'uppercase', 
-                      letterSpacing: '0.15em', 
-                      fontSize: '0.75rem', 
-                      color: 'text.secondary',
-                      opacity: 0.6
-                    }}
-                  >
+                <div className="flex items-center gap-2 mb-5 px-1 select-none">
+                  <div className="p-2 bg-white/3 border border-white/8 rounded-xl flex items-center justify-center text-white/50">
+                    <SearchIcon size={14} />
+                  </div>
+                  <span className="font-black text-[10px] tracking-widest uppercase text-white/50 font-mono leading-none">
                     All Notes
-                  </Typography>
-                </Stack>
+                  </span>
+                </div>
               )}
-              <Box sx={gridSx}>
+              
+              <div style={gridStyle}>
                 {regularNotes.map((note) => (
                   <NoteCard
                     key={note.$id}
@@ -824,23 +591,23 @@ export default function NotesPage() {
                     onNoteSelect={openNoteDetailSurface}
                   />
                 ))}
-              </Box>
-            </Box>
+              </div>
+            </div>
           )}
           
           {hasMore && !isInitialLoading && !hasSearchResults && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-              <Button variant="outlined" onClick={loadMore} {...sidebarIgnoreProps}>
+            <div className="flex justify-center mt-2">
+              <Button variant="outlined" onClick={loadMore}>
                 Load More
               </Button>
-            </Box>
+            </div>
           )}
-        </Stack>
+        </div>
       )}
 
       {/* Bottom Pagination */}
       {totalPages > 1 && paginatedNotes.length > 0 && (
-        <Box sx={{ mt: 4 }}>
+        <div className="mt-4">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -853,285 +620,208 @@ export default function NotesPage() {
             pageSize={paginationConfig.pageSize}
             compact={false}
           />
-        </Box>
+        </div>
       )}
-    </>
+    </div>
   );
 
   return (
     <NotesErrorBoundary>
-      <Box sx={{ flex: 1, minHeight: '100vh', pointerEvents: 'auto' }}>
+      <div className="flex-1 min-h-screen pointer-events-auto">
         {isDesktop ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 4, alignItems: 'flex-start' }}>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 items-start">
+            
             {/* Left Pane: Main Notes Content */}
-            <Box sx={{ minWidth: 0 }}>
+            <div className="min-w-0">
               {mainNotesContent}
-            </Box>
+            </div>
 
-            {/* Right Pane: Sticky interactive side column */}
-            <Box sx={{
-              height: 'calc(100vh - 120px)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 3,
-              position: 'sticky',
-              top: '108px',
-            }}>
+            {/* Right Pane: Sticky side column */}
+            <div className="h-[calc(100vh-120px)] flex flex-col gap-6 sticky top-[108px]">
+              
               {/* Section 1: Shared Notes Accordion */}
-              <Box sx={{
-                bgcolor: '#161412',
-                borderRadius: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                p: 2.5,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: sharedNotesOpen && projectsOpen ? '1 1 50%' : sharedNotesOpen ? '1 1 100%' : '0 0 68px',
-              }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: sharedNotesOpen ? 2 : 0 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+              <div 
+                className={`bg-[#161412] border border-white/5 p-5 rounded-[24px] flex flex-col overflow-hidden transition-all duration-300 ${
+                  sharedNotesOpen && projectsOpen 
+                    ? 'flex-1 h-[50%]' 
+                    : sharedNotesOpen 
+                      ? 'flex-1 h-full' 
+                      : 'h-[68px] flex-none'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-4 flex-shrink-0 select-none">
+                  <h3 className="text-white text-base font-black tracking-tight leading-tight">
                     Shared Notes
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <IconButton onClick={() => setSharedNotesOpen(!sharedNotesOpen)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => setSharedNotesOpen(!sharedNotesOpen)} 
+                      className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                    >
                       {sharedNotesOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </IconButton>
-                    <IconButton onClick={() => router.push('/note/shared')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#EC4899' } }}>
+                    </button>
+                    <button 
+                      onClick={() => router.push('/note/shared')} 
+                      className="p-1.5 rounded-lg text-white/40 hover:text-[#EC4899] hover:bg-white/5 transition-all"
+                    >
                       <Maximize2 size={14} />
-                    </IconButton>
-                  </Box>
-                </Box>
+                    </button>
+                  </div>
+                </div>
 
                 {sharedNotesOpen && (
-                  <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+                  <div className="flex-1 overflow-y-auto pr-0.5 scrollbar-thin">
                     {sharedNotesLoading ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <div className="flex flex-col gap-3">
                         {[1, 2, 3].map((n) => (
-                          <Box key={n} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                            <></>
-                            <Box sx={{ flex: 1 }}>
-                              <></>
-                              <></>
-                            </Box>
-                          </Box>
+                          <div key={n} className="flex gap-3 p-3.5 rounded-xl bg-white/[0.01] border border-white/3 animate-pulse">
+                            <div className="w-9 h-9 rounded-lg bg-white/5" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-4 bg-white/5 rounded w-3/4" />
+                              <div className="h-3 bg-white/5 rounded w-1/2" />
+                            </div>
+                          </div>
                         ))}
-                      </Box>
+                      </div>
                     ) : sharedNotes.length === 0 ? (
-                      <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                      <div className="text-center py-6 select-none">
+                        <p className="text-white/40 text-xs italic font-bold">
                           No shared notes.
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     ) : (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <div className="flex flex-col gap-3">
                         {sharedNotes.map((note) => (
-                          <Box
+                          <button
                             key={note.$id}
                             onClick={() => handleSharedNoteClick(note)}
-                            sx={{
-                              display: 'flex',
-                              gap: 1.5,
-                              p: 1.5,
-                              borderRadius: '16px',
-                              bgcolor: 'rgba(255,255,255,0.02)',
-                              border: '1px solid rgba(255,255,255,0.03)',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                bgcolor: 'rgba(255,255,255,0.04)',
-                                borderColor: 'rgba(255,255,255,0.08)',
-                                transform: 'translateX(3px)',
-                              }
-                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/3 hover:border-white/10 text-left transition-all duration-300 hover:translate-x-1 group"
                           >
-                            <Box sx={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: '10px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              bgcolor: alpha('#EC4899', 0.12),
-                              color: '#EC4899',
-                              flexShrink: 0,
-                            }}>
+                            <div className="w-9 h-9 rounded-lg bg-[#EC4899]/10 text-[#EC4899] flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105">
                               <Share2 size={18} />
-                            </Box>
-                            <Box sx={{ minWidth: 0, flex: 1 }}>
-                              <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }} noWrap>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="block text-white font-extrabold text-xs truncate">
                                 {note.title || 'Untitled Note'}
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }} noWrap>
+                              </span>
+                              <span className="block text-white/40 text-[9px] font-black uppercase tracking-wider font-mono mt-0.5">
                                 BY: {note.userId === 'system' ? 'SYSTEM' : (note.userName || 'Collaborator').toUpperCase()}
-                              </Typography>
-                            </Box>
-                          </Box>
+                              </span>
+                            </div>
+                          </button>
                         ))}
-                      </Box>
+                      </div>
                     )}
-                  </Box>
+                  </div>
                 )}
-              </Box>
+              </div>
 
               {/* Section 2: Projects Accordion */}
-              <Box sx={{
-                bgcolor: '#161412',
-                borderRadius: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.05)',
-                p: 2.5,
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                transition: 'flex 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                flex: sharedNotesOpen && projectsOpen ? '1 1 50%' : projectsOpen ? '1 1 100%' : '0 0 68px',
-              }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: projectsOpen ? 2 : 0 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: '#fff' }}>
+              <div 
+                className={`bg-[#161412] border border-white/5 p-5 rounded-[24px] flex flex-col overflow-hidden transition-all duration-300 ${
+                  sharedNotesOpen && projectsOpen 
+                    ? 'flex-1 h-[50%]' 
+                    : projectsOpen 
+                      ? 'flex-1 h-full' 
+                      : 'h-[68px] flex-none'
+                }`}
+              >
+                <div className="flex justify-between items-center mb-4 flex-shrink-0 select-none">
+                  <h3 className="text-white text-base font-black tracking-tight leading-tight">
                     Projects
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 0.5 }}>
-                    <IconButton onClick={() => setProjectsOpen(!projectsOpen)} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>
+                  </h3>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => setProjectsOpen(!projectsOpen)} 
+                      className="p-1 rounded-lg text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                    >
                       {projectsOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </IconButton>
-                    <IconButton onClick={() => router.push('/projects')} size="small" sx={{ color: 'rgba(255,255,255,0.4)', '&:hover': { color: '#EC4899' } }}>
+                    </button>
+                    <button 
+                      onClick={() => router.push('/projects')} 
+                      className="p-1.5 rounded-lg text-white/40 hover:text-[#EC4899] hover:bg-white/5 transition-all"
+                    >
                       <Maximize2 size={14} />
-                    </IconButton>
-                  </Box>
-                </Box>
+                    </button>
+                  </div>
+                </div>
 
                 {projectsOpen && (
-                  <Box sx={{ flex: 1, overflowY: 'auto', pr: 0.5 }}>
+                  <div className="flex-1 overflow-y-auto pr-0.5 scrollbar-thin">
                     {projectsLoading ? (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <div className="flex flex-col gap-3">
                         {[1, 2, 3].map((n) => (
-                          <Box key={n} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)' }}>
-                            <></>
-                            <Box sx={{ flex: 1 }}>
-                              <></>
-                              <></>
-                            </Box>
-                          </Box>
+                          <div key={n} className="flex gap-3 p-3.5 rounded-xl bg-white/[0.01] border border-white/3 animate-pulse">
+                            <div className="w-9 h-9 rounded-lg bg-white/5" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-4 bg-white/5 rounded w-3/4" />
+                              <div className="h-3 bg-white/5 rounded w-1/2" />
+                            </div>
+                          </div>
                         ))}
-                      </Box>
+                      </div>
                     ) : projects.length === 0 ? (
-                      <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+                      <div className="text-center py-6 select-none">
+                        <p className="text-white/40 text-xs italic font-bold">
                           No active projects.
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                     ) : (
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <div className="flex flex-col gap-3">
                         {projects.map((proj) => (
-                          <Box
+                          <button
                             key={proj.$id}
                             onClick={() => router.push(`/projects/${proj.$id}`)}
-                            sx={{
-                              display: 'flex',
-                              gap: 1.5,
-                              p: 1.5,
-                              borderRadius: '16px',
-                              bgcolor: 'rgba(255,255,255,0.02)',
-                              border: '1px solid rgba(255,255,255,0.03)',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                bgcolor: 'rgba(255,255,255,0.04)',
-                                borderColor: 'rgba(255,255,255,0.08)',
-                                transform: 'translateX(3px)',
-                              }
-                            }}
+                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] hover:bg-white/5 border border-white/3 hover:border-white/10 text-left transition-all duration-300 hover:translate-x-1 group"
                           >
-                            <Box sx={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: '10px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              bgcolor: alpha(proj.color || '#6366F1', 0.12),
-                              color: proj.color || '#6366F1',
-                              flexShrink: 0,
-                            }}>
-                              <FolderKanban size={18} />
-                            </Box>
-                            <Box sx={{ minWidth: 0, flex: 1 }}>
-                              <Typography variant="body2" sx={{ fontWeight: 800, color: '#fff' }} noWrap>
+                            <div 
+                              style={{ 
+                                backgroundColor: `${proj.color || '#6366F1'}1a`,
+                                color: proj.color || '#6366F1'
+                              }}
+                              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                            >
+                              <ProjectIcon size={18} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <span className="block text-white font-extrabold text-xs truncate">
                                 {proj.name}
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }} noWrap>
+                              </span>
+                              <span className="block text-white/40 text-[9px] font-black uppercase tracking-wider font-mono mt-0.5">
                                 STATUS: {(proj.status || 'Active').toUpperCase()}
-                              </Typography>
-                            </Box>
-                          </Box>
+                              </span>
+                            </div>
+                          </button>
                         ))}
-                      </Box>
+                      </div>
                     )}
-                  </Box>
+                  </div>
                 )}
-              </Box>
-            </Box>
-          </Box>
+              </div>
+
+            </div>
+          </div>
         ) : (
           <>
             {/* Mobile Header */}
-            <Box
-              component="header"
-              sx={{
-                mb: 4,
-                display: { xs: 'flex', md: 'none' },
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                px: 2,
-                py: 1.5,
-                bgcolor: 'rgba(255, 255, 255, 0.01)',
-                borderRadius: '24px',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-              }}
-            >
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 900,
-                  fontFamily: 'var(--font-clash-display)',
-                  color: 'text.primary',
-                  letterSpacing: '-0.04em',
-                }}
-              >
+            <header className="mb-4 flex md:hidden items-center justify-between px-3 py-2 bg-white/[0.01] border border-white/8 rounded-2xl select-none">
+              <h1 className="text-white font-black text-xl tracking-tight leading-none font-mono">
                 Notes
-              </Typography>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <IconButton 
+              </h1>
+              <div className="flex items-center gap-2">
+                <button 
                   onClick={handleManualRefresh} 
-                  {...sidebarIgnoreProps} 
-                  sx={{ 
-                    color: isRefreshing ? 'secondary.main' : 'text.secondary',
-                    bgcolor: 'rgba(255, 255, 255, 0.03)',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    '&:hover': {
-                      bgcolor: 'rgba(255, 255, 255, 0.05)',
-                      borderColor: 'rgba(255, 255, 255, 0.15)',
-                    },
-                    transition: 'all 0.3s ease',
-                    '& svg': {
-                      animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
-                      '@keyframes spin': {
-                        '0%': { transform: 'rotate(0deg)' },
-                        '100%': { transform: 'rotate(360deg)' }
-                      }
-                    }
-                  }}
                   disabled={isRefreshing}
+                  className="w-9 h-9 rounded-lg bg-white/3 border border-white/8 hover:border-white/15 flex items-center justify-center transition-all duration-300 disabled:opacity-40"
                 >
-                  <RefreshIcon />
-                </IconButton>
-              </Stack>
-            </Box>
+                  <RefreshIcon size={14} className={isRefreshing ? 'animate-spin text-[#EC4899]' : 'text-white/60'} />
+                </button>
+              </div>
+            </header>
             {mainNotesContent}
           </>
         )}
-      </Box>
+      </div>
     </NotesErrorBoundary>
   );
 }
