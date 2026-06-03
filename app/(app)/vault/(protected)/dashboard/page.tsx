@@ -99,6 +99,8 @@ function DashboardPageContent() {
   useEffect(() => {
     if (needsMasterPassword || !isVaultUnlocked()) {
       setShowMasterPassDrawer(true);
+    } else {
+      setShowMasterPassDrawer(false);
     }
   }, [needsMasterPassword, isVaultUnlocked]);
 

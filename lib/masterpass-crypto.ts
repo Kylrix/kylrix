@@ -179,20 +179,28 @@ export class MasterPassCrypto {
     }
   }
 
+  // Mark the vault as unlocked and notify ecosystem
+  private markAsUnlocked(): void {
+    this.isUnlocked = true;
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem("vault_unlocked", Date.now().toString());
+      sessionStorage.setItem("kylrix_vault_unlocked", "true");
+      sessionStorage.removeItem("vault_login_check");
+    }
+    markSudoActive();
+    
+    if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("vault-unlocked"));
+    }
+  }
+
   // Unlock a key has been imported (e.g., from passkey)
   async unlockWithImportedKey(): Promise<boolean> {
     if (!this.masterKey) {
       logError("Cannot unlock with imported key: key is not present");
       return false;
     }
-    this.isUnlocked = true;
-    if (typeof sessionStorage !== "undefined") {
-      sessionStorage.setItem("vault_unlocked", Date.now().toString());
-      // CRITICAL FIX: Ensure ecosystem sync is reflected in sessionStorage immediately
-      // EcosystemSecurity uses this key to track unlock status across apps.
-      sessionStorage.setItem("kylrix_vault_unlocked", "true");
-    }
-    markSudoActive();
+    this.markAsUnlocked();
     return true;
   }
 
@@ -220,17 +228,7 @@ export class MasterPassCrypto {
         const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
         await ecosystemSecurity.importMasterKey(rawMek);
 
-        this.isUnlocked = true;
-        if (typeof sessionStorage !== "undefined") {
-          sessionStorage.setItem("vault_unlocked", Date.now().toString());
-          // Ensure we don't have stale login data
-          sessionStorage.removeItem("vault_login_check");
-          
-          // CRITICAL FIX: Ensure ecosystem sync is reflected in sessionStorage immediately
-          // EcosystemSecurity uses this key to track unlock status across apps.
-          sessionStorage.setItem("kylrix_vault_unlocked", "true");
-        }
-        markSudoActive();
+        this.markAsUnlocked();
         await this.syncToServiceWorker();
         return true;
       }
@@ -258,14 +256,7 @@ export class MasterPassCrypto {
         const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
         await ecosystemSecurity.importMasterKey(rawMek);
 
-        this.isUnlocked = true;
-        if (typeof sessionStorage !== "undefined") {
-          sessionStorage.setItem("vault_unlocked", Date.now().toString());
-          // CRITICAL FIX: Ensure ecosystem sync is reflected in sessionStorage immediately
-          // EcosystemSecurity uses this key to track unlock status across apps.
-          sessionStorage.setItem("kylrix_vault_unlocked", "true");
-        }
-        markSudoActive();
+        this.markAsUnlocked();
         await this.syncToServiceWorker();
         return true;
       }

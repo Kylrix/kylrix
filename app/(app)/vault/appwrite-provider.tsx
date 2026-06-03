@@ -321,12 +321,19 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     };
     window.addEventListener("vault-locked", handleVaultLocked);
 
+    // Listen for vault unlock events
+    const handleVaultUnlocked = () => {
+      setTimeout(() => setNeedsMasterPassword(false), 0);
+    };
+    window.addEventListener("vault-unlocked", handleVaultUnlocked);
+
     // Listen for storage changes (multi-tab logout)
     const handleStorageChange = () => fetchUser(true);
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
       window.removeEventListener("vault-locked", handleVaultLocked);
+      window.removeEventListener("vault-unlocked", handleVaultUnlocked);
       window.removeEventListener("storage", handleStorageChange);
       unsubscribe();
     };
