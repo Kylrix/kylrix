@@ -188,7 +188,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
       columnsCount = 2;
       sections = [
         { id: 'original', type: 'original', width: '1fr' },
-        { id: 'sidebar-1', type: 'panel', width: '350px', panels: routePanels },
+        { id: 'sidebar-1', type: 'panel', width: '320px', panels: routePanels },
       ];
     } else if (screenWidth >= 1440 && screenWidth < 1920) {
       // Ultra-Wide Desktop: 3-column screen partition
@@ -199,8 +199,8 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
       
       sections = [
         { id: 'original', type: 'original', width: '1fr' },
-        { id: 'column-first', type: 'panel', width: '340px', panels: firstPanel },
-        { id: 'column-rest', type: 'panel', width: '340px', panels: remainingPanels },
+        { id: 'column-first', type: 'panel', width: '310px', panels: firstPanel },
+        { id: 'column-rest', type: 'panel', width: '310px', panels: remainingPanels },
       ];
     } else {
       // Double Ultra-Wide: 4-column display setup
@@ -212,7 +212,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
         sections.push({
           id: `column-dedicated-${index}`,
           type: 'panel',
-          width: '320px',
+          width: '300px',
           panels: [panel]
         });
       });

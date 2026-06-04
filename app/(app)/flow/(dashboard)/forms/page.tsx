@@ -189,7 +189,7 @@ export default function FormsDashboard() {
     const filteredForms = forms; // Active forms (published/draft on server)
 
     return (
-        <div className="animate-fadeIn p-4 md:p-8 min-h-screen bg-black">
+        <div className="animate-fadeIn p-4 md:px-0 md:py-8 min-h-screen bg-black">
             <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
                 <div className="flex justify-between items-center mb-8">
                     <div>

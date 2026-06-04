@@ -6,18 +6,19 @@ import { X, Mail, ArrowLeft, Fingerprint } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import OAuthButtons from '@/components/OAuthButtons';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import toast from 'react-hot-toast';
 
 import Link from 'next/link';
 
 type LoginStep = 'initial' | 'email' | 'otp' | 'mfa';
-
 export function LoginDrawer() {
   const { activeContent, close } = useUnifiedDrawer();
   const { loginWithEmailOTP, verifyEmailOTP, verifyMFA, refreshUser } = useAuth();
+  const { setIsDrawerOpen } = useDrawerState();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
-  
+
   const [step, setStep] = useState<LoginStep>('initial');
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
@@ -30,6 +31,12 @@ export function LoginDrawer() {
   const isOpen = activeContent === 'login';
 
   useEffect(() => {
+    setIsDrawerOpen(isOpen);
+    return () => setIsDrawerOpen(false);
+  }, [isOpen, setIsDrawerOpen]);
+
+  useEffect(() => {
+...
     if (typeof window !== 'undefined') {
       setLastUsedMethod(localStorage.getItem('kylrix_last_auth_method'));
     }

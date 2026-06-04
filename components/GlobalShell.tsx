@@ -181,7 +181,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           pb: isLandingPage ? 0 : { xs: 12, md: 4 },
           px: isProjectDetailPage ? { xs: 1, sm: 1, md: 2 } : { xs: 2, sm: 2, md: 4 },
           pl: isProjectDetailPage ? { xs: 1, sm: 1, md: 2 } : { xs: 2, sm: 2, md: showLeftSidebar ? 'calc(80px + 32px)' : 4 }, // Dynamic desktop offset padding
-          maxWidth: 1600,
+          maxWidth: 1800,
           mx: 'auto',
           minHeight: '100vh',
           pointerEvents: 'auto',

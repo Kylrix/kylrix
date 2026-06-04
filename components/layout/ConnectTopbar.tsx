@@ -1469,7 +1469,7 @@ export default function ConnectTopbar({
                   component="button"
                   onClick={() => {
                     handleCloseAll();
-                    if (!user && item.app !== 'kylrix') {
+                    if (!user || user.isPulse) {
                       openUnified('login');
                     } else {
                       router.push(item.href);
@@ -1642,11 +1642,15 @@ export default function ConnectTopbar({
               component="div"
               role="button"
               tabIndex={0}
-              onClick={openAppMenu}
+              onClick={user ? openAppMenu : () => openUnified('login')}
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
-                  setAppMenuAnchorEl(event.currentTarget as HTMLElement);
+                  if (user) {
+                    setAppMenuAnchorEl(event.currentTarget as HTMLElement);
+                  } else {
+                    openUnified('login');
+                  }
                 }
               }}
               sx={{

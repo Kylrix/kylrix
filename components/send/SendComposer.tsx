@@ -846,7 +846,7 @@ export function SendComposer() {
         }}
       />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 md:px-0 py-8 md:py-16 pb-20">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-16 pb-20">
         {/* Workspace Banner */}
         <div className={`mb-8 rounded-3xl overflow-hidden border p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)] ${
           user 
