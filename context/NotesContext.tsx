@@ -336,6 +336,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
   }, [invalidate, INITIAL_NOTES_CACHE_KEY]);
 
+  const scheduleInvalidateInitialNotesPage = useCallback(() => {
+    if (INITIAL_NOTES_CACHE_KEY) invalidate(INITIAL_NOTES_CACHE_KEY);
+  }, [invalidate, INITIAL_NOTES_CACHE_KEY]);
+
   // Realtime subscription
   useEffect(() => {
     if (!isAuthenticated || !user?.$id) return;
@@ -427,18 +431,18 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   const isPinned = useCallback((noteId: string) => {
     const note = notes.find(n => n.$id === noteId);
     if (note && note.isPinned) return true;
-    return effectivePinnedIds.includes(noteId);
-  }, [notes, effectivePinnedIds]);
+    return pinnedIds.includes(noteId);
+  }, [notes, pinnedIds]);
 
   const sortedNotes = useMemo(() => {
     return [...notes].sort((a, b) => {
-      const aPinned = a.isPinned || effectivePinnedIds.includes(a.$id);
-      const bPinned = b.isPinned || effectivePinnedIds.includes(b.$id);
+      const aPinned = a.isPinned || pinnedIds.includes(a.$id);
+      const bPinned = b.isPinned || pinnedIds.includes(b.$id);
       if (aPinned && !bPinned) return -1;
       if (!aPinned && bPinned) return 1;
       return 0;
     });
-  }, [notes, effectivePinnedIds]);
+  }, [notes, pinnedIds]);
 
   /**
    * Memoize the context value so consumers (note list, sidebar, search, etc.) don't
@@ -455,7 +459,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       refetchNotes,
       upsertNote,
       removeNote,
-      pinnedIds: effectivePinnedIds,
+      pinnedIds: pinnedIds,
       pinNote,
       unpinNote,
       isPinned,
@@ -470,7 +474,7 @@ export function NotesProvider({ children }: { children: ReactNode }) {
       refetchNotes,
       upsertNote,
       removeNote,
-      effectivePinnedIds,
+      pinnedIds,
       pinNote,
       unpinNote,
       isPinned]
