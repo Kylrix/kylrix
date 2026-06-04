@@ -273,12 +273,12 @@ export default function CreateNoteForm({
     content: content.trim(),
     format,
     tags: normalizeTags(tags),
-    isPublic,
     composerKind,
+    isPublic,
     hasPaywall,
-    paywallAmount,
+    paywallAmount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
     resolvedNoteId: resolvedNoteId || null,
-  }), [title, content, format, tags, isPublic, composerKind, hasPaywall, paywallAmount, resolvedNoteId]);
+  }), [title, content, format, tags, composerKind, isPublic, hasPaywall, paywallAmount, resolvedNoteId]);
 
   const isDirty = snapshot !== lastSavedSnapshot;
 
@@ -313,7 +313,7 @@ export default function CreateNoteForm({
           format: (cached.format as 'text' | 'doodle') || 'text',
           tags: normalizeTags(cached.tags || []),
           composerKind: nextComposerKind,
-          isPublic: !!cached.isPublic,
+          isPublic: cachedPublic,
           hasPaywall: !!paywall?.enabled,
           paywallAmount: paywall?.amount || 0,
           resolvedNoteId: cached.$id,
@@ -342,7 +342,7 @@ export default function CreateNoteForm({
           format: (loaded.format as 'text' | 'doodle') || 'text',
           tags: normalizeTags(loaded.tags || []),
           composerKind: nextComposerKind,
-          isPublic: !!loaded.isPublic,
+          isPublic: loadedPublic,
           hasPaywall: !!paywall?.enabled,
           paywallAmount: paywall?.amount || 0,
           resolvedNoteId: loaded.$id,
@@ -597,15 +597,30 @@ export default function CreateNoteForm({
               {format === 'doodle' ? <PenTool className="w-3.5 h-3.5 animate-in fade-in duration-200" /> : <FileText className="w-3.5 h-3.5 animate-in fade-in duration-200" />}
             </div>
             <div className="min-w-0 flex flex-col">
-              <span className="font-extrabold text-[11px] font-mono tracking-tight text-white leading-tight">
+              <span className="font-extrabold text-xs font-mono tracking-tight text-white leading-tight">
                 {resolvedNoteId 
                   ? (composerKind === 'project' ? 'Edit Project' : 'Edit Note') 
                   : (composerKind === 'project' ? 'New Project' : 'New Note')
                 }
               </span>
-              <span className="text-[8px] font-mono text-white/40 mt-0.5">
-                {isSaving ? 'Saving...' : isDirty ? 'Unsaved' : 'Autosaved'}
-              </span>
+              <div className="flex items-center gap-1 mt-0.5 select-none">
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  isSaving 
+                    ? 'bg-amber-500 animate-pulse' 
+                    : isDirty 
+                      ? 'bg-white/30' 
+                      : 'bg-emerald-500'
+                }`} />
+                <span className={`text-[9px] font-mono font-bold uppercase tracking-wider ${
+                  isSaving 
+                    ? 'text-amber-500/80' 
+                    : isDirty 
+                      ? 'text-white/45' 
+                      : 'text-emerald-400'
+                }`}>
+                  {isSaving ? 'Saving' : isDirty ? 'Unsaved' : 'Autosaved'}
+                </span>
+              </div>
             </div>
           </div>
 
