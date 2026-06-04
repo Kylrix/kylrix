@@ -455,6 +455,7 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
           href={href}
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             // Clicking triggers unlock if locked, or copies the current token if unlocked
             if (!isUnlocked) {
               setIsDrawerOpen(true);
@@ -531,6 +532,7 @@ export function LinkComponent({ href, children }: { href?: string; children?: Re
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
       sx={{
         color: '#6366F1',
         textDecoration: 'none',
