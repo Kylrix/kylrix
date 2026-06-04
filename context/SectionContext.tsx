@@ -518,7 +518,7 @@ export function MultiSectionContainer({ children, panels, contextId }: MultiSect
 
   // Certain types should ALWAYS be full screen (overlaying everything)
   const isFullScreenDetail = useMemo(() => {
-    return activeDetail?.type === 'secret';
+    return activeDetail?.type === 'secret' || activeDetail?.type === 'goal';
   }, [activeDetail?.type]);
 
   // Compute CSS Grid columns style

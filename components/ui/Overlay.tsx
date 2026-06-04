@@ -49,24 +49,33 @@ const Overlay: React.FC = () => {
     return <>{content}</>;
   }
 
+  const isFlapover = React.isValidElement(content) && (
+    (content.props as any).note !== undefined ||
+    (content.type as any).name === 'NoteDetailSidebar' ||
+    (content.type as any).name === 'CreateNoteForm' ||
+    (content.props as any).onNoteCreated !== undefined ||
+    (content.props as any).noteKind !== undefined
+  );
+
   const drawerHeight = isMobile 
-    ? (isExpanded ? '100dvh' : '60dvh')
+    ? (isFlapover ? '100dvh' : (isExpanded ? '100dvh' : '60dvh'))
     : '100%';
 
   return (
     <Drawer
-      anchor={isMobile ? 'bottom' : 'right'}
+      anchor={isMobile && !isFlapover ? 'bottom' : 'right'}
       open={isOpen}
       onClose={closeOverlay}
       ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
+      sx={isMobile && isFlapover ? { zIndex: 9999 } : undefined}
       PaperProps={{
         sx: {
           width: isMobile ? '100%' : 'min(100vw, 720px)',
           maxWidth: isMobile ? '100%' : '720px',
           height: drawerHeight,
           maxHeight: '100dvh',
-          borderTopLeftRadius: isMobile ? '24px' : 0,
-          borderTopRightRadius: isMobile ? '24px' : 0,
+          borderTopLeftRadius: isMobile && !isFlapover ? '24px' : 0,
+          borderTopRightRadius: isMobile && !isFlapover ? '24px' : 0,
           borderLeft: isMobile ? 'none' : '1px solid rgba(255, 255, 255, 0.08)',
           backgroundImage: 'none',
           bgcolor: '#161412',
