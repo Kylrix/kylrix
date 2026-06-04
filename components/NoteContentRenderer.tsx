@@ -1,10 +1,12 @@
 'use client';
 
+import React, { useMemo } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { Box, Typography, alpha } from '@/lib/mui-tailwind/material';
 import NoteContentDisplay from '@/components/NoteContentDisplay';
 import { preProcessMarkdown } from '@/lib/markdown';
+import { VoiceNotePlayer } from '@/components/LinkRenderer';
 
 // Configure marked for GFM and breaks
 marked.setOptions({
@@ -29,6 +31,15 @@ export function NoteContentRenderer({
 }: NoteContentRendererProps) {
   const noteFormat = format === 'doodle' ? 'doodle' : 'text';
 
+  const parts = useMemo(() => {
+    const trimmed = content?.trim();
+    if (!trimmed || noteFormat === 'doodle') return [];
+    
+    // Split by voice tag to render VoiceNotePlayer inline natively
+    const voiceNoteRegex = /(\[voice:[a-zA-Z0-9_-]+\])/g;
+    return trimmed.split(voiceNoteRegex);
+  }, [content, noteFormat]);
+
   if (noteFormat === 'doodle') {
     return (
       <NoteContentDisplay
@@ -40,15 +51,9 @@ export function NoteContentRenderer({
     );
   }
 
-  const trimmed = content?.trim();
-  if (!trimmed) {
+  if (parts.length === 0) {
     return <Box>{emptyFallback}</Box>;
   }
-
-  // Pre-process and parse markdown
-  const processed = preProcessMarkdown(trimmed);
-  const rawHtml = marked.parse(processed) as string;
-  const sanitizedHtml = typeof window !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
 
   return (
     <Box 
@@ -136,10 +141,33 @@ export function NoteContentRenderer({
           }
         }
       }}
-      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-    />
+    >
+      {parts.map((part, index) => {
+        const match = part.match(/^\[voice:([a-zA-Z0-9_-]+)\]$/);
+        if (match) {
+          const fileId = match[1];
+          return (
+            <Box key={index} sx={{ my: 1.5, display: 'block' }}>
+              <VoiceNotePlayer fileId={fileId} />
+            </Box>
+          );
+        }
+
+        const processed = preProcessMarkdown(part);
+        const rawHtml = marked.parse(processed) as string;
+        const sanitizedHtml = typeof window !== 'undefined' ? DOMPurify.sanitize(rawHtml) : rawHtml;
+
+        return (
+          <Box
+            key={index}
+            component="div"
+            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+            sx={{ display: 'inline' }}
+          />
+        );
+      })}
+    </Box>
   );
 }
 
 export default NoteContentRenderer;
-

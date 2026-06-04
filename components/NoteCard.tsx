@@ -345,7 +345,10 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
                   </div>
                 ) : (
                   <p className="line-clamp-2 break-words select-text">
-                    {isEncryptedNote ? '🔒 Encrypted note' : note.content}
+                    {isEncryptedNote 
+                      ? '🔒 Encrypted note' 
+                      : (note.content || '').replace(/\[voice:[a-zA-Z0-9_-]+\]/g, '🎙️ Voice Note')
+                    }
                   </p>
                 )}
               </div>

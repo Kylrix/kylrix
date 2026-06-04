@@ -42,6 +42,7 @@ import { ConfirmationDialog } from '@/components/ConfirmationDialog';
 import { formatNoteCreatedDate, formatNoteUpdatedDate } from '@/lib/date-utils';
 import { getTablesDbRowCached } from '@/lib/ecosystem/tablesdb-row-cache';
 import { 
+  getNote,
   listFlowTasks, 
   listFlowEvents, 
   listKeepCredentials, 
@@ -106,9 +107,33 @@ export function NoteDetailSidebar({
     noteRef.current = note;
   }, [note]);
 
+  // Fetch note fully on mount/change
   useEffect(() => {
     setRealtimeNote(null);
-  }, [note.$id]);
+    let active = true;
+    const fetchFullNote = async () => {
+      try {
+        const full = await getNote(note.$id);
+        if (active && full) {
+          let resolved = full as Notes;
+          const meta = (() => {
+            try { return JSON.parse(full.metadata || '{}'); } catch { return {}; }
+          })();
+          const isT4 = (meta?.isEncrypted === true || meta?.isEncrypted === 'true') && meta?.encryptionVersion === 'T4';
+          if (isT4 && ecosystemSecurity.status.isUnlocked && !meta?.clientDecrypted) {
+            const decrypted = await decryptPublicEncryptedNote(full);
+            if (decrypted) resolved = decrypted;
+          }
+          onUpdate(resolved);
+          setRealtimeNote(resolved);
+        }
+      } catch (err) {
+        console.error('Failed to fetch full note:', err);
+      }
+    };
+    fetchFullNote();
+    return () => { active = false; };
+  }, [note.$id, onUpdate]);
   
   const noteMeta = useMemo(() => {
     try {
@@ -477,6 +502,45 @@ export function NoteDetailSidebar({
     setShowDeleteConfirm(false);
   }, [onDelete, liveNote.$id]);
 
+  const handleBackClick = useCallback(async () => {
+    const hasDiff = liveNote.title !== title ||
+                    liveNote.content !== content ||
+                    liveNote.format !== format ||
+                    liveNote.tags?.join(', ') !== tags;
+                    
+    if (hasDiff) {
+      const updated = {
+        ...liveNote,
+        title,
+        content,
+        format,
+        tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+      };
+      
+      onUpdate(updated);
+      
+      if (isEditing) {
+        try {
+          const { updateNote } = await import('@/lib/actions/client-ops');
+          await updateNote(liveNote.$id, {
+            title,
+            content,
+            format,
+            tags: tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+          });
+        } catch (e) {
+          console.error('Failed to sync on back click:', e);
+        }
+      }
+    }
+    
+    if (onBack) {
+      onBack();
+    } else {
+      closeSidebar();
+    }
+  }, [onBack, closeSidebar, liveNote, title, content, format, tags, onUpdate, isEditing]);
+
   const handleCreateTaskFromNote = useCallback(async () => {
     setIsCreatingTaskFromNote(true);
     try {
@@ -654,7 +718,7 @@ export function NoteDetailSidebar({
             {onBack ? (
               <button 
                 type="button"
-                onClick={onBack} 
+                onClick={handleBackClick} 
                 className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex-shrink-0"
               >
                 <BackIcon className="w-5 h-5" />
@@ -662,7 +726,7 @@ export function NoteDetailSidebar({
             ) : (
               <button 
                 type="button"
-                onClick={closeSidebar} 
+                onClick={handleBackClick} 
                 className="p-1.5 text-white/50 hover:text-white hover:bg-white/5 rounded-lg transition-colors flex-shrink-0 sm:hidden"
               >
                 <BackIcon className="w-5 h-5" />
