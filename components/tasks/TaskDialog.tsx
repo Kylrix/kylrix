@@ -51,6 +51,7 @@ export default function TaskDialog() {
   const [status, setStatus] = useState<TaskStatus>('todo');
   const [projectId, setProjectId] = useState(selectedProjectId || 'inbox');
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [estimatedTime, setEstimatedTime] = useState('');
   const [isHydrated, setIsHydrated] = useState(false);
