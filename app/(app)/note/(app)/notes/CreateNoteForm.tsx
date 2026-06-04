@@ -1,30 +1,21 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Box,
-  Button,
-  IconButton,
-  Paper,
-  Stack,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Typography,
-  alpha,
-  useMediaQuery,
-  useTheme,
-} from '@/lib/mui-tailwind/material';
-import {
-  Description as DescriptionIcon,
-  ExpandLess as ExpandLessIcon,
-  ExpandMore as ExpandMoreIcon,
-  DragHandle as DragHandleIcon,
-  Lock as PrivateIcon,
-  Public as PublicIcon,
-  Brush as PencilIcon,
-} from '@/lib/mui-tailwind/icons';
-import { Check, ArrowUpRight, Mic, Square } from 'lucide-react';
+import { 
+  Check, 
+  ArrowUpRight, 
+  Mic, 
+  Square, 
+  FileText, 
+  PenTool, 
+  Lock, 
+  Globe, 
+  ChevronUp, 
+  ChevronDown, 
+  X, 
+  Tag, 
+  Plus
+} from 'lucide-react';
 import { StorageService } from '@/lib/services/storage';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -60,8 +51,6 @@ export default function CreateNoteForm({
   noteKind = 'note',
   noteId,
 }: CreateNoteFormProps) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { setActiveDetail } = useSection();
   const { closeOverlay } = useOverlay();
   const { showSuccess, showError } = useToast();
@@ -77,7 +66,6 @@ export default function CreateNoteForm({
   const [isPublic, setIsPublic] = useState(false);
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
   const [currentTag, setCurrentTag] = useState('');
-  const [isExpanded, setIsExpanded] = useState(!isMobile);
   const [isSaving, setIsSaving] = useState(false);
   const [showDoodleEditor, setShowDoodleEditor] = useState(initialFormat === 'doodle');
   const [resolvedNoteId, setResolvedNoteId] = useState<string | undefined>(noteId);
@@ -97,6 +85,20 @@ export default function CreateNoteForm({
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setIsExpanded(!mobile);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -271,10 +273,6 @@ export default function CreateNoteForm({
   const isDirty = snapshot !== lastSavedSnapshot;
 
   useEffect(() => {
-    if (!isMobile) setIsExpanded(true);
-  }, [isMobile]);
-
-  useEffect(() => {
     let cancelled = false;
 
     const hydrate = async () => {
@@ -398,125 +396,123 @@ export default function CreateNoteForm({
     }
 
     const runPersist = (async () => {
-    const normalizedTags = normalizeTags(tags);
-    const payload = {
-      title: title.trim(),
-      content: content.trim(),
-      format,
-      tags: normalizedTags,
-      kind: composerKind,
-      isPublic,
-      metadata: JSON.stringify({
-        paywall: hasPaywall && paywallAmount ? {
-          enabled: true,
-          amount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
-          currency: 'USD',
-        } : {
-          enabled: false,
-          amount: 0,
-          currency: 'USD',
-        },
-      }),
-    };
+      const normalizedTags = normalizeTags(tags);
+      const payload = {
+        title: title.trim(),
+        content: content.trim(),
+        format,
+        tags: normalizedTags,
+        kind: composerKind,
+        isPublic,
+        metadata: JSON.stringify({
+          paywall: hasPaywall && paywallAmount ? {
+            enabled: true,
+            amount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
+            currency: 'USD',
+          } : {
+            enabled: false,
+            amount: 0,
+            currency: 'USD',
+          },
+        }),
+      };
 
-    const hasMeaningfulContent = Boolean(payload.title || payload.content || (resolvedNoteId && payload.tags.length));
-    if (!resolvedNoteId && !hasMeaningfulContent) {
-      return null;
-    }
-
-    setIsSaving(true);
-    try {
-      let saved: Notes;
-      const generatedTitle = payload.title || (
-        format === 'doodle'
-          ? `${composerKind === 'project' ? 'Project sketch' : 'Sketch'} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-          : buildAutoTitleFromContent(payload.content) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
-      );
-
-      if (resolvedNoteId) {
-        saved = (await updateNote(resolvedNoteId, {
-          ...payload,
-          // Public/private transitions must go through secure toggle flow.
-          isPublic: persistedIsPublic,
-          title: generatedTitle,
-        })) as Notes;
-      } else {
-        saved = (await createNote({
-          ...payload,
-          // New notes always start private, then securely toggle if requested.
-          isPublic: false,
-          title: generatedTitle,
-        })) as Notes;
-        setResolvedNoteId(saved.$id);
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('kylrix:draft:note');
-        }
-        onNoteCreated(saved);
-        if (showToast && !createdToastShown.current) {
-          createdToastShown.current = true;
-          showSuccess('Note saved', 'Your note has been created.');
-        }
+      const hasMeaningfulContent = Boolean(payload.title || payload.content || (resolvedNoteId && payload.tags.length));
+      if (!resolvedNoteId && !hasMeaningualContent) {
+        return null;
       }
 
-      if (saved?.$id) {
-        if (isPublic !== persistedIsPublic) {
-          const applySecureVisibility = async (): Promise<Notes> => {
-            try {
-              const toggled = await toggleNoteVisibility(saved.$id);
-              if (!toggled) throw new Error('Failed to update note visibility.');
-              return toggled as Notes;
-            } catch (error: any) {
-              if (error?.message === 'VAULT_LOCKED') {
-                const unlocked = await promptSudo();
-                if (!unlocked) {
-                  throw new Error('Vault unlock required to make this note public.');
-                }
-                const retried = await toggleNoteVisibility(saved.$id);
-                if (!retried) throw new Error('Failed to update note visibility.');
-                return retried as Notes;
-              }
-              throw error;
-            }
-          };
+      setIsSaving(true);
+      try {
+        let saved: Notes;
+        const generatedTitle = payload.title || (
+          format === 'doodle'
+            ? `${composerKind === 'project' ? 'Project sketch' : 'Sketch'} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            : buildAutoTitleFromContent(payload.content) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
+        );
 
-          saved = await applySecureVisibility();
+        if (resolvedNoteId) {
+          saved = (await updateNote(resolvedNoteId, {
+            ...payload,
+            isPublic: persistedIsPublic,
+            title: generatedTitle,
+          })) as Notes;
+        } else {
+          saved = (await createNote({
+            ...payload,
+            isPublic: false,
+            title: generatedTitle,
+          })) as Notes;
+          setResolvedNoteId(saved.$id);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('kylrix:draft:note');
+          }
           onNoteCreated(saved);
-          showSuccess(
-            getNotePublicState(saved) ? 'Note is now Public' : 'Note is now Private',
-            getNotePublicState(saved)
-              ? 'Encrypted sharing is enabled for this note.'
-              : 'This note is now private.'
-          );
+          if (showToast && !createdToastShown.current) {
+            createdToastShown.current = true;
+            showSuccess('Note saved', 'Your note has been created.');
+          }
         }
 
-        const livePublicState = getNotePublicState(saved);
-        setPersistedIsPublic(livePublicState);
-        setIsPublic(livePublicState);
-        setCachedData(`note_${saved.$id}`, saved);
-        const paywall = (saved as any).metadata?.paywall;
-        setLastSavedSnapshot(JSON.stringify({
-          title: saved.title || '',
-          content: saved.content || '',
-          format: (saved.format as 'text' | 'doodle') || format,
-          tags: normalizeTags((saved.tags || []) as string[]),
-          composerKind,
-          isPublic: livePublicState,
-          hasPaywall: !!paywall?.enabled,
-          paywallAmount: paywall?.amount || 0,
-          resolvedNoteId: saved.$id,
-        }));
-      }
+        if (saved?.$id) {
+          if (isPublic !== persistedIsPublic) {
+            const applySecureVisibility = async (): Promise<Notes> => {
+              try {
+                const toggled = await toggleNoteVisibility(saved.$id);
+                if (!toggled) throw new Error('Failed to update note visibility.');
+                return toggled as Notes;
+              } catch (error: any) {
+                if (error?.message === 'VAULT_LOCKED') {
+                  const unlocked = await promptSudo();
+                  if (!unlocked) {
+                    throw new Error('Vault unlock required to make this note public.');
+                  }
+                  const retried = await toggleNoteVisibility(saved.$id);
+                  if (!retried) throw new Error('Failed to update note visibility.');
+                  return retried as Notes;
+                }
+                throw error;
+              }
+            };
 
-      return saved || null;
-    } catch (error: any) {
-      console.error('Failed to persist note:', error);
-      if (showToast) {
-        showError('Could not save note', error?.message || 'Please try again.');
+            saved = await applySecureVisibility();
+            onNoteCreated(saved);
+            showSuccess(
+              getNotePublicState(saved) ? 'Note is now Public' : 'Note is now Private',
+              getNotePublicState(saved)
+                ? 'Encrypted sharing is enabled for this note.'
+                : 'This note is now private.'
+            );
+          }
+
+          const livePublicState = getNotePublicState(saved);
+          setPersistedIsPublic(livePublicState);
+          setIsPublic(livePublicState);
+          setCachedData(`note_${saved.$id}`, saved);
+          const paywall = (saved as any).metadata?.paywall;
+          setLastSavedSnapshot(JSON.stringify({
+            title: saved.title || '',
+            content: saved.content || '',
+            format: (saved.format as 'text' | 'doodle') || format,
+            tags: normalizeTags((saved.tags || []) as string[]),
+            composerKind,
+            isPublic: livePublicState,
+            hasPaywall: !!paywall?.enabled,
+            paywallAmount: paywall?.amount || 0,
+            resolvedNoteId: saved.$id,
+          }));
+        }
+
+        return saved || null;
+      } catch (error: any) {
+        console.error('Failed to persist note:', error);
+        if (showToast) {
+          showError('Could not save note', error?.message || 'Please try again.');
+        }
+        throw error;
+      } finally {
+        setIsSaving(false);
       }
-      throw error;
-    } finally {
-      setIsSaving(false);
-    }
     })();
 
     persistInFlightRef.current = runPersist;
@@ -572,224 +568,264 @@ export default function CreateNoteForm({
         />
       )}
 
-      <Box
+      <div
         onContextMenu={(event) => event.preventDefault()}
-        sx={{
-          width: '100%',
-          height: '100%',
-          minHeight: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          bgcolor: '#161412',
-          color: 'white',
-        }}
+        className="w-full h-full min-h-0 flex flex-col bg-[#161412] text-white"
       >
-        <Box
-          sx={{
-            px: 2,
-            py: 1.5,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
-            position: 'sticky',
-            top: 0,
-            zIndex: 2,
-            backdropFilter: 'blur(18px)',
-            bgcolor: 'rgba(22, 20, 18, 0.95)',
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
-            <DragHandleIcon sx={{ fontSize: 20, color: 'rgba(255,255,255,0.3)' }} />
-          </Box>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: '14px',
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: alpha('#EC4899', 0.12),
-                border: '1px solid rgba(236,72,153,0.2)',
-              }}
-            >
-              {format === 'doodle' ? <PencilIcon sx={{ color: '#EC4899' }} /> : <DescriptionIcon sx={{ color: '#EC4899' }} />}
-            </Box>
-            <Box>
-              <Typography sx={{ fontWeight: 900, letterSpacing: '-0.03em' }}>
-                {resolvedNoteId ? (composerKind === 'project' ? 'Edit project' : 'Edit note') : (composerKind === 'project' ? 'New project' : 'New note')}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                {isSaving ? 'Saving…' : isDirty ? 'Unsaved changes' : 'Autosaves on close'}
-              </Typography>
-            </Box>
-          </Stack>
-
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <ToggleButtonGroup
-              value={isPublic}
-              exclusive
-              size="small"
-              onChange={async (_, value) => {
-                if (value === null) return;
-                if (value === true && !ecosystemSecurity.status.isUnlocked) {
-                  const unlocked = await promptSudo();
-                  if (!unlocked) {
-                    setIsPublic(false);
-                    showError('Vault Locked', 'Unlock MasterPass before enabling public sharing.');
-                    return;
-                  }
+        {/* Header */}
+        <div className="px-4 py-3 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 backdrop-blur-md bg-[#161412]/95 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-pink-500/10 border border-pink-500/20 text-pink-500 shrink-0 animate-in fade-in zoom-in-90 duration-200">
+              {format === 'doodle' ? <PenTool className="w-5 h-5 animate-in fade-in duration-200" /> : <FileText className="w-5 h-5 animate-in fade-in duration-200" />}
+            </div>
+            <div className="min-w-0 flex flex-col">
+              <span className="font-extrabold text-sm font-mono tracking-tight text-white leading-tight">
+                {resolvedNoteId 
+                  ? (composerKind === 'project' ? 'Edit Project' : 'Edit Note') 
+                  : (composerKind === 'project' ? 'New Project' : 'New Note')
                 }
-                setIsPublic(value);
-              }}
-              sx={{
-                bgcolor: 'rgba(255,255,255,0.04)',
-                borderRadius: '14px',
-                '& .MuiToggleButton-root': {
-                  border: 'none',
-                  color: 'rgba(255,255,255,0.55)',
-                  px: 1.5,
-                  '&.Mui-selected': {
-                    bgcolor: 'rgba(236,72,153,0.16)',
-                    color: 'white',
-                  }
-                }
-              }}
-            >
-              <ToggleButton value={false}><PrivateIcon fontSize="small" /></ToggleButton>
-              <ToggleButton value={true}><PublicIcon fontSize="small" /></ToggleButton>
-            </ToggleButtonGroup>
+              </span>
+              <span className="text-[10px] font-mono text-white/40 mt-0.5">
+                {isSaving ? 'Saving...' : isDirty ? 'Unsaved changes' : 'Autosaves on close'}
+              </span>
+            </div>
+          </div>
 
-            {format === 'text' && (
-              <IconButton 
-                onClick={toggleRecording} 
-                sx={{ 
-                  color: isRecording ? '#EF4444' : 'rgba(255, 255, 255, 0.7)',
-                  bgcolor: isRecording ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${isRecording ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255, 255, 255, 0.08)'}`,
-                  animation: isRecording ? 'pulseGlow 1.2s infinite alternate' : 'none',
-                  '&:hover': {
-                    bgcolor: isRecording ? 'rgba(239, 68, 68, 0.25)' : 'rgba(255,255,255,0.08)'
-                  }
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Format toggle: Text vs Doodle */}
+            <div className="flex items-center bg-black/40 border border-white/5 rounded-xl p-0.5 mr-1 text-[11px] font-mono shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setFormat('text');
+                  setShowDoodleEditor(false);
                 }}
-                title={isRecording ? `Recording (${Math.floor(recordingDuration / 60)}:${(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}) - Click to Stop & Insert` : "Record Voice Note"}
+                className={`px-2 py-1 rounded-lg transition-colors font-bold ${format === 'text' ? 'bg-pink-500/20 text-pink-400 font-extrabold' : 'text-white/50 hover:text-white'}`}
               >
-                {isRecording ? <Square size={16} fill="#EF4444" /> : <Mic size={16} />}
-              </IconButton>
-            )}
+                Text
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFormat('doodle');
+                  setShowDoodleEditor(true);
+                }}
+                className={`px-2 py-1 rounded-lg transition-colors font-bold ${format === 'doodle' ? 'bg-pink-500/20 text-pink-400 font-extrabold' : 'text-white/50 hover:text-white'}`}
+              >
+                Doodle
+              </button>
+            </div>
 
             {(content.trim().length > 0 || title.trim().length > 0) && (
-              <IconButton onClick={handleMorphToDetail} sx={{ color: '#F59E0B' }} title="Go Full Detail">
-                <ArrowUpRight size={20} />
-              </IconButton>
-            )}
-
-            <style>{`
-              @keyframes pulseGlow {
-                0% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.2); }
-                100% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); }
-              }
-            `}</style>
-
-            <IconButton onClick={() => setIsExpanded((prev) => !prev)} sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </IconButton>
-
-            <IconButton onClick={handleClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
-              <Check size={20} />
-            </IconButton>
-          </Stack>
-        </Box>
-
-        <Box sx={{ px: 2, py: 2, overflowY: 'auto', minHeight: 0, flex: 1 }}>
-          <Stack spacing={2.25}>
-            {(content.trim().length >= 5 || isTitleManuallyEdited) && (
-              <TextField
-                fullWidth
-                value={title}
-                onChange={(event) => {
-                  setTitle(event.target.value);
-                  setIsTitleManuallyEdited(true);
-                }}
-                placeholder="Title"
-                variant="standard"
-                InputProps={{
-                  disableUnderline: true,
-                  sx: {
-                    fontSize: '1.4rem',
-                    fontWeight: 900,
-                    color: 'white',
-                    '& input::placeholder': { color: 'rgba(255,255,255,0.22)', opacity: 1 },
-                  }
-                }}
-                sx={{
-                  bgcolor: 'rgba(255,255,255,0.02)',
-                  borderRadius: '18px',
-                  px: 2,
-                  py: 1.5,
-                  border: '1px solid rgba(255,255,255,0.05)',
-                }}
-              />
-            )}
-
-            {format === 'text' ? (
-              <>
-                <TextField
-                  multiline
-                  minRows={isExpanded ? 14 : 8}
-                  fullWidth
-                  value={content}
-                  onChange={(event) => setContent(event.target.value)}
-                  placeholder="Write your note..."
-                  inputRef={contentRef}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: '22px',
-                      bgcolor: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.06)',
-                    }
-                  }}
-                />
-              </>
-            ) : (
-              <Paper
-                variant="outlined"
-                sx={{
-                  p: 2,
-                  borderRadius: '22px',
-                  borderColor: 'rgba(255,255,255,0.08)',
-                  bgcolor: 'rgba(255,255,255,0.03)',
-                }}
+              <button 
+                type="button"
+                onClick={handleMorphToDetail} 
+                className="p-2 rounded-xl text-amber-500 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/5 transition-all shrink-0"
+                title="Go Full Detail"
               >
-                {content ? (
-                  <Typography sx={{ whiteSpace: 'pre-wrap', minHeight: 120 }}>
-                    {content.slice(0, 300)}
-                  </Typography>
-                ) : (
-                  <Typography sx={{ color: 'rgba(255,255,255,0.45)' }}>
-                    No doodle yet. Open the canvas to sketch.
-                  </Typography>
-                )}
-                <Stack direction="row" spacing={1.5} sx={{ mt: 2 }} flexWrap="wrap">
-                  <Button variant="contained" onClick={() => { setShowDoodleEditor(true); setFormat('doodle'); }} sx={{ bgcolor: '#EC4899', color: 'black', fontWeight: 800 }}>
-                    {content ? 'Edit doodle' : 'Create doodle'}
-                  </Button>
-                  <Button variant="outlined" onClick={() => setFormat('text')} sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.1)' }}>
-                    Switch to text
-                  </Button>
-                </Stack>
-              </Paper>
+                <ArrowUpRight className="w-4 h-4" />
+              </button>
             )}
 
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.45)' }}>
-                Right click is handled here so copy, cut, paste, and shortcuts stay local.
-              </Typography>
-            </Box>
-          </Stack>
-        </Box>
-      </Box>
+            {isMobile && (
+              <button 
+                type="button"
+                onClick={() => setIsExpanded(prev => !prev)} 
+                className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/5 transition-all shrink-0"
+              >
+                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+            )}
+
+            <button 
+              type="button"
+              onClick={handleClose} 
+              className="p-2 rounded-xl text-[#10B981] hover:bg-[#10B981]/10 border border-transparent hover:border-[#10B981]/10 transition-all font-bold shrink-0"
+              title="Save and Close"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content Body */}
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 min-h-0 scrollbar-thin">
+          {(content.trim().length >= 5 || isTitleManuallyEdited) && (
+            <input
+              type="text"
+              value={title}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                setIsTitleManuallyEdited(true);
+              }}
+              placeholder="Title"
+              className="w-full bg-white/[0.02] text-white placeholder-white/20 border border-white/5 focus:border-pink-500/30 rounded-2xl px-4 py-3.5 text-lg font-black focus:outline-none transition-all font-space-grotesk shrink-0"
+            />
+          )}
+
+          {format === 'text' ? (
+            <textarea
+              ref={contentRef}
+              rows={isExpanded ? 14 : 8}
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              placeholder="Write your note..."
+              className="w-full flex-1 min-h-[220px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-pink-500/30 rounded-2xl px-4 py-3 text-sm focus:outline-none transition-all scrollbar-thin"
+            />
+          ) : (
+            <div className="p-5 rounded-2xl border border-white/10 bg-white/[0.03] flex flex-col gap-4">
+              {content ? (
+                <div className="min-h-[120px] max-h-[300px] overflow-y-auto whitespace-pre-wrap font-sans text-white/80 text-sm leading-relaxed border-b border-white/5 pb-4 scrollbar-thin">
+                  <div className="flex items-center gap-2 text-pink-400 font-mono text-xs mb-2">
+                    <PenTool className="w-4 h-4" />
+                    <span>Doodle Sketch Saved</span>
+                  </div>
+                  <p className="text-white/40 text-xs italic">Open the drawing canvas to view or edit the full sketch.</p>
+                </div>
+              ) : (
+                <p className="text-sm text-white/40 italic min-h-[120px] flex items-center justify-center border-b border-white/5 pb-4">
+                  No sketch created yet. Open the canvas to start drawing.
+                </p>
+              )}
+              <div className="flex gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDoodleEditor(true);
+                    setFormat('doodle');
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-black font-extrabold text-xs font-mono transition shadow-[0_4px_14px_rgba(236,72,153,0.2)]"
+                >
+                  {content ? 'Edit sketch' : 'Create sketch'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormat('text')}
+                  className="px-4 py-2.5 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 font-extrabold text-xs font-mono transition"
+                >
+                  Switch to text
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="text-[11px] text-white/30 font-mono select-none mt-auto pt-2">
+            Right click is handled here so copy, cut, paste, and shortcuts stay local.
+          </div>
+        </div>
+
+        {/* Bottom Toolbar */}
+        <div className="px-4 py-3.5 border-t border-white/5 bg-[#161412] flex flex-col gap-3 shrink-0">
+          {/* Tags section */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Tag className="w-3.5 h-3.5 text-white/40" />
+              <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider">Tags</span>
+            </div>
+            
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-pink-500/10 border border-pink-500/20 text-pink-400 font-mono text-[10px] animate-in zoom-in-95 duration-150"
+                >
+                  <span>{tag}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="hover:text-red-400 transition-colors"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                </span>
+              ))}
+              
+              {/* Mini Tag Input */}
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={currentTag}
+                  onChange={(e) => setCurrentTag(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+                  placeholder="Add tag..."
+                  className="bg-black/30 border border-white/5 focus:border-pink-500/30 rounded-lg px-2.5 py-1 text-[10px] font-mono text-white placeholder-white/20 focus:outline-none transition-all w-24"
+                />
+                {currentTag.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => appendTag(currentTag)}
+                    className="absolute right-2 p-0.5 text-pink-400 hover:text-white rounded"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Visibility and Voice controls */}
+          <div className="flex items-center justify-between border-t border-white/5 pt-3">
+            {/* Public vs Private toggle */}
+            <div className="flex items-center gap-1 bg-black/40 border border-white/5 rounded-xl p-0.5 text-[10px] font-mono">
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsPublic(false);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors font-bold ${!isPublic ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white'}`}
+              >
+                <Lock className="w-3 h-3" />
+                <span>Private</span>
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!ecosystemSecurity.status.isUnlocked) {
+                    const unlocked = await promptSudo();
+                    if (!unlocked) {
+                      showError('Vault Locked', 'Unlock MasterPass before enabling public sharing.');
+                      return;
+                    }
+                  }
+                  setIsPublic(true);
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors font-bold ${isPublic ? 'bg-pink-500/20 text-pink-400 font-extrabold' : 'text-white/40 hover:text-white'}`}
+              >
+                <Globe className="w-3 h-3" />
+                <span>Public</span>
+              </button>
+            </div>
+
+            {/* Voice Recorder & Info */}
+            <div className="flex items-center gap-2">
+              {format === 'text' && (
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`h-8 px-3 rounded-xl flex items-center justify-center gap-2 font-mono text-[11px] font-bold transition-all select-none border ${
+                    isRecording 
+                      ? 'bg-red-500/20 border-red-500/30 text-red-400 animate-pulse' 
+                      : 'bg-black/40 border-white/5 text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                  title={isRecording ? "Click to Stop & Insert" : "Record Voice Note"}
+                >
+                  {isRecording ? (
+                    <>
+                      <Square className="w-3 h-3 fill-current" />
+                      <span>{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-3.5 h-3.5" />
+                      <span>Record</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
