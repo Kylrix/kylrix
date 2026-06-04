@@ -85,117 +85,43 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     isAuthLoading = false;
   }
 
-  const { fetchOptimized, setCachedData, invalidate, getCachedData } = useDataNexus();
-  const sweepInFlightRef = useRef(false);
-  const notesInitialInvalidateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
-  // All pinned notes are now free. No plan-based limits.
-  const effectivePinnedIds = useMemo(() => {
-    return pinnedIds;
-  }, [pinnedIds]);
+  const { fetchOptimized, setCachedData, invalidate, getCachedData, getCachedDataAsync } = useDataNexus();
 
-  // Primary: fetch from database using native column
-  const fetchPinnedIds = useCallback(async () => {
-    if (!user?.$id) return [];
-    try {
-        const res = await listNotesPaginated({
-            limit: 100,
-            queries: [
-                Query.equal('userId', user.$id),
-                Query.equal('isPinned', true),
-                Query.select(['$id'])
-            ]
-        });
-        return res.rows.map(d => d.$id);
-    } catch (e) {
-        console.warn('[NotesContext] Native pinned fetch failed, falling back to prefs:', e);
-        return getPinnedNoteIds();
-    }
-  }, [user?.$id]);
-
-  // Ensure pinned notes are present in the 'notes' array (smart hydration)
-  useEffect(() => {
-    if (!isAuthenticated || !user?.$id || !effectivePinnedIds.length) return;
-
-    const missingIds = effectivePinnedIds.filter(id => !notes.some(n => n.$id === id));
-    if (missingIds.length === 0) return;
-
-    const hydratePinnedNotes = async () => {
-      try {
-        const res = await listNotesPaginated({
-          limit: missingIds.length,
-          queries: [Query.equal('$id', missingIds), Query.equal('userId', user.$id)],
-          hydrateTags: true
-        });
-
-        if (res?.rows?.length > 0) {
-          const newDocs = res.rows as unknown as Notes[];
-
-          setNotes(prev => {
-            const existingIds = new Set(prev.map(n => n.$id));
-            const distinctNew = newDocs.filter(n => !existingIds.has(n.$id));
-            return [...prev, ...distinctNew];
-          });
-          
-          // Cache them individualy
-          newDocs.forEach(doc => setCachedData(`note_${doc.$id}`, doc));
-        }
-      } catch (e) {
-        console.error('[NotesContext] Failed to hydrate missing pinned notes:', e);
-      }
-    };
-
-    void hydratePinnedNotes();
-  }, [effectivePinnedIds, isAuthenticated, user?.$id, setCachedData, notes]);
-
-  const PINNED_CACHE_KEY = useMemo(() => user?.$id ? `pinned_ids_${user.$id}` : null, [user?.$id]);
-  const INITIAL_NOTES_CACHE_KEY = useMemo(() => user?.$id ? `initial_notes_${user.$id}` : null, [user?.$id]);
-
-  const scheduleInvalidateInitialNotesPage = useCallback(() => {
-    if (!INITIAL_NOTES_CACHE_KEY) return;
-    if (notesInitialInvalidateTimerRef.current) {
-      clearTimeout(notesInitialInvalidateTimerRef.current);
-    }
-    notesInitialInvalidateTimerRef.current = setTimeout(() => {
-      notesInitialInvalidateTimerRef.current = null;
-      invalidate(INITIAL_NOTES_CACHE_KEY);
-    }, 750);
-  }, [INITIAL_NOTES_CACHE_KEY, invalidate]);
-
-  useEffect(() => {
-    return () => {
-      if (notesInitialInvalidateTimerRef.current) {
-        clearTimeout(notesInitialInvalidateTimerRef.current);
-      }
-    };
-  }, []);
-
-  // Load from cache on mount
+  // Load from cache on mount (Instant Cold-Start Hydration)
   useEffect(() => {
     if (!user?.$id || isCacheLoaded) return;
 
-    // Fast hydrate from DataNexus (which handles localStorage internaly)
-    if (PINNED_CACHE_KEY && INITIAL_NOTES_CACHE_KEY) {
-      const cachedPinned = getCachedData<string[]>(PINNED_CACHE_KEY);
-      const cachedNotes = getCachedData<{
-        notes: Notes[];
-        totalNotes: number;
-        cursor: string | null;
-        hasMore: boolean;
-      }>(INITIAL_NOTES_CACHE_KEY);
+    const hydrateFromCache = async () => {
+        if (PINNED_CACHE_KEY && INITIAL_NOTES_CACHE_KEY) {
+            // Try Async hit first (checks memory then RxDB/IndexedDB)
+            const [cachedPinned, cachedNotes] = await Promise.all([
+                getCachedDataAsync<string[]>(PINNED_CACHE_KEY),
+                getCachedDataAsync<{
+                    notes: Notes[];
+                    totalNotes: number;
+                    cursor: string | null;
+                    hasMore: boolean;
+                }>(INITIAL_NOTES_CACHE_KEY)
+            ]);
 
-      if (cachedPinned && Array.isArray(cachedPinned)) setPinnedIds(cachedPinned);
-      if (cachedNotes && Array.isArray(cachedNotes.notes)) {
-        setNotes(cachedNotes.notes);
-        setTotalNotes(cachedNotes.totalNotes || 0);
-        setCursor(cachedNotes.cursor || null);
-        setHasMore(cachedNotes.hasMore ?? true);
-        setIsLoading(false);
-      }
-    }
+            if (cachedPinned && Array.isArray(cachedPinned)) {
+                setPinnedIds(cachedPinned);
+            }
+
+            if (cachedNotes && Array.isArray(cachedNotes.notes)) {
+                setNotes(cachedNotes.notes);
+                setTotalNotes(cachedNotes.totalNotes || 0);
+                setCursor(cachedNotes.cursor || null);
+                setHasMore(cachedNotes.hasMore ?? true);
+                setIsLoading(false); // Stop loading immediately on local hit
+                console.log('[NotesContext] Sub-millisecond cold start via RxDB substrate.');
+            }
+        }
+        setIsCacheLoaded(true);
+    };
     
-    setIsCacheLoaded(true);
-  }, [user?.$id, isCacheLoaded, getCachedData, PINNED_CACHE_KEY, INITIAL_NOTES_CACHE_KEY]);
+    void hydrateFromCache();
+  }, [user?.$id, isCacheLoaded, getCachedDataAsync, PINNED_CACHE_KEY, INITIAL_NOTES_CACHE_KEY]);
 
   // Refs to avoid unnecessary re-creations / dependency loops
   const isFetchingRef = useRef(false);

@@ -18,6 +18,7 @@ interface CacheEntry<T> {
 
 interface DataNexusContextType {
     getCachedData: <T>(key: string, ttl?: number) => T | null;
+    getCachedDataAsync: <T>(key: string, ttl?: number) => Promise<T | null>;
     setCachedData: <T>(key: string, data: T, ttl?: number) => void;
     fetchOptimized: <T>(key: string, fetcher: () => Promise<T>, ttl?: number) => Promise<T>;
     invalidate: (key: string) => void;
@@ -66,11 +67,31 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
             return memoryEntry.data;
         }
 
-        // 2. RxDB Substrate Fallback (Asynchronous)
-        // Since getCachedData is synchronous, we can't await RxDB here.
-        // We rely on fetchOptimized to handle the async load if mirror misses.
         return null;
     }, []);
+
+    const getCachedDataAsync = useCallback(async function<T>(key: string, ttl: number = DEFAULT_TTL): Promise<T | null> {
+        // 1. Check Mirror First
+        const syncHit = getCachedData<T>(key, ttl);
+        if (syncHit) return syncHit;
+
+        // 2. Check RxDB Substrate
+        try {
+            const db = await getRxDB();
+            const doc = await db.cache.findOne(key).exec();
+            
+            if (doc && (Date.now() - doc.timestamp < ttl)) {
+                const data = doc.data as T;
+                // Backfill memory cache
+                memoryCache.current.set(key, { data, timestamp: doc.timestamp });
+                return data;
+            }
+        } catch (e) {
+            console.warn(`[Nexus] RxDB getCachedDataAsync failed for ${key}:`, e);
+        }
+
+        return null;
+    }, [getCachedData]);
 
     const setCachedData = useCallback(async function<T>(key: string, data: T, _ttl?: number) {
         const timestamp = Date.now();
@@ -236,6 +257,7 @@ export function DataNexusProvider({ children }: { children: ReactNode }) {
     return (
         <DataNexusContext.Provider value={{ 
             getCachedData, 
+            getCachedDataAsync,
             setCachedData, 
             fetchOptimized, 
             invalidate, 

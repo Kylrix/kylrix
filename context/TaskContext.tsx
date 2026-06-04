@@ -595,7 +595,7 @@ async function syncTaskAccess(taskId: string, creatorId: string, assigneeIds: st
 
 export function TaskProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(taskReducer, initialState);
-  const { fetchOptimized, invalidate, getCachedData, setCachedData, refreshInBackground } = useDataNexus();
+  const { fetchOptimized, invalidate, getCachedData, getCachedDataAsync, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const flowWarmOwnerRef = useRef<string | null>(null);
 
@@ -630,7 +630,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   }, [fetchOptimized]);
 
-  // Initial Data Fetch
+  // Initial Data Fetch & Cold Hydration
   useEffect(() => {
     if (isAuthLoading) return;
 
@@ -647,12 +647,33 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
       if (userId === 'guest') return;
 
+      // 1. Proactive Hydration (RxDB Substrate)
+      const tasksKey = `f_tasks_${userId}`;
+      const calsKey = `f_calendars_${userId}`;
+
+      const [cachedTasksRes, cachedCalsRes] = await Promise.all([
+          getCachedDataAsync<any>(tasksKey),
+          getCachedDataAsync<any>(calsKey)
+      ]);
+
+      if (cachedTasksRes || cachedCalsRes) {
+          console.log('[TaskContext] Cold-start hydration triggered via RxDB.');
+          dispatch({ 
+              type: 'SET_DATA', 
+              payload: {
+                  tasks: (cachedTasksRes?.rows || []).map(mapAppwriteTaskToTask),
+                  projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject)
+              } 
+          });
+      }
+
+      // 2. Standard Background Refresh
       const data = await fetchBatch(userId);
       dispatch({ type: 'SET_DATA', payload: data });
     };
 
     init();
-  }, [authUser?.$id, isAuthLoading, fetchBatch]);
+  }, [authUser?.$id, isAuthLoading, fetchBatch, getCachedDataAsync]);
 
   // Route-based background revalidation
   useEffect(() => {
