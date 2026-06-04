@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Close as CloseIcon } from './icons';
 
 const OPENBRICKS_TOKENS = {
   shell: '#000000',
@@ -1178,52 +1179,64 @@ export const Menu = React.forwardRef(({
   ...props
 }: any, ref) => {
   const panelRef = React.useRef<HTMLDivElement | null>(null);
-  const [coords, setCoords] = React.useState({ top: 0, left: 0 });
+  const [baseCoords, setBaseCoords] = React.useState({ top: 0, left: 0 });
+  const [panelSize, setPanelSize] = React.useState({ width: 0, height: 0 });
 
+  // 1. Capture base coordinates from anchor
   React.useLayoutEffect(() => {
     if (!open) return;
 
     if (anchorReference === 'anchorPosition' && anchorPosition) {
-      setCoords({ top: anchorPosition.top, left: anchorPosition.left });
-      return;
-    }
-
-    if (anchorEl) {
+      setBaseCoords({ top: anchorPosition.top, left: anchorPosition.left });
+    } else if (anchorEl) {
       const rect = anchorEl.getBoundingClientRect();
       const vertical = anchorOrigin?.vertical === 'top' ? 'top' : 'bottom';
       const horizontal = anchorOrigin?.horizontal === 'right' ? 'right' : 'left';
-      setCoords({
+      setBaseCoords({
         top: vertical === 'top' ? rect.top - 4 : rect.bottom + 4,
         left: horizontal === 'right' ? rect.right : rect.left,
       });
     }
   }, [open, anchorEl, anchorReference, anchorPosition?.top, anchorPosition?.left, anchorOrigin?.vertical, anchorOrigin?.horizontal]);
 
+  // 2. Measure panel size to handle transformOrigin and clamping
   React.useLayoutEffect(() => {
     if (!open || !panelRef.current) return;
-    const panel = panelRef.current;
-    const rect = panel.getBoundingClientRect();
-    let { top, left } = coords;
+    const obs = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setPanelSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height
+        });
+      }
+    });
+    obs.observe(panelRef.current);
+    return () => obs.disconnect();
+  }, [open]);
+
+  // 3. Compute final display coordinates
+  const finalCoords = React.useMemo(() => {
+    let { top, left } = baseCoords;
+    const { width, height } = panelSize;
+    if (width === 0) return { top, left, opacity: 0 }; // Hide while measuring
 
     const hOrigin = transformOrigin?.horizontal || anchorOrigin?.horizontal;
-    if (hOrigin === 'right') {
-      left = left - rect.width;
-    }
+    const vOrigin = transformOrigin?.vertical || anchorOrigin?.vertical;
+
+    if (hOrigin === 'right') left -= width;
+    else if (hOrigin === 'center') left -= width / 2;
+
+    if (vOrigin === 'bottom') top -= height;
+    else if (vOrigin === 'center') top -= height / 2;
 
     const margin = 8;
-    if (left + rect.width > window.innerWidth - margin) {
-      left = window.innerWidth - rect.width - margin;
-    }
-    if (top + rect.height > window.innerHeight - margin) {
-      top = window.innerHeight - rect.height - margin;
-    }
+    if (left + width > window.innerWidth - margin) left = window.innerWidth - width - margin;
+    if (top + height > window.innerHeight - margin) top = window.innerHeight - height - margin;
     if (left < margin) left = margin;
     if (top < margin) top = margin;
 
-    if (left !== coords.left || top !== coords.top) {
-      setCoords({ top, left });
-    }
-  }, [open, coords, children]);
+    return { top, left, opacity: 1 };
+  }, [baseCoords, panelSize, transformOrigin, anchorOrigin]);
 
   if (!open && !keepMounted) return null;
 
@@ -1251,8 +1264,9 @@ export const Menu = React.forwardRef(({
         data-kylrix-context-menu="true"
         className={`fixed z-[1401] overflow-hidden animate-fade-in ${className || ''}`}
         style={{
-          top: coords.top,
-          left: coords.left,
+          top: finalCoords.top,
+          left: finalCoords.left,
+          opacity: finalCoords.opacity,
           minWidth: 220,
           ...paperSx,
         }}
