@@ -396,8 +396,8 @@ export default function SudoModal({
                     100% { transform: scale(1); opacity: 1; }
                 }
             `}</style>
-            <Box sx={{ position: 'relative', px: { xs: 2.5, sm: 3 }, pt: { xs: 1.5, sm: 2 }, pb: 1, flex: '0 0 auto', bgcolor: '#161412' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
+            <Box sx={{ position: 'relative', px: { xs: 1.25, sm: 1.5 }, pt: { xs: 0.75, sm: 1 }, pb: 0.5, flex: '0 0 auto', bgcolor: '#161412' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 0.75 }}>
                     <Box sx={{
                         width: 44,
                         height: 5,
@@ -454,9 +454,9 @@ export default function SudoModal({
                 </Box>
             </Box>
 
-            <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.08)' }} />
+            <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.08)', my: 1 }} />
 
-            <Box sx={{ px: { xs: 2.5, sm: 3 }, py: { xs: 1.5, sm: 2 }, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable', pb: 'calc(8px + env(safe-area-inset-bottom))', bgcolor: '#161412' }}>
+            <Box sx={{ px: { xs: 1.25, sm: 1.5 }, py: { xs: 0.75, sm: 1 }, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', scrollbarGutter: 'stable', pb: 'calc(4px + env(safe-area-inset-bottom))', bgcolor: '#161412' }}>
                 {isDetecting || (loading && !password && mode !== 'migrating') ? (
                     <Box sx={{ display: "flex", justifyContent: "center", py: 2.5 }}>
                         <CircularProgress sx={{ color: accentColor }} />
@@ -686,9 +686,9 @@ export default function SudoModal({
             {mode === "passkey" && (
                 <Box sx={{
                     flex: '0 0 auto',
-                    px: { xs: 2.5, sm: 3 },
-                    pb: 'calc(12px + env(safe-area-inset-bottom))',
-                    pt: 1.5,
+                    px: { xs: 1.25, sm: 1.5 },
+                    pb: 'calc(6px + env(safe-area-inset-bottom))',
+                    pt: 0.75,
                     borderTop: '1px solid rgba(255, 255, 255, 0.08)',
                     bgcolor: '#161412'
                 }}>
