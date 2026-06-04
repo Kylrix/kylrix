@@ -349,7 +349,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     };
   }, [fetchUser, attemptSilentAuth]);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     await fetchUser(true);
     // After refresh, re-calculate needsMasterPassword specifically
     const unlocked = masterPassCrypto.isVaultUnlocked();
@@ -360,9 +360,9 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     } else {
       setNeedsMasterPassword(!unlocked);
     }
-  };
+  }, [fetchUser, pathname, setNeedsMasterPassword]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     // 1. Immediately clear local security state to stop modal triggers
     setNeedsMasterPassword(false);
     masterPassCrypto.lock();
@@ -377,14 +377,14 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     
     // 3. Clear the user state and trigger a final refresh
     setUser(null);
-  };
+  }, [setNeedsMasterPassword, setUser]);
 
-  const resetMasterpass = async () => {
+  const resetMasterpass = useCallback(async () => {
     if (!user) return;
     await resetMasterpassAndWipe(user.$id);
     masterPassCrypto.lock();
     setNeedsMasterPassword(true);
-  };
+  }, [user, setNeedsMasterPassword]);
 
   const isVaultUnlocked = useCallback(() => {
     const unlocked = masterPassCrypto.isVaultUnlocked();
@@ -392,7 +392,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
     return unlocked;
   }, [verbose]);
 
-  const setVaultBlurEnabled = async (enabled: boolean) => {
+  const setVaultBlurEnabled = useCallback(async (enabled: boolean) => {
     setIsVaultBlurEnabled(enabled);
     if (user?.$id) {
         try {
@@ -403,9 +403,9 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
             console.error("[Vault] Failed to persist blur preference", err);
         }
     }
-  };
+  }, [user]);
 
-  const setUsePasskeysByDefault = async (enabled: boolean) => {
+  const setUsePasskeysByDefault = useCallback(async (enabled: boolean) => {
     setUsePasskeysByDefaultState(enabled);
     if (user?.$id) {
         try {
@@ -416,7 +416,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
             console.error("[Vault] Failed to persist passkey default preference", err);
         }
     }
-  };
+  }, [user]);
 
   const contextValue = useMemo(() => ({
     user,
