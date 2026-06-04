@@ -1105,9 +1105,9 @@ export const Chip = ({
       {onDelete && (
         <span 
           onClick={handleDelete}
-          className="flex items-center justify-center cursor-pointer hover:bg-white/10 rounded-full p-0.5 -mr-1"
+          className="flex items-center justify-center cursor-pointer hover:bg-white/20 rounded-full p-1 -mr-1 transition-colors group/chip-delete"
         >
-          {deleteIcon || <CloseIcon sx={{ fontSize: 14 }} />}
+          {deleteIcon || <CloseIcon sx={{ fontSize: 16, opacity: 0.6, '&:hover': { opacity: 1 } }} />}
         </span>
       )}
     </span>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import UserSearch from '@/components/UserSearch';
 import { useTask } from '@/context/TaskContext';
+import { listTags } from '@/lib/appwrite';
 import { Priority, TaskStatus } from '@/types';
 import { ArrowUpRight, ChevronUp, ChevronDown, X, Type } from 'lucide-react';
 import { useSection } from '@/context/SectionContext';
@@ -256,11 +257,15 @@ export default function TaskDialog() {
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-[#1C1A18] flex-shrink-0">
-          <div>
-            <h3 className="text-white text-lg font-black tracking-tight font-clash leading-none">NEW GOAL</h3>
-            <p className="text-[#9B9691] text-[10px] font-bold mt-1 tracking-wider uppercase">INITIALIZE EXECUTION TRACK</p>
+          <div className="min-w-0 flex-1 pr-4">
+            <h3 className="text-white text-lg font-black tracking-tight font-clash leading-none truncate">
+              {(!showTitleInput && title) ? title.toUpperCase() : "NEW GOAL"}
+            </h3>
+            <p className="text-[#9B9691] text-[10px] font-bold mt-1 tracking-wider uppercase truncate">
+              {(!showTitleInput && title) ? "Auto-generated Title" : "INITIALIZE EXECUTION TRACK"}
+            </p>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
             <button
               type="button"
               onClick={() => setShowTitleInput(!showTitleInput)}
