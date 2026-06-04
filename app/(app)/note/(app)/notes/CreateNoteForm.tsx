@@ -40,6 +40,9 @@ interface CreateNoteFormProps {
   initialFormat?: 'text' | 'doodle';
   noteKind?: 'note' | 'project';
   noteId?: string;
+  onClose?: () => void;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 const normalizeTags = (tags: string[] = []) => Array.from(new Set(tags.map((tag) => tag.trim()).filter(Boolean)));
@@ -50,6 +53,9 @@ export default function CreateNoteForm({
   initialFormat = 'text',
   noteKind = 'note',
   noteId,
+  onClose,
+  isExpanded: controlledIsExpanded,
+  onToggleExpand,
 }: CreateNoteFormProps) {
   const { setActiveDetail } = useSection();
   const { closeOverlay } = useOverlay();
@@ -87,18 +93,22 @@ export default function CreateNoteForm({
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isMobile, setIsMobile] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [localIsExpanded, setLocalIsExpanded] = useState(true);
+  const isExpanded = controlledIsExpanded !== undefined ? controlledIsExpanded : localIsExpanded;
+  const toggleExpand = onToggleExpand || (() => setLocalIsExpanded(prev => !prev));
 
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-      setIsExpanded(!mobile);
+      if (controlledIsExpanded === undefined) {
+        setLocalIsExpanded(!mobile);
+      }
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  }, [controlledIsExpanded]);
 
   useEffect(() => {
     return () => {
@@ -529,11 +539,15 @@ export default function CreateNoteForm({
       if (saved && saved.$id) {
         setActiveDetail({ type: 'note', id: saved.$id });
       }
-      closeOverlay();
+      if (onClose) {
+        onClose();
+      } else {
+        closeOverlay();
+      }
     } catch (err) {
       console.error('Failed to morph note to detail', err);
     }
-  }, [persist, setActiveDetail, closeOverlay]);
+  }, [persist, setActiveDetail, closeOverlay, onClose]);
 
   const handleClose = useCallback(async () => {
     const shouldPersist = Boolean((resolvedNoteId && isDirty) || (!resolvedNoteId && (title.trim() || content.trim())));
@@ -544,8 +558,12 @@ export default function CreateNoteForm({
         return;
       }
     }
-    closeOverlay();
-  }, [closeOverlay, content, isDirty, persist, resolvedNoteId, title]);
+    if (onClose) {
+      onClose();
+    } else {
+      closeOverlay();
+    }
+  }, [closeOverlay, content, isDirty, onClose, persist, resolvedNoteId, title]);
 
   const handleTagKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -630,10 +648,10 @@ export default function CreateNoteForm({
             {isMobile && (
               <button 
                 type="button"
-                onClick={() => setIsExpanded(prev => !prev)} 
+                onClick={toggleExpand} 
                 className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/5 border border-transparent hover:border-white/5 transition-all shrink-0"
               >
-                {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
               </button>
             )}
 
@@ -659,7 +677,7 @@ export default function CreateNoteForm({
                 setIsTitleManuallyEdited(true);
               }}
               placeholder="Title"
-              className="w-full bg-white/[0.02] text-white placeholder-white/20 border border-white/5 focus:border-pink-500/30 rounded-xl px-3 py-2 text-md font-black focus:outline-none transition-all font-space-grotesk shrink-0"
+              className="w-full bg-white/[0.02] text-white placeholder-white/20 border border-white/5 focus:border-pink-500/30 rounded-xl px-3 py-2 text-lg font-black focus:outline-none transition-all font-space-grotesk shrink-0"
             />
           )}
 
@@ -670,7 +688,7 @@ export default function CreateNoteForm({
               value={content}
               onChange={(event) => setContent(event.target.value)}
               placeholder="Write your note..."
-              className="w-full flex-1 min-h-[160px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-pink-500/30 rounded-xl px-3 py-2 text-sm focus:outline-none transition-all scrollbar-thin"
+              className="w-full flex-1 min-h-[160px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-pink-500/30 rounded-xl px-3 py-2 text-base focus:outline-none transition-all scrollbar-thin"
             />
           ) : (
             <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.03] flex flex-col gap-3.5">

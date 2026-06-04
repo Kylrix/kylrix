@@ -102,7 +102,13 @@ const Overlay: React.FC = () => {
           onMouseUp={isMobile ? handleMouseUp : undefined}
           onClick={(e) => e.stopPropagation()}
         >
-          {content}
+          {React.isValidElement(content)
+            ? React.cloneElement(content as React.ReactElement<any>, {
+                isExpanded,
+                onToggleExpand: () => setIsExpanded(prev => !prev),
+                onClose: closeOverlay
+              })
+            : content}
         </Box>
       </Fade>
     </Drawer>

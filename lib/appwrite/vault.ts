@@ -1897,12 +1897,13 @@ export class VaultService {
         return result;
       }
 
+      const currentUser = await getCurrentUser().catch(() => null);
+
       if (tableType === "credentials" || tableType === "totpSecrets") {
         const hasDek = result.dek && typeof result.dek === "string" && result.dek.trim().length > 0;
         let dek: CryptoKey | null = null;
 
         if (hasDek) {
-          const currentUser = await getCurrentUser().catch(() => null);
           const isOwner = !currentUser || !result.userId || result.userId === currentUser.$id;
 
           if (isOwner) {

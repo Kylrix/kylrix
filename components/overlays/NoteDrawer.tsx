@@ -83,6 +83,9 @@ export function NoteDrawer() {
               setIsExpanded(false);
               close();
             }}
+            isExpanded={isExpanded}
+            onToggleExpand={() => setIsExpanded(!isExpanded)}
+            onClose={handleClose}
         />
       </Box>
     </Drawer>
