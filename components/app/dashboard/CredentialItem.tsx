@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Credentials } from '@/lib/appwrite/types';
-import { Shield, ExternalLink, Copy, Edit2, Trash2, MoreVertical, User, Lock, Pin } from 'lucide-react';
+import { Shield, ExternalLink, Copy, Edit2, Trash2, MoreVertical, User, Lock, Pin, CheckSquare } from 'lucide-react';
 
 export default function CredentialItem({
   credential,
@@ -11,6 +11,9 @@ export default function CredentialItem({
   onClick,
   onTogglePin,
   isBlurEnabled = false,
+  isSelectMode = false,
+  isSelected = false,
+  onToggleSelect,
 }: {
   credential: Credentials;
   onCopy: (value: string) => void;
@@ -20,9 +23,25 @@ export default function CredentialItem({
   onClick?: () => void;
   onTogglePin?: () => void;
   isBlurEnabled?: boolean;
+  isSelectMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }) {
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [showCopyMenu, setShowCopyMenu] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowActionMenu(false);
+        setShowCopyMenu(false);
+      }
+    };
+    if (showActionMenu || showCopyMenu) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showActionMenu, showCopyMenu]);
 
   const handleCopy = (value: string) => {
     onCopy(value);
@@ -43,9 +62,29 @@ export default function CredentialItem({
 
   return (
     <div
-      onClick={onClick}
-      className="group px-[18px] py-[14px] mb-3 rounded-[24px] bg-[#161412] border border-[#34322F] cursor-pointer transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center gap-[12px] shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)] hover:bg-[#1C1A18] hover:border-[#10B981]/20 hover:-translate-y-0.5 hover:shadow-[0_8px_10px_-8px_rgba(0,0,0,1),0_6px_8px_-6px_rgba(37,35,33,1.0)]"
+      onClick={() => {
+        if (isSelectMode && onToggleSelect) {
+          onToggleSelect();
+        } else if (onClick) {
+          onClick();
+        }
+      }}
+      className={`group px-[18px] py-[14px] mb-3 rounded-[24px] border cursor-pointer transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] flex items-center gap-[12px] shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),0_2px_3px_-3px_rgba(37,35,33,0.9)] ${
+        isSelected 
+          ? 'bg-[#1C1A18] border-[#10B981]/40 shadow-[0_8px_10px_-8px_rgba(0,0,0,1),0_6px_8px_-6px_rgba(37,35,33,1.0)]' 
+          : 'bg-[#161412] border-[#34322F] hover:bg-[#1C1A18] hover:border-[#10B981]/20 hover:-translate-y-0.5 hover:shadow-[0_8px_10px_-8px_rgba(0,0,0,1),0_6px_8px_-6px_rgba(37,35,33,1.0)]'
+      }`}
     >
+      {isSelectMode && (
+        <div className="shrink-0 flex items-center justify-center pr-1">
+          <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${
+            isSelected ? 'bg-[#10B981] border-[#10B981] text-[#0A0908]' : 'border-[#9B9691] bg-transparent'
+          }`}>
+            {isSelected && <CheckSquare className="w-4 h-4" />}
+          </div>
+        </div>
+      )}
+
       {/* Icon */}
       <div 
         className="w-[52px] h-[52px] rounded-[16px] bg-white/[0.02] flex items-center justify-center shrink-0 border border-white/[0.05] overflow-hidden transition-all duration-300 group-hover:border-[#10B981]/20 group-hover:bg-[#10B981]/5"
@@ -110,7 +149,7 @@ export default function CredentialItem({
 
           <button 
             onClick={onDelete}
-            title="Destroy"
+            title="Delete"
             className="p-1.5 rounded-lg text-white/15 hover:text-[#FF453A] hover:bg-[#FF453A]/5 transition-colors"
           >
             <Trash2 className="w-[18px] h-[18px]" />
@@ -138,7 +177,7 @@ export default function CredentialItem({
           <>
             <div 
               className="fixed inset-0 z-40" 
-              onClick={() => setShowCopyMenu(false)} 
+              onClick={(e) => { e.stopPropagation(); setShowCopyMenu(false); }} 
             />
             <div 
               className="absolute right-0 top-8 z-50 min-w-[200px] py-1 bg-[#161412] border border-[#34322F] rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-1 duration-150"
@@ -166,7 +205,7 @@ export default function CredentialItem({
           <>
             <div 
               className="fixed inset-0 z-40" 
-              onClick={() => setShowActionMenu(false)} 
+              onClick={(e) => { e.stopPropagation(); setShowActionMenu(false); }} 
             />
             <div 
               className="absolute right-0 top-8 z-50 min-w-[180px] py-1 bg-[#161412] border border-[#34322F] rounded-2xl shadow-xl animate-in fade-in slide-in-from-top-1 duration-150"
@@ -190,7 +229,7 @@ export default function CredentialItem({
                 className="w-full text-left py-2.5 px-5 flex items-center gap-3 hover:bg-[#FF453A]/10 transition-colors text-[#FF453A] font-semibold text-xs"
               >
                 <Trash2 className="w-4.5 h-4.5 text-[#FF453A]" />
-                <span>Destroy</span>
+                <span>Delete</span>
               </button>
             </div>
           </>

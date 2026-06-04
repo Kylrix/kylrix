@@ -44,6 +44,37 @@ function DashboardPageContent() {
   const [credentialToDelete, setCredentialToDelete] = useState<Credentials | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
+  // Multi-select state
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isMultiDeleting, setIsMultiDeleting] = useState(false);
+
+  const handleToggleSelectMode = () => {
+    setIsSelectMode(!isSelectMode);
+    setSelectedIds([]);
+  };
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleMultiDelete = async () => {
+    if (!user?.$id || selectedIds.length === 0) return;
+    setIsMultiDeleting(true);
+    try {
+      await Promise.all(selectedIds.map(id => deleteCredential(id)));
+      setAllCredentials(prev => prev.filter(c => !selectedIds.includes(c.$id)));
+      toast.success(`${selectedIds.length} secret(s) deleted successfully.`);
+      setIsSelectMode(false);
+      setSelectedIds([]);
+    } catch (error: unknown) {
+      toast.error("Failed to delete some secrets.");
+      console.error("Multi-delete error:", error);
+    } finally {
+      setIsMultiDeleting(false);
+    }
+  };
+
   // Handlers
   const handleAdd = useCallback(() => {
     setEditCredential(null);
@@ -213,21 +244,43 @@ function DashboardPageContent() {
                 <h1 className="text-2xl font-black font-clash text-white">
                   Secrets
                 </h1>
-                <button
-                  onClick={() => setVaultBlurEnabled(!isVaultBlurEnabled)}
-                  className={`p-2 border border-[#1C1A18] rounded-xl transition-colors ${
-                    isVaultBlurEnabled ? 'text-white/40 bg-[#161412]' : 'text-[#10B981] bg-[#161412]'
-                  } hover:bg-[#1C1A18]`}
-                >
-                  {isVaultBlurEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
+                
+                <div className="ml-auto flex items-center gap-2">
+                  {isSelectMode && selectedIds.length > 0 && (
+                    <button
+                      onClick={() => requestSudo({ onSuccess: handleMultiDelete })}
+                      disabled={isMultiDeleting}
+                      className="px-3 py-2 bg-[#FF453A]/10 text-[#FF453A] text-xs font-bold rounded-xl hover:bg-[#FF453A]/20 transition-colors"
+                    >
+                      {isMultiDeleting ? "Deleting..." : `Delete (${selectedIds.length})`}
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={handleToggleSelectMode}
+                    className={`px-3 py-2 border text-xs font-bold rounded-xl transition-colors ${
+                      isSelectMode ? 'border-[#10B981] bg-[#10B981]/10 text-[#10B981]' : 'border-[#1C1A18] text-white/60 hover:text-white hover:bg-[#1C1A18]'
+                    }`}
+                  >
+                    {isSelectMode ? 'Cancel' : 'Select'}
+                  </button>
+
+                  <button
+                    onClick={() => setVaultBlurEnabled(!isVaultBlurEnabled)}
+                    className={`p-2 border border-[#1C1A18] rounded-xl transition-colors ${
+                      isVaultBlurEnabled ? 'text-white/40 bg-[#161412]' : 'text-[#10B981] bg-[#161412]'
+                    } hover:bg-[#1C1A18]`}
+                  >
+                    {isVaultBlurEnabled ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               {/* Credentials List */}
               <div className="flex flex-col gap-3.5 max-w-3xl">
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
-                    <CredentialItem key={`skeleton-${i}`} credential={{ $id: `skeleton-${i}`, name: 'Loading...', username: '', type: 'password' } as any} />
+                    <CredentialItem key={`skeleton-${i}`} credential={{ $id: `skeleton-${i}`, name: 'Loading...', username: '', type: 'password' } as any} onCopy={() => {}} onEdit={() => {}} onDelete={() => {}} />
                   ))
                 ) : allCredentials.length === 0 ? (
                   <div className="p-24 text-center rounded-[32px] bg-[#161412] border border-dashed border-[#1C1A18]">
@@ -248,6 +301,9 @@ function DashboardPageContent() {
                       onDelete={() => openDeleteModal(cred)}
                       onTogglePin={() => handleTogglePin(cred.$id)}
                       isBlurEnabled={isVaultBlurEnabled}
+                      isSelectMode={isSelectMode}
+                      isSelected={selectedIds.includes(cred.$id)}
+                      onToggleSelect={() => toggleSelection(cred.$id)}
                       onClick={() => {
                         setSelectedCredential(cred);
                         setActiveDetail({ type: 'secret', id: cred.$id, data: cred });
