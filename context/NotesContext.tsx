@@ -60,6 +60,9 @@ function normalizeVisibility(note: Notes): Notes {
   };
 }
 
+const PINNED_CACHE_KEY = 'pinned_note_ids';
+const INITIAL_NOTES_CACHE_KEY = 'initial_notes_page';
+
 export function NotesProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Notes[]>([]);
   const [totalNotes, setTotalNotes] = useState<number>(0);
@@ -131,6 +134,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
   useEffect(() => { cursorRef.current = cursor; }, [cursor]);
 
   const PAGE_SIZE = Number(process.env.NEXT_PUBLIC_NOTES_PAGE_SIZE || 50);
+
+  const fetchPinnedIds = useCallback(async () => {
+    return await getPinnedNoteIds(user?.$id || '');
+  }, [user?.$id]);
 
   const fetchBatch = useCallback(async (reset: boolean = false) => {
     if (isFetchingRef.current) return;
