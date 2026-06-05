@@ -18,11 +18,9 @@ import { ContextMenuProvider } from '@/components/ui/ContextMenuContext';
 import { GlobalContextMenu } from '@/components/ui/GlobalContextMenu';
 import { ChatNotificationProvider } from '@/components/providers/ChatNotificationProvider';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
-import GlobalShortcuts from '@/components/GlobalShortcuts';
 import dynamic from 'next/dynamic';
 import { SectionProvider } from '@/context/SectionContext';
 import { EcosystemStateTracker } from '@/components/providers/EcosystemStateTracker';
-import { PresenceProvider } from '@/components/providers/PresenceProvider';
 
 function ContextMenuWrapper({ children }: { children: ReactNode }) {
   return (
@@ -30,15 +28,6 @@ function ContextMenuWrapper({ children }: { children: ReactNode }) {
       <GlobalContextMenu />
       {children}
     </ContextMenuProvider>
-  );
-}
-
-function PresenceWrapper({ children }: { children: ReactNode }) {
-  return (
-    <PresenceProvider>
-      <GlobalShortcuts />
-      {children}
-    </PresenceProvider>
   );
 }
 
@@ -75,7 +64,6 @@ const ecosystemProvidersList: Array<React.ComponentType<{ children: ReactNode }>
   PotatoProvider,
   TokenOpsProvider,
   ChatNotificationProvider,
-  PresenceWrapper,
   EcosystemStateTracker,
   ];
 export function EcosystemProviders({ children }: { children: ReactNode }) {

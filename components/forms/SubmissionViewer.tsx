@@ -1,110 +1,100 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  IconButton,
-  Tooltip,
-  Chip,
-  alpha,
-  Button,
-  Stack
-} from '@/lib/mui-tailwind/material';
 import { 
-  TableRows as CSVIcon,
-  DataObject as JSONIcon,
-  MarkEmailRead as ReadIcon,
-  MarkEmailUnread as UnreadIcon,
-  Flag as FlagIcon,
-  FlagOutlined as UnflaggedIcon
-} from '@/lib/mui-tailwind/icons';
+  Download, 
+  Code, 
+  Eye, 
+  EyeOff, 
+  Flag,
+  X
+} from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { FormSubmissions } from '@/generated/appwrite/types';
 import ResponseDetailSidebar from './ResponseDetailSidebar';
 
 const SubmissionViewerTable = ({ submissions, headers, schemaMap, parsePayload, renderValue, onToggleRead, onToggleFlag, onRowClick }: any) => (
-    <TableContainer component={Paper} sx={{ bgcolor: 'transparent', backgroundImage: 'none', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '24px', overflow: 'hidden' }}>
-      <Table size="medium">
-        <TableHead>
-          <TableRow sx={{ bgcolor: 'rgba(255, 255, 255, 0.02)' }}>
-            <TableCell sx={{ width: 50, borderBottom: '1px solid rgba(255,255,255,0.05)' }}></TableCell>
-            <TableCell sx={{ fontWeight: 900, color: 'text.secondary', py: 3, borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem', letterSpacing: '0.1em' }}>TIMESTAMP</TableCell>
-            <TableCell sx={{ fontWeight: 900, color: 'text.secondary', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem', letterSpacing: '0.1em' }}>SUBMITTER</TableCell>
-            {headers.map((h: string) => (
-              <TableCell key={h} sx={{ fontWeight: 900, color: 'text.secondary', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem', letterSpacing: '0.1em' }}>{schemaMap?.[h] || h}</TableCell>
-            ))}
-            <TableCell sx={{ width: 100, borderBottom: '1px solid rgba(255,255,255,0.05)' }}></TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {submissions.map((sub: any) => {
-            const data = parsePayload(sub.payload);
-            const isRead = (sub as any).read || false;
-            const isFlagged = (sub as any).flagged || false;
+  <div className="overflow-x-auto rounded-[24px] border border-white/5 bg-[#161412] shadow-xl">
+    <table className="w-full border-collapse text-left text-xs text-[#F2F2F2] font-satoshi">
+      <thead>
+        <tr className="bg-white/[0.02] border-b border-white/5">
+          <th className="px-4 py-4 w-12"></th>
+          <th className="px-4 py-4 text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">Timestamp</th>
+          <th className="px-4 py-4 text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">Submitter</th>
+          {headers.map((h: string) => (
+            <th key={h} className="px-4 py-4 text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">
+              {schemaMap?.[h] || h}
+            </th>
+          ))}
+          <th className="px-4 py-4 w-24"></th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-white/[0.03]">
+        {submissions.map((sub: any) => {
+          const data = parsePayload(sub.payload);
+          const isRead = sub.read || false;
+          const isFlagged = sub.flagged || false;
 
-            return (
-              <TableRow 
-                key={sub.$id} 
-                onClick={() => onRowClick(sub)}
-                sx={{ 
-                  '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.02)', cursor: 'pointer' }, 
-                  transition: 'background-color 0.2s', 
-                  opacity: isRead ? 0.7 : 1 
-                }}
-              >
-                <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                    {!isRead && <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'var(--color-primary)', boxShadow: `0 0 10px ${alpha('#6366F1', 0.5)}` }} />}
-                </TableCell>
-                <TableCell sx={{ color: 'text.secondary', fontSize: '0.8rem', fontWeight: 600, borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                  {new Date(sub.$createdAt).toLocaleString()}
-                </TableCell>
-                <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                    <Chip 
-                        label={sub.submitterName || 'Anonymous'} 
-                        size="small" 
-                        sx={{ 
-                            fontSize: '10px', 
-                            fontWeight: 800, 
-                            bgcolor: sub.submitterName && sub.submitterName !== 'Anonymous' ? alpha('#6366F1', 0.1) : 'transparent',
-                            color: sub.submitterName && sub.submitterName !== 'Anonymous' ? 'var(--color-primary)' : 'text.disabled',
-                            border: sub.submitterName && sub.submitterName !== 'Anonymous' ? 'none' : '1px solid rgba(255,255,255,0.05)'
-                        }} 
-                    />
-                </TableCell>
-                {headers.map((h: string) => (
-                  <TableCell key={h} sx={{ color: '#F2F2F2', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                    {renderValue(data[h])}
-                  </TableCell>
-                ))}
-                <TableCell sx={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} onClick={(e) => e.stopPropagation()}>
-                    <Stack direction="row" spacing={1}>
-                        <Tooltip title={isRead ? "Mark as unread" : "Mark as read"}>
-                            <IconButton size="small" onClick={() => onToggleRead(sub.$id, !isRead)} sx={{ color: isRead ? 'rgba(255,255,255,0.2)' : 'var(--color-primary)' }}>
-                                {isRead ? <UnreadIcon fontSize="inherit" /> : <ReadIcon fontSize="inherit" />}
-                            </IconButton>
-                        </Tooltip>
-                        <Tooltip title={isFlagged ? "Remove flag" : "Flag submission"}>
-                            <IconButton size="small" onClick={() => onToggleFlag(sub.$id, !isFlagged)} sx={{ color: isFlagged ? '#FFB020' : 'rgba(255,255,255,0.1)' }}>
-                                {isFlagged ? <FlagIcon fontSize="inherit" /> : <UnflaggedIcon fontSize="inherit" />}
-                            </IconButton>
-                        </Tooltip>
-                    </Stack>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+          return (
+            <tr
+              key={sub.$id}
+              onClick={() => onRowClick(sub)}
+              className={`hover:bg-white/[0.01] transition-all cursor-pointer ${
+                isRead ? 'opacity-70' : 'opacity-100'
+              }`}
+            >
+              <td className="px-4 py-3">
+                {!isRead && (
+                  <span className="inline-block w-2 h-2 rounded-full bg-[#6366F1] shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
+                )}
+              </td>
+              <td className="px-4 py-3 text-[#9B9691] font-mono text-[11px] whitespace-nowrap">
+                {new Date(sub.$createdAt).toLocaleString()}
+              </td>
+              <td className="px-4 py-3">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  sub.submitterName && sub.submitterName !== 'Anonymous'
+                    ? 'bg-[#6366F1]/10 text-[#6366F1]'
+                    : 'border border-white/5 text-[#9B9691]'
+                }`}>
+                  {sub.submitterName || 'Anonymous'}
+                </span>
+              </td>
+              {headers.map((h: string) => (
+                <td key={h} className="px-4 py-3 font-semibold truncate max-w-[200px]">
+                  {renderValue(data[h])}
+                </td>
+              ))}
+              <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => onToggleRead(sub.$id, !isRead)}
+                    className={`p-1.5 rounded-lg hover:bg-white/5 transition-colors ${
+                      isRead ? 'text-white/20' : 'text-[#6366F1]'
+                    }`}
+                    title={isRead ? 'Mark as unread' : 'Mark as read'}
+                  >
+                    {isRead ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onToggleFlag(sub.$id, !isFlagged)}
+                    className={`p-1.5 rounded-lg hover:bg-white/5 transition-colors ${
+                      isFlagged ? 'text-[#FFB020]' : 'text-white/10 hover:text-[#FFB020]'
+                    }`}
+                    title={isFlagged ? 'Remove flag' : 'Flag submission'}
+                  >
+                    <Flag className={`w-4 h-4 ${isFlagged ? 'fill-[#FFB020]' : ''}`} />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
 );
 
 export default function SubmissionViewer({ formId, formSchema }: { formId: string, formSchema?: string }) {
@@ -178,13 +168,19 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
     }
   };
 
-  if (loading) return <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}><CircularProgress size={24} /></Box>;
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-10">
+        <div className="w-6 h-6 border-2 border-[#6366F1] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (submissions.length === 0) {
     return (
-      <Box sx={{ textAlign: 'center', py: 10, opacity: 0.5 }}>
-        <Typography variant="body1" sx={{ fontWeight: 700 }}>No telemetry received.</Typography>
-      </Box>
+      <div className="text-center py-12 text-[#9B9691] bg-[#161412] border border-[#34322F] rounded-[24px]">
+        <span className="text-sm font-bold block">No telemetry received.</span>
+      </div>
     );
   }
 
@@ -202,11 +198,13 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
   const renderValue = (val: any) => {
     if (Array.isArray(val)) {
         return (
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            <div className="flex gap-1 flex-wrap">
                 {val.map((v, i) => (
-                    <Chip key={i} label={v} size="small" sx={{ fontSize: '10px', fontWeight: 800, bgcolor: alpha('#6366F1', 0.1), color: 'var(--color-primary)' }} />
+                    <span key={i} className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#6366F1]/15 text-[#6366F1]">
+                      {v}
+                    </span>
                 ))}
-            </Box>
+            </div>
         );
     }
     return String(val || '-');
@@ -255,25 +253,25 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
   };
 
   return (
-    <Box>
-        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-            <Button 
-                size="small" 
-                startIcon={<CSVIcon />} 
+    <div>
+        <div className="mb-4 flex justify-end gap-2.5">
+            <button 
+                type="button"
                 onClick={() => exportData('csv')}
-                sx={{ borderRadius: '12px', fontWeight: 800, bgcolor: 'rgba(255,255,255,0.03)', color: 'text.secondary', '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' } }}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-[#161412] hover:bg-[#1C1A18] text-[#9B9691] hover:text-white border border-[#34322F] rounded-xl transition-all font-satoshi"
             >
-                Export CSV
-            </Button>
-            <Button 
-                size="small" 
-                startIcon={<JSONIcon />} 
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+            </button>
+            <button 
+                type="button"
                 onClick={() => exportData('json')}
-                sx={{ borderRadius: '12px', fontWeight: 800, bgcolor: 'rgba(255,255,255,0.03)', color: 'text.secondary', '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' } }}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-[#161412] hover:bg-[#1C1A18] text-[#9B9691] hover:text-white border border-[#34322F] rounded-xl transition-all font-satoshi"
             >
-                Export JSON
-            </Button>
-        </Box>
+                <Code className="w-3.5 h-3.5" />
+                <span>Export JSON</span>
+            </button>
+        </div>
         <SubmissionViewerTable 
             submissions={submissions} 
             headers={headers} 
@@ -284,12 +282,14 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
             onToggleFlag={handleToggleFlag}
             onRowClick={handleRowClick}
         />
-        <ResponseDetailSidebar 
-            open={sidebarOpen} 
-            onClose={() => setSidebarOpen(false)} 
-            submission={selectedSubmission} 
-            schemaMap={schemaMap}
-        />
-    </Box>
+        {sidebarOpen && (
+          <ResponseDetailSidebar 
+              open={sidebarOpen} 
+              onClose={() => setSidebarOpen(false)} 
+              submission={selectedSubmission} 
+              schemaMap={schemaMap}
+          />
+        )}
+    </div>
   );
 }

@@ -1,24 +1,13 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  IconButton,
-  Drawer,
-  Stack,
-  Divider,
-  Chip,
-  Paper,
-  alpha,
-  Button
-} from '@/lib/mui-tailwind/material';
-import {
-  Close as CloseIcon,
-  ArrowBack as BackIcon,
-  Event as TimeIcon,
-  Person as UserIcon,
-  Flag as FlagIcon,
-  ContentPaste as DataIcon
-} from '@/lib/mui-tailwind/icons';
+import { 
+  X, 
+  ArrowLeft, 
+  Clock, 
+  User, 
+  Flag, 
+  Database,
+  FileText
+} from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { convertResponseToGoal } from '@/lib/actions/client-ops';
@@ -35,7 +24,7 @@ export default function ResponseDetailSidebar({ open, onClose, submission, schem
   const { showSuccess, showError } = useToast();
   const [converting, setConverting] = useState(false);
 
-  if (!submission) return null;
+  if (!submission || !open) return null;
 
   const handleConvertToProject = () => {
     onClose();
@@ -74,213 +63,131 @@ export default function ResponseDetailSidebar({ open, onClose, submission, schem
   }
 
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          width: { xs: '100%', sm: 480 },
-          bgcolor: '#000000',
-          backdropFilter: 'blur(20px)',
-          borderLeft: '1px solid rgba(255, 255, 255, 0.05)',
-          p: 0,
-          boxShadow: '-20px 0 50px rgba(0,0,0,0.5)',
-          marginTop: { xs: '64px', sm: '64px' },
-          height: 'calc(100% - 64px)',
-        }
-      }}
-    >
-      {/* Header */}
-      <Box sx={{ 
-        p: 3, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        background: 'linear-gradient(to bottom, rgba(99, 102, 241, 0.05), transparent)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
-      }}>
-        <Stack direction="row" spacing={2} alignItems="center">
-          <IconButton 
-            onClick={onClose} 
-            size="small"
-            sx={{ 
-              bgcolor: 'rgba(99, 102, 241, 0.15)',
-              color: '#6366F1',
-              '&:hover': { bgcolor: 'rgba(99, 102, 241, 0.25)' }
-            }}
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 z-[9990]"
+        onClick={onClose}
+      />
+
+      {/* Slide-over Container */}
+      <div className="fixed right-0 top-0 bottom-0 h-dvh bg-[#000000] border-l border-white/5 shadow-2xl flex flex-col z-[9995] w-full sm:w-[480px] transition-transform duration-300 ease-out translate-x-0 font-satoshi text-[#F2F2F2]">
+        {/* Header */}
+        <div className="p-4 md:p-5 flex items-center justify-between border-b border-white/5 bg-[linear-gradient(to_bottom,rgba(99,102,241,0.05),transparent)] shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 bg-[#6366F1]/10 text-[#6366F1] hover:bg-[#6366F1]/20 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+            <div className="w-9 h-9 rounded-xl bg-[#6366F1]/10 border border-[#6366F1]/20 text-[#6366F1] flex items-center justify-center">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold font-clash text-white tracking-tight uppercase leading-tight">Response Detail</h3>
+              <span className="block text-[10px] text-[#9B9691] font-mono font-bold">ID: {submission.$id.slice(-8)}</span>
+            </div>
+          </div>
+          <button 
+            type="button"
+            onClick={onClose}
+            className="p-1.5 bg-white/5 hover:bg-white/10 text-[#9B9691] hover:text-white rounded-lg transition-colors"
           >
-            <BackIcon fontSize="small" />
-          </IconButton>
-          <Box sx={{ 
-            width: 40, 
-            height: 40, 
-            borderRadius: 2, 
-            bgcolor: alpha('#6366F1', 0.1), 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            color: '#6366F1',
-            border: '1px solid rgba(99, 102, 241, 0.2)'
-          }}>
-            <DataIcon />
-          </Box>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 900, letterSpacing: '-0.02em' }}>Response Detail</Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              ID: {submission.$id.slice(-8)}
-            </Typography>
-          </Box>
-        </Stack>
-        <IconButton onClick={onClose} sx={{ bgcolor: 'rgba(255,255,255,0.03)', color: 'text.secondary' }}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </Box>
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-6 scrollbar-thin">
+          {/* Metadata Section */}
+          <div className="space-y-3">
+            <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">METADATA</span>
+            <div className="grid grid-cols-1 gap-2.5">
+              <div className="p-3.5 rounded-xl bg-[#161412] border border-white/5 flex items-center gap-3">
+                <Clock className="w-5 h-5 text-[#9B9691] shrink-0" />
+                <div>
+                  <span className="block text-[9px] text-[#9B9691] font-black font-mono">SUBMITTED AT</span>
+                  <span className="text-xs font-bold text-white">{new Date(submission.$createdAt).toLocaleString()}</span>
+                </div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#161412] border border-white/5 flex items-center gap-3">
+                <User className="w-5 h-5 text-[#9B9691] shrink-0" />
+                <div>
+                  <span className="block text-[9px] text-[#9B9691] font-black font-mono">SUBMITTER</span>
+                  <span className="text-xs font-bold text-white">{submission.submitterName || 'Anonymous User'}</span>
+                </div>
+              </div>
+            </div>
+            {submission.flagged && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FFB020]/10 text-[#FFB020] text-[10px] font-extrabold font-mono uppercase tracking-wider">
+                <Flag className="w-3.5 h-3.5 fill-[#FFB020]" />
+                <span>Important / Flagged</span>
+              </span>
+            )}
+          </div>
 
-      {/* Metadata */}
-      <Box sx={{ p: 3 }}>
-        <Stack spacing={2.5}>
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 900, mb: 1, display: 'block', letterSpacing: '0.1em' }}>METADATA</Typography>
-            <Stack spacing={1.5}>
-              <Paper sx={{ p: 2, borderRadius: 3, bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <TimeIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-                  <Box>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, display: 'block' }}>Submitted At</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{new Date(submission.$createdAt).toLocaleString()}</Typography>
-                  </Box>
-                </Stack>
-              </Paper>
-
-              <Paper sx={{ p: 2, borderRadius: 3, bgcolor: '#161514', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <Stack direction="row" spacing={2} alignItems="center">
-                  <UserIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-                  <Box>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, display: 'block' }}>Submitter</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{submission.submitterName || 'Anonymous User'}</Typography>
-                  </Box>
-                </Stack>
-              </Paper>
-
-              {submission.flagged && (
-                <Chip 
-                  icon={<FlagIcon sx={{ fontSize: '14px !important' }} />}
-                  label="Important / Flagged" 
-                  sx={{ 
-                    bgcolor: alpha('#FFB020', 0.1), 
-                    color: '#FFB020', 
-                    fontWeight: 800, 
-                    borderRadius: 2,
-                    alignSelf: 'flex-start',
-                    px: 1
-                  }} 
-                />
-              )}
-            </Stack>
-          </Box>
-
-          {/* Form Data */}
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 900, mb: 1, display: 'block', letterSpacing: '0.1em' }}>RESPONSE DATA</Typography>
-            <Stack spacing={2}>
+          {/* Response Fields */}
+          <div className="space-y-4">
+            <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">RESPONSE DATA</span>
+            <div className="space-y-3.5">
               {Object.entries(data).map(([key, value]: [string, any]) => (
-                <Box key={key}>
-                     <Typography variant="body2" sx={{ color: 'text.secondary', fontWeight: 800, mb: 0.5, textTransform: 'capitalize' }}>
-                     {schemaMap?.[key] || key.split(/(?=[A-Z])/).join(' ').replace(/_/g, ' ') || 'Field'}
-                   </Typography>
-                  <Paper sx={{ 
-                    p: 2, 
-                    borderRadius: 3, 
-                    bgcolor: '#161514', 
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
-                      bgcolor: 'rgba(99, 102, 241, 0.05)'
-                    }
-                  }}>
+                <div key={key} className="space-y-1.5">
+                  <span className="block text-xs font-bold text-[#9B9691] capitalize font-satoshi">
+                    {schemaMap?.[key] || key.split(/(?=[A-Z])/).join(' ').replace(/_/g, ' ') || 'Field'}
+                  </span>
+                  <div className="p-4 rounded-[18px] bg-[#161412] border border-white/5 hover:border-[#6366F1]/30 hover:bg-[#6366F1]/[0.02] transition-all duration-200">
                     {Array.isArray(value) ? (
-                      <Stack direction="row" spacing={1} flexWrap="wrap">
+                      <div className="flex flex-wrap gap-1">
                         {value.map((v, i) => (
-                          <Chip key={i} label={String(v)} size="small" sx={{ fontWeight: 800, bgcolor: 'rgba(255,255,255,0.05)' }} />
+                          <span key={i} className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/5 text-white/60">
+                            {String(v)}
+                          </span>
                         ))}
-                      </Stack>
+                      </div>
                     ) : (
-                      <Typography variant="body1" sx={{ fontWeight: 700, color: '#F2F2F2' }}>
+                      <p className="text-sm font-bold text-white break-words leading-relaxed font-satoshi">
                         {String(value)}
-                      </Typography>
+                      </p>
                     )}
-                  </Paper>
-                </Box>
+                  </div>
+                </div>
               ))}
-            </Stack>
-          </Box>
+            </div>
+          </div>
 
-          {/* Workflow Actions */}
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 900, mb: 1.5, display: 'block', letterSpacing: '0.1em' }}>WORKFLOW ACTIONS</Typography>
-            <Stack spacing={1.5}>
-              <Button
-                fullWidth
-                variant="contained"
+          {/* Actions */}
+          <div className="space-y-3">
+            <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">WORKFLOW ACTIONS</span>
+            <div className="flex flex-col gap-2.5">
+              <button
+                type="button"
                 onClick={handleConvertToProject}
-                sx={{
-                  bgcolor: '#6366F1',
-                  color: '#fff',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  py: 1.25,
-                  borderRadius: 3,
-                  textTransform: 'none',
-                  boxShadow: 'none',
-                  '&:hover': { bgcolor: '#575CF0' }
-                }}
+                className="w-full py-3 bg-[#6366F1] text-black font-extrabold text-xs rounded-xl shadow-[0_8px_30px_rgb(99,102,241,0.2)] hover:bg-[#5254E8] hover:translate-y-[-1px] transition-all duration-200 font-satoshi"
               >
                 Convert to Project Thread
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
+              </button>
+              <button
+                type="button"
                 disabled={converting}
                 onClick={handleConvertToGoal}
-                sx={{
-                  color: '#EC4899',
-                  borderColor: 'rgba(236, 72, 153, 0.3)',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  py: 1.25,
-                  borderRadius: 3,
-                  textTransform: 'none',
-                  '&:hover': { borderColor: '#EC4899', bgcolor: 'rgba(236, 72, 153, 0.05)' }
-                }}
+                className="w-full py-3 border border-[#EC4899]/30 text-[#EC4899] hover:bg-[#EC4899]/5 hover:border-[#EC4899] font-extrabold text-xs rounded-xl transition-all duration-200 font-satoshi"
               >
                 {converting ? 'Converting...' : 'Convert to Execution Goal'}
-              </Button>
-            </Stack>
-          </Box>
-        </Stack>
-      </Box>
+              </button>
+            </div>
+          </div>
+        </div>
 
-      {/* Footer / Raw JSON */}
-      <Box sx={{ mt: 'auto', p: 3, bgcolor: '#000000', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 900, mb: 2, display: 'block', letterSpacing: '0.1em' }}>RAW TELEMETRY</Typography>
-        <Box component="pre" sx={{ 
-          p: 2, 
-          borderRadius: 2, 
-          bgcolor: '#161514', 
-          color: alpha('#6366F1', 0.8),
-          fontSize: '0.7rem', 
-          overflow: 'auto', 
-          maxHeight: 150,
-          fontFamily: 'var(--font-jetbrains)',
-          border: '1px solid rgba(255,255,255,0.05)'
-        }}>
-          {JSON.stringify(data, null, 2)}
-        </Box>
-      </Box>
-    </Drawer>
+        {/* Footer */}
+        <div className="p-4 md:p-5 bg-black border-t border-white/5 shrink-0">
+          <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono mb-2">RAW TELEMETRY</span>
+          <pre className="p-3 rounded-xl bg-[#161412] border border-white/5 text-[10px] text-[#6366F1]/80 overflow-auto max-h-[140px] font-mono scrollbar-thin">
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        </div>
+      </div>
+    </>
   );
 }

@@ -17,6 +17,7 @@ import { SectionProvider } from '@/context/SectionContext';
 import { WalletOverlayProvider } from '@/context/WalletOverlayContext';
 import { AgenticDrawerProvider } from '@/context/AgenticDrawerContext';
 import { TokenOpsProvider } from '@/context/TokenOpsContext';
+import { PresenceProvider } from '@/components/providers/PresenceProvider';
 import { AIProvider } from '@/context/AIContext';
 import { AppChromeProvider } from '@/components/providers/AppChromeProvider';
 import { SudoProvider } from '@/context/SudoContext';
@@ -66,6 +67,7 @@ const rootProvidersList: Array<React.ComponentType<{ children: ReactNode }>> = [
   SectionProvider,
   WalletOverlayProvider,
   AgenticDrawerProvider,
+  PresenceProvider,
   TokenOpsProvider,
   AIProvider,
 ];

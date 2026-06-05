@@ -2,29 +2,6 @@
 
 import React, { useEffect, useState, use, useCallback } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
-import { 
-    Box, 
-    Typography, 
-    Button, 
-    Chip, 
-    IconButton, 
-    CircularProgress,
-    Fade,
-    Paper,
-    Tabs,
-    Tab,
-    Stack,
-    Snackbar,
-    Alert
-} from '@/lib/mui-tailwind/material';
-import { 
-    Edit as EditIcon, 
-    Launch as LaunchIcon,
-    Assignment as FormIcon,
-    ContentCopy as CopyIcon,
-    ArrowBack as BackIcon,
-    Insights as InsightsIcon
-} from '@/lib/mui-tailwind/icons';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import Link from 'next/link';
@@ -39,8 +16,19 @@ import { AppwriteService } from '@/lib/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getResourceCollaboratorsSecure } from '@/lib/actions/secure-ops';
 import { account } from '@/lib/appwrite';
-import { MessageSquare, Clock, FileText, Globe, Send, Share2 } from 'lucide-react';
-import { TextField } from '@/lib/mui-tailwind/material';
+import { 
+  MessageSquare, 
+  Clock, 
+  FileText, 
+  Globe, 
+  Send, 
+  Share2, 
+  ArrowLeft,
+  Copy,
+  Edit,
+  ExternalLink,
+  BarChart2
+} from 'lucide-react';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 
@@ -61,7 +49,6 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
     } as any : null);
     const [tab, setTab] = useState(0);
     const [isEditing, setIsEditing] = useState(false);
-    const [snackbar, setSnackbar] = useState<string | null>(null);
 
     // Huddle Discussion State & Effects
     const { showSuccess, showError } = useToast();
@@ -156,11 +143,11 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                             } catch {}
                         }
                         return {
-                            id: doc.$id,
-                            senderId: doc.userId,
-                            senderName,
-                            content: doc.content,
-                            timestamp: new Date(doc.createdAt).getTime(),
+                          id: doc.$id,
+                          senderId: doc.userId,
+                          senderName,
+                          content: doc.content,
+                          timestamp: new Date(doc.createdAt).getTime(),
                         };
                     })
                 );
@@ -281,220 +268,232 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
     const handleCopyLink = () => {
         const url = `${window.location.origin}/flow/form/${resolvedParams.formId}`;
         navigator.clipboard.writeText(url);
-        setSnackbar("Public link copied to clipboard.");
+        showSuccess('Link Copied', 'Public link copied to clipboard.');
     };
 
-    if (!loading && !form) return <Box sx={{ p: 4 }}><Typography color="error">Form not found.</Typography></Box>;
+    if (!loading && !form) {
+      return (
+        <div className="p-6 text-center font-satoshi text-red-500">
+          Form not found.
+        </div>
+      );
+    }
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'published': return '#10B981';
-            case 'draft': return '#FFB020';
-            case 'archived': return '#D14343';
-            default: return 'text.secondary';
+            case 'published': return 'text-[#10B981] border-[#10B981]';
+            case 'draft': return 'text-[#FFB020] border-[#FFB020]';
+            case 'archived': return 'text-[#D14343] border-[#D14343]';
+            default: return 'text-[#9B9691] border-[#34322F]';
         }
     };
 
     return (
-        <Box sx={{ 
-            animation: 'fadeIn 0.3s ease-out', 
-            p: { xs: 2, md: 4 },
-            minHeight: '100vh',
-            bgcolor: '#000000'
-        }}>
-            <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
-            {/* Header / Sub-Header */}
-            <Box sx={{ mb: 4, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, justifyContent: 'space-between', alignItems: { md: 'center' } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <IconButton 
-                        {...(onBack ? { onClick: onBack } : { component: Link, href: "/flow/forms" })} 
-                        sx={{ bgcolor: '#161412', color: '#6366F1', border: '1px solid #34322F', '&:hover': { bgcolor: '#1C1A18', borderColor: '#6366F1' } }}
-                    >
-                        <BackIcon />
-                    </IconButton>
-                    <Box>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                            {loading ? (
-                                <></>
-                            ) : (
-                                <Typography variant="h4" sx={{ fontWeight: 900, letterSpacing: '-0.04em', fontFamily: 'var(--font-clash)', color: '#FFF' }}>{form.title}</Typography>
-                            )}
-                            {!loading && (
-                                <Chip 
-                                    label={(form.status || 'unknown').toUpperCase()} 
-                                    size="small" 
-                                    sx={{ 
-                                        fontSize: '9px', 
-                                        fontWeight: 900, 
-                                        bgcolor: 'transparent',
-                                        color: getStatusColor(form.status || 'draft'),
-                                        border: `1px solid ${getStatusColor(form.status || 'draft')}`,
-                                        fontFamily: 'var(--font-mono)'
-                                    }} 
-                                />
-                            )}
-                        </Stack>
-                        {loading ? (
-                            <></>
-                        ) : (
-                            <Typography variant="body2" sx={{ color: '#9B9691', fontWeight: 600, fontFamily: 'var(--font-satoshi)' }}>Form ID: {form.$id}</Typography>
-                        )}
-                    </Box>
-                </Box>
+        <div className="animate-fadeIn min-h-screen bg-[#000000] p-4 md:p-8 font-satoshi relative">
+            {/* Ambient background glow */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(99,102,241,0.08),transparent_60%)] pointer-events-none" />
 
-                <Stack direction="row" spacing={2} sx={{ width: { xs: '100%', md: 'auto' } }}>
-                    {form.status === 'published' && (
-                        <Button 
-                            variant="outlined" 
-                            startIcon={<CopyIcon />} 
-                            onClick={handleCopyLink}
-                            sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 800, borderColor: '#34322F', color: '#FFF', bgcolor: '#161412', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#1C1A18', borderColor: '#6366F1' } }}
+            <MultiSectionContainer panels={['projects', 'huddles', 'goals']}>
+            {/* Header Toolbar */}
+            <div className="relative z-10 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-8">
+                <div className="flex items-center gap-3.5">
+                    {onBack ? (
+                        <button
+                            type="button"
+                            onClick={onBack}
+                            className="p-2.5 bg-[#161412] hover:bg-[#1C1A18] text-[#6366F1] border border-[#34322F] hover:border-[#6366F1] rounded-xl transition-all"
                         >
-                            Copy Public Link
-                        </Button>
+                            <ArrowLeft className="w-5 h-5" />
+                        </button>
+                    ) : (
+                        <Link
+                            href="/flow/forms"
+                            className="p-2.5 bg-[#161412] hover:bg-[#1C1A18] text-[#6366F1] border border-[#34322F] hover:border-[#6366F1] rounded-xl transition-all inline-flex items-center justify-center"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Link>
                     )}
-                    <Button 
-                        variant="outlined" 
-                        startIcon={<Share2 size={16} />} 
+                    <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-xl md:text-2xl font-black font-clash text-white tracking-tight uppercase">
+                              {form.title}
+                            </h1>
+                            {!loading && (
+                                <span className={`px-2 py-0.5 rounded text-[9px] font-black border uppercase tracking-wider font-mono ${getStatusColor(form.status || 'draft')}`}>
+                                    {form.status || 'unknown'}
+                                </span>
+                            )}
+                        </div>
+                        {!loading && (
+                            <span className="block text-xs text-[#9B9691] font-medium font-satoshi mt-0.5">Form ID: {form.$id}</span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5 w-full md:w-auto">
+                    {form.status === 'published' && (
+                        <button 
+                            type="button"
+                            onClick={handleCopyLink}
+                            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-[#161412] border border-[#34322F] text-white hover:border-[#6366F1] rounded-xl transition-all font-satoshi"
+                        >
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Link</span>
+                        </button>
+                    )}
+                    <button 
+                        type="button"
                         onClick={() => openUnified('share-note', {
                             resourceId: resolvedParams.formId,
                             resourceType: 'form',
                             resourceTitle: form.title,
                             onShared: () => fetchCollaborators()
                         })}
-                        sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 800, borderColor: '#34322F', color: '#FFF', bgcolor: '#161412', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#1C1A18', borderColor: '#6366F1' } }}
+                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-[#161412] border border-[#34322F] text-white hover:border-[#6366F1] rounded-xl transition-all font-satoshi"
                     >
-                        Share Form
-                    </Button>
-                    <Button 
-                        variant="contained" 
-                        startIcon={<EditIcon />} 
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span>Share Form</span>
+                    </button>
+                    <button 
+                        type="button"
                         onClick={() => setIsEditing(true)}
-                        sx={{ borderRadius: '12px', px: 3, fontWeight: 800, bgcolor: '#6366F1', color: 'black', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#575CF0' } }}
+                        className="flex items-center gap-1.5 px-5 py-2.5 text-xs font-extrabold bg-[#6366F1] text-black shadow-[0_8px_30px_rgb(99,102,241,0.2)] hover:bg-[#5254E8] hover:translate-y-[-1px] rounded-xl transition-all font-satoshi"
                     >
-                        Edit Design
-                    </Button>
-                </Stack>
-            </Box>
+                        <Edit className="w-3.5 h-3.5" />
+                        <span>Edit Design</span>
+                    </button>
+                </div>
+            </div>
 
-            {/* Dynamic Status Bar (Only when Published) */}
+            {/* Live Status Flag */}
             {form.status === 'published' && (
-                <Paper sx={{ p: 1.5, mb: 4, borderRadius: '16px', bgcolor: '#161412', border: '1px solid #10B981', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, backgroundImage: 'none', boxShadow: 'none' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#10B981', boxShadow: '0 0 8px #10B981' }} />
-                        <Typography variant="body2" sx={{ fontWeight: 800, color: '#10B981', fontSize: '0.75rem', letterSpacing: '0.05em', fontFamily: 'var(--font-mono)' }}>FORM IS LIVE & ACCEPTING RESPONSES</Typography>
-                    </Box>
-                    <IconButton size="small" component={Link} href={`/flow/form/${form.$id}`} target="_blank" sx={{ color: '#10B981' }}>
-                        <LaunchIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                </Paper>
+                <div className="relative z-10 p-4 mb-6 rounded-2xl bg-[#161412] border border-[#10B981] flex items-center justify-between gap-3 shadow-[0_4px_24px_rgba(16,185,129,0.05)]">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#10B981] shadow-[0_0_8px_#10B981] animate-pulse" />
+                        <span className="text-[10px] font-black text-[#10B981] tracking-wider uppercase font-mono">FORM IS LIVE & ACCEPTING RESPONSES</span>
+                    </div>
+                    <Link href={`/flow/form/${form.$id}`} target="_blank" className="p-1 text-[#10B981] hover:text-white transition-colors">
+                        <ExternalLink className="w-4 h-4" />
+                    </Link>
+                </div>
             )}
 
-            {/* Tabs */}
-            <Box sx={{ borderBottom: 1, borderColor: '#34322F', mb: 4 }}>
-                <Tabs 
-                    value={tab} 
-                    onChange={(_, v) => setTab(v)}
-                    sx={{
-                        '& .MuiTab-root': { fontWeight: 800, fontSize: '0.85rem', color: '#9B9691', px: 3, fontFamily: 'var(--font-satoshi)' },
-                        '& .Mui-selected': { color: '#6366F1 !important' },
-                        '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' }
-                    }}
-                >
-                    <Tab label="RESPONSES" icon={<InsightsIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-                    <Tab label="PREVIEW & SCHEMA" icon={<FormIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
-                    <Tab label="DISCUSSION" icon={<MessageSquare size={16} />} iconPosition="start" />
-                </Tabs>
-            </Box>
+            {/* Navigation Tabs */}
+            <div className="relative z-10 flex border-b border-[#34322F] mb-6 gap-2 font-satoshi text-xs overflow-x-auto shrink-0 scrollbar-none">
+                {[
+                    { id: 0, label: 'RESPONSES', icon: <BarChart2 className="w-4 h-4" /> },
+                    { id: 1, label: 'PREVIEW & SCHEMA', icon: <FileText className="w-4 h-4" /> },
+                    { id: 2, label: 'DISCUSSION', icon: <MessageSquare className="w-4 h-4" /> },
+                ].map((item) => {
+                    const isActive = tab === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setTab(item.id)}
+                            className={`flex items-center gap-2 px-4 py-3 font-extrabold border-b-2 transition-all whitespace-nowrap ${
+                                isActive 
+                                    ? 'border-[#6366F1] text-[#6366F1]' 
+                                    : 'border-transparent text-[#9B9691] hover:text-white'
+                            }`}
+                        >
+                            {item.icon}
+                            <span>{item.label}</span>
+                        </button>
+                    );
+                })}
+            </div>
 
-            {/* Tab Panels */}
-            {tab === 0 && (
-                <Fade in={true}>
-                    <Box>
+            {/* Tab Contents */}
+            <div className="relative z-10">
+                {/* Responses Tab */}
+                {tab === 0 && (
+                    <div className="animate-fadeIn">
                         {loading ? (
-                            <Stack spacing={2}>
+                            <div className="space-y-4">
                                 {[1, 2, 3].map((i) => (
-                                    <></>
+                                    <div key={i} className="h-16 bg-white/5 rounded-2xl animate-pulse" />
                                 ))}
-                            </Stack>
+                            </div>
                         ) : (
                             <SubmissionViewer formId={resolvedParams.formId} formSchema={form.schema} />
                         )}
-                    </Box>
-                </Fade>
-            )}
+                    </div>
+                )}
 
-            {tab === 1 && (
-                <Fade in={true}>
-                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' }, gap: 4 }}>
-                        <Paper sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid #34322F', backgroundImage: 'none', boxShadow: 'none' }}>
-                            <Typography variant="overline" sx={{ color: '#9B9691', fontWeight: 900, mb: 4, display: 'block', fontFamily: 'var(--font-mono)' }}>SCHEMA PREVIEW</Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {/* Preview & Schema Tab */}
+                {tab === 1 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start animate-fadeIn">
+                        {/* Schema Preview */}
+                        <div className="lg:col-span-2 p-5 md:p-6 rounded-[28px] bg-[#161412] border border-[#34322F] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
+                            <span className="text-[10px] font-black text-[#9B9691] uppercase tracking-wider mb-4 block font-mono">SCHEMA PREVIEW</span>
+                            <div className="flex flex-col gap-4">
                                 {loading ? (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                                        {[1, 2].map((i) => (
-                                            <Box key={i}>
-                                                <></>
-                                                <></>
-                                            </Box>
-                                        ))}
-                                    </Box>
+                                    <div className="space-y-3">
+                                        <div className="w-1/3 h-4 bg-white/5 rounded animate-pulse" />
+                                        <div className="w-full h-10 bg-white/5 rounded-xl animate-pulse" />
+                                    </div>
+                                ) : JSON.parse(form.schema || '[]').length === 0 ? (
+                                    <div className="text-xs text-[#9B9691] italic font-satoshi py-4">No fields defined. Click Edit Design to build your schema.</div>
                                 ) : JSON.parse(form.schema || '[]').map((field: any) => (
-                                    <Box key={field.id}>
-                                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 800, fontFamily: 'var(--font-satoshi)', color: '#FFF' }}>
-                                            {field.label} {field.required && <Box component="span" sx={{ color: '#ff1744' }}>*</Box>}
-                                        </Typography>
-                                        <Box sx={{ p: 2, borderRadius: '12px', bgcolor: '#000000', border: '1px solid #34322F', color: '#9B9691', fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }}>
+                                    <div key={field.id}>
+                                        <span className="block text-xs font-bold text-white mb-1.5 font-satoshi">
+                                            {field.label} {field.required && <span className="text-red-500">*</span>}
+                                        </span>
+                                        <div className="p-3 rounded-xl bg-black border border-[#34322F] text-[#9B9691] text-xs font-satoshi">
                                             {field.placeholder || `Input for ${field.type}...`}
-                                        </Box>
-                                    </Box>
+                                        </div>
+                                    </div>
                                 ))}
-                            </Box>
-                        </Paper>
+                            </div>
+                        </div>
 
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                            <Paper sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid #34322F', height: 'fit-content', backgroundImage: 'none', boxShadow: 'none' }}>
-                                <Typography variant="overline" sx={{ color: '#9B9691', fontWeight: 900, mb: 2, display: 'block', fontFamily: 'var(--font-mono)' }}>RAW JSON</Typography>
+                        {/* Raw JSON & Collaborators Side columns */}
+                        <div className="flex flex-col gap-6">
+                            {/* Raw JSON */}
+                            <div className="p-5 md:p-6 rounded-[28px] bg-[#161412] border border-[#34322F] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
+                                <span className="text-[10px] font-black text-[#9B9691] uppercase tracking-wider mb-3 block font-mono">RAW JSON</span>
                                 {loading ? (
-                                    <></>
+                                    <div className="h-32 bg-white/5 rounded-xl animate-pulse" />
                                 ) : (
-                                    <Box component="pre" sx={{ fontSize: '0.75rem', color: '#9B9691', overflow: 'auto', maxHeight: 400, fontFamily: 'var(--font-mono)', bgcolor: '#000000', border: '1px solid #34322F', p: 2, borderRadius: '12px' }}>
+                                    <pre className="text-[10px] text-[#9B9691] overflow-auto max-h-[220px] font-mono bg-black border border-[#34322F] p-3 rounded-xl scrollbar-thin">
                                         {JSON.stringify(JSON.parse(form.schema || '[]'), null, 2)}
-                                    </Box>
+                                    </pre>
                                 )}
-                            </Paper>
+                            </div>
 
-                            <Paper sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid #34322F', height: 'fit-content', backgroundImage: 'none', boxShadow: 'none' }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                                    <Typography variant="overline" sx={{ color: '#9B9691', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>COLLABORATORS</Typography>
+                            {/* Collaborators */}
+                            <div className="p-5 md:p-6 rounded-[28px] bg-[#161412] border border-[#34322F] shadow-[0_12px_32px_rgba(0,0,0,0.4)]">
+                                <div className="flex justify-between items-center mb-3.5">
+                                    <span className="text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">COLLABORATORS</span>
                                     {!loading && (
-                                        <Button 
-                                            size="small"
+                                        <button 
+                                            type="button"
                                             onClick={() => openUnified('share-note', {
                                                 resourceId: resolvedParams.formId,
                                                 resourceType: 'form',
                                                 resourceTitle: form.title,
                                                 onShared: () => fetchCollaborators()
                                             })}
-                                            sx={{ color: '#10B981', fontWeight: 800, fontSize: '0.7rem', textTransform: 'none', p: 0, minWidth: 0, fontFamily: 'var(--font-satoshi)', '&:hover': { textDecoration: 'underline' } }}
+                                            className="text-[#10B981] font-bold text-xs hover:underline font-satoshi"
                                         >
                                             + Manage
-                                        </Button>
+                                        </button>
                                     )}
-                                </Box>
+                                </div>
                                 
                                 {loading ? (
-                                    <></>
+                                    <div className="w-5 h-5 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
                                 ) : loadingCollaborators ? (
-                                    <CircularProgress size={16} sx={{ color: '#10B981' }} />
+                                    <div className="w-5 h-5 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
                                 ) : collaborators.length === 0 ? (
-                                    <Typography variant="caption" sx={{ color: '#9B9691', fontStyle: 'italic', display: 'block', fontFamily: 'var(--font-satoshi)' }}>
-                                        No co-collaborators added yet.
-                                    </Typography>
+                                    <span className="text-xs text-[#9B9691] italic block font-satoshi">
+                                        No collaborators added yet.
+                                    </span>
                                 ) : (
-                                    <Stack spacing={1.5}>
+                                    <div className="space-y-2">
                                         {collaborators.map((profile) => (
-                                            <Box 
+                                            <div 
                                                 key={profile.$id || profile.userId} 
                                                 onClick={() => openUnified('share-note', {
                                                     resourceId: resolvedParams.formId,
@@ -503,191 +502,135 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                                                     initialCollaborator: profile,
                                                     onShared: () => fetchCollaborators()
                                                 })}
-                                                sx={{ 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
-                                                    gap: 1.5, 
-                                                    p: 1, 
-                                                    borderRadius: '12px', 
-                                                    bgcolor: '#1C1A18', 
-                                                    border: '1px solid #34322F',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s ease',
-                                                    '&:hover': {
-                                                        borderColor: '#6366F1',
-                                                        bgcolor: '#1C1A18'
-                                                    }
-                                                }}
+                                                className="flex items-center gap-2 p-2 rounded-xl bg-[#1C1A18] border border-[#34322F] cursor-pointer hover:border-[#6366F1] transition-all"
                                             >
                                                 <IdentityAvatar
                                                     fileId={profile.avatar || profile.profilePicId || null}
                                                     alt={profile.displayName || profile.username}
                                                     fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
-                                                    size={28}
+                                                    size={26}
                                                 />
-                                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                    <Typography variant="caption" sx={{ fontWeight: 800, color: 'white', display: 'block', fontFamily: 'var(--font-satoshi)' }} noWrap>
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="block text-xs font-bold text-white truncate font-satoshi">
                                                         {profile.displayName || profile.username}
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#9B9691', display: 'block', fontSize: '9px', fontFamily: 'var(--font-mono)' }}>
+                                                    </span>
+                                                    <span className="block text-[9px] text-[#9B9691] font-mono">
                                                         {profile.permissionLevel || 'Viewer'}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
+                                                    </span>
+                                                </div>
+                                            </div>
                                         ))}
-                                    </Stack>
+                                    </div>
                                 )}
-                            </Paper>
-                        </Box>
-                    </Box>
-                </Fade>
-            )}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
-            {tab === 2 && (
-                <Fade in={true}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', height: 600, bgcolor: '#161412', borderRadius: '24px', border: '1px solid #34322F', overflow: 'hidden', position: 'relative' }}>
-                        {/* Mode Control & Toolbar */}
-                        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 2.25, borderBottom: '1px solid #34322F', bgcolor: '#000000' }}>
-                            <Typography variant="body2" sx={{ fontWeight: 800, color: '#FFF', fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>Public Huddle Thread</Typography>
+                {/* Discussion Tab */}
+                {tab === 2 && (
+                    <div className="flex flex-col h-[520px] bg-[#161412] rounded-[28px] border border-[#34322F] shadow-[0_12px_32px_rgba(0,0,0,0.4)] overflow-hidden animate-fadeIn relative">
+                        {/* Discussion Header */}
+                        <div className="flex justify-between items-center p-4 border-b border-[#34322F] bg-black shrink-0 relative z-10">
+                            <span className="text-xs font-bold text-white font-clash uppercase tracking-wider">Public Huddle Thread</span>
                             {isHuddleInit && huddleTimeRemaining && (
-                                <Stack direction="row" spacing={1.5} alignItems="center">
-                                    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ color: '#FFB020' }}>
-                                        <Clock size={14} style={{ color: '#FFB020' }} />
-                                        <Typography variant="caption" sx={{ fontWeight: 800, fontFamily: 'var(--font-mono)' }}>{huddleTimeRemaining}</Typography>
-                                    </Stack>
-                                    <Button
-                                        size="small"
-                                        startIcon={<FileText size={14} />}
+                                <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1 text-[#FFB020] font-mono text-[10px] font-bold">
+                                        <Clock className="w-3.5 h-3.5" />
+                                        <span>{huddleTimeRemaining}</span>
+                                    </div>
+                                    <button
+                                        type="button"
                                         onClick={handleSaveHuddleAsStory}
-                                        sx={{
-                                            bgcolor: '#1C1A18', color: '#EC4899', border: '1px solid #34322F', fontWeight: 800, fontSize: '0.75rem', px: 2, py: 0.75, borderRadius: '12px', textTransform: 'none', fontFamily: 'var(--font-satoshi)',
-                                            '&:hover': { bgcolor: '#34322F', borderColor: '#EC4899' }
-                                        }}
+                                        className="flex items-center gap-1.5 px-3 py-1 bg-[#1C1A18] border border-[#34322F] hover:border-[#EC4899] text-[#EC4899] font-bold text-[10px] rounded-xl transition-all font-satoshi uppercase tracking-wider"
                                     >
-                                        Save Story
-                                    </Button>
-                                </Stack>
+                                        <FileText className="w-3.5 h-3.5" />
+                                        <span>Save Story</span>
+                                    </button>
+                                </div>
                             )}
-                        </Stack>
+                        </div>
 
-                        {/* Main Viewport */}
-                        <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                        {/* Discussion Body */}
+                        <div className="flex-1 min-h-0 flex flex-col relative">
                             {huddleLoading && (
-                                <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: '#000000', zIndex: 2 }}>
-                                    <CircularProgress size={28} sx={{ color: '#6366F1' }} />
-                                </Box>
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20">
+                                    <div className="w-6 h-6 border-2 border-[#6366F1] border-t-transparent rounded-full animate-spin" />
+                                </div>
                             )}
 
                             {!isHuddleInit ? (
-                                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center' }}>
-                                    <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: '#1C1A18', color: '#6366F1', border: '1px solid #34322F', mb: 2.5 }}>
-                                        <Globe size={26} style={{ color: '#6366F1' }} />
-                                    </Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 800, color: '#FFF', mb: 1, fontFamily: 'var(--font-clash)', letterSpacing: '0.01em' }}>Initialize Public Huddle</Typography>
-                                    <Typography variant="caption" sx={{ color: '#9B9691', maxWidth: 360, lineHeight: 1.5, mb: 3, fontFamily: 'var(--font-satoshi)' }}>
+                                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                                    <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-[#1C1A18] border border-[#34322F] text-[#6366F1] mb-3">
+                                        <Globe className="w-5 h-5" />
+                                    </div>
+                                    <h3 className="font-extrabold text-white mb-2 font-clash text-sm">Initialize Public Huddle</h3>
+                                    <p className="text-xs text-[#9B9691] max-w-xs leading-relaxed mb-4 font-satoshi">
                                         Coordinate form structure, survey target audience, or review field submissions with your collaborators in this temporary real-time public thread. Comments auto-clean in 7 days.
-                                    </Typography>
-                                    <Button 
+                                    </p>
+                                    <button 
+                                        type="button"
                                         onClick={handleInitHuddle}
-                                        sx={{ bgcolor: '#6366F1', color: 'black', fontWeight: 800, fontSize: '0.8rem', py: 1.25, px: 3, borderRadius: '12px', textTransform: 'none', fontFamily: 'var(--font-satoshi)', '&:hover': { bgcolor: '#575CF0' } }}
+                                        className="px-4 py-2 bg-[#6366F1] text-black font-extrabold text-xs rounded-xl hover:bg-[#5254E8] transition-all font-satoshi shadow-[0_8px_30px_rgb(99,102,241,0.2)] hover:translate-y-[-1px]"
                                     >
                                         Start Huddle
-                                    </Button>
-                                </Box>
+                                    </button>
+                                </div>
                             ) : (
                                 <>
-                                    <Box sx={{ flex: 1, overflowY: 'auto', p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 scrollbar-thin">
                                         {huddleMessages.length === 0 ? (
-                                            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Typography variant="caption" sx={{ fontStyle: 'italic', color: '#9B9691', fontFamily: 'var(--font-satoshi)' }}>No messages yet. Start the discussion!</Typography>
-                                            </Box>
+                                            <div className="flex-1 flex items-center justify-center text-xs text-[#9B9691] italic font-satoshi">
+                                                No messages yet. Start the discussion!
+                                            </div>
                                         ) : (
                                             huddleMessages.map((msg) => {
                                                 const isSelf = msg.senderId === user?.$id;
                                                 return (
-                                                    <Box key={msg.id} sx={{ alignSelf: isSelf ? 'flex-end' : 'flex-start', maxWidth: '75%' }}>
-                                                        <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 800, display: 'block', mb: 0.5, textAlign: isSelf ? 'right' : 'left', fontFamily: 'var(--font-satoshi)' }}>
-                                                            {msg.senderName}
-                                                        </Typography>
-                                                        <Paper 
-                                                            elevation={0}
-                                                            sx={{
-                                                                p: 1.75,
-                                                                borderRadius: '16px',
-                                                                borderTopRightRadius: isSelf ? 0 : '16px',
-                                                                borderTopLeftRadius: isSelf ? '16px' : 0,
-                                                                bgcolor: isSelf ? '#6366F1' : '#1C1A18',
-                                                                border: isSelf ? 'none' : '1px solid #34322F',
-                                                                color: isSelf ? 'black' : '#fff',
-                                                                boxShadow: 'none',
-                                                                backgroundImage: 'none'
-                                                            }}
-                                                        >
-                                                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word', fontSize: '0.85rem', fontFamily: 'var(--font-satoshi)' }}>
-                                                                {msg.content}
-                                                            </Typography>
-                                                        </Paper>
-                                                        <Typography variant="caption" sx={{ color: '#9B9691', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left', fontFamily: 'var(--font-mono)' }}>
+                                                    <div key={msg.id} className={`flex flex-col gap-0.5 max-w-[80%] ${isSelf ? 'align-self-end items-end ml-auto' : 'align-self-start items-start'}`}>
+                                                        <span className="text-[9px] font-bold text-white/30 font-mono">{msg.senderName}</span>
+                                                        <div className={`p-2.5 rounded-2xl text-xs leading-relaxed border ${
+                                                            isSelf 
+                                                                ? 'bg-[#6366F1] border-[#6366F1]/20 text-black font-semibold rounded-tr-none' 
+                                                                : 'bg-[#1C1A18] border-[#34322F] text-white rounded-tl-none'
+                                                        }`}>
+                                                            {msg.content}
+                                                        </div>
+                                                        <span className="text-[8px] text-white/30 font-mono mt-0.5">
                                                             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </Typography>
-                                                    </Box>
+                                                        </span>
+                                                    </div>
                                                 );
                                             })
                                         )}
                                         <div ref={huddleMessageEndRef} />
-                                    </Box>
+                                    </div>
 
-                                    {/* Input Form */}
-                                    <Box component="form" onSubmit={handleSendHuddleMessage} sx={{ p: 2.25, borderTop: '1px solid #34322F', bgcolor: '#000000' }}>
-                                        <Stack direction="row" spacing={1.5}>
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                value={inputText}
-                                                onChange={(e) => setInputText(e.target.value)}
-                                                placeholder="Type huddle message (auto-cleans in 7 days)..."
-                                                variant="standard"
-                                                InputProps={{
-                                                    disableUnderline: true,
-                                                    sx: {
-                                                        bgcolor: '#161412',
-                                                        borderRadius: '12px',
-                                                        color: 'white',
-                                                        px: 2,
-                                                        py: 1,
-                                                        fontWeight: 600,
-                                                        fontSize: '0.85rem',
-                                                        border: '1px solid #34322F',
-                                                        fontFamily: 'var(--font-satoshi)',
-                                                        '&:hover': { borderColor: '#6366F1' }
-                                                    }
-                                                }}
-                                            />
-                                            <IconButton 
-                                                type="submit"
-                                                disabled={!inputText.trim() || huddleSending}
-                                                sx={{
-                                                    bgcolor: '#6366F1',
-                                                    color: 'black',
-                                                    borderRadius: '12px',
-                                                    width: 40,
-                                                    height: 40,
-                                                    '&:hover': { bgcolor: '#575CF0' },
-                                                    '&.Mui-disabled': { bgcolor: '#1C1A18', color: '#34322F' }
-                                                }}
-                                            >
-                                                <Send size={16} style={{ color: 'inherit' }} />
-                                            </IconButton>
-                                        </Stack>
-                                    </Box>
+                                    {/* Discussion Input */}
+                                    <form onSubmit={handleSendHuddleMessage} className="p-3 border-t border-[#34322F] bg-black flex gap-2 shrink-0">
+                                        <input
+                                            type="text"
+                                            value={inputText}
+                                            onChange={(e) => setInputText(e.target.value)}
+                                            placeholder="Type huddle message (auto-cleans in 7 days)..."
+                                            className="w-full bg-[#161412] border border-[#34322F] rounded-xl text-white px-3 py-2 text-xs font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none transition-all font-satoshi"
+                                        />
+                                        <button 
+                                            type="submit"
+                                            disabled={!inputText.trim() || huddleSending}
+                                            className="w-9 h-9 flex items-center justify-center bg-[#6366F1] text-black rounded-xl hover:bg-[#5254E8] disabled:bg-[#1C1A18] disabled:text-[#34322F] transition-all shrink-0"
+                                        >
+                                            <Send className="w-4 h-4" />
+                                        </button>
+                                    </form>
                                 </>
                             )}
-                        </Box>
-                    </Box>
-                </Fade>
-            )}
+                        </div>
+                    </div>
+                )}
+            </div>
 
-            {/* Edit Dialog */}
+            {/* Edit Dialog Integration */}
             {isEditing && (
                 <FormDialog 
                     open={isEditing} 
@@ -696,16 +639,7 @@ export default function FormDetailsPage({ params, formId: propFormId, onBack }: 
                     onSaved={fetchForm} 
                 />
             )}
-
-            <Snackbar 
-                open={!!snackbar} 
-                autoHideDuration={3000} 
-                onClose={() => setSnackbar(null)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-            >
-                <Alert severity="success" sx={{ bgcolor: '#10B981', color: '#000', fontWeight: 800, borderRadius: 2 }}>{snackbar}</Alert>
-            </Snackbar>
-          </MultiSectionContainer>
-        </Box>
-  );
+            </MultiSectionContainer>
+        </div>
+    );
 }

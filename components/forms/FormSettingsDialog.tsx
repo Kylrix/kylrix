@@ -1,31 +1,13 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
-import {
-  Drawer,
-  Button,
-  Box,
-  Typography,
-  IconButton,
-  Stack,
-  FormControlLabel,
-  Switch,
-  TextField,
-  Divider,
-  alpha,
-  Alert,
-  Snackbar,
-  useTheme,
-  useMediaQuery,
-} from '@/lib/mui-tailwind/material';
-import {
-  Close as CloseIcon,
-  ContentCopy as CopyIcon,
-  EventBusy as ExpiryIcon,
-  Public as PublicIcon,
-} from '@/lib/mui-tailwind/icons';
+import { 
+  X, 
+  Copy, 
+  Clock, 
+  Globe 
+} from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms, FormsStatus } from '@/generated/appwrite/types';
+import { useToast } from '@/components/ui/Toast';
 
 interface FormSettingsDialogProps {
   open: boolean;
@@ -35,14 +17,12 @@ interface FormSettingsDialogProps {
 }
 
 export default function FormSettingsDialog({ open, onClose, form, onSaved }: FormSettingsDialogProps) {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { showSuccess } = useToast();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'draft' | 'published' | 'archived'>('draft');
   const [allowAnonymousView, setAllowAnonymousView] = useState(false);
   const [allowAnonymousFill, setAllowAnonymousFill] = useState(false);
   const [expiresAt, setExpiresAt] = useState('');
-  const [showCopySuccess, setShowCopySuccess] = useState(false);
 
   useEffect(() => {
     if (form && open) {
@@ -59,8 +39,9 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
     }
   }, [form, open, status]);
 
+  if (!open || !form) return null;
+
   const handleSave = async () => {
-    if (!form) return;
     setLoading(true);
     try {
       const settings = {
@@ -78,6 +59,7 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
       
       onSaved();
       onClose();
+      showSuccess('Saved', 'Portal settings updated.');
     } catch (error) {
       console.error('Failed to update form settings', error);
     } finally {
@@ -86,190 +68,163 @@ export default function FormSettingsDialog({ open, onClose, form, onSaved }: For
   };
 
   const copyPublicLink = () => {
-    if (!form) return;
     const url = `${window.location.origin}/form/${form.$id}`;
     navigator.clipboard.writeText(url);
-    setShowCopySuccess(true);
+    showSuccess('Link Copied', 'Portal URL is on your clipboard.');
   };
 
   const isExpired = expiresAt && new Date(expiresAt) < new Date();
 
   return (
     <>
-      <Drawer 
-        anchor={isMobile ? 'bottom' : 'right'}
-        open={open} 
-        onClose={onClose}
-        ModalProps={{ keepMounted: false, disablePortal: true }}
-        PaperProps={{
-          sx: { 
-            width: isMobile ? '100%' : 'min(100vw, 500px)',
-            maxWidth: '100%',
-            height: isMobile ? 'auto' : '100%',
-            maxHeight: isMobile ? '92dvh' : '100%',
-            bgcolor: 'rgba(10, 10, 10, 0.95)', 
-            backdropFilter: 'blur(40px) saturate(200%)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: isMobile ? '24px 24px 0 0' : '0',
-            backgroundImage: 'none',
-            display: 'flex',
-            flexDirection: 'column',
-          }
-        }}
-      >
-        <Box sx={{ p: 3, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', flexShrink: 0 }}>
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9990]"
+        onClick={onClose}
+      />
+
+      {/* Slide-over Container */}
+      <div className="fixed right-0 top-0 bottom-0 h-dvh bg-[#0a0a0a] border-l border-white/5 shadow-2xl flex flex-col z-[9995] w-full sm:w-[480px] font-satoshi text-[#F2F2F2]">
+        {/* Header */}
+        <div className="p-4 md:p-5 flex items-center justify-between border-b border-white/5 bg-black shrink-0">
+          <div>
+            <h3 className="text-sm font-extrabold font-clash text-white tracking-tight uppercase leading-tight">
               Portal Configuration
-            </Typography>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>
-                {form?.title.toUpperCase()}
-            </Typography>
-          </Box>
-          <IconButton onClick={onClose} size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.05)' }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
+            </h3>
+            <span className="block text-[10px] text-[#9B9691] font-mono font-bold uppercase truncate max-w-[280px]">
+              {form.title}
+            </span>
+          </div>
+          <button 
+            type="button"
+            onClick={onClose}
+            className="p-1.5 bg-white/5 hover:bg-white/10 text-[#9B9691] hover:text-white rounded-lg transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-        <Box sx={{ p: 3, pt: 2, flex: 1, overflowY: 'auto' }}>
-          <Stack spacing={3.5}>
-            {/* PUBLISH STATE */}
-            <Box>
-              <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 900, letterSpacing: '0.1em', mb: 2, display: 'block' }}>
-                DEPLOYMENT
-              </Typography>
-              <Stack spacing={2}>
-                <Box 
-                  sx={{ 
-                    p: 2, 
-                    borderRadius: 3, 
-                    bgcolor: status === 'published' ? alpha('#10B981', 0.05) : 'rgba(255,255,255,0.02)',
-                    border: '1px solid',
-                    borderColor: status === 'published' ? alpha('#10B981', 0.2) : 'rgba(255,255,255,0.05)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between'
-                  }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <PublicIcon sx={{ color: status === 'published' ? '#10B981' : 'text.secondary' }} />
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 800 }}>Public Visibility</Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
-                        {status === 'published' ? 'Accessible via unique URL' : 'Internal access only'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Switch 
-                    checked={status === 'published'} 
-                    onChange={(e) => setStatus(e.target.checked ? 'published' : 'draft')}
-                    sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: '#10B981' }, '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: '#10B981' } }}
-                  />
-                </Box>
-
-                {status === 'published' && (
-                  <Button 
-                    fullWidth 
-                    variant="outlined" 
-                    startIcon={<CopyIcon />}
-                    onClick={copyPublicLink}
-                    sx={{ borderRadius: 2, borderStyle: 'dashed', fontWeight: 800, py: 1 }}
-                  >
-                    Copy Portal Link
-                  </Button>
-                )}
-              </Stack>
-            </Box>
-
-            <Divider sx={{ opacity: 0.05 }} />
-
-            {/* PERMISSIONS */}
-            <Box>
-              <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 900, letterSpacing: '0.1em', mb: 2, display: 'block' }}>
-                ACCESS CONTROL
-              </Typography>
-              <Stack spacing={1}>
-                <FormControlLabel
-                  control={<Switch size="small" checked={allowAnonymousFill} onChange={(e) => setAllowAnonymousFill(e.target.checked)} />}
-                  label={
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 800 }}>Allow guest submissions</Typography>
-                      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>If off, only signed-in users can respond</Typography>
-                    </Box>
-                  }
-                  sx={{ mb: 1 }}
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-5 md:p-6 space-y-6 scrollbar-thin">
+          {/* Deployment */}
+          <div className="space-y-3">
+            <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">DEPLOYMENT</span>
+            
+            <div className={`p-4 rounded-xl border flex items-center justify-between gap-4 transition-all duration-300 ${
+              status === 'published' 
+                ? 'bg-[#10B981]/5 border-[#10B981]/20' 
+                : 'bg-white/[0.02] border-white/5'
+            }`}>
+              <div className="flex items-center gap-3">
+                <Globe className={`w-5 h-5 shrink-0 ${status === 'published' ? 'text-[#10B981]' : 'text-[#9B9691]'}`} />
+                <div>
+                  <span className="block text-xs font-bold text-white font-satoshi">Public Visibility</span>
+                  <span className="block text-[10px] text-[#9B9691] font-medium leading-normal">
+                    {status === 'published' ? 'Accessible via unique URL' : 'Internal access only'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatus(status === 'published' ? 'draft' : 'published')}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none shrink-0 ${
+                  status === 'published' ? 'bg-[#10B981]' : 'bg-white/10'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-black transition-transform ${
+                    status === 'published' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
                 />
-              </Stack>
-            </Box>
+              </button>
+            </div>
 
-            <Divider sx={{ opacity: 0.05 }} />
+            {status === 'published' && (
+              <button
+                type="button"
+                onClick={copyPublicLink}
+                className="w-full py-2.5 border border-dashed border-[#34322F] hover:border-[#6366F1] hover:text-[#6366F1] font-bold text-xs text-white rounded-xl transition-all flex items-center justify-center gap-2"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy Portal Link</span>
+              </button>
+            )}
+          </div>
 
-            {/* EXPIRY */}
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                <ExpiryIcon sx={{ fontSize: 18, color: isExpired ? '#D14343' : 'text.secondary' }} />
-                <Typography variant="overline" sx={{ color: isExpired ? '#D14343' : 'text.secondary', fontWeight: 900, letterSpacing: '0.1em' }}>
-                  AUTO-CLOSURE
-                </Typography>
-              </Box>
-              
-              <TextField
-                fullWidth
+          <div className="border-t border-white/5" />
+
+          {/* Access Control */}
+          <div className="space-y-3">
+            <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">ACCESS CONTROL</span>
+            
+            <div className="flex items-center justify-between gap-4 p-1">
+              <div>
+                <span className="block text-xs font-bold text-white font-satoshi">Allow guest submissions</span>
+                <span className="block text-[10px] text-[#9B9691] leading-normal mt-0.5">If off, only signed-in users can respond</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAllowAnonymousFill(!allowAnonymousFill)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none shrink-0 ${
+                  allowAnonymousFill ? 'bg-[#6366F1]' : 'bg-white/10'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-black transition-transform ${
+                    allowAnonymousFill ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="border-t border-white/5" />
+
+          {/* Auto-Closure */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Clock className={`w-4 h-4 ${isExpired ? 'text-red-400' : 'text-[#9B9691]'}`} />
+              <span className="block text-[10px] font-black text-[#9B9691] uppercase tracking-wider font-mono">AUTO-CLOSURE</span>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-bold text-[#9B9691] uppercase tracking-wider font-mono">Closure Timestamp</label>
+              <input
                 type="datetime-local"
-                label="Closure Timestamp"
-                variant="filled"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                InputProps={{ disableUnderline: true, sx: { borderRadius: 3, fontWeight: 700 } }}
-                helperText="Responses will be rejected after this time."
+                className="w-full px-4 py-3 rounded-xl bg-black border border-[#34322F] text-white focus:outline-none focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/30 hover:border-[#6366F1] transition-all font-satoshi text-sm"
               />
+              <span className="text-[10px] text-white/30 italic block mt-0.5">Responses will be rejected after this time.</span>
+            </div>
 
-              {isExpired && (
-                <Alert severity="error" sx={{ mt: 2, borderRadius: 2, bgcolor: alpha('#D14343', 0.1), color: '#D14343', '& .MuiAlert-icon': { color: '#D14343' } }}>
-                  Form is currently closed.
-                </Alert>
-              )}
-            </Box>
-          </Stack>
-        </Box>
+            {isExpired && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold font-satoshi text-center">
+                Form is currently closed.
+              </div>
+            )}
+          </div>
+        </div>
 
-        <Box sx={{ p: 3, pt: 0, display: 'flex', gap: 1, borderTop: '1px solid rgba(255, 255, 255, 0.05)', flexShrink: 0 }}>
-          <Button onClick={onClose} sx={{ fontWeight: 800, color: 'text.secondary' }}>Cancel</Button>
-          <Button 
-            variant="contained" 
+        {/* Footer */}
+        <div className="p-4 md:p-5 border-t border-white/5 bg-black flex gap-3 shrink-0">
+          <button 
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-3 text-xs font-bold text-[#9B9691] hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            type="button"
             disabled={loading}
             onClick={handleSave}
-            sx={{ 
-              borderRadius: '12px', 
-              px: 4, 
-              fontWeight: 900,
-              bgcolor: 'var(--color-primary)',
-              color: 'black',
-              '&:hover': { bgcolor: alpha('#6366F1', 0.9) }
-            }}
+            className="flex-1 py-3 bg-[#6366F1] text-black font-extrabold text-xs rounded-xl shadow-[0_8px_30px_rgb(99,102,241,0.2)] hover:bg-[#5254E8] active:translate-y-[0.5px] transition-all disabled:opacity-50"
           >
             Update Configuration
-          </Button>
-        </Box>
-      </Drawer>
-
-      <Snackbar
-        open={showCopySuccess}
-        autoHideDuration={2000}
-        onClose={() => setShowCopySuccess(false)}
-        message="Portal Link Copied"
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        ContentProps={{
-          sx: { 
-            bgcolor: 'var(--color-primary)', 
-            color: 'black', 
-            fontWeight: 800,
-            borderRadius: 2,
-            minWidth: 'auto'
-          }
-        }}
-      />
+          </button>
+        </div>
+      </div>
     </>
   );
 }
