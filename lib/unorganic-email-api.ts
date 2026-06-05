@@ -340,7 +340,7 @@ function resolveEventCopy(input: Required<Pick<UnorganicEmailDispatchInput, 'eve
         return {
           subject: pickText(input.metadata?.subject as string, 'You received a Kylrix Coupon!'),
           title: 'Special Offer',
-          body: `${actorName} sent you a coupon for ${discount}% off Kylrix Pro. Claim it now to upgrade your workspace.`.trim(),
+          body: `You received a coupon for ${discount}% off Kylrix Pro. Claim it now to upgrade your workspace.`.trim(),
           ctaText: 'Claim Coupon',
           ctaUrl: pickText(input.metadata?.couponUrl as string, ctaUrl),
         };
