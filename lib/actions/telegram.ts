@@ -183,7 +183,7 @@ export async function syncServerTelegramListener(jwt?: string) {
   if (!actor?.$id) throw new Error('Unauthorized');
   
   const { isUserAdmin } = await import('./admin/check-admin');
-  const isAdmin = await isUserAdmin();
+  const isAdmin = await isUserAdmin(jwt);
   if (!isAdmin) throw new Error('Forbidden: admin only');
 
   const botToken = process.env.TELEGRAM_BOT_API;

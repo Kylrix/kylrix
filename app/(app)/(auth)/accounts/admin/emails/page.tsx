@@ -12,6 +12,7 @@ import AdminLayout from '../components/AdminLayout';
 import { EMAIL_TEMPLATES } from '@/lib/email-template-catalog';
 import { getAdminUsersAction } from '../../actions/admin';
 import { sendAdminEmailsAction } from '../../actions/emails';
+import { useAuth } from '@/context/auth/AuthContext';
 
 interface User {
   id: string;
@@ -42,6 +43,7 @@ export default function EmailOrchestrator() {
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<string | null>(null);
   const [userLoadError, setUserLoadError] = useState<string | null>(null);
+  const { getJWT } = useAuth();
 
   const fetchUsers = async (cursorAfter: string | null = null, append = false) => {
     const isInitialLoad = !append;
@@ -53,11 +55,12 @@ export default function EmailOrchestrator() {
 
     try {
       setUserLoadError(null);
+      const jwt = await getJWT();
       const data = await getAdminUsersAction({
         verifiedOnly: true,
         limit: 50,
         cursorAfter,
-      });
+      }, jwt || undefined);
       const batch = data.users || [];
       setUsers((prev) => {
         if (!append) {
@@ -88,7 +91,7 @@ export default function EmailOrchestrator() {
 
   useEffect(() => {
     void fetchUsers();
-  }, []);
+  }, [getJWT]);
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -121,13 +124,14 @@ export default function EmailOrchestrator() {
     setSending(true);
     setSendResult(null);
     try {
+      const jwt = await getJWT();
       const data = await sendAdminEmailsAction({
         recipientIds: selectedUsers,
         templateId: template,
         subject: customSubject.trim() || selectedTemplate.subject,
         html: customBody.trim() || undefined,
         ctaUrl: '/accounts',
-      });
+      }, jwt || undefined);
 
       setSendResult(`Queued ${data.sent} email(s) successfully.`);
       setSelectedUsers([]);

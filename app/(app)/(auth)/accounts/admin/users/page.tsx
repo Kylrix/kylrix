@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { getAdminUsersAction } from '../../actions/admin';
+import { useAuth } from '@/context/auth/AuthContext';
 
 interface User {
   id: string;
@@ -31,23 +32,25 @@ export default function UsersManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getJWT } = useAuth();
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      const jwt = await getJWT();
       const data = await getAdminUsersAction({
         search: searchTerm,
         verifiedOnly: false,
         limit: 100,
-      });
+      }, jwt || undefined);
       setUsers(data.users);
     } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [searchTerm]);
+  }, [searchTerm, getJWT]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

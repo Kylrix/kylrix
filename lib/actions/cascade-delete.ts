@@ -123,7 +123,7 @@ export async function executeCascadeDeleteSecure(
     
     const isOwner = row.userId === actor.$id || row.creatorId === actor.$id || row.ownerId === actor.$id;
     const { isUserAdmin } = await import('./admin/check-admin');
-    const isAdmin = await isUserAdmin();
+    const isAdmin = await isUserAdmin(jwt);
 
     if (!isOwner && !isAdmin) {
       throw new Error('Forbidden: You do not have permission to delete this resource.');

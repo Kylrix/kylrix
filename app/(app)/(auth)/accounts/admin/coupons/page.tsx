@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Copy, RefreshCw, Ticket } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { createCouponAction, listCouponsAction } from '../../actions/coupons';
+import { useAuth } from '@/context/auth/AuthContext';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,7 @@ export default function AdminCouponsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { getJWT } = useAuth();
   const [form, setForm] = useState({
     targetUserIds: '',
     discountPercent: '50',
@@ -57,7 +59,8 @@ export default function AdminCouponsPage() {
     setLoading(true);
     setError(null);
     try {
-      const rows = await listCouponsAction();
+      const jwt = await getJWT();
+      const rows = await listCouponsAction(jwt || undefined);
       setCoupons(rows as any[]);
     } catch (err: any) {
       setError(err?.message || 'Failed to load coupons');
@@ -68,13 +71,14 @@ export default function AdminCouponsPage() {
 
   useEffect(() => {
     loadCoupons();
-  }, []);
+  }, [getJWT]);
 
   const createCoupon = async () => {
     setSaving(true);
     setError(null);
     setSuccess(null);
     try {
+      const jwt = await getJWT();
       const targetUserIds = form.targetUserIds.split(',').map((id) => id.trim()).filter(Boolean);
       const data = await createCouponAction({
         userIds: targetUserIds.length > 0 ? targetUserIds : undefined,
@@ -87,7 +91,7 @@ export default function AdminCouponsPage() {
         metadata: {
           scope: targetUserIds.length > 0 ? 'targeted' : 'open',
         },
-      });
+      }, jwt || undefined);
       setSuccess(`Created ${data.count || 1} coupon(s).`);
       setForm((prev) => ({ ...prev, targetUserIds: '', title: '', note: '', redemptionLimit: '1' }));
       await loadCoupons();
