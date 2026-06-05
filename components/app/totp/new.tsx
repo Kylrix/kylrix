@@ -4,7 +4,6 @@ import { createTotpSecret, updateTotpSecret } from '@/lib/appwrite';
 import { useAppwriteVault } from '@/context/appwrite-context';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { CdrProcessingDrawer } from '@/src/features/story-cdr/CdrProcessingDrawer';
 
 export default function NewTotpDialog({
   open,
@@ -36,23 +35,6 @@ export default function NewTotpDialog({
   });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [cdrProcessingOpen, setCdrProcessingOpen] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>('');
-
-  useEffect(() => {
-    if (!open || !user?.$id) return;
-    const fetchWallet = async () => {
-      try {
-        const { getStorySignerAndClient } = await import('@/src/features/story-cdr/wallet-bridge');
-        const { account } = await getStorySignerAndClient(user.$id);
-        setWalletAddress(account.address);
-      } catch (err) {
-        console.warn('Failed to derive wallet address for Story CDR:', err);
-        setWalletAddress('0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC');
-      }
-    };
-    fetchWallet();
-  }, [open, user?.$id]);
 
   useEffect(() => {
     if (initialData) {
@@ -83,61 +65,28 @@ export default function NewTotpDialog({
     setLoading(true);
     try {
       if (!user) throw new Error("Not authenticated");
-      const cdrActive = !!(user?.prefs as any)?.cdr_enabled;
 
-      if (cdrActive) {
-        setCdrProcessingOpen(true);
-        try {
-          if (initialData && initialData.$id) {
-            await updateTotpSecret(initialData.$id, {
-              ...form,
-              updatedAt: new Date().toISOString(),
-            });
-            toast.success("Smart Code updated!");
-          } else {
-            await createTotpSecret({
-              userId: user.$id,
-              ...form,
-              url: null,
-              tags: null,
-              isFavorite: false,
-              isDeleted: false,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            });
-            toast.success("Smart Code added!");
-          }
-        } catch (e: unknown) {
-          const err = e as { message?: string };
-          toast.error(
-            err.message || `Failed to ${initialData ? "update" : "add"} Smart Code.`,
-          );
-          setCdrProcessingOpen(false);
-          setLoading(false);
-        }
+      if (initialData && initialData.$id) {
+        await updateTotpSecret(initialData.$id, {
+          ...form,
+          updatedAt: new Date().toISOString(),
+        });
+        toast.success("Smart Code updated!");
       } else {
-        if (initialData && initialData.$id) {
-          await updateTotpSecret(initialData.$id, {
-            ...form,
-            updatedAt: new Date().toISOString(),
-          });
-          toast.success("Smart Code updated!");
-        } else {
-          await createTotpSecret({
-            userId: user.$id,
-            ...form,
-            url: null,
-            tags: null,
-            isFavorite: false,
-            isDeleted: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          });
-          toast.success("Smart Code added!");
-        }
-        onClose();
-        setLoading(false);
+        await createTotpSecret({
+          userId: user.$id,
+          ...form,
+          url: null,
+          tags: null,
+          isFavorite: false,
+          isDeleted: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+        toast.success("Smart Code added!");
       }
+      onClose();
+      setLoading(false);
     } catch (e: unknown) {
       const err = e as { message?: string };
       toast.error(
@@ -278,19 +227,6 @@ export default function NewTotpDialog({
             </button>
           </div>
         </form>
-        {cdrProcessingOpen && (
-          <CdrProcessingDrawer
-            open={cdrProcessingOpen}
-            onClose={() => {
-              setCdrProcessingOpen(false);
-              setLoading(false);
-              onClose();
-            }}
-            isDemoMode={!!(user?.prefs as any)?.demo_mode}
-            walletAddress={walletAddress || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'}
-            onFinished={() => {}}
-          />
-        )}
       </div>
     </div>
   );

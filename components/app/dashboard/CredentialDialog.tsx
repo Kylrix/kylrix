@@ -27,7 +27,6 @@ import {
   CreditCard 
 } from 'lucide-react';
 import { useSection } from '@/context/SectionContext';
-import { CdrProcessingDrawer } from '@/src/features/story-cdr/CdrProcessingDrawer';
 
 const VAULT_PRIMARY = "#10B981"; // Emerald
 const SURFACE_COLOR = "#161412";
@@ -62,24 +61,6 @@ export default function CredentialDialog({
   const { setIsDrawerOpen } = useDrawerState();
   const { setActiveDetail } = useSection();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [cdrProcessingOpen, setCdrProcessingOpen] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string>('');
-  const [pendingDetailSaved, setPendingDetailSaved] = useState<any | null>(null);
-
-  useEffect(() => {
-    if (!open || !user?.$id) return;
-    const fetchWallet = async () => {
-      try {
-        const { getStorySignerAndClient } = await import('@/src/features/story-cdr/wallet-bridge');
-        const { account } = await getStorySignerAndClient(user.$id);
-        setWalletAddress(account.address);
-      } catch (err) {
-        console.warn('Failed to derive wallet address for Story CDR:', err);
-        setWalletAddress('0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC');
-      }
-    };
-    fetchWallet();
-  }, [open, user?.$id]);
 
   const handleClose = () => {
     onClose();
@@ -310,38 +291,17 @@ export default function CredentialDialog({
       if (customFields.length > 0)
         credentialData.customFields = JSON.stringify(customFields) as string;
 
-      const cdrActive = !!(user?.prefs as any)?.cdr_enabled;
-
-      if (cdrActive) {
-        setCdrProcessingOpen(true);
-        try {
-          if (initial && initial.$id) {
-            await updateCredential(initial.$id, credentialData);
-          } else {
-            await createCredential(credentialData);
-          }
-          if (!initial && typeof window !== 'undefined') {
-            localStorage.removeItem('kylrix:draft:secret');
-          }
-        } catch (e: unknown) {
-          const err = e as { message?: string };
-          setError(err.message || "Failed to save credential.");
-          setCdrProcessingOpen(false);
-          setLoading(false);
-        }
+      if (initial && initial.$id) {
+        await updateCredential(initial.$id, credentialData);
       } else {
-        if (initial && initial.$id) {
-          await updateCredential(initial.$id, credentialData);
-        } else {
-          await createCredential(credentialData);
-        }
-        if (!initial && typeof window !== 'undefined') {
-          localStorage.removeItem('kylrix:draft:secret');
-        }
-        onSaved();
-        handleClose();
-        setLoading(false);
+        await createCredential(credentialData);
       }
+      if (!initial && typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:secret');
+      }
+      onSaved();
+      handleClose();
+      setLoading(false);
     } catch (e: unknown) {
       const err = e as { message?: string };
       setError(err.message || "Failed to save credential.");
@@ -411,60 +371,26 @@ export default function CredentialDialog({
       if (customFields.length > 0)
         credentialData.customFields = JSON.stringify(customFields) as string;
 
-      const cdrActive = !!(user?.prefs as any)?.cdr_enabled;
-
-      if (cdrActive) {
-        setCdrProcessingOpen(true);
-        try {
-          let saved: any;
-          if (initial && initial.$id) {
-            saved = await updateCredential(initial.$id, credentialData);
-          } else {
-            saved = await createCredential(credentialData);
-          }
-          if (!initial && typeof window !== 'undefined') {
-            localStorage.removeItem('kylrix:draft:secret');
-          }
-          setPendingDetailSaved(saved);
-        } catch (e: unknown) {
-          const err = e as { message?: string };
-          setError(err.message || "Failed to save credential.");
-          setCdrProcessingOpen(false);
-          setLoading(false);
-        }
+      let saved: any;
+      if (initial && initial.$id) {
+        saved = await updateCredential(initial.$id, credentialData);
       } else {
-        let saved: any;
-        if (initial && initial.$id) {
-          saved = await updateCredential(initial.$id, credentialData);
-        } else {
-          saved = await createCredential(credentialData);
-        }
-        if (!initial && typeof window !== 'undefined') {
-          localStorage.removeItem('kylrix:draft:secret');
-        }
-        onSaved();
-        if (saved && (saved.$id || saved.id)) {
-          setActiveDetail({ type: 'secret', id: saved.$id || saved.id, data: saved });
-        }
-        handleClose();
-        setLoading(false);
+        saved = await createCredential(credentialData);
       }
+      if (!initial && typeof window !== 'undefined') {
+        localStorage.removeItem('kylrix:draft:secret');
+      }
+      onSaved();
+      if (saved && (saved.$id || saved.id)) {
+        setActiveDetail({ type: 'secret', id: saved.$id || saved.id, data: saved });
+      }
+      handleClose();
+      setLoading(false);
     } catch (e: unknown) {
       const err = e as { message?: string };
       setError(err.message || "Failed to save credential.");
       setLoading(false);
     }
-  };
-
-  const handleCdrClose = () => {
-    setCdrProcessingOpen(false);
-    setLoading(false);
-    onSaved();
-    if (pendingDetailSaved) {
-      setActiveDetail({ type: 'secret', id: pendingDetailSaved.$id || pendingDetailSaved.id, data: pendingDetailSaved });
-      setPendingDetailSaved(null);
-    }
-    handleClose();
   };
 
   const currentType = initial?.itemType || defaultType;
@@ -871,15 +797,6 @@ export default function CredentialDialog({
             </button>
           </div>
         </form>
-        {cdrProcessingOpen && (
-          <CdrProcessingDrawer
-            open={cdrProcessingOpen}
-            onClose={handleCdrClose}
-            isDemoMode={!!(user?.prefs as any)?.demo_mode}
-            walletAddress={walletAddress || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'}
-            onFinished={handleCdrClose}
-          />
-        )}
       </div>
     </div>
   );
