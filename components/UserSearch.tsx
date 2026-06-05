@@ -1,24 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  Box,
-  TextField,
-  Typography,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  CircularProgress,
-  alpha,
-  IconButton,
-  Chip
-} from '@/lib/mui-tailwind/material';
-import {
-  Search as SearchIcon,
-  Close as CloseIcon
-} from '@/lib/mui-tailwind/icons';
-import { UsersService } from '@/lib/services/users';
+import { Search, X, Loader2 } from 'lucide-react';
 import { fetchProfilePreview } from '@/lib/profile-preview';
 import { IdentityAvatar, computeIdentityFlags } from './common/IdentityBadge';
 import { seedIdentityCache } from '@/lib/identity-cache';
@@ -112,162 +95,109 @@ export default function UserSearch({
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+    <div className="flex flex-col gap-2.5 w-full">
       {label && (
-        <Typography variant="caption" sx={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.05em', color: 'text.secondary' }}>
+        <span className="text-[10px] font-black text-white/30 tracking-wider uppercase block font-satoshi">
           {label}
-        </Typography>
+        </span>
       )}
 
       {/* Selected Users Chips */}
       {selectedUsers.length > 0 && (
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+        <div className="flex flex-wrap gap-2 mb-1">
           {selectedUsers.map((user) => (
-            <Chip
+            <div
               key={user.id}
-              avatar={
-                <IdentityAvatar 
-                  fileId={user.profilePicId || user.avatar || null}
-                  alt={user.title}
-                  fallback={(user.title || user.subtitle || 'U').charAt(0).toUpperCase()}
-                  verified={computeIdentityFlags({
-                    createdAt: (user as any).$createdAt || (user as any).createdAt || null,
-                    lastUsernameEdit: (user as any).last_username_edit || null,
-                    profilePicId: (user as any).profilePicId || (user as any).avatar || null,
-                    username: (user as any).username || null,
-                    bio: (user as any).bio || null,
-                    tier: (user as any).tier || null,
-                    publicKey: (user as any).publicKey || null,
-                  }).verified}
-                  pro={computeIdentityFlags({
-                    createdAt: (user as any).$createdAt || (user as any).createdAt || null,
-                    lastUsernameEdit: (user as any).last_username_edit || null,
-                    profilePicId: (user as any).profilePicId || (user as any).avatar || null,
-                    username: (user as any).username || null,
-                    bio: (user as any).bio || null,
-                    tier: (user as any).tier || null,
-                    publicKey: (user as any).publicKey || null,
-                  }).pro}
-                  size={24}
-                  userId={user.id}
-                  isAvatar={(user as any).isAvatar}
-                  isPublic={(user as any).isPublic}
-                  isGuest={(user as any).isGuest}
-                  displayName={user.displayName || (user as any).displayName}
-                  username={user.username || (user as any).username}
-                  accountName={(user as any).name || (user as any).displayName}
-                  email={(user as any).email}
-                />
-              }
-              label={user.title}
-              onDelete={() => onRemove(user.id)}
-              deleteIcon={<CloseIcon sx={{ fontSize: '14px !important' }} />}
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
-                color: '#F2F2F2',
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                borderRadius: '8px',
-                '& .MuiChip-deleteIcon': {
-                  color: 'rgba(255, 255, 255, 0.3)',
-                  '&:hover': { color: '#FF4D4D' }
-                }
-              }}
-            />
+              className="flex items-center gap-2 pl-2 pr-1.5 py-1 bg-white/3 border border-white/8 text-[#F2F2F2] font-semibold text-xs rounded-xl transition-all"
+            >
+              <IdentityAvatar 
+                fileId={user.profilePicId || user.avatar || null}
+                alt={user.title}
+                fallback={(user.title || user.subtitle || 'U').charAt(0).toUpperCase()}
+                verified={computeIdentityFlags({
+                  createdAt: (user as any).$createdAt || (user as any).createdAt || null,
+                  lastUsernameEdit: (user as any).last_username_edit || null,
+                  profilePicId: (user as any).profilePicId || (user as any).avatar || null,
+                  username: (user as any).username || null,
+                  bio: (user as any).bio || null,
+                  tier: (user as any).tier || null,
+                  publicKey: (user as any).publicKey || null,
+                }).verified}
+                pro={computeIdentityFlags({
+                  createdAt: (user as any).$createdAt || (user as any).createdAt || null,
+                  lastUsernameEdit: (user as any).last_username_edit || null,
+                  profilePicId: (user as any).profilePicId || (user as any).avatar || null,
+                  username: (user as any).username || null,
+                  bio: (user as any).bio || null,
+                  tier: (user as any).tier || null,
+                  publicKey: (user as any).publicKey || null,
+                }).pro}
+                size={20}
+                userId={user.id}
+                isAvatar={(user as any).isAvatar}
+                isPublic={(user as any).isPublic}
+                isGuest={(user as any).isGuest}
+                displayName={user.displayName || (user as any).displayName}
+                username={user.username || (user as any).username}
+                accountName={(user as any).name || (user as any).displayName}
+                email={(user as any).email}
+              />
+              <span className="font-satoshi text-xs font-bold leading-none">{user.title}</span>
+              <button
+                type="button"
+                onClick={() => onRemove(user.id)}
+                className="text-white/40 hover:text-[#FF4D4D] transition-colors p-0.5 rounded-md hover:bg-white/5"
+              >
+                <X size={12} />
+              </button>
+            </div>
           ))}
-        </Box>
+        </div>
       )}
 
-      <Box sx={{ position: 'relative' }}>
-        <TextField
-          fullWidth
-          placeholder={placeholder}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          variant="standard"
-          autoComplete="off"
-          InputProps={{
-            disableUnderline: true,
-            startAdornment: (
-              <Box sx={{ mr: 1, color: 'rgba(255, 255, 255, 0.2)', display: 'flex' }}>
-                <SearchIcon fontSize="small" />
-              </Box>
-            ),
-            endAdornment: isSearching ? (
-              <CircularProgress size={16} sx={{ color: '#F59E0B' }} />
-            ) : query ? (
-              <IconButton size="small" onClick={() => setQuery('')} sx={{ color: 'rgba(255, 255, 255, 0.2)' }}>
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            ) : null,
-            sx: {
-              bgcolor: 'rgba(255, 255, 255, 0.02)',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
-              borderRadius: '12px',
-              px: 2,
-              py: 1,
-              fontSize: '0.9rem',
-              color: '#F2F2F2',
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.04)',
-                borderColor: 'rgba(255, 255, 255, 0.1)',
-              },
-              '&.Mui-focused': {
-                bgcolor: 'rgba(255, 255, 255, 0.05)',
-                borderColor: alpha('#F59E0B', 0.5),
-                boxShadow: `0 0 0 2px ${alpha('#F59E0B', 0.1)}`,
-              }
-            }
-          }}
-        />
+      {/* Input container */}
+      <div className="relative w-full">
+        <div className="relative flex items-center bg-white/2 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-[#F2F2F2] transition hover:bg-white/4 focus-within:bg-white/5 focus-within:border-amber-500/50 focus-within:ring-2 focus-within:ring-amber-500/10">
+          <Search size={16} className="text-white/25 mr-2.5 shrink-0" />
+          <input
+            type="text"
+            className="w-full bg-transparent border-none outline-none text-[#F2F2F2] placeholder-white/30 text-xs font-semibold"
+            placeholder={placeholder}
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            autoComplete="off"
+          />
+          {isSearching ? (
+            <Loader2 size={16} className="text-amber-500 animate-spin shrink-0" />
+          ) : query ? (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="text-white/30 hover:text-white transition-colors shrink-0 p-0.5 rounded hover:bg-white/5"
+            >
+              <X size={16} />
+            </button>
+          ) : null}
+        </div>
 
+        {/* Results List */}
         {query.length >= 2 && results.length > 0 && (
-          <Box
-            sx={inlineResults ? {
-              mt: 1,
-              bgcolor: 'rgba(22, 20, 18, 0.98)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '16px',
-              maxHeight: 240,
-              overflow: 'auto'
-            } : {
-              position: 'absolute',
-              top: 'calc(100% + 8px)',
-              left: 0,
-              right: 0,
-              zIndex: 100,
-              bgcolor: 'rgba(10, 10, 10, 0.98)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '16px',
-              maxHeight: 280,
-              overflow: 'auto',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
-            }}
+          <div
+            className={
+              inlineResults
+                ? 'mt-2 bg-[#161412]/98 border border-white/8 rounded-2xl max-h-60 overflow-y-auto z-10'
+                : 'absolute top-[calc(100%+8px)] left-0 right-0 z-[100] bg-[#0A0908]/98 backdrop-blur-md border border-white/10 rounded-2xl max-h-70 overflow-y-auto shadow-2xl shadow-black/80'
+            }
           >
-            <List disablePadding>
+            <div className="flex flex-col">
               {results.map((user) => (
-                <ListItem
+                <button
                   key={user.id}
-                  component="button"
+                  type="button"
                   onClick={() => handleSelect(user)}
-                  sx={{
-                    width: '100%',
-                    textAlign: 'left',
-                    border: 'none',
-                    bgcolor: 'transparent',
-                    '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.05)' },
-                    px: 2,
-                    py: 1.5,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1.5
-                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-white/5 transition-colors border-none bg-transparent cursor-pointer"
                 >
-                  <ListItemAvatar sx={{ minWidth: 0 }}>
+                  <div className="shrink-0">
                     <IdentityAvatar
                       fileId={user.profilePicId || user.avatar || null}
                       alt={user.title}
@@ -290,7 +220,7 @@ export default function UserSearch({
                         tier: (user as any).tier || null,
                         publicKey: (user as any).publicKey || null,
                       }).pro}
-                      size={36}
+                      size={32}
                       userId={user.id}
                       isAvatar={(user as any).isAvatar}
                       isPublic={(user as any).isPublic}
@@ -300,48 +230,35 @@ export default function UserSearch({
                       accountName={(user as any).name || (user as any).displayName}
                       email={(user as any).email}
                     />
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={user.displayName || user.username || user.title}
-                    primaryTypographyProps={{ variant: 'body2', fontWeight: 700, color: '#F2F2F2' }}
-                    secondary={user.username ? `@${user.username}` : user.subtitle}
-                    secondaryTypographyProps={{ variant: 'caption', color: 'rgba(255, 255, 255, 0.4)' }}
-                  />
-                </ListItem>
+                  </div>
+                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                    <span className="font-extrabold text-xs text-white truncate font-satoshi">
+                      {user.displayName || user.username || user.title}
+                    </span>
+                    <span className="text-[10px] text-white/45 truncate font-bold font-satoshi">
+                      {user.username ? `@${user.username}` : user.subtitle}
+                    </span>
+                  </div>
+                </button>
               ))}
-            </List>
-          </Box>
+            </div>
+          </div>
         )}
 
         {query.length >= 2 && results.length === 0 && !isSearching && (
-          <Box
-            sx={inlineResults ? {
-              mt: 1,
-              bgcolor: 'rgba(22, 20, 18, 0.98)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '16px',
-              p: 3,
-              textAlign: 'center'
-            } : {
-              position: 'absolute',
-              top: 'calc(100% + 8px)',
-              left: 0,
-              right: 0,
-              zIndex: 100,
-              bgcolor: 'rgba(10, 10, 10, 0.98)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '16px',
-              p: 3,
-              textAlign: 'center'
-            }}
+          <div
+            className={
+              inlineResults
+                ? 'mt-2 bg-[#161412]/98 border border-white/8 rounded-2xl p-4 text-center z-10'
+                : 'absolute top-[calc(100%+8px)] left-0 right-0 z-[100] bg-[#0A0908]/98 backdrop-blur-md border border-white/10 rounded-2xl p-4 text-center shadow-2xl shadow-black/80'
+            }
           >
-            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 500 }}>
+            <p className="text-xs text-white/40 font-bold font-satoshi">
               No entities matching &quot;{query}&quot; found
-            </Typography>
-          </Box>
+            </p>
+          </div>
         )}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }

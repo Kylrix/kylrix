@@ -2,20 +2,6 @@
 
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
-  Box,
-  IconButton,
-  Button,
-  Chip,
-  Paper,
-  Stack,
-  Typography,
-  CircularProgress,
-  TextField,
-  alpha,
-  useTheme,
-  Tooltip,
-} from '@/lib/mui-tailwind/material';
-import {
   ChevronLeft,
   X,
   Send,
@@ -25,6 +11,7 @@ import {
   Globe,
   Smile,
   Copy,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/Toast';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
@@ -97,23 +84,12 @@ function renderMessageText(text: string): React.ReactNode {
     }
 
     pieces.push(
-      <Box
-        component="span"
+      <span
         key={`${start}-${username}`}
-        sx={{
-          color: '#6366F1',
-          fontWeight: 800,
-          bgcolor: 'rgba(99, 102, 241, 0.08)',
-          px: 0.4,
-          py: 0.1,
-          borderRadius: '4px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '0.9em',
-          userSelect: 'text',
-        }}
+        className="text-[#6366F1] font-extrabold bg-[#6366F1]/8 px-1 py-0.5 rounded font-mono text-[0.9em] select-text"
       >
         @{username}
-      </Box>
+      </span>
     );
 
     lastIndex = end;
@@ -123,7 +99,7 @@ function renderMessageText(text: string): React.ReactNode {
     pieces.push(text.slice(lastIndex));
   }
 
-  return <Box component="span" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{pieces}</Box>;
+  return <span className="whitespace-pre-wrap break-words">{pieces}</span>;
 }
 
 export function ProjectDiscussionSidebar({
@@ -131,7 +107,6 @@ export function ProjectDiscussionSidebar({
   fetchProjectData,
   user,
 }: ProjectDiscussionSidebarProps) {
-  const theme = useTheme();
   const { closeSidebar } = useDynamicSidebar();
   const { showSuccess, showError } = useToast();
 
@@ -632,132 +607,81 @@ export function ProjectDiscussionSidebar({
   const showMentions = mentionAnchorEl && mentionResults.length > 0;
 
   return (
-    <Box sx={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      bgcolor: '#0A0908',
-      overflow: 'hidden',
-      position: 'relative'
-    }}>
+    <div className="flex flex-col h-full bg-[#0A0908] overflow-hidden relative">
       
       {/* 1. Header (Fixed/Anchored at top) */}
-      <Box sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        p: 2.5,
-        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-        bgcolor: '#0A0908',
-        zIndex: 10
-      }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+      <div className="flex flex-col p-5 border-b border-white/5 bg-[#0A0908] z-10">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 min-w-0">
             {activeThreadParent && (
-              <IconButton
+              <button
+                type="button"
                 onClick={() => setActiveThreadParent(null)}
-                sx={{ color: theme.palette.text.secondary, mr: 0.5 }}
+                className="text-white/50 hover:text-white transition p-1.5 rounded-lg hover:bg-white/5 mr-1 shrink-0"
               >
                 <ChevronLeft size={18} />
-              </IconButton>
+              </button>
             )}
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="h6"
-                noWrap
-                sx={{
-                  fontWeight: 900,
-                  fontFamily: '"Space Grotesk", sans-serif',
-                  color: '#6366F1',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  fontSize: '1.05rem'
-                }}
-              >
+            <div className="min-w-0">
+              <h3 className="font-black font-clash text-[#6366F1] uppercase tracking-wider text-sm truncate">
                 {activeThreadParent ? 'Thread replies' : 'Project Discussion'}
-              </Typography>
-              <Typography variant="caption" noWrap sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', fontWeight: 600 }}>
+              </h3>
+              <span className="text-[10px] text-white/40 block truncate font-bold font-satoshi mt-0.5">
                 {project.title}
-              </Typography>
-            </Box>
-          </Stack>
+              </span>
+            </div>
+          </div>
 
-          <IconButton
+          <button
+            type="button"
             onClick={closeSidebar}
-            sx={{
-              color: theme.palette.text.secondary,
-              '&:hover': { color: 'white', bgcolor: alpha(theme.palette.text.primary, 0.08) }
-            }}
+            className="text-white/50 hover:text-white transition p-1.5 rounded-lg hover:bg-white/5 shrink-0"
           >
             <X size={18} />
-          </IconButton>
-        </Box>
-      </Box>
+          </button>
+        </div>
+      </div>
 
       {/* 2. Middle Content (Free scroll chat viewport) */}
-      <Box sx={{
-        flex: 1,
-        minHeight: 0,
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        bgcolor: '#080706'
-      }}>
+      <div className="flex-1 min-h-0 relative flex flex-col bg-[#080706]">
         <MuralPattern />
 
         {loading && (
-          <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: 'rgba(10,9,8,0.7)', zIndex: 3 }}>
-            <CircularProgress size={28} sx={{ color: '#6366F1' }} />
-          </Box>
+          <div className="absolute inset-0 grid place-items-center bg-[#0A0908]/70 z-30 animate-in fade-in">
+            <Loader2 size={28} className="text-[#6366F1] animate-spin" />
+          </div>
         )}
 
         {!chatNoteId ? (
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center', position: 'relative', zIndex: 1 }}>
-            <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.08)', color: '#6366F1', border: '1px solid rgba(99, 102, 241, 0.15)', mb: 2.5 }}>
+          <div className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10">
+            <div className="w-14 h-14 rounded-2xl grid place-items-center bg-[#6366F1]/8 text-[#6366F1] border border-[#6366F1]/15 mb-6">
               <Globe size={26} />
-            </Box>
-            <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', mb: 1 }}>Initialize Public Huddle</Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', maxWidth: 300, lineHeight: 1.5, mb: 3 }}>
+            </div>
+            <h4 className="font-extrabold text-sm text-white mb-2 font-satoshi">Initialize Public Huddle</h4>
+            <p className="text-xs text-white/40 max-w-[320px] leading-relaxed mb-6 font-medium font-satoshi">
               A temporary public comment thread lets your team coordinate tasks, tag members, and comment on assets. Messages automatically clean up in 7 days.
-            </Typography>
-            <Button
+            </p>
+            <button
+              type="button"
               onClick={handleInitHuddle}
-              sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 800, fontSize: '0.8rem', py: 1.25, px: 3, borderRadius: '10px', textTransform: 'none', '&:hover': { bgcolor: '#575CF0' } }}
+              className="bg-[#6366F1] hover:bg-[#6366F1]/90 text-white font-extrabold text-xs py-3 px-6 rounded-xl transition duration-200"
             >
               Start Huddle
-            </Button>
-          </Box>
+            </button>
+          </div>
         ) : (
           /* Scrollable Messages view */
-          <Box sx={{
-            flex: 1,
-            overflowY: 'auto',
-            p: 2.5,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            minHeight: 0,
-            '&::-webkit-scrollbar': { width: '5px' },
-            '&::-webkit-scrollbar-track': { background: 'transparent' },
-            '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.06)', borderRadius: '10px' }
-          }}>
+          <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 min-h-0 scrollbar-thin">
             {activeThreadParent ? (
               /* THREAD REPLIES VIEW */
               <>
-                <Box sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', pb: 2, mb: 1 }}>
-                  <Typography variant="caption" sx={{ color: '#818CF8', fontWeight: 900, mb: 1, display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <div className="border-b border-white/5 pb-4 mb-2">
+                  <span className="text-[10px] text-[#818CF8] font-black block uppercase tracking-wider mb-2 font-satoshi">
                     Thread initialized by {activeThreadParent.senderName}
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                    <Paper
-                      elevation={0}
-                      sx={{
-                        p: 1.5,
-                        borderRadius: '4px 20px 20px 20px',
-                        bgcolor: '#161412',
-                        border: '1px solid #23211F',
-                        borderLeft: '3px solid #818CF8',
-                        color: '#F5F2ED',
-                      }}
+                  </span>
+                  <div className="flex flex-col gap-1">
+                    <div
+                      className="p-4 rounded-r-2xl rounded-bl-2xl rounded-tl-sm bg-[#161412] border border-[#23211F] border-l-[3px] border-l-[#818CF8] text-[#F5F2ED]"
                     >
                       {(() => {
                         const parsedParent = parseMessageContent(activeThreadParent.content);
@@ -765,16 +689,16 @@ export function ProjectDiscussionSidebar({
                           return <VoiceMessage url={StorageService.getFileView(parsedParent.voiceFileId, 'voice')} />;
                         }
                         return (
-                          <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word' }}>
+                          <p className="font-semibold text-xs leading-relaxed break-words font-satoshi">
                             {renderMessageText(parsedParent.text)}
-                          </Typography>
+                          </p>
                         );
                       })()}
-                    </Paper>
+                    </div>
 
                     {/* Parent Reactions */}
                     {activeThreadParent.reactions && activeThreadParent.reactions.length > 0 && (
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75, alignSelf: 'flex-start' }}>
+                      <div className="flex flex-wrap gap-1 mt-2 align-self-start">
                         {Object.entries(
                           activeThreadParent.reactions.reduce((acc: Record<string, string[]>, r: any) => {
                             if (!acc[r.emoji]) acc[r.emoji] = [];
@@ -784,69 +708,61 @@ export function ProjectDiscussionSidebar({
                         ).map(([emoji, userIds]) => {
                           const hasReacted = (userIds as any[]).includes(user?.$id);
                           return (
-                            <Chip
+                            <button
+                              type="button"
                               key={emoji}
-                              label={`${emoji} ${(userIds as any[]).length}`}
-                              size="small"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleReact(activeThreadParent.id, emoji);
                               }}
-                              sx={{
-                                bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.03)',
-                                color: hasReacted ? '#818CF8' : 'rgba(255,255,255,0.5)',
-                                border: `1px solid ${hasReacted ? alpha('#818CF8', 0.3) : 'rgba(255,255,255,0.05)'}`,
-                                height: 20,
-                                fontSize: '0.7rem',
-                                fontWeight: 800,
-                                cursor: 'pointer',
-                              }}
-                            />
+                              className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-extrabold border transition-colors ${
+                                hasReacted 
+                                  ? 'bg-[#818CF8]/15 text-[#818CF8] border-[#818CF8]/30' 
+                                  : 'bg-white/3 text-white/55 border-white/5 hover:bg-white/5 hover:border-white/10'
+                              }`}
+                            >
+                              <span>{emoji}</span>
+                              <span>{(userIds as any[]).length}</span>
+                            </button>
                           );
                         })}
-                      </Box>
+                      </div>
                     )}
-                  </Box>
-                </Box>
+                  </div>
+                </div>
 
                 {threadMessages.length === 0 ? (
-                  <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35, py: 4 }}>
-                    <Typography variant="caption" sx={{ fontStyle: 'italic', fontWeight: 700 }}>No replies yet. Send a reply below!</Typography>
-                  </Box>
+                  <div className="flex-1 flex items-center justify-center py-8 opacity-40">
+                    <span className="italic font-bold text-xs font-satoshi text-white/60">No replies yet. Send a reply below!</span>
+                  </div>
                 ) : (
                   threadMessages.map(reply => {
                     const isSelfReply = reply.senderId === user?.$id;
                     const parsedReply = parseMessageContent(reply.content);
                     return (
-                      <Box key={reply.id} sx={{ alignSelf: isSelfReply ? 'flex-end' : 'flex-start', maxWidth: '85%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, display: 'block', mb: 0.5, textAlign: isSelfReply ? 'right' : 'left' }}>
+                      <div key={reply.id} className={`max-w-[85%] flex flex-col ${isSelfReply ? 'self-end' : 'self-start'}`}>
+                        <span className={`text-[10px] text-white/30 font-black block mb-1 font-satoshi ${isSelfReply ? 'text-right' : 'text-left'}`}>
                           {reply.senderName}
-                        </Typography>
-                        <Paper
-                          elevation={0}
-                          sx={{
-                            p: parsedReply.type === 'voice' ? 1.25 : 1.75,
-                            borderRadius: isSelfReply ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
-                            bgcolor: isSelfReply ? '#1C1A18' : '#161412',
-                            border: '1px solid #23211F',
-                            borderRight: isSelfReply ? '3px solid #6366F1' : '1px solid #23211F',
-                            borderLeft: !isSelfReply ? '3px solid #34322F' : '1px solid #23211F',
-                            color: isSelfReply ? '#FFFFFF' : '#F5F2ED',
-                            boxShadow: '0 4px 12px -4px rgba(0,0,0,0.8)',
-                          }}
+                        </span>
+                        <div
+                          className={`p-3.5 shadow-xl shadow-black/30 border border-[#23211F] text-xs font-semibold leading-relaxed break-words font-satoshi ${
+                            isSelfReply 
+                              ? 'bg-[#1C1A18] text-white rounded-l-2xl rounded-br-2xl rounded-tr-sm border-r-[3px] border-r-[#6366F1]' 
+                              : 'bg-[#161412] text-[#F5F2ED] rounded-r-2xl rounded-bl-2xl rounded-tl-sm border-l-[3px] border-l-[#34322F]'
+                          }`}
                         >
                           {parsedReply.type === 'voice' && parsedReply.voiceFileId ? (
                             <VoiceMessage url={StorageService.getFileView(parsedReply.voiceFileId, 'voice')} />
                           ) : (
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word' }}>
+                            <p className="font-semibold text-xs leading-relaxed break-words font-satoshi">
                               {renderMessageText(parsedReply.text)}
-                            </Typography>
+                            </p>
                           )}
-                        </Paper>
+                        </div>
 
                         {/* Reply Reactions */}
                         {reply.reactions && reply.reactions.length > 0 && (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.75, alignSelf: isSelfReply ? 'flex-end' : 'flex-start' }}>
+                          <div className={`flex flex-wrap gap-1 mt-1.5 ${isSelfReply ? 'justify-end' : 'justify-start'}`}>
                             {Object.entries(
                               reply.reactions.reduce((acc: Record<string, string[]>, r: any) => {
                                 if (!acc[r.emoji]) acc[r.emoji] = [];
@@ -856,33 +772,31 @@ export function ProjectDiscussionSidebar({
                             ).map(([emoji, userIds]) => {
                               const hasReacted = (userIds as any[]).includes(user?.$id);
                               return (
-                                <Chip
+                                <button
+                                  type="button"
                                   key={emoji}
-                                  label={`${emoji} ${(userIds as any[]).length}`}
-                                  size="small"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleReact(reply.id, emoji);
                                   }}
-                                  sx={{
-                                    bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.03)',
-                                    color: hasReacted ? '#818CF8' : 'rgba(255,255,255,0.5)',
-                                    border: `1px solid ${hasReacted ? alpha('#818CF8', 0.3) : 'rgba(255,255,255,0.05)'}`,
-                                    height: 20,
-                                    fontSize: '0.7rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer',
-                                  }}
-                                />
+                                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-extrabold border transition-colors ${
+                                    hasReacted 
+                                      ? 'bg-[#818CF8]/15 text-[#818CF8] border-[#818CF8]/30' 
+                                      : 'bg-white/3 text-white/55 border-white/5 hover:bg-white/5 hover:border-white/10'
+                                  }`}
+                                >
+                                  <span>{emoji}</span>
+                                  <span>{(userIds as any[]).length}</span>
+                                </button>
                               );
                             })}
-                          </Box>
+                          </div>
                         )}
 
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelfReply ? 'right' : 'left', fontWeight: 700 }}>
+                        <span className={`text-[9px] text-white/20 block mt-1.5 font-bold font-satoshi ${isSelfReply ? 'text-right' : 'text-left'}`}>
                           {new Date(reply.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Typography>
-                      </Box>
+                        </span>
+                      </div>
                     );
                   })
                 )}
@@ -892,9 +806,9 @@ export function ProjectDiscussionSidebar({
               /* GENERAL HUDDLE CHAT LIST */
               <>
                 {generalMessages.length === 0 ? (
-                  <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.35 }}>
-                    <Typography variant="caption" sx={{ fontStyle: 'italic', fontWeight: 700 }}>No messages yet. Start the discussion!</Typography>
-                  </Box>
+                  <div className="flex-1 flex items-center justify-center opacity-40">
+                    <span className="italic font-bold text-xs font-satoshi text-white/60">No messages yet. Start the discussion!</span>
+                  </div>
                 ) : (
                   generalMessages.map((msg) => {
                     const isSelf = msg.senderId === user?.$id;
@@ -902,63 +816,42 @@ export function ProjectDiscussionSidebar({
                     const replyCount = threadReplies[msg.id]?.length || 0;
 
                     return (
-                      <Box key={msg.id} sx={{ alignSelf: isSelf ? 'flex-end' : 'flex-start', maxWidth: '85%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, display: 'block', mb: 0.75, textAlign: isSelf ? 'right' : 'left' }}>
+                      <div key={msg.id} className={`max-w-[85%] flex flex-col ${isSelf ? 'self-end' : 'self-start'}`}>
+                        <span className={`text-[10px] text-white/30 font-black block mb-1 font-satoshi ${isSelf ? 'text-right' : 'text-left'}`}>
                           {msg.senderName}
-                        </Typography>
-                        <Paper
-                          elevation={0}
+                        </span>
+                        <div
                           onClick={(e) => handleMessageClick(e, msg)}
                           onTouchStart={(e) => handleTouchStart(e, msg)}
                           onTouchMove={handleTouchMove}
                           onTouchEnd={handleTouchEnd}
-                          sx={{
-                            p: parsed.type === 'voice' ? 1.25 : 1.75,
-                            borderRadius: isSelf ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
-                            bgcolor: isSelf ? '#1C1A18' : '#161412',
-                            backgroundImage: 'none',
-                            border: '1px solid #23211F',
-                            borderRight: isSelf ? '3px solid #6366F1' : '1px solid #23211F',
-                            borderLeft: !isSelf ? '3px solid #34322F' : '1px solid #23211F',
-                            color: isSelf ? '#FFFFFF' : '#F5F2ED',
-                            boxShadow: '0 4px 12px -4px rgba(0,0,0,0.8)',
-                            cursor: 'pointer',
-                            transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                            '&:hover': {
-                              transform: 'translateY(-1px)',
-                              boxShadow: '0 6px 16px -4px rgba(0,0,0,0.9)',
-                            }
-                          }}
+                          className={`p-3.5 shadow-xl shadow-black/30 border border-[#23211F] text-xs font-semibold leading-relaxed break-words font-satoshi cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-black/40 ${
+                            isSelf 
+                              ? 'bg-[#1C1A18] text-white rounded-l-2xl rounded-br-2xl rounded-tr-sm border-r-[3px] border-r-[#6366F1]' 
+                              : 'bg-[#161412] text-[#F5F2ED] rounded-r-2xl rounded-bl-2xl rounded-tl-sm border-l-[3px] border-l-[#34322F]'
+                          }`}
                         >
                           {parsed.type === 'voice' && parsed.voiceFileId ? (
                             <VoiceMessage url={StorageService.getFileView(parsed.voiceFileId, 'voice')} />
                           ) : (
-                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.5, wordBreak: 'break-word' }}>
+                            <p className="font-semibold text-xs leading-relaxed break-words font-satoshi">
                               {renderMessageText(parsed.text)}
-                            </Typography>
+                            </p>
                           )}
-                        </Paper>
+                        </div>
 
                         {/* Reactions and Quick Emoji Picker */}
-                        <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.75, alignSelf: isSelf ? 'flex-end' : 'flex-start' }}>
-                          {/* Emoji Trigger */}
-                          <IconButton
-                            size="small"
+                        <div className={`flex items-center gap-1.5 mt-1.5 ${isSelf ? 'justify-end' : 'justify-start'}`}>
+                          <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleReact(msg.id, '👍');
                             }}
-                            sx={{
-                              p: 0.5,
-                              color: 'rgba(255,255,255,0.3)',
-                              bgcolor: 'rgba(255,255,255,0.02)',
-                              border: '1px solid rgba(255,255,255,0.04)',
-                              borderRadius: '6px',
-                              '&:hover': { color: '#818CF8', bgcolor: 'rgba(99,102,241,0.08)' }
-                            }}
+                            className="p-1 text-white/30 bg-white/2 border border-white/5 rounded-md hover:text-[#818CF8] hover:bg-[#6366F1]/8 hover:border-[#6366F1]/15 transition"
                           >
                             <Smile size={12} />
-                          </IconButton>
+                          </button>
 
                           {msg.reactions && msg.reactions.length > 0 && (
                             Object.entries(
@@ -970,77 +863,61 @@ export function ProjectDiscussionSidebar({
                             ).map(([emoji, userIds]) => {
                               const hasReacted = (userIds as any[]).includes(user?.$id);
                               return (
-                                <Chip
+                                <button
+                                  type="button"
                                   key={emoji}
-                                  label={`${emoji} ${(userIds as any[]).length}`}
-                                  size="small"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleReact(msg.id, emoji);
                                   }}
-                                  sx={{
-                                    bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255,255,255,0.03)',
-                                    color: hasReacted ? '#818CF8' : 'rgba(255,255,255,0.5)',
-                                    border: `1px solid ${hasReacted ? alpha('#818CF8', 0.3) : 'rgba(255,255,255,0.05)'}`,
-                                    height: 20,
-                                    fontSize: '0.7rem',
-                                    fontWeight: 800,
-                                    cursor: 'pointer',
-                                    '&:hover': {
-                                      bgcolor: hasReacted ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255,255,255,0.08)'
-                                    }
-                                  }}
-                                />
+                                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10px] font-extrabold border transition-colors ${
+                                    hasReacted 
+                                      ? 'bg-[#818CF8]/15 text-[#818CF8] border-[#818CF8]/30' 
+                                      : 'bg-white/3 text-white/55 border-white/5 hover:bg-white/5 hover:border-white/10'
+                                  }`}
+                                >
+                                  <span>{emoji}</span>
+                                  <span>{(userIds as any[]).length}</span>
+                                </button>
                               );
                             })
                           )}
-                        </Stack>
+                        </div>
 
                         {/* Thread Replies Button */}
                         {replyCount > 0 && (
-                          <Button
-                            size="small"
-                            startIcon={<MessageSquare size={12} />}
+                          <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               setActiveThreadParent(msg);
                             }}
-                            sx={{
-                              alignSelf: isSelf ? 'flex-end' : 'flex-start',
-                              mt: 0.75,
-                              color: '#818CF8',
-                              fontWeight: 800,
-                              textTransform: 'none',
-                              fontSize: '0.75rem',
-                              bgcolor: 'rgba(99,102,241,0.04)',
-                              px: 1.5,
-                              borderRadius: '8px',
-                              border: '1px solid rgba(99,102,241,0.1)',
-                              '&:hover': { bgcolor: 'rgba(99,102,241,0.08)', borderColor: '#818CF8' }
-                            }}
+                            className={`flex items-center justify-center gap-1.5 mt-1.5 px-3 py-1 bg-[#6366F1]/4 border border-[#6366F1]/10 rounded-lg text-[#818CF8] font-extrabold text-[10px] transition duration-200 hover:bg-[#6366F1]/8 hover:border-[#818CF8] ${
+                              isSelf ? 'self-end' : 'self-start'
+                            }`}
                           >
-                            {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
-                          </Button>
+                            <MessageSquare size={12} />
+                            <span>{replyCount} {replyCount === 1 ? 'reply' : 'replies'}</span>
+                          </button>
                         )}
 
-                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.65rem', display: 'block', mt: 0.5, textAlign: isSelf ? 'right' : 'left', fontWeight: 700 }}>
+                        <span className={`text-[9px] text-white/20 block mt-1.5 font-bold font-satoshi ${isSelf ? 'text-right' : 'text-left'}`}>
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Typography>
-                      </Box>
+                        </span>
+                      </div>
                     );
                   })
                 )}
                 <div ref={messageEndRef} />
               </>
             )}
-          </Box>
+          </div>
         )}
-      </Box>
+      </div>
 
       {/* 3. Input Panel (Fixed/Anchored at bottom) */}
       {chatNoteId && (
-        <Box
-          component="form"
+        <form
           onSubmit={async (e) => {
             e.preventDefault();
             if (activeThreadParent) {
@@ -1063,117 +940,63 @@ export function ProjectDiscussionSidebar({
               handleSendMessage(e);
             }
           }}
-          sx={{
-            p: 2,
-            borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-            bgcolor: 'rgba(10, 9, 8, 0.95)',
-            backdropFilter: 'blur(12px)',
-            position: 'relative',
-            zIndex: 20
-          }}
+          className="p-4 border-t border-white/5 bg-[#0A0908]/95 backdrop-blur-md relative z-20"
         >
           {/* Mentions dropdown popup overlay */}
           {showMentions && (
-            <Paper sx={{
-              position: 'absolute',
-              bottom: '100%',
-              left: 16,
-              right: 16,
-              bgcolor: '#161412',
-              border: '1px solid #23211F',
-              borderRadius: '16px',
-              p: 1.5,
-              mb: 1.5,
-              maxHeight: 180,
-              overflowY: 'auto',
-              boxShadow: '0 -8px 24px rgba(0,0,0,0.5)',
-              zIndex: 30,
-              '&::-webkit-scrollbar': { width: '4px' },
-              '&::-webkit-scrollbar-thumb': { background: 'rgba(255,255,255,0.06)', borderRadius: '10px' }
-            }}>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 900, textTransform: 'uppercase', mb: 1, display: 'block' }}>
+            <div className="absolute bottom-full left-4 right-4 bg-[#161412] border border-[#23211F] rounded-2xl p-3 mb-3 max-h-45 overflow-y-auto shadow-2xl shadow-black/85 z-30 scrollbar-thin">
+              <span className="text-[10px] text-white/40 font-black block uppercase tracking-wider mb-2 font-satoshi">
                 Mention users
-              </Typography>
-              <Stack spacing={0.5}>
+              </span>
+              <div className="flex flex-col gap-1">
                 {mentionResults.map((item) => (
-                  <Box
+                  <button
+                    type="button"
                     key={item.id}
                     onClick={() => replaceActiveMention(item)}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1.5,
-                      p: 1,
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' }
-                    }}
+                    className="flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-white/4 transition-colors w-full text-left"
                   >
                     <IdentityAvatar fileId={item.avatar} alt={item.title} fallback={item.title[0]?.toUpperCase()} size={28} />
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 800 }} noWrap>{item.title}</Typography>
-                      {item.username && <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block' }}>@{item.username}</Typography>}
-                    </Box>
-                  </Box>
+                    <div className="min-w-0 flex flex-col">
+                      <span className="font-extrabold text-xs text-white truncate font-satoshi">{item.title}</span>
+                      {item.username && <span className="text-[10px] text-white/40 font-bold truncate mt-0.5 font-satoshi">@{item.username}</span>}
+                    </div>
+                  </button>
                 ))}
-              </Stack>
-            </Paper>
+              </div>
+            </div>
           )}
 
-          <Stack direction="row" spacing={1.5} alignItems="center">
+          <div className="flex items-center gap-3">
             {!activeThreadParent && (
-              <IconButton
+              <button
+                type="button"
                 onClick={toggleRecording}
                 disabled={sending}
-                sx={{
-                  color: isRecording ? '#ff4d4d' : 'rgba(255,255,255,0.4)',
-                  width: 44,
-                  height: 44,
-                  flexShrink: 0,
-                  bgcolor: '#161412',
-                  border: `1px solid ${isRecording ? '#ff4d4d' : 'rgba(255,255,255,0.05)'}`,
-                  borderRadius: '12px',
-                  '&:hover': { bgcolor: '#1C1A18', color: '#fff' }
-                }}
+                className={`w-11 h-11 shrink-0 flex items-center justify-center bg-[#161412] border rounded-xl hover:bg-[#1C1A18] hover:text-white transition ${
+                  isRecording ? 'text-[#ff4d4d] border-[#ff4d4d]' : 'text-white/40 border-white/5'
+                }`}
               >
-                {isRecording ? <Square size={16} fill="#ff4d4d" /> : <Mic size={18} />}
-              </IconButton>
+                {isRecording ? <Square size={16} fill="#ff4d4d" className="text-[#ff4d4d]" /> : <Mic size={18} />}
+              </button>
             )}
 
-            <Box ref={activeThreadParent ? threadMentionContainerRef : mentionContainerRef} sx={{ flexGrow: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <div ref={activeThreadParent ? threadMentionContainerRef : mentionContainerRef} className="flex-1 relative flex items-center min-w-0">
               {isRecording && (
-                <Box sx={{
-                  position: 'absolute',
-                  inset: 0,
-                  bgcolor: '#0A0908',
-                  borderRadius: '12px',
-                  border: '1px solid #ff4d4d',
-                  display: 'flex',
-                  alignItems: 'center',
-                  px: 2,
-                  gap: 1.5,
-                  zIndex: 2,
-                }}>
-                  <Box sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    bgcolor: '#ff4d4d',
-                    animation: 'blink 1s infinite',
-                    '@keyframes blink': { '0%, 100%': { opacity: 0.3 }, '50%': { opacity: 1 } }
-                  }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', fontWeight: 800, flexGrow: 1 }} noWrap>
+                <div className="absolute inset-0 bg-[#0A0908] rounded-xl border border-[#ff4d4d] flex items-center px-4 gap-3 z-[2]">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#ff4d4d] animate-pulse" />
+                  <span className="text-white/60 text-xs font-extrabold flex-1 truncate font-satoshi">
                     Recording... click stop to send
-                  </Typography>
-                  <Typography sx={{ color: '#ff4d4d', fontSize: '0.85rem', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>
+                  </span>
+                  <span className="text-[#ff4d4d] text-xs font-black font-mono">
                     {formatRecordingTime(recordingSeconds)}
-                  </Typography>
-                </Box>
+                  </span>
+                </div>
               )}
 
-              <TextField
-                fullWidth
-                size="small"
+              <input
+                type="text"
+                className="w-full bg-[#161412] rounded-xl text-white px-4 py-3 font-semibold text-xs border border-white/5 transition hover:border-white/10 focus:border-[#6366F1] outline-none"
                 value={activeThreadParent ? threadInputText : inputText}
                 disabled={isRecording}
                 onChange={(e) => handleInputChange(
@@ -1211,7 +1034,7 @@ export function ProjectDiscussionSidebar({
                       const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
                       
                       const ghostSecret = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-send`;
-                      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days standard
+                      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
                       
                       const titleEnc = await encryptGhostData('Secure Note');
                       const contentEnc = await encryptGhostData(val, titleEnc.key);
@@ -1229,7 +1052,6 @@ export function ProjectDiscussionSidebar({
                       const origin = typeof window !== 'undefined' ? window.location.origin : '';
                       const url = `${origin}/send/${note.$id}/${titleEnc.key}`;
                       
-                      // Cache in localStorage stash
                       try {
                         const existing = JSON.parse(localStorage.getItem('kylrix_send_sparks') || '[]');
                         const newSpark = {
@@ -1254,45 +1076,19 @@ export function ProjectDiscussionSidebar({
                     return;
                   }
                 }}
-                variant="standard"
-                InputProps={{
-                  disableUnderline: true,
-                  sx: {
-                    bgcolor: '#161412',
-                    borderRadius: '12px',
-                    color: 'white',
-                    px: 2,
-                    py: 1.25,
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    transition: 'all 0.2s ease',
-                    '&:hover': { borderColor: 'rgba(255,255,255,0.1)' },
-                    '&.Mui-focused': { borderColor: '#6366F1' }
-                  }
-                }}
               />
-            </Box>
+            </div>
 
-            <IconButton
+            <button
               type="submit"
               disabled={sending || isRecording || (activeThreadParent ? !threadInputText.trim() : !inputText.trim())}
-              sx={{
-                bgcolor: '#6366F1',
-                color: '#fff',
-                borderRadius: '12px',
-                width: 44,
-                height: 44,
-                flexShrink: 0,
-                '&:hover': { bgcolor: '#575CF0' },
-                '&.Mui-disabled': { bgcolor: 'rgba(255,255,255,0.02)', color: 'rgba(255,255,255,0.1)' }
-              }}
+              className="bg-[#6366F1] hover:bg-[#575CF0] disabled:bg-white/2 disabled:text-white/10 text-white rounded-xl w-11 h-11 shrink-0 flex items-center justify-center transition duration-200"
             >
               <Send size={18} />
-            </IconButton>
-          </Stack>
-        </Box>
+            </button>
+          </div>
+        </form>
       )}
-    </Box>
+    </div>
   );
 }

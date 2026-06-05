@@ -1,9 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Box, Typography, IconButton, Button, Stack, alpha, CircularProgress, useTheme, useMediaQuery, Chip, TextField } from '@/lib/mui-tailwind/material';
-import { X, ArrowLeft, Trash2, ChevronDown, ShieldCheck, UserPlus, Link, Copy, Check, Info } from 'lucide-react';
-import Drawer from '@/lib/mui-tailwind/material';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { X, ArrowLeft, Trash2, ChevronDown, ShieldCheck, Link, Copy, Check, Info } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { grantPermissionSecure, getResourceCollaboratorsSecure, revokePermissionSecure, PermissionLevel } from '@/lib/actions/secure-ops';
@@ -13,18 +11,6 @@ import { account } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import toast from 'react-hot-toast';
-
-const DRAWER_SX = {
-  borderTopLeftRadius: '28px',
-  borderTopRightRadius: '28px',
-  bgcolor: '#161412', // Deep Ash
-  borderTop: '1px solid #1C1A18', // Rim/Border Ash
-  maxWidth: 720,
-  width: '100%',
-  mx: 'auto',
-  backgroundImage: 'none',
-  color: '#fff',
-};
 
 // Unified config builder for dynamic resource terminology & branding
 const getResourceConfig = (type: string) => {
@@ -135,8 +121,6 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
   const { setIsDrawerOpen } = useDrawerState();
   const { drawerData, open } = useUnifiedDrawer();
   const { user } = useAuth();
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
   const [collaboratorProfiles, setCollaboratorProfiles] = useState<any[]>([]);
@@ -146,7 +130,6 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
 
   // Dynamic Invite Link parameters
   const [copiedLink, setCopiedLink] = useState(false);
-  const [copiedCode, setCopiedCode] = useState(false);
   const [showInviteSection, setShowInviteSection] = useState(false);
   
   // Edit specific collaborator state
@@ -154,6 +137,18 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
 
   // Nested Permission Drawer state
   const [isPermissionDrawerOpen, setIsPermissionDrawerOpen] = useState(false);
+
+  // Screen layout state
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Resolve IDs and titles from polymorphic parent schemas
   const activeResourceId = noteId || resourceId || drawerData?.noteId || drawerData?.resourceId || '';
@@ -167,12 +162,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
     return `${window.location.origin}/shared/${resourceType}/${activeResourceId}`;
   }, [resourceType, activeResourceId]);
 
-  const inviteCode = useMemo(() => {
-    if (!activeResourceId) return '';
-    return `KYLRIX-${activeResourceId.slice(0, 8).toUpperCase()}`;
-  }, [activeResourceId]);
-
-  const fetchExistingCollaborators = React.useCallback(async () => {
+  const fetchExistingCollaborators = useCallback(async () => {
     if (!activeResourceId) return;
     
     setIsLoadingExisting(true);
@@ -206,11 +196,10 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
       setSelectedUsers([]);
       setPermission('viewer');
       setCopiedLink(false);
-      setCopiedCode(false);
       setShowInviteSection(false);
     }
     return () => setIsDrawerOpen(false);
-    }, [isOpen, activeResourceId, setIsDrawerOpen, fetchExistingCollaborators, drawerData?.initialCollaborator]);
+  }, [isOpen, activeResourceId, setIsDrawerOpen, fetchExistingCollaborators, drawerData?.initialCollaborator]);
 
   const handleCopyLink = () => {
     try {
@@ -220,17 +209,6 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
       setTimeout(() => setCopiedLink(false), 2000);
     } catch (err: any) {
       toast.error('Failed to copy link: ' + err.message);
-    }
-  };
-
-  const handleCopyCode = () => {
-    try {
-      navigator.clipboard.writeText(inviteCode);
-      setCopiedCode(true);
-      toast.success('Claim code copied!');
-      setTimeout(() => setCopiedCode(false), 2000);
-    } catch (err: any) {
-      toast.error('Failed to copy code: ' + err.message);
     }
   };
 
@@ -348,392 +326,360 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
   const renderContent = () => {
       if (editingCollaborator) {
           return (
-            <Stack spacing={4}>
-                <Stack direction="row" alignItems="center" spacing={2} sx={{ p: 2.5, borderRadius: '20px', bgcolor: '#0A0908', border: '1px solid #1C1A18' }}>
-                    <IdentityAvatar
-                        fileId={editingCollaborator.avatar}
-                        alt={editingCollaborator.displayName}
-                        fallback={(editingCollaborator.displayName || 'U').charAt(0).toUpperCase()}
-                        size={48}
-                        verified={editingCollaborator.verified}
-                    />
-                    <Box sx={{ minWidth: 0, flex: 1 }}>
-                        <Typography noWrap variant="body1" sx={{ fontWeight: 900, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                          {editingCollaborator.displayName || editingCollaborator.username}
-                        </Typography>
-                        <Typography noWrap variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 700, display: 'block', fontFamily: 'var(--font-satoshi)' }}>
-                          @{editingCollaborator.username}
-                        </Typography>
-                    </Box>
-                </Stack>
+            <div className="flex flex-col gap-6">
+              {/* Collaborator Profile Card */}
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0A0908] border border-[#1C1A18]">
+                <IdentityAvatar
+                  fileId={editingCollaborator.avatar}
+                  alt={editingCollaborator.displayName}
+                  fallback={(editingCollaborator.displayName || 'U').charAt(0).toUpperCase()}
+                  size={48}
+                  verified={editingCollaborator.verified}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="font-extrabold text-sm text-white truncate font-satoshi">
+                    {editingCollaborator.displayName || editingCollaborator.username}
+                  </p>
+                  <p className="text-xs text-white/40 font-bold truncate font-satoshi mt-0.5">
+                    @{editingCollaborator.username}
+                  </p>
+                </div>
+              </div>
 
-                <Box>
-                    <Typography variant="caption" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', mb: 1, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)' }}>
-                        Access Permission Level
-                    </Typography>
-                    <Box 
-                      onClick={() => setIsPermissionDrawerOpen(true)}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        bgcolor: '#0A0908', 
-                        p: 2,
-                        borderRadius: '16px',
-                        border: '1px solid #1C1A18',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        '&:hover': { borderColor: 'rgba(255,255,255,0.15)' }
-                      }}
-                    >
-                      <Stack direction="row" alignItems="center" spacing={1.5}>
-                        <ShieldCheck size={18} style={{ color: config.brandColor }} />
-                        <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'var(--font-satoshi)', color: 'white', textTransform: 'capitalize' }}>
-                          {(config.permissionDetails as any)?.[permission]?.title || permission}
-                        </Typography>
-                      </Stack>
-                      <ChevronDown size={18} style={{ color: 'rgba(255,255,255,0.4)' }} />
-                    </Box>
-                </Box>
+              {/* Permission Level Selector Trigger */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[10px] font-black text-white/30 tracking-wider uppercase block font-satoshi">
+                  Access Permission Level
+                </span>
+                <button 
+                  type="button"
+                  onClick={() => setIsPermissionDrawerOpen(true)}
+                  className="flex items-center justify-between bg-[#0A0908] p-4 rounded-2xl border border-[#1C1A18] hover:border-white/15 transition duration-200 w-full"
+                >
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck size={18} style={{ color: config.brandColor }} />
+                    <span className="font-extrabold text-sm text-white capitalize font-satoshi">
+                      {(config.permissionDetails as any)?.[permission]?.title || permission}
+                    </span>
+                  </div>
+                  <ChevronDown size={18} className="text-white/40" />
+                </button>
+              </div>
 
-                <Stack spacing={2} sx={{ pt: 4 }}>
-                    <Button 
-                        variant="contained" 
-                        fullWidth
-                        onClick={handleUpdateCollaborator}
-                        disabled={loading}
-                        sx={{ borderRadius: '14px', fontWeight: 900, fontFamily: 'var(--font-satoshi)', py: 1.75, bgcolor: config.brandColor, color: '#000', textTransform: 'none', '&:hover': { bgcolor: alpha(config.brandColor, 0.9) } }}
-                    >
-                        {loading ? <CircularProgress size={20} color="inherit" /> : 'Save New Access'}
-                    </Button>
-                    <Button 
-                        variant="outlined" 
-                        fullWidth
-                        color="error"
-                        onClick={handleRevokeCollaborator}
-                        disabled={loading}
-                        startIcon={<Trash2 size={16} />}
-                        sx={{ borderRadius: '14px', fontWeight: 800, fontFamily: 'var(--font-satoshi)', py: 1.75, borderColor: '#1C1A18', color: '#FF453A', textTransform: 'none', '&:hover': { borderColor: '#FF453A', bgcolor: alpha('#FF453A', 0.05) } }}
-                    >
-                        Remove {config.labelSingular}
-                    </Button>
-                </Stack>
-            </Stack>
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 pt-4">
+                <button 
+                  type="button"
+                  onClick={handleUpdateCollaborator}
+                  disabled={loading}
+                  style={{ backgroundColor: config.brandColor }}
+                  className="w-full flex items-center justify-center rounded-xl font-extrabold text-xs text-black py-4 transition hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed font-satoshi"
+                >
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    'Save New Access'
+                  )}
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleRevokeCollaborator}
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-xl font-extrabold text-xs text-[#FF453A] border border-[#1C1A18] hover:border-[#FF453A]/30 hover:bg-[#FF453A]/5 py-4 transition disabled:opacity-50 disabled:cursor-not-allowed font-satoshi"
+                >
+                  <Trash2 size={16} />
+                  <span>Remove {config.labelSingular}</span>
+                </button>
+              </div>
+            </div>
           );
       }
 
       return (
-        <Stack spacing={4}>
-            {collaboratorProfiles.length > 0 && (
-                <Box>
-                    <Typography variant="caption" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', mb: 1.5, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)' }}>
-                        Workspace {config.labelPlural} ({collaboratorProfiles.length})
-                    </Typography>
-                    <Stack spacing={1.5}>
-                        {collaboratorProfiles.map((profile) => (
-                            <Box 
-                                key={profile.$id || profile.userId} 
-                                onClick={() => {
-                                    setEditingCollaborator(profile);
-                                    setPermission(profile.permissionLevel || 'viewer');
-                                }}
-                                sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: 2, 
-                                    p: 1.75, 
-                                    borderRadius: '16px', 
-                                    bgcolor: '#0A0908', 
-                                    border: '1px solid #1C1A18',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s ease',
-                                    '&:hover': {
-                                        borderColor: 'rgba(255,255,255,0.15)',
-                                        bgcolor: 'rgba(255,255,255,0.01)'
-                                    }
-                                }}
-                            >
-                                <IdentityAvatar
-                                    fileId={profile.avatar || profile.profilePicId || null}
-                                    alt={profile.displayName || profile.username}
-                                    fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
-                                    size={36}
-                                    verified={profile.tier === 'admin' || profile.verified}
-                                />
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                                        <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                                            {profile.displayName || profile.username}
-                                        </Typography>
-                                        <Typography 
-                                            variant="caption" 
-                                            sx={{ 
-                                                px: 1.25, 
-                                                py: 0.5, 
-                                                borderRadius: '8px', 
-                                                bgcolor: alpha(config.brandColor, 0.1),
-                                                color: config.brandColor,
-                                                fontWeight: 900,
-                                                fontSize: '9px',
-                                                textTransform: 'uppercase',
-                                                letterSpacing: '0.04em',
-                                                fontFamily: 'var(--font-satoshi)'
-                                            }}
-                                        >
-                                            {(config.permissionDetails as any)?.[profile.permissionLevel?.toLowerCase() as PermissionLevel]?.title || profile.permissionLevel || 'Viewer'}
-                                        </Typography>
-                                    </Box>
-                                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', display: 'block', fontFamily: 'var(--font-satoshi)', fontWeight: 600 }}>
-                                        @{profile.username}
-                                    </Typography>
-                                </Box>
-                            </Box>
-                        ))}
-                    </Stack>
-                </Box>
-            )}
-
-            <Box>
-                <UserSearch 
-                    label={`INVITE NEW ${config.labelPlural.toUpperCase()}`}
-                    placeholder="Search by name or @username"
-                    selectedUsers={selectedUsers}
-                    onSelect={(newUser) => setSelectedUsers([...selectedUsers, newUser])}
-                    onRemove={(id) => setSelectedUsers(selectedUsers.filter((u) => u.id !== id))}
-                    multiple={true}
-                    excludeIds={[user?.$id, ...collaboratorProfiles.map(p => p.userId || p.$id)].filter(Boolean)}
-                />
-            </Box>
-
-            {!config.addOnlyViewer && (
-              <Box>
-                  <Typography variant="caption" sx={{ display: 'block', fontSize: '0.72rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', mb: 1, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)' }}>
-                      Set Access Rights
-                  </Typography>
-                  <Box 
-                    onClick={() => setIsPermissionDrawerOpen(true)}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      bgcolor: '#0A0908', 
-                      p: 2,
-                      borderRadius: '16px',
-                      border: '1px solid #1C1A18',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      '&:hover': { borderColor: 'rgba(255,255,255,0.15)' }
+        <div className="flex flex-col gap-6">
+          {/* 1. Existing Workspace Collaborators List */}
+          {collaboratorProfiles.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-black text-white/30 tracking-wider uppercase block font-satoshi">
+                Workspace {config.labelPlural} ({collaboratorProfiles.length})
+              </span>
+              <div className="flex flex-col gap-2">
+                {collaboratorProfiles.map((profile) => (
+                  <button 
+                    type="button"
+                    key={profile.$id || profile.userId} 
+                    onClick={() => {
+                      setEditingCollaborator(profile);
+                      setPermission(profile.permissionLevel || 'viewer');
                     }}
+                    className="flex items-center gap-3.5 px-4 py-3 rounded-2xl bg-[#0A0908] border border-[#1C1A18] hover:border-white/15 hover:bg-white/[0.01] transition duration-200 w-full text-left"
                   >
-                    <Stack direction="row" alignItems="center" spacing={1.5}>
-                      <ShieldCheck size={18} style={{ color: config.brandColor }} />
-                      <Typography variant="body2" sx={{ fontWeight: 700, fontFamily: 'var(--font-satoshi)', color: 'white', textTransform: 'capitalize' }}>
-                        {(config.permissionDetails as any)?.[permission]?.title || permission}
-                      </Typography>
-                    </Stack>
-                    <ChevronDown size={18} style={{ color: 'rgba(255,255,255,0.4)' }} />
-                  </Box>
-              </Box>
-            )}
-
-            <Button 
-                variant="contained" 
-                onClick={handleGrant} 
-                disabled={loading || selectedUsers.length === 0}
-                sx={{ borderRadius: '14px', fontWeight: 900, fontFamily: 'var(--font-satoshi)', py: 1.75, bgcolor: config.brandColor, color: '#000', textTransform: 'none', '&:hover': { bgcolor: alpha(config.brandColor, 0.9) } }}
-            >
-                {loading ? <CircularProgress size={20} color="inherit" /> : `Send Invitation`}
-            </Button>
-
-            {/* Collapsible Invite Link & Claim Code Section */}
-            <Box sx={{ border: '1px solid #1C1A18', borderRadius: '16px', bgcolor: '#0A0908', overflow: 'hidden' }}>
-              <Box 
-                onClick={() => setShowInviteSection(!showInviteSection)}
-                sx={{ 
-                  p: 2, 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between', 
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.02)' }
-                }}
-              >
-                <Stack direction="row" alignItems="center" spacing={1.5}>
-                  <Link size={16} style={{ color: config.brandColor }} />
-                  <Typography variant="body2" sx={{ fontWeight: 800, color: 'white', fontFamily: 'var(--font-satoshi)' }}>
-                    Invite Link
-                  </Typography>
-                </Stack>
-                <ChevronDown size={16} style={{ color: 'rgba(255,255,255,0.4)', transform: showInviteSection ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-              </Box>
-              {showInviteSection && (
-                <Stack spacing={2} sx={{ p: 2, pt: 0, borderTop: '1px solid rgba(255,255,255,0.02)' }}>
-                  <Box>
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mb: 1, display: 'block', fontSize: '10px' }}>
-                      SECURE INVITE URL
-                    </Typography>
-                    <Stack direction="row" spacing={1}>
-                      <TextField
-                        fullWidth
-                        size="small"
-                        value={inviteUrl}
-                        InputProps={{ readOnly: true }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            bgcolor: '#161412',
-                            borderRadius: '10px',
-                            color: 'rgba(255,255,255,0.6)',
-                            fontSize: '11px',
-                            fontFamily: 'var(--font-mono)',
-                            '& fieldset': { borderColor: 'rgba(255,255,255,0.05)' }
-                          }
-                        }}
+                    <div className="w-9 h-9 shrink-0 flex items-center justify-center">
+                      <IdentityAvatar
+                        fileId={profile.avatar || profile.profilePicId || null}
+                        alt={profile.displayName || profile.username}
+                        fallback={(profile.displayName || profile.username || 'U').charAt(0).toUpperCase()}
+                        size={36}
+                        verified={profile.tier === 'admin' || profile.verified}
                       />
-                      <IconButton onClick={handleCopyLink} sx={{ bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', color: copiedLink ? '#10B981' : 'white' }}>
-                        {copiedLink ? <Check size={16} /> : <Copy size={16} />}
-                      </IconButton>
-                    </Stack>
-                  </Box>
+                    </div>
+                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                      <span className="font-extrabold text-sm text-white truncate font-satoshi">
+                        {profile.displayName || profile.username}
+                      </span>
+                      <span className="text-xs text-white/40 truncate font-bold font-satoshi">
+                        @{profile.username}
+                      </span>
+                    </div>
+                    <div className="shrink-0 flex items-center">
+                      <span 
+                        style={{ color: config.brandColor, backgroundColor: `${config.brandColor}14` }}
+                        className="px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider font-satoshi border border-current/10"
+                      >
+                        {(config.permissionDetails as any)?.[profile.permissionLevel?.toLowerCase() as PermissionLevel]?.title || profile.permissionLevel || 'Viewer'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-                  <Box sx={{ display: 'flex', gap: 1, p: 1.5, borderRadius: '10px', bgcolor: alpha(config.brandColor, 0.03), border: `1px dashed ${alpha(config.brandColor, 0.15)}`, mt: 1 }}>
-                    <Info size={14} style={{ color: config.brandColor, flexShrink: 0, marginTop: 1 }} />
-                    <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.4, fontSize: '9px' }}>
-                      Distribute this link. Anyone accessing this link will be added contextually as an active resource participant with the set default permissions.
-                    </Typography>
-                  </Box>
-                </Stack>
-              )}
-            </Box>
-        </Stack>
+          {/* 2. Invite Search Input Field */}
+          <div className="flex flex-col gap-1.5">
+            <UserSearch 
+              label={`INVITE NEW ${config.labelPlural.toUpperCase()}`}
+              placeholder="Search by name or @username"
+              selectedUsers={selectedUsers}
+              onSelect={(newUser) => setSelectedUsers([...selectedUsers, newUser])}
+              onRemove={(id) => setSelectedUsers(selectedUsers.filter((u) => u.id !== id))}
+              multiple={true}
+              excludeIds={[user?.$id, ...collaboratorProfiles.map(p => p.userId || p.$id)].filter(Boolean)}
+            />
+          </div>
+
+          {/* 3. Default Access Rights for invitation */}
+          {!config.addOnlyViewer && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-black text-white/30 tracking-wider uppercase block font-satoshi">
+                Set Access Rights
+              </span>
+              <button 
+                type="button"
+                onClick={() => setIsPermissionDrawerOpen(true)}
+                className="flex items-center justify-between bg-[#0A0908] p-4 rounded-2xl border border-[#1C1A18] hover:border-white/15 transition duration-200 w-full"
+              >
+                <div className="flex items-center gap-3">
+                  <ShieldCheck size={18} style={{ color: config.brandColor }} />
+                  <span className="font-extrabold text-sm text-white capitalize font-satoshi">
+                    {(config.permissionDetails as any)?.[permission]?.title || permission}
+                  </span>
+                </div>
+                <ChevronDown size={18} className="text-white/40" />
+              </button>
+            </div>
+          )}
+
+          {/* 4. Send Invitation Button */}
+          <button 
+            type="button"
+            onClick={handleGrant} 
+            disabled={loading || selectedUsers.length === 0}
+            style={{ backgroundColor: selectedUsers.length > 0 ? config.brandColor : undefined }}
+            className={`w-full flex items-center justify-center rounded-xl font-extrabold text-xs text-black py-4 transition hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-white/30 font-satoshi`}
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+            ) : (
+              'Send Invitation'
+            )}
+          </button>
+
+          {/* 5. Collapsible Invite Link & Claim Code Section */}
+          <div className="border border-[#1C1A18] rounded-2xl bg-[#0A0908] overflow-hidden">
+            <button 
+              type="button"
+              onClick={() => setShowInviteSection(!showInviteSection)}
+              className="p-4 w-full flex items-center justify-between hover:bg-white/[0.01] transition duration-200 select-none text-left"
+            >
+              <div className="flex items-center gap-3">
+                <Link size={16} style={{ color: config.brandColor }} />
+                <span className="font-extrabold text-sm text-white font-satoshi">
+                  Invite Link
+                </span>
+              </div>
+              <ChevronDown 
+                size={16} 
+                className={`text-white/40 transition duration-200 ${showInviteSection ? 'rotate-180' : ''}`} 
+              />
+            </button>
+            {showInviteSection && (
+              <div className="p-4 pt-0 border-t border-white/[0.02] flex flex-col gap-4">
+                <div className="mt-2">
+                  <span className="text-[9px] font-black text-white/30 tracking-wider uppercase block mb-1.5 font-satoshi">
+                    SECURE INVITE URL
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0 bg-[#161412] border border-white/5 rounded-xl px-3 py-2 text-xs font-mono text-white/60 truncate select-all">
+                      {inviteUrl}
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={handleCopyLink} 
+                      style={{ color: copiedLink ? '#10B981' : undefined }}
+                      className="p-2.5 rounded-xl bg-[#161412] border border-white/5 hover:border-white/10 hover:bg-white/5 transition flex items-center justify-center text-white flex-shrink-0"
+                    >
+                      {copiedLink ? <Check size={16} /> : <Copy size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 p-3.5 rounded-xl bg-white/[0.01] border border-dashed border-white/10 mt-1">
+                  <Info size={14} style={{ color: config.brandColor }} className="flex-shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-white/45 leading-relaxed font-satoshi">
+                    Distribute this link. Anyone accessing this link will be added contextually as an active resource participant with the set default permissions.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       );
   };
 
+  if (!isOpen) return null;
+
   return (
     <>
-      <Drawer 
-        anchor={isDesktop ? 'right' : 'bottom'} 
-        open={isOpen} 
-        onClose={onClose} 
-        PaperProps={{ 
-            sx: {
-                bgcolor: '#161412',
-                backgroundImage: 'none',
-                color: '#fff',
-                ...(isDesktop ? {
-                    height: '100%',
-                    maxWidth: 480,
-                    width: '100%',
-                    borderLeft: '1px solid #1C1A18',
-                    borderTopLeftRadius: 0,
-                    borderTopRightRadius: 0,
-                } : {
-                    borderTopLeftRadius: '28px',
-                    borderTopRightRadius: '28px',
-                    borderTop: '1px solid #1C1A18',
-                    maxWidth: 720,
-                    width: '100%',
-                    mx: 'auto',
-                })
-            } 
-        }} 
-        ModalProps={{ keepMounted: false, disableScrollLock: false, disablePortal: true }}
-      >
-        <Box sx={{ p: 2.75, pb: 'calc(2.75rem + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', height: '100%', overflowY: 'auto' }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                {editingCollaborator && (
-                    <IconButton size="small" onClick={() => setEditingCollaborator(null)} sx={{ color: 'rgba(255,255,255,0.5)', ml: -1 }}>
-                        <ArrowLeft size={20} />
-                    </IconButton>
-                )}
-                <Typography sx={{ fontWeight: 900, fontSize: '1.25rem', color: '#fff', fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
-                  {editingCollaborator ? 'Manage Permission' : `Manage ${config.labelPlural}`}
-                </Typography>
-            </Box>
-            <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.5)', p: 0.5 }}><X size={20} /></IconButton>
-          </Box>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 animate-in fade-in"
+        onClick={onClose}
+      />
 
+      {/* Drawer Container */}
+      <div 
+        className={`fixed bg-[#161412] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-50 ${
+          isDesktop 
+            ? 'top-0 right-0 h-screen w-[480px] border-l rounded-l-none'
+            : 'bottom-0 left-0 right-0 max-h-[90dvh] h-auto border-t rounded-t-[28px] max-w-[720px] mx-auto'
+        }`}
+      >
+        {/* Mobile Drag Handle */}
+        {!isDesktop && (
+          <div 
+            className="flex justify-center py-3 cursor-pointer select-none"
+            onClick={onClose}
+          >
+            <div className="w-10 h-1 rounded bg-[#3D3A36]" />
+          </div>
+        )}
+
+        {/* Header */}
+        <div className="p-6 pb-4 flex items-center justify-between border-b border-[#1C1A18] shrink-0">
+          <div className="flex items-center gap-3">
+            {editingCollaborator && (
+              <button 
+                type="button"
+                onClick={() => setEditingCollaborator(null)} 
+                className="p-1 text-white/50 hover:text-white transition rounded-lg hover:bg-white/5"
+              >
+                <ArrowLeft size={20} />
+              </button>
+            )}
+            <h3 className="font-extrabold text-lg text-white font-clash tracking-tight">
+              {editingCollaborator ? 'Manage Permission' : `Manage ${config.labelPlural}`}
+            </h3>
+          </div>
+          <button 
+            type="button"
+            onClick={onClose} 
+            className="p-1.5 text-white/50 hover:text-white transition rounded-lg hover:bg-white/5"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Body content scrollable container */}
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
           {isLoadingExisting && !editingCollaborator ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-                  <CircularProgress color="primary" />
-              </Box>
-          ) : renderContent()}
-        </Box>
-      </Drawer>
+            <div className="flex justify-center items-center py-16">
+              <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            renderContent()
+          )}
+        </div>
+      </div>
 
       {/* Nested Permission Selection Bottom Drawer */}
-      <Drawer
-        anchor={isDesktop ? 'right' : 'bottom'}
-        open={isPermissionDrawerOpen}
-        onClose={() => setIsPermissionDrawerOpen(false)}
-        keepMounted={false}
-        disablePortal={true}
-        PaperProps={{
-          sx: {
-            bgcolor: '#0A0908', // Pitch Black nested contrast
-            backgroundImage: 'none',
-            color: '#fff',
-            ...(isDesktop ? {
-                height: '100%',
-                maxWidth: 480,
-                width: '100%',
-                borderLeft: '1px solid #1C1A18',
-                borderTopLeftRadius: 0,
-                borderTopRightRadius: 0,
-            } : {
-                borderTop: '1px solid #1C1A18',
-                borderTopLeftRadius: '24px',
-                borderTopRightRadius: '24px',
-                p: 3,
-                maxWidth: 720,
-                width: '100%',
-                mx: 'auto',
-            })
-          }
-        }}
-      >
-        <Box sx={{ p: isDesktop ? 3 : 0 }}>
-            {!isDesktop && <Box sx={{ width: 40, height: 4, bgcolor: 'rgba(255,255,255,0.12)', borderRadius: '2px', mx: 'auto', mb: 3 }} />}
-            
-            <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', mb: 2, letterSpacing: '-0.01em' }}>
-            Assign Access Level
-            </Typography>
+      {isPermissionDrawerOpen && (
+        <>
+          {/* Nested Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] transition-opacity duration-300 animate-in fade-in"
+            onClick={() => setIsPermissionDrawerOpen(false)}
+          />
 
-            <Stack spacing={1.5}>
-            {[
-                { value: 'viewer', title: (config.permissionDetails as any)?.viewer?.title || 'Viewer', desc: (config.permissionDetails as any)?.viewer?.desc || `Can read, download, and review the contents of this ${resourceType}.` },
-                { value: 'editor', title: (config.permissionDetails as any)?.editor?.title || 'Editor', desc: (config.permissionDetails as any)?.editor?.desc || `Can edit, write updates, comment, and fully shape ${resourceType} contents.` },
-                { value: 'admin', title: (config.permissionDetails as any)?.admin?.title || 'Admin', desc: (config.permissionDetails as any)?.admin?.desc || `Full ownership level rights, including the ability to manage other participants.` }
-            ].filter(item => config.allowedPermissions.includes(item.value)).map((item) => (
-                <Box
-                key={item.value}
-                onClick={() => {
-                    setPermission(item.value as PermissionLevel);
-                    setIsPermissionDrawerOpen(false);
-                }}
-                sx={{
-                    p: 2,
-                    borderRadius: '16px',
-                    bgcolor: permission === item.value ? alpha(config.brandColor, 0.08) : '#161412',
-                    border: '1px solid',
-                    borderColor: permission === item.value ? config.brandColor : '#1C1A18',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    '&:hover': { bgcolor: permission === item.value ? alpha(config.brandColor, 0.12) : 'rgba(255,255,255,0.02)' }
-                }}
-                >
-                <Typography variant="body2" sx={{ fontWeight: 900, fontFamily: 'var(--font-satoshi)', color: 'white', mb: 0.5 }}>
-                    {item.title}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)', display: 'block', lineHeight: 1.4 }}>
-                    {item.desc}
-                </Typography>
-                </Box>
-            ))}
-            </Stack>
-        </Box>
-      </Drawer>
+          {/* Nested Drawer Container */}
+          <div 
+            className={`fixed bg-[#0A0908] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 z-[60] ${
+              isDesktop 
+                ? 'top-0 right-0 h-screen w-[480px] border-l rounded-l-none'
+                : 'bottom-0 left-0 right-0 max-h-[80dvh] h-auto border-t rounded-t-[24px] max-w-[720px] mx-auto'
+            }`}
+          >
+            {/* Mobile Drag Handle */}
+            {!isDesktop && (
+              <div 
+                className="flex justify-center py-3 cursor-pointer select-none"
+                onClick={() => setIsPermissionDrawerOpen(false)}
+              >
+                <div className="w-10 h-1 rounded bg-[#3D3A36]" />
+              </div>
+            )}
+
+            <div className="p-6">
+              <h3 className="font-extrabold text-lg text-white font-clash tracking-tight mb-4">
+                Assign Access Level
+              </h3>
+
+              <div className="flex flex-col gap-3">
+                {[
+                  { value: 'viewer', title: (config.permissionDetails as any)?.viewer?.title || 'Viewer', desc: (config.permissionDetails as any)?.viewer?.desc || `Can read, download, and review the contents of this ${resourceType}.` },
+                  { value: 'editor', title: (config.permissionDetails as any)?.editor?.title || 'Editor', desc: (config.permissionDetails as any)?.editor?.desc || `Can edit, write updates, comment, and fully shape ${resourceType} contents.` },
+                  { value: 'admin', title: (config.permissionDetails as any)?.admin?.title || 'Admin', desc: (config.permissionDetails as any)?.admin?.desc || `Full ownership level rights, including the ability to manage other participants.` }
+                ].filter(item => config.allowedPermissions.includes(item.value)).map((item) => {
+                  const isSelected = permission === item.value;
+                  const borderStyle = isSelected 
+                    ? { borderColor: config.brandColor, backgroundColor: `${config.brandColor}14` }
+                    : { borderColor: '#1C1A18', backgroundColor: '#161412' };
+                  
+                  return (
+                    <button
+                      type="button"
+                      key={item.value}
+                      onClick={() => {
+                        setPermission(item.value as PermissionLevel);
+                        setIsPermissionDrawerOpen(false);
+                      }}
+                      style={borderStyle}
+                      className="p-4 rounded-2xl border text-left transition duration-200 hover:brightness-110 flex flex-col gap-1 w-full"
+                    >
+                      <span className="font-extrabold text-sm text-white font-satoshi">
+                        {item.title}
+                      </span>
+                      <span className="text-xs text-white/40 leading-relaxed font-satoshi">
+                        {item.desc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
