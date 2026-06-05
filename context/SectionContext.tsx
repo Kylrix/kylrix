@@ -140,7 +140,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Intelligent fallback: auto-partitions data/sections for non-configured routes
-  const analyzeAndPartitionRoute = (route: string): PanelType[] => {
+  const analyzeAndPartitionRoute = useCallback((route: string): PanelType[] => {
     let cleanRoute = route.split('?')[0];
     if (cleanRoute.length > 1 && cleanRoute.endsWith('/')) {
       cleanRoute = cleanRoute.slice(0, -1);
@@ -162,7 +162,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     }
 
     return ['note', 'projects'];
-  };
+  }, [isAuthenticated]);
 
   // Computes the dynamic layout depending on screen width and route preferences
   const getLayoutForRoute = useCallback((route: string): SectionConfig => {
@@ -225,7 +225,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     };
 
     return finalConfig;
-    }, [overrides, screenWidth, isAuthenticated, analyzeAndPartitionRoute]);
+    }, [overrides, screenWidth, analyzeAndPartitionRoute]);
 
   const contextValue = useMemo<SectionContextType>(() => ({
     getLayoutForRoute,

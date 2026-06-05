@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Copy, RefreshCw, Ticket, Search, Check, X } from 'lucide-react';
+import { Copy, RefreshCw, Ticket, Search, Check, X, Loader2 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { createCouponAction, listCouponsAction } from '../../actions/coupons';
 import { getAdminUserByIdAction } from '../../actions/admin';
@@ -204,48 +204,85 @@ export default function AdminCouponsPage() {
         {/* Coupon Creator Card */}
         <div className="p-6 rounded-[28px] bg-[#161412] border border-white/5 flex flex-col gap-5">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-1.5 relative">
+            <div className="space-y-1.5 relative col-span-1 md:col-span-2">
               <span className="text-[10px] text-white/40 font-bold font-mono uppercase tracking-wider block">Target Users</span>
               <div className="relative">
-                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                  <Search size={14} className="text-white/40" />
+                <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none">
+                  {searchingProfiles ? (
+                    <Loader2 size={14} className="text-[#6366F1] animate-spin" />
+                  ) : (
+                    <Search size={14} className="text-white/40" />
+                  )}
                 </div>
                 <input
                   type="text"
                   placeholder="Search user profiles..."
                   value={profileQuery}
                   onChange={(e) => setProfileQuery(e.target.value)}
-                  className="w-full bg-[#0A0908] pl-9 pr-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none transition-all"
+                  className="w-full bg-[#0A0908] pl-10 pr-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none transition-all"
                 />
-                
-                {/* Search Results Dropdown */}
-                {searchResults.length > 0 && (
-                  <div className="absolute z-50 left-0 right-0 mt-2 bg-[#161412] border border-white/10 rounded-xl shadow-xl max-h-60 overflow-y-auto p-1.5 flex flex-col gap-1">
-                    {searchResults.map((p) => (
-                      <button
-                        key={p.$id}
-                        type="button"
-                        onClick={() => selectProfile(p)}
-                        className="flex items-center justify-between w-full px-3 py-2 rounded-lg bg-transparent hover:bg-white/[0.03] text-left text-xs font-semibold text-white/80 transition-all cursor-pointer"
-                      >
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-extrabold text-white truncate">@{p.username}</span>
-                          <span className="text-[10px] text-white/40 truncate">{p.displayName || 'Unnamed User'}</span>
-                        </div>
-                        <span className="text-[10px] text-[#6366F1] font-extrabold bg-[#6366F1]/10 px-2 py-0.5 rounded-md flex-shrink-0">Select</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
               <span className="text-[10px] text-white/30 block">Leave blank for open claim</span>
               
+              {/* Search Results Dropdown */}
+              {searchResults.length > 0 && (
+                <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1 mt-2">
+                  {searchResults.map((p) => (
+                    <div
+                      key={p.$id}
+                      onClick={() => selectProfile(p)}
+                      className={`flex items-center justify-between gap-4 p-3.5 rounded-xl border transition-all cursor-pointer ${
+                        selectedTargets.some(t => t.id === p.userId)
+                          ? 'bg-[#6366F1]/10 border-[#6366F1]/25'
+                          : 'bg-white/[0.02] border-white/5 hover:border-[#6366F1]/30 hover:bg-[#6366F1]/5'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#6366F1] text-black font-black flex items-center justify-center text-xs flex-shrink-0">
+                          {(p.displayName || p.username || '?').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-sm font-extrabold text-white truncate">
+                            {p.displayName || p.username}
+                          </span>
+                          <span className="block text-[11px] text-[#9B9691] font-medium font-mono truncate">
+                            @{p.username}
+                          </span>
+                        </div>
+                      </div>
+                      {selectedTargets.some(t => t.id === p.userId) ? (
+                        <span className="flex items-center gap-1 px-3 py-1.5 bg-[#6366F1]/20 text-[#6366F1] font-black text-[10px] rounded-lg flex-shrink-0">
+                          <Check size={12} />
+                          <span>Added</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectProfile(p);
+                          }}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-[#6366F1] hover:bg-[#5458E8] text-black font-black text-[10px] rounded-lg transition-all cursor-pointer flex-shrink-0"
+                        >
+                          <Check size={12} />
+                          <span>Select</span>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Selected Targets Chips */}
               {selectedTargets.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2 max-h-24 overflow-y-auto">
+                <div className="flex flex-wrap gap-1.5 mt-3 max-h-28 overflow-y-auto">
                   {selectedTargets.map((t) => (
-                    <div key={t.id} className="flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-full bg-white/[0.04] border border-white/5 text-[9px] font-bold">
-                      <span className="text-[#6366F1]">@{t.username}</span>
-                      <span className="text-white/45 truncate max-w-[100px]" title={t.email}>{t.email}</span>
+                    <div key={t.id} className="flex items-center gap-2 pl-1.5 pr-1.5 py-1 rounded-full bg-white/[0.04] border border-white/5">
+                      <div className="w-5 h-5 rounded-full bg-[#6366F1] text-black font-black flex items-center justify-center text-[8px] flex-shrink-0">
+                        {(t.name || t.username || '?').charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-[10px] font-bold text-[#6366F1]">@{t.username}</span>
+                      <span className="text-[9px] text-white/40 truncate max-w-[90px]" title={t.email}>{t.email}</span>
                       <button
                         type="button"
                         onClick={() => removeProfile(t.id)}

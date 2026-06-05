@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from 'next/navigation';
 import {
     Lock,
@@ -66,7 +66,7 @@ export default function SudoModal({
         return () => setIsDrawerOpen(false);
     }, [isOpen, setIsDrawerOpen]);
 
-    const cancelHandler = onCancel ?? onClose ?? (() => {});
+    const cancelHandler = useMemo(() => onCancel ?? onClose ?? (() => {}), [onCancel, onClose]);
     const isDesktop = useIsDesktop();
     const { user } = useAuth();
     const [password, setPassword] = useState("");
