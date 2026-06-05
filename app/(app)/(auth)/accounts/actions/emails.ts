@@ -18,8 +18,8 @@ type SendEmailBody = {
 
 const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
-export async function sendAdminEmailsAction(body: SendEmailBody) {
-  const actor = await getActor();
+export async function sendAdminEmailsAction(body: SendEmailBody, jwt?: string) {
+  const actor = await getActor(jwt);
   if (!actor) {
     throw new Error('Unauthorized');
   }

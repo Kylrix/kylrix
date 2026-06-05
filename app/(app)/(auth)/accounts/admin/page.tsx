@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import AdminLayout from './components/AdminLayout';
 import { getAdminStatsAction } from '../actions/admin';
+import { useAuth } from '@/context/auth/AuthContext';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,11 +32,13 @@ export default function AdminDashboardPage() {
 function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const { getJWT } = useAuth();
 
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const data = await getAdminStatsAction();
+      const jwt = await getJWT();
+      const data = await getAdminStatsAction(jwt || undefined);
       setStats(data);
     } catch (error: any) {
       console.error('Failed to fetch stats:', error);
@@ -47,7 +50,7 @@ function AdminDashboard() {
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [getJWT]);
 
   const statCards = [
     { label: 'Total Users', value: stats?.totalUsers || '0', icon: Users, color: 'text-indigo-400', bgColor: 'bg-indigo-500/10', borderColor: 'hover:border-indigo-500/30', trend: stats?.growth || '+0%' },

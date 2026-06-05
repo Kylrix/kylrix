@@ -9,8 +9,8 @@ import { requireAdmin } from '@/lib/services/internal/admin';
 const CHAT_DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const EVENTS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
 
-export async function listCouponsAction() {
-  const user = await getActor();
+export async function listCouponsAction(jwt?: string) {
+  const user = await getActor(jwt);
   if (!user) {
     throw new Error('Unauthorized');
   }
@@ -33,8 +33,8 @@ export async function createCouponAction(input: {
   note?: string;
   redemptionLimit?: number;
   metadata?: Record<string, unknown>;
-}) {
-  const user = await getActor();
+}, jwt?: string) {
+  const user = await getActor(jwt);
   if (!user) {
     throw new Error('Unauthorized');
   }

@@ -3,8 +3,8 @@
 import { getActor } from '@/lib/actions/secure-ops';
 import { getAdminStats, listAdminUsers, requireAdmin } from '@/lib/services/internal/admin';
 
-export async function getAdminStatsAction() {
-  const user = await getActor();
+export async function getAdminStatsAction(jwt?: string) {
+  const user = await getActor(jwt);
   if (!user) {
     throw new Error('Unauthorized');
   }
@@ -17,8 +17,8 @@ export async function getAdminUsersAction(params: {
   verifiedOnly?: boolean;
   limit?: number;
   cursorAfter?: string | null;
-}) {
-  const user = await getActor();
+}, jwt?: string) {
+  const user = await getActor(jwt);
   if (!user) {
     throw new Error('Unauthorized');
   }

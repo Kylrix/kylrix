@@ -6,7 +6,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { isUserAdmin } from '@/lib/actions/admin/check-admin';
 
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, getJWT } = useAuth();
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const checkedRef = useRef(false);
@@ -37,8 +37,9 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
       checkedRef.current = true;
 
       try {
+        const jwt = await getJWT();
         // Server-side check reads session cookies directly via getActor()
-        const result = await isUserAdmin();
+        const result = await isUserAdmin(jwt || undefined);
         console.log('[AdminGuard] isUserAdmin result:', result, 'for email:', user!.email);
         setIsAdmin(result);
 

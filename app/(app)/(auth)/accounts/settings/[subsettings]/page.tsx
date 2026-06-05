@@ -27,6 +27,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { isUserAdmin } from '@/lib/actions/admin/check-admin';
+import { useAuth } from '@/context/auth/AuthContext';
 
 interface UserData {
   email: string;
@@ -70,11 +71,14 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
   const [confirmExportOpen, setConfirmExportOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
+  const { getJWT } = useAuth();
+
   useEffect(() => {
     let active = true;
     async function checkAdmin() {
       try {
-        const result = await isUserAdmin();
+        const jwt = await getJWT();
+        const result = await isUserAdmin(jwt || undefined);
         if (active) setIsAdmin(result);
       } catch (err) {
         console.error('Failed to check admin status:', err);
@@ -84,7 +88,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
     return () => {
       active = false;
     };
-  }, []);
+  }, [getJWT]);
 
   const navItems = useMemo(() => {
     const items = [

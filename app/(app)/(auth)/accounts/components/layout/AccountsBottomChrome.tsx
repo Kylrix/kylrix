@@ -15,18 +15,21 @@ import {
   X,
 } from 'lucide-react';
 import { isUserAdmin } from '@/lib/actions/admin/check-admin';
+import { useAuth } from '@/context/auth/AuthContext';
 
 export function AccountsBottomChrome() {
   const pathname = usePathname();
   const router = useRouter();
   const [speedDialOpen, setSpeedDialOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { getJWT } = useAuth();
 
   useEffect(() => {
     let active = true;
     async function checkAdmin() {
       try {
-        const result = await isUserAdmin();
+        const jwt = await getJWT();
+        const result = await isUserAdmin(jwt || undefined);
         console.log('[AccountsBottomChrome] isUserAdmin result:', result);
         if (active) setIsAdmin(result);
       } catch (err) {
@@ -37,7 +40,7 @@ export function AccountsBottomChrome() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [getJWT]);
 
   // Map subsettings from URL
   const currentSubsetting = useMemo(() => {
