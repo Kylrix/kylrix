@@ -22,8 +22,7 @@ import GlobalShortcuts from '@/components/GlobalShortcuts';
 import dynamic from 'next/dynamic';
 import { SectionProvider } from '@/context/SectionContext';
 import { EcosystemStateTracker } from '@/components/providers/EcosystemStateTracker';
-
-const PresenceProvider = dynamic(() => import('@/components/providers/PresenceProvider').then(m => m.PresenceProvider), { ssr: false });
+import { PresenceProvider } from '@/components/providers/PresenceProvider';
 
 function ContextMenuWrapper({ children }: { children: ReactNode }) {
   return (
