@@ -1314,7 +1314,7 @@ export function SendComposer() {
             </button>
 
             <p className="text-center text-xs text-[#9B9691] px-4 leading-relaxed">
-              {effectiveSecureMode ? 'Encrypted' : 'Unencrypted'} rows stored for this link — they clear automatically after 7 days.
+              {effectiveSecureMode ? 'Securely stored' : 'Stored'} for this link — they clear automatically after 7 days.
               {effectiveSecureMode && ' The key stays in the link fragment only.'}
             </p>
           </div>

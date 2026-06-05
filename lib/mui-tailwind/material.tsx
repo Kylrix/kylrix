@@ -810,7 +810,7 @@ export const Grid = React.forwardRef(({ children, container, item, size, xs, sm,
 Grid.displayName = 'Grid';
 
 // 9. Stack Component
-export const Stack = React.forwardRef(({ children, direction = 'column', spacing = 2, className, sx, alignItems, justifyContent, flexWrap, useFlexGap, divider, component: Component = 'div', ...props }: any, ref) => {
+export const Stack = React.forwardRef(({ children, direction = 'column', spacing = 2, className, sx, alignItems, justifyContent, flexWrap, useFlexGap, divider, component: Component = 'div', textAlign, ...props }: any, ref) => {
   const flexDirection = direction === 'row' ? 'row' : 'column';
   return (
     <Component
@@ -822,6 +822,7 @@ export const Stack = React.forwardRef(({ children, direction = 'column', spacing
         ...(alignItems !== undefined ? { alignItems } : {}),
         ...(justifyContent !== undefined ? { justifyContent } : {}),
         ...(flexWrap !== undefined ? { flexWrap } : {}),
+        ...(textAlign !== undefined ? { textAlign } : {}),
         ...cleanSx(sx),
       }}
       {...props}
