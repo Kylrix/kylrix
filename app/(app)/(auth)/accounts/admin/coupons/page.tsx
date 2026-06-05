@@ -7,6 +7,7 @@ import AdminLayout from '../components/AdminLayout';
 import { createCouponAction, listCouponsAction, invalidateCouponAction } from '../../actions/coupons';
 import { getAdminUserByIdAction } from '../../actions/admin';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { AppwriteService } from '@/lib/appwrite';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,7 @@ function formatScope(row: CouponRow) {
 }
 
 export default function AdminCouponsPage() {
+  const { open: openUnified } = useUnifiedDrawer();
   const [coupons, setCoupons] = useState<CouponRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -166,20 +168,27 @@ export default function AdminCouponsPage() {
     setSuccess('Coupon link copied.');
   };
 
-  const revokeCoupon = async (id: string) => {
-    if (!confirm('Are you sure you want to revoke this coupon?')) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const jwt = await getJWT();
-      await invalidateCouponAction(id, jwt || undefined);
-      setSuccess('Coupon revoked successfully.');
-      await loadCoupons();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to revoke coupon');
-    } finally {
-      setLoading(false);
-    }
+  const revokeCoupon = (id: string) => {
+    openUnified('delete-confirm', {
+      title: 'Revoke Coupon?',
+      description: 'This will invalidate the coupon and prevent any future claims. Existing subscriptions created with this coupon will not be affected.',
+      resourceName: 'this coupon',
+      confirmLabel: 'Revoke Coupon',
+      onConfirm: async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const jwt = await getJWT();
+          await invalidateCouponAction(id, jwt || undefined);
+          setSuccess('Coupon revoked successfully.');
+          await loadCoupons();
+        } catch (err: any) {
+          setError(err?.message || 'Failed to revoke coupon');
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const totalCoupons = useMemo(() => coupons.length, [coupons]);
