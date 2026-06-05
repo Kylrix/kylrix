@@ -18,11 +18,19 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
           return;
         }
 
-        // Perform server-side check using the private ADMINS variable
-        const result = await isUserAdmin();
-        setIsAdmin(result);
+        try {
+          // Perform server-side check using the private ADMINS variable
+          const result = await isUserAdmin();
+          console.log('[AdminGuard] isUserAdmin result:', result, 'for email:', user.email);
+          setIsAdmin(result);
 
-        if (!result) {
+          if (!result) {
+            console.warn('[AdminGuard] User is not admin, redirecting. Email:', user.email);
+            router.push('/');
+          }
+        } catch (err) {
+          console.error('[AdminGuard] Admin check failed with exception:', err);
+          setIsAdmin(false);
           router.push('/');
         }
       }

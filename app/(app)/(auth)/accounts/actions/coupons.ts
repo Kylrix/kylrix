@@ -1,9 +1,7 @@
 'use server';
 
-import { headers } from 'next/headers';
-import { NextRequest } from 'next/server';
 import { ID, Permission, Query, Role } from 'node-appwrite';
-import { verifyUser } from '@/lib/api/permission-updater';
+import { getActor } from '@/lib/actions/secure-ops';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { requireAdmin } from '@/lib/services/internal/admin';
@@ -11,25 +9,18 @@ import { requireAdmin } from '@/lib/services/internal/admin';
 const CHAT_DB_ID = APPWRITE_CONFIG.DATABASES.CHAT;
 const EVENTS_TABLE_ID = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
 
-async function getRequestLike() {
-  const h = await headers();
-  return new NextRequest('http://localhost/internal', {
-    headers: {
-      cookie: h.get('cookie') || '',
-      authorization: h.get('authorization') || '',
-    },
-  });
-}
-
 export async function listCouponsAction() {
-  const req = await getRequestLike();
-  const user = await verifyUser(req);
+  const user = await getActor();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
   requireAdmin(user);
   const { databases } = createAdminClient(user.email);
-  const result = await databases.listDocuments(CHAT_DB_ID, EVENTS_TABLE_ID, [
+  const result = await databases.listRows(CHAT_DB_ID, EVENTS_TABLE_ID, [
     Query.equal('type', 'coupon'),
     Query.orderDesc('$createdAt'),
-    Query.limit(100)]);
+    Query.limit(100)
+  ]);
   return result.rows;
 }
 
@@ -43,8 +34,10 @@ export async function createCouponAction(input: {
   redemptionLimit?: number;
   metadata?: Record<string, unknown>;
 }) {
-  const req = await getRequestLike();
-  const user = await verifyUser(req);
+  const user = await getActor();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
   requireAdmin(user);
   const { databases } = createAdminClient(user.email);
   const recipients = (input.userIds || []).map((id) => String(id || '').trim()).filter(Boolean);
@@ -52,7 +45,7 @@ export async function createCouponAction(input: {
   const targets = recipients.length > 0 ? recipients : [null];
   const created: any[] = [];
   for (const targetUserId of targets) {
-    const row = await databases.createDocument(
+    const row = await databases.createRow(
       CHAT_DB_ID,
       EVENTS_TABLE_ID,
       ID.unique(),

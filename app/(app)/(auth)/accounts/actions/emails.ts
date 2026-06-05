@@ -1,9 +1,7 @@
 'use server';
 
-import { headers } from 'next/headers';
-import { NextRequest } from 'next/server';
 import { ID, Query } from 'node-appwrite';
-import { verifyUser } from '@/lib/api/permission-updater';
+import { getActor } from '@/lib/actions/secure-ops';
 import { requireAdmin } from '@/lib/services/internal/admin';
 import { createAdminClient } from '@/lib/appwrite-admin';
 import { getEmailTemplateMeta } from '@/lib/email-template-catalog';
@@ -20,19 +18,11 @@ type SendEmailBody = {
 
 const validateEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 
-async function getRequestLike() {
-  const h = await headers();
-  return new NextRequest('http://localhost/internal', {
-    headers: {
-      cookie: h.get('cookie') || '',
-      authorization: h.get('authorization') || '',
-    },
-  });
-}
-
 export async function sendAdminEmailsAction(body: SendEmailBody) {
-  const req = await getRequestLike();
-  const actor = await verifyUser(req);
+  const actor = await getActor();
+  if (!actor) {
+    throw new Error('Unauthorized');
+  }
   requireAdmin(actor);
 
   const { users, messaging } = createAdminClient(actor.email);

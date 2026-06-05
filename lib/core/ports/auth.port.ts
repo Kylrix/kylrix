@@ -4,6 +4,7 @@ export interface Actor {
   name: string;
   emailVerification: boolean;
   isAdmin: boolean;
+  labels?: string[];
 }
 
 export interface AuthPort {

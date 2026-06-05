@@ -1,25 +1,13 @@
 'use server';
 
-import { headers } from 'next/headers';
-import { NextRequest } from 'next/server';
-import { verifyUser } from '@/lib/api/permission-updater';
+import { getActor } from '@/lib/actions/secure-ops';
 import { getAdminStats, listAdminUsers, requireAdmin } from '@/lib/services/internal/admin';
 
-async function getRequestLike() {
-  const h = await headers();
-  const cookie = h.get('cookie') || '';
-  const authorization = h.get('authorization') || '';
-  return new NextRequest('http://localhost/internal', {
-    headers: {
-      cookie,
-      authorization,
-    },
-  });
-}
-
 export async function getAdminStatsAction() {
-  const req = await getRequestLike();
-  const user = await verifyUser(req);
+  const user = await getActor();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
   requireAdmin(user);
   return getAdminStats(user.email);
 }
@@ -30,8 +18,10 @@ export async function getAdminUsersAction(params: {
   limit?: number;
   cursorAfter?: string | null;
 }) {
-  const req = await getRequestLike();
-  const user = await verifyUser(req);
+  const user = await getActor();
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
   requireAdmin(user);
   return listAdminUsers(params, user.email);
 }
