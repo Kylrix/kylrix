@@ -27,9 +27,10 @@ export function AccountsBottomChrome() {
     async function checkAdmin() {
       try {
         const result = await isUserAdmin();
+        console.log('[AccountsBottomChrome] isUserAdmin result:', result);
         if (active) setIsAdmin(result);
       } catch (err) {
-        console.error('Failed to check admin status:', err);
+        console.error('[AccountsBottomChrome] Failed to check admin status:', err);
       }
     }
     checkAdmin();

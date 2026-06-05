@@ -4,21 +4,18 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 
 /**
  * Sync admin gate for administrative console/dashboard operations.
- * Mathematically validates the presence of master server key AND caller's email in ADMINS.
+ * Single source of truth: the ADMINS environment variable (comma-separated emails).
  */
 export function requireAdmin(user: any) {
-  // 1. Mathematically guarantee server environment has the master API key
+  // 1. Guarantee server environment has the master API key
   const apiKey = process.env.APPWRITE_API;
   if (!apiKey) {
     throw new Error('Forbidden: missing master environment API key');
   }
 
-  // 2. Validate email against ADMINS list OR user labels as safety fallback
+  // 2. Validate email against ADMINS env variable (sole source of truth)
   const email = String(user?.email || '').trim().toLowerCase();
-  const isInAdminList = !!(email && isEmailInAdminList(email));
-  const hasAdminLabel = !!(user && Array.isArray(user.labels) && user.labels.includes('admin'));
-
-  if (!isInAdminList && !hasAdminLabel) {
+  if (!email || !isEmailInAdminList(email)) {
     throw new Error('Forbidden: admin privileges required');
   }
 }
