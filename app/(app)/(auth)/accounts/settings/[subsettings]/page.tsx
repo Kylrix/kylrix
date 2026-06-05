@@ -23,7 +23,8 @@ import {
   Fingerprint as IdentityIcon,
   Sliders as PreferencesIcon,
   Settings2 as RootAccountIcon,
-  ShieldAlert as AdminIcon
+  ShieldAlert as AdminIcon,
+  AlertTriangle
 } from 'lucide-react';
 import { isUserAdmin } from '@/lib/actions/admin/check-admin';
 
@@ -66,6 +67,8 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
   const [isAdmin, setIsAdmin] = useState(false);
   const [sudoModalOpen, setSudoModalOpen] = useState(false);
   const [sudoAction, setSudoAction] = useState<'export' | 'delete' | null>(null);
+  const [confirmExportOpen, setConfirmExportOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -653,14 +656,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  const confirm1 = window.confirm("Are you sure you want to export your account data?");
-                  if (!confirm1) return;
-                  const confirm2 = window.confirm("This will download a backup file containing your settings and profile details. Proceed?");
-                  if (!confirm2) return;
-                  setSudoAction('export');
-                  setSudoModalOpen(true);
-                }}
+                onClick={() => setConfirmExportOpen(true)}
                 className="py-3 px-5 rounded-xl border border-white/10 text-white font-extrabold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all min-w-[200px] cursor-pointer"
               >
                 Download Data
@@ -678,14 +674,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  const confirm1 = window.confirm("Are you sure you want to permanently delete your account?");
-                  if (!confirm1) return;
-                  const confirm2 = window.confirm("WARNING: This will permanently delete your profile, active sessions, and preferences. You will immediately lose access to all Kylrix features. This action CANNOT be undone. Proceed?");
-                  if (!confirm2) return;
-                  setSudoAction('delete');
-                  setSudoModalOpen(true);
-                }}
+                onClick={() => setConfirmDeleteOpen(true)}
                 className="py-3 px-5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500 font-extrabold text-xs transition-all min-w-[200px] cursor-pointer"
               >
                 Delete Account
@@ -697,24 +686,65 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
         </div>
       </div>
 
-      <SudoModal
-        isOpen={twoFactorSudoOpen}
-        onSuccess={handleTwoFactorSuccess}
-        onCancel={() => setTwoFactorSudoOpen(false)}
-      />
+      {confirmExportOpen && (
+        <DoubleConfirmationModal
+          isOpen={confirmExportOpen}
+          title1="Export Account Data"
+          message1="This will prepare a downloadable backup containing your account information, preferences, and active sessions."
+          title2="Security & Privacy Warning"
+          message2="The generated file will contain sensitive configuration and session data. Please store this backup securely and only download it onto a personal, trusted device."
+          confirmLabel1="Continue"
+          confirmLabel2="Verify & Download"
+          onSuccess={() => {
+            setConfirmExportOpen(false);
+            setSudoAction('export');
+            setSudoModalOpen(true);
+          }}
+          onCancel={() => setConfirmExportOpen(false)}
+        />
+      )}
 
-      <SudoModal
-        isOpen={sudoModalOpen}
-        onSuccess={handleSudoSuccess}
-        onCancel={() => {
-          setSudoModalOpen(false);
-          setSudoAction(null);
-        }}
-        intent="unlock"
-        app="accounts"
-      />
+      {confirmDeleteOpen && (
+        <DoubleConfirmationModal
+          isOpen={confirmDeleteOpen}
+          title1="Delete Your Account"
+          message1="This will permanently delete your profile, active sessions, and configurations. This action is irreversible."
+          title2="Irreversible Wiping Warning"
+          message2="WARNING: All your data, including credentials and files, will be completely wiped from our records. You will lose access immediately. Do you want to proceed?"
+          confirmLabel1="Continue"
+          confirmLabel2="Verify & Delete Account"
+          isDestructive={true}
+          onSuccess={() => {
+            setConfirmDeleteOpen(false);
+            setSudoAction('delete');
+            setSudoModalOpen(true);
+          }}
+          onCancel={() => setConfirmDeleteOpen(false)}
+        />
+      )}
 
-      {user && (
+      {twoFactorSudoOpen && (
+        <SudoModal
+          isOpen={twoFactorSudoOpen}
+          onSuccess={handleTwoFactorSuccess}
+          onCancel={() => setTwoFactorSudoOpen(false)}
+        />
+      )}
+
+      {sudoModalOpen && (
+        <SudoModal
+          isOpen={sudoModalOpen}
+          onSuccess={handleSudoSuccess}
+          onCancel={() => {
+            setSudoModalOpen(false);
+            setSudoAction(null);
+          }}
+          intent="unlock"
+          app="accounts"
+        />
+      )}
+
+      {twoFactorDrawerOpen && user && (
         <TwoFactorDrawer
           open={twoFactorDrawerOpen}
           onClose={() => setTwoFactorDrawerOpen(false)}
@@ -727,6 +757,104 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
       )}
 
       <AccountsBottomChrome />
+    </div>
+  );
+}
+
+interface DoubleConfirmationModalProps {
+  isOpen: boolean;
+  title1: string;
+  message1: string;
+  title2: string;
+  message2: string;
+  confirmLabel1?: string;
+  confirmLabel2?: string;
+  isDestructive?: boolean;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+function DoubleConfirmationModal({
+  isOpen,
+  title1,
+  message1,
+  title2,
+  message2,
+  confirmLabel1 = "Continue",
+  confirmLabel2 = "Confirm",
+  isDestructive = false,
+  onSuccess,
+  onCancel
+}: DoubleConfirmationModalProps) {
+  const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleNext = () => {
+    if (step === 1) {
+      setStep(2);
+    } else {
+      onSuccess();
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm transition-opacity duration-300"
+        onClick={onCancel}
+      />
+      {/* Content Card */}
+      <div className="relative w-full max-w-md bg-[#161412] border border-white/5 rounded-[28px] p-6 md:p-8 shadow-2xl transition-all duration-300 transform scale-100 flex flex-col gap-6 text-white font-satoshi">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider">
+              Step {step} of 2
+            </span>
+            {isDestructive && (
+              <span className="text-[10px] bg-red-500/10 border border-red-500/20 text-red-400 px-2 py-0.5 rounded font-black font-mono uppercase tracking-wider">
+                Critical
+              </span>
+            )}
+          </div>
+          <h3 className="text-xl font-black font-clash text-white tracking-tight leading-tight flex items-center gap-2">
+            {isDestructive && <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />}
+            {step === 1 ? title1 : title2}
+          </h3>
+        </div>
+
+        <p className="text-sm text-[#9B9691] leading-relaxed">
+          {step === 1 ? message1 : message2}
+        </p>
+
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="py-3 px-5 rounded-xl border border-white/10 text-white/80 hover:text-white font-bold text-xs hover:border-white/20 transition-all cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleNext}
+            className={`py-3 px-5 rounded-xl font-black text-xs transition-all duration-200 cursor-pointer ${
+              isDestructive
+                ? 'bg-red-500 hover:bg-red-600 text-white shadow-[0_8px_30px_rgba(239,68,68,0.2)]'
+                : 'bg-[#6366F1] hover:bg-[#5254E8] text-black shadow-[0_8px_30px_rgba(99,102,241,0.2)]'
+            }`}
+          >
+            {step === 1 ? confirmLabel1 : confirmLabel2}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

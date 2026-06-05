@@ -116,7 +116,11 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
       const updatedAllPrefs = { ...allPrefs, [key]: value };
       setAllPrefs(updatedAllPrefs);
       
-      await account.updatePrefs(updatedAllPrefs);
+      if (key === 'theme') {
+        await setTheme(value);
+      } else {
+        await account.updatePrefs(updatedAllPrefs);
+      }
 
       // Sync to global directory if discoverability changed
       if (key === 'publicProfile' || key === 'language') {
@@ -142,21 +146,36 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
   }
 
   return (
-    <div className="space-y-6 text-white">
+    <div className="space-y-6 text-white font-satoshi">
       {error && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold font-satoshi">
+        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-semibold">
           <span className="block font-bold mb-1">Error</span>
           {error}
         </div>
       )}
 
       <div className="space-y-6">
-        {/* Localization Settings */}
+        {/* Localization & Display Settings */}
         <div className="space-y-4">
           <h3 className="text-lg font-black font-clash text-white tracking-tight leading-tight">
-            Language & Timezone
+            Display & Localization
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider block">
+                Theme
+              </span>
+              <select
+                value={prefs.theme || 'system'}
+                onChange={(e) => updatePreference('theme', e.target.value)}
+                className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none cursor-pointer transition-all duration-200"
+              >
+                <option value="system" className="bg-[#161412]">System Default</option>
+                <option value="light" className="bg-[#161412]">Light Mode</option>
+                <option value="dark" className="bg-[#161412]">Dark Mode</option>
+              </select>
+            </div>
+
             <div className="space-y-2">
               <span className="text-[10px] text-[#9B9691] font-bold font-mono uppercase tracking-wider block">
                 Language
@@ -164,7 +183,7 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
               <select
                 value={prefs.language || 'en'}
                 onChange={(e) => updatePreference('language', e.target.value)}
-                className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] cursor-pointer"
+                className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none cursor-pointer transition-all duration-200"
               >
                 {LANGUAGES.map((lang) => (
                   <option key={lang.code} value={lang.code} className="bg-[#161412]">
@@ -181,7 +200,7 @@ export default function PreferencesManager({ onSave }: PreferencesManagerProps) 
               <select
                 value={prefs.timezone || 'UTC'}
                 onChange={(e) => updatePreference('timezone', e.target.value)}
-                className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:outline-none focus:border-[#6366F1] cursor-pointer"
+                className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none cursor-pointer transition-all duration-200"
               >
                 {TIMEZONES.map((tz) => (
                   <option key={tz.value} value={tz.value} className="bg-[#161412]">
