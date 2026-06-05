@@ -2227,6 +2227,6 @@ export const ToggleOn = ({ children, ...props }: any) => React.createElement('di
 export const Undo = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const UploadFile = ({ children, ...props }: any) => React.createElement('div', props, children);
 export const VerifiedUser = ({ children, ...props }: any) => React.createElement('div', props, children);
-export const Zoom = ({ children, ...props }: any) => React.createElement('div', props, children);
+export const Zoom = ({ children, in: _in, ...props }: any) => React.createElement('div', props, children);
 export const keyframes = (...args: any[]) => String(args[0] ?? '');
 export default {};

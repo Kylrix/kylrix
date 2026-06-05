@@ -12,7 +12,10 @@ import { permissions, EventVisibility } from '@/lib/permissions';
 import { CallService } from '@/lib/services/call';
 import toast from 'react-hot-toast';
 import { Query } from 'appwrite';
-import { MultiSectionContainer, useSection } from '@/context/SectionContext';
+import { MultiSectionContainer } from '@/context/SectionContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import EventDetails from './EventDetails';
 
 export default function EventList() {
   const [tabValue, setTabValue] = useState(0);
@@ -20,8 +23,19 @@ export default function EventList() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { projects, userId } = useTask();
-  const { setActiveDetail } = useSection();
+  const { openSidebar, closeSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
   const { isAuthenticated, openIDMWindow } = useAuth();
+
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const checkViewport = () => setIsDesktop(window.innerWidth >= 768);
+    checkViewport();
+    window.addEventListener('resize', checkViewport);
+    return () => window.removeEventListener('resize', checkViewport);
+  }, []);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -216,9 +230,22 @@ export default function EventList() {
                 event={event} 
                 onDelete={() => {
                   setEvents(prev => prev.filter(e => e.id !== event.id));
-                  setActiveDetail(null);
+                  closeSidebar();
+                  closeOverlay();
                 }}
-                onClick={() => setActiveDetail({ type: 'event', id: event.id, data: event })} 
+                onClick={() => {
+                  if (isDesktop) {
+                    openSidebar(
+                      <EventDetails eventId={event.id} initialData={event} />,
+                      event.id,
+                      { hideHeader: true }
+                    );
+                  } else {
+                    openOverlay(
+                      <EventDetails eventId={event.id} initialData={event} onBack={closeOverlay} />
+                    );
+                  }
+                }} 
               />
             </div>
           ))}

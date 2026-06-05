@@ -6,6 +6,9 @@ import { addHours } from '@/lib/time-util';
 import { EventVisibility } from '@/lib/permissions';
 import UserSearch from '@/components/UserSearch';
 import { useSection } from '@/context/SectionContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import EventDetails from './EventDetails';
 
 interface User {
   id: string;
@@ -158,6 +161,9 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
     setIsHydrated(false);
   };
 
+  const { openSidebar } = useDynamicSidebar();
+  const { openOverlay, closeOverlay } = useOverlay();
+
   const handleMorphToDetail = async () => {
     if (!title.trim() || !startTime || !endTime) return;
 
@@ -178,7 +184,18 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
       if (typeof window !== 'undefined') {
         localStorage.removeItem('kylrix:draft:event');
       }
-      setActiveDetail({ type: 'event', id: result.id || result.$id, data: result });
+      const eventId = result.id || result.$id;
+      if (!isMobile) {
+        openSidebar(
+          <EventDetails eventId={eventId} initialData={result} />,
+          eventId,
+          { hideHeader: true }
+        );
+      } else {
+        openOverlay(
+          <EventDetails eventId={eventId} initialData={result} onBack={closeOverlay} />
+        );
+      }
     }
     handleClose();
   };
