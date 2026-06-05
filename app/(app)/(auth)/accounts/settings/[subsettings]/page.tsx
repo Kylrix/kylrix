@@ -64,6 +64,8 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
   const [giftLoading, setGiftLoading] = useState(false);
   const [giftError, setGiftError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [sudoModalOpen, setSudoModalOpen] = useState(false);
+  const [sudoAction, setSudoAction] = useState<'export' | 'delete' | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -265,6 +267,52 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
     setTwoFactorSudoOpen(false);
     setTwoFactorDrawerOpen(true);
   }, []);
+
+  const handleSudoSuccess = useCallback(async () => {
+    setSudoModalOpen(false);
+    if (sudoAction === 'export') {
+      try {
+        const [appPrefs, sessions] = await Promise.all([
+          account.getPrefs().catch(() => ({})),
+          account.listSessions().catch(() => ({ documents: [] }))
+        ]);
+        
+        const exportData = {
+          profile: {
+            userId: user.userId,
+            email: user.email,
+            name: user.name,
+          },
+          preferences: appPrefs,
+          sessions: (sessions as any).documents || [],
+          exportDate: new Date().toISOString(),
+        };
+        
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `kylrix_account_export_${user.userId}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        toast.success('Account data exported successfully.');
+      } catch (err: any) {
+        toast.error(err.message || 'Export failed.');
+      }
+    } else if (sudoAction === 'delete') {
+      try {
+        toast.loading('Purging identity data...', { id: 'delete-purge' });
+        const { executeMasterPurgeSecure } = await import('@/lib/actions/secure-ops');
+        await executeMasterPurgeSecure();
+        await account.deleteSession('current').catch(() => {});
+        toast.success('Identity purged. Redirecting...', { id: 'delete-purge' });
+        router.push('/accounts/login');
+      } catch (err: any) {
+        toast.error(err.message || 'Purge failed.', { id: 'delete-purge' });
+      }
+    }
+    setSudoAction(null);
+  }, [sudoAction, user, router]);
 
   if (loading || !user) {
     return (
@@ -593,21 +641,29 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
       {subsettings === 'account' && (
         <div id="root-mgmt" className="space-y-6 pb-24">
           <h2 className="text-xl font-black font-clash text-white tracking-tight capitalize">
-            Account
+            Account Settings
           </h2>
           <div className="bg-white/[0.01] border border-white/5 rounded-[28px] p-6 md:p-8 space-y-6">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
-                <h4 className="text-base font-extrabold text-white mb-1">Identity Data Export</h4>
-                <p className="text-xs text-[#9B9691] leading-relaxed max-w-[600px]">
-                  Download a full cryptographic archive of your account data. This process may take several minutes to compile.
+                <h4 className="text-base font-extrabold text-white mb-1">Export Account Data</h4>
+                <p className="text-xs text-[#9B9691] leading-relaxed max-w-[600px] font-satoshi">
+                  Download a copy of your account profile, preferences, and active session details.
                 </p>
               </div>
               <button
                 type="button"
+                onClick={() => {
+                  const confirm1 = window.confirm("Are you sure you want to export your account data?");
+                  if (!confirm1) return;
+                  const confirm2 = window.confirm("This will download a backup file containing your settings and profile details. Proceed?");
+                  if (!confirm2) return;
+                  setSudoAction('export');
+                  setSudoModalOpen(true);
+                }}
                 className="py-3 px-5 rounded-xl border border-white/10 text-white font-extrabold text-xs hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all min-w-[200px] cursor-pointer"
               >
-                PREPARE ARCHIVE
+                Download Data
               </button>
             </div>
             
@@ -615,16 +671,24 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
 
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
-                <h4 className="text-base font-extrabold text-red-500 mb-1">Node Decommissioning</h4>
-                <p className="text-xs text-[#9B9691] leading-relaxed max-w-[600px]">
-                  Permanently terminate this identity node and purge all associated encrypted data from the ecosystem. This operation is terminal.
+                <h4 className="text-base font-extrabold text-red-500 mb-1">Delete Account</h4>
+                <p className="text-xs text-[#9B9691] leading-relaxed max-w-[600px] font-satoshi">
+                  Permanently delete your account and all associated data. This action cannot be undone.
                 </p>
               </div>
               <button
                 type="button"
+                onClick={() => {
+                  const confirm1 = window.confirm("Are you sure you want to permanently delete your account?");
+                  if (!confirm1) return;
+                  const confirm2 = window.confirm("WARNING: This will permanently delete your profile, active sessions, and preferences. You will immediately lose access to all Kylrix features. This action CANNOT be undone. Proceed?");
+                  if (!confirm2) return;
+                  setSudoAction('delete');
+                  setSudoModalOpen(true);
+                }}
                 className="py-3 px-5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500 font-extrabold text-xs transition-all min-w-[200px] cursor-pointer"
               >
-                PURGE IDENTITY
+                Delete Account
               </button>
             </div>
           </div>
@@ -637,6 +701,17 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
         isOpen={twoFactorSudoOpen}
         onSuccess={handleTwoFactorSuccess}
         onCancel={() => setTwoFactorSudoOpen(false)}
+      />
+
+      <SudoModal
+        isOpen={sudoModalOpen}
+        onSuccess={handleSudoSuccess}
+        onCancel={() => {
+          setSudoModalOpen(false);
+          setSudoAction(null);
+        }}
+        intent="unlock"
+        app="accounts"
       />
 
       {user && (
