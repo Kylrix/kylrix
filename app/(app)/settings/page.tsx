@@ -98,6 +98,19 @@ export default function SettingsPage() {
         }
     }, []);
 
+    // Initialize with optimistic default based on client-side tier
+    useEffect(() => {
+        if (user && !computeBalance) {
+            const isPro = hasPaidKylrixPlan(user);
+            setComputeBalance({
+                balance: isPro ? 100000 : 0,
+                maxBalance: isPro ? 100000 : 10000,
+                tier: isPro ? 'pro' : 'free',
+                percent: isPro ? 100 : 0
+            });
+        }
+    }, [user]);
+
     useEffect(() => {
         const fetchCompute = async () => {
             const balance = await getComputeBalanceAction();
@@ -337,38 +350,50 @@ export default function SettingsPage() {
                     </div>
 
                     {/* AI Compute Section */}
-                    <div className="w-full md:w-[280px] pt-4 md:pt-0 border-t md:border-t-0 md:border-l border-white/5 md:pl-8 flex flex-col gap-4">
+                    <div className="w-full md:w-[320px] pt-6 md:pt-0 border-t md:border-t-0 md:border-l border-white/10 md:pl-8 flex flex-col gap-5">
                         <div className="flex items-center justify-between gap-2">
                             <div className="flex flex-col gap-0.5">
-                                <span className="text-[10px] font-black text-white/30 tracking-widest uppercase font-mono">
-                                    AI Compute Daily Limit
+                                <span className="text-[10px] font-black text-[#6366F1] tracking-[0.15em] uppercase font-mono">
+                                    Agentic Capacity
                                 </span>
-                                <span className="text-[11px] font-bold text-white/60">
-                                    Dynamic Resource Allocation
+                                <span className="text-[11px] font-bold text-white/70">
+                                    Daily Compute Quota
                                 </span>
                             </div>
                             <div className="text-right">
-                                <span className="text-lg font-black font-mono text-[#6366F1]">
-                                    {computeBalance ? Math.round(computeBalance.percent) : '0'}%
+                                <span className="text-xl font-black font-mono text-white">
+                                    {computeBalance ? Math.round(computeBalance.percent) : '0'}<span className="text-white/30 text-sm ml-0.5">%</span>
                                 </span>
                             </div>
                         </div>
                         
-                        {/* Compute Progress Bar */}
-                        <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5 shadow-inner">
-                            <motion.div 
-                                initial={{ width: 0 }}
-                                animate={{ width: `${computeBalance?.percent || 0}%` }}
-                                transition={{ duration: 1.2, ease: "easeOut" }}
-                                className="h-full bg-gradient-to-r from-[#6366F1] via-[#A855F7] to-[#EC4899] relative"
-                            >
-                                {/* Animated Shine Effect */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shine" />
-                            </motion.div>
+                        {/* Compute Progress Bar Container */}
+                        <div className="relative">
+                            <div className="h-3 w-full bg-black/40 rounded-full overflow-hidden border border-white/5 shadow-[inset_0_2px_4px_rgba(0,0,0,0.4)]">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${computeBalance?.percent || 0}%` }}
+                                    transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                                    className="h-full bg-gradient-to-r from-[#6366F1] via-[#A855F7] to-[#EC4899] relative"
+                                >
+                                    {/* Animated Shine Effect */}
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shine" />
+                                </motion.div>
+                            </div>
+                            
+                            {/* Detailed Balance Hint */}
+                            <div className="flex justify-between mt-2 px-0.5">
+                                <span className="text-[9px] font-black text-white/20 uppercase tracking-widest font-mono">
+                                    {computeBalance?.balance.toLocaleString() || '0'} / {computeBalance?.maxBalance.toLocaleString() || '0'} TOKENS
+                                </span>
+                                <span className="text-[9px] font-black text-[#EC4899] uppercase tracking-widest font-mono animate-pulse">
+                                    Live
+                                </span>
+                            </div>
                         </div>
                         
-                        <p className="text-[9px] font-bold text-white/20 leading-relaxed uppercase tracking-tighter">
-                            Availability scales relative to global ecosystem load.
+                        <p className="text-[9px] font-bold text-white/30 leading-relaxed uppercase tracking-tighter italic">
+                            Availability scales dynamically relative to global ecosystem stress.
                         </p>
                     </div>
                 </div>

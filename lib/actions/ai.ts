@@ -322,6 +322,13 @@ export async function getComputeBalanceAction(jwt?: string) {
   if (!actor) return null;
 
   try {
+    const systemClient = createSystemClient();
+    const { users: systemUsers } = systemClient;
+    
+    // Fetch latest user data including prefs to ensure tier accuracy
+    const fullUser = await systemUsers.get(actor.$id);
+    const isPro = hasPaidKylrixPlan(fullUser);
+
     const tables = createSystemTablesDB();
     const res = await tables.listRows({
       databaseId: 'whisperrflow',
@@ -333,8 +340,6 @@ export async function getComputeBalanceAction(jwt?: string) {
     });
 
     if (res.rows.length === 0) {
-      // Default initial state for return if not yet initialized
-      const isPro = hasPaidKylrixPlan(actor);
       return {
         balance: isPro ? 100000 : 0,
         maxBalance: isPro ? 100000 : 0,
@@ -344,7 +349,7 @@ export async function getComputeBalanceAction(jwt?: string) {
     }
 
     const row = res.rows[0];
-    const maxBalance = row.tier === 'pro' ? 100000 : 10000; // Example relative limits
+    const maxBalance = row.tier === 'pro' ? 100000 : 10000;
     const currentBalance = Number(row.balance);
     const percent = Math.min(100, Math.max(0, (currentBalance / maxBalance) * 100));
 
