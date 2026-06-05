@@ -1019,12 +1019,16 @@ export default function ConnectTopbar({
 
                 <Box sx={{ display: 'grid', gap: 1.25, maxHeight: '58vh', overflowY: 'auto', pr: 0.5, pb: 0.5 }}>
                 <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', p: 0.75 }}>
-                  <Avatar
-                    src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
-                    sx={{ width: 88, height: 88, bgcolor: tone.secondary, color: '#fff', fontWeight: 900, borderRadius: '24px', flexShrink: 0 }}
-                  >
-                    {profileName.slice(0, 1).toUpperCase()}
-                  </Avatar>
+                  <IdentityAvatar
+                    src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl : null}
+                    size={88}
+                    pro={isPro}
+                    fallback={profileName.slice(0, 1).toUpperCase()}
+                    sx={{
+                       bgcolor: tone.secondary,
+                       flexShrink: 0
+                    }}
+                  />
                   <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                     <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
                       <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1.05rem', lineHeight: 1.15, minWidth: 0, flex: 1 }} noWrap>
@@ -1818,19 +1822,15 @@ export default function ConnectTopbar({
                         transition: 'transform 0.2s',
                       }}
                     >
-                      <Avatar
-                        src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl || undefined : undefined}
+                      <IdentityAvatar
+                        src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl : null}
+                        size={38}
+                        pro={isPro}
+                        fallback={profileName.slice(0, 1).toUpperCase()}
                         sx={{
-                          width: 38,
-                          height: 38,
                           bgcolor: profileAvatarUrl ? 'rgba(255,255,255,0.04)' : tone.secondary,
-                          color: '#fff',
-                          fontWeight: 900,
-                          borderRadius: '12px',
                         }}
-                      >
-                        {profileName.slice(0, 1).toUpperCase()}
-                      </Avatar>
+                      />
                     </ButtonBase>
                   )}
                 </>
