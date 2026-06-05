@@ -10,40 +10,10 @@ import { TelemetryService } from "@/lib/services/telemetry";
 
 const MODEL_NAME = process.env.GEMINI_MODEL_NAME || "gemini-2.0-flash";
 
-function sanitizeCdrPayloadForAI(data: any): any {
-  if (typeof data === 'string') {
-    if (data.includes('"type":"cdr"') || data.includes("'type':'cdr'") || data.includes('"type": "cdr"')) {
-      return '[Secure CDR Asset: Locked Vault Payload]';
-    }
-    return data;
-  }
-  if (Array.isArray(data)) {
-    return data.map(item => sanitizeCdrPayloadForAI(item));
-  }
-  if (data !== null && typeof data === 'object') {
-    const res: Record<string, any> = {};
-    for (const key of Object.keys(data)) {
-      res[key] = sanitizeCdrPayloadForAI(data[key]);
-    }
-    return res;
-  }
-  return data;
-}
-
 export async function generateAIContent(payload: AIRequestPayload): Promise<AIResponse> {
   // Input Validation & Sanitization
   if (!payload || typeof payload !== 'object') {
     return { success: false, error: "Invalid request payload." };
-  }
-
-  if (payload.data) {
-    payload.data = sanitizeCdrPayloadForAI(payload.data);
-  }
-  if (payload.prompt) {
-    payload.prompt = sanitizeCdrPayloadForAI(payload.prompt);
-  }
-  if (payload.history) {
-    payload.history = sanitizeCdrPayloadForAI(payload.history);
   }
   
   const VALID_MODES = ['VAULT_ORGANIZE', 'PASSWORD_AUDIT', 'URL_SAFETY', 'GENERAL_QUERY', 'GENERIC_CHAT', 'COMMAND_INTENT'];
@@ -91,14 +61,15 @@ export async function generateAIContent(payload: AIRequestPayload): Promise<AIRe
 
       if (res.rows.length === 0) {
         // Initialize Pro user compute profile
+        const isPro = hasPaidKylrixPlan(actor);
         balanceRow = await tables.createRow({
           databaseId: 'whisperrflow',
           tableId: 'compute_balances',
           rowId: ID.unique(),
           data: {
             userId: actor.$id,
-            tier: 'pro',
-            balance: 100000,
+            tier: isPro ? 'pro' : 'free',
+            balance: isPro ? 100000 : 0,
             lastResetAt: new Date().toISOString()
           }
         });

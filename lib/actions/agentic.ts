@@ -163,31 +163,11 @@ export async function runMyAgent(agentId: string, jwt?: string): Promise<{ summa
         'You are a Kylrix internal autonomous agent. Return concise operational guidance only.',
     });
 
-    function sanitizeCdrPayloadForAI(data: any): any {
-      if (typeof data === 'string') {
-        if (data.includes('"type":"cdr"') || data.includes("'type':'cdr'") || data.includes('"type": "cdr"')) {
-          return '[Secure CDR Asset: Locked Vault Payload]';
-        }
-        return data;
-      }
-      if (Array.isArray(data)) {
-        return data.map(item => sanitizeCdrPayloadForAI(item));
-      }
-      if (data !== null && typeof data === 'object') {
-        const res: Record<string, any> = {};
-        for (const key of Object.keys(data)) {
-          res[key] = sanitizeCdrPayloadForAI(data[key]);
-        }
-        return res;
-      }
-      return data;
-    }
-
     const prompt = [
       `Agent name: ${config.name || `Agent ${agent.$id.slice(0, 6)}`}`,
       `Goal: ${config.goal || 'General productivity assistance.'}`,
       'Generate a short execution summary and next actions based on current tasks.',
-      `Tasks JSON: ${JSON.stringify(sanitizeCdrPayloadForAI(tasks))}`].join('\n');
+      `Tasks JSON: ${JSON.stringify(tasks)}`].join('\n');
 
     const result = await model.generateContent(prompt);
     const summary = result.response.text().trim().slice(0, 6000);

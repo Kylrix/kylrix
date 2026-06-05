@@ -469,18 +469,10 @@ export function LocalContextProvider({ children }: { children: React.ReactNode }
       }
     });
 
-    const sanitizeCdrValue = (val: string | undefined): string | undefined => {
-      if (!val) return val;
-      if (val.includes('"type":"cdr"') || val.includes("'type':'cdr'") || val.includes('"type": "cdr"')) {
-        return '[Secure CDR Asset: Locked Vault Payload]';
-      }
-      return val;
-    };
-
     return {
       activeNiches: Array.from(activeNichesSet),
       recentApps: Array.from(recentAppsSet),
-      lastSearchQuery: sanitizeCdrValue(lastSearchQuery),
+      lastSearchQuery: lastSearchQuery,
       flowTransitions: flowTransitions.slice(-5),
       timestamp: new Date().toISOString(),
       activeWorkflowSteps: currentWorkflow.map(step => step.actionId)
