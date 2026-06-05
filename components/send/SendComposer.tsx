@@ -275,7 +275,7 @@ function DiscussionComposerCard({
             onChange={(e) => setNoteBody(e.target.value)}
             rows={3}
             autoFocus
-            className="w-full bg-transparent text-white text-base font-satoshi leading-normal placeholder-white/20 focus:outline-none resize-none scrollbar-thin"-thin"
+            className="w-full bg-transparent text-white text-base font-satoshi leading-normal placeholder-white/20 focus:outline-none resize-none scrollbar-thin"
           />
           <div className="flex items-center justify-between pt-2 border-t border-white/[0.03]">
             <div className="flex items-center gap-2">
@@ -366,6 +366,8 @@ export function SendComposer() {
 
   const [noteTitle, setNoteTitle] = useState('');
   const [noteBody, setNoteBody] = useState('');
+  const [taskTitle, setTaskTitle] = useState('');
+  const [taskDetail, setTaskDetail] = useState('');
 
   // LIFTED MECHANISM: Exactly like CreateNoteForm.tsx
   useEffect(() => {
@@ -381,12 +383,12 @@ export function SendComposer() {
       if (noteTitle) setNoteTitle('');
     }
   }, [noteBody, isTitleManuallyEdited, noteTitle, kind]);
- 
+
   // LIFTED TASK AUTO-TITLE MECHANISM: Automatically generates task title from details
   useEffect(() => {
     if (isTaskTitleManuallyEdited) return;
     if (kind !== 'task') return;
- 
+
     const generatedTitle = buildAutoTitleFromContent(taskDetail);
     if (taskDetail.trim()) {
       if (generatedTitle !== taskTitle) {
@@ -396,11 +398,9 @@ export function SendComposer() {
       if (taskTitle) setTaskTitle('');
     }
   }, [taskDetail, isTaskTitleManuallyEdited, taskTitle, kind]);
- 
+
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [taskTitle, setTaskTitle] = useState('');
-  const [taskDetail, setTaskDetail] = useState('');
   const [totpIssuer, setTotpIssuer] = useState('');
   const [totpSecret, setTotpSecret] = useState('');
   const [passwordTotpBundle, setPasswordTotpBundle] = useState('');
