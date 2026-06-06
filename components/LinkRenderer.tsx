@@ -309,7 +309,7 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
         digits: totpSecret.digits || 6
       }
     );
-  }, [totpSecret, currentTime]);
+  }, [totpSecret]);
 
   return (
     <>
