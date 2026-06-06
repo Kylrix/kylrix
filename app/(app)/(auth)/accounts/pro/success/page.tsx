@@ -28,10 +28,17 @@ function LoadingSpinner({ size = 28 }: { size?: number }) {
   );
 }
 
+import { getLastActiveAppRedirectUrl } from '@/lib/sdk/ecosystem/useLastActiveApp';
+
 export default function ProSuccessPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [verify, setVerify] = React.useState<VerifyState>({ status: 'loading' });
-  const [dashboardUrl] = React.useState('/');
+  const [dashboardUrl] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+        return getLastActiveAppRedirectUrl(window.location.origin);
+    }
+    return '/connect';
+  });
 
   React.useEffect(() => {
     let cancelled = false;
