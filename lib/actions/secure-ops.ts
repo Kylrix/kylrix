@@ -2181,11 +2181,11 @@ export async function verifyResourcePermissionSecure(params: {
     if (!row) {
       try {
         const systemTables = createSystemTablesDB();
-        row = await systemTables.getRow({
+        row = await systemTables.getRow(
           databaseId,
           tableId,
-          rowId,
-        });
+          rowId
+        );
       } catch (err) {
         console.warn('[verifyResourcePermissionSecure] Admin fallback fetch failed:', err);
       }
@@ -2220,7 +2220,7 @@ export async function verifyResourcePermissionSecure(params: {
   }
 
   // 0. Inherited Project Ownership
-  // If this resource is explicitly linked to a project, the project owner inherits full control.
+  // Case A: Authoritative resourceType/resourceId link (standard for Notes/Secrets)
   if (actorId && row.resourceType === 'project' && row.resourceId) {
     try {
       const project = await getRowCached({
@@ -2232,7 +2232,23 @@ export async function verifyResourcePermissionSecure(params: {
         return true;
       }
     } catch (err) {
-      console.warn('[verifyResourcePermissionSecure] Project inheritance check failed:', err);
+      console.warn('[verifyResourcePermissionSecure] Project inheritance (Case A) check failed:', err);
+    }
+  }
+
+  // Case B: Explicit projectId column (standard for Tasks/Goals)
+  if (actorId && row.projectId) {
+    try {
+      const project = await getRowCached({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: 'projects',
+        rowId: row.projectId,
+      });
+      if (project && project.ownerId === actorId) {
+        return true;
+      }
+    } catch (err) {
+      console.warn('[verifyResourcePermissionSecure] Project inheritance (Case B) check failed:', err);
     }
   }
 

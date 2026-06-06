@@ -35,6 +35,7 @@ import { useAuth } from '@/lib/auth';
 import { useToast } from '@/components/ui/Toast';
 import { type Models } from 'appwrite';
 import { MultiSectionContainer } from '@/context/SectionContext';
+import TeamDialog from '@/components/teams/TeamDialog';
 
 export default function TeamsPage() {
   const router = useRouter();
@@ -42,6 +43,7 @@ export default function TeamsPage() {
   const { showSuccess, showError } = useToast();
   const [teams, setTeams] = useState<Models.Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const fetchTeams = useCallback(async () => {
     setLoading(true);
@@ -58,6 +60,17 @@ export default function TeamsPage() {
   useEffect(() => {
     fetchTeams();
   }, [fetchTeams]);
+
+  const handleCreateTeam = async (name: string) => {
+    try {
+        await TeamsService.createTeam(name);
+        showSuccess(`Team "${name}" provisioned successfully!`);
+        fetchTeams();
+    } catch (err: any) {
+        console.error('Failed to create team:', err);
+        showError('Provisioning failed', err.message);
+    }
+  };
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0A0908', color: '#fff', pt: { xs: 4, md: 6 }, pb: 10 }}>
@@ -90,7 +103,7 @@ export default function TeamsPage() {
 
               <Box>
                 <Button
-                  onClick={() => showSuccess('Team creation environment spinning up...')}
+                  onClick={() => setIsDialogOpen(true)}
                   variant="contained"
                   sx={{
                     bgcolor: '#10B981',
@@ -137,7 +150,7 @@ export default function TeamsPage() {
                 </Typography>
                 <Button 
                     variant="outlined" 
-                    onClick={() => showSuccess('Team creation environment spinning up...')}
+                    onClick={() => setIsDialogOpen(true)}
                     sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}
                 >
                     Start Your First Team
@@ -206,6 +219,14 @@ export default function TeamsPage() {
             )}
           </Box>
         </Box>
+
+        {isDialogOpen && (
+          <TeamDialog 
+            open={isDialogOpen} 
+            onClose={() => setIsDialogOpen(false)} 
+            onSubmit={handleCreateTeam} 
+          />
+        )}
       </MultiSectionContainer>
     </Box>
   );
