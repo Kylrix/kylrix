@@ -17,6 +17,7 @@ export interface FABConfiguration {
   mainColor?: string;
   actions: FABAction[];
   onMainClick?: () => void;
+  suppressWorkflow?: boolean;
 }
 
 interface FABContextType {

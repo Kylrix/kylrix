@@ -116,7 +116,7 @@ export default function UniversalFAB() {
         },
       };
 
-  const speedDialActions = [...actions, workflowAction];
+  const speedDialActions = config.suppressWorkflow ? actions : [...actions, workflowAction];
 
   return (
     <>

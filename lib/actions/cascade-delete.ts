@@ -526,18 +526,24 @@ export async function executeCascadeDeleteSecure(
     console.log(`[Cascade Delete] Triggered event cascade cleanup for: ${rowId}`);
 
     let meetingUrl = '';
+    let coverImageId = '';
     try {
-      const eventDoc = await tables.getRow({
-        databaseId: FLOW_DB,
-        tableId: EVENTS_TABLE,
-        rowId: rowId,
-      });
+      const eventDoc = await tables.getRow<any>(FLOW_DB, EVENTS_TABLE, rowId);
       meetingUrl = eventDoc?.meetingUrl || '';
+      coverImageId = eventDoc?.coverImageId || '';
     } catch (err) {
-      console.warn(`[Cascade Delete] Failed to fetch event row ${rowId} for meetingUrl:`, err);
+      console.warn(`[Cascade Delete] Failed to fetch event row ${rowId} for meetingUrl/cover:`, err);
     }
 
-    // A. Clean up linked Call Link
+    // A. Clean up cover image from storage
+    if (coverImageId) {
+      console.log(`[Cascade Delete] Purging event cover: ${coverImageId}`);
+      await storage.deleteFile(APPWRITE_CONFIG.BUCKETS.EVENT_COVERS, coverImageId).catch(err => {
+        console.warn(`[Cascade Delete] Failed to delete event cover file ${coverImageId}:`, err?.message);
+      });
+    }
+
+    // B. Clean up linked Call Link
     if (meetingUrl && meetingUrl.includes('/connect/call/')) {
       const parts = meetingUrl.split('/connect/call/');
       const callId = parts[parts.length - 1];
@@ -556,7 +562,7 @@ export async function executeCascadeDeleteSecure(
       }
     }
 
-    // B. Clean up linked Ghost Note (Discussion Thread)
+    // C. Clean up linked Ghost Note (Discussion Thread)
     try {
       console.log(`[Cascade Delete] Cleaning up linked event ghost huddle: ${rowId}`);
       await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, rowId);
@@ -569,7 +575,7 @@ export async function executeCascadeDeleteSecure(
       // It's normal for many events to not have initialized discussions
     }
 
-    // C. Clean up Guests/Participants
+    // D. Clean up Guests/Participants
     try {
       const guestsRes = await tables.listRows({
         databaseId,
@@ -590,7 +596,31 @@ export async function executeCascadeDeleteSecure(
       console.error('[Cascade Delete] Event guests cleanup failed:', err);
     }
 
-    // D. Wipe collaborators and key mappings for the event itself
+    // E. Clean up Project Object Links
+    try {
+        const objectsRes = await tables.listRows({
+            databaseId: CHAT_DB,
+            tableId: 'project_objects',
+            queries: [
+                Query.equal('entityId', rowId),
+                Query.equal('entityKind', 'event'),
+                Query.limit(100)
+            ] as any,
+        });
+        await Promise.all(
+            objectsRes.rows.map((obj: any) =>
+                tables.deleteRow({
+                    databaseId: CHAT_DB,
+                    tableId: 'project_objects',
+                    rowId: obj.$id,
+                })
+            )
+        );
+    } catch (err) {
+        console.error('[Cascade Delete] Event project objects cleanup failed:', err);
+    }
+
+    // F. Wipe collaborators and key mappings for the event itself
     await wipeCollaboratorsAndKeys(tables, rowId, 'event');
   }
 

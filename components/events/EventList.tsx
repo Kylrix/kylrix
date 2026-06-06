@@ -15,6 +15,7 @@ import { Query } from 'appwrite';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useFAB } from '@/context/FABContext';
 import EventDetails from './EventDetails';
 
 export default function EventList() {
@@ -26,16 +27,34 @@ export default function EventList() {
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
   const { isAuthenticated, openIDMWindow } = useAuth();
+  const { setConfiguration, resetConfiguration } = useFAB();
 
   const [isDesktop, setIsDesktop] = useState(true);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const checkViewport = () => setIsDesktop(window.innerWidth >= 768);
-    checkViewport();
-    window.addEventListener('resize', checkViewport);
-    return () => window.removeEventListener('resize', checkViewport);
-  }, []);
+    // Configure FAB for this page
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#6366F1',
+      suppressWorkflow: true,
+      actions: [
+        {
+          id: 'new-event',
+          label: 'NEW EVENT',
+          icon: <Plus className="h-5 w-5" />,
+          onClick: () => {
+            if (!isAuthenticated) {
+              openIDMWindow();
+              return;
+            }
+            setIsDialogOpen(true);
+          }
+        }
+      ]
+    });
+
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, isAuthenticated]);
 
   useEffect(() => {
     const fetchEvents = async () => {
