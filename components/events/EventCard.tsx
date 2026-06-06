@@ -15,6 +15,7 @@ import { generateEventPattern as generatePattern } from '@/utils/patternGenerato
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { events as eventApi } from '@/lib/kylrixflow';
 import toast from 'react-hot-toast';
 
@@ -29,6 +30,7 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
+  const { open: openUnified } = useUnifiedDrawer();
 
   const isCreator = user && (event.creatorId === user.$id || (event as any).userId === user.$id);
   
@@ -64,19 +66,27 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
 
   const handleDeleteEvent = async () => {
     handleMenuClose();
-    if (!confirm('Are you sure you want to delete this event? This will also purge all linked voice files, call links, and guest RSVPs.')) return;
-    try {
-      await eventApi.delete(event.id);
-      toast.success('Event successfully deleted');
-      if (onDelete) {
-        onDelete();
-      } else {
-        window.location.reload();
+    
+    openUnified('delete-confirm', {
+      title: `Delete event: "${event.title}"?`,
+      description: 'This will permanently remove this event from your ecosystem. All linked voice files, call links, and guest RSVPs will be purged.',
+      resourceName: 'this event',
+      confirmLabel: 'Delete Event',
+      onConfirm: async () => {
+        try {
+          await eventApi.delete(event.id);
+          toast.success('Event successfully deleted');
+          if (onDelete) {
+            onDelete();
+          } else {
+            window.location.reload();
+          }
+        } catch (err) {
+          console.error('Failed to delete event:', err);
+          toast.error('Failed to delete event');
+        }
       }
-    } catch (err) {
-      console.error('Failed to delete event:', err);
-      toast.error('Failed to delete event');
-    }
+    });
   };
 
   return (
