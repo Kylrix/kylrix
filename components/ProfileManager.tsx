@@ -172,17 +172,28 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
         setError('Only image files are allowed.');
         return;
       }
-      if (file.size > 1024 * 1024) {
-        setError('Maximum file size of 1MB exceeded.');
-        return;
-      }
+      
       setError(null);
       try {
+        // Attempt compression first to improve UX for large files
         const compressed = await compressImage(file, 512, 512, 0.7);
+        
+        if (compressed.size > 1024 * 1024) {
+          setError('Maximum file size of 1MB exceeded even after compression.');
+          return;
+        }
+
         setProfilePic(compressed);
         setProfilePicUrl(URL.createObjectURL(compressed));
       } catch (err: any) {
-        console.warn('Instant compression failed, using original:', err);
+        console.warn('Instant compression failed, checking original size:', err);
+        
+        // Fallback to original if compression fails, but enforce the limit
+        if (file.size > 1024 * 1024) {
+          setError('Maximum file size of 1MB exceeded.');
+          return;
+        }
+
         setProfilePic(file);
         setProfilePicUrl(URL.createObjectURL(file));
       }
@@ -389,26 +400,33 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
             />
             
             {/* Upload Floating Action Button */}
-            <IconButton
-              component="label"
-              sx={{
-                position: 'absolute',
-                bottom: 8,
-                right: 8,
-                bgcolor: brandIndigo,
-                color: 'white',
-                '&:hover': { bgcolor: '#4f46e5', transform: 'scale(1.1)' },
-                boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-                width: 44,
-                height: 44,
-                border: '3px solid #161514',
-                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                zIndex: 5,
-              }}
-            >
-              <input hidden accept="image/*" type="file" onChange={handleFileChange} />
-              <Camera size={20} />
-            </IconButton>
+            {!profilePic && (
+              <Box
+                component="label"
+                sx={{
+                  position: 'absolute',
+                  bottom: 8,
+                  right: 8,
+                  bgcolor: brandIndigo,
+                  color: 'white',
+                  '&:hover': { bgcolor: '#4f46e5', transform: 'scale(1.1)' },
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  border: '3px solid #161514',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  zIndex: 10,
+                }}
+              >
+                <input hidden accept="image/*" type="file" onChange={handleFileChange} />
+                <Camera size={20} />
+              </Box>
+            )}
 
             {/* Clear/Reset selection if previewing */}
             {profilePic && (
@@ -419,15 +437,16 @@ export default function ProfileManager({ onProfileUpdate }: ProfileManagerProps)
                 }}
                 sx={{
                   position: 'absolute',
-                  top: 8,
+                  bottom: 8,
                   right: 8,
                   bgcolor: '#0A0908',
                   color: 'white',
-                  '&:hover': { bgcolor: '#1C1A18', color: '#ef4444' },
+                  '&:hover': { bgcolor: '#1C1A18', color: '#ef4444', transform: 'scale(1.1)' },
                   width: 32,
                   height: 32,
                   border: '1px solid rgba(255,255,255,0.1)',
-                  zIndex: 5,
+                  transition: 'all 0.2s ease',
+                  zIndex: 10,
                 }}
               >
                 <RotateCcw size={16} />
