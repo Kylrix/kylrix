@@ -711,7 +711,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                         sx={{
                           p: parsed.type === 'voice' ? 1.25 : 1.75,
                           borderRadius: isSelf ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
-                          bgcolor: isSelf ? '#1C1A18' : '#161412', 
+                          bgcolor: '#161412', 
                           backgroundImage: 'none',
                           border: '1px solid #23211F',
                           borderRight: isSelf ? '3px solid #F59E0B' : '1px solid #23211F',
@@ -1056,7 +1056,7 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
                           sx={{
                             p: parsedReply.type === 'voice' ? 1.25 : 1.75,
                             borderRadius: isSelfReply ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
-                            bgcolor: isSelfReply ? '#1C1A18' : '#161412',
+                            bgcolor: '#161412',
                             border: '1px solid #23211F',
                             borderRight: isSelfReply ? '3px solid #F59E0B' : '1px solid #23211F',
                             borderLeft: !isSelfReply ? '3px solid #34322F' : '1px solid #23211F',
