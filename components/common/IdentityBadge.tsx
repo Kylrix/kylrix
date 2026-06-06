@@ -224,7 +224,7 @@ export function IdentityAvatar({
           : pro
           ? {
               padding: '2px',
-              background: RING_GRADIENT,
+              backgroundImage: RING_GRADIENT,
               boxShadow: '0 0 0 1px rgba(255,255,255,0.04), 0 0 18px rgba(99,102,241,0.18)',
             }
           : {
