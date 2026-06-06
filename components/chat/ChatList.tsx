@@ -1101,7 +1101,7 @@ export const ChatList = ({
         };
     }, [user, activeTab, loadConversations, loadGhostConversations, formatPreviewFromMessage, startTransition, skipSecureLoad, skipThreadsLoad, scheduleConversationsReload, ghostConversations.length]);
 
-    if (loading) return (
+    if (loading && activeTab === 'secure' && !skipSecureLoad) return (
         <div className="p-4 space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex items-center gap-4 p-2 animate-pulse">
@@ -1213,14 +1213,19 @@ export const ChatList = ({
                                     Unlock your decentralized node to initialize secure communication channels and identity resolution.
                                 </p>
                                 <button 
-                                    onClick={() => requestSudo({ onSuccess: () => setIsUnlocked(true) })}
+                                    onClick={() => requestSudo({
+                                        onSuccess: () => {
+                                            setIsUnlocked(true);
+                                            void loadConversations({ forceRefresh: true });
+                                        },
+                                    })}
                                     className="px-8 py-3.5 rounded-2xl font-black bg-[#F59E0B] text-black text-sm shadow-[0_12px_24px_rgba(245,158,11,0.15)] hover:bg-[#eab308] hover:-translate-y-0.5 transition-all duration-300 ease-out"
                                 >
                                     Unlock Node
                                 </button>
                             </div>
                         </div>
-                    ) : filteredConversations.length === 0 && !showGlobalResults ? (
+                    ) : filteredConversations.length === 0 && !showGlobalResults && !loading ? (
                         <div className="p-12 text-center">
                             <span className="font-black text-white text-lg mb-1 font-clash block">Quiet Frequency</span>
                             <span className="text-sm text-[#9B9691] font-medium block">No encrypted channels found matching your query.</span>

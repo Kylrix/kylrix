@@ -1097,6 +1097,7 @@ export const ChatService = {
             lastMessageAt: message.$createdAt || message.createdAt || new Date().toISOString(),
             lastMessageSenderId: senderId,
         });
+        invalidateConversationsListCache(senderId);
 
         // 3. (Background) Re-keying check
         if (ecosystemSecurity.status.isUnlocked && conversation?.creatorId === senderId) {
