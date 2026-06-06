@@ -28,6 +28,7 @@ import { usePresence } from '@/components/providers/PresenceProvider';
 import { FlowPresenceFlapOver } from '@/components/LinkRenderer';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import TaskDetails from './TaskDetails';
 
 interface TaskItemProps {
@@ -59,7 +60,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   const { open: openUnified } = useUnifiedDrawer();
   const { openSidebar } = useDynamicSidebar();
   const { openOverlay, closeOverlay } = useOverlay();
-  const [anchorEl, setAnchorEl] = useState<boolean>(false);
+  const { openMenu } = useContextMenu();
   const [isHovered, setIsHovered] = useState(false);
   const [isFlapOverOpen, setIsFlapOverOpen] = useState(false);
   const { resourcePresence } = usePresence();
@@ -81,62 +82,97 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
   const totalSubtasks = task.subtasks.length;
 
+  const contextMenuItems = [
+    { 
+        label: 'Edit Task', 
+        icon: <Edit size={16} />, 
+        onClick: () => {
+            selectTask(task.id);
+            openSecondarySidebar('task', task.id);
+        }
+    },
+    { 
+        label: 'Duplicate', 
+        icon: <Copy size={16} />, 
+        onClick: () => {
+            // Implementation logic preserved
+        }
+    },
+    { 
+        label: 'Archive', 
+        icon: <Archive size={16} />, 
+        onClick: () => updateTask(task.id, { isArchived: true })
+    },
+    { 
+        label: task.isPinned ? "Unpin Goal" : "Pin Goal", 
+        icon: <Pin size={16} className={task.isPinned ? 'text-[#F59E0B]' : ''} />, 
+        onClick: () => togglePinTask(task.id)
+    },
+    { 
+        label: 'Assign Goal', 
+        icon: <AssignIcon size={16} />, 
+        onClick: () => openUnified('share-note', {
+            resourceId: task.id,
+            resourceType: 'goal',
+            resourceTitle: task.title,
+            actorName: user?.name || 'A Kylrix User'
+        })
+    },
+    { 
+        label: 'Start Huddle', 
+        icon: <Video size={16} />, 
+        onClick: () => {
+            const participantIds = Array.from(new Set([task.creatorId, ...(task.assigneeIds || [])].filter(Boolean)));
+            openCallLauncher({
+              source: 'task',
+              taskId: task.id,
+              participantIds,
+              title: task.title ? `Task Huddle: ${task.title}` : 'Task Huddle',
+            });
+        }
+    },
+    { 
+        label: 'Delete', 
+        icon: <Trash2 size={16} />, 
+        variant: 'destructive' as const,
+        onClick: () => openUnified('delete-confirm', {
+            title: `Delete goal: "${task.title}"?`,
+            description: 'This will permanently remove this goal and all its subtasks, comments, and history from your domain.',
+            resourceName: 'this goal',
+            confirmLabel: 'Delete Goal',
+            onConfirm: async () => {
+              await deleteTask(task.id);
+            }
+        })
+    }
+  ];
+
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
-    setAnchorEl(!anchorEl);
+    event.preventDefault();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    openMenu({ 
+        x: rect.left, 
+        y: rect.bottom + 4, 
+        items: contextMenuItems,
+        appType: 'flow'
+    });
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(false);
+  const handleContextMenu = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openMenu({
+        x: event.clientX,
+        y: event.clientY,
+        items: contextMenuItems,
+        appType: 'flow'
+    });
   };
 
   const handleComplete = (event: React.MouseEvent) => {
     event.stopPropagation();
     completeTask(task.id);
-  };
-
-  const handleDelete = () => {
-    handleMenuClose();
-    openUnified('delete-confirm', {
-      title: `Delete goal: "${task.title}"?`,
-      description: 'This will permanently remove this goal and all its subtasks, comments, and history from your domain.',
-      resourceName: 'this goal',
-      confirmLabel: 'Delete Goal',
-      onConfirm: async () => {
-        await deleteTask(task.id);
-      }
-    });
-  };
-
-  const handleArchive = () => {
-    handleMenuClose();
-    updateTask(task.id, { isArchived: true });
-  };
-
-  const handleTogglePin = async () => {
-    handleMenuClose();
-    await togglePinTask(task.id);
-  };
-
-  const handleStartTaskHuddle = () => {
-    handleMenuClose();
-    const participantIds = Array.from(new Set([task.creatorId, ...(task.assigneeIds || [])].filter(Boolean)));
-    openCallLauncher({
-      source: 'task',
-      taskId: task.id,
-      participantIds,
-      title: task.title ? `Task Huddle: ${task.title}` : 'Task Huddle',
-    });
-  };
-
-  const handleAssignGoal = () => {
-    handleMenuClose();
-    openUnified('share-note', {
-      resourceId: task.id,
-      resourceType: 'goal',
-      resourceTitle: task.title,
-      actorName: user?.name || 'A Kylrix User'
-    });
   };
 
   const formatDueDate = (date: Date) => {
@@ -165,7 +201,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
           compact ? 'p-4' : 'p-4 sm:p-5'
         } ${
           task.status === 'done' ? 'opacity-60' : 'opacity-100'
-        } border shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9)] hover:shadow-[0_8px_10px_-8px_rgba(0,0,0,1)] hover:-translate-y-0.5 mb-3`}
+        } border shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9)] hover:shadow-[0_8px_10px_-8px_rgba(0,0,0,1)] hover:-translate-y-0.5 mb-3 select-none`}
         onClick={() => {
           selectTask(task.id);
           if (isDesktop) {
@@ -181,6 +217,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
           }
           onClick?.();
         }}
+        onContextMenu={handleContextMenu}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
@@ -256,79 +293,6 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
                 >
                   <MoreVertical className="h-4.5 w-4.5" />
                 </button>
-
-                {/* Dropdown Menu */}
-                {anchorEl && (
-                  <>
-                    <div className="fixed inset-0 z-40 bg-transparent cursor-default" onClick={handleMenuClose} />
-                    <div 
-                      className="absolute right-0 top-full mt-1 w-48 rounded-xl bg-[#0F0D0C] border border-[#222222] shadow-2xl py-1.5 z-50 font-satoshi text-left"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          selectTask(task.id);
-                          openSecondarySidebar('task', task.id);
-                          handleMenuClose();
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
-                      >
-                        <Edit className="h-4 w-4 text-[#A1A1AA]" />
-                        <span>Edit Task</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleMenuClose}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
-                      >
-                        <Copy className="h-4 w-4 text-[#A1A1AA]" />
-                        <span>Duplicate</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleArchive}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
-                      >
-                        <Archive className="h-4 w-4 text-[#A1A1AA]" />
-                        <span>Archive</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleTogglePin}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
-                      >
-                        <Pin className={`h-4 w-4 ${task.isPinned ? 'text-[#F59E0B]' : 'text-[#A1A1AA]'}`} />
-                        <span>{task.isPinned ? "Unpin Goal" : "Pin Goal"}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleAssignGoal}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
-                      >
-                        <AssignIcon className="h-4 w-4 text-[#A1A1AA]" />
-                        <span>Assign Goal</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleStartTaskHuddle}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#9B9691] hover:bg-[#1C1A18] hover:text-white transition-colors"
-                      >
-                        <Video className="h-4 w-4 text-[#A1A1AA]" />
-                        <span>Start Huddle</span>
-                      </button>
-                      <div className="my-1 border-t border-[#222222]" />
-                      <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-[#ef4444] hover:bg-red-500/5 transition-colors font-semibold"
-                      >
-                        <Trash2 className="h-4 w-4 text-[#ef4444]" />
-                        <span>Delete</span>
-                      </button>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
 
