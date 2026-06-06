@@ -1816,7 +1816,7 @@ export default function ConnectTopbar({
                       sx={{
                         p: 0,
                         border: 'none',
-                        background: 'transparent',
+                        backgroundColor: 'transparent',
                         cursor: 'pointer',
                         '&:hover': { transform: 'scale(1.05)' },
                         transition: 'transform 0.2s',

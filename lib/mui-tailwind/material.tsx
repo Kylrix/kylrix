@@ -188,8 +188,8 @@ const cleanSx = (sx: any) => {
   const resolved: Record<string, any> = {};
   for (const key in root) {
     const val = root[key];
-    if (key === 'color' || key === 'backgroundColor' || key === 'borderColor' || key === 'bgcolor') {
-      const mappedKey = key === 'bgcolor' ? 'backgroundColor' : key;
+    if (key === 'color' || key === 'backgroundColor' || key === 'borderColor' || key === 'bgcolor' || key === 'background') {
+      const mappedKey = (key === 'bgcolor' || key === 'background') ? 'backgroundColor' : key;
       resolved[mappedKey] = resolvePaletteToken(val);
       continue;
     }
