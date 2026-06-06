@@ -690,41 +690,68 @@ export function ProjectDiscussionSidebar({
 
   return (
     <Box sx={{ bgcolor: '#0A0908', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
-      <MuralPattern />
-
+      {/* Fixed top command rail — opaque, no mural bleed */}
       <AppBar
         position="static"
         color="transparent"
         elevation={0}
         sx={{
-          bgcolor: '#0A0908',
+          bgcolor: '#161412',
+          backgroundImage: 'none',
           borderBottom: '1px solid #1C1A18',
           zIndex: 10,
           flexShrink: 0,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
         }}
       >
-        <Toolbar sx={{ gap: 1, minHeight: '64px !important', px: 2 }}>
+        <Toolbar sx={{ gap: 1, minHeight: '68px !important', px: 2 }}>
           {activeThreadParent ? (
-            <IconButton onClick={() => setActiveThreadParent(null)} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff', bgcolor: '#161412' } }}>
+            <IconButton
+              onClick={() => setActiveThreadParent(null)}
+              sx={{ color: 'rgba(255,255,255,0.55)', bgcolor: '#0A0908', border: '1px solid #1C1A18', '&:hover': { color: '#fff', bgcolor: '#1C1A18' } }}
+            >
               <ChevronLeft size={20} strokeWidth={2} />
             </IconButton>
-          ) : null}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.1, color: '#fff', fontSize: '1rem' }}>
-              {activeThreadParent ? 'Thread' : project.title}
+          ) : (
+            <Box
+              sx={{
+                width: 36,
+                height: 36,
+                borderRadius: '12px',
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.22)',
+                color: '#818CF8',
+                flexShrink: 0,
+              }}
+            >
+              <MessageSquare size={18} strokeWidth={2} />
+            </Box>
+          )}
+          <Box sx={{ flex: 1, minWidth: 0, px: 0.5 }}>
+            <Typography
+              variant="subtitle1"
+              noWrap
+              sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', lineHeight: 1.15, color: '#F5F2ED', fontSize: '0.95rem' }}
+            >
+              {activeThreadParent ? 'Thread replies' : project.title}
             </Typography>
-            <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 700, fontSize: '0.75rem' }}>
-              {activeThreadParent ? `Replying in ${project.title}` : 'Project discussion'}
+            <Typography variant="caption" sx={{ color: '#9B9691', fontWeight: 700, fontSize: '0.72rem', lineHeight: 1.35, display: 'block' }}>
+              {activeThreadParent ? project.title : 'Project discussion · team huddle'}
             </Typography>
           </Box>
-          <IconButton onClick={closeSidebar} sx={{ color: 'rgba(255,255,255,0.6)', '&:hover': { color: '#fff', bgcolor: '#161412' } }}>
-            <X size={20} strokeWidth={2} />
+          <IconButton
+            onClick={closeSidebar}
+            sx={{ color: 'rgba(255,255,255,0.55)', bgcolor: '#0A0908', border: '1px solid #1C1A18', '&:hover': { color: '#fff', bgcolor: '#1C1A18' } }}
+          >
+            <X size={18} strokeWidth={2} />
           </IconButton>
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      {/* Middle lane — mural + scroll only (header/footer stay solid) */}
+      <Box sx={{ flex: 1, minHeight: 0, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {loading && !messages.length && (
           <Box sx={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', bgcolor: 'rgba(10,9,8,0.7)', zIndex: 30 }}>
             <CircularProgress sx={{ color: '#6366F1' }} size={28} />
@@ -732,49 +759,80 @@ export function ProjectDiscussionSidebar({
         )}
 
         {!chatNoteId ? (
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center', position: 'relative', zIndex: 2 }}>
-            <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)', color: '#6366F1', mb: 3 }}>
-              <Globe size={26} />
-            </Box>
-            <Typography sx={{ fontWeight: 900, color: '#fff', mb: 1, fontFamily: 'var(--font-satoshi)' }}>
-              Start project discussion
-            </Typography>
-            <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', lineHeight: 1.6, maxWidth: 320, mb: 3 }}>
-              Spin up a team huddle thread for this project. Messages auto-clean after 7 days.
-            </Typography>
-            <Button variant="contained" onClick={handleInitHuddle} sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 900, borderRadius: '14px', px: 3, py: 1.25, textTransform: 'none' }}>
-              Start Huddle
-            </Button>
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 3, position: 'relative', zIndex: 2 }}>
+            <Paper
+              elevation={0}
+              sx={{
+                p: 3,
+                maxWidth: 340,
+                width: '100%',
+                textAlign: 'center',
+                bgcolor: '#161412',
+                backgroundImage: 'none',
+                border: '1px solid #34322F',
+                borderRadius: '28px',
+                boxShadow: '0 12px 32px rgba(0,0,0,0.4)',
+              }}
+            >
+              <Box sx={{ width: 56, height: 56, borderRadius: '16px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.18)', color: '#818CF8', mx: 'auto', mb: 2.5 }}>
+                <Globe size={26} />
+              </Box>
+              <Typography component="span" sx={{ display: 'block', fontWeight: 900, color: '#F5F2ED', mb: 1, fontFamily: 'var(--font-clash)', fontSize: '1rem', lineHeight: 1.25 }}>
+                Start project discussion
+              </Typography>
+              <Typography component="span" sx={{ display: 'block', color: 'rgba(255,255,255,0.48)', fontSize: '0.85rem', lineHeight: 1.6, mb: 2.5 }}>
+                Spin up a team huddle for this project. Messages auto-clean after 7 days.
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={handleInitHuddle}
+                sx={{ bgcolor: '#6366F1', color: '#fff', fontWeight: 900, borderRadius: '14px', px: 3, py: 1.25, textTransform: 'none', boxShadow: '0 8px 24px rgba(99,102,241,0.25)' }}
+              >
+                Start Huddle
+              </Button>
+            </Paper>
           </Box>
         ) : (
           <>
+            <MuralPattern />
             <Box
               sx={{
                 flex: 1,
                 minHeight: 0,
                 overflowY: 'auto',
-                p: 2,
+                px: 2,
+                py: 2,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 1.5,
-                pb: 'calc(96px + env(safe-area-inset-bottom))',
+                gap: 1.75,
+                pb: 'calc(108px + env(safe-area-inset-bottom))',
                 position: 'relative',
                 zIndex: 2,
               }}
               className="scrollbar-thin"
             >
               {activeThreadParent && (
-                <Box sx={{ mb: 1, pb: 2, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                  <Typography variant="caption" sx={{ fontWeight: 900, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', mb: 1, display: 'block' }}>
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 2,
+                    mb: 0.5,
+                    bgcolor: '#161412',
+                    backgroundImage: 'none',
+                    border: '1px solid #34322F',
+                    borderRadius: '20px',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ fontWeight: 900, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', mb: 1.25, display: 'block', lineHeight: 1.25 }}>
                     Thread started by {activeThreadParent.senderName}
                   </Typography>
                   {renderMessageRow(activeThreadParent, { isThreadParent: true })}
-                </Box>
+                </Paper>
               )}
 
               {visibleMessages.length === 0 ? (
-                <Box sx={{ flex: 1, display: 'grid', placeItems: 'center', py: 6 }}>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                <Box sx={{ flex: 1, display: 'grid', placeItems: 'center', py: 8 }}>
+                  <Typography component="span" sx={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.85rem', lineHeight: 1.45, fontStyle: 'italic' }}>
                     {activeThreadParent ? 'No replies yet.' : 'No messages yet. Say hello!'}
                   </Typography>
                 </Box>
@@ -784,7 +842,7 @@ export function ProjectDiscussionSidebar({
               <div ref={messageEndRef} />
             </Box>
 
-            {/* Input — Connect secret chat bottom drawer */}
+            {/* Fixed bottom composer — openbricks inset drawer lip */}
             <Box
               sx={{
                 position: 'absolute',
@@ -795,9 +853,10 @@ export function ProjectDiscussionSidebar({
                 pb: 'max(1rem, env(safe-area-inset-bottom))',
                 pt: 1.5,
                 bgcolor: '#161412',
+                backgroundImage: 'none',
                 borderTop: '1px solid #1C1A18',
-                borderRadius: '24px 24px 0 0',
-                boxShadow: '0 -4px 24px rgba(0,0,0,0.6)',
+                borderRadius: '28px 28px 0 0',
+                boxShadow: '0 -8px 32px rgba(0,0,0,0.55)',
                 zIndex: 20,
               }}
             >

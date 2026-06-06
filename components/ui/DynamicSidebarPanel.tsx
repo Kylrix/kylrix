@@ -1,18 +1,26 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { Box, IconButton, Typography } from '@/lib/mui-tailwind/material';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { X as CloseIcon, ArrowLeft as BackIcon } from 'lucide-react';
 
+/** Panels that manage their own fixed header/footer + internal scroll. */
+const SELF_CONTAINED_PANEL_KEYS = new Set([
+  'project-discussion',
+  'note-detail',
+  'task-detail',
+  'event-detail',
+]);
+
 export function DynamicSidebar() {
-  const { isOpen, content, closeSidebar, options } = useDynamicSidebar();
+  const { isOpen, content, closeSidebar, options, activeContentKey } = useDynamicSidebar();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setMounted(true);
-      // Disable scroll on body when open on mobile
-      if (window.innerWidth < 768) {
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
         document.body.style.overflow = 'hidden';
       }
     } else {
@@ -27,58 +35,135 @@ export function DynamicSidebar() {
 
   if (!isOpen && !mounted) return null;
 
-  const isNoteDetail = content && React.isValidElement(content) && (
-    (typeof content.type === 'function' && content.type.name === 'NoteDetailSidebar') ||
-    (typeof content.type === 'object' && content.type !== null && (content.type as any).type?.name === 'NoteDetailSidebar') ||
-    (content.props as any)?.note !== undefined
-  );
+  const isNoteDetail =
+    content &&
+    React.isValidElement(content) &&
+    ((typeof content.type === 'function' && content.type.name === 'NoteDetailSidebar') ||
+      (typeof content.type === 'object' &&
+        content.type !== null &&
+        (content.type as { type?: { name?: string } }).type?.name === 'NoteDetailSidebar') ||
+      (content.props as { note?: unknown })?.note !== undefined);
 
   const shouldHideHeader = options?.hideHeader || isNoteDetail;
+  const isSelfContained =
+    isNoteDetail ||
+    shouldHideHeader ||
+    Boolean(activeContentKey && SELF_CONTAINED_PANEL_KEYS.has(activeContentKey));
 
   return (
     <>
-      {/* Backdrop (Only for desktop or non-fullscreen) */}
-      <div 
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 z-[9990] ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        } md:block hidden`}
+      {/* Openbricks: blur scrim behind focused drawer */}
+      <Box
         onClick={closeSidebar}
+        sx={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9990,
+          bgcolor: 'rgba(0, 0, 0, 0.58)',
+          backdropFilter: 'blur(10px) saturate(120%)',
+          WebkitBackdropFilter: 'blur(10px) saturate(120%)',
+          opacity: isOpen ? 1 : 0,
+          pointerEvents: isOpen ? 'auto' : 'none',
+          transition: 'opacity 0.3s ease',
+        }}
       />
 
-      {/* Slide-over Container */}
-      <div 
-        className={`fixed right-0 top-0 bottom-0 h-dvh bg-[#161412] flex flex-col z-[9995] shadow-2xl transition-transform duration-300 ease-out border-l border-white/5 ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        } w-full md:w-[450px] lg:w-[500px]`}
+      {/* Side sheet — deep ash on pitch-black stage */}
+      <Box
+        sx={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          height: '100dvh',
+          width: { xs: '100%', md: 480, lg: 520 },
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 9995,
+          bgcolor: '#161412',
+          borderLeft: '1px solid #1C1A18',
+          boxShadow: '-12px 0 48px rgba(0, 0, 0, 0.55)',
+          transform: isOpen ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.32s cubic-bezier(0.16, 1, 0.3, 1)',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            bottom: 0,
+            width: '1px',
+            bgcolor: 'rgba(255, 255, 255, 0.04)',
+            pointerEvents: 'none',
+          },
+        }}
       >
         {!shouldHideHeader && (
-          <div className="flex items-center justify-between p-4 border-b border-white/5 bg-[#161412] shrink-0">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              px: 2,
+              py: 1.5,
+              flexShrink: 0,
+              bgcolor: '#161412',
+              borderBottom: '1px solid #1C1A18',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <IconButton
                 onClick={closeSidebar}
-                className="p-1 text-white/50 hover:text-white rounded-lg hover:bg-white/5 md:hidden"
+                sx={{
+                  display: { xs: 'inline-flex', md: 'none' },
+                  color: 'rgba(255,255,255,0.55)',
+                  '&:hover': { color: '#fff', bgcolor: '#1C1A18' },
+                }}
+                size="small"
               >
-                <BackIcon className="w-5 h-5" />
-              </button>
-              <h3 className="font-extrabold font-space-grotesk text-[#6366F1] uppercase tracking-wider text-sm md:text-base">
+                <BackIcon size={20} />
+              </IconButton>
+              <Typography
+                sx={{
+                  fontWeight: 900,
+                  fontFamily: 'var(--font-clash)',
+                  color: '#6366F1',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  fontSize: '0.8rem',
+                }}
+              >
                 Details
-              </h3>
-            </div>
-            <button
-              type="button"
+              </Typography>
+            </Box>
+            <IconButton
               onClick={closeSidebar}
-              className="p-1 text-white/50 hover:text-white rounded-lg hover:bg-white/5 md:inline-flex hidden"
+              sx={{
+                display: { xs: 'none', md: 'inline-flex' },
+                color: 'rgba(255,255,255,0.55)',
+                '&:hover': { color: '#fff', bgcolor: '#1C1A18' },
+              }}
+              size="small"
             >
-              <CloseIcon className="w-4 h-4" />
-            </button>
-          </div>
+              <CloseIcon size={18} />
+            </IconButton>
+          </Box>
         )}
 
-        <div className={`flex-1 min-h-0 bg-[#161412] ${isNoteDetail ? 'overflow-hidden' : 'overflow-y-auto scrollbar-thin'}`}>
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: '#0A0908',
+            overflow: isSelfContained ? 'hidden' : 'auto',
+          }}
+          className={isSelfContained ? undefined : 'scrollbar-thin'}
+        >
           {content}
-        </div>
-      </div>
+        </Box>
+      </Box>
     </>
   );
 }

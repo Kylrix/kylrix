@@ -398,7 +398,7 @@ export default function ConnectTopbar({
 
   const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
 
-  const activePanel = searchOpen ? 'search' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
+  const activePanel = searchOpen ? 'search' : notificationsOpen ? 'notifications' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
 
   useEffect(() => {
     if (!activePanel) return;
@@ -1013,7 +1013,7 @@ export default function ConnectTopbar({
           open={searchOpen}
           onClose={handleCloseAll}
           keepMounted={false}
-          disablePortal={true}
+          disablePortal={false}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
@@ -1276,7 +1276,7 @@ export default function ConnectTopbar({
           open={Boolean(profileMenuAnchorEl)}
           onClose={() => setProfileMenuAnchorEl(null)}
           keepMounted={false}
-          disablePortal={true}
+          disablePortal={false}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
@@ -1522,7 +1522,7 @@ export default function ConnectTopbar({
           open={Boolean(appMenuAnchorEl)}
           onClose={() => setAppMenuAnchorEl(null)}
           keepMounted={false}
-          disablePortal={true}
+          disablePortal={false}
           PaperProps={{
             sx: {
               bgcolor: '#161412',
@@ -1711,7 +1711,7 @@ export default function ConnectTopbar({
           backgroundImage: 'none',
           overflow: 'visible',
           pointerEvents: 'auto',
-          height: activePanel ? 'auto' : '88px',
+          height: isDesktop ? '88px' : (activePanel ? 'auto' : '88px'),
         }}
       >
         <SyncIndicator />
