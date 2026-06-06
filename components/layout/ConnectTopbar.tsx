@@ -607,15 +607,6 @@ export default function ConnectTopbar({
         ))}
       </Box>
     );
-    if (false) {
-      return (
-        <Drawer
-          anchor="left" open={Boolean(appMenuAnchorEl)} onClose={handleCloseAll} disablePortal={true} PaperProps={{ sx: { bgcolor: '#161412', width: 320, height: '100vh', borderRight: '1px solid rgba(255,255,255,0.06)', p: 2.75 } }}>
-          <Typography variant="h6" sx={{ color: 'white', fontWeight: 900, mb: 3 }}>Ecosystem</Typography>
-          {appList}
-        </Drawer>
-      );
-    }
     return <Box sx={{ bgcolor: '#161412', borderTop: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px' }}>{appList}</Box>;
   };
 
