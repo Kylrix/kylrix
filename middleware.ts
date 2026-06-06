@@ -33,6 +33,20 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ─── AGGRESSIVE LANDING REDIRECT (MIDDLEWARE FAST-PATH) ────────────────
+  // If we are at the root landing page and not explicitly staying (e.g. for marketing/debugging)
+  if (pathname === '/' && !searchParams.has('stay')) {
+    const pulse = request.cookies.get('kylrix_pulse_v2')?.value;
+    
+    if (!pulse) {
+      // No active session pulse: Forward to Unified Send (/send)
+      return NextResponse.redirect(new URL('/send', request.url));
+    }
+
+    // Session pulse exists: Attempt to resume last active ecosystem route via authoritative handler
+    return NextResponse.redirect(new URL('/accounts/resume', request.url));
+  }
+
   // Instant Route Forwards
   if (pathname === '/note' || pathname === '/note/') {
     return NextResponse.redirect(new URL('/note/notes', request.url));
