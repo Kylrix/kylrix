@@ -2167,8 +2167,10 @@ export async function verifyResourcePermissionSecure(params: {
 }) {
   const { databaseId, tableId, rowId, actorId, action, ownerFields = ['userId', 'ownerId', 'creatorId'], metadataField = 'metadata', data } = params;
   
-  let row = data;
-  if (!row && databaseId && tableId && rowId) {
+  let row = null;
+  
+  // Authoritative existing row fetch for permission validation
+  if (databaseId && tableId && rowId) {
     row = await getRowCached({
       databaseId: databaseId,
       tableId: tableId,
@@ -2188,6 +2190,16 @@ export async function verifyResourcePermissionSecure(params: {
         console.warn('[verifyResourcePermissionSecure] Admin fallback fetch failed:', err);
       }
     }
+  }
+
+  // If no existing row found and it's not a create action, we cannot verify permissions
+  if (!row && action !== 'create') {
+    return false;
+  }
+
+  // Use provided data as fallback (primarily for 'create' or specialized injections)
+  if (!row && data) {
+    row = data;
   }
 
   if (!row) {
