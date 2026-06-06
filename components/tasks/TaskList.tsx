@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2 } from 'lucide-react';
+import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2, Trash2, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import TaskItem from './TaskItem';
 import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
 import { useFAB } from '@/context/FABContext';
 import { ViewMode, SortField, TaskStatus } from '@/types';
 import { MultiSectionContainer } from '@/context/SectionContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { toast } from 'react-hot-toast';
 
 export default function TaskList() {
   const {
@@ -19,10 +21,12 @@ export default function TaskList() {
     filter,
     setFilter,
     setTaskDialogOpen,
+    deleteTask,
     projects,
     selectedProjectId,
   } = useTask();
   const { setConfiguration, resetConfiguration } = useFAB();
+  const { open } = useUnifiedDrawer();
   const router = React.useRef(useRouter()).current;
 
   React.useEffect(() => {
@@ -38,8 +42,34 @@ export default function TaskList() {
 
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [showCompletedSection, setShowCompletedSection] = useState(true);
 
   const tasks = getFilteredTasks();
+  const activeTasks = tasks.filter(t => t.status !== 'done');
+  const completedTasks = tasks.filter(t => t.status === 'done');
+
+  const handleBulkDeleteCompleted = () => {
+    if (completedTasks.length === 0) return;
+
+    open('delete-confirm', {
+      title: `Purge ${completedTasks.length} Completed Goals?`,
+      description: 'This will permanently remove all finished goals and their history from your workspace. This action is irreversible.',
+      resourceName: 'completed goals',
+      confirmLabel: 'Purge Finished Goals',
+      onConfirm: async () => {
+        try {
+          // Sequential deletion to avoid hammering the DB too hard
+          for (const task of completedTasks) {
+            await deleteTask(task.id);
+          }
+          toast.success('Workspace successfully uncluttered.');
+        } catch (err) {
+          toast.error('Failed to complete bulk purge.');
+        }
+      }
+    });
+  };
+
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
 
   const sortOptions: { field: SortField; label: string }[] = [
@@ -271,7 +301,7 @@ export default function TaskList() {
         <div className="min-h-[60vh]">
           {/* Task List View */}
           {viewMode === 'list' && (
-            <div>
+            <div className="space-y-8">
               {tasks.length === 0 ? (
                 <div className="text-center py-24 text-[#9B9691]">
                   <h3 className="font-clash font-extrabold text-[#F5F2ED] text-xl tracking-tight mb-2">
@@ -292,7 +322,69 @@ export default function TaskList() {
                   </button>
                 </div>
               ) : (
-                tasks.map((task) => <TaskItem key={task.id} task={task} />)
+                <>
+                  {/* Active Goals Section */}
+                  {activeTasks.length > 0 && (
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3 px-1 mb-2">
+                        <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-[0.2em] font-mono">
+                          Active Goals ({activeTasks.length})
+                        </span>
+                        <div className="flex-1 h-px bg-gradient-to-r from-[#A855F7]/20 to-transparent" />
+                      </div>
+                      {activeTasks.map((task) => <TaskItem key={task.id} task={task} />)}
+                    </div>
+                  )}
+
+                  {/* Completed Goals Section */}
+                  {completedTasks.length > 0 && (
+                    <div className="space-y-4 pt-4">
+                      <div className="flex items-center justify-between px-1 mb-2">
+                        <button 
+                          onClick={() => setShowCompletedSection(!showCompletedSection)}
+                          className="flex items-center gap-2 group cursor-pointer"
+                        >
+                          <span className="text-[10px] font-black text-[#9B9691] uppercase tracking-[0.2em] font-mono group-hover:text-white transition-colors">
+                            Completed ({completedTasks.length})
+                          </span>
+                          {showCompletedSection ? <ChevronUp size={12} className="text-[#9B9691]" /> : <ChevronDown size={12} className="text-[#9B9691]" />}
+                        </button>
+                        <div className="flex-1 mx-4 h-px bg-[#1C1A18]" />
+                      </div>
+
+                      {showCompletedSection && (
+                        <>
+                          {/* Cleanup Pulse Card */}
+                          <div className="bg-[#161412] border border-[#A855F7]/10 rounded-[28px] p-5 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 transition-all hover:border-[#A855F7]/20 relative overflow-hidden group/cleanup">
+                             <div className="absolute top-0 right-0 w-32 h-32 bg-[#A855F7]/5 rounded-full blur-3xl pointer-events-none group-hover/cleanup:bg-[#A855F7]/10 transition-all duration-500" />
+                             <div className="flex items-center gap-4 relative z-10">
+                                <div className="w-12 h-12 rounded-xl bg-[#A855F7]/10 text-[#A855F7] flex items-center justify-center flex-shrink-0">
+                                    <Sparkles size={22} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="text-white font-black text-sm uppercase tracking-tight">Workspace Integrity</h4>
+                                    <p className="text-[#9B9691] text-[11px] font-bold uppercase tracking-wider mt-0.5 leading-normal">
+                                        Purge finished goals to maintain a lean, high-fidelity environment.
+                                    </p>
+                                </div>
+                             </div>
+                             <button
+                                onClick={handleBulkDeleteCompleted}
+                                className="relative z-10 px-5 py-2.5 rounded-xl bg-[#1C1A18] border border-white/5 text-white/70 font-black text-[10px] uppercase tracking-widest hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all active:scale-[0.98] flex items-center gap-2"
+                             >
+                                <Trash2 size={14} />
+                                Purge All
+                             </button>
+                          </div>
+
+                          <div className="space-y-3 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500">
+                            {completedTasks.map((task) => <TaskItem key={task.id} task={task} />)}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
