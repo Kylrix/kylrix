@@ -592,43 +592,19 @@ export default function ConnectTopbar({
     return <Box sx={{ bgcolor: '#161412', borderTop: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px' }}>{profileContent}</Box>;
   };
 
-  const renderAppPanel = () => {
-    if (!appMenuAnchorEl) return null;
-    const appList = (
-      <Box sx={{ p: 2, display: 'grid', gap: 1 }}>
-        {connectApps.map(item => (
-          <Box key={item.href} component="button" onClick={() => { handleCloseAll(); router.push(item.href); }} sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: item.selected ? alpha(getAppColor(item.app), 0.06) : 'rgba(255,255,255,0.01)', border: '1px solid', borderColor: item.selected ? alpha(getAppColor(item.app), 0.15) : 'rgba(255,255,255,0.03)', color: 'white', cursor: 'pointer', transition: 'all 0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' } }}>
-            <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: alpha(getAppColor(item.app), 0.1), color: getAppColor(item.app), display: 'grid', placeItems: 'center' }}><Logo app={item.app} size={15} variant="icon" /></Box>
-            <Box sx={{ minWidth: 0, flex: 1, textAlign: 'left' }}>
-                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.85rem' }} noWrap>{item.label}</Typography>
-                <Typography sx={{ color: 'white/40', fontSize: '0.72rem' }} noWrap>{item.description}</Typography>
-            </Box>
-          </Box>
-        ))}
-      </Box>
-    );
-    return <Box sx={{ bgcolor: '#161412', borderTop: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px' }}>{appList}</Box>;
-  };
-
   return (
       <AppBar ref={headerRef} position="fixed" elevation={0} sx={{ zIndex: 1201, bgcolor: '#161412', borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px', boxShadow: '0 16px 42px rgba(0,0,0,0.42)', backgroundImage: 'none', overflow: 'visible', height: activePanel ? 'auto' : '88px' }}>
         <SyncIndicator />
         <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, width: '100%', height: '88px', display: 'flex', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: 2 }}>
-            
-            {/* App Logo / Menu Trigger */}
             <Box onClick={user ? openAppMenu : () => openUnified('login')} sx={{ cursor: 'pointer', flexShrink: 0 }}>
               <Logo app={activeApp} size={32} variant={isDesktop ? 'full' : 'icon'} />
             </Box>
-
-            {/* ... (rest of the component) */}
           </Box>
         </Box>
-
         <AnimatePresence>
           {notificationsOpen ? renderNotificationPanel() : renderSearchPanel()}
         </AnimatePresence>
-        {renderAppPanel()}
         {renderProfilePanel()}
       </AppBar>
   );
