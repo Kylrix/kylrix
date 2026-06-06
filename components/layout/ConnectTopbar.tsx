@@ -145,8 +145,8 @@ export default function ConnectTopbar({
     return 'kylrix';
   }, [pathname]);
 
-  const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [appMenuOpen, setAppMenuOpen] = useState(false);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username'>('idle');
   
@@ -184,7 +184,7 @@ export default function ConnectTopbar({
   const profileName = user?.name || user?.email || 'User';
   const profileUsername = (user as any)?.username || (user as any)?.prefs?.username || null;
   
-  const [isClient, setIsClient] = useState(true);
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
 
   const profileSeed = useMemo(
@@ -237,8 +237,8 @@ export default function ConnectTopbar({
 
   const openSearch = useCallback(() => {
     setNotificationsOpen(false);
-    setProfileMenuAnchorEl(null);
-    setAppMenuAnchorEl(null);
+    setProfileMenuOpen(false);
+    setAppMenuOpen(false);
     setSearchOpen(true);
     setTimeout(() => {
       searchInputRef.current?.focus();
@@ -246,31 +246,16 @@ export default function ConnectTopbar({
   }, []);
 
   const handleCloseAll = useCallback(() => {
-    setProfileMenuAnchorEl(null);
-    setAppMenuAnchorEl(null);
+    setProfileMenuOpen(false);
+    setAppMenuOpen(false);
     setSearchOpen(false);
     setNotificationsOpen(false);
-  }, []);
-
-  const openAppMenu = useCallback((event: MouseEvent<HTMLElement>) => {
-    setNotificationsOpen(false);
-    setSearchOpen(false);
-    setProfileMenuAnchorEl(null);
-    setAppMenuAnchorEl(event.currentTarget);
-  }, []);
-
-  const openProfileMenu = useCallback((event: MouseEvent<HTMLElement>) => {
-    setNotificationsOpen(false);
-    setSearchOpen(false);
-    setAppMenuAnchorEl(null);
-    setProfileMenuAnchorEl(event.currentTarget);
-    setCopyState('idle');
   }, []);
 
   const toggleNotifications = useCallback(() => {
-    setSearchOpen(true); // Ensure search is expanded as the host
-    setAppMenuAnchorEl(null);
-    setProfileMenuAnchorEl(null);
+    setSearchOpen(true);
+    setAppMenuOpen(false);
+    setProfileMenuOpen(false);
     setNotificationsOpen(prev => !prev);
   }, []);
 
@@ -399,10 +384,7 @@ export default function ConnectTopbar({
     [activeApp],
   );
 
-  const appPanelMotion = useMemo(() => createTopbarPanelMotion(), []);
-
-  // activePanel determines if the Topbar should expand (accordion) or show standard drawers
-  const activePanel = searchOpen ? 'search' : notificationsOpen ? 'notifications' : profileMenuAnchorEl ? 'profile' : appMenuAnchorEl ? 'ecosystem' : null;
+  const activePanel = searchOpen ? 'search' : notificationsOpen ? 'notifications' : profileMenuOpen ? 'profile' : appMenuOpen ? 'ecosystem' : null;
 
   useEffect(() => {
     if (!activePanel) return;
@@ -417,283 +399,156 @@ export default function ConnectTopbar({
 
   const renderSearchPanel = () => {
     if (!searchOpen || notificationsOpen) return null;
-
     const query = searchQuery.trim().toLowerCase();
     const hasQuery = query.length >= 2;
 
-    const searchContent = (
-        <Box sx={{ width: '100%', px: isDesktop ? 0 : { xs: 2.25, md: 4 }, py: isDesktop ? 0 : 1.25, maxHeight: isDesktop ? 'none' : '45vh', overflowY: isDesktop ? 'visible' : 'auto' }}>
-          <Stack spacing={2} sx={{ mt: isDesktop ? 0 : 1.5 }}>
-            {!hasQuery ? (
-              <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' }, gap: 2.5 }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {suggestions.length > 0 && (
-                    <Box sx={{ display: 'grid', gap: 1 }}>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75, px: 0.5 }}>
-                        <Sparkles size={11} style={{ color: '#6366F1' }} />
-                        Smart Insights
-                      </Typography>
-                      <Box sx={{ display: 'grid', gap: 1 }}>
-                        {suggestions.map((suggestion) => (
-                          <Box key={suggestion.id} sx={{ p: 1.75, borderRadius: '22px', bgcolor: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.12)', display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-                            <Box sx={{ display: 'flex', gap: 1.25 }}>
-                              <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                                <Bot size={16} />
-                              </Box>
-                              <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.84rem' }}>{suggestion.title}</Typography>
-                                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.74rem' }}>{suggestion.description}</Typography>
-                              </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'flex-end' }}>
-                              <Button size="small" onClick={(e) => { e.stopPropagation(); dismissSuggestion(suggestion.id); }} sx={{ color: 'rgba(255,255,255,0.35)', textTransform: 'none', fontSize: '0.7rem', fontWeight: 700 }}>Cancel</Button>
-                              {suggestion.actionHref && (
-                                <Button size="small" onClick={() => { handleCloseAll(); router.push(suggestion.actionHref!); }} variant="contained" sx={{ bgcolor: '#6366F1', color: 'white', textTransform: 'none', fontSize: '0.7rem', fontWeight: 800 }}>{suggestion.actionLabel || 'Run'}</Button>
-                              )}
-                            </Box>
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+    return (
+      <Box sx={{ width: '100%', px: { xs: 2.25, md: 4 }, py: 1.25, borderBottom: '1px solid rgba(255,255,255,0.08)', bgcolor: '#161412', borderRadius: '0 0 28px 28px', boxShadow: '0 12px 32px rgba(0,0,0,0.35)', maxHeight: '45vh', overflowY: 'auto' }}>
+        <Stack spacing={2} sx={{ mt: 1.5 }}>
+          {!hasQuery ? (
+            <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' }, gap: 2.5 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {suggestions.length > 0 && (
+                  <Box sx={{ display: 'grid', gap: 1 }}>
                     <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75, px: 0.5 }}>
-                      <Activity size={11} style={{ color: '#F59E0B' }} />
-                      Quick Actions
+                      <Sparkles size={11} style={{ color: '#6366F1' }} /> Smart Insights
                     </Typography>
-                    <Box sx={{ display: 'grid', gap: 0.75 }}>
-                      {dynamicQuickActions.map((action) => (
-                        <Box key={action.id} component="button" onClick={() => { handleCloseAll(); router.push(action.href); }} sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1.25, px: 2, py: 1.25, borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', color: 'white', cursor: 'pointer', transition: 'all 0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', transform: 'translateX(2px)' } }}>
-                          <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}><Logo app={action.kind as any} size={15} variant="icon" /></Box>
-                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5, textAlign: 'left' }}>
-                            <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem' }} noWrap>{action.title}</Typography>
-                            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem' }}>{action.description}</Typography>
-                          </Box>
-                        </Box>
-                      ))}
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
-            ) : (
-              <Box sx={{ display: 'grid', gap: 1.5 }}>
-                <Box sx={{ display: 'grid', gap: 0.5 }}>
-                  <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>{searchSurface.searchAcrossLabel}</Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', sm: '1fr 1fr' }, gap: 0.75 }}>
-                    {searchSurface.searchTargets.slice(0, 4).map((action) => (
-                      <Box key={action.id} component="button" onClick={() => { handleCloseAll(); router.push(action.href); }} sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1.25, px: 2, py: 1.25, borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', color: 'white', textAlign: 'left', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
-                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}><Logo app={action.kind as any} size={15} variant="icon" /></Box>
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem' }} noWrap>{action.title}</Typography>
-                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.74rem' }} noWrap>{action.description}</Typography>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </Box>
-                {(searchingPeople || peopleResults.length > 0) && (
-                  <Box sx={{ display: 'grid', gap: 0.5 }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>People</Typography>
-                    <Box sx={{ display: 'grid', gap: 0.75 }}>
-                      {peopleResults.slice(0, 3).map((person) => (
-                        <Box key={person.$id} component="button" onClick={() => { stageProfileView(person, person.avatar); handleCloseAll(); router.push(`/u/${encodeURIComponent((person.username || '').replace(/^@+/, ''))}?transition=profile`); }} sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1.25, px: 2, py: 1.25, borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', color: 'white', textAlign: 'left', cursor: 'pointer' }}>
-                          <Avatar src={person.avatar || undefined} sx={{ width: 36, height: 36, borderRadius: '10px', bgcolor: 'rgba(255,255,255,0.06)' }}>{(person.displayName || 'U')[0]}</Avatar>
-                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                            <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem' }} noWrap>{person.displayName || person.name}</Typography>
-                            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.74rem' }} noWrap>@{person.username || 'user'}</Typography>
+                    <Box sx={{ display: 'grid', gap: 1 }}>
+                      {suggestions.map((suggestion) => (
+                        <Box key={suggestion.id} sx={{ p: 1.75, borderRadius: '22px', bgcolor: 'rgba(99, 102, 241, 0.04)', border: '1px solid rgba(99, 102, 241, 0.12)', display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                          <Box sx={{ display: 'flex', gap: 1.25 }}>
+                            <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', display: 'grid', placeItems: 'center', flexShrink: 0 }}><Bot size={16} /></Box>
+                            <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.25 }}><Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.84rem' }}>{suggestion.title}</Typography><Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.74rem' }}>{suggestion.description}</Typography></Box>
                           </Box>
                         </Box>
                       ))}
                     </Box>
                   </Box>
                 )}
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>Quick Actions</Typography>
+                  {dynamicQuickActions.map((action) => (
+                    <Box key={action.id} component="button" onClick={() => { handleCloseAll(); router.push(action.href); }} sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1.25, px: 2, py: 1.25, borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', color: 'white', cursor: 'pointer', textAlign: 'left', '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
+                      <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}><Logo app={action.kind as any} size={15} variant="icon" /></Box>
+                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}><Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem' }} noWrap>{action.title}</Typography><Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem' }}>{action.description}</Typography></Box>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
-            )}
-          </Stack>
-        </Box>
+          ) : (
+            <Box sx={{ display: 'grid', gap: 1.5 }}>
+              <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', px: 0.5 }}>{searchSurface.searchAcrossLabel}</Typography>
+              {searchSurface.searchTargets.slice(0, 4).map((action) => (
+                <Box key={action.id} component="button" onClick={() => { handleCloseAll(); router.push(action.href); }} sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1.25, px: 2, py: 1.25, borderRadius: '20px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', color: 'white', textAlign: 'left', cursor: 'pointer', '&:hover': { bgcolor: 'rgba(255,255,255,0.03)' } }}>
+                  <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}><Logo app={action.kind as any} size={15} variant="icon" /></Box>
+                  <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}><Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem' }} noWrap>{action.title}</Typography><Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontSize: '0.74rem' }} noWrap>{action.description}</Typography></Box>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </Stack>
+      </Box>
     );
-
-    if (isDesktop) {
-      return (
-        <Drawer anchor="left" open={searchOpen} onClose={handleCloseAll} disablePortal={true} PaperProps={{ sx: { bgcolor: '#161412', width: 360, height: '100vh', borderRight: '1px solid rgba(255,255,255,0.06)', p: 2.75, display: 'flex', flexDirection: 'column' } }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.75 }}>
-            <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>Search Ecosystem</Typography>
-            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)' }}><CloseIcon size={16} /></IconButton>
-          </Box>
-          <Box sx={{ flex: 1, overflowY: 'auto' }}>{searchContent}</Box>
-        </Drawer>
-      );
-    }
-    return <Box sx={{ width: '100%', borderTop: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px', bgcolor: '#161412', overflow: 'hidden' }}>{searchContent}</Box>;
   };
 
   const renderNotificationPanel = () => {
     if (!notificationsOpen) return null;
-    
-    const notificationList = (
-      <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, mb: 1 }}>
-          <Typography sx={{ color: 'white/40', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent Alerts</Typography>
-          {unreadNotifCount > 0 && <Box sx={{ px: 1, py: 0.25, bgcolor: BRAND_INDIGO, color: 'white', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900 }}>{unreadNotifCount} NEW</Box>}
-        </Box>
-        {notifications.map(notif => (
-          <Box key={notif.id} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: notif.read ? 'transparent' : 'rgba(255,255,255,0.02)', border: '1px solid', borderColor: notif.read ? 'rgba(255,255,255,0.02)' : alpha(notif.accent, 0.15), cursor: 'pointer', transition: 'all 0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' } }} onClick={() => markNotificationRead(notif.id)}>
-            <Box sx={{ width: 32, height: 32, borderRadius: '10px', bgcolor: alpha(notif.accent, 0.1), color: notif.accent, display: 'grid', placeItems: 'center', flexShrink: 0 }}><Bell size={14} /></Box>
-            <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.8rem', lineHeight: 1.2 }}>{notif.title}</Typography>
-              <Typography sx={{ color: 'white/40', fontSize: '0.72rem', lineHeight: 1.3 }}>{notif.message}</Typography>
-            </Box>
-            <IconButton size="small" onClick={(e) => dismissNotification(notif.id, e)} sx={{ color: 'white/10', alignSelf: 'flex-start' }}><CloseIcon size={12} /></IconButton>
-          </Box>
-        ))}
-      </Box>
-    );
-
-    if (isDesktop) {
-        return (
-          <Drawer anchor="top" open={notificationsOpen} onClose={() => setNotificationsOpen(false)} disablePortal={true} PaperProps={{ sx: { bgcolor: '#161412', width: 420, mx: 'auto', left: '50%', transform: 'translateX(-50%)', borderRadius: '0 0 24px 24px', border: '1px solid rgba(255,255,255,0.08)', borderTop: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', maxHeight: 320, overflow: 'hidden' } }}>
-            <Box sx={{ flex: 1, overflowY: 'auto' }}>{notificationList}</Box>
-          </Drawer>
-        );
-    }
-
     return (
-      <Box sx={{ width: '100%', bgcolor: '#161412', borderTop: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px', overflow: 'hidden' }}>
-        {notificationList}
+      <Box sx={{ width: '100%', bgcolor: '#161412', borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px', overflow: 'hidden', boxShadow: '0 12px 32px rgba(0,0,0,0.35)', maxHeight: 320 }}>
+        <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, overflowY: 'auto' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1, mb: 1 }}><Typography sx={{ color: 'white/40', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent Alerts</Typography>{unreadNotifCount > 0 && <Box sx={{ px: 1, py: 0.25, bgcolor: BRAND_INDIGO, color: 'white', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900 }}>{unreadNotifCount} NEW</Box>}</Box>
+          {notifications.map(notif => (
+            <Box key={notif.id} sx={{ display: 'flex', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: notif.read ? 'transparent' : 'rgba(255,255,255,0.02)', border: '1px solid', borderColor: notif.read ? 'rgba(255,255,255,0.02)' : alpha(notif.accent, 0.15), cursor: 'pointer', transition: 'all 0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' } }} onClick={() => markNotificationRead(notif.id)}><Box sx={{ width: 32, height: 32, borderRadius: '10px', bgcolor: alpha(notif.accent, 0.1), color: notif.accent, display: 'grid', placeItems: 'center', flexShrink: 0 }}><Bell size={14} /></Box><Box sx={{ minWidth: 0, flex: 1 }}><Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.8rem', lineHeight: 1.2 }}>{notif.title}</Typography><Typography sx={{ color: 'white/40', fontSize: '0.72rem', lineHeight: 1.3 }}>{notif.message}</Typography></Box><IconButton size="small" onClick={(e) => dismissNotification(notif.id, e)} sx={{ color: 'white/10', alignSelf: 'flex-start' }}><CloseIcon size={12} /></IconButton></Box>
+          ))}
+        </Box>
       </Box>
     );
   };
 
   const renderProfilePanel = () => {
-    if (!profileMenuAnchorEl || !user) return null;
-    const profileContent = (
-      <Box sx={{ p: 2 }}>
+    if (!profileMenuOpen || !user) return null;
+    return (
+      <Drawer anchor="left" open={profileMenuOpen} onClose={() => setProfileMenuOpen(false)} disablePortal={true} PaperProps={{ sx: { bgcolor: '#161412', width: 320, height: '100vh', borderRight: '1px solid rgba(255,255,255,0.06)', p: 2.75, display: 'flex', flexDirection: 'column' } }}>
+        <Typography variant="h6" sx={{ color: 'white', fontWeight: 900, mb: 3 }}>Secure Space</Typography>
+        <Box sx={{ flex: 1, overflowY: 'auto' }}>
           <Paper elevation={0} sx={{ borderRadius: '24px', bgcolor: '#161412', border: `1px solid ${alpha(appAccent, 0.2)}`, overflow: 'hidden', p: 2 }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-                <IdentityAvatar src={profileAvatarUrl} size={64} pro={isPro} fallback={profileName[0]} />
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1rem' }} noWrap>{profileName}</Typography>
-                    <Typography sx={{ color: 'white/40', fontSize: '0.8rem', fontWeight: 700 }} noWrap>@{profileUsername || 'user'}</Typography>
-                </Box>
-            </Box>
-            <Stack spacing={1}>
-                <Button fullWidth onClick={() => { handleCloseAll(); openWallet(); }} sx={{ justifyContent: 'flex-start', color: appAccent, bgcolor: alpha(appAccent, 0.05), borderRadius: '12px' }} startIcon={<Wallet size={16} />}>Wallet</Button>
-                <Button fullWidth onClick={() => { handleCloseAll(); router.push('/settings'); }} sx={{ justifyContent: 'flex-start', color: 'white', bgcolor: 'white/3', borderRadius: '12px' }} startIcon={<UserIcon size={16} />}>Settings</Button>
-                <Button fullWidth onClick={() => { handleCloseAll(); logout(); }} sx={{ justifyContent: 'flex-start', color: '#ff4d4d', bgcolor: 'rgba(255,77,77,0.05)', borderRadius: '12px' }} startIcon={<CloseIcon size={16} />}>Sign Out</Button>
-            </Stack>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}><IdentityAvatar src={profileAvatarUrl} userId={user?.$id} size={64} pro={isPro} fallback={profileName[0]} /><Box sx={{ minWidth: 0, flex: 1 }}><Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1rem' }} noWrap>{profileName}</Typography><Typography sx={{ color: 'white/40', fontSize: '0.8rem', fontWeight: 700 }} noWrap>@{profileUsername || 'user'}</Typography></Box></Box>
+            <Stack spacing={1}><Button fullWidth onClick={() => { handleCloseAll(); openWallet(); }} sx={{ justifyContent: 'flex-start', color: appAccent, bgcolor: alpha(appAccent, 0.05), borderRadius: '12px' }} startIcon={<Wallet size={16} />}>Wallet</Button><Button fullWidth onClick={() => { handleCloseAll(); router.push('/settings'); }} sx={{ justifyContent: 'flex-start', color: 'white', bgcolor: 'white/3', borderRadius: '12px' }} startIcon={<UserIcon size={16} />}>Settings</Button><Button fullWidth onClick={() => { handleCloseAll(); logout(); }} sx={{ justifyContent: 'flex-start', color: '#ff4d4d', bgcolor: 'rgba(255,77,77,0.05)', borderRadius: '12px' }} startIcon={<CloseIcon size={16} />}>Sign Out</Button></Stack>
           </Paper>
-      </Box>
+        </Box>
+      </Drawer>
     );
-    if (isDesktop) {
-      return (
-        <Drawer anchor="left" open={Boolean(profileMenuAnchorEl)} onClose={handleCloseAll} disablePortal={true} PaperProps={{ sx: { bgcolor: '#161412', width: 320, height: '100vh', borderRight: '1px solid rgba(255,255,255,0.06)', p: 2.75 } }}>
-          <Typography variant="h6" sx={{ color: 'white', fontWeight: 900, mb: 3 }}>Secure Space</Typography>
-          {profileContent}
-        </Drawer>
-      );
-    }
-    return <Box sx={{ bgcolor: '#161412', borderTop: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px' }}>{profileContent}</Box>;
   };
 
-
-  return (
-    <AppBar ref={headerRef} position="fixed" elevation={0} sx={{ zIndex: 1201, bgcolor: '#161412', borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px', boxShadow: '0 16px 42px rgba(0,0,0,0.42)', backgroundImage: 'none', overflow: 'visible', height: activePanel ? 'auto' : '88px' }}>
-      <SyncIndicator />
-      <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, width: '100%', height: '88px', display: 'flex', alignItems: 'center' }}>
-        <Box sx={{ 
-          display: 'grid', 
-          gridTemplateColumns: { xs: 'auto 1fr auto', md: '1fr auto 1fr' }, 
-          alignItems: 'center', 
-          width: '100%', 
-          gap: 2 
-        }}>
-
-          {/* Left: App Logo / Menu Trigger */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
-            <Box onClick={user ? openAppMenu : () => openUnified('login')} sx={{ cursor: 'pointer', flexShrink: 0 }}>
-              <Logo app={activeApp} size={32} variant={isDesktop ? 'full' : 'icon'} />
-            </Box>
-          </Box>
-
-          {/* Center: 🏝️ Dynamic Island Search & Notification Host */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', minWidth: 0 }}>
-            {user ? (
-              <AnimatePresence mode="wait">
-                {searchOpen ? (
-                  <motion.div 
-                    key="search-active"
-                    initial={{ width: 44, opacity: 0 }} 
-                    animate={{ width: isDesktop ? 520 : '100%', opacity: 1 }} 
-                    exit={{ width: 44, opacity: 0 }} 
-                    transition={{ type: 'spring', damping: 25, stiffness: 200 }} 
-                    style={{ position: 'relative', maxWidth: '100%' }}
-                  >
-                    <Paper elevation={0} sx={{ height: 44, display: 'flex', alignItems: 'center', gap: 1.25, px: 1.5, border: '1px solid rgba(255,255,255,0.1)', bgcolor: '#000', color: 'white', borderRadius: '24px', boxShadow: '0 0 26px rgba(0,0,0,0.5)' }}>
-                      <Search size={16} strokeWidth={2.5} style={{ opacity: 0.6 }} />
-                      <InputBase inputRef={searchInputRef} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search ecosystem..." sx={{ flex: 1, color: 'white', fontWeight: 800, fontSize: '0.9rem', '& input::placeholder': { color: 'white/20' } }} />
-
-                      {/* 🔔 Notifications CTA */}
-                      <IconButton onClick={toggleNotifications} sx={{ color: unreadNotifCount > 0 ? '#6366F1' : 'white/20', position: 'relative', p: 0.5, bgcolor: notificationsOpen ? 'white/5' : 'transparent' }}>
-                        <Bell size={18} strokeWidth={2.5} />
-                        {unreadNotifCount > 0 && <Box sx={{ position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: '50%', bgcolor: '#EC4899', border: '1.5px solid #000' }} />}
-                      </IconButton>
-
-                      <Box sx={{ width: 1, height: 20, bgcolor: 'white/10', mx: 0.5 }} />
-
-                      <IconButton size="small" onClick={() => setSearchOpen(false)} sx={{ color: 'white/40' }}><CloseIcon size={16} /></IconButton>
-                    </Paper>
-                  </motion.div>
-                ) : (
-                  <motion.div 
-                    key="island-rest"
-                    initial={{ scale: 0.8, opacity: 0 }} 
-                    animate={{ scale: 1, opacity: 1 }} 
-                    whileHover={{ scale: 1.05 }} 
-                    onClick={openSearch} 
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <Box sx={{ width: { xs: 44, md: 160 }, height: 44, borderRadius: '999px', bgcolor: '#000', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.25, color: 'white', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
-                      <Search size={18} strokeWidth={2.5} />
-                      <Typography sx={{ display: { xs: 'none', md: 'block' }, fontWeight: 900, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Search</Typography>
-                      {unreadNotifCount > 0 && <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: '#EC4899' }} />}
-                    </Box>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            ) : <Box sx={{ height: 44 }} />}
-          </Box>
-
-          {/* Right: Smart Systems & Profile */}
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Stack direction="row" alignItems="center" spacing={1.5} sx={{ flexShrink: 0 }}>
-              {user ? (
-                <>
-                  <IconButton onClick={() => openAgenticDrawer()} sx={{ color: appAccent, bgcolor: '#0A0908', border: '1px solid', borderColor: alpha(appAccent, 0.2), borderRadius: '50%', width: 38, height: 38, boxShadow: `0 8px 22px ${alpha(appAccent, 0.15)}`, '&:hover': { bgcolor: '#111' } }}>
-                    <Bot size={16} strokeWidth={2} />
-                  </IconButton>
-                  <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
-                    <IdentityAvatar 
-                      src={profileAvatarUrl} 
-                      userId={user?.$id}
-                      size={38} 
-                      pro={isPro} 
-                      fallback={profileName[0]} 
-                    />
-                  </ButtonBase>
-                </>
-              ) : (
-                <Button onClick={() => openUnified('login')} sx={{ bgcolor: '#6366F1', color: 'white', fontWeight: 900, borderRadius: '12px', px: 2.5, py: 1, '&:hover': { bgcolor: '#5254E8' } }}>{isAuthenticating ? <CircularProgress size={16} color="inherit" /> : 'Connect'}</Button>
-              )}
-            </Stack>
+  const renderAppPanel = () => {
+    if (!appMenuOpen) return null;
+    return (
+      <Drawer anchor="left" open={appMenuOpen} onClose={() => setAppMenuOpen(false)} disablePortal={true} PaperProps={{ sx: { bgcolor: '#161412', width: 320, height: '100vh', borderRight: '1px solid rgba(255,255,255,0.06)', p: 2.75, display: 'flex', flexDirection: 'column' } }}>
+        <Typography variant="h6" sx={{ color: 'white', fontWeight: 900, mb: 3 }}>Ecosystem</Typography>
+        <Box sx={{ flex: 1, overflowY: 'auto' }}>
+          <Box sx={{ display: 'grid', gap: 1 }}>
+            {connectApps.map(item => (
+              <Box key={item.href} component="button" onClick={() => { handleCloseAll(); router.push(item.href); }} sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, borderRadius: '16px', bgcolor: item.selected ? alpha(getAppColor(item.app), 0.06) : 'rgba(255,255,255,0.01)', border: '1px solid', borderColor: item.selected ? alpha(getAppColor(item.app), 0.15) : 'rgba(255,255,255,0.03)', color: 'white', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', '&:hover': { bgcolor: 'rgba(255,255,255,0.04)' } }}>
+                <Box sx={{ width: 34, height: 34, borderRadius: '10px', bgcolor: alpha(getAppColor(item.app), 0.1), color: getAppColor(item.app), display: 'grid', placeItems: 'center' }}><Logo app={item.app} size={15} variant="icon" /></Box>
+                <Box sx={{ minWidth: 0, flex: 1 }}><Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.85rem' }} noWrap>{item.label}</Typography><Typography sx={{ color: 'white/40', fontSize: '0.72rem' }} noWrap>{item.description}</Typography></Box>
+              </Box>
+            ))}
           </Box>
         </Box>
-      </Box>
+      </Drawer>
+    );
+  };
 
-      <AnimatePresence>
-        {notificationsOpen ? renderNotificationPanel() : renderSearchPanel()}
-      </AnimatePresence>
-       
+  return (
+    <>
+      <AppBar ref={headerRef} position="fixed" elevation={0} sx={{ zIndex: 1201, bgcolor: '#161412', borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: '0 0 28px 28px', boxShadow: '0 16px 42px rgba(0,0,0,0.42)', backgroundImage: 'none', overflow: 'visible', height: activePanel === 'search' || activePanel === 'notifications' ? 'auto' : '88px' }}>
+        <SyncIndicator />
+        <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, width: '100%', height: '88px', display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', width: '100%', gap: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <Box onClick={user ? () => setAppMenuOpen(true) : () => openUnified('login')} sx={{ cursor: 'pointer', flexShrink: 0 }}>
+                <Logo app={activeApp} size={32} variant={isDesktop ? 'full' : 'icon'} />
+              </Box>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'center', minWidth: 0 }}>
+              {user ? (
+                <AnimatePresence mode="wait">
+                  {searchOpen ? (
+                    <motion.div key="search-active" initial={{ width: 44, opacity: 0 }} animate={{ width: isDesktop ? 520 : '100%', opacity: 1 }} exit={{ width: 44, opacity: 0 }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} style={{ position: 'relative', maxWidth: '100%' }}>
+                      <Paper elevation={0} sx={{ height: 44, display: 'flex', alignItems: 'center', gap: 1.25, px: 1.5, border: '1px solid rgba(255,255,255,0.1)', bgcolor: '#000', color: 'white', borderRadius: '24px', boxShadow: '0 0 26px rgba(0,0,0,0.5)' }}>
+                        <Search size={16} strokeWidth={2.5} style={{ opacity: 0.6 }} />
+                        <InputBase inputRef={searchInputRef} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search ecosystem..." sx={{ flex: 1, color: 'white', fontWeight: 800, fontSize: '0.9rem', '& input::placeholder': { color: 'white/20' } }} />
+                        <IconButton onClick={toggleNotifications} sx={{ color: unreadNotifCount > 0 ? '#6366F1' : 'white/20', position: 'relative', p: 0.5, bgcolor: notificationsOpen ? 'white/5' : 'transparent' }}><Bell size={18} strokeWidth={2.5} />{unreadNotifCount > 0 && <Box sx={{ position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: '50%', bgcolor: '#EC4899', border: '1.5px solid #000' }} />}</IconButton>
+                        <Box sx={{ width: 1, height: 20, bgcolor: 'white/10', mx: 0.5 }} />
+                        <IconButton size="small" onClick={() => setSearchOpen(false)} sx={{ color: 'white/40' }}><CloseIcon size={16} /></IconButton>
+                      </Paper>
+                    </motion.div>
+                  ) : (
+                    <motion.div key="island-rest" initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} whileHover={{ scale: 1.05 }} onClick={openSearch} style={{ cursor: 'pointer' }}>
+                      <Box sx={{ width: { xs: 44, md: 160 }, height: 44, borderRadius: '999px', bgcolor: '#000', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.25, color: 'white', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}><Search size={18} strokeWidth={2.5} /><Typography sx={{ display: { xs: 'none', md: 'block' }, fontWeight: 900, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Search</Typography>{unreadNotifCount > 0 && <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: '#EC4899' }} />}</Box>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              ) : <Box sx={{ height: 44 }} />}
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Stack direction="row" alignItems="center" spacing={1.5}>
+                {user ? (
+                  <>
+                    <IconButton onClick={() => openAgenticDrawer()} sx={{ color: appAccent, bgcolor: '#0A0908', border: '1px solid', borderColor: alpha(appAccent, 0.2), borderRadius: '50%', width: 38, height: 38, boxShadow: `0 8px 22px ${alpha(appAccent, 0.15)}`, '&:hover': { bgcolor: '#111' } }}><Bot size={16} strokeWidth={2} /></IconButton>
+                    <ButtonBase onClick={() => setProfileMenuOpen(true)} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}><IdentityAvatar src={profileAvatarUrl} userId={user?.$id} size={38} pro={isPro} fallback={profileName[0]} /></ButtonBase>
+                  </>
+                ) : (
+                  <Button onClick={() => openUnified('login')} sx={{ bgcolor: '#6366F1', color: 'white', fontWeight: 900, borderRadius: '12px', px: 2.5, py: 1, '&:hover': { bgcolor: '#5254E8' } }}>{isAuthenticating ? <CircularProgress size={16} color="inherit" /> : 'Connect'}</Button>
+                )}
+              </Stack>
+            </Box>
+          </Box>
+        </Box>
+        <AnimatePresence>{notificationsOpen ? renderNotificationPanel() : renderSearchPanel()}</AnimatePresence>
+      </AppBar>
+      {renderAppPanel()}
       {renderProfilePanel()}
-    </AppBar>
+    </>
   );
 }
