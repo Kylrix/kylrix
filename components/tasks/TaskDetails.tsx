@@ -807,10 +807,10 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
                     huddleMessages.map((msg) => (
                       <div key={msg.id} className={`flex flex-col gap-0.5 ${msg.senderId === user?.$id ? 'items-end' : 'items-start'}`}>
                         <span className="text-[9px] font-bold text-white/30 font-mono">{msg.senderName}</span>
-                        <div className={`px-3 py-2 rounded-2xl text-xs leading-relaxed max-w-[85%] border ${
+                        <div className={`px-3 py-2 px-5 rounded-2xl text-xs leading-relaxed max-w-[85%] border shadow-[0_4px_12px_-4px_rgba(0,0,0,0.8)] ${
                           msg.senderId === user?.$id
-                            ? 'bg-[#A855F7] border-[#A855F7]/20 text-[#0A0908] font-semibold'
-                            : 'bg-[#161412] border-[#23211F] text-[#F5F2ED]'
+                            ? 'bg-[#161412] border-[#23211F] border-r-[3px] border-r-[#6366F1] text-white font-semibold'
+                            : 'bg-[#161412] border-[#23211F] border-l-[3px] border-l-[#34322F] text-[#F5F2ED]'
                         }`}>
                           {msg.content}
                         </div>

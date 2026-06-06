@@ -681,7 +681,7 @@ export function ProjectDiscussionSidebar({
                   </span>
                   <div className="flex flex-col gap-1">
                     <div
-                      className="p-4 rounded-r-2xl rounded-bl-2xl rounded-tl-sm !bg-[#161412] !bg-opacity-100 border border-[#23211F] border-l-[3px] border-l-[#818CF8] text-[#F5F2ED]"
+                      className="p-4 px-6 rounded-r-2xl rounded-bl-2xl rounded-tl-sm bg-[#161412] border border-[#23211F] border-l-[3px] border-l-[#818CF8] text-[#F5F2ED] shadow-[0_4px_12px_-4px_rgba(0,0,0,0.8)]"
                     >
                       {(() => {
                         const parsedParent = parseMessageContent(activeThreadParent.content);
@@ -745,10 +745,10 @@ export function ProjectDiscussionSidebar({
                           {reply.senderName}
                         </span>
                         <div
-                          className={`p-3.5 shadow-xl shadow-black/30 border border-[#23211F] text-xs font-semibold leading-relaxed break-words font-satoshi !bg-opacity-100 ${
+                          className={`p-3.5 px-6 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.8)] border border-[#23211F] text-xs font-semibold leading-relaxed break-words font-satoshi transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] bg-[#161412] ${
                             isSelfReply 
-                              ? '!bg-[#161412] text-white rounded-l-2xl rounded-br-2xl rounded-tr-sm border-r-[3px] border-r-[#6366F1]' 
-                              : '!bg-[#161412] text-[#F5F2ED] rounded-r-2xl rounded-bl-2xl rounded-tl-sm border-l-[3px] border-l-[#34322F]'
+                              ? 'text-white rounded-l-2xl rounded-br-2xl rounded-tr-sm border-r-[3px] border-r-[#6366F1]' 
+                              : 'text-[#F5F2ED] rounded-r-2xl rounded-bl-2xl rounded-tl-sm border-l-[3px] border-l-[#34322F]'
                           }`}
                         >
                           {parsedReply.type === 'voice' && parsedReply.voiceFileId ? (
@@ -825,10 +825,10 @@ export function ProjectDiscussionSidebar({
                           onTouchStart={(e) => handleTouchStart(e, msg)}
                           onTouchMove={handleTouchMove}
                           onTouchEnd={handleTouchEnd}
-                          className={`p-3.5 shadow-xl shadow-black/30 border border-[#23211F] text-xs font-semibold leading-relaxed break-words font-satoshi cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:shadow-black/40 !bg-opacity-100 ${
+                          className={`p-3.5 px-6 shadow-[0_4px_12px_-4px_rgba(0,0,0,0.8)] border border-[#23211F] text-xs font-semibold leading-relaxed break-words font-satoshi cursor-pointer transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-[1px] hover:shadow-[0_6px_16px_-4px_rgba(0,0,0,0.9)] bg-[#161412] ${
                             isSelf 
-                              ? '!bg-[#161412] text-white rounded-l-2xl rounded-br-2xl rounded-tr-sm border-r-[3px] border-r-[#6366F1]' 
-                              : '!bg-[#161412] text-[#F5F2ED] rounded-r-2xl rounded-bl-2xl rounded-tl-sm border-l-[3px] border-l-[#34322F]'
+                              ? 'text-white rounded-l-2xl rounded-br-2xl rounded-tr-sm border-r-[3px] border-r-[#6366F1]' 
+                              : 'text-[#F5F2ED] rounded-r-2xl rounded-bl-2xl rounded-tl-sm border-l-[3px] border-l-[#34322F]'
                           }`}
                         >
                           {parsed.type === 'voice' && parsed.voiceFileId ? (
