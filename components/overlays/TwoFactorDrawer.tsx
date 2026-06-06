@@ -14,10 +14,10 @@ import {
   Download, 
   CheckCircle2, 
   ArrowRight,
-  RefreshCw,
-  ChevronUp,
-  ChevronDown,
-  AlertTriangle
+  ShieldAlert,
+  AlertTriangle,
+  Lock,
+  ArrowDown
 } from 'lucide-react';
 import { 
   Drawer, 
@@ -30,8 +30,12 @@ import {
   IconButton, 
   alpha,
   CircularProgress,
-  Paper
+  Paper,
+  Card,
+  CardHeader,
+  CardContent
 } from '@/lib/mui-tailwind/material';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type LoginMethod = 'email-otp' | 'oauth2' | 'password' | 'unknown';
 
@@ -50,6 +54,8 @@ type Step = 'summary' | 'email-init' | 'email-verify' | 'totp' | 'done';
 const RECOVERY_COPY_HINT = 'Save these recovery codes in a secure place. They are shown only once.';
 const BRAND_INDIGO = '#6366F1';
 const BRAND_EMERALD = '#10B981';
+const NAV_SURFACE = '#161412';
+const PITCH_BLACK = '#0A0908';
 
 export function TwoFactorDrawer({
   open,
@@ -367,7 +373,7 @@ export function TwoFactorDrawer({
       ModalProps={{ keepMounted: false }}
       PaperProps={{
         sx: {
-          bgcolor: '#161412',
+          bgcolor: NAV_SURFACE,
           backgroundImage: 'none',
           ...(isDesktop ? {
             borderLeft: '1px solid rgba(255,255,255,0.08)',
@@ -385,258 +391,245 @@ export function TwoFactorDrawer({
         }
       }}
     >
-      {/* Header */}
-      <Box sx={{ px: 4, py: 3, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: '#161412', zIndex: 10 }}>
-        <Box>
-          <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.1rem', fontClash: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
-            {mode === 'reminder' ? 'Secure Your Account' : '2FA Configuration'}
-          </Typography>
-          <Typography sx={{ color: 'white/40', fontSize: '0.75rem', fontWeight: 600 }}>
-            Mandatory Flow: Email Verification → TOTP Setup
-          </Typography>
+      {/* Header Panel */}
+      <Box sx={{ p: 0, borderBottom: '1px solid rgba(255,255,255,0.05)', bgcolor: NAV_SURFACE, zIndex: 10 }}>
+        <Box sx={{ px: 3, py: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: isTwoFactorOn ? BRAND_EMERALD : BRAND_INDIGO, shadow: `0 0 10px ${isTwoFactorOn ? BRAND_EMERALD : BRAND_INDIGO}` }} />
+            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1rem', fontClash: 'var(--font-clash)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+                    {mode === 'reminder' ? 'SECURITY UPGRADE' : '2FA PROTOCOL'}
+                </Typography>
+                <Typography component="span" sx={{ color: 'white/40', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.3 }}>
+                    Mandatory: Email → App Authenticator
+                </Typography>
+            </Box>
+          </Box>
+          <IconButton onClick={onClose} sx={{ color: 'white/30', '&:hover': { color: 'white', bgcolor: 'white/5' }, width: 36, height: 36 }}>
+            <X size={18} />
+          </IconButton>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: 'white/30', '&:hover': { color: 'white', bgcolor: 'white/5' } }}>
-          <X size={20} />
-        </IconButton>
       </Box>
 
-      {/* Content */}
-      <Box sx={{ p: 4, flex: 1, overflowY: 'auto', bgcolor: '#0A0908' }}>
-        {error && (
-          <Box sx={{ mb: 4, p: 3, borderRadius: '16px', bgcolor: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-            <AlertTriangle size={18} style={{ color: '#ef4444', flexShrink: 0, marginTop: 2 }} />
-            <Typography sx={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: 600, lineHeight: 1.5 }}>
-              {error}
-            </Typography>
-          </Box>
-        )}
-
-        {step === 'summary' && (
-          <Stack spacing={4} className="animate-fadeIn">
-            <Box sx={{ p: 3, borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.03)' }}>
-              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.9rem', mb: 1 }}>Ecosystem Security Protocol</Typography>
-              <Typography sx={{ color: 'white/50', fontSize: '0.8rem', lineHeight: 1.6 }}>
-                Enabling Two-Factor Authentication adds an extra layer of protection to your Kylrix identity. We require email verification as a fallback before setting up your primary TOTP factor.
-              </Typography>
-            </Box>
-
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={isTwoFactorOn ? disableTwoFactor : startTwoFactorSetup}
-              disabled={loading || (!isTwoFactorOn && !canUseEmailFactor)}
-              sx={{
-                py: 2,
-                borderRadius: '16px',
-                bgcolor: isTwoFactorOn ? 'rgba(239, 68, 68, 0.1)' : BRAND_INDIGO,
-                color: isTwoFactorOn ? '#ef4444' : 'white',
-                fontWeight: 900,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                '&:hover': { bgcolor: isTwoFactorOn ? 'rgba(239, 68, 68, 0.2)' : '#4f46e5' }
-              }}
-            >
-              {loading ? <CircularProgress size={20} color="inherit" /> : (isTwoFactorOn ? 'Deactivate 2FA' : 'Begin Setup')}
-            </Button>
-          </Stack>
-        )}
-
-        {step === 'email-init' && (
-          <Stack spacing={4} className="animate-fadeIn">
-            <Box sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'center' }}>
-              <Box sx={{ width: 64, height: 64, borderRadius: '20px', bgcolor: alpha(BRAND_INDIGO, 0.1), color: BRAND_INDIGO, display: 'grid', placeItems: 'center', mx: 'auto', mb: 3 }}>
-                <Mail size={32} />
-              </Box>
-              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '1.1rem', mb: 1 }}>1. Email Verification</Typography>
-              <Typography sx={{ color: 'white/40', fontSize: '0.85rem', mb: 4 }}>
-                We'll send a 6-digit code to verify your primary email relay.
-              </Typography>
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={sendEmailCode}
-                disabled={loading}
-                sx={{ py: 1.75, borderRadius: '14px', bgcolor: BRAND_INDIGO, fontWeight: 900 }}
-              >
-                {loading ? <CircularProgress size={20} color="inherit" /> : 'Send Code'}
-              </Button>
-            </Box>
-          </Stack>
-        )}
-
-        {step === 'email-verify' && (
-          <Stack spacing={4} className="animate-fadeIn">
-            <Box sx={{ p: 4, borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.03)' }}>
-              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '1rem', mb: 2 }}>Enter Verification Code</Typography>
-              <Box 
-                component="input"
-                type="text"
-                value={emailOtp}
-                onChange={(e: any) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                sx={{
-                  width: '100%',
-                  bgcolor: '#0A0908',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '16px',
-                  px: 3,
-                  py: 2,
-                  fontSize: '1.5rem',
-                  fontWeight: 900,
-                  textAlign: 'center',
-                  letterSpacing: '0.25em',
-                  mb: 4,
-                  outline: 'none',
-                  '&:focus': { borderColor: BRAND_INDIGO }
-                }}
-              />
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={verifyEmailChallenge}
-                disabled={loading || emailOtp.length !== 6 || !vaultUnlocked}
-                sx={{ py: 1.75, borderRadius: '14px', bgcolor: BRAND_INDIGO, fontWeight: 900 }}
-              >
-                {loading ? <CircularProgress size={20} color="inherit" /> : 'Verify & Continue'}
-              </Button>
-              {!vaultUnlocked && (
-                <Typography sx={{ color: '#F59E0B', fontSize: '0.75rem', mt: 2, fontWeight: 700, textAlign: 'center' }}>
-                  Unlock your vault to enable 2FA.
-                </Typography>
-              )}
-            </Box>
-          </Stack>
-        )}
-
-        {step === 'totp' && (
-          <Stack spacing={4} className="animate-fadeIn">
-            <Box sx={{ p: 3, borderRadius: '24px', bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.03)' }}>
-              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '1rem', mb: 1 }}>2. Authenticator Setup</Typography>
-              <Typography sx={{ color: 'white/40', fontSize: '0.8rem', mb: 3 }}>
-                Scan this QR code with your security app (e.g. Google Authenticator, Raivo).
-              </Typography>
-              
-              {totpQr && (
-                <Box sx={{ p: 2, bgcolor: 'white', borderRadius: '20px', display: 'flex', justifyContent: 'center', mb: 3 }}>
-                  <Box component="img" src={totpQr} sx={{ width: 200, height: 200 }} />
+      {/* Main Content Area */}
+      <Box sx={{ p: 0, flex: 1, overflowY: 'auto', bgcolor: PITCH_BLACK }}>
+        <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            
+            {/* Context Header */}
+            {step !== 'done' && (
+                <Box sx={{ p: 2.5, borderRadius: '24px', bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.04)' }}>
+                    <Typography component="span" sx={{ display: 'block', color: 'white', fontWeight: 800, fontSize: '0.85rem', mb: 0.75, lineHeight: 1.3 }}>Ecosystem Integrity Check</Typography>
+                    <Typography component="span" sx={{ display: 'block', color: 'white/50', fontSize: '0.78rem', fontWeight: 600, lineHeight: 1.5 }}>
+                        To mathematically prevent lockout, we verify your email relay as a secure backup before establishing TOTP as your primary factor.
+                    </Typography>
                 </Box>
-              )}
-
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: '#0A0908', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', mb: 3 }}>
-                <Typography sx={{ color: 'white/70', fontSize: '0.7rem', fontWeight: 700, fontFamily: 'var(--font-mono)', flex: 1, wordBreak: 'break-all' }}>
-                  {totpSecret}
-                </Typography>
-                <IconButton onClick={() => copyToClipboard(totpSecret, 'Secret copied.')} sx={{ color: 'white/30', '&:hover': { color: 'white' } }}>
-                  <Copy size={16} />
-                </IconButton>
-              </Box>
-
-              <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.9rem', mb: 2 }}>Verify Authenticator Code</Typography>
-              <Box 
-                component="input"
-                type="text"
-                value={totpOtp}
-                onChange={(e: any) => setTotpOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                sx={{
-                  width: '100%',
-                  bgcolor: '#0A0908',
-                  color: 'white',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: '16px',
-                  px: 3,
-                  py: 1.5,
-                  fontSize: '1.25rem',
-                  fontWeight: 900,
-                  textAlign: 'center',
-                  letterSpacing: '0.2em',
-                  mb: 3,
-                  outline: 'none',
-                  '&:focus': { borderColor: BRAND_EMERALD }
-                }}
-              />
-
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={verifyTotpSetup}
-                disabled={loading || totpOtp.length !== 6 || !vaultUnlocked}
-                sx={{ py: 1.75, borderRadius: '14px', bgcolor: BRAND_EMERALD, color: 'black', fontWeight: 900, '&:hover': { bgcolor: '#0fa976' } }}
-              >
-                {loading ? <CircularProgress size={20} color="inherit" /> : 'Finalize 2FA'}
-              </Button>
-            </Box>
-          </Stack>
-        )}
-
-        {step === 'done' && (
-          <Stack spacing={4} className="animate-fadeIn">
-            <Box sx={{ p: 4, borderRadius: '32px', bgcolor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)', textAlign: 'center' }}>
-              <Box sx={{ width: 56, height: 56, borderRadius: '50%', bgcolor: BRAND_EMERALD, color: 'black', display: 'grid', placeItems: 'center', mx: 'auto', mb: 2 }}>
-                <CheckCircle2 size={32} />
-              </Box>
-              <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.2rem' }}>Identity Secured</Typography>
-              <Typography sx={{ color: '#10B981', fontSize: '0.85rem', fontWeight: 700, mt: 0.5 }}>2FA Protocol Fully Active</Typography>
-            </Box>
-
-            {recoveryCodes.length > 0 && (
-              <Box sx={{ p: 4, borderRadius: '28px', bgcolor: '#161412', border: '1px solid rgba(255,255,255,0.05)' }}>
-                <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.9rem', mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <ShieldCheck size={18} style={{ color: BRAND_EMERALD }} />
-                  Recovery Protocols
-                </Typography>
-                <Typography sx={{ color: 'white/40', fontSize: '0.75rem', mb: 3, lineHeight: 1.5 }}>
-                  {RECOVERY_COPY_HINT}
-                </Typography>
-                
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5, mb: 4 }}>
-                  {recoveryCodes.map((code) => (
-                    <Box key={code} sx={{ p: 2, borderRadius: '12px', bgcolor: '#0A0908', border: '1px solid rgba(255,255,255,0.03)', color: 'white', fontSize: '0.7rem', fontWeight: 800, fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
-                      {code}
-                    </Box>
-                  ))}
-                </Box>
-
-                <Stack direction="row" spacing={2}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={<Copy size={16} />}
-                    onClick={() => copyToClipboard(recoveryCodes.join('\n'), 'Codes copied.')}
-                    sx={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontWeight: 800, fontSize: '0.75rem', py: 1.25 }}
-                  >
-                    Copy
-                  </Button>
-                  <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<Download size={16} />}
-                    onClick={downloadRecoveryCodes}
-                    sx={{ borderRadius: '12px', bgcolor: 'white', color: 'black', fontWeight: 900, fontSize: '0.75rem', py: 1.25, '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}
-                  >
-                    Download
-                  </Button>
-                </Stack>
-              </Box>
             )}
 
-            <Button
-              fullWidth
-              onClick={onClose}
-              sx={{ py: 2, borderRadius: '16px', color: 'white/40', fontWeight: 800, fontSize: '0.85rem', textTransform: 'uppercase', '&:hover': { bgcolor: 'white/5', color: 'white' } }}
-            >
-              Exit Configuration
-            </Button>
-          </Stack>
-        )}
+            {error && (
+            <Box sx={{ p: 2.5, borderRadius: '18px', bgcolor: alpha('#ef4444', 0.08), border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', gap: 1.75, alignItems: 'flex-start' }}>
+                <AlertTriangle size={18} style={{ color: '#ef4444', flexShrink: 0, marginTop: 2 }} />
+                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    <Typography component="span" sx={{ color: '#ef4444', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase' }}>Protocol Error</Typography>
+                    <Typography component="span" sx={{ color: '#ef4444', fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.45 }}>{error}</Typography>
+                </Box>
+            </Box>
+            )}
+
+            <AnimatePresence mode="wait">
+            {step === 'summary' && (
+                <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-3">
+                    <Box component="button" onClick={isTwoFactorOn ? disableTwoFactor : startTwoFactorSetup} disabled={loading || (!isTwoFactorOn && !canUseEmailFactor)}
+                        sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 2, px: 2.5, py: 2.25, borderRadius: '24px', bgcolor: NAV_SURFACE, border: '1px solid', borderColor: isTwoFactorOn ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)', textAlign: 'left', transition: 'all 0.2s', '&:hover': { bgcolor: isTwoFactorOn ? alpha('#ef4444', 0.05) : 'rgba(255,255,255,0.03)' } }}>
+                        <Box sx={{ width: 44, height: 44, borderRadius: '14px', bgcolor: isTwoFactorOn ? alpha('#ef4444', 0.1) : alpha(BRAND_INDIGO, 0.1), display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                            {loading ? <CircularProgress size={20} sx={{ color: isTwoFactorOn ? '#ef4444' : BRAND_INDIGO }} /> : (isTwoFactorOn ? <ShieldAlert size={22} color="#ef4444" /> : <Lock size={22} color={BRAND_INDIGO} />)}
+                        </Box>
+                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
+                            <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.25 }}>{isTwoFactorOn ? 'DEACTIVATE PROTOCOLS' : 'BEGIN 2FA ACTIVATION'}</Typography>
+                            <Typography component="span" sx={{ color: 'white/40', fontWeight: 600, fontSize: '0.72rem', lineHeight: 1.35 }}>{isTwoFactorOn ? 'Downgrade account protection level' : 'Activate cross-node identity security'}</Typography>
+                        </Box>
+                        <ArrowRight size={18} style={{ color: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+                    </Box>
+                </motion.div>
+            )}
+
+            {step === 'email-init' && (
+                <motion.div key="email-init" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                    <Card sx={{ bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '28px', overflow: 'hidden', boxShadow: 'none' }}>
+                        <CardHeader sx={{ p: 3, pb: 1 }} title={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(BRAND_INDIGO, 0.1), color: BRAND_INDIGO, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                                    <Mail size={20} />
+                                </Box>
+                                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>PHASE 1: EMAIL</Typography>
+                                    <Typography component="span" sx={{ color: 'white/30', fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Verify Backup Relay</Typography>
+                                </Box>
+                            </Box>
+                        } />
+                        <CardContent sx={{ p: 3, pt: 1 }}>
+                            <Typography component="span" sx={{ display: 'block', color: 'white/60', fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.5, mb: 3 }}>
+                                A one-time activation code will be dispatched to your registered email address. This is required for recovery synchronization.
+                            </Typography>
+                            <Button variant="contained" fullWidth onClick={sendEmailCode} disabled={loading}
+                                sx={{ py: 1.75, borderRadius: '14px', bgcolor: BRAND_INDIGO, color: 'white', fontWeight: 900, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', '&:hover': { bgcolor: '#4f46e5' } }}>
+                                {loading ? <CircularProgress size={20} color="inherit" /> : 'Dispatch Verification Code'}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            )}
+
+            {step === 'email-verify' && (
+                <motion.div key="email-verify" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                    <Card sx={{ bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '28px', overflow: 'hidden', boxShadow: 'none' }}>
+                        <CardHeader sx={{ p: 3, pb: 1 }} title={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(BRAND_INDIGO, 0.1), color: BRAND_INDIGO, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                                    <ShieldCheck size={20} />
+                                </Box>
+                                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>VERIFY IDENTITY</Typography>
+                                    <Typography component="span" sx={{ color: 'white/30', fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Check your inbox</Typography>
+                                </Box>
+                            </Box>
+                        } />
+                        <CardContent sx={{ p: 3, pt: 1.5 }}>
+                            <Box component="input" type="text" value={emailOtp} onChange={(e: any) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="000000" sx={{ width: '100%', bgcolor: PITCH_BLACK, color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', px: 3, py: 2.5, fontSize: '1.75rem', fontWeight: 900, textAlign: 'center', letterSpacing: '0.2em', mb: 3, outline: 'none', fontMono: 'var(--font-mono)', '&:focus': { borderColor: BRAND_INDIGO } }} />
+                            
+                            <Button variant="contained" fullWidth onClick={verifyEmailChallenge} disabled={loading || emailOtp.length !== 6 || !vaultUnlocked}
+                                sx={{ py: 2, borderRadius: '16px', bgcolor: BRAND_INDIGO, color: 'white', fontWeight: 900, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2 }}>
+                                {loading ? <CircularProgress size={20} color="inherit" /> : 'Confirm Relay'}
+                            </Button>
+
+                            {!vaultUnlocked && (
+                                <Box sx={{ p: 2, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.05), border: '1px solid rgba(245, 158, 11, 0.15)', display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                                    <AlertTriangle size={14} color="#F59E0B" />
+                                    <Typography component="span" sx={{ color: '#F59E0B', fontSize: '0.72rem', fontWeight: 700 }}>Vault Unlock Required to Proceed</Typography>
+                                </Box>
+                            )}
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            )}
+
+            {step === 'totp' && (
+                <motion.div key="totp" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4 pb-12">
+                    <Card sx={{ bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '28px', overflow: 'hidden', boxShadow: 'none' }}>
+                        <CardHeader sx={{ p: 3, pb: 1 }} title={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(BRAND_EMERALD, 0.1), color: BRAND_EMERALD, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                                    <Smartphone size={20} />
+                                </Box>
+                                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>PHASE 2: AUTHENTICATOR</Typography>
+                                    <Typography component="span" sx={{ color: 'white/30', fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOTP Key Activation</Typography>
+                                </Box>
+                            </Box>
+                        } />
+                        <CardContent sx={{ p: 3, pt: 1.5 }}>
+                            <Typography component="span" sx={{ display: 'block', color: 'white/50', fontSize: '0.78rem', fontWeight: 600, lineHeight: 1.5, mb: 3 }}>
+                                Scan this secure vector using an authoritative TOTP manager (e.g., Raivo, Google Auth).
+                            </Typography>
+                            
+                            {totpQr && (
+                                <Box sx={{ p: 2, bgcolor: 'white', borderRadius: '24px', display: 'flex', justifyContent: 'center', mb: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
+                                    <Box component="img" src={totpQr} sx={{ width: 220, height: 220 }} />
+                                </Box>
+                            )}
+
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: PITCH_BLACK, borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', mb: 4 }}>
+                                <Typography sx={{ color: 'white/60', fontSize: '0.65rem', fontWeight: 700, fontFamily: 'var(--font-mono)', flex: 1, wordBreak: 'break-all', lineHeight: 1.4 }}>
+                                    {totpSecret}
+                                </Typography>
+                                <IconButton onClick={() => copyToClipboard(totpSecret, 'Secret copied.')} sx={{ color: 'white/30', '&:hover': { color: 'white' }, bgcolor: 'white/3' }}>
+                                    <Copy size={14} />
+                                </IconButton>
+                            </Box>
+
+                            <Box sx={{ mb: 2 }}>
+                                <Typography component="span" sx={{ display: 'block', color: 'white/40', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', mb: 1.5, ml: 0.5 }}>Verification Challenge</Typography>
+                                <Box component="input" type="text" value={totpOtp} onChange={(e: any) => setTotpOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                    placeholder="000000" sx={{ width: '100%', bgcolor: PITCH_BLACK, color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', px: 3, py: 2, fontSize: '1.5rem', fontWeight: 900, textAlign: 'center', letterSpacing: '0.2em', mb: 3, outline: 'none', fontMono: 'var(--font-mono)', '&:focus': { borderColor: BRAND_EMERALD } }} />
+                            </Box>
+
+                            <Button variant="contained" fullWidth onClick={verifyTotpSetup} disabled={loading || totpOtp.length !== 6 || !vaultUnlocked}
+                                sx={{ py: 2, borderRadius: '16px', bgcolor: BRAND_EMERALD, color: 'black', fontWeight: 900, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', '&:hover': { bgcolor: '#0fa976' } }}>
+                                {loading ? <CircularProgress size={20} color="inherit" /> : 'Finalize Activation'}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+            )}
+
+            {step === 'done' && (
+                <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
+                    <Box sx={{ p: 4, borderRadius: '32px', bgcolor: alpha(BRAND_EMERALD, 0.04), border: '1px solid rgba(16, 185, 129, 0.12)', textAlign: 'center' }}>
+                        <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: BRAND_EMERALD, color: 'black', display: 'grid', placeItems: 'center', mx: 'auto', mb: 2, shadow: `0 0 24px ${alpha(BRAND_EMERALD, 0.4)}` }}>
+                            <CheckCircle2 size={36} />
+                        </Box>
+                        <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.25rem', fontClash: 'var(--font-clash)' }}>IDENTITY SECURED</Typography>
+                        <Typography sx={{ color: BRAND_EMERALD, fontSize: '0.78rem', fontWeight: 900, mt: 0.5, letterSpacing: '0.08em', textTransform: 'uppercase' }}>2FA Protocol Fully Active</Typography>
+                    </Box>
+
+                    {recoveryCodes.length > 0 && (
+                    <Card sx={{ bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '32px', overflow: 'hidden', boxShadow: 'none' }}>
+                        <CardHeader sx={{ p: 3, pb: 1 }} title={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(BRAND_EMERALD, 0.1), color: BRAND_EMERALD, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                                    <ShieldCheck size={20} />
+                                </Box>
+                                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>RECOVERY VECTORS</Typography>
+                                    <Typography component="span" sx={{ color: 'white/30', fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Emergency Access Layer</Typography>
+                                </Box>
+                            </Box>
+                        } />
+                        <CardContent sx={{ p: 3, pt: 1.5 }}>
+                            <Typography component="span" sx={{ display: 'block', color: 'white/40', fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.5, mb: 3 }}>
+                                {RECOVERY_COPY_HINT} Save these to a trusted offline device.
+                            </Typography>
+                            
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5, mb: 4 }}>
+                            {recoveryCodes.map((code) => (
+                                <Box key={code} sx={{ p: 2.25, borderRadius: '14px', bgcolor: PITCH_BLACK, border: '1px solid rgba(255,255,255,0.04)', color: 'white', fontSize: '0.72rem', fontWeight: 800, fontFamily: 'var(--font-mono)', textAlign: 'center', letterSpacing: '0.05em' }}>
+                                {code}
+                                </Box>
+                            ))}
+                            </Box>
+
+                            <Stack direction="row" spacing={2}>
+                                <Button variant="outlined" startIcon={<Copy size={16} />} onClick={() => copyToClipboard(recoveryCodes.join('\n'), 'Codes copied.')}
+                                    sx={{ flex: 1, borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontWeight: 800, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase' }}>
+                                    Copy
+                                </Button>
+                                <Button variant="contained" startIcon={<Download size={16} />} onClick={downloadRecoveryCodes}
+                                    sx={{ flex: 1, borderRadius: '14px', bgcolor: 'white', color: 'black', fontWeight: 900, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}>
+                                    Download
+                                </Button>
+                            </Stack>
+                        </CardContent>
+                    </Card>
+                    )}
+
+                    <Button fullWidth onClick={onClose}
+                        sx={{ py: 2, borderRadius: '18px', bgcolor: alpha(BRAND_INDIGO, 0.1), color: BRAND_INDIGO, fontWeight: 900, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', '&:hover': { bgcolor: alpha(BRAND_INDIGO, 0.2) } }}>
+                        Complete Configuration
+                    </Button>
+                </motion.div>
+            )}
+            </AnimatePresence>
+        </Box>
       </Box>
 
-      {/* Sticky Footer Info */}
-      <Box sx={{ p: 3, borderTop: '1px solid rgba(255,255,255,0.03)', bgcolor: '#161412', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-         <Box className={`w-2 h-2 rounded-full ${isTwoFactorOn ? 'bg-[#10B981] animate-pulse' : 'bg-white/10'}`} />
-         <Typography sx={{ color: 'white/30', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            System Integrity: {isTwoFactorOn ? 'SECURE' : 'ACTION REQUIRED'}
+      {/* Persistence Ledger Footer */}
+      <Box sx={{ px: 4, py: 2.5, borderTop: '1px solid rgba(255,255,255,0.03)', bgcolor: NAV_SURFACE, display: 'flex', alignItems: 'center', gap: 2 }}>
+         <Box sx={{ position: 'relative' }}>
+            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: isTwoFactorOn ? BRAND_EMERALD : alpha('#ef4444', 0.4), shadow: `0 0 8px ${isTwoFactorOn ? BRAND_EMERALD : '#ef4444'}` }} />
+            {isTwoFactorOn && <Box sx={{ position: 'absolute', inset: 0, width: 8, height: 8, borderRadius: '50%', bgcolor: BRAND_EMERALD, animate: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />}
+         </Box>
+         <Typography sx={{ color: 'white/30', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'var(--font-mono)' }}>
+            System Ledger: {isTwoFactorOn ? 'PROTECTED (SHA-256)' : 'UNSHIELDED IDENTITY'}
          </Typography>
       </Box>
     </Drawer>
