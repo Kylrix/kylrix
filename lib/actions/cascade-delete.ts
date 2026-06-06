@@ -659,7 +659,95 @@ export async function executeCascadeDeleteSecure(
   else if (databaseId === FLOW_DB && tableId === APPWRITE_CONFIG.TABLES.FLOW.TASKS) {
     console.log(`[Cascade Delete] Triggered task cascade cleanup for: ${rowId}`);
 
-    // Wipe collaborators and key mappings for the task/goal itself
+    // A. Fetch task to get attachments and discussion links
+    let attachmentIds: string[] = [];
+    try {
+      const taskDoc = await tables.getRow<any>(FLOW_DB, APPWRITE_CONFIG.TABLES.FLOW.TASKS, rowId);
+      if (taskDoc && Array.isArray(taskDoc.attachmentIds)) {
+        attachmentIds = taskDoc.attachmentIds;
+      }
+    } catch (err) {
+      console.warn(`[Cascade Delete] Failed to fetch task row ${rowId} for cleanup:`, err);
+    }
+
+    // B. Clean up attachments from storage
+    if (attachmentIds.length > 0) {
+      console.log(`[Cascade Delete] Purging ${attachmentIds.length} task attachments`);
+      await Promise.all(
+        attachmentIds.map((fileId) =>
+          storage.deleteFile(APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS, fileId).catch((err) => {
+            console.warn(`[Cascade Delete] Failed to delete task attachment ${fileId}:`, err?.message);
+          })
+        )
+      );
+    }
+
+    // C. Clean up Subtasks (Recursive Jump)
+    try {
+      const subtasksRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+        queries: [Query.equal('parentId', rowId), Query.limit(1000)] as any,
+      });
+
+      await Promise.all(
+        subtasksRes.rows.map((subtask: any) =>
+          executeCascadeDeleteSecure(FLOW_DB, APPWRITE_CONFIG.TABLES.FLOW.TASKS, subtask.$id, projectDeleteMode, jwt)
+        )
+      );
+      
+      // Physically delete subtask rows (parent task deletion will happen in main deleteRowSecure)
+      await Promise.all(
+        subtasksRes.rows.map((subtask: any) =>
+          tables.deleteRow({
+            databaseId: FLOW_DB,
+            tableId: APPWRITE_CONFIG.TABLES.FLOW.TASKS,
+            rowId: subtask.$id,
+          })
+        )
+      );
+    } catch (err) {
+      console.error('[Cascade Delete] Task subtasks cleanup failed:', err);
+    }
+
+    // D. Clean up linked Ghost Note (Discussion Thread)
+    try {
+      console.log(`[Cascade Delete] Cleaning up linked task ghost discussion: ${rowId}`);
+      await executeCascadeDeleteSecure(NOTE_DB, NOTE_TABLE, rowId);
+      await tables.deleteRow({
+        databaseId: NOTE_DB,
+        tableId: NOTE_TABLE,
+        rowId: rowId,
+      }).catch(() => null);
+    } catch (err) {
+        // Safe to ignore if not present
+    }
+
+    // E. Clean up Project Object Links
+    try {
+        const objectsRes = await tables.listRows({
+            databaseId: CHAT_DB,
+            tableId: 'project_objects',
+            queries: [
+                Query.equal('entityId', rowId),
+                Query.equal('entityKind', 'goal'),
+                Query.limit(100)
+            ] as any,
+        });
+        await Promise.all(
+            objectsRes.rows.map((obj: any) =>
+                tables.deleteRow({
+                    databaseId: CHAT_DB,
+                    tableId: 'project_objects',
+                    rowId: obj.$id,
+                })
+            )
+        );
+    } catch (err) {
+        console.error('[Cascade Delete] Task project objects cleanup failed:', err);
+    }
+
+    // F. Wipe collaborators and key mappings for the task/goal itself
     await wipeCollaboratorsAndKeys(tables, rowId, 'task');
   }
 

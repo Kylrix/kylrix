@@ -53,18 +53,21 @@ export default function TaskList() {
 
     open('delete-confirm', {
       title: `Purge ${completedTasks.length} Completed Goals?`,
-      description: 'This will permanently remove all finished goals and their history from your workspace. This action is irreversible.',
+      description: 'This will authoritatively erase all finished goals, including their sub-objects (subtasks, comments, attachments, and project links). This operation is final and irreversible.',
       resourceName: 'completed goals',
       confirmLabel: 'Purge Finished Goals',
       onConfirm: async () => {
+        const total = completedTasks.length;
+        let count = 0;
         try {
-          // Sequential deletion to avoid hammering the DB too hard
           for (const task of completedTasks) {
             await deleteTask(task.id);
+            count++;
           }
-          toast.success('Workspace successfully uncluttered.');
+          toast.success(`Workspace cleansed: ${total} goals removed.`);
         } catch (err) {
-          toast.error('Failed to complete bulk purge.');
+          console.error('[Purge] Failed after', count, 'tasks:', err);
+          toast.error('Partial purge completed. Check connection.');
         }
       }
     });
