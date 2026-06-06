@@ -16,26 +16,8 @@ import {
   ArrowRight,
   ShieldAlert,
   AlertTriangle,
-  Lock,
-  ArrowDown
+  Lock
 } from 'lucide-react';
-import { 
-  Drawer, 
-  useTheme, 
-  useMediaQuery, 
-  Box, 
-  Typography, 
-  Stack, 
-  Button, 
-  IconButton, 
-  alpha,
-  CircularProgress,
-  Paper,
-  Card,
-  CardHeader,
-  CardContent
-} from '@/lib/mui-tailwind/material';
-import { motion, AnimatePresence } from 'framer-motion';
 
 type LoginMethod = 'email-otp' | 'oauth2' | 'password' | 'unknown';
 
@@ -54,8 +36,6 @@ type Step = 'summary' | 'email-init' | 'email-verify' | 'totp' | 'done';
 const RECOVERY_COPY_HINT = 'Save these recovery codes in a secure place. They are shown only once.';
 const BRAND_INDIGO = '#6366F1';
 const BRAND_EMERALD = '#10B981';
-const NAV_SURFACE = '#161412';
-const PITCH_BLACK = '#0A0908';
 
 export function TwoFactorDrawer({
   open,
@@ -66,8 +46,6 @@ export function TwoFactorDrawer({
   onEnabled,
   mode = 'setup',
 }: Props) {
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [loading, setLoading] = useState(false);
   const [vaultUnlocked, setVaultUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
   const [emailEnabled, setEmailEnabled] = useState(false);
@@ -366,272 +344,278 @@ export function TwoFactorDrawer({
   if (!open) return null;
 
   return (
-    <Drawer
-      anchor={isDesktop ? 'right' : 'bottom'}
-      open={open}
-      onClose={onClose}
-      ModalProps={{ keepMounted: false }}
-      PaperProps={{
-        sx: {
-          bgcolor: NAV_SURFACE,
-          backgroundImage: 'none',
-          ...(isDesktop ? {
-            borderLeft: '1px solid rgba(255,255,255,0.08)',
-            height: '100%',
-            maxWidth: 480,
-            width: '100%'
-          } : {
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '32px 32px 0 0',
-            maxHeight: '90dvh',
-          }),
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column'
-        }
-      }}
-    >
-      {/* Header Panel */}
-      <Box sx={{ p: 0, borderBottom: '1px solid rgba(255,255,255,0.05)', bgcolor: NAV_SURFACE, zIndex: 10 }}>
-        <Box sx={{ px: 3, py: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box sx={{ width: 10, height: 10, borderRadius: '3px', bgcolor: isTwoFactorOn ? BRAND_EMERALD : BRAND_INDIGO, shadow: `0 0 10px ${isTwoFactorOn ? BRAND_EMERALD : BRAND_INDIGO}` }} />
-            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '1rem', fontClash: 'var(--font-clash)', letterSpacing: '-0.01em', lineHeight: 1.2 }}>
-                    {mode === 'reminder' ? 'SECURITY UPGRADE' : '2FA PROTOCOL'}
-                </Typography>
-                <Typography component="span" sx={{ color: 'white/40', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', lineHeight: 1.3 }}>
-                    Mandatory: Email → App Authenticator
-                </Typography>
-            </Box>
-          </Box>
-          <IconButton onClick={onClose} sx={{ color: 'white/30', '&:hover': { color: 'white', bgcolor: 'white/5' }, width: 36, height: 36 }}>
+    <>
+      {/* 🏗️ 1. Backdrop (Closes on Click) */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1399] transition-opacity duration-300 ease-in-out cursor-default animate-fadeIn"
+        onClick={onClose}
+      />
+      
+      {/* 🏗️ 2. Slide-up Panel Container (Tailwind Migration - Phase II) */}
+      <div className="fixed bottom-0 right-0 left-0 md:left-auto md:top-0 w-full md:w-[480px] md:h-full max-h-[90vh] md:max-h-full bg-[#161412] border-t md:border-t-0 md:border-l border-white/8 rounded-t-[28px] md:rounded-t-0 z-[1400] text-white flex flex-col animate-slide-up overflow-hidden">
+        {/* Decorative drag handle bar (mobile only) */}
+        <div className="w-10 h-1 bg-white/12 rounded-[2px] mx-auto mt-3 mb-1 flex-shrink-0 md:hidden" />
+        
+        {/* Header container */}
+        <div className="flex items-center justify-between gap-4 p-6 border-b border-white/5 bg-[#161412]">
+          <div className="flex items-center gap-3">
+             <div className={`w-2.5 h-2.5 rounded-full ${isTwoFactorOn ? 'bg-[#10B981] shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-[#6366F1] shadow-[0_0_8px_rgba(99,102,241,0.5)]'}`} />
+             <div>
+                <h3 className="text-white text-lg font-black tracking-tight leading-tight font-clash uppercase">
+                    {mode === 'reminder' ? 'Security Upgrade' : '2FA Protocol'}
+                </h3>
+                <p className="text-white/40 text-[10px] font-black mt-0.5 uppercase tracking-widest">
+                    Mandatory: Email Relay → App Authenticator
+                </p>
+             </div>
+          </div>
+          <button 
+            onClick={onClose}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-white/40 hover:text-white bg-white/3 hover:bg-white/6 transition-all"
+          >
             <X size={18} />
-          </IconButton>
-        </Box>
-      </Box>
+          </button>
+        </div>
 
-      {/* Main Content Area */}
-      <Box sx={{ p: 0, flex: 1, overflowY: 'auto', bgcolor: PITCH_BLACK }}>
-        <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            
-            {/* Context Header */}
-            {step !== 'done' && (
-                <Box sx={{ p: 2.5, borderRadius: '24px', bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.04)' }}>
-                    <Typography component="span" sx={{ display: 'block', color: 'white', fontWeight: 800, fontSize: '0.85rem', mb: 0.75, lineHeight: 1.3 }}>Ecosystem Integrity Check</Typography>
-                    <Typography component="span" sx={{ display: 'block', color: 'white/50', fontSize: '0.78rem', fontWeight: 600, lineHeight: 1.5 }}>
-                        To mathematically prevent lockout, we verify your email relay as a secure backup before establishing TOTP as your primary factor.
-                    </Typography>
-                </Box>
-            )}
+        {/* Content body */}
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-[#0A0908]">
+          
+          {/* Integrity Notice */}
+          {step !== 'done' && (
+            <div className="p-4 rounded-2xl bg-[#161412] border border-white/4 flex flex-col gap-2">
+                <span className="text-white font-extrabold text-[13px] leading-none">Ecosystem Integrity Check</span>
+                <p className="text-white/50 text-[12px] font-semibold leading-relaxed">
+                    To mathematically prevent lockout, we verify your email relay as a secure backup before establishing TOTP as your primary factor.
+                </p>
+            </div>
+          )}
 
-            {error && (
-            <Box sx={{ p: 2.5, borderRadius: '18px', bgcolor: alpha('#ef4444', 0.08), border: '1px solid rgba(239, 68, 68, 0.2)', display: 'flex', gap: 1.75, alignItems: 'flex-start' }}>
-                <AlertTriangle size={18} style={{ color: '#ef4444', flexShrink: 0, marginTop: 2 }} />
-                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                    <Typography component="span" sx={{ color: '#ef4444', fontWeight: 800, fontSize: '0.8rem', textTransform: 'uppercase' }}>Protocol Error</Typography>
-                    <Typography component="span" sx={{ color: '#ef4444', fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.45 }}>{error}</Typography>
-                </Box>
-            </Box>
-            )}
+          {error && (
+            <div className="p-4 rounded-xl bg-red-500/8 border border-red-500/20 flex gap-3 items-start animate-shake">
+                <AlertTriangle size={18} className="text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                    <span className="text-red-500 font-black text-[11px] uppercase tracking-wider">Protocol Error</span>
+                    <p className="text-red-400 text-[12px] font-bold leading-normal">{error}</p>
+                </div>
+            </div>
+          )}
 
-            <AnimatePresence mode="wait">
+          {/* Stepper Logic */}
+          <div className="flex flex-col gap-4">
             {step === 'summary' && (
-                <motion.div key="summary" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-3">
-                    <Box component="button" onClick={isTwoFactorOn ? disableTwoFactor : startTwoFactorSetup} disabled={loading || (!isTwoFactorOn && !canUseEmailFactor)}
-                        sx={{ width: '100%', display: 'flex', alignItems: 'center', gap: 2, px: 2.5, py: 2.25, borderRadius: '24px', bgcolor: NAV_SURFACE, border: '1px solid', borderColor: isTwoFactorOn ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.05)', textAlign: 'left', transition: 'all 0.2s', '&:hover': { bgcolor: isTwoFactorOn ? alpha('#ef4444', 0.05) : 'rgba(255,255,255,0.03)' } }}>
-                        <Box sx={{ width: 44, height: 44, borderRadius: '14px', bgcolor: isTwoFactorOn ? alpha('#ef4444', 0.1) : alpha(BRAND_INDIGO, 0.1), display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                            {loading ? <CircularProgress size={20} sx={{ color: isTwoFactorOn ? '#ef4444' : BRAND_INDIGO }} /> : (isTwoFactorOn ? <ShieldAlert size={22} color="#ef4444" /> : <Lock size={22} color={BRAND_INDIGO} />)}
-                        </Box>
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                            <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.25 }}>{isTwoFactorOn ? 'DEACTIVATE PROTOCOLS' : 'BEGIN 2FA ACTIVATION'}</Typography>
-                            <Typography component="span" sx={{ color: 'white/40', fontWeight: 600, fontSize: '0.72rem', lineHeight: 1.35 }}>{isTwoFactorOn ? 'Downgrade account protection level' : 'Activate cross-node identity security'}</Typography>
-                        </Box>
-                        <ArrowRight size={18} style={{ color: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
-                    </Box>
-                </motion.div>
+                <button
+                    onClick={isTwoFactorOn ? disableTwoFactor : startTwoFactorSetup}
+                    disabled={loading || (!isTwoFactorOn && !canUseEmailFactor)}
+                    className="group w-full flex items-center gap-4 p-5 rounded-2xl bg-[#161412] border border-white/5 text-left transition-all hover:bg-white/[0.03] active:scale-[0.98] disabled:opacity-50"
+                >
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${isTwoFactorOn ? 'bg-red-500/10 text-red-500' : 'bg-[#6366F1]/10 text-[#6366F1]'}`}>
+                        {loading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current" /> : (isTwoFactorOn ? <ShieldAlert size={22} /> : <Lock size={22} />)}
+                    </div>
+                    <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                        <span className="text-white font-black text-[14px] uppercase tracking-tight">
+                            {isTwoFactorOn ? 'Deactivate Protocols' : 'Begin 2FA Activation'}
+                        </span>
+                        <span className="text-white/40 font-bold text-[11px] uppercase tracking-wider">
+                            {isTwoFactorOn ? 'Downgrade account protection level' : 'Activate cross-node identity security'}
+                        </span>
+                    </div>
+                    <ArrowRight size={18} className="text-white/10 group-hover:text-white/30 transition-colors" />
+                </button>
             )}
 
             {step === 'email-init' && (
-                <motion.div key="email-init" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                    <Card sx={{ bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '28px', overflow: 'hidden', boxShadow: 'none' }}>
-                        <CardHeader sx={{ p: 3, pb: 1 }} title={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(BRAND_INDIGO, 0.1), color: BRAND_INDIGO, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                                    <Mail size={20} />
-                                </Box>
-                                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>PHASE 1: EMAIL</Typography>
-                                    <Typography component="span" sx={{ color: 'white/30', fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Verify Backup Relay</Typography>
-                                </Box>
-                            </Box>
-                        } />
-                        <CardContent sx={{ p: 3, pt: 1 }}>
-                            <Typography component="span" sx={{ display: 'block', color: 'white/60', fontSize: '0.8rem', fontWeight: 600, lineHeight: 1.5, mb: 3 }}>
-                                A one-time activation code will be dispatched to your registered email address. This is required for recovery synchronization.
-                            </Typography>
-                            <Button variant="contained" fullWidth onClick={sendEmailCode} disabled={loading}
-                                sx={{ py: 1.75, borderRadius: '14px', bgcolor: BRAND_INDIGO, color: 'white', fontWeight: 900, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', '&:hover': { bgcolor: '#4f46e5' } }}>
-                                {loading ? <CircularProgress size={20} color="inherit" /> : 'Dispatch Verification Code'}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </motion.div>
+                <div className="flex flex-col gap-4 animate-fadeIn">
+                    <div className="p-5 rounded-3xl bg-[#161412] border border-white/5 flex flex-col items-center text-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center">
+                            <Mail size={28} />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <h4 className="text-white font-black text-base uppercase">Phase 1: Email</h4>
+                            <p className="text-white/40 text-[12px] font-bold uppercase tracking-wider px-4">Verify Backup Relay</p>
+                        </div>
+                        <p className="text-white/50 text-sm font-semibold leading-relaxed px-2">
+                            A one-time activation code will be dispatched to your registered email address. This is required for recovery synchronization.
+                        </p>
+                        <button
+                            onClick={sendEmailCode}
+                            disabled={loading}
+                            className="w-full mt-2 py-4 rounded-xl bg-[#6366F1] text-black font-black text-sm uppercase tracking-widest hover:bg-[#5254E8] transition-all disabled:opacity-50"
+                        >
+                            {loading ? 'Dispatching...' : 'Dispatch Code'}
+                        </button>
+                    </div>
+                </div>
             )}
 
             {step === 'email-verify' && (
-                <motion.div key="email-verify" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                    <Card sx={{ bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '28px', overflow: 'hidden', boxShadow: 'none' }}>
-                        <CardHeader sx={{ p: 3, pb: 1 }} title={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(BRAND_INDIGO, 0.1), color: BRAND_INDIGO, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                                    <ShieldCheck size={20} />
-                                </Box>
-                                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>VERIFY IDENTITY</Typography>
-                                    <Typography component="span" sx={{ color: 'white/30', fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Check your inbox</Typography>
-                                </Box>
-                            </Box>
-                        } />
-                        <CardContent sx={{ p: 3, pt: 1.5 }}>
-                            <Box component="input" type="text" value={emailOtp} onChange={(e: any) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                placeholder="000000" sx={{ width: '100%', bgcolor: PITCH_BLACK, color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', px: 3, py: 2.5, fontSize: '1.75rem', fontWeight: 900, textAlign: 'center', letterSpacing: '0.2em', mb: 3, outline: 'none', fontMono: 'var(--font-mono)', '&:focus': { borderColor: BRAND_INDIGO } }} />
-                            
-                            <Button variant="contained" fullWidth onClick={verifyEmailChallenge} disabled={loading || emailOtp.length !== 6 || !vaultUnlocked}
-                                sx={{ py: 2, borderRadius: '16px', bgcolor: BRAND_INDIGO, color: 'white', fontWeight: 900, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', mb: 2 }}>
-                                {loading ? <CircularProgress size={20} color="inherit" /> : 'Confirm Relay'}
-                            </Button>
+                <div className="flex flex-col gap-4 animate-fadeIn">
+                    <div className="p-5 rounded-3xl bg-[#161412] border border-white/5 flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-[#6366F1]/10 text-[#6366F1] flex items-center justify-center flex-shrink-0">
+                                <ShieldCheck size={20} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h4 className="text-white font-black text-[13px] uppercase tracking-tight">Verify Identity</h4>
+                                <p className="text-white/30 font-bold text-[10px] uppercase tracking-widest">Enter code from inbox</p>
+                            </div>
+                        </div>
 
-                            {!vaultUnlocked && (
-                                <Box sx={{ p: 2, borderRadius: '12px', bgcolor: alpha('#F59E0B', 0.05), border: '1px solid rgba(245, 158, 11, 0.15)', display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                                    <AlertTriangle size={14} color="#F59E0B" />
-                                    <Typography component="span" sx={{ color: '#F59E0B', fontSize: '0.72rem', fontWeight: 700 }}>Vault Unlock Required to Proceed</Typography>
-                                </Box>
-                            )}
-                        </CardContent>
-                    </Card>
-                </motion.div>
+                        <input
+                            type="text"
+                            value={emailOtp}
+                            onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                            placeholder="000000"
+                            className="w-full bg-[#0A0908] text-white border border-white/8 rounded-2xl px-4 py-5 text-3xl font-black text-center tracking-[0.3em] focus:outline-none focus:border-[#6366F1] transition-all font-mono"
+                        />
+
+                        <button
+                            onClick={verifyEmailChallenge}
+                            disabled={loading || emailOtp.length !== 6 || !vaultUnlocked}
+                            className="w-full py-4 rounded-xl bg-[#6366F1] text-black font-black text-sm uppercase tracking-widest hover:bg-[#5254E8] transition-all disabled:opacity-50"
+                        >
+                            {loading ? 'Verifying...' : 'Confirm Relay'}
+                        </button>
+
+                        {!vaultUnlocked && (
+                            <div className="p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 flex gap-2 items-center justify-center">
+                                <AlertTriangle size={14} className="text-amber-500" />
+                                <span className="text-amber-500 font-bold text-[11px] uppercase tracking-wider">Vault Unlock Required</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
 
             {step === 'totp' && (
-                <motion.div key="totp" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4 pb-12">
-                    <Card sx={{ bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '28px', overflow: 'hidden', boxShadow: 'none' }}>
-                        <CardHeader sx={{ p: 3, pb: 1 }} title={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(BRAND_EMERALD, 0.1), color: BRAND_EMERALD, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                                    <Smartphone size={20} />
-                                </Box>
-                                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>PHASE 2: AUTHENTICATOR</Typography>
-                                    <Typography component="span" sx={{ color: 'white/30', fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>TOTP Key Activation</Typography>
-                                </Box>
-                            </Box>
-                        } />
-                        <CardContent sx={{ p: 3, pt: 1.5 }}>
-                            <Typography component="span" sx={{ display: 'block', color: 'white/50', fontSize: '0.78rem', fontWeight: 600, lineHeight: 1.5, mb: 3 }}>
-                                Scan this secure vector using an authoritative TOTP manager (e.g., Raivo, Google Auth).
-                            </Typography>
-                            
-                            {totpQr && (
-                                <Box sx={{ p: 2, bgcolor: 'white', borderRadius: '24px', display: 'flex', justifyContent: 'center', mb: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
-                                    <Box component="img" src={totpQr} sx={{ width: 220, height: 220 }} />
-                                </Box>
-                            )}
+                <div className="flex flex-col gap-5 animate-fadeIn pb-10">
+                    <div className="p-5 rounded-3xl bg-[#161412] border border-white/5 flex flex-col gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-[#10B981]/10 text-[#10B981] flex items-center justify-center flex-shrink-0">
+                                <Smartphone size={20} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <h4 className="text-white font-black text-[13px] uppercase tracking-tight">Phase 2: Authenticator</h4>
+                                <p className="text-white/30 font-bold text-[10px] uppercase tracking-widest">TOTP Key Activation</p>
+                            </div>
+                        </div>
+                        
+                        <p className="text-white/50 text-[12px] font-semibold leading-relaxed">
+                            Scan this secure vector using an authoritative TOTP manager (e.g., Raivo, Google Auth).
+                        </p>
 
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: PITCH_BLACK, borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', mb: 4 }}>
-                                <Typography sx={{ color: 'white/60', fontSize: '0.65rem', fontWeight: 700, fontFamily: 'var(--font-mono)', flex: 1, wordBreak: 'break-all', lineHeight: 1.4 }}>
-                                    {totpSecret}
-                                </Typography>
-                                <IconButton onClick={() => copyToClipboard(totpSecret, 'Secret copied.')} sx={{ color: 'white/30', '&:hover': { color: 'white' }, bgcolor: 'white/3' }}>
-                                    <Copy size={14} />
-                                </IconButton>
-                            </Box>
+                        {totpQr && (
+                            <div className="p-3 bg-white rounded-[24px] flex items-center justify-center shadow-2xl mx-auto">
+                                <img src={totpQr} alt="TOTP QR" className="w-48 h-48" />
+                            </div>
+                        )}
 
-                            <Box sx={{ mb: 2 }}>
-                                <Typography component="span" sx={{ display: 'block', color: 'white/40', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', mb: 1.5, ml: 0.5 }}>Verification Challenge</Typography>
-                                <Box component="input" type="text" value={totpOtp} onChange={(e: any) => setTotpOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                    placeholder="000000" sx={{ width: '100%', bgcolor: PITCH_BLACK, color: 'white', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '18px', px: 3, py: 2, fontSize: '1.5rem', fontWeight: 900, textAlign: 'center', letterSpacing: '0.2em', mb: 3, outline: 'none', fontMono: 'var(--font-mono)', '&:focus': { borderColor: BRAND_EMERALD } }} />
-                            </Box>
+                        <div className="flex items-center gap-3 p-3 bg-[#0A0908] border border-white/5 rounded-2xl">
+                            <span className="flex-1 min-w-0 text-white/60 font-mono text-[10px] break-all font-bold leading-tight select-all">
+                                {totpSecret}
+                            </span>
+                            <button 
+                                onClick={() => copyToClipboard(totpSecret, 'Secret copied.')}
+                                className="w-8 h-8 rounded-lg bg-white/3 flex items-center justify-center text-white/30 hover:text-white hover:bg-white/6 transition-all flex-shrink-0"
+                            >
+                                <Copy size={14} />
+                            </button>
+                        </div>
+                    </div>
 
-                            <Button variant="contained" fullWidth onClick={verifyTotpSetup} disabled={loading || totpOtp.length !== 6 || !vaultUnlocked}
-                                sx={{ py: 2, borderRadius: '16px', bgcolor: BRAND_EMERALD, color: 'black', fontWeight: 900, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', '&:hover': { bgcolor: '#0fa976' } }}>
-                                {loading ? <CircularProgress size={20} color="inherit" /> : 'Finalize Activation'}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </motion.div>
+                    <div className="p-5 rounded-3xl bg-[#161412] border border-white/5 flex flex-col gap-4">
+                        <div className="flex flex-col gap-1 px-1">
+                            <span className="text-white/40 font-black text-[10px] uppercase tracking-widest">Verification Challenge</span>
+                            <input
+                                type="text"
+                                value={totpOtp}
+                                onChange={(e) => setTotpOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="000000"
+                                className="w-full bg-[#0A0908] text-white border border-white/8 rounded-xl px-4 py-3 text-2xl font-black text-center tracking-[0.2em] focus:outline-none focus:border-[#10B981] transition-all font-mono"
+                            />
+                        </div>
+
+                        <button
+                            onClick={verifyTotpSetup}
+                            disabled={loading || totpOtp.length !== 6 || !vaultUnlocked}
+                            className="w-full py-4 rounded-xl bg-[#10B981] text-black font-black text-sm uppercase tracking-widest hover:bg-[#0fa976] transition-all disabled:opacity-50"
+                        >
+                            {loading ? 'Finalizing...' : 'Finalize Activation'}
+                        </button>
+                    </div>
+                </div>
             )}
 
             {step === 'done' && (
-                <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-6">
-                    <Box sx={{ p: 4, borderRadius: '32px', bgcolor: alpha(BRAND_EMERALD, 0.04), border: '1px solid rgba(16, 185, 129, 0.12)', textAlign: 'center' }}>
-                        <Box sx={{ width: 64, height: 64, borderRadius: '50%', bgcolor: BRAND_EMERALD, color: 'black', display: 'grid', placeItems: 'center', mx: 'auto', mb: 2, shadow: `0 0 24px ${alpha(BRAND_EMERALD, 0.4)}` }}>
+                <div className="flex flex-col gap-6 animate-fadeIn">
+                    <div className="p-8 rounded-[40px] bg-[#10B981]/5 border border-[#10B981]/15 text-center flex flex-col items-center gap-4">
+                        <div className="w-16 h-16 rounded-full bg-[#10B981] text-black flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-pulse">
                             <CheckCircle2 size={36} />
-                        </Box>
-                        <Typography sx={{ color: 'white', fontWeight: 900, fontSize: '1.25rem', fontClash: 'var(--font-clash)' }}>IDENTITY SECURED</Typography>
-                        <Typography sx={{ color: BRAND_EMERALD, fontSize: '0.78rem', fontWeight: 900, mt: 0.5, letterSpacing: '0.08em', textTransform: 'uppercase' }}>2FA Protocol Fully Active</Typography>
-                    </Box>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <h4 className="text-white font-black text-xl font-clash uppercase">Identity Secured</h4>
+                            <p className="text-[#10B981] text-[11px] font-black uppercase tracking-widest">2FA Protocol Fully Active</p>
+                        </div>
+                    </div>
 
                     {recoveryCodes.length > 0 && (
-                    <Card sx={{ bgcolor: NAV_SURFACE, border: '1px solid rgba(255,255,255,0.05)', borderRadius: '32px', overflow: 'hidden', boxShadow: 'none' }}>
-                        <CardHeader sx={{ p: 3, pb: 1 }} title={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Box sx={{ width: 40, height: 40, borderRadius: '12px', bgcolor: alpha(BRAND_EMERALD, 0.1), color: BRAND_EMERALD, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                                    <ShieldCheck size={20} />
-                                </Box>
-                                <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                                    <Typography component="span" sx={{ color: 'white', fontWeight: 900, fontSize: '0.9rem', lineHeight: 1.2 }}>RECOVERY VECTORS</Typography>
-                                    <Typography component="span" sx={{ color: 'white/30', fontWeight: 800, fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Emergency Access Layer</Typography>
-                                </Box>
-                            </Box>
-                        } />
-                        <CardContent sx={{ p: 3, pt: 1.5 }}>
-                            <Typography component="span" sx={{ display: 'block', color: 'white/40', fontSize: '0.75rem', fontWeight: 600, lineHeight: 1.5, mb: 3 }}>
+                        <div className="p-6 rounded-[32px] bg-[#161412] border border-white/5 flex flex-col gap-4">
+                            <div className="flex items-center gap-3">
+                                <ShieldCheck size={20} className="text-[#10B981]" />
+                                <span className="text-white font-black text-sm uppercase">Recovery Vectors</span>
+                            </div>
+                            <p className="text-white/40 text-[11px] font-semibold leading-relaxed">
                                 {RECOVERY_COPY_HINT} Save these to a trusted offline device.
-                            </Typography>
+                            </p>
                             
-                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5, mb: 4 }}>
-                            {recoveryCodes.map((code) => (
-                                <Box key={code} sx={{ p: 2.25, borderRadius: '14px', bgcolor: PITCH_BLACK, border: '1px solid rgba(255,255,255,0.04)', color: 'white', fontSize: '0.72rem', fontWeight: 800, fontFamily: 'var(--font-mono)', textAlign: 'center', letterSpacing: '0.05em' }}>
-                                {code}
-                                </Box>
-                            ))}
-                            </Box>
+                            <div className="grid grid-cols-2 gap-2">
+                                {recoveryCodes.map((code) => (
+                                    <div key={code} className="p-2.5 rounded-xl bg-[#0A0908] border border-white/4 text-white font-mono text-[11px] font-black text-center tracking-tight">
+                                        {code}
+                                    </div>
+                                ))}
+                            </div>
 
-                            <Stack direction="row" spacing={2}>
-                                <Button variant="outlined" startIcon={<Copy size={16} />} onClick={() => copyToClipboard(recoveryCodes.join('\n'), 'Codes copied.')}
-                                    sx={{ flex: 1, borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontWeight: 800, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase' }}>
-                                    Copy
-                                </Button>
-                                <Button variant="contained" startIcon={<Download size={16} />} onClick={downloadRecoveryCodes}
-                                    sx={{ flex: 1, borderRadius: '14px', bgcolor: 'white', color: 'black', fontWeight: 900, fontSize: '0.75rem', py: 1.5, textTransform: 'uppercase', '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}>
-                                    Download
-                                </Button>
-                            </Stack>
-                        </CardContent>
-                    </Card>
+                            <div className="flex gap-2 mt-2">
+                                <button
+                                    onClick={() => copyToClipboard(recoveryCodes.join('\n'), 'Codes copied.')}
+                                    className="flex-1 py-3 rounded-xl border border-white/8 text-white font-black text-[11px] uppercase tracking-wider hover:bg-white/2 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Copy size={14} /> Copy
+                                </button>
+                                <button
+                                    onClick={downloadRecoveryCodes}
+                                    className="flex-1 py-3 rounded-xl bg-white text-black font-black text-[11px] uppercase tracking-wider hover:bg-white/90 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Download size={14} /> Download
+                                </button>
+                            </div>
+                        </div>
                     )}
 
-                    <Button fullWidth onClick={onClose}
-                        sx={{ py: 2, borderRadius: '18px', bgcolor: alpha(BRAND_INDIGO, 0.1), color: BRAND_INDIGO, fontWeight: 900, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.05em', '&:hover': { bgcolor: alpha(BRAND_INDIGO, 0.2) } }}>
+                    <button
+                        onClick={onClose}
+                        className="w-full py-4 rounded-2xl bg-white/3 border border-white/8 text-white/50 font-black text-xs uppercase tracking-[0.2em] hover:text-white hover:bg-white/6 transition-all"
+                    >
                         Complete Configuration
-                    </Button>
-                </motion.div>
+                    </button>
+                </div>
             )}
-            </AnimatePresence>
-        </Box>
-      </Box>
+          </div>
+        </div>
 
-      {/* Persistence Ledger Footer */}
-      <Box sx={{ px: 4, py: 2.5, borderTop: '1px solid rgba(255,255,255,0.03)', bgcolor: NAV_SURFACE, display: 'flex', alignItems: 'center', gap: 2 }}>
-         <Box sx={{ position: 'relative' }}>
-            <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: isTwoFactorOn ? BRAND_EMERALD : alpha('#ef4444', 0.4), shadow: `0 0 8px ${isTwoFactorOn ? BRAND_EMERALD : '#ef4444'}` }} />
-            {isTwoFactorOn && <Box sx={{ position: 'absolute', inset: 0, width: 8, height: 8, borderRadius: '50%', bgcolor: BRAND_EMERALD, animate: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />}
-         </Box>
-         <Typography sx={{ color: 'white/30', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: 'var(--font-mono)' }}>
-            System Ledger: {isTwoFactorOn ? 'PROTECTED (SHA-256)' : 'UNSHIELDED IDENTITY'}
-         </Typography>
-      </Box>
-    </Drawer>
+        {/* 🏗️ 5. Safe Text Truncation boundaries / Footer Persistence Ledger */}
+        <div className="p-4 border-t border-white/4 bg-[#161412] flex items-center gap-3 mt-auto">
+            <div className="relative flex-shrink-0">
+                <div className={`w-2 h-2 rounded-full ${isTwoFactorOn ? 'bg-[#10B981]' : 'bg-white/10'}`} />
+                {isTwoFactorOn && <div className="absolute inset-0 w-2 h-2 rounded-full bg-[#10B981] animate-ping" />}
+            </div>
+            <div className="min-w-0 flex-1">
+                <span className="block text-white/30 font-black text-[9px] uppercase tracking-[0.15em] font-mono truncate">
+                    System Ledger: {isTwoFactorOn ? 'Protected (SHA-256)' : 'Unshielded Identity'}
+                </span>
+            </div>
+        </div>
+      </div>
+    </>
   );
 }
