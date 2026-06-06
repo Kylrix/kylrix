@@ -198,7 +198,7 @@ export default function SudoModal({
                 setIsDetecting(true);
                 
                 // 1. Check if user has masterpass
-                const hasPass = await AppwriteService.checkUserHasMasterpass(user.$id);
+                const hasPass = await AppwriteService.hasMasterpass(user.$id);
                 if (!active) return;
                 setHasMasterpass(hasPass);
 
