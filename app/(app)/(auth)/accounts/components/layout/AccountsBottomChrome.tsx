@@ -16,13 +16,25 @@ import {
 } from 'lucide-react';
 import { isUserAdmin } from '@/lib/actions/admin/check-admin';
 import { useAuth } from '@/context/auth/AuthContext';
+import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 export function AccountsBottomChrome() {
   const pathname = usePathname();
   const router = useRouter();
   const [speedDialOpen, setSpeedDialOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isVaultUnlocked, setIsVaultUnlocked] = useState(true);
   const { getJWT } = useAuth();
+  const { isDrawerOpen } = useDrawerState();
+
+  useEffect(() => {
+    // Listen for vault status changes
+    const unsub = ecosystemSecurity.onStatusChange((status) => {
+      setIsVaultUnlocked(status.isUnlocked);
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -66,6 +78,12 @@ export function AccountsBottomChrome() {
     }
     return items;
   }, [isAdmin]);
+
+  // Hide chrome when on security page and vault is locked (unlock/setup screen visible)
+  // OR when any global drawer is open
+  if ((currentSubsetting === 'security' && !isVaultUnlocked) || isDrawerOpen) {
+    return null;
+  }
 
   return (
     <>
