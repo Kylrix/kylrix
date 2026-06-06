@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   alpha,
@@ -55,6 +55,8 @@ import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useLocalContext } from '@/lib/context-engine';
+
+const BRAND_INDIGO = '#6366F1';
 
 interface ConnectTopbarProps {
   className?: string;
@@ -146,6 +148,7 @@ export default function ConnectTopbar({
   const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username'>('idle');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
   const [searchingPeople, setSearchingPeople] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -166,6 +169,8 @@ export default function ConnectTopbar({
     event.stopPropagation();
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
+
+  const unreadNotifCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
   const profilePicId = getUserProfilePicId(user) || getSdkUserProfilePicId(user);
   const tone = getAppTone(activeApp);
