@@ -23,7 +23,6 @@ import {
   MoreVertical,
   ChevronRight
 } from 'lucide-react';
-...
 import { 
   createGhostNoteForResource, 
   promoteGhostResourceThreadToStory,
