@@ -100,9 +100,14 @@ export function UnifiedBottomBar() {
       connect: { home: '/connect', chats: '/connect/chats', calls: '/connect/calls', projects: '/projects' },
     };
     
-    // Fallback context if navigating from /projects
     const context = appContext || 'note';
-    router.push(routes[context]?.[newValue] || pathname || '/');
+    const target = routes[context]?.[newValue];
+    if (!target) return;
+
+    const current = pathname || '';
+    if (current === target || current.startsWith(`${target}/`)) return;
+
+    router.push(target);
   };
 
   const renderNavItems = () => {

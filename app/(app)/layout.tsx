@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
-
-import { AuthProvider } from '@/context/auth/AuthContext';
+import { hasAuthSessionHint } from '@/lib/appwrite/client';
 import { EcosystemProviders } from './EcosystemProviders';
 
 export default function AppLayout({
@@ -12,22 +11,30 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <AuthProvider>
-      <AppLayoutContent>{children}</AppLayoutContent>
-    </AuthProvider>
-  );
+  return <AppLayoutContent>{children}</AppLayoutContent>;
 }
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const authGraceUntilRef = useRef(0);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      authGraceUntilRef.current = Date.now() + 15_000;
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     // Zero-Idle Mandate: Redirect unauthenticated users to /send
-    if (!isLoading && !isAuthenticated) {
-      // ... (keep the same redirect logic) ...
+    if (isLoading) return;
+
+    if (!isAuthenticated) {
+      if (hasAuthSessionHint() || Date.now() < authGraceUntilRef.current) {
+        return;
+      }
+
       const path = pathname || '';
       const isPublic = 
         path === '/' ||

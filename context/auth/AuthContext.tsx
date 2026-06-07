@@ -104,6 +104,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   attemptSilentAuthRef.current = attemptSilentAuth;
 
   const lastPathnameRef = useRef<string | null>(null);
+  const lastBackgroundVerifyAtRef = useRef(0);
+  const BACKGROUND_VERIFY_COOLDOWN_MS = 60_000;
 
   const refreshUser = useCallback(async (forceRefresh = false): Promise<User | null> => {
     try {
@@ -125,20 +127,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           window.history.replaceState({}, '', url.toString());
         }
 
-        // 2. Background revalidation only if forced OR if pathname changed
+        // Background revalidation — throttled; never on every tab switch.
         const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-        const shouldVerify = forceRefresh || (currentPath !== lastPathnameRef.current);
-        
-        if (shouldVerify) {
+        const pathChanged = currentPath !== lastPathnameRef.current;
+        if (pathChanged) {
           lastPathnameRef.current = currentPath;
+        }
+
+        const verifyDue =
+          forceRefresh ||
+          (pathChanged && Date.now() - lastBackgroundVerifyAtRef.current > BACKGROUND_VERIFY_COOLDOWN_MS);
+
+        if (verifyDue) {
+          lastBackgroundVerifyAtRef.current = Date.now();
           const seq = ++sessionVerifySeq.current;
           void getCurrentUser(true).then((verified) => {
             if (seq !== sessionVerifySeq.current) return;
-            if (!verified) {
-              setUser(null);
-              clearKylrixPulse();
-              return;
-            }
+            if (!verified) return;
             setUser(verified as any);
             setKylrixPulse(verified);
           });

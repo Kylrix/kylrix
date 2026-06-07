@@ -52,14 +52,14 @@ export function AuthDiscoveryDrawer() {
       timerRef.current = setTimeout(() => {
         setCountdown((prev) => prev - 1);
       }, 1000);
-    } else if (open && countdown === 0) {
-      handleReturn();
     }
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [open, countdown, handleReturn]);
+  }, [open, countdown]);
+
+  // Manual return only — no auto-redirect countdown (prevents phantom bounce after auth blips).
 
   const handleCancel = () => {
     if (timerRef.current) clearTimeout(timerRef.current);

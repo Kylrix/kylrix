@@ -488,11 +488,21 @@ export async function getCurrentUser(force = false): Promise<any | null> {
             return user;
         })
         .catch((error) => {
-            // Only clear cache on hard unauthorized errors
-            if (error?.code === 401 || error?.code === 'user_unauthorized' || error?.code === 'user_session_not_found') {
+            const isUnauthorized =
+                error?.code === 401 ||
+                error?.code === 'user_unauthorized' ||
+                error?.code === 'user_session_not_found';
+
+            if (isUnauthorized) {
                 currentUserCache = null;
                 writeCurrentUserSnapshot(null);
                 emitCurrentUserChange(null);
+                return null;
+            }
+
+            // Network/timeout blips must not log the user out mid-navigation.
+            if (currentUserCache?.user) {
+                return currentUserCache.user;
             }
             return null;
         })
