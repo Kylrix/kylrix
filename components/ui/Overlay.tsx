@@ -57,7 +57,11 @@ const Overlay: React.FC = () => {
 
   const isFlapover = React.isValidElement(content) && (
     (content.props as any).note !== undefined ||
-    (content.type as any).name === 'NoteDetailSidebar'
+    (content.props as any).taskId !== undefined ||
+    (content.props as any).eventId !== undefined ||
+    (content.type as any).name === 'NoteDetailSidebar' ||
+    (content.type as any).name === 'TaskDetails' ||
+    (content.type as any).name === 'EventDetails'
   );
 
   const drawerHeight = isMobile 
