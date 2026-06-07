@@ -1,19 +1,27 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  X,
-  Flag,
-  Calendar,
-  Sparkles,
-  Plus,
-  Trash2,
-  Edit3,
-  FileText,
-  Video,
-  Send,
-  ArrowLeft,
-  Globe
+import { 
+  X, 
+  Flag, 
+  Calendar, 
+  Sparkles, 
+  Plus, 
+  Trash2, 
+  Edit3, 
+  FileText, 
+  Video, 
+  Send, 
+  ArrowLeft, 
+  Globe,
+  Tag as TagIcon,
+  MessageSquare,
+  Activity,
+  Mic,
+  Square,
+  RefreshCw,
+  MoreVertical,
+  ChevronRight
 } from 'lucide-react';
 import { formatTime } from '@/lib/time-util';
 import { formatNoteCreatedDate } from '@/lib/date-utils';
@@ -31,7 +39,11 @@ import { account } from '@/lib/appwrite';
 import { UsersService } from '@/lib/services/users';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 import type { CollaboratorPermission, TaskCollaborator } from '@/types';
-import { createGhostNoteForResource, promoteGhostResourceThreadToStory } from '@/lib/actions/client-ops';
+import { 
+  createGhostNoteForResource, 
+  promoteGhostResourceThreadToStory,
+  initGoalDiscussion 
+} from '@/lib/actions/client-ops';
 import { createComment, listComments, getNote } from '@/lib/appwrite/note';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';

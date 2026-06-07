@@ -63,6 +63,7 @@ const mapAppwriteTaskToTask = (doc: AppwriteTask): Task => {
     position: 0,
     isArchived: raw.isArchived === true || String(raw.isArchived) === 'true',
     isPinned: raw.isPinned === true || String(raw.isPinned) === 'true',
+    discussionId: raw.discussionId || null,
   };
 };
 
@@ -633,7 +634,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const taskQueries = [
       Query.equal('userId', uid),
       Query.limit(1000),
-      Query.select(['$id', 'userId', 'title', 'description', 'status', 'priority', 'dueDate', 'recurrenceRule', 'tags', 'assigneeIds', 'attachmentIds', '$createdAt', '$updatedAt', 'isPinned', 'isArchived', 'parentId', 'comments'])];
+      Query.select(['$id', 'userId', 'title', 'description', 'status', 'priority', 'dueDate', 'recurrenceRule', 'tags', 'assigneeIds', 'attachmentIds', '$createdAt', '$updatedAt', 'isPinned', 'isArchived', 'parentId', 'comments', 'discussionId'])];
     const calQueries = [
       Query.equal('userId', uid),
       Query.limit(100),
