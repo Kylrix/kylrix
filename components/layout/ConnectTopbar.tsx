@@ -260,6 +260,14 @@ export default function ConnectTopbar({
     }, 10);
   }, []);
 
+  const handleCloseAll = useCallback(() => {
+    setProfileMenuAnchorEl(null);
+    setAppMenuAnchorEl(null);
+    setSearchOpen(false);
+    setNotificationsOpen(false);
+    setNotifHint(null);
+  }, []);
+
   const toggleNotifications = useCallback(() => {
     if (!notificationsOpen) {
       handleCloseAll();
@@ -269,14 +277,6 @@ export default function ConnectTopbar({
     }
     setNotifHint(null);
   }, [notificationsOpen, handleCloseAll]);
-
-  const handleCloseAll = useCallback(() => {
-    setProfileMenuAnchorEl(null);
-    setAppMenuAnchorEl(null);
-    setSearchOpen(false);
-    setNotificationsOpen(false);
-    setNotifHint(null);
-  }, []);
 
   const openAppMenu = useCallback((event: MouseEvent<HTMLElement>) => {
     setAppMenuAnchorEl(event.currentTarget);
