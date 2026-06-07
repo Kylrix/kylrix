@@ -33,6 +33,8 @@ export default function TaskList() {
     setConfiguration({
       isVisible: true,
       mainColor: '#A855F7',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: () => setTaskDialogOpen(true),
       actions: [
         { id: 'new-goal', label: 'NEW GOAL', icon: <Plus className="h-5 w-5" />, onClick: () => setTaskDialogOpen(true) },
         { id: 'focus', label: 'FOCUS MODE', icon: <Calendar className="h-5 w-5" />, onClick: () => window.location.href = '/flow/focus' }]

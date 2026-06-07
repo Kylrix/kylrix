@@ -641,6 +641,8 @@ export default function ProjectsPage() {
     setConfiguration({
       isVisible: !isDesktop,
       mainColor: '#6366F1',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: () => openCreateDrawerRef.current(),
       actions: [
         { id: 'create-project', label: 'CREATE PROJECT', icon: <Plus size={20} />, onClick: () => openCreateDrawerRef.current() },
         { 

@@ -48,6 +48,8 @@ function ConnectHomeContent() {
     setConfiguration({
       isVisible: true,
       mainColor: '#F59E0B',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: () => openUnified('new-chat'),
       actions: [
         { id: 'chat', label: 'NEW CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat') },
         { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },

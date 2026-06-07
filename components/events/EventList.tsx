@@ -36,6 +36,14 @@ export default function EventList() {
     setConfiguration({
       isVisible: true,
       mainColor: '#6366F1',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: () => {
+        if (!isAuthenticated) {
+          openIDMWindow();
+          return;
+        }
+        setIsDialogOpen(true);
+      },
       suppressWorkflow: true,
       actions: [
         {

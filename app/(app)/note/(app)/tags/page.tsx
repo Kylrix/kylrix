@@ -9,23 +9,40 @@ import { formatDateWithFallback } from '@/lib/date-utils';
 import { TagNotesListSidebar } from '@/components/ui/TagNotesListSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
+import { useFAB } from '@/context/FABContext';
 import { 
   Plus as PlusIcon, 
   Edit2 as EditIcon, 
   Trash2 as TrashIcon, 
   Tag as TagIcon,
   Clock as ClockIcon,
-  Loader2 as SpinnerIcon
+  Loader2 as SpinnerIcon,
+  Plus
 } from 'lucide-react';
 
 export default function TagsPage() {
   const { user, isAuthenticated, openIDMWindow } = useAuth();
   const { open } = useUnifiedDrawer();
+  const { setConfiguration, resetConfiguration } = useFAB();
   const hasFetched = useRef(false);
   const [tags, setTags] = useState<Tags[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<Tags | null>(null);
+
+  const handleCreateNew = useCallback(() => {
+    open('new-tag', { onSuccess: fetchTags });
+  }, [open, fetchTags]);
+
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#6366F1',
+      onMainClick: handleCreateNew,
+      actions: []
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, handleCreateNew]);
 
   const fetchTags = useCallback(async () => {
     if (!user) {
@@ -60,9 +77,7 @@ export default function TagsPage() {
     open('new-tag', { tag, onSuccess: fetchTags });
   };
 
-  const handleCreateNew = () => {
-    open('new-tag', { onSuccess: fetchTags });
-  };
+
 
   const handleDelete = async (tag: Tags) => {
     open('delete-confirm', {

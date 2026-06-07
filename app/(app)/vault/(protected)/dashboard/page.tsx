@@ -107,6 +107,8 @@ function DashboardPageContent() {
     setConfiguration({
       isVisible: true,
       mainColor: '#10B981',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: () => handleAdd(),
       actions: [
         { id: 'add', label: 'ADD SECRET', icon: <Plus size={20} />, onClick: () => handleAdd() }]
     });
