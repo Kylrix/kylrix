@@ -243,6 +243,7 @@ export default function NotesPage() {
       setConfiguration({
         isVisible: true,
         mainColor: '#EC4899',
+        onMainClick: () => openComposer('note'),
         actions: [
           { id: 'new-note', label: 'NEW NOTE', icon: <NoteIcon size={16} />, onClick: () => openComposer('note') },
           { id: 'new-project', label: 'NEW PROJECT', icon: <ProjectIcon size={16} />, onClick: () => openComposer('project') },

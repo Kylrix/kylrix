@@ -85,6 +85,8 @@ export default function CreateNoteForm({
   const contentRef = useRef<HTMLTextAreaElement | null>(null);
   const createdToastShown = useRef(false);
   const persistInFlightRef = useRef<Promise<Notes | null> | null>(null);
+  const isPastedRef = useRef(false);
+  const pasteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -609,6 +611,14 @@ export default function CreateNoteForm({
     }
   }, [closeOverlay, content, isDirty, onClose, persist, resolvedNoteId, title]);
 
+  const handlePaste = useCallback(() => {
+    isPastedRef.current = true;
+    if (pasteTimerRef.current) clearTimeout(pasteTimerRef.current);
+    pasteTimerRef.current = setTimeout(() => {
+      isPastedRef.current = false;
+    }, 2000); // 2s protection window for formatting after paste
+  }, []);
+
   const handleTagKeyDown = useCallback((event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -743,10 +753,19 @@ export default function CreateNoteForm({
               ref={contentRef}
               rows={isExpanded ? 12 : 6}
               value={content}
+              onPaste={handlePaste}
               onChange={(event) => {
                 const val = event.target.value;
                 setContent(val);
                 syncNoteInMemory(title, val, tags, format);
+              }}
+              onKeyDown={(event) => {
+                // High-speed capture protocol: Enter in 60% state triggers save & exit
+                // Protection: Do not exit if user just pasted content (formatting window)
+                if (event.key === 'Enter' && !event.shiftKey && !isExpanded && !isPastedRef.current) {
+                  event.preventDefault();
+                  handleClose();
+                }
               }}
               placeholder="Write your note..."
               className="w-full flex-1 min-h-[160px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-pink-500/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
