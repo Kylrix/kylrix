@@ -6,6 +6,41 @@
   border-color: rgba(255, 255, 255, 0.08);
 }
 
+/* Authoritative Main Content Isolation */
+.kylrix-main-content {
+    --sidebar-width: 80px;
+    --sidebar-gap: 32px;
+    --mobile-px: 16px;
+    --desktop-px: 32px;
+    
+    padding-left: var(--mobile-px) !important;
+    transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mathematically guaranteed desktop-only offset */
+@media (min-width: 900px) {
+    .kylrix-main-content.with-sidebar {
+        padding-left: calc(var(--sidebar-width) + var(--sidebar-gap)) !important;
+    }
+    
+    .kylrix-main-content:not(.with-sidebar) {
+        padding-left: var(--desktop-px) !important;
+    }
+}
+
+/* Project Detail Specialized Rigidity */
+.kylrix-main-content.project-detail {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+}
+
+@media (min-width: 900px) {
+    .kylrix-main-content.project-detail {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+}
+
 /* Hardware-Accelerated Skeleton Transitions */
 .nexus-skeleton-pulse {
   animation: visual-fade 1.2s infinite ease-in-out;

@@ -173,6 +173,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {/* --- LAYER 0: CONTENT --- */}
       <Box
         component="main"
+        className={`kylrix-main-content ${showLeftSidebar ? 'with-sidebar' : ''} ${isProjectDetailPage ? 'project-detail' : ''}`}
         sx={{
           minWidth: 0,
           position: 'relative',
@@ -180,12 +181,11 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
           pt: '88px', // Exact Topbar height
           pb: isLandingPage ? 0 : { xs: 12, md: 4 },
           px: isProjectDetailPage ? { xs: 1, sm: 1, md: 2 } : { xs: 2, sm: 2, md: 4 },
-          pl: isProjectDetailPage ? { xs: 1, sm: 1, md: 2 } : { xs: 2, sm: 2, md: showLeftSidebar ? 'calc(80px + 32px)' : 4 }, // Dynamic desktop offset padding
+          // Authoritative padding is now handled by CSS classes for 100% rigidity
           maxWidth: 1800,
           mx: 'auto',
           minHeight: '100vh',
           pointerEvents: 'auto',
-          transition: 'padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
       >
         {children}
