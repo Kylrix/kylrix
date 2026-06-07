@@ -903,6 +903,7 @@ export type Calendars = Models.Row & {
     userId: string;
     isPublic: boolean | null;
     isGuest: boolean | null;
+    isPinned: boolean | null;
 }
 
 export type Tasks = Models.Row & {
@@ -923,6 +924,8 @@ export type Tasks = Models.Row & {
     isPinned: boolean | null;
     source: string | null;
     keepPermission: boolean | null;
+    isArchived: boolean | null;
+    comments: string[] | null;
 }
 
 export type Forms = Models.Row & {
