@@ -633,7 +633,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     const taskQueries = [
       Query.equal('userId', uid),
       Query.limit(1000),
-      Query.select(['$id', 'userId', 'title', 'status', 'priority', 'dueDate', 'tags', '$createdAt', '$updatedAt', 'isPinned', 'isArchived', 'parentId', 'comments'])];
+      // Pruned non-existent 'isArchived' and 'comments' to prevent authoritative query failure
+      Query.select(['$id', 'userId', 'title', 'status', 'priority', 'dueDate', 'tags', '$createdAt', '$updatedAt', 'isPinned', 'parentId'])];
     const calQueries = [
       Query.equal('userId', uid),
       Query.limit(100),
@@ -655,41 +656,51 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     if (isAuthLoading) return;
 
     const init = async () => {
-      let userId = authUser?.$id || 'guest';
-      if (!authUser?.$id) {
-        try {
-          const user = await getCurrentUser();
-          userId = user.$id;
-        } catch {}
+      try {
+        let userId = authUser?.$id || 'guest';
+        if (!authUser?.$id) {
+            try {
+                const user = await getCurrentUser();
+                userId = user.$id;
+            } catch {
+                // If we can't get user even here, we are truly guest
+            }
+        }
+        dispatch({ type: 'SET_USER', payload: userId });
+        flowWarmOwnerRef.current = userId;
+
+        if (userId === 'guest') {
+            dispatch({ type: 'SET_LOADING', payload: false });
+            return;
+        }
+
+        // 1. Proactive Hydration (RxDB Substrate)
+        const tasksKey = `f_tasks_${userId}`;
+        const calsKey = `f_calendars_${userId}`;
+
+        const [cachedTasksRes, cachedCalsRes] = await Promise.all([
+            getCachedDataAsync<any>(tasksKey),
+            getCachedDataAsync<any>(calsKey)
+        ]);
+
+        if (cachedTasksRes || cachedCalsRes) {
+            console.log('[TaskContext] Cold-start hydration triggered via RxDB.');
+            dispatch({ 
+                type: 'SET_DATA', 
+                payload: {
+                    tasks: (cachedTasksRes?.rows || []).map(mapAppwriteTaskToTask),
+                    projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject)
+                } 
+            });
+        }
+
+        // 2. Standard Background Refresh
+        const data = await fetchBatch(userId);
+        dispatch({ type: 'SET_DATA', payload: data });
+      } catch (err: any) {
+          console.error('[TaskContext] Authoritative init failed:', err);
+          dispatch({ type: 'SET_ERROR', payload: err.message || 'Failed to sync workspace' });
       }
-      dispatch({ type: 'SET_USER', payload: userId });
-      flowWarmOwnerRef.current = userId;
-
-      if (userId === 'guest') return;
-
-      // 1. Proactive Hydration (RxDB Substrate)
-      const tasksKey = `f_tasks_${userId}`;
-      const calsKey = `f_calendars_${userId}`;
-
-      const [cachedTasksRes, cachedCalsRes] = await Promise.all([
-          getCachedDataAsync<any>(tasksKey),
-          getCachedDataAsync<any>(calsKey)
-      ]);
-
-      if (cachedTasksRes || cachedCalsRes) {
-          console.log('[TaskContext] Cold-start hydration triggered via RxDB.');
-          dispatch({ 
-              type: 'SET_DATA', 
-              payload: {
-                  tasks: (cachedTasksRes?.rows || []).map(mapAppwriteTaskToTask),
-                  projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject)
-              } 
-          });
-      }
-
-      // 2. Standard Background Refresh
-      const data = await fetchBatch(userId);
-      dispatch({ type: 'SET_DATA', payload: data });
     };
 
     init();
