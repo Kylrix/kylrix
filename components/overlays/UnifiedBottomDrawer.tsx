@@ -2,7 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import { Drawer, useTheme, useMediaQuery } from '@/lib/mui-tailwind/material';
+import { Drawer, useTheme, useMediaQuery, Box } from '@/lib/mui-tailwind/material';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 // Import all dynamic drawer components

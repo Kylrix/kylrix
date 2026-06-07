@@ -35,6 +35,7 @@ import {
   Sparkles,
   Activity,
   RefreshCw,
+  ChevronRight,
 } from 'lucide-react';
 
 import Logo from '@/components/common/Logo';
@@ -267,7 +268,7 @@ export default function ConnectTopbar({
       setNotificationsOpen(false);
     }
     setNotifHint(null);
-  }, [notificationsOpen]);
+  }, [notificationsOpen, handleCloseAll]);
 
   const handleCloseAll = useCallback(() => {
     setProfileMenuAnchorEl(null);
