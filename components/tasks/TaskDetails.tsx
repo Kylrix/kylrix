@@ -31,6 +31,7 @@ import {
 import { createComment, listComments, getNote } from '@/lib/appwrite/note';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useLayout } from '@/context/LayoutContext';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '@/components/providers/PresenceProvider';
