@@ -41,6 +41,7 @@ import { usePresence } from '@/components/providers/PresenceProvider';
 import { useToast } from '@/components/ui/Toast';
 import { AppwriteService } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/IdentityBadge';
+import ProjectLinker from '@/components/projects/ProjectLinker';
 
 const priorityColors: Record<Priority, string> = {
   low: '#A1A1AA',
