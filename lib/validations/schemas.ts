@@ -146,6 +146,13 @@ export const EphemeralNoteSchema = z.object({
   secret: z.string().min(1),
 });
 
+export const SuggestionParamsSchema = z.object({
+  sourceApp: z.string(),
+  sourceType: z.string(),
+  sourceId: z.string().nullable(),
+});
+
+
 
 
 

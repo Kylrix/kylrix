@@ -38,7 +38,8 @@ import {
   FormSchema,
   TokenOperationSchema,
   TelemetrySchema,
-  EphemeralNoteSchema
+  EphemeralNoteSchema,
+  SuggestionParamsSchema
 } from '@/lib/validations/schemas';
 
 /**
@@ -536,13 +537,13 @@ export async function executeSessionRuntimeJobSecure(job: string, jwt?: string) 
  * Replaces legacy /api/ephemeral-note/delete.
  * Follows "The Golden Rule of Server Action Security".
  */
-export async function burnEphemeralNoteSecure(params: { noteId: string; deletionSecret: string }, jwt?: string) {
-  const noteId = String(params.noteId || '').trim();
-  const deletionSecret = String(params.deletionSecret || '').trim();
-  
-  if (!noteId || !deletionSecret) {
-    throw new Error('noteId and deletionSecret are required');
-  }
+export async function burnEphemeralNoteSecure(params: any, jwt?: string) {
+  // Rigorous runtime validation
+  const validated = EphemeralNoteSchema.parse({ noteId: params.noteId, secret: params.deletionSecret });
+  const validatedJwt = JWTSchema.parse(jwt);
+
+  const noteId = validated.noteId;
+  const deletionSecret = validated.secret;
 
   const { databases } = createSystemClient();
   const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -550,7 +551,7 @@ export async function burnEphemeralNoteSecure(params: { noteId: string; deletion
 
   // Parallel Fetch: Actor identity + Note document
   const [actor, doc] = await Promise.all([
-    getActor(jwt),
+    getActor(validatedJwt),
     databases.getDocument(dbId, tableId, noteId).catch(() => null)
   ]);
 
@@ -593,13 +594,13 @@ export async function burnEphemeralNoteSecure(params: { noteId: string; deletion
  * Removes the ghost row (and Send ciphertext file) after successful import.
  * Replaces legacy /api/ephemeral-note/consume.
  */
-export async function consumeEphemeralNoteSecure(params: { noteId: string; claimSecret: string }, jwt?: string) {
-  const noteId = String(params.noteId || '').trim();
-  const claimSecret = String(params.claimSecret || '').trim();
-  
-  if (!noteId || !claimSecret) {
-    throw new Error('noteId and claimSecret are required');
-  }
+export async function consumeEphemeralNoteSecure(params: any, jwt?: string) {
+  // Rigorous runtime validation
+  const validated = EphemeralNoteSchema.parse({ noteId: params.noteId, secret: params.claimSecret });
+  const validatedJwt = JWTSchema.parse(jwt);
+
+  const noteId = validated.noteId;
+  const claimSecret = validated.secret;
 
   const { databases, storage } = createSystemClient();
   const dbId = APPWRITE_CONFIG.DATABASES.NOTE;
@@ -607,7 +608,7 @@ export async function consumeEphemeralNoteSecure(params: { noteId: string; claim
 
   // Parallel Fetch: Actor identity + Note document
   const [actor, doc] = await Promise.all([
-    getActor(jwt),
+    getActor(validatedJwt),
     databases.getDocument(dbId, tableId, noteId).catch(() => null)
   ]);
 
@@ -1048,11 +1049,15 @@ export async function executeMasterPurgeSecure(jwt?: string) {
  * Replaces legacy GET /api/cross/suggest.
  * Follows "The Golden Rule of Server Action Security".
  */
-export async function getCrossSuggestionsSecure(params: { sourceApp: string; sourceType: string; sourceId: string | null }, jwt?: string) {
-  const actor = await getActor(jwt);
+export async function getCrossSuggestionsSecure(params: any, jwt?: string) {
+  // Rigorous runtime validation
+  const validated = SuggestionParamsSchema.parse(params);
+  const validatedJwt = JWTSchema.parse(jwt);
+
+  const actor = await getActor(validatedJwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const { sourceApp, sourceType, sourceId } = params;
+  const { sourceApp, sourceType, sourceId } = validated;
   const baseId = sourceId || 'unknown';
 
   let suggestions = [
