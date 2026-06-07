@@ -8130,6 +8130,15 @@
                     "size": 5000,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "discussionId",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 36,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
