@@ -17,7 +17,9 @@ import {
   CheckSquare as GrammarIcon,
   PlusSquare as TodoIcon,
   Calendar,
-  Unlock
+  Unlock,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
 
 import { useContextMenu } from './ui/ContextMenuContext';
