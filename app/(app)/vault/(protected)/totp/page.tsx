@@ -9,6 +9,8 @@ import { generateTOTP } from '@/lib/totp-util';
 import toast from 'react-hot-toast';
 import NewTotpDialog from '@/components/app/totp/new';
 import { useSudo } from '@/context/SudoContext';
+import { useSudo } from '@/context/SudoContext';
+import { useFAB } from '@/context/FABContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
 
 export const dynamic = 'force-dynamic';
@@ -18,6 +20,7 @@ function TOTPPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isVaultUnlocked, isVaultBlurEnabled } = useAppwriteVault();
+  const { setConfiguration, resetConfiguration } = useFAB();
   
   type TotpItem = {
     $id: string;
@@ -51,6 +54,18 @@ function TOTPPageContent() {
   }, [totpCodes, selectedTotp]);
 
   const { requestSudo } = useSudo();
+
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#10B981',
+      mainIcon: <Plus size={32} strokeWidth={3} />,
+      onMainClick: () => setShowNew(true),
+      actions: [
+        { id: 'add-totp', label: 'ADD CODE', icon: <Plus size={20} />, onClick: () => setShowNew(true) }]
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration]);
 
   // Handle action query param
   useEffect(() => {

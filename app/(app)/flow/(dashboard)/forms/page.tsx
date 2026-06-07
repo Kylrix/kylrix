@@ -27,6 +27,7 @@ import { useDataNexus } from '@/context/DataNexusContext';
 import { toast } from 'react-hot-toast';
 
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useFAB } from '@/context/FABContext';
 import { useSection, MultiSectionContainer } from '@/context/SectionContext';
 
 export default function FormsDashboard() {
@@ -35,6 +36,7 @@ export default function FormsDashboard() {
     const { fetchOptimized, invalidate } = useDataNexus();
     const { open: openDrawer } = useUnifiedDrawer();
     const { setActiveDetail } = useSection();
+    const { setConfiguration, resetConfiguration } = useFAB();
     const [forms, setForms] = useState<Forms[]>([]);
     const [offlineDrafts, setOfflineDrafts] = useState<FormDraft[]>([]);
     const [loading, setLoading] = useState(true);
@@ -48,6 +50,18 @@ export default function FormsDashboard() {
     // UI States
     const [activeMenuFormId, setActiveMenuFormId] = useState<string | null>(null);
     const [isDesktop, setIsDesktop] = useState(false);
+
+    useEffect(() => {
+        setConfiguration({
+            isVisible: true,
+            mainColor: '#6366F1',
+            mainIcon: <Plus size={32} strokeWidth={3} />,
+            onMainClick: handleCreate,
+            actions: [
+                { id: 'create-form', label: 'CREATE FORM', icon: <Plus size={20} />, onClick: handleCreate }]
+        });
+        return () => resetConfiguration();
+    }, [setConfiguration, resetConfiguration]);
 
     useEffect(() => {
         const checkSize = () => setIsDesktop(window.innerWidth >= 1024);
