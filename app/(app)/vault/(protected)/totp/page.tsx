@@ -9,7 +9,6 @@ import { generateTOTP } from '@/lib/totp-util';
 import toast from 'react-hot-toast';
 import NewTotpDialog from '@/components/app/totp/new';
 import { useSudo } from '@/context/SudoContext';
-import { useSudo } from '@/context/SudoContext';
 import { useFAB } from '@/context/FABContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
 
