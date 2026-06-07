@@ -29,6 +29,8 @@ import {
   initGoalDiscussion 
 } from '@/lib/actions/client-ops';
 import { createComment, listComments, getNote } from '@/lib/appwrite/note';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { client } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { usePresence } from '@/components/providers/PresenceProvider';
