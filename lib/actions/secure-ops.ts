@@ -24,6 +24,15 @@ import { executeCascadeDeleteSecure } from './cascade-delete';
 import { verifyCreatorDeletionProof } from '@/lib/ephemeral/ephemeral-proof';
 import { verifyTurnstileToken } from '@/lib/turnstile';
 import { validatePublicNoteAccess } from '@/lib/appwrite/note';
+import { 
+  MutatePermissionsSchema, 
+  IDSchema, 
+  JWTSchema,
+  CreateRowSchema,
+  UpdateRowSchema,
+  CRUDParamsSchema,
+  ListParamsSchema 
+} from '@/lib/validations/schemas';
 
 /**
  * Updates row-level permissions for a resource.
@@ -33,31 +42,33 @@ export async function mutatePermissionsSecure(body: any, jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  const action = String(body?.action || 'grant').trim();
+  // Rigorous runtime validation
+  const validated = MutatePermissionsSchema.parse(body);
+  const action = validated.action;
 
   if (action === 'pin_ghost_note') {
-    const noteIds = normalizeTargetUserIds(body?.noteIds || body?.resourceIds || body?.resourceId);
-    const wrappedKey = body?.wrappedKey || body?.ghostSecret;
+    const noteIds = normalizeTargetUserIds(validated.noteIds || validated.resourceIds || validated.resourceId);
+    const wrappedKey = validated.wrappedKey || validated.ghostSecret;
     if (noteIds.length === 0) throw new Error('At least one noteId is required');
     if (!wrappedKey) throw new Error('wrappedKey is required');
 
     const keyMappings = noteIds.map((noteId) => ({
       resourceId: noteId,
-      resourceType: body?.resourceType || 'ghost_note',
+      resourceType: validated.resourceType || 'ghost_note',
       grantee: actor.$id,
       wrappedKey,
-      metadata: body?.metadata || null,
+      metadata: validated.metadata || null,
     }));
     const { databases } = createSystemClient();
     const rows = await upsertLockboxRows(databases, actor.$id, keyMappings);
     return { success: true, action, rows };
   }
 
-  const result = await applyPermissionMutation(actor.$id, body);
+  const result = await applyPermissionMutation(actor.$id, validated);
   return {
     success: true,
     action,
-    rowId: body?.rowId || null,
+    rowId: validated.rowId || null,
     permissions: (result as any)?.permissions || null,
   };
 }
@@ -70,8 +81,12 @@ export async function revokePermissionsSecure(body: any, targetUserId?: string, 
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
 
-  await revokePermissionMutation(actor.$id, body, targetUserId);
-  return { success: true, action: 'revoke', rowId: body?.rowId || null };
+  // Rigorous runtime validation
+  const validated = MutatePermissionsSchema.parse(body);
+  const validatedTargetUserId = IDSchema.optional().parse(targetUserId);
+
+  await revokePermissionMutation(actor.$id, validated, validatedTargetUserId);
+  return { success: true, action: 'revoke', rowId: validated.rowId || null };
 }
 
 // Short-lived in-memory cache for row reads during permission checks.
@@ -4971,10 +4986,11 @@ export async function getProfileByUsernameSecure(username: string) {
 }
 
 export async function listRowsSecure(databaseId: string, tableId: string, queries: string[] = [], jwt?: string) {
-  console.log('[listRowsSecure] Request:', { databaseId, tableId, queries });
+  // Rigorous runtime validation
+  const validated = ListParamsSchema.parse({ databaseId, tableId, queries });
   
   try {
-    const res = await Registry.getDatabase().listRows<any>(databaseId, tableId, queries, { jwt });
+    const res = await Registry.getDatabase().listRows<any>(validated.databaseId, validated.tableId, validated.queries, { jwt });
     console.log('[listRowsSecure] Success via DatabasePort. Total:', res.total, 'Count:', res.rows?.length);
     // Unified response: 'rows' is now the primary key, 'documents' is legacy
     return JSON.parse(JSON.stringify({

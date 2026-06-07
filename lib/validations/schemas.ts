@@ -43,3 +43,37 @@ export const UpdateRowSchema = z.object({
   data: z.record(z.any()),
   permissions: z.array(z.string()).optional(),
 });
+
+export const NoteSchema = z.object({
+  title: z.string().min(1).max(512),
+  content: z.string().optional(),
+  format: z.enum(['markdown', 'text', 'doodle']).default('markdown'),
+  tags: z.array(z.string()).optional(),
+  isPublic: z.boolean().optional(),
+  metadata: z.string().nullable().optional(),
+});
+
+export const ProjectSchema = z.object({
+  name: z.string().min(1).max(255),
+  color: z.string().optional(),
+  description: z.string().optional(),
+  isPublic: z.boolean().optional(),
+});
+
+export const EventSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().optional(),
+  startTime: z.string().optional(),
+  endTime: z.string().optional(),
+  location: z.string().optional(),
+  isPublic: z.boolean().optional(),
+});
+
+export const FormSchema = z.object({
+  title: z.string().min(1).max(255),
+  description: z.string().optional(),
+  schema: z.string().optional(),
+  settings: z.string().optional(),
+  isPublic: z.boolean().optional(),
+});
+
