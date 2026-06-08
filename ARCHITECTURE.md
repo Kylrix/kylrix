@@ -252,16 +252,17 @@ The following catalog provides a highly detailed engineering breakdown of the 56
 *   **Ecosystem Synergy**: Forms the core defense shield against credential stuffing.
 *   **Next-Gen Optimizations**: Network-wide coordinate-based heuristics that detect distributed bruteforce attempts targeting an account from multiple distinct IP addresses.
 
-#### 12. Row-Level Security (RLS) Hardening
-*   **Mechanics & Substrate**: Least-privileged database policies implemented across all Appwrite tables. Detailed in `lib/actions/secure-ops.ts`.
-*   **Zero-Knowledge Boundary**: Database tables are locked to read-only default policies at the platform level. Clients are mathematically prevented from performing direct remote write requests.
-*   **Acute Architectural Rationale**: All write operations must route through verified Server Actions (`lib/actions/secure-ops.ts`) which escalate privileges safely after performing strict server-side validation. This design blocks database scraping exploits and direct client-side table modifications.
+#### 12. Row-Level Security (RLS) & Hybrid Team Expansion
+*   **Mechanics & Substrate**: Least-privileged database policies augmented by a background Appwrite Team wrapper. Detailed in `lib/actions/secure-ops.ts`.
+*   **Zero-Knowledge Boundary**: Database tables are locked to read-only default policies. Clients cannot modify rows directly. Write operations escalate through Server Actions.
+*   **Acute Architectural Rationale**: To bypass the free-tier 8-user limit without inflating database row permission payloads, Kylrix uses a **Hybrid Team Expansion Slot**. The first 8 collaborators are bound directly to the resource's ACL. For Pro users adding a 9th member, a background Appwrite Team is silently provisioned and linked to the row (`read("team:ID")`). 
 *   **Vivid End-to-End Execution Flow**:
-    1.  Client invokes `createNoteSecure` Action.
-    2.  Action verifies actor JWT, validating the caller's identity.
-    3.  Server validates the payload bounds.
-    4.  Server calls the Admin SDK with elevated privileges to write the Row with read-only ACLs for the owner.
-*   **Ecosystem Synergy**: Core data protection layer that enforces the integrity of every database row.
+    1.  Pro user adds the 9th collaborator to a Project.
+    2.  Server Action provisions a background Appwrite Team.
+    3.  The original 8 members and the 9th member are added to this Team.
+    4.  The resource ACL is updated to include the Team ID.
+    5.  On downgrade, the background team is deleted. Access for members 9+ instantly vanishes, but the foundational 8 remain untouched, ensuring a safe, self-cleaning fallback.
+*   **Ecosystem Synergy**: Provides infinite collaboration scaling while strictly enforcing Free/Pro boundaries without manual data migration.
 *   **Next-Gen Optimizations**: Cryptographically signed write transactions, where the server only executes database mutations accompanied by a valid user signature.
 
 #### 13. Cross-App Linking Service
