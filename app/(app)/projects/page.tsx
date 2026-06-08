@@ -55,10 +55,8 @@ import {
 } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
-import { TeamsService } from '@/lib/appwrite/teams';
 import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';
-import { type Models } from 'appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import { useLocalContext } from '@/lib/context-engine';
