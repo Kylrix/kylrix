@@ -18,9 +18,9 @@ Per-resource specification for ruthless sharing. Each row is authoritative for i
 |-------|-------|
 | DB | `67ff05a9000296822396` / `67ff05f3002502ef239e` |
 | Columns | `isPublic`, `isGuest` (both exist) |
-| Internal list URL | `/notes` |
-| Internal detail | `/notes/[id]` |
-| Public URL | `/note/[id]` |
+| Internal flagship list | **`/note`** (was `/note/notes`; `/note/shared` etc. unchanged) |
+| Internal detail | Existing paths (e.g. `/note/notes/[id]`) — no mass move in this program |
+| Public URL | **`/note/[id]`** — detail or access-unavailable |
 | Project public | `/projects/[pid]/note/[id]` |
 | Pin | `user_resource_pins` + owner `isPinned` |
 | Lock accent | `#EC4899` |
@@ -40,8 +40,8 @@ Per-resource specification for ruthless sharing. Each row is authoritative for i
 |-------|-------|
 | DB | `passwordManagerDb` / `credentials` |
 | Columns | `isPublic`, `isGuest` |
-| Internal list | `/vault` or `/vault/dashboard` |
-| Public URL | `/vault/[id]` |
+| Internal flagship list | **`/vault`** (was `/vault/dashboard`; `/vault/totp` etc. unchanged) |
+| Public URL | **`/vault/[id]`** |
 | Project public | `/projects/[pid]/secret/[id]` |
 | Pin | `user_resource_pins` type `credential` |
 | Lock accent | `#10B981` |
@@ -76,8 +76,8 @@ Per-resource specification for ruthless sharing. Each row is authoritative for i
 |-------|-------|
 | DB | `whisperrflow` / `tasks` |
 | Columns | `isPublic`, `isGuest` |
-| Internal list | `/goals` |
-| Public URL | `/goal/[id]` |
+| Internal flagship list | **`/flow`** (was `/flow/goals`, `/flow/tasks`; `/flow/forms` etc. unchanged) |
+| Public URL | **`/flow/goal/[id]`** (OD-R1 — keeps `/flow` prefix) |
 | Project public | `/projects/[pid]/goal/[id]` |
 | Pin | type `task` |
 | Lock accent | `#A855F7` |
@@ -95,8 +95,8 @@ Per-resource specification for ruthless sharing. Each row is authoritative for i
 |-------|-------|
 | DB | `whisperrflow` / `forms` |
 | Columns | `isPublic`, `isGuest` |
-| Internal | `/forms`, `/forms/[id]` |
-| Public | `/form/[id]` (may overlap existing `/flow/forms/[id]` public fill) |
+| Internal | **`/flow/forms`**, **`/flow/forms/[id]`** (unchanged) |
+| Public | **`/flow/form/[id]`** |
 | Pin | type `form` |
 | Lock accent | `#6366F1` |
 | Card files | `app/(app)/flow/(dashboard)/forms/page.tsx` |
@@ -110,7 +110,8 @@ Per-resource specification for ruthless sharing. Each row is authoritative for i
 |-------|-------|
 | DB | `whisperrflow` / `events` |
 | Columns | `isPublic`, `isGuest` |
-| Public | `/event/[id]` |
+| Internal | **`/flow/events`**, **`/flow/events/[id]`** (unchanged) |
+| Public | **`/flow/event/[id]`** |
 | Card files | `components/events/EventCard.tsx` |
 | Pin | Not yet on card — add with global pin if event pin desired |
 
@@ -138,9 +139,9 @@ Per-resource specification for ruthless sharing. Each row is authoritative for i
 |-------|-------|
 | DB | `chat` / `conversations` or `calls` |
 | Columns | varies — conversations use `isPinned: string[]`, may need `isPublic/isGuest` on call row |
-| Internal list | `/connect/huddles` (rename from `/connect/calls`) |
-| Internal detail | `/connect/huddles/[id]` |
-| Public join | `/connect/huddle/[id]` |
+| Internal list | **`/connect/calls`** (unchanged) |
+| Internal detail | **`/connect/calls/[id]`** or existing call route |
+| Public join | **`/connect/call/[id]`** |
 | Pin | per-user conversation pin (future) |
 | Publish | Lock shares join link; guest may enter call lobby |
 

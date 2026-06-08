@@ -1,125 +1,184 @@
-# Route Canonicalization Matrix
+# Route Policy — Conservative (Revised)
 
-## Naming law
+**Last updated:** per user correction — **no sweeping route deprecation.**
+
+This document replaces the earlier aggressive canonicalization plan. Most existing paths **stay as-is**. Only three **flagship landing** routes collapse so the sub-app root actually serves its primary feature (like `/connect` already does for the moment feed).
+
+---
+
+## 1. What we are NOT doing
+
+| Do NOT | Why |
+|--------|-----|
+| Move `/note/shared` → root `/shared` | Sub-app pages keep their `/note` prefix |
+| Move `/flow/forms` → `/forms` | Same — `/flow/*` siblings unchanged |
+| Rename `/connect/calls` → `/connect/huddles` | Existing terminology/routes stay unless product asks later |
+| Collapse everything to root `/notes`, `/goals`, `/vault` | Sub-apps are not distilled into site root |
+| Mass-delete `app/(app)/note/(app)/...` tree | Catastrophic; avoid |
+| 301 every `/flow/*` path | Out of scope |
+
+**Rule of thumb:** Sub-app secondary pages **keep** their prefix (`/note/shared`, `/note/tags`, `/flow/forms`, `/vault/totp`, etc.). Only the **empty middle segment** list pages move up one level.
+
+---
+
+## 2. Standalone apps (own league — unchanged)
+
+These are **not** sub-routes of Note / Vault / Flow / Connect:
+
+| App | Root | Notes |
+|-----|------|-------|
+| **Projects** | `/projects`, `/projects/[id]` | Cross-ecosystem; not under `/note` or `/flow` |
+| **Send** | `/send`, `/send/[id]` | Ephemeral relay; separate security model |
+
+---
+
+## 3. The only three internal landing collapses
+
+Each row: **old URL** had a redundant segment (`/notes`, `/dashboard`, `/goals`) where the **parent prefix was empty**. Parent becomes the flagship surface.
+
+| Sub-app | Old flagship list | **New flagship list** | What moves here | Unchanged siblings (examples) |
+|---------|-------------------|----------------------|-----------------|-------------------------------|
+| **Note** | `/note/notes` | **`/note`** | Notes list (primary Note feature) | `/note/shared`, `/note/tags`, `/note/settings`, … |
+| **Vault** | `/vault/dashboard` | **`/vault`** | Secrets/credentials list | `/vault/totp`, `/vault/sharing`, `/vault/overview`, … |
+| **Flow** | `/flow/goals`, `/flow/tasks` | **`/flow`** | Goals/tasks list (primary Flow feature) | `/flow/forms`, `/flow/events`, `/flow/calendar`, … |
+
+### Why only these three?
+
+- `/connect` **already** lands on the live moment feed at `/connect` — no `/connect/feed` middle layer. This is the pattern we mirror.
+- `/note/notes` → the `/note` prefix carried no content until `/notes`; opportunistic to serve notes at `/note`.
+- `/vault/dashboard` → same for secrets at `/vault`.
+- `/flow/goals` (and `/flow/tasks`) → same for goals at `/flow`.
+
+### Compatibility (not deprecation theater)
+
+- Keep **`/note/notes`**, **`/vault/dashboard`**, **`/flow/goals`**, **`/flow/tasks`** as **aliases** (redirect or same page component) so bookmarks and external links never break.
+- Update **all internal hrefs globally** to point at the new canonical targets (`/note`, `/vault`, `/flow`).
+- This is a **href + flagship route** change, not a tree wipe.
+
+---
+
+## 4. Connect (reference pattern — no change required)
+
+| Route | Role |
+|-------|------|
+| `/connect` | Live moment feed (flagship — already correct) |
+| `/connect/chats` | Chat list |
+| `/connect/calls` | Huddles/calls |
+| `/connect/chat/[id]` | Conversation detail (internal) |
+
+No collapses planned for Connect in this program.
+
+---
+
+## 5. Public (guest) URL law
+
+> **A resource’s URI — drop a trailing `s` on the resource noun if present — then `+ /[id]` → public detail page.**
+
+Behavior on hit:
+
+1. Load row via `secure-ops` guest/public gate (`isGuest` / `isPublic`).
+2. If allowed → render **standard detail component** for that resource (read-only).
+3. If not → friendly **access unavailable** message (not a generic 403 wall).
+
+### Examples
+
+| Resource | Internal (auth app chrome) | Public guest URL | Notes |
+|----------|----------------------------|------------------|-------|
+| Note | `/note` (list), `/note/notes/[id]` or detail route TBD | **`/note/[id]`** | Aligns with `/note` prefix; replaces legacy `/note/shared/[id]` for **new** shares when ready (old URL may remain alias) |
+| Goal | `/flow` (list) | **`/flow/goal/[id]`** | OD-R1 — keeps `/flow` prefix; no root `/goal/[id]` |
+| Form | `/flow/forms/[id]` | **`/flow/form/[id]`** | Drop `s` on `forms` |
+| Event | `/flow/events/[id]` | **`/flow/event/[id]`** | |
+| Vault secret | `/vault` (list) | **`/vault/[id]`** | |
+| Project | `/projects/[id]` | **`/project/[id]`** | Standalone; `projects` → `project` |
+| Huddle | `/connect/calls` … | **`/connect/call/[id]`** | `calls` → `call` |
+
+**Project sub-resources (hierarchy):**
+
+`/projects/[projectId]/[kind]/[entityId]` — unchanged for integrated objects.
+
+### Public page contract
 
 ```
-INTERNAL LIST ROUTE     → plural, app-scoped prefix (owner/collaborator workspace)
-INTERNAL DETAIL ROUTE   → plural path + [id]  (authenticated app chrome)
-PUBLIC ITEM ROUTE       → singular resource segment + [id]  (guest-readable, minimal chrome)
-PROJECT-SCOPED PUBLIC   → /projects/[projectId]/[kind]/[entityId]  (hierarchy preserved)
+GET /{appPrefix}/{resourceNoun}/{id}   // noun singularized
+  → guest read via isGuest / isPublic
+  → <ResourceDetailReadOnly /> | <AccessUnavailable />
 ```
 
-**Why drop `s` only on public routes?**  
-Plural paths signal "my collection inside Kylrix." Singular paths signal "one object on the web." Users sharing `kylrix.space/note/abc` intuit a single note; `kylrix.space/notes/abc` feels like a dashboard path that might 404 without login.
-
-**Why deprecate `/note/notes`, `/flow/...` prefixes?**  
-Historical app silos (`/note/`, `/flow/`, `/vault/`) added URL depth without semantic value. Canonical workspace paths shorten to `/notes`, `/goals`, `/forms`, etc. Middleware redirects preserve bookmarks.
+Minimal chrome: no vault unlock, no owner edit affordances.
 
 ---
 
-## Master table
+## 6. Internal detail routes (mostly unchanged)
 
-| Resource | Old internal list | **New internal list** | Old internal detail | **New internal detail** | **New public (guest)** | Project-scoped public |
-|----------|-------------------|----------------------|---------------------|-------------------------|------------------------|----------------------|
-| Note | `/note/notes` | `/notes` | `/note/(app)/notes/[id]` | `/notes/[id]` | `/note/[id]` | `/projects/[pid]/note/[id]` |
-| Note (legacy shared) | `/note/shared` | `/notes/shared` or merge into filter tab | `/note/shared/[noteid]` | — | `/note/[id]` (301 from old) | — |
-| Tag | `/note/tags` | `/notes/tags` | — | — | N/A (no guest single-tag URL) | — |
-| Goal/Task | `/flow/goals`, `/flow/tasks` | `/goals` | — | `/goals/[id]` | `/goal/[id]` | `/projects/[pid]/goal/[id]` |
-| Form | `/flow/forms` | `/forms` | `/flow/forms/[formId]` | `/forms/[id]` | `/form/[id]` | `/projects/[pid]/form/[id]` |
-| Event | `/flow/events` | `/events` | `/flow/events/[eventId]` | `/events/[id]` | `/event/[id]` | `/projects/[pid]/event/[id]` |
-| Calendar | `/flow/calendar` | `/calendar` | — | — | TBD | — |
-| Vault credential | `/vault/dashboard` | `/vault` or keep `/vault/dashboard` | — | `/vault/[id]` (new) | `/vault/[id]` | `/projects/[pid]/secret/[id]` |
-| TOTP | `/vault/totp` | `/vault/totp` | — | `/vault/totp/[id]` | `/totp/[id]` TBD | `/projects/[pid]/totp/[id]` |
-| Project | `/projects` | `/projects` (unchanged) | `/projects/[id]` | `/projects/[id]` | `/project/[id]` | — |
-| Huddle/Call | `/connect/calls` | `/connect/huddles` | `/connect/call/[id]`? | `/connect/huddles/[id]` | `/connect/huddle/[id]` | — |
-| Chat | `/connect/chats` | `/connect/chats` | `/connect/chat/[id]` | `/connect/chats/[id]` | N/A (invite links separate) | — |
-| Send (ephemeral) | `/send` | `/send` | `/send/[noteId]` | `/send/[noteId]` | `/send/[noteId]` | **Out of scope** |
+Do **not** mass-move detail pages in this program.
+
+| Area | Keep unless explicitly listed |
+|------|------------------------------|
+| Note editor/detail | Existing `app/(app)/note/(app)/notes/[id]/...` paths may remain; only **list** hrefs switch to `/note` |
+| Form builder | `/flow/forms/[formId]` |
+| Event | `/flow/events/[eventId]` |
+| Project workspace | `/projects/[projectId]` |
+
+Resolve note internal detail canonical URL in implementation (may stay `/note/notes/[id]` with hrefs from `/note` list).
 
 ---
 
-## Redirect policy
+## 7. Global href update scope (when implementing)
 
-| From | To | Code | Why |
-|------|-----|------|-----|
-| `/note/notes` | `/notes` | 308 | Permanent canonical list |
-| `/note/notes/[id]` | `/notes/[id]` | 308 | Internal detail |
-| `/note/shared/[noteid]` | `/note/[noteid]` | 301 | Public singular |
-| `/flow/goals` | `/goals` | 308 | Drop flow prefix |
-| `/flow/tasks` | `/goals` | 308 | Tasks merged UX into goals |
-| `/flow/forms` | `/forms` | 308 | |
-| `/flow/forms/[id]` | `/forms/[id]` | 308 | |
-| `/flow/events` | `/events` | 308 | |
-| `/flow/events/[id]` | `/events/[id]` | 308 | |
-| `/connect/calls` | `/connect/huddles` | 308 | Terminology: huddle |
-| `/connect/call/[id]` | `/connect/huddles/[id]` | 308 | Internal detail |
-| `/projects/[id]` (guest, no auth) | `/project/[id]` | 302 | Only when serving public guest view — **careful:** internal collabs keep `/projects/[id]` |
+**Must update** every callsite that links to the three collapsed landings:
 
-**Implementation home:** `middleware.ts` + Next.js `redirect()` in old `page.tsx` stubs.
+```bash
+# Primary grep targets (internal navigation only)
+rg "/note/notes" --glob "*.{ts,tsx}"
+rg "/vault/dashboard" --glob "*.{ts,tsx}"
+rg "/flow/goals" --glob "*.{ts,tsx}"
+rg "/flow/tasks" --glob "*.{ts,tsx}"
+```
 
----
+**Known files (non-exhaustive):**
 
-## Public route pages (to create)
+- `components/UnifiedBottomBar.tsx`
+- `components/layout/ConnectTopbar.tsx`
+- `components/ui/ContextMenuContext.tsx`
+- `context/SectionContext.tsx` — `DEFAULT_LAYOUTS` key `/note/notes` → `/note`
+- `middleware.ts` — auth redirect if it targets `/note/notes`
+- `app/layout.tsx` — root redirect script
+- `lib/ecosystem/resume-route.ts`
+- `components/providers/EcosystemStateTracker.tsx`
+- `app/(app)/layout.tsx` — public allowlist (add `/note` as list, keep `/note/shared`)
+- `lib/context-engine.tsx`
+- `components/layout/DesktopRightSection.tsx`
 
-Each needs a **minimal guest shell** (no GlobalShell sidebar, no vault unlock):
-
-| Route | Page path (planned) | Data source |
-|-------|---------------------|-------------|
-| `/note/[id]` | `app/note/[id]/page.tsx` | `getSharedNoteSecure` or general `getResourceSecure` |
-| `/goal/[id]` | `app/goal/[id]/page.tsx` | `secure-ops` task read guest path |
-| `/form/[id]` | `app/form/[id]/page.tsx` | existing public form renderer if any |
-| `/event/[id]` | `app/event/[id]/page.tsx` | new guest event view |
-| `/project/[id]` | extend `app/(app)/project/[projectId]/page.tsx` or new `app/project/[id]/page.tsx` | guest project preview |
-| `/vault/[id]` | `app/vault/[id]/page.tsx` | **high risk** — likely metadata-only guest view |
-| `/connect/huddle/[id]` | `app/connect/huddle/[id]/page.tsx` | join flow |
+**Do NOT grep-replace** `/note/shared`, `/flow/forms`, `/connect/calls`, etc.
 
 ---
 
-## Internal route pages (to move)
+## 8. Redirect aliases (minimal)
 
-| Current file | Target |
-|--------------|--------|
-| `app/(app)/note/(app)/notes/page.tsx` | `app/(app)/notes/page.tsx` |
-| `app/(app)/note/(app)/notes/[id]/page.tsx` | `app/(app)/notes/[id]/page.tsx` |
-| `app/(app)/flow/(dashboard)/goals/page.tsx` | `app/(app)/goals/page.tsx` |
-| `app/(app)/flow/(dashboard)/forms/page.tsx` | `app/(app)/forms/page.tsx` |
-| `app/(app)/connect/calls/page.tsx` | `app/(app)/connect/huddles/page.tsx` |
+| From (alias) | To (canonical) | Code |
+|--------------|----------------|------|
+| `/note/notes` | `/note` | 308 or same component |
+| `/vault/dashboard` | `/vault` | 308 or same component |
+| `/flow/goals` | `/flow` | 308 or same component |
+| `/flow/tasks` | `/flow` | 308 or same component |
 
-Keep old paths as thin re-export/redirect stubs until Phase 7 cleanup.
+**Not in scope:**
 
----
-
-## URL generator migration checklist
-
-Every callsite that builds URLs must switch to `buildPublicResourceUrl()` / `buildInternalResourceUrl()`:
-
-- [ ] `lib/appwrite/note.ts` — `getShareableUrl`
-- [ ] `components/overlays/ShareNoteDrawer.tsx`
-- [ ] `lib/send/shared-note-api.ts`
-- [ ] `lib/ecosystem/resume-route.ts`
-- [ ] `components/UnifiedBottomBar.tsx`
-- [ ] `components/layout/ConnectTopbar.tsx`
-- [ ] `context/SectionContext.tsx` — `DEFAULT_LAYOUTS` keys
-- [ ] `middleware.ts`
-- [ ] `app/layout.tsx` — root redirect script
-- [ ] `app/(app)/layout.tsx` — public path allowlist
-- [ ] `components/providers/EcosystemStateTracker.tsx`
-- [ ] Email / Telegram CTAs (`system.domain-canonicalization` skill)
-- [ ] `lib/services/chat.ts` — invite links if applicable
+- `/note/shared/[id]` → `/note/[id]` (optional later for share URL builder only; **not** a mass redirect)
+- `/flow/forms` → anything else
+- `/connect/calls` → anything else
 
 ---
 
-## `entityKind` → URL kind mapping (project sub-paths)
+## 9. SectionContext / layout keys
 
-| `project_objects.entityKind` | Public sub-path segment |
-|------------------------------|-------------------------|
-| `note` | `note` |
-| `goal` | `goal` |
-| `password` / `credential` | `secret` |
-| `totp` | `totp` |
-| `form` | `form` |
-| `event` | `event` |
-| `tag` | `tag` |
-| `call` / `huddle` | `huddle` |
-| `project` (sub-project) | `project` |
+Update `DEFAULT_LAYOUTS` only for keys that **rename**:
 
-**Why `secret` not `password`?** Layman-friendly public URL per AGENTS.md terminology mandate in UI copy; path segment matches vault UX word "Secret."
+| Old key | New key |
+|---------|---------|
+| `/note/notes` | `/note` |
+| `/vault/dashboard` | `/vault` |
+| `/flow/goals` | `/flow` |
+| `/flow/tasks` | `/flow` |
+
+Leave `/note/shared`, `/flow/forms`, `/connect/chats`, etc. keys **unchanged**.

@@ -113,7 +113,7 @@ Some resources need side effects on publish:
 
 ---
 
-## 4. Canonical public URL builder
+## 4. Public URL builder (revised — no mass internal route change)
 
 **Location (planned):** `lib/share/public-url.ts`
 
@@ -123,25 +123,32 @@ buildPublicResourceUrl(resourceType, resourceId, projectId?: string): string
 
 **Base:** `https://www.kylrix.space` (per `system.domain-canonicalization` skill).
 
-### Singular-vs-plural rule
+### Public URL law
 
-> **App list routes are plural. Public item routes are singular.**
+> Take the resource’s **app-scoped path**, **drop trailing `s`** on the resource noun if present, append **`/[id]`**. That URL is what Lock copies.
 
-Examples:
+On request:
 
-| Resource | Internal (owner/collab) | Public (guest) |
-|----------|-------------------------|----------------|
-| Note | `/notes`, `/notes/[id]` | `/note/[id]` |
-| Vault secret | `/vault/dashboard` | `/vault/[id]` |
-| TOTP | `/vault/totp` | `/vault/totp/[id]` or `/totp/[id]` — TBD |
-| Goal/task | `/flow/goals` | `/goal/[id]` |
-| Form | `/flow/forms/[id]` | `/form/[id]` |
-| Event | `/flow/events/[id]` | `/event/[id]` |
-| Project | `/projects/[id]` | `/project/[id]` |
-| Project child | `/projects/[id]` (tab) | `/projects/[id]/[kind]/[entityId]` |
-| Huddle | `/connect/huddles/[id]` | `/connect/huddle/[id]` |
+- If `isGuest` or (`isPublic` + authenticated) → render **standard detail component** (read-only).
+- Else → **Access unavailable** page (clear copy, not a permission maze).
 
-**Why project children keep `/projects/` prefix?** Sub-resource public pages are scoped to a project container; the path encodes hierarchy for deep links without a global registry lookup.
+### Examples (internal flagship vs public guest)
+
+| Resource | Internal flagship / list (revised) | Other internal (unchanged) | Public guest |
+|----------|-----------------------------------|----------------------------|--------------|
+| Note | **`/note`** (was `/note/notes`) | `/note/shared`, `/note/tags`, detail routes as today | **`/note/[id]`** |
+| Vault secret | **`/vault`** (was `/vault/dashboard`) | `/vault/totp`, `/vault/sharing` | **`/vault/[id]`** |
+| Goal | **`/flow`** (was `/flow/goals`) | `/flow/forms`, `/flow/events` | **`/flow/goal/[id]`** (OD-R1) |
+| Form | — | `/flow/forms/[id]` | **`/flow/form/[id]`** |
+| Event | — | `/flow/events/[id]` | **`/flow/event/[id]`** |
+| Project | `/projects/[id]` (standalone) | — | **`/project/[id]`** |
+| Project child | `/projects/[id]` | — | `/projects/[id]/[kind]/[entityId]` |
+| Huddle | — | `/connect/calls`, `/connect/chat/[id]` | **`/connect/call/[id]`** |
+| Send | `/send` | — | `/send/[id]` (unchanged) |
+
+**Why not collapse `/note/shared`?** Sub-app secondary routes keep their prefix; only empty middle flagship segments move up.
+
+**Why `/connect` unchanged?** It already serves the flagship feed at the app root — the template for `/note`, `/vault`, `/flow`.
 
 ---
 
@@ -250,7 +257,8 @@ DataNexus cache invalidation keys (per resource) listed in `migration.todo.md`.
 |----|----------|------------------|--------|
 | OD-1 | T4 encrypted note one-tap publish | Block with toast "Unlock vault to share" OR strip encryption | **Unresolved** |
 | OD-2 | Notes `Role.any()` on publish | Remove; rely on `isGuest` column only | **Proposed** |
-| OD-3 | `/note/shared/[id]` legacy | 301 → `/note/[id]` | **Proposed** |
+| OD-3 | `/note/shared/[id]` legacy | Keep working; **new** shares may use `/note/[id]` via builder | **Revised — no mass redirect** |
+| OD-R1 | Flow goal public path | `/flow/goal/[id]` (keeps `/flow` prefix) | **Proposed** |
 | OD-4 | Send `/send/[id]` | Out of ruthless lock program (ephemeral) | **Accepted** |
 | OD-5 | Project `visibility` enum | Mirror: `visibility=public` when `isPublic` | **Proposed** |
 

@@ -1,37 +1,64 @@
-# Ruthless Sharing & Route Canonicalization — Program Cache
+# Ruthless Sharing & Route Tuning — Program Cache
 
 **Status:** Planning only — **do not implement** until explicitly instructed.  
 **Created:** 2026-06-02  
-**Owner surface:** All Kylrix resource cards, public routes, `secure-ops` guest/public gates.
+**Revised:** User correction — **no sweeping route deprecation.**
 
-This directory is the **single source of truth** for the ruthless sharing overhaul. Every file includes **why** behind decisions, not just what to build.
-
----
-
-## Problem statement (why we are doing this)
-
-Incumbent suites (Google Workspace, etc.) optimize for enterprise ACL granularity at the cost of **recipient UX**:
-
-1. Owner copies a link and sends it.
-2. Recipient opens the link.
-3. Recipient sees *"You need permission"* with no path forward.
-
-Kylrix already has the right **server-side escape hatches** (`isPublic`, `isGuest`) documented in `.agents/skills/why.ispublic-isguest-escape-hatches/SKILL.md`. We have been **under-using** them in product UI while **over-using** collaborator permission drawers, three-dot menus, and multi-step share flows.
-
-This program **flips the default**: sharing is one tap on the resource card. Fine-grained access control moves behind an explicit *Access Control* entry that only appears **after** a resource is already public.
+This directory is the **single source of truth** for the ruthless sharing overhaul and the **minimal** flagship-route adjustments. Every file includes **why** behind decisions.
 
 ---
 
-## Design pillars
+## Problem statement (sharing — unchanged)
+
+Incumbent suites optimize for ACL granularity at the cost of recipient UX: copy link → recipient sees "no permission."
+
+Kylrix uses **`isPublic`** + **`isGuest`** column escape hatches (see `.agents/skills/why.ispublic-isguest-escape-hatches/SKILL.md`). This program puts **one-tap publish** on every resource card (Pin + Lock/Link) and moves fine-grained **Access Control** behind context menu / detail — only when already public.
+
+---
+
+## Route policy (revised — read this first)
+
+**Most routes stay exactly as they are today.**
+
+### Only three flagship landings collapse
+
+| Old | New | Why |
+|-----|-----|-----|
+| `/note/notes` | `/note` | `/note` prefix was empty; notes are the Note app flagship (like `/connect` = feed) |
+| `/vault/dashboard` | `/vault` | Secrets list belongs at vault root |
+| `/flow/goals`, `/flow/tasks` | `/flow` | Goals are the Flow app flagship |
+
+**Keep unchanged:** `/note/shared`, `/note/tags`, `/flow/forms`, `/flow/events`, `/connect/calls`, `/connect/chats`, `/projects`, `/send`, and the rest of the app tree.
+
+**Sub-app rule:** Secondary pages **do not** move to site root (`/notes`, `/forms`). They stay under their prefix (`/note/shared`, `/flow/forms`, …).
+
+**Standalone league:** `/projects` and `/send` are not children of Note/Vault/Flow/Connect.
+
+**Aliases:** Old URLs (`/note/notes`, etc.) remain valid via redirect or shared page — **not** deleted.
+
+Full detail: [routes.md](./routes.md)
+
+---
+
+## Public URL law (sharing links)
+
+> Resource URI, singularize noun (`s` off if present), `+ /[id]` → guest detail page or access-unavailable message.
+
+Examples: `/note/[id]`, `/project/[id]`, `/vault/[id]`, `/flow/form/[id]`.
+
+Uses standard read-only detail component when `isGuest` / `isPublic` allows.
+
+---
+
+## Design pillars (sharing UI)
 
 | Pillar | Decision | Why |
 |--------|----------|-----|
-| **Two-tap chrome** | Every resource card shows **Pin** + **Lock/Link** only | Frees horizontal space; matches muscle memory (pin = personal order, lock = world access) |
-| **Lock = publish** | First lock click sets `isPublic: true` **and** `isGuest: true`, copies canonical public URL | Guest=true means **unauthenticated** recipients work — no login wall on shared links |
-| **Link = re-copy** | When already public, lock icon is bright **Link**; click only copies URL | No accidental unpublish; unpublish is intentional via Access Control |
-| **Read-only public** | Public/guest paths never grant write via flags | Avoids realtime CRUD complexity; writes stay on `collaborators` table + `secure-ops` |
-| **Context menu demotion** | Remove card **three-dot** / overflow; keep **right-click** (desktop) + **long-press** (mobile) | Same power, cleaner cards; aligns with `ui.interactivity-safety` global unmount policy |
-| **Singular public routes** | Public item URL drops trailing `s` from app plural (`/projects/[id]` → `/project/[id]`) | Mental model: plural = *my workspace*, singular = *this one thing on the web* |
+| **Two-tap chrome** | Pin + Lock/Link on every resource card | Space; no three-dot on card |
+| **Lock = publish** | Sets `isPublic` + `isGuest`, copies public URL | Link works for strangers immediately |
+| **Link = re-copy** | When public, click copies only | No accidental unpublish |
+| **Read-only public** | Flags never grant write | Collaborators table handles writes |
+| **Context menu** | Right-click / long-press; Access Control when public | Same power, cleaner cards |
 
 ---
 
@@ -39,74 +66,53 @@ This program **flips the default**: sharing is one tap on the resource card. Fin
 
 | File | Purpose |
 |------|---------|
-| [architecture.md](./architecture.md) | Full system design, UX flows, security model, component contracts |
-| [routes.md](./routes.md) | Canonical route matrix: internal vs public vs deprecated |
-| [resource-matrix.md](./resource-matrix.md) | Per-resource: DB flags, public URL, toggle API, card chrome |
-| [tasks.todo.md](./tasks.todo.md) | Phased implementation checklist (tracked religiously) |
-| [migration.todo.md](./migration.todo.md) | Redirects, link generators, SEO, telemetry, comms |
+| [architecture.md](./architecture.md) | Sharing UX, server actions, security, components |
+| [routes.md](./routes.md) | **Revised** minimal route matrix + public URL law |
+| [resource-matrix.md](./resource-matrix.md) | Per-resource flags, URLs, card chrome |
+| [tasks.todo.md](./tasks.todo.md) | Phased checklist — **no mass route wipe** |
+| [migration.todo.md](./migration.todo.md) | **Narrow** href + alias redirects only |
 
 ---
 
-## Phase overview (high level)
+## Phase overview (revised)
 
 ```
-Phase 0 ─ Documentation & sign-off          ← YOU ARE HERE
-Phase 1 ─ lib/share canonical URL builder   (no UI yet)
-Phase 2 ─ secure-ops togglePublicGuest()    (unified server action)
-Phase 3 ─ ShareLockButton component         (shared card chrome)
-Phase 4 ─ Roll card chrome per resource     (notes → vault → flow → projects → connect)
+Phase 0 ─ Documentation & sign-off
+Phase 1 ─ lib/share/public-url.ts (public links only)
+Phase 2 ─ secure-ops toggleResourcePublicGuestSecure
+Phase 3 ─ ShareLockButton + Access Control menu items
+Phase 4 ─ Card chrome rollout (all resources)
 Phase 5 ─ Access Control drawer (public-only)
-Phase 6 ─ Route additions + middleware redirects
-Phase 7 ─ Deprecate old paths + update all href generators
-Phase 8 ─ QA matrix + delete dead share drawers where redundant
+Phase 6 ─ Public guest detail pages (singular noun + [id])
+Phase 7 ─ THREE flagship routes only (/note, /vault, /flow) + global href updates
+Phase 8 ─ QA
 ```
 
-**Rule:** Do not start Phase 1 until user gives explicit implementation go-ahead.
+**Removed from plan:** Mass deprecation, root-level `/notes` `/goals`, `/connect/calls` rename, moving `/note/shared`, flattening entire `app/(app)` tree.
 
 ---
 
-## Tracking legend (`tasks.todo.md`)
+## Tracking
 
-- `[ ]` Not started  
-- `[~]` In progress  
-- `[x]` Done  
-- `[—]` Explicitly deferred with reason  
-- `[!]` Blocked — note blocker in line  
-
-Update checkboxes in `tasks.todo.md` as work proceeds. This README's phase list is summary only; **tasks.todo.md is authoritative**.
+Update [tasks.todo.md](./tasks.todo.md) religiously. Status: `[ ]` `[~]` `[x]` `[—]` `[!]`
 
 ---
 
-## Related existing code (anchors for implementers)
+## Open questions (sharing — unchanged)
 
-| Area | Path |
-|------|------|
-| `isPublic` / `isGuest` skill | `.agents/skills/why.ispublic-isguest-escape-hatches/SKILL.md` |
-| Note visibility toggle (legacy) | `lib/appwrite/note.ts` → `toggleNoteVisibility` |
-| Share URL (legacy note) | `lib/appwrite/note.ts` → `getShareableUrl` → `/note/shared/[id]` |
-| Permission grants | `lib/actions/secure-ops.ts` → `grantPermissionSecure` |
-| Share drawer (to demote) | `components/overlays/ShareNoteDrawer.tsx` |
-| Context menu | `components/ui/ContextMenuContext.tsx` |
-| Note card chrome (reference) | `components/NoteCard.tsx`, `components/ui/NoteCard.tsx` |
-| Section layouts | `context/SectionContext.tsx` |
-| Bottom bar routes | `components/UnifiedBottomBar.tsx` |
-| Resume / public allowlist | `lib/ecosystem/resume-route.ts`, `app/(app)/layout.tsx` |
+1. Encrypted notes on one-tap publish — block vs strip encryption (OD-1)
+2. Public vault secrets — block vs metadata-only (OD-6)
+3. TOTP — hard block on public share
+4. Send — out of scope for Lock button
+
+Route open question:
+
+5. **OD-R1:** Flow goal public URL — `/flow/goal/[id]` (keeps prefix) vs `/goal/[id]` (root) — prefer **`/flow/goal/[id]`** per sub-app rule
 
 ---
 
-## Non-goals (this program)
+## Non-goals
 
-- Rebuilding the entire `collaborators` permission matrix UI (only **relocate** behind Access Control when public).
-- E2EE public sharing for T4 encrypted notes (encrypted resources may **block** one-tap publish with clear toast — see `resource-matrix.md`).
-- Appwrite ACL `Role.any()` on row permissions for every resource (we keep **column flags** + admin SDK reads per existing mandate).
-
----
-
-## Open questions (resolve before Phase 2)
-
-1. **Encrypted notes:** Publish strips encryption (today's `toggleNoteVisibility` behavior) — confirm product copy on first lock click.
-2. **Projects:** `visibility: public` enum vs `isPublic`/`isGuest` columns — unify or bridge?
-3. **Huddles / calls:** Guest join without account — does `isGuest` on conversation row suffice?
-4. **Send ghosts:** `/send/[id]` stays separate ephemeral channel — out of scope for lock icon?
-
-Document answers in `architecture.md` § Open decisions when resolved.
+- Sweeping application route migration
+- Rebuilding full collaborator permission matrix
+- New `app/api/*` routes
