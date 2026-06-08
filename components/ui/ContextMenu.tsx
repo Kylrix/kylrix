@@ -42,10 +42,11 @@ export function ContextMenu({ x, y, onCloseAction, items, appType }: ContextMenu
   useEffect(() => {
     setMenuStack((prev) => {
       if (prev.length <= 1) return [items];
-      const root = prev[0];
-      const nextRoot = items;
-      if (root === nextRoot) return prev;
-      return [nextRoot, ...prev.slice(1)];
+      const activeParent = items.find((item) => item.submenu && prev[1] === item.submenu);
+      if (activeParent?.submenu) return [items, activeParent.submenu];
+      const tagsParent = items.find((item) => item.label === 'Tags' && item.submenu);
+      if (tagsParent?.submenu && prev.length === 2) return [items, tagsParent.submenu];
+      return [items];
     });
   }, [items]);
 

@@ -418,6 +418,18 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     return () => { active = false; };
   }, [taskId]);
 
+  const project = projects.find((p) => p.id === task?.projectId);
+  
+  const taskLabels = useMemo(() => {
+    if (!task) return [];
+    const known = labels.filter((label) => task.labels.includes(label.name));
+    const knownNames = new Set(known.map((label) => label.name));
+    const orphans = task.labels
+      .filter((name) => !knownNames.has(name))
+      .map((name) => ({ id: name, name, color: '#9B9691' }));
+    return [...known, ...orphans];
+  }, [labels, task]);
+
   if (!task) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center gap-4 bg-[#161412] text-[#9B9691] font-satoshi">
@@ -433,15 +445,6 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
     );
   }
 
-  const project = projects.find((p) => p.id === task.projectId);
-  const taskLabels = useMemo(() => {
-    const known = labels.filter((label) => task.labels.includes(label.name));
-    const knownNames = new Set(known.map((label) => label.name));
-    const orphans = task.labels
-      .filter((name) => !knownNames.has(name))
-      .map((name) => ({ id: name, name, color: '#9B9691' }));
-    return [...known, ...orphans];
-  }, [labels, task.labels]);
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
   const subtaskProgress = task.subtasks.length > 0
     ? (completedSubtasks / task.subtasks.length) * 100
