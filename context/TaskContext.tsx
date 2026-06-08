@@ -554,6 +554,14 @@ interface TaskContextType extends TaskState {
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
+const PENDING_STATUS_TTL_MS = 15000;
+
+type PendingStatusPatch = {
+  status: TaskStatus;
+  completedAt?: Date;
+  at: number;
+};
+
 export const useTask = () => {
   const context = useContext(TaskContext);
   if (!context) {
@@ -619,6 +627,66 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const { fetchOptimized, invalidate, getCachedData, getCachedDataAsync, setCachedData, refreshInBackground } = useDataNexus();
   const { user: authUser, isLoading: isAuthLoading } = useAuth();
   const flowWarmOwnerRef = useRef<string | null>(null);
+  const pendingStatusPatchesRef = useRef<Map<string, PendingStatusPatch>>(new Map());
+
+  const clearStalePendingPatches = useCallback(() => {
+    const now = Date.now();
+    for (const [id, patch] of pendingStatusPatchesRef.current.entries()) {
+      if (now - patch.at > PENDING_STATUS_TTL_MS) {
+        pendingStatusPatchesRef.current.delete(id);
+      }
+    }
+  }, []);
+
+  const registerPendingStatus = useCallback((id: string, status: TaskStatus, completedAt?: Date) => {
+    pendingStatusPatchesRef.current.set(id, {
+      status,
+      completedAt,
+      at: Date.now(),
+    });
+  }, []);
+
+  const applyPendingPatches = useCallback((tasks: Task[]) => {
+    clearStalePendingPatches();
+    const pending = pendingStatusPatchesRef.current;
+    if (pending.size === 0) return tasks;
+
+    return tasks.map((task) => {
+      const patch = pending.get(task.id);
+      if (!patch) return task;
+      if (task.status === patch.status) {
+        pending.delete(task.id);
+        return task;
+      }
+      return {
+        ...task,
+        status: patch.status,
+        completedAt: patch.status === 'done' ? (patch.completedAt || task.completedAt || new Date()) : undefined,
+        updatedAt: new Date(),
+      };
+    });
+  }, [clearStalePendingPatches]);
+
+  const shouldIgnoreRealtimeStatus = useCallback((taskId: string, incomingStatus: TaskStatus) => {
+    clearStalePendingPatches();
+    const patch = pendingStatusPatchesRef.current.get(taskId);
+    if (!patch) return false;
+    if (incomingStatus === patch.status) {
+      pendingStatusPatchesRef.current.delete(taskId);
+      return false;
+    }
+    return true;
+  }, [clearStalePendingPatches]);
+
+  const dispatchSyncedData = useCallback((data: { tasks: Task[]; projects: Project[] }) => {
+    dispatch({
+      type: 'SET_DATA',
+      payload: {
+        tasks: applyPendingPatches(data.tasks),
+        projects: data.projects,
+      },
+    });
+  }, [applyPendingPatches]);
 
   const invalidateTasksNexus = useCallback((uid: string) => invalidate(`f_tasks_${uid}`), [invalidate]);
   const invalidateCalendarsNexus = useCallback((uid: string) => invalidate(`f_calendars_${uid}`), [invalidate]);
