@@ -754,18 +754,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
         if (cachedTasksRes || cachedCalsRes) {
             console.log('[TaskContext] Cold-start hydration triggered via RxDB.');
-            dispatch({ 
-                type: 'SET_DATA', 
-                payload: {
-                    tasks: (cachedTasksRes?.rows || []).map(mapAppwriteTaskToTask),
-                    projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject)
-                } 
+            dispatchSyncedData({
+              tasks: (cachedTasksRes?.rows || []).map(mapAppwriteTaskToTask),
+              projects: (cachedCalsRes?.rows || []).map(mapAppwriteCalendarToProject),
             });
         }
 
         // 2. Standard Background Refresh
         const data = await fetchBatch(userId);
-        dispatch({ type: 'SET_DATA', payload: data });
+        dispatchSyncedData(data);
       } catch (err: any) {
           console.error('[TaskContext] Authoritative init failed:', err);
           dispatch({ type: 'SET_ERROR', payload: err.message || 'Failed to sync workspace' });
@@ -773,7 +770,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     };
 
     init();
-  }, [authUser?.$id, isAuthLoading, fetchBatch, getCachedDataAsync]);
+  }, [authUser?.$id, isAuthLoading, fetchBatch, getCachedDataAsync, dispatchSyncedData]);
 
   // Route-based background revalidation
   useEffect(() => {
@@ -788,11 +785,11 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const uid = state.userId;
       refreshInBackground(`f_route_refresh_${uid}`, async () => {
         const data = await fetchBatch(uid, true);
-        dispatch({ type: 'SET_DATA', payload: data });
+        dispatchSyncedData(data);
         return true;
       }, 10000); // 10s cooldown for route-based refreshes
     }
-  }, [pathname, state.userId, isAuthLoading, fetchBatch, refreshInBackground]);
+  }, [pathname, state.userId, isAuthLoading, fetchBatch, refreshInBackground, dispatchSyncedData]);
   // Realtime Subscriptions
   useEffect(() => {
     if (!state.userId) return;
@@ -807,7 +804,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         if (type === 'create') {
           dispatch({ type: 'ADD_TASK', payload: mapAppwriteTaskToTask(payload) });
         } else if (type === 'update') {
-          dispatch({ type: 'UPDATE_TASK', payload: { id: payload.$id, updates: mapAppwriteTaskToTask(payload) } });
+          const mapped = mapAppwriteTaskToTask(payload);
+          if (shouldIgnoreRealtimeStatus(payload.$id, mapped.status)) return;
+          dispatch({ type: 'UPDATE_TASK', payload: { id: payload.$id, updates: mapped } });
         } else if (type === 'delete') {
           dispatch({ type: 'DELETE_TASK', payload: payload.$id });
         }
@@ -836,7 +835,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       if (typeof unsubProjects === 'function') unsubProjects();
       else if (unsubProjects?.unsubscribe) unsubProjects.unsubscribe();
     };
-  }, [state.userId]);
+  }, [state.userId, shouldIgnoreRealtimeStatus]);
 
   // Task actions
   const addTask = useCallback(
@@ -883,12 +882,24 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   );
 
   const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
-    try {
-      const currentTask = state.tasks.find(t => t.id === id);
-      if (!currentTask) return;
+    const currentTask = state.tasks.find(t => t.id === id);
+    if (!currentTask) return;
 
-      // Optimistic update
-      dispatch({ type: 'UPDATE_TASK', payload: { id, updates } });
+    const previousStatus = currentTask.status;
+    const previousCompletedAt = currentTask.completedAt;
+
+    if (updates.status !== undefined) {
+      registerPendingStatus(
+        id,
+        updates.status,
+        updates.completedAt ?? (updates.status === 'done' ? new Date() : undefined),
+      );
+    }
+
+    // Optimistic update
+    dispatch({ type: 'UPDATE_TASK', payload: { id, updates } });
+
+    try {
 
       const apiUpdates: any = {};
       if (updates.title !== undefined) apiUpdates.title = updates.title;
@@ -930,10 +941,22 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       await syncTaskAccess(id, currentTask.creatorId, nextAssignees || [], currentTask.title, currentTask.assigneeIds || []);
       invalidateTasksNexus(state.userId || 'guest');
     } catch (error: unknown) {
+      if (updates.status !== undefined) {
+        pendingStatusPatchesRef.current.delete(id);
+        dispatch({
+          type: 'UPDATE_TASK',
+          payload: {
+            id,
+            updates: {
+              status: previousStatus,
+              completedAt: previousCompletedAt,
+            },
+          },
+        });
+      }
       console.error('Failed to update task', error);
-      // Revert?
     }
-  }, [state.tasks, state.userId, invalidateTasksNexus]);
+  }, [state.tasks, state.userId, invalidateTasksNexus, registerPendingStatus]);
 
   const togglePinTask = useCallback(async (id: string) => {
     const task = state.tasks.find(t => t.id === id);
@@ -993,18 +1016,38 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }, [state.tasks, state.userId, invalidateTasksNexus]);
 
   const completeTask = useCallback(async (id: string) => {
+    const task = state.tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const newStatus: TaskStatus = task.status === 'done' ? 'todo' : 'done';
+    const completedAt = newStatus === 'done' ? new Date() : undefined;
+    const previousStatus = task.status;
+    const previousCompletedAt = task.completedAt;
+
+    registerPendingStatus(id, newStatus, completedAt);
+    dispatch({
+      type: 'UPDATE_TASK',
+      payload: { id, updates: { status: newStatus, completedAt } },
+    });
+
     try {
-      const task = state.tasks.find(t => t.id === id);
-      if (!task) return;
-      
-      const newStatus = task.status === 'done' ? 'todo' : 'done';
       await taskApi.update(id, { status: newStatus });
       invalidateTasksNexus(state.userId || 'guest');
-      dispatch({ type: 'COMPLETE_TASK', payload: id });
     } catch (error: unknown) {
+      pendingStatusPatchesRef.current.delete(id);
+      dispatch({
+        type: 'UPDATE_TASK',
+        payload: {
+          id,
+          updates: {
+            status: previousStatus,
+            completedAt: previousCompletedAt,
+          },
+        },
+      });
       console.error('Failed to complete task', error);
     }
-  }, [state.tasks, state.userId, invalidateTasksNexus]);
+  }, [state.tasks, state.userId, invalidateTasksNexus, registerPendingStatus]);
 
   const selectTask = useCallback((id: string | null) => {
     dispatch({ type: 'SELECT_TASK', payload: id });
