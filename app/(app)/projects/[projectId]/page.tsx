@@ -37,6 +37,7 @@ import { useToast } from '@/components/ui/Toast';
 import toast from 'react-hot-toast';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { IdentityAvatar } from '@/components/IdentityBadge';
+import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Projects, ProjectObjects, Notes, Tasks, Credentials, Users as UserType } from '@/types/appwrite';
 import { listNotes, listFlowTasks, listKeepCredentials, Query, AppwriteService, listTags } from '@/lib/appwrite';

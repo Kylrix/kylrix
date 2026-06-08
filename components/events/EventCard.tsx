@@ -9,7 +9,8 @@ import {
   Trash2,
   Pin,
   Lock,
-  Link as LinkIcon
+  Link as LinkIcon,
+  MoreVertical
 } from 'lucide-react';
 import { Event } from '@/types';
 import { formatTime, isToday, isTomorrow } from '@/lib/time-util';
