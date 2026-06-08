@@ -565,8 +565,7 @@ export function NewProjectDrawer() {
         <Stack spacing={2}>
           {[
             { id: 'private', label: 'Private', desc: 'Only you and explicitly added collaborators can access.', icon: Lock, color: TEXT_MUTED },
-            { id: 'shared', label: 'Shared', desc: 'Anyone with the exact secure link can access.', icon: Users, color: SYSTEM_PRIMARY },
-            { id: 'public', label: 'Public', desc: 'Visible and searchable to the entire ecosystem.', icon: Globe, color: '#10B981' }
+            { id: 'public', label: 'Public', desc: 'Visible and searchable to the entire ecosystem and guests.', icon: Globe, color: '#10B981' }
           ].map((opt) => {
             const isSelected = visibility === opt.id;
             return (

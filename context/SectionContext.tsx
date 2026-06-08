@@ -73,11 +73,11 @@ const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
   '/connect/calls': ['projects', 'threads'],
   '/projects': ['projects_stats', 'projects_templates'],
   '/projects/[projectId]': ['note', 'huddles', 'goals'],
+  '/send': ['stash'],
 };
 
 export function SectionProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { isAuthenticated } = useAuth();
   const [activeDetail, setActiveDetail] = useState<ActiveDetail | null>(null);
   
   const [overrides, setOverrides] = useState<Record<string, Partial<SectionConfig>>>(() => {
@@ -146,9 +146,9 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
       cleanRoute = cleanRoute.slice(0, -1);
     }
 
-    // /send page fallback: split composition, Sparks history, security Context
+    // /send: stash history only — no notes, vault, or huddles in the sidebar
     if (cleanRoute.startsWith('/send')) {
-      return isAuthenticated ? ['note', 'secrets', 'huddles'] : ['stash'];
+      return ['stash'];
     }
 
     // /projects/[projectId] fallback: display relevant execution panels
@@ -162,7 +162,7 @@ export function SectionProvider({ children }: { children: React.ReactNode }) {
     }
 
     return ['note', 'projects'];
-  }, [isAuthenticated]);
+  }, []);
 
   // Computes the dynamic layout depending on screen width and route preferences
   const getLayoutForRoute = useCallback((route: string): SectionConfig => {

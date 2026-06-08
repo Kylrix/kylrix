@@ -47,11 +47,9 @@ import {
   Lock,
   Globe,
   LayoutGrid,
-  FileText,
   Play,
   RotateCcw,
   UserCheck,
-  Loader2,
 } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
@@ -64,7 +62,6 @@ import { useAuth } from '@/lib/auth';
 import { useResourcePins } from '@/context/ResourcePinContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { createNote } from '@/lib/appwrite/note';
 import { anonymizeWorkflow, negateWorkflow, WorkflowChain } from '@/lib/workflow-engine';
 import { 
   saveWorkflowAction, 
@@ -407,11 +404,6 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
 
-  // Live Draft Cockpit States
-  const [draftTitle, setDraftTitle] = useState('');
-  const [draftText, setDraftText] = useState('');
-  const [drafting, setDrafting] = useState(false);
-
   // Workflow Simulator States
   const [runningWorkflow, setRunningWorkflow] = useState<string | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(-1);
@@ -432,25 +424,6 @@ export default function ProjectsPage() {
     };
     syncDb();
   }, [updateWorkflow]);
-
-  const handleSaveDraft = async () => {
-    if (!draftText.trim()) {
-      showError('Draft content cannot be empty');
-      return;
-    }
-    setDrafting(true);
-    try {
-      const title = draftTitle.trim() || 'Untitled Quick Draft';
-      await createNote({ title, content: draftText });
-      showSuccess(`Draft "${title}" saved secure!`);
-      setDraftText('');
-      setDraftTitle('');
-    } catch (e: any) {
-      showError('Failed to save draft', e.message);
-    } finally {
-      setDrafting(false);
-    }
-  };
 
   const simulateWorkflow = async (wf: any) => {
     setRunningWorkflow(wf.id);
@@ -927,66 +900,6 @@ export default function ProjectsPage() {
                 </Button>
               </Box>
           </Stack>
-
-          {/* Flagship Workspace Cockpit Grid */}
-          <div className="grid grid-cols-1 gap-6 mb-8">
-            {/* Quick Draft Note & Actions */}
-            <div className="bg-[#161412] rounded-[32px] border border-white/6 p-6 flex flex-col justify-between min-h-[260px] relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-[#EC4899]/5 rounded-full filter blur-3xl pointer-events-none group-hover:bg-[#EC4899]/8 transition-all duration-500" />
-              
-              <div className="space-y-4 flex-1">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-white text-sm font-black tracking-tight leading-tight flex items-center gap-2 font-mono select-none">
-                    <FileText size={18} className="text-[#EC4899]" />
-                    Instant Draft Cockpit
-                  </h3>
-                  <span className="text-[9px] text-[#EC4899] font-black font-mono uppercase bg-[#EC4899]/10 px-2 py-0.5 rounded border border-[#EC4899]/20 select-none">
-                    SECURE AES-256
-                  </span>
-                </div>
-                
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    value={draftTitle}
-                    onChange={(e) => setDraftTitle(e.target.value)}
-                    placeholder="Enter Draft Title (Optional)..."
-                    className="w-full bg-[#0A0908]/60 border border-white/5 rounded-xl px-4 py-2 text-xs font-bold text-white placeholder-white/20 focus:outline-none focus:border-[#EC4899]/50 transition-all font-sans"
-                  />
-                  <textarea
-                    value={draftText}
-                    onChange={(e) => setDraftText(e.target.value)}
-                    placeholder="Draft thoughts, tasks, or secrets... Save instantly on the spot."
-                    rows={4}
-                    className="w-full bg-[#0A0908]/60 border border-white/5 rounded-2xl p-4 text-xs font-medium text-white placeholder-white/20 focus:outline-none focus:border-[#EC4899]/50 resize-none transition-all font-sans"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-between items-center mt-4 pt-4 border-t border-white/4">
-                <span className="text-[10px] text-white/30 font-medium">
-                  Direct connection to your Secure Notes list.
-                </span>
-                <button
-                  onClick={handleSaveDraft}
-                  disabled={drafting || !draftText.trim()}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all bg-[#EC4899] text-white hover:bg-[#D0357F] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {drafting ? (
-                    <>
-                      <Loader2 size={13} className="animate-spin" />
-                      <span>Saving Secure...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Plus size={13} strokeWidth={3} />
-                      <span>Save Draft Note</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
 
           {projects.length === 0 ? (
             <>
