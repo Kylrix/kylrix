@@ -33,13 +33,77 @@ interface EventCardProps {
 
 export default function EventCard({ event, onClick, onDelete }: EventCardProps) {
   const pattern = generatePattern(event.id);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
   const { user } = useAuth();
   const { open: openUnified } = useUnifiedDrawer();
+  const { openMenu } = useContextMenu();
+  const { isPinned: isResourcePinned, togglePin } = useResourcePins();
 
   const isCreator = user && (event.creatorId === user.$id || (event as any).userId === user.$id);
-  
+  const pinned = isResourcePinned('event', event.id, event.creatorId, event.isPinned);
+
+  const handlePinToggle = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    try {
+      await togglePin({
+        resourceType: 'event',
+        resourceId: event.id,
+        ownerId: event.creatorId || (event as any).userId,
+        rowIsPinned: event.isPinned,
+        setOwnerRowPin: async (nextPinned) => {
+          await eventApi.update(event.id, { isPinned: nextPinned });
+        },
+      });
+    } catch (err: any) {
+      console.error('Failed to toggle pin:', err);
+    }
+  };
+
+  const accessControlItems = useAccessControlMenuItems({
+    resourceType: 'event',
+    resourceId: event.id,
+    isPublic: !!event.isPublic,
+    isGuest: !!event.isGuest,
+    resourceTitle: event.title,
+    onUpdate: () => {
+      // Re-render handled by parent/realtime
+    }
+  });
+
+  const contextMenuItems = useMemo(() => [
+    { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
+    ...accessControlItems,
+    ...(isCreator ? [
+      { label: 'Edit Event', icon: <Edit size={16} />, onClick: () => router.push(`/flow/events/${event.id}`) },
+      { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => {
+        openUnified('delete-confirm', {
+          title: `Delete event: "${event.title}"?`,
+          description: 'This will permanently remove this event from your ecosystem.',
+          resourceName: 'this event',
+          confirmLabel: 'Delete Event',
+          onConfirm: async () => {
+            await eventApi.delete(event.id);
+            onDelete?.();
+          }
+        });
+      }}
+    ] : [])
+  ], [pinned, accessControlItems, isCreator, event, router, openUnified, onDelete, handlePinToggle]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenu({
+      x: e.clientX,
+      y: e.clientY,
+      items: contextMenuItems,
+      appType: 'flow'
+    });
+  };
+
   const getDateLabel = () => {
     const date = new Date(event.startTime);
     if (isToday(date)) return 'Today';
@@ -49,55 +113,9 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
   
   const dateLabel = getDateLabel();
 
-  const handleMenuClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const handleMenuClose = () => {
-    setIsMenuOpen(false);
-  };
-
-  const handleShareEvent = () => {
-    handleMenuClose();
-    navigator.clipboard.writeText(`${window.location.origin}/flow/events/${event.id}`);
-    toast.success('Event link copied to clipboard');
-  };
-
-  const handleEditEvent = () => {
-    handleMenuClose();
-    router.push(`/flow/events/${event.id}`);
-  };
-
-  const handleDeleteEvent = async () => {
-    handleMenuClose();
-    
-    openUnified('delete-confirm', {
-      title: `Delete event: "${event.title}"?`,
-      description: 'This will permanently remove this event from your ecosystem. All linked voice files, call links, and guest RSVPs will be purged.',
-      resourceName: 'this event',
-      confirmLabel: 'Delete Event',
-      onConfirm: async () => {
-        try {
-          await eventApi.delete(event.id);
-          toast.success('Event successfully deleted');
-          if (onDelete) {
-            onDelete();
-          } else {
-            window.location.reload();
-          }
-        } catch (err) {
-          console.error('Failed to delete event:', err);
-          toast.error('Failed to delete event');
-        }
-      }
-    });
-  };
-
   return (
     <div
-      onContextMenu={handleMenuClick}
+      onContextMenu={handleContextMenu}
       onClick={onClick}
       className="group flex flex-col bg-[#161412] hover:bg-[#1C1A18] border border-[#34322F] hover:border-[#6366F1] rounded-[28px] cursor-pointer overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,0,0,0.5)] h-full"
     >
@@ -116,7 +134,7 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
         )}
         
         {/* Date badge */}
-        <div className="absolute top-3 left-3 bg-black/85 rounded-xl px-2.5 py-1.5 flex flex-col items-center min-w-[48px] border border-[#34322F]/60">
+        <div className="absolute top-3 left-3 bg-black/85 rounded-xl px-2.5 py-1.5 flex flex-col items-center min-w-[48px] border border-white/5">
           <span className="text-[10px] font-extrabold font-mono text-[#6366F1] uppercase tracking-wider leading-none mb-1">
             {formatTime(new Date(event.startTime), { month: 'short' })}
           </span>
@@ -125,9 +143,29 @@ export default function EventCard({ event, onClick, onDelete }: EventCardProps) 
           </span>
         </div>
 
+        {/* Top Right Actions Overlay */}
+        <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+           <button
+             onClick={handlePinToggle}
+             className={`p-1.5 rounded-lg backdrop-blur-md bg-black/40 border border-white/10 transition-all duration-200 ${pinned ? 'text-[#F59E0B]' : 'text-white/40 hover:text-[#F59E0B]'}`}
+           >
+             <Pin size={14} className={pinned ? 'fill-[#F59E0B]' : ''} />
+           </button>
+           <div className="backdrop-blur-md bg-black/40 border border-white/10 rounded-lg">
+             <ShareLockButton 
+                resourceType="event"
+                resourceId={event.id}
+                isPublic={!!event.isPublic}
+                isGuest={!!event.isGuest}
+                accentColor="#6366F1"
+                onPublished={() => {}}
+             />
+           </div>
+        </div>
+
         {/* Today/Tomorrow chip */}
         {dateLabel && (
-          <span className={`absolute top-3 right-3 text-[10px] font-bold font-mono px-2.5 py-1 rounded-full border border-[#34322F] tracking-wider text-black ${
+          <span className={`absolute bottom-3 left-3 text-[9px] font-black font-mono px-2 py-0.5 rounded-md border border-black/10 tracking-wider text-black ${
             dateLabel === 'Today' ? 'bg-[#10B981]' : 'bg-[#3B82F6]'
           }`}>
             {dateLabel.toUpperCase()}
