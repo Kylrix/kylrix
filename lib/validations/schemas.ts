@@ -61,6 +61,7 @@ export const ProjectSchema = z.object({
   visibility: z.enum(['private', 'shared', 'public']).optional().default('private'),
   status: z.enum(['active', 'paused', 'archived', 'completed', 'on_hold']).optional().default('active'),
   isPublic: z.boolean().optional(),
+  isPinned: z.boolean().optional().nullable(),
   metadata: z.string().nullable().optional(),
 });
 

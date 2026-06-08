@@ -291,7 +291,7 @@ function filterNoteData(data: Record<string, any>): Record<string, any> {
     'id', 'createdAt', 'updatedAt', 'userId', 'isPublic', 'status', 
     'parentNoteId', 'title', 'content', 'tags', 'comments', 
     'extensions', 'collaborators', 'metadata', 'attachments', 'format',
-    'isGhost', 'isThread'
+    'isGhost', 'isThread', 'isPinned', 'creatorId'
   ];
   
   const filtered: Record<string, any> = {};

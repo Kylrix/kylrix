@@ -2502,13 +2502,25 @@ export async function updateNoteSecure(noteId: string, data: any, jwt?: string) 
     getNotePermissions,
   } = await import('@/lib/appwrite/note');
 
-  const cleanData = cleanRowData(data);
+  const noteRow = await tables.getRow({
+    databaseId: APPWRITE_DATABASE_ID,
+    tableId: APPWRITE_TABLE_ID_NOTES,
+    rowId: noteId,
+  }) as { creatorId?: string | null; userId?: string | null };
+
+  const patch = { ...data };
+  const noteOwnerId = noteRow.creatorId || noteRow.userId || '';
+  if (Object.prototype.hasOwnProperty.call(patch, 'isPinned') && noteOwnerId !== actor.$id) {
+    delete patch.isPinned;
+  }
+
+  const cleanData = cleanRowData(patch);
   const updatedAt = new Date().toISOString();
   const updatedData = filterNoteData({ ...cleanData, updatedAt: updatedAt });
 
   let permissions = undefined;
-  if (data.isPublic !== undefined) {
-    permissions = getNotePermissions(actor.$id, !!data.isPublic);
+  if (patch.isPublic !== undefined) {
+    permissions = getNotePermissions(actor.$id, !!patch.isPublic);
   }
 
   const row = await tables.updateRow({
@@ -2840,10 +2852,20 @@ export async function updateProjectSecure(projectId: string, data: any, permissi
     throw new Error('Forbidden: Insufficient permissions to update this project');
   }
 
-  // Rigorous runtime validation (partial since it's an update)
-  const validated = ProjectSchema.partial().parse(data);
-
   const tables = createSystemTablesDB();
+  const existing = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    rowId: projectId,
+  }) as { ownerId?: string };
+
+  const patch = { ...data };
+  if (Object.prototype.hasOwnProperty.call(patch, 'isPinned') && existing.ownerId !== actor.$id) {
+    delete patch.isPinned;
+  }
+
+  // Rigorous runtime validation (partial since it's an update)
+  const validated = ProjectSchema.partial().parse(patch);
   const { databases } = createSystemClient();
   const now = new Date().toISOString();
   
@@ -3590,6 +3612,10 @@ export async function updateFormSecure(formId: string, data: any, jwt?: string) 
 
   const ownerId = form.userId;
   const currentStatus = data.status || form.status;
+
+  if (Object.prototype.hasOwnProperty.call(data, 'isPinned') && ownerId !== actor.$id) {
+    delete data.isPinned;
+  }
 
   const permissions = [
     Permission.read(Role.user(ownerId))];

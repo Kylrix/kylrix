@@ -332,7 +332,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin }: {
               }}
               className="p-1.5 rounded-lg text-white/20 hover:text-[#F59E0B] hover:bg-[#F59E0B]/5 transition-all duration-200"
             >
-              <Pin size={16} className={(project as any).isPinned ? 'fill-[#F59E0B]' : ''} />
+              <Pin size={16} className={pinned ? 'fill-[#F59E0B]' : ''} />
             </button>
             <button
               onClick={(e) => {
@@ -389,6 +389,7 @@ export default function ProjectsPage() {
     updateWorkflow 
   } = useLocalContext();
   const { user } = useAuth();
+  const { isPinned: isResourcePinned, togglePin, setLocalPin } = useResourcePins();
   const { openProUpgrade } = useProUpgrade();
   
   const [isDesktop, setIsDesktop] = useState(false);
@@ -577,28 +578,47 @@ export default function ProjectsPage() {
   };
 
   const handleTogglePin = async (projectId: string) => {
+    const project = projects.find((p) => p.$id === projectId);
+    if (!project || !user?.$id) return;
+    const ownerId = project.ownerId || user.$id;
+    const currentlyPinned = isResourcePinned('project', projectId, ownerId, project.isPinned);
+    const isOwner = user.$id === ownerId;
+
     try {
-        const project = projects.find(p => p.$id === projectId);
-        const newPinned = !(project as any).isPinned;
-        await ProjectsService.updateProject(projectId, { isPinned: newPinned } as any);
-        setProjects(prev => prev.map(p => p.$id === projectId ? { ...p, isPinned: newPinned } : p));
-        showSuccess(newPinned ? "Pinned to top" : "Unpinned");
+      const nextPinned = await togglePin({
+        resourceType: 'project',
+        resourceId: projectId,
+        ownerId,
+        rowIsPinned: project.isPinned,
+        setOwnerRowPin: async (pinned) => {
+          await ProjectsService.updateProject(projectId, { isPinned: pinned } as any);
+        },
+      });
+      if (isOwner) {
+        setProjects((prev) => prev.map((p) => (p.$id === projectId ? { ...p, isPinned: nextPinned } : p)));
+      }
+      showSuccess(nextPinned ? 'Pinned to top' : 'Unpinned');
     } catch (err: any) {
-        showError('Action failed', err.message);
+      if (!isOwner) {
+        setLocalPin('project', projectId, currentlyPinned);
+      }
+      showError('Action failed', err.message);
     }
   };
 
   const sortedProjects = useMemo(() => {
     return [...projects].sort((a: any, b: any) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
+        const aPinned = isResourcePinned('project', a.$id, a.ownerId, a.isPinned);
+        const bPinned = isResourcePinned('project', b.$id, b.ownerId, b.isPinned);
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
         const bTime = new Date(b.$updatedAt || b.updatedAt || 0).getTime();
         const aTime = new Date(a.$updatedAt || a.updatedAt || 0).getTime();
         const timeDiff = (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
         if (timeDiff !== 0) return timeDiff;
         return String(a.title || '').localeCompare(String(b.title || ''));
     });
-  }, [projects]);
+  }, [projects, isResourcePinned]);
 
   const handleProjectClick = (projectId: string) => {
     const selectedProj = projects.find(p => p.$id === projectId);
