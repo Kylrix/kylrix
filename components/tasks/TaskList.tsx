@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2, Trash2, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, ArrowUpDown, Filter, List, LayoutGrid, Calendar, ArrowUp, ArrowDown, CheckCircle2, Trash2, Sparkles, ChevronDown, ChevronUp, Tag, X } from 'lucide-react';
 import TaskItem from './TaskItem';
 import { useRouter } from 'next/navigation';
 import { useTask } from '@/context/TaskContext';
@@ -24,6 +24,8 @@ export default function TaskList() {
     deleteTask,
     projects,
     selectedProjectId,
+    getTagFilterOptions,
+    labels,
   } = useTask();
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open } = useUnifiedDrawer();
@@ -45,6 +47,20 @@ export default function TaskList() {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [showCompletedSection, setShowCompletedSection] = useState(true);
+
+  const tagFilterOptions = getTagFilterOptions();
+  const activeTagFilter = filter.labels?.[0] ?? null;
+
+  const handleTagFilterToggle = (tag: string) => {
+    if (activeTagFilter === tag) {
+      setFilter({ ...filter, labels: [] });
+      return;
+    }
+    setFilter({ ...filter, labels: [tag] });
+  };
+
+  const getTagColor = (tagName: string) =>
+    labels.find((label) => label.name === tagName)?.color || '#9B9691';
 
   const tasks = getFilteredTasks();
   const activeTasks = tasks.filter(t => t.status !== 'done');
