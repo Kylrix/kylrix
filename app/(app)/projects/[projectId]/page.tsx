@@ -271,6 +271,23 @@ export default function ProjectDetailPage() {
   const [totps, setTotps] = useState<any[]>([]);
   const [moments, setMoments] = useState<any[]>([]);
   const [calls, setCalls] = useState<any[]>([]);
+  const [taggedResources, setTaggedResources] = useState<{
+    notes: any[];
+    tasks: any[];
+    credentials: any[];
+    totps: any[];
+    events: any[];
+    forms: any[];
+    moments: any[];
+  }>({
+    notes: [],
+    tasks: [],
+    credentials: [],
+    totps: [],
+    events: [],
+    forms: [],
+    moments: []
+  });
   const [resolving, setResolving] = useState(false);
 
   // Local Cache for Project Details to ensure instant back-and-forth navigation
@@ -293,6 +310,15 @@ export default function ProjectDetailPage() {
         setTotps(parsed.totps || []);
         setMoments(parsed.moments || []);
         setCalls(parsed.calls || []);
+        setTaggedResources(parsed.taggedResources || {
+          notes: [],
+          tasks: [],
+          credentials: [],
+          totps: [],
+          events: [],
+          forms: [],
+          moments: []
+        });
         setOwnerProfile(parsed.ownerProfile || null);
         setGitIntegration(parsed.gitIntegration || null);
         setLoading(false);
@@ -423,6 +449,26 @@ export default function ProjectDetailPage() {
         callsPromise
       ]);
 
+      // Resolve Tagged Resources if any tags exist in the project
+      let resolvedTagged: any = { notes: [], tasks: [], credentials: [], totps: [], events: [], forms: [], moments: [] };
+      if (tagIds.length > 0) {
+        try {
+          resolvedTagged = await ProjectsService.listTaggedResources(tagIds);
+          
+          // Filter out items that are already explicitly linked as project objects
+          const explicitIds = new Set(objects.map(o => o.entityId));
+          resolvedTagged.notes = resolvedTagged.notes.filter((n: any) => !explicitIds.has(n.$id));
+          resolvedTagged.tasks = resolvedTagged.tasks.filter((t: any) => !explicitIds.has(t.$id));
+          resolvedTagged.credentials = resolvedTagged.credentials.filter((c: any) => !explicitIds.has(c.$id));
+          resolvedTagged.totps = resolvedTagged.totps.filter((t: any) => !explicitIds.has(t.$id));
+          resolvedTagged.events = resolvedTagged.events.filter((e: any) => !explicitIds.has(e.$id));
+          resolvedTagged.forms = resolvedTagged.forms.filter((f: any) => !explicitIds.has(f.$id));
+          resolvedTagged.moments = resolvedTagged.moments.filter((m: any) => !explicitIds.has(m.$id));
+        } catch (taggedErr) {
+          console.error('Failed to resolve tagged resources:', taggedErr);
+        }
+      }
+
       setNotes(resolvedNotes);
       setTasks(resolvedTasks);
       setCredentials(resolvedCreds);
@@ -433,6 +479,7 @@ export default function ProjectDetailPage() {
       setTotps(resolvedTotps);
       setMoments(resolvedMoments);
       setCalls(resolvedCalls);
+      setTaggedResources(resolvedTagged);
 
       return {
         notes: resolvedNotes,
@@ -444,7 +491,8 @@ export default function ProjectDetailPage() {
         tags: resolvedTags,
         totps: resolvedTotps,
         moments: resolvedMoments,
-        calls: resolvedCalls
+        calls: resolvedCalls,
+        taggedResources: resolvedTagged
       };
     } catch (err) {
       console.error('Failed to resolve entities', err);
@@ -977,6 +1025,45 @@ export default function ProjectDetailPage() {
                         </CustomTabPanel>
                     </div>
                 </div>
+
+                {/* Tagged Resources Section */}
+                {Object.values(taggedResources).some(arr => arr.length > 0) && (
+                  <div className="bg-[#161412] border border-white/6 rounded-[32px] overflow-hidden shadow-2xl mt-8">
+                      <div className="border-b border-white/6 px-6 py-5 bg-white/[0.01] flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <Tag size={18} className="text-[#6366F1] flex-shrink-0" />
+                            <span className="text-white font-black text-base tracking-tight leading-none block">
+                                Tagged Resources
+                            </span>
+                          </div>
+                          <span className="bg-[#6366F1]/10 text-[#6366F1] text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded border border-[#6366F1]/20">
+                              AUTO-SWEPT
+                          </span>
+                      </div>
+                      
+                      <div className="px-6 py-3 bg-[#6366F1]/5 border-b border-white/4 flex items-center gap-2.5">
+                          <ShieldCheck size={14} className="text-[#10B981] flex-shrink-0" />
+                          <p className="text-[10px] text-white/50 font-bold leading-tight">
+                            By default, tagged items keep their permissions. You must manually allow project permission for shared visibility.
+                          </p>
+                      </div>
+
+                      <div className="p-4 md:p-8">
+                          <TaggedResourcesTabs 
+                            resources={taggedResources} 
+                            openSidebar={openSidebar}
+                            openSecondarySidebar={openSecondarySidebar}
+                            openOverlay={openOverlay}
+                            closeOverlay={closeOverlay}
+                            fetchProjectData={fetchProjectData}
+                            handleToggleKeepPermission={handleToggleKeepPermission}
+                            handleRemoveObject={handleRemoveObject}
+                            router={router}
+                            showError={showError}
+                          />
+                      </div>
+                  </div>
+                )}
 
                 {/* External Objects Card */}
                 <div className="bg-[#161412] border border-white/6 rounded-[32px] overflow-hidden shadow-2xl mt-8">
@@ -1813,6 +1900,212 @@ function ProjectSettingsDrawer({ open, onClose, project, onSave }: ProjectSettin
         </div>
       </div>
     </>
+  );
+}
+
+// ============================================================================
+// TAGGED RESOURCES MODULE: AUTO-SWEPT BY PROJECT TAGS
+// ============================================================================
+
+function TaggedResourcesTabs({ 
+  resources, 
+  openSidebar, 
+  openSecondarySidebar, 
+  openOverlay, 
+  closeOverlay, 
+  fetchProjectData,
+  handleToggleKeepPermission,
+  handleRemoveObject,
+  router,
+  showError
+}: { 
+  resources: any, 
+  openSidebar: any,
+  openSecondarySidebar: any,
+  openOverlay: any,
+  closeOverlay: any,
+  fetchProjectData: () => Promise<void>,
+  handleToggleKeepPermission: any,
+  handleRemoveObject: any,
+  router: any,
+  showError: (title: string, msg: string) => void
+}) {
+  const [activeTab, setActiveTab] = useState(0);
+
+  const TAGGED_TABS = [
+    { label: 'Notes', icon: <FileText size={16} />, count: resources.notes.length },
+    { label: 'Tasks', icon: <CheckSquare size={16} />, count: resources.tasks.length },
+    { label: 'Vault', icon: <Lock size={16} />, count: resources.credentials.length + resources.totps.length },
+    { label: 'Flow', icon: <Workflow size={16} />, count: resources.forms.length + resources.moments.length + resources.events.length },
+  ];
+
+  const visibleTabs = TAGGED_TABS.filter(t => t.count > 0);
+  
+  // Adjusted tab value if the current active tab is filtered out
+  const [localTabValue, setLocalTabValue] = useState(0);
+  
+  useEffect(() => {
+    if (visibleTabs.length > 0 && !visibleTabs[localTabValue]) {
+      setLocalTabValue(0);
+    }
+  }, [visibleTabs, localTabValue]);
+
+  if (visibleTabs.length === 0) return null;
+
+  const currentTabLabel = visibleTabs[localTabValue]?.label;
+
+  const handleUnlinkTagged = (title: string) => {
+    showError('Cannot unlink tagged resource', `"${title}" is automatically included because it shares tags with this project. To remove it, you must remove the tags from the item itself or remove the Tag resource from the project.`);
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-2">
+        {visibleTabs.map((tab, idx) => (
+          <button
+            key={tab.label}
+            onClick={() => setLocalTabValue(idx)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-xs transition-all whitespace-nowrap ${
+              localTabValue === idx 
+                ? 'bg-[#6366F1] text-black shadow-[0_4px_12px_rgba(99,102,241,0.3)]' 
+                : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/8'
+            }`}
+          >
+            {tab.icon}
+            <span>{tab.label}</span>
+            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              localTabValue === idx ? 'bg-black/20' : 'bg-white/10'
+            }`}>
+              {tab.count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {currentTabLabel === 'Notes' && resources.notes.map((note: any) => (
+          <ResourceItem 
+            key={note.$id}
+            title={note.title || 'Untitled Note'} 
+            kind="note"
+            metadata={note.tags?.slice(0, 3).join(' • ') || 'Auto-swept'}
+            onOpen={() => openSidebar(
+              <NoteDetailSidebar 
+                note={note} 
+                onUpdate={fetchProjectData} 
+                onDelete={fetchProjectData} 
+              />, 
+              'note-detail'
+            )}
+            onUnlink={() => handleUnlinkTagged(note.title || 'Untitled Note')}
+            keepPermission={note.keepPermission ?? true}
+            onToggleKeepPermission={(checked) => handleToggleKeepPermission(note.$id, 'note', checked)}
+          />
+        ))}
+
+        {currentTabLabel === 'Tasks' && resources.tasks.map((task: any) => (
+          <ResourceItem 
+            key={task.$id}
+            title={task.title} 
+            kind="goal"
+            metadata={`${task.status.replace('-', ' ')} • ${task.priority}`}
+            onOpen={() => openSecondarySidebar('task', task.$id)}
+            onUnlink={() => handleUnlinkTagged(task.title)}
+            keepPermission={task.keepPermission ?? true}
+            onToggleKeepPermission={(checked) => handleToggleKeepPermission(task.$id, 'goal', checked)}
+          />
+        ))}
+
+        {currentTabLabel === 'Vault' && (
+          <>
+            {resources.credentials.map((cred: any) => (
+              <ResourceItem 
+                key={cred.$id}
+                title={cred.name} 
+                kind="password"
+                metadata={cred.username || 'Shared secret'}
+                onOpen={() => openOverlay(
+                  <CredentialDialog 
+                    open={true} 
+                    onClose={closeOverlay} 
+                    initial={cred} 
+                    onSaved={fetchProjectData} 
+                  />
+                )}
+                onUnlink={() => handleUnlinkTagged(cred.name)}
+                keepPermission={cred.keepPermission ?? true}
+                onToggleKeepPermission={(checked) => handleToggleKeepPermission(cred.$id, 'password', checked)}
+              />
+            ))}
+            {resources.totps.map((totp: any) => (
+              <ResourceItem 
+                key={totp.$id}
+                title={totp.issuer || totp.name || 'Smart Code'} 
+                kind="totp"
+                metadata={totp.accountName || 'TOTP secret'}
+                onOpen={() => openOverlay(
+                  <NewTotpDialog 
+                    open={true} 
+                    onClose={() => {
+                      closeOverlay();
+                      fetchProjectData();
+                    }} 
+                    initialData={totp} 
+                  />
+                )}
+                onUnlink={() => handleUnlinkTagged(totp.issuer || totp.name || 'Smart Code')}
+                keepPermission={totp.keepPermission ?? true}
+                onToggleKeepPermission={(checked) => handleToggleKeepPermission(totp.$id, 'totp', checked)}
+              />
+            ))}
+          </>
+        )}
+
+        {currentTabLabel === 'Flow' && (
+          <>
+            {resources.forms.map((form: any) => (
+              <ResourceItem 
+                key={form.$id}
+                title={form.title || 'Untitled Form'} 
+                kind="form"
+                metadata={form.description || 'Interactive Flow Schema'}
+                onOpen={() => openOverlay(
+                  <FormDialog 
+                    open={true} 
+                    onClose={closeOverlay} 
+                    form={form} 
+                    onSaved={fetchProjectData} 
+                  />
+                )}
+                onUnlink={() => handleUnlinkTagged(form.title || 'Untitled Form')}
+              />
+            ))}
+            {resources.events.map((event: any) => (
+              <ResourceItem 
+                key={event.$id}
+                title={event.title} 
+                kind="event"
+                metadata={`${event.location || 'No location'} • ${new Date(event.startTime).toLocaleString()}`}
+                onOpen={() => openSecondarySidebar('event', event.$id, event)}
+                onUnlink={() => handleUnlinkTagged(event.title)}
+                keepPermission={event.keepPermission ?? true}
+                onToggleKeepPermission={(checked) => handleToggleKeepPermission(event.$id, 'event', checked)}
+              />
+            ))}
+            {resources.moments.map((moment: any) => (
+              <ResourceItem 
+                key={moment.$id}
+                title={moment.caption || 'Integrated Moment'} 
+                kind="moment"
+                metadata={`Published: ${new Date(moment.$createdAt || moment.createdAt).toLocaleDateString()}`}
+                onOpen={() => router.push(`/connect/post/${moment.$id}`)}
+                onUnlink={() => handleUnlinkTagged(moment.caption || 'Integrated Moment')}
+              />
+            ))}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

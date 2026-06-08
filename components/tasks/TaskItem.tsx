@@ -18,6 +18,7 @@ import {
   Sparkles,
   Settings,
   Tag,
+  FolderKanban,
 } from 'lucide-react';
 import { formatTime, isToday, isTomorrow, isPast, isThisWeek } from '@/lib/time-util';
 import { Task, Priority } from '@/types';
@@ -143,6 +144,20 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
                 }
             },
         ]
+    },
+    {
+        label: 'Project',
+        icon: <FolderKanban size={16} className="text-[#6366F1]" />,
+        submenu: [
+            {
+                label: 'Add to Project',
+                icon: <FolderKanban size={16} />,
+                onClick: () => openUnified('task-add-to-project', {
+                    taskId: task.id,
+                    taskTitle: task.title,
+                }),
+            },
+        ],
     },
     {
         label: 'Tags',

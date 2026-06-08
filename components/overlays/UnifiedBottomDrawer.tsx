@@ -22,6 +22,7 @@ const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(m
 const ProjectInviteDrawer = dynamic(() => import('./ProjectInviteDrawer').then(mod => mod.ProjectInviteDrawer), { ssr: false });
 const UnifiedFormContent = dynamic(() => import('../forms/UnifiedFormContent').then(mod => mod.UnifiedFormContent), { ssr: false });
 const GithubIntegrationDrawer = dynamic(() => import('./GithubIntegrationDrawer').then(mod => mod.GithubIntegrationDrawer), { ssr: false });
+const TaskAddToProjectDrawerHost = dynamic(() => import('./TaskAddToProjectDrawer').then(mod => mod.TaskAddToProjectDrawerHost), { ssr: false });
 
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
@@ -51,6 +52,8 @@ export function UnifiedBottomDrawer() {
                 noteTitle={drawerData?.taskTitle || drawerData?.resourceTitle} 
                 resourceType="goal"
             />;
+        case 'task-add-to-project':
+            return <TaskAddToProjectDrawerHost />;
         case 'delete-note':
             return <DeleteNoteDrawer 
                 isOpen={true} 
