@@ -428,7 +428,7 @@ export default function TaskDialog() {
           {/* Labels Selection */}
           <div className="flex flex-col gap-2">
             <label className="text-[10px] font-bold text-[#9B9691] tracking-wider uppercase font-clash">TAGS</label>
-            <div className="flex flex-wrap gap-2 mb-2">
+            <div className="flex flex-wrap gap-2 mb-1">
               {selectedLabels.map((tagName) => {
                 const tag = ecosystemTags.find(t => t.name === tagName);
                 const color = (tag as any)?.color || '#9B9691';
@@ -445,23 +445,22 @@ export default function TaskDialog() {
                 );
               })}
             </div>
-            <select
-              value=""
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val && !selectedLabels.includes(val)) {
-                  setSelectedLabels(prev => [...prev, val]);
+            
+            <button
+              type="button"
+              onClick={() => openUnified('tag-selector', {
+                selectedTags: selectedLabels,
+                onSelect: (tagName: string) => {
+                  if (!selectedLabels.includes(tagName)) {
+                    setSelectedLabels(prev => [...prev, tagName]);
+                  }
                 }
-              }}
-              className="w-full bg-[#161412] border border-[#1C1A18] rounded-xl px-3 py-2.5 text-sm text-[#9B9691] font-semibold focus:outline-none focus:border-[#A855F7] transition-colors cursor-pointer"
+              })}
+              className="w-full flex items-center justify-between bg-[#161412] border border-[#1C1A18] rounded-xl px-3 py-2.5 text-sm text-[#9B9691] font-semibold hover:border-[#6366F1] hover:text-white transition-all cursor-pointer"
             >
-              <option value="" disabled>Add tags...</option>
-              {ecosystemTags.filter(t => !selectedLabels.includes(t.name)).map((tag) => (
-                <option key={tag.$id} value={tag.name}>
-                  {tag.name}
-                </option>
-              ))}
-            </select>
+              <span>{selectedLabels.length > 0 ? 'Add more tags...' : 'Add tags to this goal...'}</span>
+              <ArrowUpRight size={14} className="opacity-40" />
+            </button>
           </div>
 
           <hr className="border-[#1C1A18]" />

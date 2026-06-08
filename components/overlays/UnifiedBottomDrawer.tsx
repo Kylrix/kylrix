@@ -16,6 +16,7 @@ const DeleteNoteDrawer = dynamic(() => import('./DeleteNoteDrawer').then(mod => 
 const NewChatDrawer = dynamic(() => import('./NewChatDrawer').then(mod => mod.NewChatDrawer), { ssr: false });
 const NewChannelDrawer = dynamic(() => import('./NewChannelDrawer').then(mod => mod.NewChannelDrawer), { ssr: false });
 const NewTagDrawer = dynamic(() => import('./NewTagDrawer').then(mod => mod.NewTagDrawer), { ssr: false });
+const TagSelectorDrawer = dynamic(() => import('./TagSelectorDrawer').then(mod => mod.TagSelectorDrawer), { ssr: false });
 const NewProjectDrawer = dynamic(() => import('./NewProjectDrawer').then(mod => mod.NewProjectDrawer), { ssr: false });
 const SecureChatSetupDrawer = dynamic(() => import('./SecureChatSetupDrawer').then(mod => mod.SecureChatSetupDrawer), { ssr: false });
 const DeleteConfirmDrawer = dynamic(() => import('./DeleteConfirmDrawer').then(mod => mod.DeleteConfirmDrawer), { ssr: false });
@@ -35,6 +36,7 @@ export function UnifiedBottomDrawer() {
         case 'agentic': return <AgenticDrawer />;
         case 'note': return <NoteDrawer />;
         case 'new-tag': return <NewTagDrawer />;
+        case 'tag-selector': return <TagSelectorDrawer />;
         case 'new-project': return <NewProjectDrawer />;
         case 'share-note': 
             return <ShareNoteDrawer 
