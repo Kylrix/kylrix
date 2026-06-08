@@ -117,5 +117,122 @@ export const ProjectsService = {
     }
     const { removeObjectFromProjectSecure } = await import('@/lib/actions/secure-ops');
     return await removeObjectFromProjectSecure(objectId);
+  },
+
+  async listTaggedResources(tagIds: string[]) {
+    if (!tagIds || tagIds.length === 0) {
+      return { 
+        notes: [], 
+        tasks: [], 
+        credentials: [], 
+        totps: [], 
+        events: [], 
+        forms: [], 
+        moments: [] 
+      };
+    }
+
+    const databaseId = APPWRITE_CONFIG.DATABASES.NOTE;
+    const pivotTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'resource_tags';
+
+    try {
+      const pivotRes = await databases.listRows(
+        databaseId,
+        pivotTable,
+        [
+          Query.equal('tagId', tagIds),
+          Query.limit(5000)
+        ]
+      );
+
+      const resourceIdsByType: Record<string, string[]> = {};
+      pivotRes.rows.forEach((p: any) => {
+        const type = p.resourceType;
+        const id = p.resourceId;
+        if (!type || !id) return;
+        if (!resourceIdsByType[type]) resourceIdsByType[type] = [];
+        resourceIdsByType[type].push(id);
+      });
+
+      // Deduplicate IDs per type
+      Object.keys(resourceIdsByType).forEach(type => {
+        resourceIdsByType[type] = Array.from(new Set(resourceIdsByType[type]));
+      });
+
+      // Fetch actual objects in parallel
+      const { 
+        listNotes, 
+        listFlowTasks, 
+        listKeepCredentials 
+      } = await import('./index');
+
+      const notesPromise = resourceIdsByType['note']?.length 
+        ? listNotes([Query.equal('$id', resourceIdsByType['note'])]).then(r => r.rows).catch(() => []) 
+        : Promise.resolve([]);
+
+      const tasksPromise = (resourceIdsByType['goal']?.length || resourceIdsByType['task']?.length)
+        ? listFlowTasks([Query.equal('$id', [...(resourceIdsByType['goal'] || []), ...(resourceIdsByType['task'] || [])])]).then(r => r.rows).catch(() => [])
+        : Promise.resolve([]);
+
+      const credentialsPromise = resourceIdsByType['password']?.length || resourceIdsByType['credential']?.length
+        ? listKeepCredentials([Query.equal('$id', [...(resourceIdsByType['password'] || []), ...(resourceIdsByType['credential'] || [])])]).then(r => r.rows).catch(() => [])
+        : Promise.resolve([]);
+
+      const totpsPromise = resourceIdsByType['totp']?.length
+        ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, 'totpSecrets', [Query.equal('$id', resourceIdsByType['totp'])]).then((r: any) => r.rows).catch(() => [])
+        : Promise.resolve([]);
+
+      const eventsPromise = resourceIdsByType['event']?.length
+        ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.KYLRIXFLOW, 'events', [Query.equal('$id', resourceIdsByType['event'])]).then((r: any) => r.rows).catch(() => [])
+        : Promise.resolve([]);
+
+      const formsPromise = resourceIdsByType['form']?.length
+        ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, [Query.equal('$id', resourceIdsByType['form'])]).then((r: any) => r.rows).catch(() => [])
+        : Promise.resolve([]);
+
+      const momentsPromise = resourceIdsByType['moment']?.length
+        ? (databases as any).listRows(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.MOMENTS, [Query.equal('$id', resourceIdsByType['moment'])]).then((r: any) => r.rows).catch(() => [])
+        : Promise.resolve([]);
+
+      const [
+        notes,
+        tasks,
+        credentials,
+        totps,
+        events,
+        forms,
+        moments
+      ] = await Promise.all([
+        notesPromise,
+        tasksPromise,
+        credentialsPromise,
+        totpsPromise,
+        eventsPromise,
+        formsPromise,
+        momentsPromise
+      ]);
+
+      return {
+        notes,
+        tasks,
+        credentials,
+        totps,
+        events,
+        forms,
+        moments
+      };
+
+    } catch (err) {
+      console.error('[ProjectsService] Failed to list tagged resources:', err);
+      return { 
+        notes: [], 
+        tasks: [], 
+        credentials: [], 
+        totps: [], 
+        events: [], 
+        forms: [], 
+        moments: [] 
+      };
+    }
   }
 };
