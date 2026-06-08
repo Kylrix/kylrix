@@ -174,16 +174,19 @@ export type Notes = Models.Row & {
     resourceType?: string | null;
     keepPermission?: boolean | null;
     source?: string | null;
-}
+    isDeleted?: boolean;
+    }
 
-export type Tags = Models.Row & {
+    export type Tags = Models.Row & {
     id: string | null;
     name: string | null;
     notes: string[] | null;
     createdAt: string | null;
     color: string | null;
     description: string | null;
-    usageCount: number | null;
+    isDeleted?: boolean;
+    }
+
     userId: string | null;
     nameLower: string | null;
 }
@@ -382,6 +385,8 @@ export type Events = Models.Row & {
     isGuest?: boolean | null;
     keepPermission?: boolean | null;
     source?: string | null;
+    isDeleted?: boolean;
+    updatedAt?: string | null;
 }
 
 export type Calendars = Models.Row & {
@@ -409,6 +414,8 @@ export type Tasks = Models.Row & {
     isGuest?: boolean | null;
     keepPermission?: boolean | null;
     source?: string | null;
+    isDeleted?: boolean;
+    updatedAt?: string | null;
 }
 
 export type Stickers = Models.Row & { name: string; description: string | null; creatorId: string | null; packId: string | null; imageUrl: string; imageFileId: string | null; animatedUrl: string | null; animatedFileId: string | null; tags: string[]; category: string | null; isPremium: boolean; isAnimated: boolean; usageCount: number; isPublic: boolean; createdAt: string | null; }
@@ -423,6 +430,7 @@ export type Projects = Models.Row & {
     metadata: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    isDeleted?: boolean;
 }
 
 export type ProjectObjects = Models.Row & {
@@ -434,6 +442,7 @@ export type ProjectObjects = Models.Row & {
     metadata: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    isDeleted?: boolean;
 }
 
 // Re-export auto-generated types from appwrite.d.ts

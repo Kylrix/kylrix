@@ -1377,7 +1377,7 @@ export async function pullNotesDeltaSecure(params: { lastCheckpoint: string | nu
     metadata: doc.metadata,
     updatedAt: doc.$updatedAt,
     crdt: doc.crdt || null,
-    _deleted: false // Appwrite doesn't have native soft deletes, would need a flag
+    _deleted: doc.isDeleted || false
   }));
 
   const lastDoc = documents[documents.length - 1];
