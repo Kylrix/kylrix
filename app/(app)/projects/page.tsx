@@ -50,7 +50,8 @@ import {
   Play,
   RotateCcw,
   UserCheck,
-} from 'lucide-react';
+  FileText
+  } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
