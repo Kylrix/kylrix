@@ -21,7 +21,8 @@ import {
   Square,
   RefreshCw,
   MoreVertical,
-  ChevronRight
+  ChevronRight,
+  Copy
 } from 'lucide-react';
 import { 
   createGhostNoteForResource, 
@@ -657,7 +658,23 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
       <div className="relative z-10 flex-1 overflow-y-auto p-5 md:p-6 space-y-6 scrollbar-thin">
         {/* Objective Details Box */}
         <div className="p-5 rounded-[28px] bg-[#0A0908] border border-white/5 shadow-[0_12px_32px_rgba(0,0,0,0.4)] flex flex-col">
-          <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-2.5 font-mono">Objective details</span>
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider font-mono">Objective details</span>
+            {task.description && !isEditing && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(task.description || '');
+                  showSuccess('Copied', 'Objective details copied to clipboard');
+                }}
+                className="p-1.5 rounded-lg text-[#9B9691] hover:text-white hover:bg-white/5 transition-colors"
+                title="Copy details"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           <div className="min-h-[100px] md:min-h-[140px] flex">
             {isEditing ? (
               <textarea
