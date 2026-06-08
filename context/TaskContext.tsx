@@ -1516,7 +1516,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     getTasksByProject,
     getTaskStats,
     getSelectedTask,
-    getSelectedProject]);
+    getSelectedProject,
+    state.ecosystemTags,
+    refreshEcosystemTags,
+    getTagFilterOptions]);
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
 }
