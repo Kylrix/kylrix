@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   Flag,
   Clock,
@@ -101,13 +101,13 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
   const totalSubtasks = task.subtasks.length;
 
-  const toggleTaskTag = (tagName: string) => {
+  const toggleTaskTag = useCallback((tagName: string) => {
     const hasTag = task.labels.includes(tagName);
     const nextLabels = hasTag
       ? task.labels.filter((name) => name !== tagName)
       : [...task.labels, tagName];
     updateTask(task.id, { labels: nextLabels });
-  };
+  }, [task.id, task.labels, updateTask]);
 
   const tagMenuOptions = getTagFilterOptions();
 
@@ -203,7 +203,19 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
             }
         })
     }
-  ];
+  ], [
+    task,
+    tagMenuOptions,
+    toggleTaskTag,
+    openUnified,
+    user?.name,
+    openCallLauncher,
+    addTask,
+    updateTask,
+    selectTask,
+    openSecondarySidebar,
+    deleteTask,
+  ]);
 
   const handleMenuClick = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -400,8 +412,13 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
               {/* Label Pills */}
               {taskLabels.length > 0 && (
                 <div className="hidden sm:flex gap-1">
-                  {taskLabels.slice(0, 2).map((l) => (
-                    <span key={l.id} className="h-1.5 w-4 rounded-full opacity-60" style={{ backgroundColor: l.color }} />
+                  {taskLabels.slice(0, 2).map((label) => (
+                    <span
+                      key={label.name}
+                      className="h-1.5 w-4 rounded-full opacity-60"
+                      style={{ backgroundColor: label.color }}
+                      title={label.name}
+                    />
                   ))}
                 </div>
               )}

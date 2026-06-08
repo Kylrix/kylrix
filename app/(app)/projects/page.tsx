@@ -504,74 +504,6 @@ export default function ProjectsPage() {
 
   const workflowsList = Object.values(savedWorkflows || {});
 
-  const teamsElement = (
-    <Box sx={{ mb: 6 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', display: 'block' }}>
-                Ecosystem Teams ({teams.length})
-            </Typography>
-            <Button 
-                size="small"
-                onClick={() => router.push('/teams')}
-                endIcon={<ArrowUpRight size={14} />}
-                sx={{ color: '#10B981', fontWeight: 800, textTransform: 'none', fontSize: '0.75rem' }}
-            >
-                Manage Teams
-            </Button>
-        </Stack>
-
-        {teams.length === 0 ? (
-            <div className="bg-[#161412] rounded-[32px] border border-white/6 p-8 text-center space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-[#10B981]/10 text-[#10B981] flex items-center justify-center mx-auto">
-                    <Users size={32} />
-                </div>
-                <div className="space-y-1">
-                    <h3 className="text-white font-black text-lg uppercase tracking-tight">No active teams</h3>
-                    <p className="text-white/40 text-sm font-semibold max-w-[320px] mx-auto leading-relaxed">
-                        Teams allow you to coordinate projects, secrets, and huddles with other ecosystem nodes.
-                    </p>
-                </div>
-                <Button 
-                    variant="outlined" 
-                    onClick={() => {
-                        if (!hasPaidKylrixPlan(user)) {
-                            open('pro-upgrade', {});
-                        } else {
-                            showSuccess('Team creation environment is spinning up...');
-                        }
-                    }}
-                    sx={{ borderRadius: '12px', borderColor: 'rgba(255,255,255,0.1)', color: '#fff', px: 4, fontWeight: 800 }}
-                >
-                    Create Your First Team
-                </Button>
-            </div>
-        ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {teams.map((team) => (
-                    <div 
-                        key={team.$id}
-                        onClick={() => router.push(`/teams/${team.$id}`)}
-                        className="group bg-[#161412] border border-white/6 hover:border-[#10B981]/40 rounded-[28px] p-5 flex items-center gap-4 transition-all duration-300 cursor-pointer active:scale-[0.98]"
-                    >
-                        <div className="w-12 h-12 rounded-xl bg-[#10B981]/10 text-[#10B981] flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
-                            <Users size={22} strokeWidth={2.5} />
-                        </div>
-                        <div className="min-w-0 flex-1 flex flex-col gap-0.5">
-                            <span className="text-white font-black text-sm uppercase tracking-tight truncate">
-                                {team.name}
-                            </span>
-                            <span className="text-[#9B9691] text-[10px] font-bold uppercase tracking-wider">
-                                {team.total} Members • Created {new Date(team.$createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                            </span>
-                        </div>
-                        <ArrowUpRight size={16} className="text-white/10 group-hover:text-[#10B981] transition-colors" />
-                    </div>
-                ))}
-            </div>
-        )}
-    </Box>
-  );
-
   const fetchProjects = useCallback(async (force = false) => {
     setLoading(true);
     try {
@@ -583,15 +515,6 @@ export default function ProjectsPage() {
       setLoading(false);
     }
   }, [showError]);
-
-  const fetchTeams = useCallback(async () => {
-    try {
-        const res = await TeamsService.listTeams();
-        setTeams(res.teams);
-    } catch (err) {
-        console.warn('[Projects] Failed to fetch ecosystem teams:', err);
-    }
-  }, []);
 
   const { setConfiguration, resetConfiguration } = useFAB();
 

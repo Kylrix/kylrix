@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   X, 
   Flag, 
@@ -434,7 +434,14 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   }
 
   const project = projects.find((p) => p.id === task.projectId);
-  const taskLabels = labels.filter((l) => task.labels.includes(l.id));
+  const taskLabels = useMemo(() => {
+    const known = labels.filter((label) => task.labels.includes(label.name));
+    const knownNames = new Set(known.map((label) => label.name));
+    const orphans = task.labels
+      .filter((name) => !knownNames.has(name))
+      .map((name) => ({ id: name, name, color: '#9B9691' }));
+    return [...known, ...orphans];
+  }, [labels, task.labels]);
   const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
   const subtaskProgress = task.subtasks.length > 0
     ? (completedSubtasks / task.subtasks.length) * 100
@@ -755,18 +762,15 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
             <div className="px-1">
                 <span className="text-[10px] font-black text-[#A855F7] uppercase tracking-wider mb-2.5 block font-mono">Ecosystem Tags</span>
                 <div className="flex flex-wrap gap-2">
-                    {task.labels.map((labelId) => {
-                        const label = labels.find(l => l.id === labelId);
-                        return (
+                    {taskLabels.map((label) => (
                             <div 
-                                key={labelId}
+                                key={label.name}
                                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] font-bold text-white/60"
                             >
-                                <TagIcon size={10} style={{ color: label?.color || '#9B9691' }} />
-                                <span>{label?.name || labelId}</span>
+                                <TagIcon size={10} style={{ color: label.color || '#9B9691' }} />
+                                <span>{label.name}</span>
                             </div>
-                        );
-                    })}
+                    ))}
                 </div>
             </div>
         )}

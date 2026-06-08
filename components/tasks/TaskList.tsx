@@ -131,6 +131,7 @@ export default function TaskList() {
   };
 
   const getViewTitle = () => {
+    if (activeTagFilter) return `Tag: ${activeTagFilter}`;
     if (selectedProject) return selectedProject.name;
     if (filter.status?.includes('done')) return 'Completed Goals';
     if (filter.dueDate?.from && filter.dueDate?.to) {
