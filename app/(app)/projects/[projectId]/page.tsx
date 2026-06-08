@@ -72,6 +72,7 @@ import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
 import { ProjectDiscussionSidebar } from '@/components/projects/ProjectDiscussionSidebar';
 import { useLayout } from '@/context/LayoutContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDataNexus } from '@/context/DataNexusContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
 import CredentialDialog from '@/components/app/dashboard/CredentialDialog';
 import FormDialog from '@/components/forms/FormDialog';
@@ -118,6 +119,7 @@ export default function ProjectDetailPage() {
   const { openSidebar, closeSidebar } = useDynamicSidebar();
   const { openSecondarySidebar } = useLayout();
   const { openOverlay, closeOverlay } = useOverlay();
+  const { fetchOptimized } = useDataNexus();
 
   useEffect(() => {
       if (projectId) {
@@ -367,7 +369,11 @@ export default function ProjectDetailPage() {
         console.error('Failed to load project collaborators securely:', collabErr);
       }
 
-      const objects = await ProjectsService.listProjectObjects(projectId as string);
+      const objects = await fetchOptimized(
+        `project_objects_${projectId}`,
+        () => ProjectsService.listProjectObjects(projectId as string),
+        1000 * 60 * 5 // 5 minute TTL
+      );
       setProjectObjects(objects.rows);
 
       // Resolve other entities and capture their resolved values
@@ -454,7 +460,11 @@ export default function ProjectDetailPage() {
       let resolvedTagged: any = { notes: [], tasks: [], credentials: [], totps: [], events: [], forms: [], moments: [] };
       if (tagIds.length > 0) {
         try {
-          resolvedTagged = await ProjectsService.listTaggedResources(tagIds);
+          resolvedTagged = await fetchOptimized(
+            `project_tagged_${projectId}_${tagIds.join('_')}`,
+            () => ProjectsService.listTaggedResources(tagIds),
+            1000 * 60 * 10 // 10 minute TTL for sweeping
+          );
           
           // Filter out items that are already explicitly linked as project objects
           const explicitIds = new Set(objects.map(o => o.entityId));
