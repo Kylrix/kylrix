@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import UserSearch from '@/components/UserSearch';
 import { useTask } from '@/context/TaskContext';
-import { listTags } from '@/lib/appwrite';
 import { Priority, TaskStatus } from '@/types';
 import { ArrowUpRight, ChevronUp, ChevronDown, X, Type } from 'lucide-react';
 import { useSection } from '@/context/SectionContext';
@@ -56,6 +55,8 @@ export default function TaskDialog() {
     labels,
     selectedProjectId,
     userId: creatorId,
+    ecosystemTags,
+    refreshEcosystemTags,
   } = useTask();
 
   const [title, setTitle] = useState('');
@@ -70,16 +71,11 @@ export default function TaskDialog() {
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [estimatedTime, setEstimatedTime] = useState('');
   const [isHydrated, setIsHydrated] = useState(false);
-  const [ecosystemTags, setEcosystemTags] = useState<Tags[]>([]);
-
-  // Fetch ecosystem tags
   useEffect(() => {
     if (taskDialogOpen) {
-      listTags([], 100).then(res => {
-        setEcosystemTags(res.rows);
-      }).catch(err => console.error('Failed to fetch tags', err));
+      void refreshEcosystemTags();
     }
-  }, [taskDialogOpen]);
+  }, [taskDialogOpen, refreshEcosystemTags]);
 
   useEffect(() => {
     const handleResize = () => {
