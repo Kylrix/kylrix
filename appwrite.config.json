@@ -347,6 +347,13 @@
                     "size": 65535,
                     "default": null,
                     "encrypt": true
+                },
+                {
+                    "key": "isDeleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -420,6 +427,17 @@
                     "orders": [
                         "ASC",
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_notes_isDeleted",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isDeleted"
+                    ],
+                    "orders": [
+                        "asc"
                     ]
                 }
             ]
@@ -1524,6 +1542,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isDeleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -1564,6 +1589,17 @@
                     "orders": [
                         "ASC",
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_resource_tags_isDeleted",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isDeleted"
+                    ],
+                    "orders": [
+                        "asc"
                     ]
                 }
             ]
@@ -7871,6 +7907,13 @@
                     "required": false,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "isDeleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -7933,6 +7976,17 @@
                     "orders": [
                         "ASC",
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_events_isDeleted",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isDeleted"
+                    ],
+                    "orders": [
+                        "asc"
                     ]
                 }
             ]
@@ -8230,6 +8284,13 @@
                     "size": 36,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "isDeleted",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [
@@ -8294,6 +8355,17 @@
                     "orders": [
                         "ASC",
                         "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_tasks_isDeleted",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "isDeleted"
+                    ],
+                    "orders": [
+                        "asc"
                     ]
                 }
             ]
