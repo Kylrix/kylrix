@@ -2790,25 +2790,12 @@ export async function createProjectSecure(data: any, jwt?: string) {
   const now = new Date().toISOString();
   const projectId = ID.unique();
 
-  const isPro = hasPaidKylrixPlan(actor);
   const permissions = [
     Permission.read(Role.user(actor.$id)),
     Permission.update(Role.user(actor.$id)),
     Permission.delete(Role.user(actor.$id)),
   ];
 
-  // 1. Native Appwrite Team: Premium High-Performance Read-Access
-  if (isPro) {
-      try {
-          await teams.create(projectId, projectData.name || 'New Project');
-          // Add creator as owner
-          await teams.createMembership(projectId, ['owner'], undefined, actor.$id);
-          // Add high-performance team permission
-          permissions.push(Permission.read(Role.team(projectId)));
-      } catch (teamErr: any) {
-          console.warn('[createProjectSecure] Team creation skipped or failed:', teamErr?.message);
-      }
-  }
   const project = await tables.createRow({
       databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
       tableId: 'projects',
@@ -2885,6 +2872,84 @@ export async function deleteProjectSecure(
     });
 
   return JSON.parse(JSON.stringify(result));
+}
+
+/**
+ * Hybrid Collaboration Architecture: Provision Background Team
+ * Dynamically spins up an Appwrite Team when a resource exceeds 8 collaborators.
+ */
+export async function provisionHybridTeamExpansionSecure(
+  resourceId: string, 
+  resourceType: string, 
+  ownerId: string,
+  targetUserId: string,
+  targetRole: string
+): Promise<{ isTeamExpanded: boolean, newAcl: string | null }> {
+  const tables = createSystemTablesDB();
+  const { users, teams, databases } = createSystemClient();
+  
+  // 1. Check current collaborator count
+  const existingCollabsRes = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
+    tableId: APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators',
+    queries: [
+      Query.equal('resourceId', resourceId),
+      Query.equal('resourceType', resourceType),
+      Query.limit(100)
+    ] as any
+  });
+
+  const uniqueCollabIds = Array.from(new Set(existingCollabsRes.rows.map(r => r.userId)));
+  if (!uniqueCollabIds.includes(targetUserId)) {
+      uniqueCollabIds.push(targetUserId);
+  }
+
+  // If under limit, no team needed
+  if (uniqueCollabIds.length <= 8) {
+      return { isTeamExpanded: false, newAcl: null };
+  }
+
+  // 2. Enforce Pro limits
+  const owner = await users.get(ownerId).catch(() => null);
+  const isPro = owner ? hasPaidKylrixPlan(owner) : false;
+
+  if (!isPro) {
+      throw new Error('Limit reached: Free plan is limited to 8 collaborators. Upgrade to PRO for unlimited team members.');
+  }
+
+  const teamId = `rt_${resourceId.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 30)}`;
+
+  // 3. Provision Team if missing
+  try {
+      await teams.get(teamId);
+  } catch (err: any) {
+      if (err.code === 404) {
+          try {
+              await teams.create(teamId, `${resourceType.toUpperCase()} Expansion: ${resourceId}`);
+              
+              // Seed the team with the owner and existing 8 collaborators
+              await teams.createMembership(teamId, ['owner'], undefined, ownerId).catch(() => null);
+
+              for (const row of existingCollabsRes.rows) {
+                  if (row.userId !== ownerId) {
+                      const role = row.permission === 'admin' ? 'admin' : (row.permission === 'write' ? 'editor' : 'viewer');
+                      await teams.createMembership(teamId, [role], undefined, row.userId).catch(() => null);
+                  }
+              }
+          } catch (createErr: any) {
+              console.warn('[provisionHybridTeamExpansionSecure] Team creation failed:', createErr?.message);
+          }
+      }
+  }
+
+  // 4. Add the 9th+ user
+  try {
+      await teams.createMembership(teamId, [targetRole], undefined, targetUserId).catch(() => null);
+  } catch (addErr: any) {
+      console.warn('[provisionHybridTeamExpansionSecure] Failed to add member to expansion team:', addErr?.message);
+  }
+
+  return { isTeamExpanded: true, newAcl: `read("team:${teamId}")` };
 }
 
 export async function addProjectCollaboratorSecure(projectId: string, targetUserId: string, permissionLevel: string = 'viewer', jwt?: string) {
