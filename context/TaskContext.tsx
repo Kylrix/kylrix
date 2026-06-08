@@ -12,6 +12,8 @@ import { Task as AppwriteTask, Calendar as AppwriteCalendar } from '@/types/kylr
 import { useDataNexus } from './DataNexusContext';
 import { sendKylrixEmailNotification } from '@/lib/email-notifications';
 import { useAuth } from '@/context/auth/AuthContext';
+import { getAllTags } from '@/lib/appwrite';
+import type { Tags } from '@/types/appwrite';
 import {
   Task,
   Project,
@@ -179,20 +181,20 @@ const mapAppwriteCalendarToProject = (doc: AppwriteCalendar): Project => ({
   },
 });
 
-// Sample labels (hardcoded for now as there is no backend collection)
-const DEFAULT_LABELS: Label[] = [
-  { id: 'label-1', name: 'Bug', color: '#ef4444', description: 'Bug fixes and issues' },
-  { id: 'label-2', name: 'Feature', color: '#10b981', description: 'New features' },
-  { id: 'label-3', name: 'Enhancement', color: '#3b82f6', description: 'Improvements' },
-  { id: 'label-4', name: 'Documentation', color: '#8b5cf6', description: 'Docs updates' },
-  { id: 'label-5', name: 'Urgent', color: '#f59e0b', description: 'Needs immediate attention' },
-  { id: 'label-6', name: 'Research', color: '#ec4899', description: 'Research tasks' }];
+const mapEcosystemTagsToLabels = (tags: Tags[]): Label[] =>
+  tags.map((tag) => ({
+    id: tag.name,
+    name: tag.name,
+    color: (tag as Tags & { color?: string }).color || '#9B9691',
+    description: (tag as Tags & { description?: string }).description,
+  }));
 
 // State
 interface TaskState {
   tasks: Task[];
   projects: Project[];
   labels: Label[];
+  ecosystemTags: Tags[];
   selectedTaskId: string | null;
   selectedProjectId: string | null;
   filter: TaskFilter;
@@ -209,7 +211,8 @@ interface TaskState {
 const initialState: TaskState = {
   tasks: [],
   projects: [],
-  labels: DEFAULT_LABELS,
+  labels: [],
+  ecosystemTags: [],
   selectedTaskId: null,
   selectedProjectId: null,
   filter: {
@@ -261,7 +264,8 @@ type TaskAction =
   | { type: 'ADD_COMMENT'; payload: { taskId: string; comment: Comment } }
   | { type: 'REORDER_TASKS'; payload: { taskIds: string[]; projectId?: string } }
   | { type: 'TOGGLE_PIN_TASK'; payload: string }
-  | { type: 'TOGGLE_PIN_PROJECT'; payload: string };
+  | { type: 'TOGGLE_PIN_PROJECT'; payload: string }
+  | { type: 'SET_ECOSYSTEM_TAGS'; payload: Tags[] };
 
 // Reducer
 function taskReducer(state: TaskState, action: TaskAction): TaskState {
@@ -500,6 +504,13 @@ function taskReducer(state: TaskState, action: TaskAction): TaskState {
         ),
       };
 
+    case 'SET_ECOSYSTEM_TAGS':
+      return {
+        ...state,
+        ecosystemTags: action.payload,
+        labels: mapEcosystemTagsToLabels(action.payload),
+      };
+
     default:
       return state;
   }
@@ -550,6 +561,9 @@ interface TaskContextType extends TaskState {
   getTaskStats: () => { total: number; completed: number; overdue: number; dueToday: number };
   getSelectedTask: () => Task | null;
   getSelectedProject: () => Project | null;
+  ecosystemTags: Tags[];
+  refreshEcosystemTags: () => Promise<void>;
+  getTagFilterOptions: () => string[];
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -678,6 +692,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     return true;
   }, [clearStalePendingPatches]);
 
+  const refreshEcosystemTags = useCallback(async () => {
+    try {
+      const { rows } = await getAllTags();
+      dispatch({ type: 'SET_ECOSYSTEM_TAGS', payload: rows });
+    } catch (error) {
+      console.error('[TaskContext] Failed to load ecosystem tags', error);
+    }
+  }, []);
+
   const dispatchSyncedData = useCallback((data: { tasks: Task[]; projects: Project[] }) => {
     dispatch({
       type: 'SET_DATA',
@@ -763,6 +786,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         // 2. Standard Background Refresh
         const data = await fetchBatch(userId);
         dispatchSyncedData(data);
+        await refreshEcosystemTags();
       } catch (err: any) {
           console.error('[TaskContext] Authoritative init failed:', err);
           dispatch({ type: 'SET_ERROR', payload: err.message || 'Failed to sync workspace' });
@@ -770,7 +794,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     };
 
     init();
-  }, [authUser?.$id, isAuthLoading, fetchBatch, getCachedDataAsync, dispatchSyncedData]);
+  }, [authUser?.$id, isAuthLoading, fetchBatch, getCachedDataAsync, dispatchSyncedData, refreshEcosystemTags]);
 
   // Route-based background revalidation
   useEffect(() => {
@@ -1408,6 +1432,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     return state.projects.find(p => p.id === state.selectedProjectId) || null;
   }, [state.projects, state.selectedProjectId]);
 
+  const getTagFilterOptions = useCallback(() => {
+    const fromTasks = state.tasks.flatMap((task) => task.labels || []);
+    const fromEcosystem = state.ecosystemTags.map((tag) => tag.name);
+    return Array.from(new Set([...fromEcosystem, ...fromTasks])).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: 'base' }),
+    );
+  }, [state.tasks, state.ecosystemTags]);
+
   const value = useMemo<TaskContextType>(() => ({
     ...state,
     addTask,
@@ -1445,6 +1477,9 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     getTaskStats,
     getSelectedTask,
     getSelectedProject,
+    ecosystemTags: state.ecosystemTags,
+    refreshEcosystemTags,
+    getTagFilterOptions,
   }), [
     state,
     addTask,

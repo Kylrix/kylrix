@@ -18,6 +18,7 @@ interface ContextMenuItem {
   onClick?: () => void;
   submenu?: ContextMenuItem[];
   variant?: 'default' | 'destructive';
+  keepOpen?: boolean;
 }
 
 interface ContextMenuProps {
@@ -50,7 +51,9 @@ export function ContextMenu({ x, y, onCloseAction, items, appType }: ContextMenu
     }
     if (item.onClick) {
       item.onClick();
-      onCloseAction();
+      if (!item.keepOpen) {
+        onCloseAction();
+      }
     }
   };
 

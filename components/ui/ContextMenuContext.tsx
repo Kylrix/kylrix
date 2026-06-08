@@ -25,6 +25,7 @@ interface ContextMenuItem {
   onClick?: () => void;
   submenu?: ContextMenuItem[];
   variant?: 'default' | 'destructive';
+  keepOpen?: boolean;
 }
 
 interface MenuState {
