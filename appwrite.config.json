@@ -1726,6 +1726,97 @@
             ]
         },
         {
+            "$id": "user_resource_pins",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")",
+                "delete(\"users\")"
+            ],
+            "databaseId": "67ff05a9000296822396",
+            "name": "User Resource Pins",
+            "enabled": true,
+            "rowSecurity": true,
+            "columns": [
+                {
+                    "key": "userId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "resourceType",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "note",
+                        "credential",
+                        "totp",
+                        "task",
+                        "calendar",
+                        "event",
+                        "form",
+                        "project",
+                        "conversation",
+                        "message"
+                    ]
+                },
+                {
+                    "key": "resourceId",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 64,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "pinnedAt",
+                    "type": "datetime",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "format": ""
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "idx_user_resource_unique",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "resourceType",
+                        "resourceId"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC",
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "idx_user_type",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "userId",
+                        "resourceType"
+                    ],
+                    "orders": [
+                        "ASC",
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
             "$id": "securityLogs",
             "$permissions": [],
             "databaseId": "passwordManagerDb",
