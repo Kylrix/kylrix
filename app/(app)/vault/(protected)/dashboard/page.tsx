@@ -224,11 +224,13 @@ function DashboardPageContent() {
 
   const sortedCredentials = useMemo(() => {
     return [...allCredentials].sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
+      const aPinned = isResourcePinned('credential', a.$id, a.userId, a.isPinned);
+      const bPinned = isResourcePinned('credential', b.$id, b.userId, b.isPinned);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
       return new Date(b.$createdAt).getTime() - new Date(a.$createdAt).getTime();
     });
-  }, [allCredentials]);
+  }, [allCredentials, isResourcePinned]);
 
   const refreshCredentials = () => {
     if (!user?.$id) return;
