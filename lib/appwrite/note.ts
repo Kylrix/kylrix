@@ -1074,39 +1074,39 @@ export async function updateTag(tagId: string, data: Partial<Tags>, jwt?: string
 export async function deleteTag(tagId: string, jwt?: string) {
   if (typeof window !== 'undefined') {
     const { deleteRow } = await import('@/lib/actions/client-ops');
-    return deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId);
+    const res = await deleteRow(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId);
+    invalidateCache('list:tags');
+    return res;
   }
   const { deleteRowSecure } = await import('@/lib/actions/secure-ops');
   return deleteRowSecure(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, tagId, jwt);
 }
 
 export async function listTags(queries: any[] = [], limit: number = 100) {
-  // By default, fetch all tags for the current user
-  if (!queries.length) {
-    const user = await getCurrentUser();
-    if (!user || !user.$id) {
-      // Return empty result instead of throwing error for unauthenticated users
-      return { 
-        rows: [], 
-        total: 0 
-      };
+  const key = `list:tags:${JSON.stringify(queries)}:${limit}`;
+  
+  return await fetchOptimized(key, async () => {
+    // By default, fetch all tags for the current user
+    if (!queries.length) {
+      const user = await getCurrentUser();
+      if (!user || !user.$id) {
+        return { rows: [], total: 0 };
+      }
+      queries = [Query.equal("userId", user.$id)];
     }
-    queries = [Query.equal("userId", user.$id)];
-  }
-  
-  // Add limit and ordering
-  const finalQueries = [
-    ...queries,
-    Query.limit(limit),
-    Query.orderDesc("$createdAt")
-  ];
-  
-  // Cast rows to Tags[]
-  const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, finalQueries);
-  return { 
-      ...res, 
-      rows: (res.rows as unknown as Tags[]).map(t => hydrateTagMetadata(t)) 
-  };
+    
+    const finalQueries = [
+      ...queries,
+      Query.limit(limit),
+      Query.orderDesc("$createdAt")
+    ];
+    
+    const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_TAGS, finalQueries);
+    return { 
+        ...res, 
+        rows: (res.rows as unknown as Tags[]).map(t => hydrateTagMetadata(t)) 
+    };
+  }, LIST_TTL);
 }
 
 // New function to get all tags with cursor pagination
