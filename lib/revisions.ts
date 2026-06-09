@@ -224,8 +224,7 @@ export async function createRevision(
 
     // Build diff JSON (bounded by 8000 size limit)
     let diffStr: string | null = null;
-    if (after.format !== 'doodle') {
-      try {
+    try {
         const diffObj = { changes };
         const serialized = JSON.stringify(diffObj);
         if (serialized.length <= 8000) {
@@ -240,7 +239,6 @@ export async function createRevision(
       } catch {
         diffStr = null;
       }
-    }
 
     // Create revision document
     const revision = await databases.createRow(

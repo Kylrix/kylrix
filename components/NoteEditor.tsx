@@ -95,16 +95,14 @@ function truncate(s: string, n: number){ return s.length>n? s.slice(0,n-1)+'…'
 interface NoteEditorProps {
   initialContent?: string;
   initialTitle?: string;
-  initialFormat?: 'text' | 'doodle';
-  noteId?: string; // existing note id if editing
-  onSave?: (note: any) => void; // called after create or update
-  onNoteCreated?: (note: any) => void; // called only on first creation
+  noteId?: string;
+  onSave?: (note: any) => void;
+  onNoteCreated?: (note: any) => void;
 }
 
 export default function NoteEditor({ 
   initialContent = '', 
   initialTitle = '',
-  initialFormat = 'text',
   noteId: externalNoteId,
   onSave,
   onNoteCreated
@@ -112,7 +110,6 @@ export default function NoteEditor({
   const { note: collabNote, updateNote: collabUpdate } = useCollaborativeNote(externalNoteId);
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
-  const [format, setFormat] = useState<'text' | 'doodle'>(initialFormat);
   
   // Sync state with collab note
   useEffect(() => {
@@ -172,15 +169,14 @@ export default function NoteEditor({
         saved = await updateNote(effectiveNoteId, { 
           title: title.trim(), 
           content: content.trim(),
-          format,
-          // Visibility transitions are handled via secure toggle.
+          format: 'text',
           isPublic: persistedIsPublic
         });
       } else {
         saved = await createNote({ 
           title: title.trim(), 
           content: content.trim(), 
-          format,
+          format: 'text',
           // New notes are created private, then securely toggled if needed.
           isPublic: false,
           tags: [] 
@@ -259,10 +255,8 @@ export default function NoteEditor({
         />
 
         <NoteContent
-          format={format}
           content={content}
           onChange={handleContentChange}
-          onFormatChange={setFormat}
           disabled={isSaving}
         />
 

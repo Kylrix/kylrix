@@ -47,7 +47,7 @@ export const UpdateRowSchema = z.object({
 export const NoteSchema = z.object({
   title: z.string().min(1).max(512),
   content: z.string().optional(),
-  format: z.enum(['markdown', 'text', 'doodle']).default('markdown'),
+  format: z.enum(['markdown', 'text']).default('markdown'),
   tags: z.array(z.string()).optional(),
   isPublic: z.boolean().optional(),
   metadata: z.string().nullable().optional(),

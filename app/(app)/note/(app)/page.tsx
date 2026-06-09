@@ -238,11 +238,10 @@ export default function NotesPage() {
     goToPage(1);
   }, [upsertNote, clearSearch, goToPage]);
 
-  const openComposer = useCallback((kind: 'note' | 'project', format: 'text' | 'doodle' = 'text') => {
+  const openComposer = useCallback((kind: 'note' | 'project') => {
     openOverlay(
       <CreateNoteForm
         onNoteCreated={handleNoteCreated}
-        initialFormat={format}
         noteKind={kind}
       />
     );
@@ -290,14 +289,6 @@ export default function NotesPage() {
       openComposer('project');
     }
   }, [openComposer]);
-
-  useEffect(() => {
-    const format = searchParams.get('format');
-    if (format === 'doodle') {
-      window.history.replaceState({}, '', '/note');
-      openOverlay(<CreateNoteForm initialFormat="doodle" onNoteCreated={handleNoteCreated} noteKind="note" />);
-    }
-  }, [searchParams, openOverlay, handleNoteCreated]);
 
   const handleNoteUpdated = useCallback((updatedNote: Notes) => {
     if (!updatedNote.$id) {

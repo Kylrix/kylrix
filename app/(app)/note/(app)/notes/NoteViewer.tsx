@@ -21,7 +21,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import rehypeSanitize from 'rehype-sanitize';
-import NoteContentDisplay from '@/components/NoteContentDisplay';
 
 interface NoteViewerProps {
   note: Notes | null;
@@ -130,12 +129,7 @@ export default function NoteViewer({ note, onClose }: NoteViewerProps) {
       <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
         <TabPanel value={tabIndex} index={0}>
           <Container maxWidth="md">
-            {note.format === 'doodle' ? (
-              <NoteContentDisplay
-                content={note.content || ''}
-                format="doodle"
-              />
-            ) : note.content ? (
+            {note.content ? (
               <Box 
                 sx={{ 
                   color: 'rgba(255, 255, 255, 0.9)',

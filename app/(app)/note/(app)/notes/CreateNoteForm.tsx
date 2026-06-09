@@ -245,7 +245,6 @@ export default function CreateNoteForm({
       title,
       content,
       tags,
-      format,
       isTitleManuallyEdited
     };
     if (title.trim() || content.trim() || tags.length > 0) {
@@ -253,7 +252,7 @@ export default function CreateNoteForm({
     } else {
       localStorage.removeItem('kylrix:draft:note');
     }
-  }, [title, content, tags, format, isTitleManuallyEdited, resolvedNoteId, noteId, isHydrated]);
+  }, [title, content, tags, isTitleManuallyEdited, resolvedNoteId, noteId, isHydrated]);
 
   // Seamless auto-title logic
   useEffect(() => {
@@ -290,14 +289,14 @@ export default function CreateNoteForm({
   const snapshot = useMemo(() => JSON.stringify({
     title: title.trim(),
     content: content.trim(),
-    format,
+    format: 'text',
     tags: normalizeTags(tags),
     composerKind,
     isPublic,
     hasPaywall,
     paywallAmount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
     resolvedNoteId: resolvedNoteId || null,
-  }), [title, content, format, tags, composerKind, isPublic, hasPaywall, paywallAmount, resolvedNoteId]);
+  }), [title, content, tags, composerKind, isPublic, hasPaywall, paywallAmount, resolvedNoteId]);
 
   const isDirty = snapshot !== lastSavedSnapshot;
 
@@ -317,7 +316,6 @@ export default function CreateNoteForm({
         setResolvedNoteId(cached.$id);
         setTitle(cached.title || '');
         setContent(cached.content || '');
-        setFormat((cached.format as 'text' | 'doodle') || initialFormat);
         setTags(normalizeTags(cached.tags || []));
         setComposerKind(nextComposerKind);
         const cachedPublic = getNotePublicState(cached as Notes);
@@ -329,7 +327,7 @@ export default function CreateNoteForm({
         setLastSavedSnapshot(JSON.stringify({
           title: cached.title || '',
           content: cached.content || '',
-          format: (cached.format as 'text' | 'doodle') || 'text',
+          format: 'text',
           tags: normalizeTags(cached.tags || []),
           composerKind: nextComposerKind,
           isPublic: cachedPublic,
@@ -346,7 +344,6 @@ export default function CreateNoteForm({
         setResolvedNoteId(loaded.$id);
         setTitle(loaded.title || '');
         setContent(loaded.content || '');
-        setFormat((loaded.format as 'text' | 'doodle') || initialFormat);
         setTags(normalizeTags(loaded.tags || []));
         setComposerKind(nextComposerKind);
         const loadedPublic = getNotePublicState(loaded as Notes);
@@ -358,7 +355,7 @@ export default function CreateNoteForm({
         setLastSavedSnapshot(JSON.stringify({
           title: loaded.title || '',
           content: loaded.content || '',
-          format: (loaded.format as 'text' | 'doodle') || 'text',
+          format: 'text',
           tags: normalizeTags(loaded.tags || []),
           composerKind: nextComposerKind,
           isPublic: loadedPublic,
@@ -377,7 +374,7 @@ export default function CreateNoteForm({
     return () => {
       cancelled = true;
     };
-  }, [fetchOptimized, getCachedData, initialFormat, noteId, noteKind]);
+  }, [fetchOptimized, getCachedData, noteId, noteKind]);
 
   useEffect(() => {
     if (!isHydrated) return;
@@ -392,7 +389,7 @@ export default function CreateNoteForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snapshot, isHydrated, isDirty]);
 
-  const syncNoteInMemory = useCallback((nextTitle: string, nextContent: string, nextTags: string[], nextFormat: 'text' | 'doodle') => {
+  const syncNoteInMemory = useCallback((nextTitle: string, nextContent: string, nextTags: string[]) => {
     if (!resolvedNoteId) return;
     const existing = (allNotes || []).find(n => n.$id === resolvedNoteId);
     if (existing) {
@@ -401,7 +398,7 @@ export default function CreateNoteForm({
         title: nextTitle.trim(),
         content: nextContent.trim(),
         tags: nextTags,
-        format: nextFormat,
+        format: 'text',
       });
     }
   }, [resolvedNoteId, allNotes, upsertNote]);
@@ -415,13 +412,12 @@ export default function CreateNoteForm({
     
     const hasDiff = existing.title !== title.trim() ||
                     existing.content !== content.trim() ||
-                    existing.format !== format ||
                     JSON.stringify(existing.tags) !== JSON.stringify(tags);
                     
     if (hasDiff) {
-      syncNoteInMemory(title, content, tags, format);
+      syncNoteInMemory(title, content, tags);
     }
-  }, [resolvedNoteId, title, content, format, tags, allNotes, syncNoteInMemory]);
+  }, [resolvedNoteId, title, content, tags, allNotes, syncNoteInMemory]);
 
   const appendTag = useCallback((tag: string) => {
     const next = tag.trim();
@@ -472,7 +468,7 @@ export default function CreateNoteForm({
       const payload = {
         title: title.trim(),
         content: content.trim(),
-        format,
+        format: 'text' as const,
         tags: normalizedTags,
         kind: composerKind,
         isPublic,
@@ -498,9 +494,7 @@ export default function CreateNoteForm({
       try {
         let saved: Notes;
         const generatedTitle = payload.title || (
-          format === 'doodle'
-            ? `${composerKind === 'project' ? 'Project sketch' : 'Sketch'} ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : buildAutoTitleFromContent(payload.content) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
+          buildAutoTitleFromContent(payload.content) || (composerKind === 'project' ? 'Untitled Project' : 'Untitled Thought')
         );
 
         if (resolvedNoteId) {
@@ -566,7 +560,7 @@ export default function CreateNoteForm({
           setLastSavedSnapshot(JSON.stringify({
             title: saved.title || '',
             content: saved.content || '',
-            format: (saved.format as 'text' | 'doodle') || format,
+            format: 'text',
             tags: normalizeTags((saved.tags || []) as string[]),
             composerKind,
             isPublic: livePublicState,
@@ -594,7 +588,7 @@ export default function CreateNoteForm({
     } finally {
       persistInFlightRef.current = null;
     }
-  }, [composerKind, content, format, hasPaywall, isPublic, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
+  }, [composerKind, content, hasPaywall, isPublic, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
 
   const handleMorphToDetail = useCallback(async () => {
     try {
@@ -644,19 +638,6 @@ export default function CreateNoteForm({
   }, [appendTag, currentTag]);
 
   return (
-    <>
-      {showDoodleEditor && (
-        <DoodleCanvas
-          initialData={format === 'doodle' ? content : ''}
-          onSave={(doodleData) => {
-            setContent(doodleData);
-            setFormat('doodle');
-            setShowDoodleEditor(false);
-          }}
-          onClose={() => setShowDoodleEditor(false)}
-        />
-      )}
-
       <div
         onContextMenu={(event) => event.preventDefault()}
         className="w-full h-full min-h-0 flex flex-col bg-[#161412] text-white"
@@ -665,7 +646,7 @@ export default function CreateNoteForm({
         <div className="px-2 py-1.5 flex items-center justify-between border-b border-white/5 sticky top-0 z-20 backdrop-blur-md bg-[#161412]/95 shrink-0">
           <div className="flex items-center gap-1.5 min-w-0">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-pink-500/10 border border-pink-500/20 text-pink-500 shrink-0 animate-in fade-in zoom-in-90 duration-200">
-              {format === 'doodle' ? <PenTool className="w-3.5 h-3.5 animate-in fade-in duration-200" /> : <FileText className="w-3.5 h-3.5 animate-in fade-in duration-200" />}
+              <FileText className="w-3.5 h-3.5 animate-in fade-in duration-200" />
             </div>
             <div className="min-w-0 flex flex-col">
               <span className="font-extrabold text-sm font-mono tracking-tight text-white leading-tight">
@@ -692,30 +673,6 @@ export default function CreateNoteForm({
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Format toggle: Text vs Doodle */}
-            <div className="flex items-center bg-black/40 border border-white/5 rounded-xl p-0.5 mr-1 text-xs font-mono shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setFormat('text');
-                  setShowDoodleEditor(false);
-                }}
-                className={`px-2 py-0.5 rounded-lg transition-colors font-bold ${format === 'text' ? 'bg-pink-500/20 text-pink-400 font-extrabold' : 'text-white/50 hover:text-white'}`}
-              >
-                Text
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFormat('doodle');
-                  setShowDoodleEditor(true);
-                }}
-                className={`px-2 py-0.5 rounded-lg transition-colors font-bold ${format === 'doodle' ? 'bg-pink-500/20 text-pink-400 font-extrabold' : 'text-white/50 hover:text-white'}`}
-              >
-                Doodle
-              </button>
-            </div>
-
             {(content.trim().length > 0 || title.trim().length > 0) && (
               <button 
                 type="button"
@@ -758,71 +715,32 @@ export default function CreateNoteForm({
                 const val = event.target.value;
                 setTitle(val);
                 setIsTitleManuallyEdited(true);
-                syncNoteInMemory(val, content, tags, format);
+                syncNoteInMemory(val, content, tags);
               }}
               placeholder="Title"
               className="w-full bg-white/[0.02] text-white placeholder-white/20 border border-white/5 focus:border-pink-500/30 rounded-xl px-3 py-2 text-xl font-black focus:outline-none transition-all font-space-grotesk shrink-0"
             />
           )}
 
-          {format === 'text' ? (
-            <textarea
-              ref={contentRef}
-              rows={isExpanded ? 12 : 6}
-              value={content}
-              onPaste={handlePaste}
-              onChange={(event) => {
-                const val = event.target.value;
-                setContent(val);
-                syncNoteInMemory(title, val, tags, format);
-              }}
-              onKeyDown={(event) => {
-                // High-speed capture protocol: Enter in 60% state triggers save & exit
-                // Protection: Do not exit if user just pasted content (formatting window)
-                if (event.key === 'Enter' && !event.shiftKey && !isExpanded && !isPastedRef.current) {
-                  event.preventDefault();
-                  handleClose();
-                }
-              }}
-              placeholder="Write your note..."
-              className="w-full flex-1 min-h-[160px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-pink-500/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
-            />
-          ) : (
-            <div className="p-3.5 rounded-xl border border-white/10 bg-white/[0.03] flex flex-col gap-3.5">
-              {content ? (
-                <div className="min-h-[100px] max-h-[240px] overflow-y-auto whitespace-pre-wrap font-sans text-white/80 text-sm leading-relaxed border-b border-white/5 pb-3 scrollbar-thin">
-                  <div className="flex items-center gap-2 text-pink-400 font-mono text-xs mb-2">
-                    <PenTool className="w-4 h-4" />
-                    <span>Doodle Sketch Saved</span>
-                  </div>
-                  <p className="text-white/40 text-xs italic">Open the drawing canvas to view or edit the full sketch.</p>
-                </div>
-              ) : (
-                <p className="text-sm text-white/40 italic min-h-[100px] flex items-center justify-center border-b border-white/5 pb-3">
-                  No sketch created yet. Open the canvas to start drawing.
-                </p>
-              )}
-              <div className="flex gap-2.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDoodleEditor(true);
-                    setFormat('doodle');
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-pink-500 hover:bg-pink-600 text-black font-extrabold text-xs font-mono transition shadow-[0_4px_14px_rgba(236,72,153,0.2)]"
-                >
-                  {content ? 'Edit sketch' : 'Create sketch'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormat('text')}
-                  className="px-3.5 py-2 rounded-xl border border-white/10 text-white/70 hover:text-white hover:bg-white/5 font-extrabold text-xs font-mono transition"
-                >
-                  Switch to text
-                </button>
-              </div>
-            </div>
-          )}
+          <textarea
+            ref={contentRef}
+            rows={isExpanded ? 12 : 6}
+            value={content}
+            onPaste={handlePaste}
+            onChange={(event) => {
+              const val = event.target.value;
+              setContent(val);
+              syncNoteInMemory(title, val, tags);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !isExpanded && !isPastedRef.current) {
+                event.preventDefault();
+                handleClose();
+              }
+            }}
+            placeholder="Write your note..."
+            className="w-full flex-1 min-h-[160px] resize-none bg-white/[0.03] text-white placeholder-white/20 border border-white/[0.06] hover:border-white/10 focus:border-pink-500/30 rounded-xl px-3 py-2 text-lg focus:outline-none transition-all scrollbar-thin"
+          />
 
           <div className="text-[10px] text-white/30 font-mono select-none mt-auto pt-1">
             Right click is handled here so copy, cut, paste, and shortcuts stay local.
@@ -961,8 +879,7 @@ export default function CreateNoteForm({
 
             {/* Voice Recorder & Info */}
             <div className="flex items-center gap-2">
-              {format === 'text' && (
-                <button
+              <button
                   type="button"
                   onClick={toggleRecording}
                   className={`h-8 px-3 rounded-lg flex items-center justify-center gap-1.5 font-mono text-xs font-bold transition-all select-none border ${
@@ -984,11 +901,9 @@ export default function CreateNoteForm({
                     </>
                   )}
                 </button>
-              )}
             </div>
           </div>
         </div>
       </div>
-    </>
   );
 }

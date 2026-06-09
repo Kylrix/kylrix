@@ -17,7 +17,7 @@ export interface NoteCreationContext<NoteRow = any> {
 export interface NoteCreationInput {
   title: string;
   content?: string;
-  format?: 'text' | 'doodle';
+  format?: 'text' | 'markdown';
   tags?: string[];
   isPublic?: boolean;
   origin?: CrossObjectOrigin | null;
@@ -28,7 +28,7 @@ export interface NoteCreationInput {
 export interface NoteUpdateInput {
   title?: string;
   content?: string;
-  format?: 'text' | 'doodle' | 'markdown';
+  format?: 'text' | 'markdown';
   tags?: string[];
   isPublic?: boolean;
   metadata?: Record<string, unknown> | string;

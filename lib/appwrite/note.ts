@@ -344,7 +344,7 @@ export function pickNoteUpdatePayload(
     payload.content = data.content;
   }
   if (data.format !== undefined) {
-    payload.format = data.format === 'doodle' ? 'doodle' : 'text';
+    payload.format = 'text';
   }
   if (data.tags !== undefined) {
     payload.tags = Array.isArray(data.tags) ? data.tags.filter(Boolean) : [];
@@ -375,7 +375,7 @@ export function pickNoteAutosavePayload(data: {
   return {
     title: trimmedTitle || buildAutoTitleFromContent(content) || 'Untitled Thought',
     content,
-    format: data.format === 'doodle' ? 'doodle' : 'text',
+    format: 'text',
     tags: Array.isArray(data.tags) ? data.tags.filter(Boolean) : [],
   };
 }

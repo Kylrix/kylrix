@@ -549,7 +549,7 @@ export function SendReceiveClient({ noteId, keyParam, initialNote }: Props) {
               </button>
               <NoteContentRenderer
                 content={plainContent}
-                format={(verifiedNote.format as 'text' | 'doodle') || 'text'}
+                format={verifiedNote.format || 'text'}
                 emptyFallback={<span className="text-white/20 italic text-sm">This payload is empty.</span>}
               />
             </div>

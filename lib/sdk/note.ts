@@ -27,7 +27,7 @@ export class KylrixNote {
   async createNote(databaseId: string, tableId: string, data: {
     title: string;
     content?: string;
-    format?: 'text' | 'doodle';
+    format?: 'text' | 'markdown';
     userId?: string;
     isPublic?: boolean;
     tags?: string[];

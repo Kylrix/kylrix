@@ -995,7 +995,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
             </IconButton>
             <NoteContentRenderer
               content={verifiedNote.content || ''}
-              format={(verifiedNote.format as 'text' | 'doodle') || 'text'}
+              format={verifiedNote.format || 'text'}
               emptyFallback={<Typography sx={{ color: 'rgba(255, 255, 255, 0.2)', fontStyle: 'italic', fontFamily: 'var(--font-satoshi)' }}>This note is empty.</Typography>}
             />
           </>
