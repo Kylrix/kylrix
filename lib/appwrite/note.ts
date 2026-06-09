@@ -870,68 +870,72 @@ export async function deleteNoteIsomorphicLegacy(noteId: string, jwt?: string) {
 }
 
 export async function listNotes(queries: any[] = [], limit: number = 100, options: { includeStories?: boolean; includeGhosts?: boolean } = {}) {
-  // Default: notes for current user
-  if (!queries.length) {
-    const user = await getCurrentUser();
-    if (!user || !user.$id) {
-      return { rows: [], total: 0 };
+  const key = `list:notes:${JSON.stringify(queries)}:${limit}:${JSON.stringify(options)}`;
+  
+  return await fetchOptimized(key, async () => {
+    // Default: notes for current user
+    if (!queries.length) {
+      const user = await getCurrentUser();
+      if (!user || !user.$id) {
+        return { rows: [], total: 0 };
+      }
+      queries = [
+        Query.equal('userId', user.$id)
+      ];
     }
-    queries = [
-      Query.equal('userId', user.$id)
+
+    const finalQueries = [
+      ...queries,
+      Query.limit(limit),
+      Query.orderDesc('$createdAt')
     ];
-  }
 
-  const finalQueries = [
-    ...queries,
-    Query.limit(limit),
-    Query.orderDesc('$createdAt')
-  ];
+    const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, finalQueries);
+    const notes = (res.rows as any[]).map(doc => hydrateVirtualAttributes(doc)) as unknown as Notes[];
 
-  const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_NOTES, finalQueries);
-  const notes = (res.rows as any[]).map(doc => hydrateVirtualAttributes(doc)) as unknown as Notes[];
-
-  // Hydrate tags from pivot table in batch (best-effort)
-  try {
-    if (notes.length) {
-      const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
-      const noteIds = notes.map((n: any) => n.$id || (n as any).id).filter(Boolean);
-      if (noteIds.length) {
-        // Appwrite supports passing array to Query.equal for multiple values
-        const pivotRes = await databases.listRows(
-          APPWRITE_DATABASE_ID,
-          noteTagsTable,
-          [Query.equal('resourceId', noteIds), Query.equal('resourceType', 'note'), Query.limit(Math.min(1000, noteIds.length * 10))] as any
-        );
-        const tagMap: Record<string, Set<string>> = {};
-        for (const p of pivotRes.rows as any[]) {
-          if (!p.resourceId || !p.tag) continue;
-            if (!tagMap[p.resourceId]) tagMap[p.resourceId] = new Set();
-          tagMap[p.resourceId].add(p.tag);
-        }
-        for (const n of notes as any[]) {
-          const id = n.$id || n.id;
-          if (id && tagMap[id] && tagMap[id].size) {
-            n.tags = Array.from(tagMap[id]);
+    // Hydrate tags from pivot table in batch (best-effort)
+    try {
+      if (notes.length) {
+        const noteTagsTable = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS || 'note_tags';
+        const noteIds = notes.map((n: any) => n.$id || (n as any).id).filter(Boolean);
+        if (noteIds.length) {
+          // Appwrite supports passing array to Query.equal for multiple values
+          const pivotRes = await databases.listRows(
+            APPWRITE_DATABASE_ID,
+            noteTagsTable,
+            [Query.equal('resourceId', noteIds), Query.equal('resourceType', 'note'), Query.limit(Math.min(1000, noteIds.length * 10))] as any
+          );
+          const tagMap: Record<string, Set<string>> = {};
+          for (const p of pivotRes.rows as any[]) {
+            if (!p.resourceId || !p.tag) continue;
+              if (!tagMap[p.resourceId]) tagMap[p.resourceId] = new Set();
+            tagMap[p.resourceId].add(p.tag);
           }
-          if (!(n as any).attachments || !Array.isArray((n as any).attachments)) {
-            (n as any).attachments = [];
+          for (const n of notes as any[]) {
+            const id = n.$id || n.id;
+            if (id && tagMap[id] && tagMap[id].size) {
+              n.tags = Array.from(tagMap[id]);
+            }
+            if (!(n as any).attachments || !Array.isArray((n as any).attachments)) {
+              (n as any).attachments = [];
+            }
           }
         }
       }
+    } catch (e: any) {
+      // Non-fatal hydration error
     }
-  } catch (e: any) {
-    // Non-fatal hydration error
-  }
 
-  let filteredNotes = notes;
-  if (!options.includeStories) {
-    filteredNotes = filteredNotes.filter(n => !(n as any).isStory);
-  }
-  if (!options.includeGhosts) {
-    filteredNotes = filteredNotes.filter(n => !isGhostNote(n));
-  }
+    let filteredNotes = notes;
+    if (!options.includeStories) {
+      filteredNotes = filteredNotes.filter(n => !(n as any).isStory);
+    }
+    if (!options.includeGhosts) {
+      filteredNotes = filteredNotes.filter(n => !isGhostNote(n));
+    }
 
-  return { ...res, rows: filteredNotes };
+    return { ...res, rows: filteredNotes };
+  }, LIST_TTL);
 }
 
 // New function to get all notes with cursor pagination (memory efficient)
