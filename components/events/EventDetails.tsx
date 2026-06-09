@@ -9,6 +9,7 @@ import { generateEventPattern } from '@/utils/patternGenerator';
 import { Event as AppwriteEvent } from '@/types/kylrixflow';
 import { Event as LocalEvent } from '@/types';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useSection } from '@/context/SectionContext';
 import toast from 'react-hot-toast';
 
@@ -16,20 +17,22 @@ interface EventDetailsProps {
   eventId: string;
   initialData?: AppwriteEvent | LocalEvent | any;
   onBack?: () => void;
+  onClose?: () => void;
 }
 
-export default function EventDetails({ eventId, initialData, onBack }: EventDetailsProps) {
+export default function EventDetails({ eventId, initialData, onBack, onClose }: EventDetailsProps) {
   const { closeSecondarySidebar } = useLayout();
   const { closeOverlay } = useOverlay();
+  const { closeSidebar } = useDynamicSidebar();
   const { setActiveDetail } = useSection();
   
   const handleClose = () => {
-    if (onBack) {
-      onBack();
-    }
+    onBack?.();
+    onClose?.();
     closeOverlay();
+    closeSidebar();
     closeSecondarySidebar();
-    setActiveDetail(null); // Force exit global detail overlay
+    setActiveDetail(null);
   };
   const [event, setEvent] = useState<AppwriteEvent | LocalEvent | null>(initialData || null);
   const [loading, setLoading] = useState(!initialData);
