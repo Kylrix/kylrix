@@ -203,7 +203,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end overflow-hidden pointer-events-none">
+    <div className="fixed inset-0 z-[2000] flex justify-end overflow-hidden pointer-events-none">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto"
@@ -212,7 +212,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
       {/* Dialog Pane */}
       <div
-        className={`fixed bg-[#161412] border-[#34322F] pointer-events-auto transition-all duration-300 flex flex-col z-50 md:inset-y-0 md:right-0 md:left-auto md:w-full md:max-w-[600px] md:h-full md:border-l md:rounded-none inset-x-0 bottom-0 border-t rounded-t-[28px] ${
+        className={`fixed bg-[#161412] border-[#34322F] pointer-events-auto transition-all duration-300 flex flex-col z-[2000] md:inset-y-0 md:right-0 md:left-auto md:w-full md:max-w-[600px] md:h-full md:border-l md:rounded-none inset-x-0 bottom-0 border-t rounded-t-[28px] ${
           isMobile ? (isExpanded ? 'h-[100dvh]' : 'h-[60dvh]') : 'h-full'
         }`}
       >
