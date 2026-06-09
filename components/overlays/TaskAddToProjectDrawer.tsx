@@ -41,39 +41,38 @@ export function TaskAddToProjectDrawer({
   const { user } = useAuth();
   const { fetchOptimized, getCachedDataAsync } = useDataNexus();
 
-  const [projects, setProjects] = useState<Projects[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<Projects[]>(() => getSessionProjectsList() ?? []);
+  const [loading, setLoading] = useState(() => !getSessionProjectsList()?.length);
   const [query, setQuery] = useState('');
   const [addingId, setAddingId] = useState<string | null>(null);
 
-  const cacheKey = user?.$id ? `projects_user_${user.$id}` : null;
-
   const loadProjects = useCallback(async () => {
-    if (!user?.$id || !cacheKey) return;
+    if (!user?.$id) return;
 
-    const cached = await getCachedDataAsync<Projects[]>(cacheKey);
-    if (cached?.length) {
-      setProjects(cached);
+    const session = getSessionProjectsList();
+    if (session?.length) {
+      setProjects(session);
       setLoading(false);
     } else {
       setLoading(true);
     }
 
     try {
-      const rows = await fetchOptimized(cacheKey, async () => {
-        const res = await ProjectsService.listProjects();
-        return (res.rows || []) as Projects[];
+      const rows = await warmProjectsList({
+        userId: user.$id,
+        getCachedDataAsync,
+        fetchOptimized,
       });
       setProjects(rows);
     } catch (error) {
       console.error('[TaskAddToProject] Failed to load projects', error);
-      if (!cached?.length) {
+      if (!session?.length) {
         toast.error('Could not load projects');
       }
     } finally {
       setLoading(false);
     }
-  }, [user?.$id, cacheKey, fetchOptimized, getCachedDataAsync]);
+  }, [user?.$id, fetchOptimized, getCachedDataAsync]);
 
   useEffect(() => {
     setIsDrawerOpen(isOpen);
