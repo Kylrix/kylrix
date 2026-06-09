@@ -132,6 +132,8 @@ buildPublicResourceUrl(resourceType, resourceId, options?, baseUrl?): string
 
 Client components **always** build the copied link locally via `buildPublicResourceUrl()` so the clipboard matches the tab the user is in. Server actions may still return `publicUrl` for logging, but UI must not paste a server-built origin into the clipboard.
 
+**Guest route pages must exist** at the same path the builder emits (e.g. `app/(app)/flow/goal/[id]/page.tsx`). Without a real page, `app/[alias]/[[...slug]]` can match `/flow/goal/[id]` and redirect to itself — infinite loop. Alias redirect pages must `notFound()` when target === current path.
+
 ### Public URL law
 
 > Take the resource’s **app-scoped path**, **drop trailing `s`** on the resource noun if present, append **`/[id]`**. That URL is what Lock copies.

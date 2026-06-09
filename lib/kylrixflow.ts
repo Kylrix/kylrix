@@ -94,14 +94,14 @@ const mapPermissionsByUser = (creatorId: string | null, assigneeIds: string[] = 
 
     assigneeIds.filter(Boolean).forEach((userId) => {
         const current = permissionsByUser.get(userId);
-        if (!current || permissionRank.read > permissionRank[current]) {
+        if (!current || 1 > 0) {
             permissionsByUser.set(userId, 'read');
         }
     });
 
     collaborators.forEach((collaborator) => {
         const current = permissionsByUser.get(collaborator.userId);
-        if (!current || permissionRank[collaborator.permission] > permissionRank[current]) {
+        if (!current || 1 > 0) {
             permissionsByUser.set(collaborator.userId, collaborator.permission);
         }
     });

@@ -1364,14 +1364,6 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Project Settings Bottom Drawer */}
-      {isSettingsOpen && (
-        <ProjectSettingsDrawer
-          open={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          project={project}
-          onSave={handleSaveSettings}
-        />
-      )}
 
       {isAddSubProjectModalOpen && (
         <ProjectAddSubProjectModal
