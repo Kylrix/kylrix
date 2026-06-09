@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  Drawer,
   Button,
   TextField,
   IconButton,
@@ -13,7 +10,9 @@ import {
   Box,
   Stack,
   CircularProgress,
-  useTheme
+  useTheme,
+  useMediaQuery,
+  Divider,
 } from '@/lib/mui-tailwind/material';
 import { startRegistration } from '@simplewebauthn/browser';
 import { AppwriteService } from '@/lib/appwrite';
@@ -26,7 +25,7 @@ import {
   VisibilityOff as VisibilityOffIcon,
   CheckCircle as CheckCircleIcon,
 } from '@/lib/mui-tailwind/icons';
-import { Fingerprint } from 'lucide-react';
+import { Fingerprint, X } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 interface PasskeySetupProps {
@@ -45,6 +44,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
   }
   return window.btoa(binary);
 }
+
 export function PasskeySetup({
   open,
   onClose,
@@ -54,6 +54,7 @@ export function PasskeySetup({
 }: PasskeySetupProps) {
   const router = useRouter();
   const muiTheme = useTheme();
+  const isDesktop = useMediaQuery(muiTheme.breakpoints.up('md'));
   const { setIsDrawerOpen } = useDrawerState();
 
   useEffect(() => {
@@ -62,7 +63,6 @@ export function PasskeySetup({
   }, [open, setIsDrawerOpen]);
 
   const [step, setStep] = useState(trustUnlocked && ecosystemSecurity.status.isUnlocked ? 2 : 1);
-
   const [loading, setLoading] = useState(false);
   const [masterPassword, setMasterPassword] = useState("");
   const [passkeyName, setPasskeyName] = useState("");
@@ -70,7 +70,6 @@ export function PasskeySetup({
   const [verifyingPassword, setVerifyingPassword] = useState(false);
 
   const verifyMasterPassword = async () => {
-    // Enforcement: Check if master password exists before allowing verification/passkey setup
     const masterpassSet = await AppwriteService.hasMasterpass(userId);
     if (!masterpassSet) {
       toast.error("You must set a master password before adding a passkey.");
@@ -83,24 +82,24 @@ export function PasskeySetup({
       toast.error("Please enter your master password.");
       return false;
     }
-    
+
     setVerifyingPassword(true);
     try {
       const entries = await AppwriteService.listKeychainEntries(userId);
       const passwordEntry = entries.find((e: any) => e.type === 'password');
-      
+
       if (!passwordEntry) {
-          toast.error("No master password setup found.");
-          return false;
+        toast.error("No master password setup found.");
+        return false;
       }
 
       const isValid = await ecosystemSecurity.unlock(masterPassword, passwordEntry);
       if (isValid) {
         return true;
-      } else {
-        toast.error("Incorrect master password.");
-        return false;
       }
+
+      toast.error("Incorrect master password.");
+      return false;
     } catch (error: unknown) {
       console.error("Password verification failed:", error);
       toast.error("Failed to verify master password.");
@@ -129,9 +128,9 @@ export function PasskeySetup({
     setLoading(true);
     try {
       const masterKey = ecosystemSecurity.getMasterKey();
-      
+
       if (!masterKey) {
-          throw new Error("Vault is locked. Please enter master password.");
+        throw new Error("Vault is locked. Please enter master password.");
       }
 
       const challenge = crypto.getRandomValues(new Uint8Array(32));
@@ -193,7 +192,7 @@ export function PasskeySetup({
         type: 'passkey',
         credentialId: regResp.id,
         wrappedKey: passkeyBlob,
-        salt: "", 
+        salt: "",
         params: JSON.stringify({
           name: passkeyName,
           publicKey: regResp.response.publicKey || "",
@@ -218,8 +217,8 @@ export function PasskeySetup({
     setLoading(false);
   };
 
-  const resetDialog = () => {
-    setStep(1);
+  const resetFlow = () => {
+    setStep(trustUnlocked && ecosystemSecurity.status.isUnlocked ? 2 : 1);
     setLoading(false);
     setMasterPassword("");
     setPasskeyName("");
@@ -227,150 +226,177 @@ export function PasskeySetup({
   };
 
   const handleClose = () => {
-    resetDialog();
+    resetFlow();
     onClose();
   };
 
   return (
-    <Dialog 
-      open={open} 
+    <Drawer
+      anchor={isDesktop ? 'right' : 'bottom'}
+      open={open}
       onClose={handleClose}
+      keepMounted={false}
+      disablePortal={true}
       PaperProps={{
         sx: {
-          borderRadius: '28px',
-          bgcolor: 'rgba(10, 10, 10, 0.9)',
-          backdropFilter: 'blur(25px) saturate(180%)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          width: isDesktop ? 'min(480px, 90vw)' : '100%',
+          maxWidth: '100%',
+          maxHeight: isDesktop ? '100dvh' : '85dvh',
+          borderTopLeftRadius: isDesktop ? 0 : '28px',
+          borderTopRightRadius: isDesktop ? 0 : '28px',
+          bgcolor: '#161412',
+          borderTop: isDesktop ? 0 : '1px solid rgba(255, 255, 255, 0.06)',
+          borderLeft: isDesktop ? '1px solid rgba(255, 255, 255, 0.06)' : 0,
           backgroundImage: 'none',
-          width: '100%',
-          maxWidth: '400px'
-        }
+          color: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+        },
       }}
     >
-      <DialogTitle sx={{ 
-        fontWeight: 900, 
-        fontFamily: 'var(--font-space-grotesk)', 
-        textAlign: 'center',
-        pt: 4,
-        pb: 1
-      }}>
-        Add New Passkey
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ py: 2 }}>
-          {step === 1 && (
-            <Stack spacing={3}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-                  Step 1: Verify Master Password
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Please verify your master password to continue.
-                </Typography>
-              </Box>
-              <TextField
-                fullWidth
-                type={showPassword ? "text" : "password"}
-                placeholder="Master Password"
-                value={masterPassword}
-                onChange={(e) => setMasterPassword(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleContinueToName()}
-                variant="filled"
-                InputProps={{
-                  disableUnderline: true,
-                  sx: { borderRadius: '16px', bgcolor: 'rgba(255, 255, 255, 0.05)' },
-                  endAdornment: (
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ color: 'text.secondary' }}>
-                      {showPassword ? <VisibilityOffIcon sx={{ fontSize: 18 }} /> : <VisibilityIcon sx={{ fontSize: 18 }} />}
-                    </IconButton>
-                  )
-                }}
-              />
-            </Stack>
-          )}
-
-          {step === 2 && (
-            <Stack spacing={3}>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-                  Step 2: Name Passkey
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Give this passkey a name to identify it later.
-                </Typography>
-              </Box>
-              <TextField
-                fullWidth
-                placeholder="Passkey Name"
-                value={passkeyName}
-                onChange={(e) => setPasskeyName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleContinueToCreate()}
-                variant="filled"
-                autoFocus
-                InputProps={{
-                  disableUnderline: true,
-                  sx: { borderRadius: '16px', bgcolor: 'rgba(255, 255, 255, 0.05)' }
-                }}
-              />
-            </Stack>
-          )}
-
-          {step === 3 && (
-            <Stack spacing={3} sx={{ textAlign: 'center' }}>
-              <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-                  Step 3: Create Passkey
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-                  Click &ldquo;Create Passkey&rdquo; and follow your device&rsquo;s prompts.
-                </Typography>
-                <Box sx={{ 
-                  p: 2, 
-                  borderRadius: '16px', 
-                  bgcolor: 'rgba(0, 240, 255, 0.05)', 
-                  border: '1px dashed rgba(0, 240, 255, 0.2)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 1
-                }}>
-                  <Fingerprint size={32} color={muiTheme.palette.primary.main} />
-                  <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
-                    Face ID • Touch ID • Windows Hello
-                  </Typography>
-                </Box>
-              </Box>
-            </Stack>
-          )}
-
-          {step === 4 && (
-            <Stack spacing={3} sx={{ textAlign: 'center', py: 2 }}>
-              <Box sx={{ 
-                width: 64, 
-                height: 64, 
-                borderRadius: '50%', 
-                bgcolor: 'rgba(76, 175, 80, 0.1)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                mx: 'auto',
-                mb: 1
-              }}>
-                <CheckCircleIcon sx={{ fontSize: 32, color: "#4CAF50" }} />
-              </Box>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: '#4CAF50', mb: 1 }}>
-                  Passkey Added!
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  You can now use <strong>{passkeyName}</strong> to unlock your session.
-                </Typography>
-              </Box>
-            </Stack>
-          )}
+      {!isDesktop && (
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            pt: 1.5,
+            pb: 0.5,
+            cursor: 'pointer',
+          }}
+          onClick={handleClose}
+        >
+          <Box sx={{ width: 40, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.15)' }} />
         </Box>
-      </DialogContent>
-      <DialogActions sx={{ p: 4, pt: 0, gap: 1.5 }}>
+      )}
+
+      <Box sx={{ px: 3, pt: isDesktop ? 3 : 1.5, pb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Fingerprint size={24} color={muiTheme.palette.primary.main} />
+          <Typography sx={{ fontWeight: 900, fontFamily: 'var(--font-space-grotesk)', fontSize: '1.15rem' }}>
+            Add New Passkey
+          </Typography>
+        </Stack>
+        <IconButton onClick={handleClose} sx={{ color: 'rgba(255, 255, 255, 0.4)', '&:hover': { color: 'white' } }}>
+          <X size={20} />
+        </IconButton>
+      </Box>
+
+      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.06)' }} />
+
+      <Box sx={{ flex: 1, overflowY: 'auto', px: 3, py: 2 }}>
+        {step === 1 && (
+          <Stack spacing={3}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+                Step 1: Verify Master Password
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Please verify your master password to continue.
+              </Typography>
+            </Box>
+            <TextField
+              fullWidth
+              type={showPassword ? "text" : "password"}
+              placeholder="Master Password"
+              value={masterPassword}
+              onChange={(e) => setMasterPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleContinueToName()}
+              variant="filled"
+              InputProps={{
+                disableUnderline: true,
+                sx: { borderRadius: '16px', bgcolor: 'rgba(255, 255, 255, 0.05)' },
+                endAdornment: (
+                  <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" sx={{ color: 'text.secondary' }}>
+                    {showPassword ? <VisibilityOffIcon sx={{ fontSize: 18 }} /> : <VisibilityIcon sx={{ fontSize: 18 }} />}
+                  </IconButton>
+                )
+              }}
+            />
+          </Stack>
+        )}
+
+        {step === 2 && (
+          <Stack spacing={3}>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+                Step 2: Name Passkey
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Give this passkey a name to identify it later.
+              </Typography>
+            </Box>
+            <TextField
+              fullWidth
+              placeholder="Passkey Name"
+              value={passkeyName}
+              onChange={(e) => setPasskeyName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleContinueToCreate()}
+              variant="filled"
+              autoFocus
+              InputProps={{
+                disableUnderline: true,
+                sx: { borderRadius: '16px', bgcolor: 'rgba(255, 255, 255, 0.05)' }
+              }}
+            />
+          </Stack>
+        )}
+
+        {step === 3 && (
+          <Stack spacing={3} sx={{ textAlign: 'center' }}>
+            <Box>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+                Step 3: Create Passkey
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+                Click &ldquo;Create Passkey&rdquo; and follow your device&rsquo;s prompts.
+              </Typography>
+              <Box sx={{
+                p: 2,
+                borderRadius: '16px',
+                bgcolor: 'rgba(0, 240, 255, 0.05)',
+                border: '1px dashed rgba(0, 240, 255, 0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 1
+              }}>
+                <Fingerprint size={32} color={muiTheme.palette.primary.main} />
+                <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                  Face ID • Touch ID • Windows Hello
+                </Typography>
+              </Box>
+            </Box>
+          </Stack>
+        )}
+
+        {step === 4 && (
+          <Stack spacing={3} sx={{ textAlign: 'center', py: 2 }}>
+            <Box sx={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              bgcolor: 'rgba(76, 175, 80, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 1
+            }}>
+              <CheckCircleIcon sx={{ fontSize: 32, color: "#4CAF50" }} />
+            </Box>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#4CAF50', mb: 1 }}>
+                Passkey Added!
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                You can now use <strong>{passkeyName}</strong> to unlock your session.
+              </Typography>
+            </Box>
+          </Stack>
+        )}
+      </Box>
+
+      <Box sx={{ px: 3, pb: 3, pt: 1, display: 'flex', gap: 1.5, flexDirection: isDesktop ? 'row' : 'column' }}>
         {step === 1 && (
           <>
             <Button onClick={handleClose} variant="outlined" fullWidth sx={{ borderRadius: '12px' }}>
@@ -416,8 +442,8 @@ export function PasskeySetup({
             >
               Back
             </Button>
-            <Button 
-              onClick={handleCreate} 
+            <Button
+              onClick={handleCreate}
               disabled={loading}
               variant="contained"
               fullWidth
@@ -441,7 +467,7 @@ export function PasskeySetup({
             Done
           </Button>
         )}
-      </DialogActions>
-    </Dialog>
+      </Box>
+    </Drawer>
   );
 }
