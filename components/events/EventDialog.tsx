@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, MapPin, Link2, Globe, Lock, Video, ChevronUp, ChevronDown, ArrowUpRight } from 'lucide-react';
 import { addHours } from '@/lib/time-util';
 import { EventVisibility } from '@/lib/permissions';
@@ -209,8 +210,10 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-[9999] flex justify-end overflow-hidden pointer-events-none">
+  const isFullscreen = isMobile && isExpanded;
+
+  const dialog = (
+    <div className="fixed inset-0 z-[10000] flex justify-end overflow-hidden pointer-events-none">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto"
@@ -219,12 +222,12 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
       {/* Dialog Pane */}
       <div
-        className={`fixed bg-[#161412] border-[#34322F] pointer-events-auto transition-all duration-300 flex flex-col z-[9999] md:inset-y-0 md:top-[88px] md:right-0 md:left-auto md:w-full md:max-w-[600px] md:h-[calc(100dvh-88px)] md:border-l md:rounded-none ${
-          isMobile
-            ? isExpanded
-              ? 'inset-0 h-[100dvh] max-h-[100dvh] rounded-none border-0'
-              : 'inset-x-0 bottom-0 h-[60dvh] border-t rounded-t-[28px]'
-            : 'inset-x-0 bottom-0 h-full'
+        className={`fixed bg-[#161412] border-[#34322F] pointer-events-auto transition-all duration-300 flex flex-col z-[10000] ${
+          isFullscreen
+            ? 'inset-0 h-[100dvh] max-h-[100dvh] w-full rounded-none border-0'
+            : isMobile
+              ? 'inset-x-0 bottom-0 h-[60dvh] border-t rounded-t-[28px]'
+              : 'inset-y-0 top-[88px] right-0 left-auto w-full max-w-[600px] h-[calc(100dvh-88px)] border-l rounded-none'
         }`}
       >
         {/* Header */}
@@ -450,6 +453,9 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
       </div>
     </div>
   );
+
+  if (typeof document === 'undefined') return null;
+  return createPortal(dialog, document.body);
 };
 
 export default EventDialog;
