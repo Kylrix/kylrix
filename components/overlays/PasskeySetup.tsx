@@ -21,9 +21,11 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
-import VisibilityIcon from '@/lib/mui-tailwind/icons';
-import VisibilityOffIcon from '@/lib/mui-tailwind/icons';
-import CheckCircleIcon from '@/lib/mui-tailwind/icons';
+import {
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
+  CheckCircle as CheckCircleIcon,
+} from '@/lib/mui-tailwind/icons';
 import { Fingerprint } from 'lucide-react';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
 

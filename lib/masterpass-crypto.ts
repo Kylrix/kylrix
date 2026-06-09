@@ -708,6 +708,18 @@ export class MasterPassCrypto {
   lockNow(): void {
     this.lockApplication();
   }
+
+  async isMigrationInterrupted(userId: string): Promise<boolean> {
+    try {
+      const { AppwriteService } = await import("./appwrite");
+      const entries = await AppwriteService.listKeychainEntries(userId);
+      const passwordEntries = entries.filter((e: any) => e.type === "password");
+      return passwordEntries.some((e: any) => e.isPending);
+    } catch (err) {
+      logError("Failed to check vault migration status", err);
+      return false;
+    }
+  }
 }
 
 export const masterPassCrypto = MasterPassCrypto.getInstance();

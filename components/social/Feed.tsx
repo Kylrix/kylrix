@@ -818,6 +818,661 @@ interface FeedProps {
     } | null;
 }
 
+type FeedMomentCardProps = {
+    moment: any;
+    user: any;
+    userAvatarUrl: string | null;
+    onOpenMoment: (moment: any) => void;
+    onEditMoment: (moment: any) => void;
+    onDeletePost: (momentId: string) => void;
+    onOpenNote: (note: any) => void;
+    setActiveDetail: (detail: { type: string; id: string; data: any }) => void;
+    onToggleLike: (e: React.MouseEvent, moment: any) => void;
+    openActorsList: (title: string, fetcher: () => Promise<any[]>) => void;
+    fetchActorsForPulses: (momentId: string) => Promise<any[]>;
+    fetchActorsForLikes: (momentId: string) => Promise<any[]>;
+    setPulseMenuAnchorEl: React.Dispatch<React.SetStateAction<HTMLElement | null>>;
+    setMenuMoment: React.Dispatch<React.SetStateAction<any>>;
+    setShareAnchorEl: React.Dispatch<React.SetStateAction<HTMLElement | null>>;
+    setSelectedMoment: React.Dispatch<React.SetStateAction<any>>;
+    router: ReturnType<typeof useRouter>;
+};
+
+function FeedMomentCard({
+    moment,
+    user,
+    userAvatarUrl,
+    onOpenMoment,
+    onEditMoment,
+    onDeletePost,
+    onOpenNote,
+    setActiveDetail,
+    onToggleLike,
+    openActorsList,
+    fetchActorsForPulses,
+    fetchActorsForLikes,
+    setPulseMenuAnchorEl,
+    setMenuMoment,
+    setShareAnchorEl,
+    setSelectedMoment,
+    router,
+}: FeedMomentCardProps) {
+const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
+const creatorId = moment.userId || moment.creatorId;
+const cachedCreator = getCachedIdentityById(creatorId);
+const resolvedCreator = resolveIdentity(moment.creator || cachedCreator, creatorId);
+const creatorName = isOwnPost ? (user?.name || 'You') : resolvedCreator.displayName;
+const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
+
+
+const { isPinned: isResourcePinned, togglePin } = useResourcePins();
+
+const pinned = isResourcePinned('moment', moment.$id, creatorId, moment.isPinned);
+const { openMenu } = useContextMenu();
+
+const handlePinToggle = async (e?: React.MouseEvent) => {
+  if (e) {
+    e.stopPropagation();
+    e.preventDefault();
+  }
+  try {
+    await togglePin({
+      resourceType: 'moment',
+      resourceId: moment.$id,
+      ownerId: creatorId,
+      rowIsPinned: moment.isPinned,
+      setOwnerRowPin: async (nextPinned) => {
+         // State refresh handled by parent/realtime
+      },
+    });
+  } catch (err: any) {
+    console.error('Failed to toggle pin:', err);
+  }
+
+};
+
+const accessControlItems = useAccessControlMenuItems({
+  resourceType: 'moment',
+  resourceId: moment.$id,
+  isPublic: !!moment.isPublic,
+  isGuest: !!moment.isGuest,
+  resourceTitle: moment.caption,
+  onUpdate: () => {
+    // Update state or refetch
+  }
+});
+
+const contextMenuItems = [
+  { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
+  ...accessControlItems,
+  ...(isOwnPost ? [
+    { label: 'Edit Moment', icon: <Edit size={16} />, onClick: () => onEditMoment(moment) },
+    { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => onDeletePost(moment.$id) }
+  ] : [])
+];
+
+const handleRightClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openMenu({
+        x: e.clientX,
+        y: e.clientY,
+        items: contextMenuItems,
+        appType: 'connect'
+    });
+};
+
+return (
+    <Card onContextMenu={handleRightClick} sx={{ ...momentCardSx, mb: { xs: 2.5, md: 3 } }} elevation={0}>
+        <CardHeader
+            sx={{ px: 2, pt: 2, pb: 0.75, '& .MuiCardHeader-content': { minWidth: 0 } }}
+            avatar={
+                <Avatar
+                    src={creatorAvatar}
+                    sx={{ 
+                        width: 40,
+                        height: 40,
+                        bgcolor: isOwnPost ? '#F59E0B' : '#161412',
+                        color: isOwnPost ? '#000' : 'text.secondary', 
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        fontWeight: 800,
+                        borderRadius: '14px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                    }}
+                >
+                    {creatorName.charAt(0).toUpperCase()}
+                </Avatar>
+            }
+            title={
+                <Typography sx={{ ...feedTitleSx, color: isOwnPost ? '#F59E0B' : 'white' }}>
+                    {creatorName}
+                    {isOwnPost && (
+                        <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.4, fontWeight: 800, verticalAlign: 'middle', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.62rem' }}>
+                            Author
+                        </Typography>
+                    )}
+                </Typography>
+            }
+            subheader={
+                <Typography variant="caption" sx={feedSubheaderSx}>
+                    {formatPostTimestamp(moment.$createdAt, moment.$updatedAt)}
+                </Typography>
+            }
+            action={
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <IconButton
+                    size="small"
+                    onClick={handlePinToggle}
+                    sx={{
+                      color: pinned ? '#F59E0B' : 'rgba(255, 255, 255, 0.15)',
+                      '&:hover': { color: '#F59E0B', bgcolor: 'rgba(255, 255, 255, 0.03)' }
+                    }}
+                  >
+                    <Pin size={16} className={pinned ? 'fill-[#F59E0B]' : ''} />
+                  </IconButton>
+                  <ShareLockButton 
+                    resourceType="moment"
+                    resourceId={moment.$id}
+                    isPublic={!!moment.isPublic}
+                    isGuest={!!moment.isGuest}
+                    accentColor="#F59E0B"
+                    onPublished={() => {}}
+                  />
+                </Box>
+            }
+        />
+        <CardContent
+            sx={{ pt: 0.25, px: 2, pb: 1.5, cursor: 'pointer' }}
+            onClick={() => onOpenMoment(moment)}
+        >
+        {/* Repost/Pulse Header */}
+        {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25, color: '#10B981', opacity: 0.9 }}>
+                <Repeat2 size={13} strokeWidth={3} />
+                <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
+                    {isOwnPost ? 'PULSED BY YOU' : `PULSED BY ${creatorName.toUpperCase()}`}
+                </Typography>
+            </Box>
+        )}
+
+        {/* Comment Thread Context */}
+        {moment.metadata?.type === 'reply' && moment.sourceMoment && (
+            <Box sx={{ mb: 2, position: 'relative' }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1.5, 
+                    mb: 1, 
+                    opacity: 0.5,
+                    '&:hover': { opacity: 0.8 },
+                    cursor: 'pointer'
+                }} onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenMoment(moment.sourceMoment);
+                }}>
+                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 16, height: 16, borderRadius: '5px' }} />
+                    <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.02em', fontSize: '0.72rem' }}>
+                        Replying to {resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}
+                    </Typography>
+                </Box>
+                <Box sx={{ 
+                    position: 'absolute', 
+                    left: 8, 
+                    top: 20, 
+                    bottom: -10, 
+                    width: '1.5px', 
+                    bgcolor: 'rgba(255,255,255,0.08)',
+                    borderRadius: '1px'
+                }} />
+                <Paper sx={{ 
+                    p: 1.25, 
+                    ml: 3,
+                    borderRadius: '12px', 
+                    bgcolor: '#161412', 
+                    border: '1px solid rgba(255, 255, 255, 0.04)',
+                    pointerEvents: 'none'
+                }}>
+                    <Typography variant="caption" sx={{ 
+                        opacity: 0.6, 
+                        display: '-webkit-box', 
+                        WebkitLineClamp: 2, 
+                        WebkitBoxOrient: 'vertical', 
+                        overflow: 'hidden',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '0.76rem',
+                        lineHeight: 1.4,
+                        fontStyle: 'italic'
+                    }}>
+                        {moment.sourceMoment.caption}
+                    </Typography>
+                </Paper>
+            </Box>
+        )}
+
+        {moment.caption && moment.caption.trim() !== "" && (
+            <FormattedText 
+                text={moment.caption}
+                variant="body1"
+                sx={{ 
+                    ...feedBodySx,
+                    lineHeight: 1.5,
+                    fontSize: '0.94rem',
+                    mb: (moment.attachedNote || (moment.sourceMoment && moment.metadata?.type !== 'reply') || moment.metadata?.attachments?.length) ? 1.5 : 0,
+                    mt: moment.metadata?.type === 'reply' ? 1 : 0 
+                }}
+            />
+        )}
+
+        {/* Media Grid */}
+        {moment.metadata?.attachments?.filter((a: any) => a.type === 'image').length > 0 && (
+            <Box sx={{ 
+                display: 'grid', 
+                gap: 1, 
+                gridTemplateColumns: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? '1fr' : '1fr 1fr',
+                mb: 2,
+                borderRadius: '16px',
+                overflow: 'hidden',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                bgcolor: 'rgba(0,0,0,0.2)'
+            }}>
+                {moment.metadata.attachments.filter((a: any) => a.type === 'image').map((att: any, i: number) => (
+                    <Box 
+                        key={i} 
+                        component="img" 
+                        src={SocialService.getMediaPreview(att.id, 800, 600)} 
+                        sx={{ 
+                            width: '100%', 
+                            height: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? 300 : 180, 
+                            objectFit: 'cover',
+                            transition: 'transform 0.5s ease',
+                            '&:hover': { transform: 'scale(1.02)' }
+                        }} 
+                    />
+                ))}
+            </Box>
+        )}
+
+        {/* Pulsed/Reposted Content */}
+        {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
+            <Paper sx={{ 
+                p: 1.5, 
+                borderRadius: '16px', 
+                bgcolor: 'rgba(255,255,255,0.01)', 
+                border: '1px solid rgba(255,255,255,0.05)',
+                transition: 'all 0.2s ease',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }
+            }}>
+                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.25 }}>
+                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
+                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
+                </Stack>
+                <Typography variant="body2" sx={{ ...feedBodySx, opacity: 0.7, WebkitLineClamp: 3, lineHeight: 1.45, fontSize: '0.84rem' }}>
+                    {moment.sourceMoment.caption}
+                </Typography>
+            </Paper>
+        )}
+
+        {moment.metadata?.type === 'quote' && moment.sourceMoment && (
+            <Paper sx={{ 
+                p: 1.5, 
+                borderRadius: '16px', 
+                bgcolor: 'rgba(255,255,255,0.01)', 
+                border: '1px solid rgba(255,255,255,0.05)',
+                transition: 'all 0.2s ease',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }
+            }}>
+                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.25 }}>
+                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
+                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
+                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
+                </Stack>
+                <Typography variant="body2" sx={{ ...feedBodySx, opacity: 0.7, WebkitLineClamp: 3, lineHeight: 1.45, fontSize: '0.84rem' }}>
+                    {moment.sourceMoment.caption}
+                </Typography>
+            </Paper>
+        )}
+
+        {moment.attachedNote && (
+            <Paper
+                variant="outlined"
+                onClick={() => onOpenNote(moment.attachedNote)}
+                sx={{
+                    p: 0,
+                    borderRadius: 4,
+                    bgcolor: '#161412',
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    overflow: 'hidden',
+                    '&:hover': {
+                        borderColor: 'rgba(99, 102, 241, 0.4)',
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(99, 102, 241, 0.1)'
+                    }
+                }}
+            >
+                <Box sx={{
+                    p: 2,
+                    background: 'rgba(99, 102, 241, 0.04)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                        <Box
+                            sx={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 1.5,
+                                bgcolor: 'rgba(99, 102, 241, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mr: 2,
+                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)'
+                            }}
+                        >
+                            <FileText size={20} color="#6366F1" strokeWidth={1.5} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
+                                    {moment.attachedNote.title || 'Untitled Note'}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                    Public Note • {new Date(moment.attachedNote.updatedAt || moment.attachedNote.$updatedAt).toLocaleDateString()}
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                        <Typography variant="body2" sx={{ ...feedBodySx, color: 'rgba(255, 255, 255, 0.7)', lineHeight: 1.5, fontSize: '0.86rem', WebkitLineClamp: 4 }}>
+                            {moment.attachedNote.content?.replace(/[#*`]/g, '')}
+                        </Typography>
+                    </Box>
+                    <Box sx={{
+                    px: 2,
+                    py: 1.25,
+                    bgcolor: 'rgba(0, 0, 0, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
+                        Shared via Kylrix Note
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        {moment.attachedNote.tags?.slice(0, 2).map((_tag: string, i: number) => (
+                            <Box key={i} sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.05)', fontSize: '0.62rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 700 }}>
+                                #{_tag}
+                            </Box>
+                        ))}
+                    </Box>
+                </Box>
+            </Paper>
+        )}
+
+        {moment.attachedEvent && (
+            <Paper
+                variant="outlined"
+                onClick={() => handleOpenEvent(moment.attachedEvent)}
+                sx={{
+                    p: 0,
+                    borderRadius: 4,
+                    bgcolor: '#161412',
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    overflow: 'hidden',
+                    '&:hover': {
+                        borderColor: 'rgba(0, 163, 255, 0.4)',
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 163, 255, 0.1)'
+                    }
+                }}
+            >
+                <Box sx={{
+                    p: 2,
+                    background: 'rgba(0, 163, 255, 0.04)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                        <Box
+                            sx={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 1.5,
+                                bgcolor: 'rgba(0, 163, 255, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mr: 2,
+                                boxShadow: '0 4px 12px rgba(0, 163, 255, 0.15)'
+                            }}
+                        >
+                            <Calendar size={20} color="#00A3FF" strokeWidth={1.5} />
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
+                                    {moment.attachedEvent.title || 'Untitled Event'}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                    Kylrix Flow Event • {new Date(moment.attachedEvent.startTime).toLocaleDateString()}
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
+                            <Clock size={13} strokeWidth={1.5} />
+                            <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
+                                {new Date(moment.attachedEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(moment.attachedEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Typography>
+                        </Box>
+                        {moment.attachedEvent.location && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
+                                <MapPin size={13} strokeWidth={1.5} />
+                                <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
+                                    {moment.attachedEvent.location}
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                </Box>
+                <Box sx={{
+                    px: 2,
+                    py: 1.25,
+                    bgcolor: 'rgba(0, 0, 0, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <Typography variant="caption" sx={{ color: '#00A3FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
+                        Scheduled via Kylrixflow
+                    </Typography>
+                    <Button size="small" variant="text" sx={{ color: '#00A3FF', fontWeight: 800, fontSize: '0.6rem' }}>
+                        View Details
+                    </Button>
+                </Box>
+            </Paper>
+        )}
+
+        {moment.attachedCall && (
+            <Paper
+                variant="outlined"
+                onClick={() => setActiveDetail({ type: 'call', id: moment.attachedCall.$id, data: moment.attachedCall })}
+                sx={{
+                    p: 0,
+                    borderRadius: 4,
+                    bgcolor: '#161412',
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    overflow: 'hidden',
+                    '&:hover': {
+                        borderColor: 'rgba(245, 158, 11, 0.4)',
+                        transform: 'translateY(-4px)',
+                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.1)'
+                    }
+                }}
+            >
+                <Box sx={{
+                    p: 2,
+                    background: 'rgba(245, 158, 11, 0.04)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                        <Box
+                            sx={{
+                                width: 34,
+                                height: 34,
+                                borderRadius: 1.5,
+                                bgcolor: 'rgba(245, 158, 11, 0.1)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mr: 2,
+                                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)'
+                            }}
+                        >
+                            {moment.attachedCall.type === 'video' ? <Video size={20} color="#F59E0B" strokeWidth={1.5} /> : <Phone size={20} color="#F59E0B" strokeWidth={1.5} />}
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
+                                    {moment.attachedCall.title || `${moment.attachedCall.type.charAt(0).toUpperCase() + moment.attachedCall.type.slice(1)} Call`}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
+                                    Kylrix Connect Call • {new Date(moment.attachedCall.startsAt).toLocaleDateString()}
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
+                            <Clock size={13} strokeWidth={1.5} />
+                            <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
+                                Starts: {new Date(moment.attachedCall.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Box>
+                <Box sx={{
+                    px: 2,
+                    py: 1.25,
+                    bgcolor: 'rgba(0, 0, 0, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }}>
+                    <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
+                        Hosted via Kylrix Connect
+                    </Typography>
+                    <Button size="small" variant="text" sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.6rem' }}>
+                        Join Call
+                    </Button>
+                </Box>
+            </Paper>
+        ) }
+    </CardContent>
+        <CardActions sx={{ px: 2, pb: 1.25, pt: 1, justifyContent: 'space-around', color: 'rgba(255, 255, 255, 0.4)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <Tooltip title="Reply">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <IconButton 
+                    size="small"
+                    sx={{ 
+                        p: 0.75,
+                        '&:hover': { color: '#6366F1', bgcolor: alpha('#6366F1', 0.1) } 
+                    }}
+                >
+                    <MessageCircle size={17} strokeWidth={1.5} />
+                </IconButton>
+                <Typography variant="caption" sx={feedActionCountSx}>{moment.stats?.replies || 0}</Typography>
+            </Box>
+        </Tooltip>
+
+        <Tooltip title="Pulse or Quote">
+            <Box
+                onClick={(e) => {
+                    e.stopPropagation();
+                    openActorsList('Pulsed by', async () => await fetchActorsForPulses(moment.$id));
+                }}
+                sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
+            >
+                <IconButton 
+                    size="small"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setPulseMenuAnchorEl(e.currentTarget);
+                        setMenuMoment(moment);
+                    }}
+                    sx={{ 
+                        p: 0.75,
+                        color: moment.isPulsed ? '#10B981' : 'inherit',
+                        bgcolor: moment.isPulsed ? 'rgba(16,185,129,0.06)' : 'transparent',
+                        '&:hover': { color: '#10B981', bgcolor: alpha('#10B981', 0.12) } 
+                    }}
+                >
+                    <Repeat2 size={17} strokeWidth={moment.isPulsed ? 2 : 1.5} />
+                </IconButton>
+                <Typography variant="caption" sx={feedActionCountSx}>{moment.stats?.pulses || 0}</Typography>
+            </Box>
+        </Tooltip>
+
+<Tooltip title="Heart">
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <IconButton 
+            size="small"
+            onClick={(e) => onToggleLike(e, moment)}
+            sx={{ 
+                p: 0.75,
+                color: moment.isLiked ? '#F59E0B' : 'inherit',
+                '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.1) } 
+            }}
+        >
+            <Heart size={17} fill={moment.isLiked ? '#F59E0B' : 'none'} strokeWidth={1.5} />
+        </IconButton>
+        <Box
+            onClick={(e) => {
+                e.stopPropagation();
+                openActorsList('Likes', async () => await fetchActorsForLikes(moment.$id));
+            }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
+        >
+            <Typography sx={feedActionCountSx} variant="caption">{moment.stats?.likes || 0}</Typography>
+        </Box>
+    </Box>
+</Tooltip>
+
+        <Tooltip title="Bookmark">
+            <IconButton 
+                size="small"
+                sx={{ 
+                    p: 0.75,
+                    '&:hover': { color: '#EC4899', bgcolor: alpha('#EC4899', 0.1) } 
+                }}
+            >
+                <Bookmark size={17} strokeWidth={1.5} />
+            </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Share">
+            <IconButton
+                size="small"
+                onClick={(e) => { 
+                    e.stopPropagation();
+                    setShareAnchorEl(e.currentTarget); 
+                    setSelectedMoment(moment); 
+                }}
+                sx={{ 
+                    p: 0.75,
+                    '&:hover': { color: '#6366F1', bgcolor: alpha('#6366F1', 0.1) } 
+                }}
+            >
+                <Share size={17} strokeWidth={1.5} />
+            </IconButton>
+        </Tooltip>
+    </CardActions>
+</Card>
+);
+}
+
 export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => {
     const { user } = useAuth();
     const { profile: myProfile } = useProfile();
@@ -1867,628 +2522,34 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
             {moments
                 .filter((m) => {
                     const creatorId = m.userId || m.creatorId;
-/* eslint-disable react-hooks/rules-of-hooks */
                     const type = m.metadata?.type || 'post';
                     // Hide if it's the current user's own direct post
                     if (user?.$id && creatorId === user.$id && type === 'post') return false;
                     return true;
                 })
-                .map((moment) => {
-                const isOwnPost = user?.$id === (moment.userId || moment.creatorId);
-                const creatorId = moment.userId || moment.creatorId;
-                const cachedCreator = getCachedIdentityById(creatorId);
-                const resolvedCreator = resolveIdentity(moment.creator || cachedCreator, creatorId);
-                const creatorName = isOwnPost ? (user?.name || 'You') : resolvedCreator.displayName;
-                const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
+                .map((moment) => (
+                    <FeedMomentCard
+                        key={moment.$id}
+                        moment={moment}
+                        user={user}
+                        userAvatarUrl={userAvatarUrl}
+                        onOpenMoment={handleOpenMoment}
+                        onEditMoment={handleEditMoment}
+                        onDeletePost={handleDeletePost}
+                        onOpenNote={handleOpenNote}
+                        setActiveDetail={setActiveDetail}
+                        onToggleLike={handleToggleLike}
+                        openActorsList={openActorsList}
+                        fetchActorsForPulses={fetchActorsForPulses}
+                        fetchActorsForLikes={fetchActorsForLikes}
+                        setPulseMenuAnchorEl={setPulseMenuAnchorEl}
+                        setMenuMoment={setMenuMoment}
+                        setShareAnchorEl={setShareAnchorEl}
+                        setSelectedMoment={setSelectedMoment}
+                        router={router}
+                    />
+                ))}
 
-
-                const { isPinned: isResourcePinned, togglePin } = useResourcePins();
-
-                const pinned = isResourcePinned('moment', moment.$id, creatorId, moment.isPinned);
-                const { openMenu } = useContextMenu();
-
-                const handlePinToggle = async (e?: React.MouseEvent) => {
-                  if (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                  }
-                  try {
-                    await togglePin({
-                      resourceType: 'moment',
-                      resourceId: moment.$id,
-                      ownerId: creatorId,
-                      rowIsPinned: moment.isPinned,
-                      setOwnerRowPin: async (nextPinned) => {
-                         // State refresh handled by parent/realtime
-                      },
-                    });
-                  } catch (err: any) {
-                    console.error('Failed to toggle pin:', err);
-                  }
-
-                };
-
-                const accessControlItems = useAccessControlMenuItems({
-                  resourceType: 'moment',
-                  resourceId: moment.$id,
-                  isPublic: !!moment.isPublic,
-                  isGuest: !!moment.isGuest,
-                  resourceTitle: moment.caption,
-                  onUpdate: () => {
-                    // Update state or refetch
-                  }
-                });
-
-                const contextMenuItems = [
-                  { label: pinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={pinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
-                  ...accessControlItems,
-                  ...(isOwnPost ? [
-                    { label: 'Edit Moment', icon: <Edit size={16} />, onClick: () => handleEditMoment(moment) },
-                    { label: 'Delete', icon: <Trash2 size={16} />, variant: 'destructive' as const, onClick: () => handleDeletePost(moment.$id) }
-                  ] : [])
-                ];
-
-                const handleRightClick = (e: React.MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    openMenu({
-                        x: e.clientX,
-                        y: e.clientY,
-                        items: contextMenuItems,
-                        appType: 'connect'
-                    });
-                };
-
-                return (
-                    <Card key={moment.$id} onContextMenu={handleRightClick} sx={{ ...momentCardSx, mb: { xs: 2.5, md: 3 } }} elevation={0}>
-                        <CardHeader
-                            sx={{ px: 2, pt: 2, pb: 0.75, '& .MuiCardHeader-content': { minWidth: 0 } }}
-                            avatar={
-                                <Avatar
-                                    src={creatorAvatar}
-                                    sx={{ 
-                                        width: 40,
-                                        height: 40,
-                                        bgcolor: isOwnPost ? '#F59E0B' : '#161412',
-                                        color: isOwnPost ? '#000' : 'text.secondary', 
-                                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                                        fontWeight: 800,
-                                        borderRadius: '14px',
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                                    }}
-                                >
-                                    {creatorName.charAt(0).toUpperCase()}
-                                </Avatar>
-                            }
-                            title={
-                                <Typography sx={{ ...feedTitleSx, color: isOwnPost ? '#F59E0B' : 'white' }}>
-                                    {creatorName}
-                                    {isOwnPost && (
-                                        <Typography component="span" variant="caption" sx={{ ml: 1, opacity: 0.4, fontWeight: 800, verticalAlign: 'middle', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.62rem' }}>
-                                            Author
-                                        </Typography>
-                                    )}
-                                </Typography>
-                            }
-                            subheader={
-                                <Typography variant="caption" sx={feedSubheaderSx}>
-                                    {formatPostTimestamp(moment.$createdAt, moment.$updatedAt)}
-                                </Typography>
-                            }
-                            action={
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <IconButton
-                                    size="small"
-                                    onClick={handlePinToggle}
-                                    sx={{
-                                      color: pinned ? '#F59E0B' : 'rgba(255, 255, 255, 0.15)',
-                                      '&:hover': { color: '#F59E0B', bgcolor: 'rgba(255, 255, 255, 0.03)' }
-                                    }}
-                                  >
-                                    <Pin size={16} className={pinned ? 'fill-[#F59E0B]' : ''} />
-                                  </IconButton>
-                                  <ShareLockButton 
-                                    resourceType="moment"
-                                    resourceId={moment.$id}
-                                    isPublic={!!moment.isPublic}
-                                    isGuest={!!moment.isGuest}
-                                    accentColor="#F59E0B"
-                                    onPublished={() => {}}
-                                  />
-                                </Box>
-                            }
-                        />
-                        <CardContent
-                            sx={{ pt: 0.25, px: 2, pb: 1.5, cursor: 'pointer' }}
-                            onClick={() => handleOpenMoment(moment)}
-                        >
-                        {/* Repost/Pulse Header */}
-                        {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25, color: '#10B981', opacity: 0.9 }}>
-                                <Repeat2 size={13} strokeWidth={3} />
-                                <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
-                                    {isOwnPost ? 'PULSED BY YOU' : `PULSED BY ${creatorName.toUpperCase()}`}
-                                </Typography>
-                            </Box>
-                        )}
-
-                        {/* Comment Thread Context */}
-                        {moment.metadata?.type === 'reply' && moment.sourceMoment && (
-                            <Box sx={{ mb: 2, position: 'relative' }}>
-                                <Box sx={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: 1.5, 
-                                    mb: 1, 
-                                    opacity: 0.5,
-                                    '&:hover': { opacity: 0.8 },
-                                    cursor: 'pointer'
-                                }} onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenMoment(moment.sourceMoment);
-                                }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 16, height: 16, borderRadius: '5px' }} />
-                                    <Typography variant="caption" sx={{ fontWeight: 800, letterSpacing: '0.02em', fontSize: '0.72rem' }}>
-                                        Replying to {resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}
-                                    </Typography>
-                                </Box>
-                                <Box sx={{ 
-                                    position: 'absolute', 
-                                    left: 8, 
-                                    top: 20, 
-                                    bottom: -10, 
-                                    width: '1.5px', 
-                                    bgcolor: 'rgba(255,255,255,0.08)',
-                                    borderRadius: '1px'
-                                }} />
-                                <Paper sx={{ 
-                                    p: 1.25, 
-                                    ml: 3,
-                                    borderRadius: '12px', 
-                                    bgcolor: '#161412', 
-                                    border: '1px solid rgba(255, 255, 255, 0.04)',
-                                    pointerEvents: 'none'
-                                }}>
-                                    <Typography variant="caption" sx={{ 
-                                        opacity: 0.6, 
-                                        display: '-webkit-box', 
-                                        WebkitLineClamp: 2, 
-                                        WebkitBoxOrient: 'vertical', 
-                                        overflow: 'hidden',
-                                        fontFamily: 'var(--font-mono)',
-                                        fontSize: '0.76rem',
-                                        lineHeight: 1.4,
-                                        fontStyle: 'italic'
-                                    }}>
-                                        {moment.sourceMoment.caption}
-                                    </Typography>
-                                </Paper>
-                            </Box>
-                        )}
-
-                        {moment.caption && moment.caption.trim() !== "" && (
-                            <FormattedText 
-                                text={moment.caption}
-                                variant="body1"
-                                sx={{ 
-                                    ...feedBodySx,
-                                    lineHeight: 1.5,
-                                    fontSize: '0.94rem',
-                                    mb: (moment.attachedNote || (moment.sourceMoment && moment.metadata?.type !== 'reply') || moment.metadata?.attachments?.length) ? 1.5 : 0,
-                                    mt: moment.metadata?.type === 'reply' ? 1 : 0 
-                                }}
-                            />
-                        )}
-
-                        {/* Media Grid */}
-                        {moment.metadata?.attachments?.filter((a: any) => a.type === 'image').length > 0 && (
-                            <Box sx={{ 
-                                display: 'grid', 
-                                gap: 1, 
-                                gridTemplateColumns: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? '1fr' : '1fr 1fr',
-                                mb: 2,
-                                borderRadius: '16px',
-                                overflow: 'hidden',
-                                border: '1px solid rgba(255, 255, 255, 0.08)',
-                                bgcolor: 'rgba(0,0,0,0.2)'
-                            }}>
-                                {moment.metadata.attachments.filter((a: any) => a.type === 'image').map((att: any, i: number) => (
-                                    <Box 
-                                        key={i} 
-                                        component="img" 
-                                        src={SocialService.getMediaPreview(att.id, 800, 600)} 
-                                        sx={{ 
-                                            width: '100%', 
-                                            height: moment.metadata.attachments.filter((a: any) => a.type === 'image').length === 1 ? 300 : 180, 
-                                            objectFit: 'cover',
-                                            transition: 'transform 0.5s ease',
-                                            '&:hover': { transform: 'scale(1.02)' }
-                                        }} 
-                                    />
-                                ))}
-                            </Box>
-                        )}
-
-                        {/* Pulsed/Reposted Content */}
-                        {moment.metadata?.type === 'pulse' && moment.sourceMoment && (
-                            <Paper sx={{ 
-                                p: 1.5, 
-                                borderRadius: '16px', 
-                                bgcolor: 'rgba(255,255,255,0.01)', 
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                transition: 'all 0.2s ease',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }
-                            }}>
-                                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.25 }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
-                                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
-                                </Stack>
-                                <Typography variant="body2" sx={{ ...feedBodySx, opacity: 0.7, WebkitLineClamp: 3, lineHeight: 1.45, fontSize: '0.84rem' }}>
-                                    {moment.sourceMoment.caption}
-                                </Typography>
-                            </Paper>
-                        )}
-
-                        {moment.metadata?.type === 'quote' && moment.sourceMoment && (
-                            <Paper sx={{ 
-                                p: 1.5, 
-                                borderRadius: '16px', 
-                                bgcolor: 'rgba(255,255,255,0.01)', 
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                transition: 'all 0.2s ease',
-                                '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)' }
-                            }}>
-                                <Stack direction="row" spacing={1.25} alignItems="center" sx={{ mb: 1.25 }}>
-                                    <Avatar src={moment.sourceMoment.creator?.avatar} sx={{ width: 20, height: 20, borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }} />
-                                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'rgba(255,255,255,0.8)' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).displayName}</Typography>
-                                    <Typography variant="caption" sx={{ opacity: 0.3, fontFamily: 'var(--font-mono)', fontSize: '0.68rem' }}>{resolveIdentity(moment.sourceMoment.creator, moment.sourceMoment.userId || moment.sourceMoment.creatorId).handle}</Typography>
-                                </Stack>
-                                <Typography variant="body2" sx={{ ...feedBodySx, opacity: 0.7, WebkitLineClamp: 3, lineHeight: 1.45, fontSize: '0.84rem' }}>
-                                    {moment.sourceMoment.caption}
-                                </Typography>
-                            </Paper>
-                        )}
-
-                        {moment.attachedNote && (
-                            <Paper
-                                variant="outlined"
-                                onClick={() => handleOpenNote(moment.attachedNote)}
-                                sx={{
-                                    p: 0,
-                                    borderRadius: 4,
-                                    bgcolor: '#161412',
-                                    borderColor: 'rgba(255, 255, 255, 0.08)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    overflow: 'hidden',
-                                    '&:hover': {
-                                        borderColor: 'rgba(99, 102, 241, 0.4)',
-                                        transform: 'translateY(-4px)',
-                                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(99, 102, 241, 0.1)'
-                                    }
-                                }}
-                            >
-                                <Box sx={{
-                                    p: 2,
-                                    background: 'rgba(99, 102, 241, 0.04)',
-                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
-                                }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                        <Box
-                                            sx={{
-                                                width: 34,
-                                                height: 34,
-                                                borderRadius: 1.5,
-                                                bgcolor: 'rgba(99, 102, 241, 0.1)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                mr: 2,
-                                                boxShadow: '0 4px 12px rgba(99, 102, 241, 0.15)'
-                                            }}
-                                        >
-                                            <FileText size={20} color="#6366F1" strokeWidth={1.5} />
-                                        </Box>
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
-                                                    {moment.attachedNote.title || 'Untitled Note'}
-                                                </Typography>
-                                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
-                                                    Public Note • {new Date(moment.attachedNote.updatedAt || moment.attachedNote.$updatedAt).toLocaleDateString()}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-
-                                        <Typography variant="body2" sx={{ ...feedBodySx, color: 'rgba(255, 255, 255, 0.7)', lineHeight: 1.5, fontSize: '0.86rem', WebkitLineClamp: 4 }}>
-                                            {moment.attachedNote.content?.replace(/[#*`]/g, '')}
-                                        </Typography>
-                                    </Box>
-                                    <Box sx={{
-                                    px: 2,
-                                    py: 1.25,
-                                    bgcolor: 'rgba(0, 0, 0, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between'
-                                }}>
-                                    <Typography variant="caption" sx={{ color: '#6366F1', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
-                                        Shared via Kylrix Note
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', gap: 1 }}>
-                                        {moment.attachedNote.tags?.slice(0, 2).map((_tag: string, i: number) => (
-                                            <Box key={i} sx={{ px: 1, py: 0.25, borderRadius: 1, bgcolor: 'rgba(255, 255, 255, 0.05)', fontSize: '0.62rem', color: 'rgba(255, 255, 255, 0.5)', fontWeight: 700 }}>
-                                                #{_tag}
-                                            </Box>
-                                        ))}
-                                    </Box>
-                                </Box>
-                            </Paper>
-                        )}
-
-                        {moment.attachedEvent && (
-                            <Paper
-                                variant="outlined"
-                                onClick={() => handleOpenEvent(moment.attachedEvent)}
-                                sx={{
-                                    p: 0,
-                                    borderRadius: 4,
-                                    bgcolor: '#161412',
-                                    borderColor: 'rgba(255, 255, 255, 0.08)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    overflow: 'hidden',
-                                    '&:hover': {
-                                        borderColor: 'rgba(0, 163, 255, 0.4)',
-                                        transform: 'translateY(-4px)',
-                                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 163, 255, 0.1)'
-                                    }
-                                }}
-                            >
-                                <Box sx={{
-                                    p: 2,
-                                    background: 'rgba(0, 163, 255, 0.04)',
-                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
-                                }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                        <Box
-                                            sx={{
-                                                width: 34,
-                                                height: 34,
-                                                borderRadius: 1.5,
-                                                bgcolor: 'rgba(0, 163, 255, 0.1)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                mr: 2,
-                                                boxShadow: '0 4px 12px rgba(0, 163, 255, 0.15)'
-                                            }}
-                                        >
-                                            <Calendar size={20} color="#00A3FF" strokeWidth={1.5} />
-                                        </Box>
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
-                                                    {moment.attachedEvent.title || 'Untitled Event'}
-                                                </Typography>
-                                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
-                                                    Kylrix Flow Event • {new Date(moment.attachedEvent.startTime).toLocaleDateString()}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
-                                            <Clock size={13} strokeWidth={1.5} />
-                                            <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
-                                                {new Date(moment.attachedEvent.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {new Date(moment.attachedEvent.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </Typography>
-                                        </Box>
-                                        {moment.attachedEvent.location && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
-                                                <MapPin size={13} strokeWidth={1.5} />
-                                                <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
-                                                    {moment.attachedEvent.location}
-                                                </Typography>
-                                            </Box>
-                                        )}
-                                    </Box>
-                                </Box>
-                                <Box sx={{
-                                    px: 2,
-                                    py: 1.25,
-                                    bgcolor: 'rgba(0, 0, 0, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between'
-                                }}>
-                                    <Typography variant="caption" sx={{ color: '#00A3FF', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
-                                        Scheduled via Kylrixflow
-                                    </Typography>
-                                    <Button size="small" variant="text" sx={{ color: '#00A3FF', fontWeight: 800, fontSize: '0.6rem' }}>
-                                        View Details
-                                    </Button>
-                                </Box>
-                            </Paper>
-                        )}
-
-                        {moment.attachedCall && (
-                            <Paper
-                                variant="outlined"
-                                onClick={() => setActiveDetail({ type: 'call', id: moment.attachedCall.$id, data: moment.attachedCall })}
-                                sx={{
-                                    p: 0,
-                                    borderRadius: 4,
-                                    bgcolor: '#161412',
-                                    borderColor: 'rgba(255, 255, 255, 0.08)',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    overflow: 'hidden',
-                                    '&:hover': {
-                                        borderColor: 'rgba(245, 158, 11, 0.4)',
-                                        transform: 'translateY(-4px)',
-                                        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.1)'
-                                    }
-                                }}
-                            >
-                                <Box sx={{
-                                    p: 2,
-                                    background: 'rgba(245, 158, 11, 0.04)',
-                                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
-                                }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                                        <Box
-                                            sx={{
-                                                width: 34,
-                                                height: 34,
-                                                borderRadius: 1.5,
-                                                bgcolor: 'rgba(245, 158, 11, 0.1)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                mr: 2,
-                                                boxShadow: '0 4px 12px rgba(245, 158, 11, 0.15)'
-                                            }}
-                                        >
-                                            {moment.attachedCall.type === 'video' ? <Video size={20} color="#F59E0B" strokeWidth={1.5} /> : <Phone size={20} color="#F59E0B" strokeWidth={1.5} />}
-                                        </Box>
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                                <Typography variant="subtitle1" sx={{ ...feedTitleSx, fontSize: '0.9rem' }}>
-                                                    {moment.attachedCall.title || `${moment.attachedCall.type.charAt(0).toUpperCase() + moment.attachedCall.type.slice(1)} Call`}
-                                                </Typography>
-                                                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.4)', fontWeight: 600, fontSize: '0.68rem' }}>
-                                                    Kylrix Connect Call • {new Date(moment.attachedCall.startsAt).toLocaleDateString()}
-                                                </Typography>
-                                            </Box>
-                                        </Box>
-
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, color: 'rgba(255, 255, 255, 0.6)' }}>
-                                            <Clock size={13} strokeWidth={1.5} />
-                                            <Typography variant="caption" fontWeight={600} sx={{ fontSize: '0.72rem' }}>
-                                                Starts: {new Date(moment.attachedCall.startsAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                </Box>
-                                <Box sx={{
-                                    px: 2,
-                                    py: 1.25,
-                                    bgcolor: 'rgba(0, 0, 0, 0.2)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between'
-                                }}>
-                                    <Typography variant="caption" sx={{ color: '#F59E0B', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase', fontSize: '0.6rem' }}>
-                                        Hosted via Kylrix Connect
-                                    </Typography>
-                                    <Button size="small" variant="text" sx={{ color: '#F59E0B', fontWeight: 800, fontSize: '0.6rem' }}>
-                                        Join Call
-                                    </Button>
-                                </Box>
-                            </Paper>
-                        ) }
-                    </CardContent>
-                        <CardActions sx={{ px: 2, pb: 1.25, pt: 1, justifyContent: 'space-around', color: 'rgba(255, 255, 255, 0.4)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                        <Tooltip title="Reply">
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <IconButton 
-                                    size="small"
-                                    sx={{ 
-                                        p: 0.75,
-                                        '&:hover': { color: '#6366F1', bgcolor: alpha('#6366F1', 0.1) } 
-                                    }}
-                                >
-                                    <MessageCircle size={17} strokeWidth={1.5} />
-                                </IconButton>
-                                <Typography variant="caption" sx={feedActionCountSx}>{moment.stats?.replies || 0}</Typography>
-                            </Box>
-                        </Tooltip>
-
-                        <Tooltip title="Pulse or Quote">
-                            <Box
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    openActorsList('Pulsed by', async () => await fetchActorsForPulses(moment.$id));
-                                }}
-                                sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
-                            >
-                                <IconButton 
-                                    size="small"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setPulseMenuAnchorEl(e.currentTarget);
-                                        setMenuMoment(moment);
-                                    }}
-                                    sx={{ 
-                                        p: 0.75,
-                                        color: moment.isPulsed ? '#10B981' : 'inherit',
-                                        bgcolor: moment.isPulsed ? 'rgba(16,185,129,0.06)' : 'transparent',
-                                        '&:hover': { color: '#10B981', bgcolor: alpha('#10B981', 0.12) } 
-                                    }}
-                                >
-                                    <Repeat2 size={17} strokeWidth={moment.isPulsed ? 2 : 1.5} />
-                                </IconButton>
-                                <Typography variant="caption" sx={feedActionCountSx}>{moment.stats?.pulses || 0}</Typography>
-                            </Box>
-                        </Tooltip>
-
-                <Tooltip title="Heart">
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <IconButton 
-                            size="small"
-                            onClick={(e) => handleToggleLike(e, moment)}
-                            sx={{ 
-                                p: 0.75,
-                                color: moment.isLiked ? '#F59E0B' : 'inherit',
-                                '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.1) } 
-                            }}
-                        >
-                            <Heart size={17} fill={moment.isLiked ? '#F59E0B' : 'none'} strokeWidth={1.5} />
-                        </IconButton>
-                        <Box
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                openActorsList('Likes', async () => await fetchActorsForLikes(moment.$id));
-                            }}
-                            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
-                        >
-                            <Typography sx={feedActionCountSx} variant="caption">{moment.stats?.likes || 0}</Typography>
-                        </Box>
-                    </Box>
-                </Tooltip>
-
-                        <Tooltip title="Bookmark">
-                            <IconButton 
-                                size="small"
-                                sx={{ 
-                                    p: 0.75,
-                                    '&:hover': { color: '#EC4899', bgcolor: alpha('#EC4899', 0.1) } 
-                                }}
-                            >
-                                <Bookmark size={17} strokeWidth={1.5} />
-                            </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Share">
-                            <IconButton
-                                size="small"
-                                onClick={(e) => { 
-                                    e.stopPropagation();
-                                    setShareAnchorEl(e.currentTarget); 
-                                    setSelectedMoment(moment); 
-                                }}
-                                sx={{ 
-                                    p: 0.75,
-                                    '&:hover': { color: '#6366F1', bgcolor: alpha('#6366F1', 0.1) } 
-                                }}
-                            >
-                                <Share size={17} strokeWidth={1.5} />
-                            </IconButton>
-                        </Tooltip>
-                    </CardActions>
-                </Card>
-                );
-            })}
 
             <Menu
                 anchorEl={postMenuAnchorEl}
