@@ -104,8 +104,10 @@ export function UnifiedBottomBar() {
     const target = routes[context]?.[newValue];
     if (!target) return;
 
-    const current = pathname || '';
-    if (current === target || current.startsWith(`${target}/`)) return;
+    if (newValue === getCurrentTab()) {
+      if (pathname !== target) router.replace(target);
+      return;
+    }
 
     router.push(target);
   };
