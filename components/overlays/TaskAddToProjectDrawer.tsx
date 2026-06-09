@@ -10,6 +10,8 @@ import { useDataNexus } from '@/context/DataNexusContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import type { Projects } from '@/types/appwrite';
 import toast from 'react-hot-toast';
+import { warmProjectsList } from '@/lib/projects/warm-projects-list';
+import { getSessionProjectsList } from '@/lib/projects/projects-cache';
 
 function ProjectRowSkeleton() {
   return (

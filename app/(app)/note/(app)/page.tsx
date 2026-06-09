@@ -37,6 +37,11 @@ import {
   setSessionSharedNotes,
   sharedNotesCacheKey,
 } from '@/lib/note/shared-notes-cache';
+import {
+  getSessionProjectsList,
+  setSessionProjectsList,
+  projectsListCacheKey,
+} from '@/lib/projects/projects-cache';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import CreateNoteForm from './notes/CreateNoteForm';
 import { useSidebar } from '@/components/ui/SidebarContext';
@@ -47,7 +52,6 @@ import { NotesErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 
 // Client-side persistence cache to resist reload flicker
-let cachedProjects: any[] | null = null;
 
 // Lightweight custom hook to track responsive breakpoint without MUI
 function useIsDesktop() {
@@ -93,8 +97,8 @@ export default function NotesPage() {
   const [projectsOpen, setProjectsOpen] = useState(true);
 
   // Projects data state
-  const [projects, setProjects] = useState<any[]>(() => cachedProjects || []);
-  const [projectsLoading, setProjectsLoading] = useState(() => !cachedProjects);
+  const [projects, setProjects] = useState<any[]>(() => getSessionProjectsList() || []);
+  const [projectsLoading, setProjectsLoading] = useState(() => !getSessionProjectsList());
 
   // Shared Notes data state
   const [sharedNotes, setSharedNotes] = useState<any[]>(() => getSessionSharedNotes() || []);
@@ -109,8 +113,12 @@ export default function NotesPage() {
         ProjectsService.listProjects()
           .then(res => {
             if (mounted) {
-              cachedProjects = res.rows || [];
-              setProjects(res.rows || []);
+              const rows = res.rows || [];
+              setSessionProjectsList(rows);
+              if (user?.$id) {
+                void setCachedData(projectsListCacheKey(user.$id), rows);
+              }
+              setProjects(rows);
               setProjectsLoading(false);
             }
           })

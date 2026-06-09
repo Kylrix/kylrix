@@ -54,6 +54,8 @@ export const ProjectsService = {
 
   async createProject(data: Partial<Projects>) {
     projectsCache.invalidate();
+    clearSessionProjectsList();
+    void invalidateCache('projects_list_*');
     if (typeof window !== 'undefined') {
       const { createProject } = await import('@/lib/actions/client-ops');
       return await createProject(data);
@@ -93,6 +95,12 @@ export const ProjectsService = {
 
   async updateProject(projectId: string, data: Partial<Projects>, permissions?: string[]) {
     projectsCache.invalidate();
+    clearSessionProjectsList();
+    clearSessionProjectDetail(projectId);
+    void invalidateCache('projects_list_*');
+    void invalidateCache(`project_detail_${projectId}`);
+    void invalidateCache(`project_meta_${projectId}`);
+    void invalidateCache(`project_objects_${projectId}`);
     if (typeof window !== 'undefined') {
       const { updateProject } = await import('@/lib/actions/client-ops');
       return await updateProject(projectId, data, permissions);
@@ -103,6 +111,10 @@ export const ProjectsService = {
 
   async deleteProject(projectId: string, deleteMode: 'detach' | 'created_within' | 'all' = 'detach') {
     projectsCache.invalidate();
+    clearSessionProjectsList();
+    clearSessionProjectDetail(projectId);
+    void invalidateCache('projects_list_*');
+    void invalidateCache(`project_detail_${projectId}*`);
     if (typeof window !== 'undefined') {
       const { deleteProject } = await import('@/lib/actions/client-ops');
       return await deleteProject(projectId, deleteMode);

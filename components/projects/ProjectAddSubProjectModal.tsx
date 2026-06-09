@@ -24,6 +24,10 @@ import { X, Search, Plus, FolderKanban } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useDataNexus } from '@/context/DataNexusContext';
+import { warmProjectsList } from '@/lib/projects/warm-projects-list';
+import { getSessionProjectsList } from '@/lib/projects/projects-cache';
 
 interface ProjectAddSubProjectModalProps {
   open: boolean;
@@ -41,18 +45,27 @@ export default function ProjectAddSubProjectModal({
   const theme = useTheme();
   const { showSuccess, showError } = useToast();
   const { open: openUnified } = useUnifiedDrawer();
+  const { user } = useAuth();
+  const { getCachedDataAsync, fetchOptimized } = useDataNexus();
   
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(() => !getSessionProjectsList()?.length);
+  const [projects, setProjects] = useState<any[]>(() =>
+    (getSessionProjectsList() ?? []).filter((p: any) => p.$id !== projectId),
+  );
   const [linking, setLinking] = useState<string | null>(null);
 
   const fetchProjects = useCallback(async () => {
-    setLoading(true);
+    if (!user?.$id) return;
+    const session = getSessionProjectsList();
+    if (!session?.length) setLoading(true);
     try {
-      const res = await ProjectsService.listProjects();
-      // Filter out the current project (cannot link to itself)
-      const filtered = (res.rows || []).filter((p: any) => p.$id !== projectId);
+      const rows = await warmProjectsList({
+        userId: user.$id,
+        getCachedDataAsync,
+        fetchOptimized,
+      });
+      const filtered = rows.filter((p: any) => p.$id !== projectId);
       setProjects(filtered);
     } catch (err) {
       console.error('Failed to load projects for sub-project picker', err);
@@ -60,7 +73,7 @@ export default function ProjectAddSubProjectModal({
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, user?.$id, getCachedDataAsync, fetchOptimized]);
 
   useEffect(() => {
     if (open) fetchProjects();

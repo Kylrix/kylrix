@@ -21,7 +21,9 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { useDataNexus } from '@/context/DataNexusContext';
+import { warmProjectsList } from '@/lib/projects/warm-projects-list';
+import { getSessionProjectsList } from '@/lib/projects/projects-cache';
 import { CallService } from '@/lib/services/call';
 import { listNotes, listTags, listKeepCredentials } from '@/lib/appwrite';
 import { listTotpSecrets } from '@/lib/appwrite/vault';
@@ -107,24 +109,37 @@ export default function DesktopRightSection({ panels, contextId, onAction }: Des
   const [userGoals, setUserGoals] = useState<any[]>([]);
   const [userGoalsLoading, setUserGoalsLoading] = useState(false);
 
+  const { getCachedDataAsync, fetchOptimized } = useDataNexus();
+
   // Load active projects
   useEffect(() => {
     if ((!panels.includes('projects') && !panels.includes('projects_stats')) || !user) return;
     let mounted = true;
+
+    const session = getSessionProjectsList();
+    if (session?.length) {
+      setProjects(session);
+      setProjectsLoading(false);
+    }
+
     async function load() {
-      setProjectsLoading(true);
+      if (!session?.length) setProjectsLoading(true);
       try {
-        const res = await ProjectsService.listProjects();
-        if (mounted) setProjects(res.rows || []);
+        const rows = await warmProjectsList({
+          userId: user.$id,
+          getCachedDataAsync,
+          fetchOptimized,
+        });
+        if (mounted) setProjects(rows);
       } catch (e) {
         console.error('Failed loading projects:', e);
       } finally {
         if (mounted) setProjectsLoading(false);
       }
     }
-    load();
+    void load();
     return () => { mounted = false; };
-  }, [panels, user]);
+  }, [panels, user, getCachedDataAsync, fetchOptimized]);
 
   // Load forms
   useEffect(() => {

@@ -3,14 +3,11 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Feed } from '@/components/social/Feed';
 import { ChatList } from '@/components/chat/ChatList';
-import { ProjectsService } from '@/lib/appwrite/projects';
+import { useProjectsList } from '@/hooks/useProjectsList';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { MessageSquare, Phone, Plus, ChevronDown, ChevronUp, Maximize2, FolderKanban } from 'lucide-react';
-
-// Client-side persistence cache to resist flicker and page reloads
-let cachedProjects: any[] | null = null;
 
 function ConnectHomeContent() {
   const searchParams = useSearchParams();
@@ -30,9 +27,7 @@ function ConnectHomeContent() {
   const [threadsOpen, setThreadsOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
 
-  // Projects data state
-  const [projects, setProjects] = useState<any[]>(() => cachedProjects || []);
-  const [projectsLoading, setProjectsLoading] = useState(() => !cachedProjects);
+  const { projects, loading: projectsLoading } = useProjectsList();
 
   const [isDesktop, setIsDesktop] = useState(false);
 
@@ -57,27 +52,6 @@ function ConnectHomeContent() {
     });
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, router, openUnified]);
-
-  useEffect(() => {
-    let mounted = true;
-    async function loadProjects() {
-      try {
-        const res = await ProjectsService.listProjects();
-        if (mounted) {
-          cachedProjects = res.rows || [];
-          setProjects(res.rows || []);
-          setProjectsLoading(false);
-        }
-      } catch (err) {
-        console.error('Failed to load projects inside Connect home:', err);
-        if (mounted) setProjectsLoading(false);
-      }
-    }
-    loadProjects();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const shouldCompose = useMemo(() => searchParams.get('compose') === '1', [searchParams]);
 

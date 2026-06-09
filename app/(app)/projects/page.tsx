@@ -54,6 +54,7 @@ import {
   } from 'lucide-react';
 import { useFAB } from '@/context/FABContext';
 import { ProjectsService } from '@/lib/appwrite/projects';
+import { useProjectsList } from '@/hooks/useProjectsList';
 import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -400,9 +401,8 @@ export default function ProjectsPage() {
     return () => media.removeEventListener('change', listener);
   }, []);
 
-  const [projects, setProjects] = useState<Projects[]>([]);
+  const { projects, loading, refetch: fetchProjects, setProjects, syncProjects } = useProjectsList();
   const [teams, setTeams] = useState<Models.Team[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showAllTemplates, setShowAllTemplates] = useState(false);
 
   // Workflow Simulator States
@@ -481,23 +481,11 @@ export default function ProjectsPage() {
 
   const workflowsList = Object.values(savedWorkflows || {});
 
-  const fetchProjects = useCallback(async (force = false) => {
-    setLoading(true);
-    try {
-      const res = await ProjectsService.listProjects(force);
-      setProjects(res.rows);
-    } catch (err: any) {
-      showError('Failed to load projects', err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [showError]);
-
   const { setConfiguration, resetConfiguration } = useFAB();
 
   const handleCreated = useCallback((newProject: any) => {
-    setProjects(prev => [newProject, ...prev]);
-  }, []);
+    syncProjects([newProject, ...projects]);
+  }, [projects, syncProjects]);
 
   const openCreateDrawer = useCallback((template?: typeof projectTemplates[0]) => {
     if (template?.isPro && !hasPaidKylrixPlan(user)) {
@@ -528,10 +516,6 @@ export default function ProjectsPage() {
     });
     return () => resetConfiguration();
   }, [setConfiguration, resetConfiguration, router, user, open, showSuccess, isDesktop]);
-
-  useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
 
   const handleDeleteProject = async (project: Projects) => {
     open('delete-confirm', {

@@ -25,6 +25,10 @@ import {
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
 import { Projects } from '@/types/appwrite';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useDataNexus } from '@/context/DataNexusContext';
+import { warmProjectsList } from '@/lib/projects/warm-projects-list';
+import { getSessionProjectsList } from '@/lib/projects/projects-cache';
 
 interface ProjectLinkerProps {
   open: boolean;
@@ -37,22 +41,30 @@ interface ProjectLinkerProps {
 export default function ProjectLinker({ open, onClose, entityId, entityKind, onLinked }: ProjectLinkerProps) {
   const theme = useTheme();
   const { showSuccess, showError } = useToast();
+  const { user } = useAuth();
+  const { getCachedDataAsync, fetchOptimized } = useDataNexus();
   
-  const [projects, setProjects] = useState<Projects[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [projects, setProjects] = useState<Projects[]>(() => getSessionProjectsList() ?? []);
+  const [loading, setLoading] = useState(() => !getSessionProjectsList()?.length);
   const [linking, setLinking] = useState<string | null>(null);
 
   const fetchProjects = useCallback(async () => {
-    setLoading(true);
+    if (!user?.$id) return;
+    const session = getSessionProjectsList();
+    if (!session?.length) setLoading(true);
     try {
-      const res = await ProjectsService.listProjects();
-      setProjects(res.rows);
+      const rows = await warmProjectsList({
+        userId: user.$id,
+        getCachedDataAsync,
+        fetchOptimized,
+      });
+      setProjects(rows);
     } catch (err: any) {
       console.error('Failed to load projects', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user?.$id, getCachedDataAsync, fetchOptimized]);
 
   useEffect(() => {
     if (open) fetchProjects();
