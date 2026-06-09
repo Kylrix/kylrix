@@ -10,6 +10,7 @@ import {
   Settings2
 } from 'lucide-react';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
+import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -45,18 +46,12 @@ export function useAccessControlMenuItems({
 
   const handleCopyLink = async () => {
     try {
-      const res = await toggleResourcePublicGuest({
-        resourceType,
-        resourceId,
-        mode: 'copy_only',
-        projectId
-      });
-      if (res.publicUrl) {
-        await navigator.clipboard.writeText(res.publicUrl);
-        showSuccess('Link copied', 'Anyone with the link can view');
-      }
-    } catch (err: any) {
-      showError('Failed to copy link', err.message);
+      const publicUrl = buildPublicResourceUrl(resourceType, resourceId, { projectId });
+      await navigator.clipboard.writeText(publicUrl);
+      showSuccess('Link copied', 'Anyone with the link can view');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Try again in a moment.';
+      showError('Could not copy link', message);
     }
   };
 

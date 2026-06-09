@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Lock, Link, Loader2 } from 'lucide-react';
 import { toggleResourcePublicGuest } from '@/lib/actions/client-ops';
+import { buildPublicResourceUrl } from '@/lib/share/public-url';
 import { PublicResourceType } from '@/lib/share/resource-types';
 import { useToast } from '@/hooks/useToast';
 import { Tooltip, IconButton } from '@/lib/mui-tailwind/material';
@@ -49,6 +50,9 @@ export function ShareLockButton({
   const errorMessage = (err: unknown, fallback: string) =>
     err instanceof Error && err.message ? err.message : fallback;
 
+  const getClipboardUrl = () =>
+    buildPublicResourceUrl(resourceType, resourceId, { projectId });
+
   const handleToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -65,21 +69,12 @@ export function ShareLockButton({
     if (isPublic || isGuest) {
       setLoading(true);
       try {
-        const res = await toggleResourcePublicGuest({
-          resourceType,
-          resourceId,
-          mode: 'copy_only',
-          projectId
-        });
-        if (!res?.publicUrl) {
-          showError('Could not copy link', 'No public link is available for this item.');
-          return;
-        }
-        const copied = await copyPublicUrl(res.publicUrl);
+        const publicUrl = getClipboardUrl();
+        const copied = await copyPublicUrl(publicUrl);
         if (copied) {
           showSuccess('Link copied', 'Anyone with the link can view');
         } else {
-          showSuccess('Public link ready', res.publicUrl);
+          showSuccess('Public link ready', publicUrl);
         }
       } catch (err: unknown) {
         showError('Could not copy link', errorMessage(err, 'Try again in a moment.'));
@@ -98,22 +93,24 @@ export function ShareLockButton({
         mode: 'publish',
         projectId
       });
-      if (!res?.success || !res.publicUrl) {
+      if (!res?.success) {
         showError('Could not publish', 'Sharing settings were not saved. Try again.');
         return;
       }
 
+      const publicUrl = getClipboardUrl();
+
       onPublished?.({
         isPublic: !!res.isPublic,
         isGuest: !!res.isGuest,
-        publicUrl: res.publicUrl,
+        publicUrl,
       });
 
-      const copied = await copyPublicUrl(res.publicUrl);
+      const copied = await copyPublicUrl(publicUrl);
       if (copied) {
         showSuccess('Published & Link copied', 'Anyone with the link can view');
       } else {
-        showSuccess('Published', res.publicUrl);
+        showSuccess('Published', publicUrl);
       }
     } catch (err: unknown) {
       showError('Could not publish', errorMessage(err, 'Sharing settings were not saved.'));

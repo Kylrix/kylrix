@@ -145,12 +145,11 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
     isGuest: !!task.isGuest,
     resourceTitle: task.title,
     onUpdate: () => {
-        // Updated via realtime or parent refetch
+      // Sharing flags sync via realtime subscription after access changes
     }
   });
 
   const contextMenuItems = useMemo(() => [
-    { label: taskPinned ? 'Unpin' : 'Pin', icon: <Pin size={16} className={taskPinned ? 'rotate-45 text-[#F59E0B]' : ''} />, onClick: handlePinToggle },
     ...accessControlItems,
     { 
         label: 'Synergy', 
@@ -258,7 +257,6 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
         })
     }
   ], [
-    taskPinned,
     accessControlItems,
     task,
     tagMenuOptions,

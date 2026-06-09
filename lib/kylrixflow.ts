@@ -46,8 +46,13 @@ type TableUpdateData<T extends Models.Row> =
 import { fetchOptimized, invalidateCache } from "@/lib/ecosystem/nexus-fetcher";
 
 const FLOW_TTL = 1000 * 60 * 15; // 15 mins
-const CACHE_TTL = FLOW_TTL;
-const queryCache = new Map<string, { data: unknown; expires: number }>();
+
+const permissionRank: Record<CollaboratorPermission, number> = {
+    read: 1,
+    comment: 2,
+    write: 3,
+    admin: 4,
+};
 
 async function listRows<T extends Models.Row>(tableId: string, queries: string[] = []): Promise<Models.RowList<T>> {
     const key = `list:${tableId}:${JSON.stringify(queries)}`;
@@ -55,9 +60,6 @@ async function listRows<T extends Models.Row>(tableId: string, queries: string[]
         return await tablesDB.listRows<T>({ databaseId: FLOW_DATABASE_ID, tableId, queries });
     }, FLOW_TTL);
 }
-
-const taskPermissionForLevel = (level: CollaboratorPermission, userId: string) => {
-    if (level === 'admin') {
         return [
             Permission.read(Role.user(userId))];
     }

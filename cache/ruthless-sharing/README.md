@@ -44,7 +44,9 @@ Full detail: [routes.md](./routes.md)
 
 > Resource URI, singularize noun (`s` off if present), `+ /[id]` → guest detail page or access-unavailable message.
 
-Examples: `/note/[id]`, `/project/[id]`, `/vault/[id]`, `/flow/form/[id]`.
+Examples: `/note/[id]`, `/project/[id]`, `/vault/[id]`, `/flow/goal/[id]`.
+
+**Clipboard base:** always `window.location.origin` in the browser — no `NEXT_PUBLIC_APP_URL` for copy. Canonical `www.kylrix.space` only on server-dispatched links (email, push).
 
 Uses standard read-only detail component when `isGuest` / `isPublic` allows.
 

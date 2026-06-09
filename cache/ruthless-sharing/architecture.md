@@ -118,10 +118,19 @@ Some resources need side effects on publish:
 **Location (planned):** `lib/share/public-url.ts`
 
 ```typescript
-buildPublicResourceUrl(resourceType, resourceId, projectId?: string): string
+resolveShareBaseUrl(): string
+buildPublicResourcePath(resourceType, resourceId, options?): string
+buildPublicResourceUrl(resourceType, resourceId, options?, baseUrl?): string
 ```
 
-**Base:** `https://www.kylrix.space` (per `system.domain-canonicalization` skill).
+**Base URL policy (no env vars for clipboard copy):**
+
+| Context | Base |
+|---------|------|
+| **Browser** (Lock button, Access Control copy) | `window.location.origin` — whatever host the user is on (localhost, preview, prod) |
+| **Server-only** (email, Telegram, background jobs) | `https://www.kylrix.space` canonical fallback |
+
+Client components **always** build the copied link locally via `buildPublicResourceUrl()` so the clipboard matches the tab the user is in. Server actions may still return `publicUrl` for logging, but UI must not paste a server-built origin into the clipboard.
 
 ### Public URL law
 
