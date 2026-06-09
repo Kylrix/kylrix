@@ -20,6 +20,8 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
 import { createGhostNoteChat, listGhostNoteChats } from '@/lib/actions/client-ops';
+import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
+import { UsersService } from '@/lib/services/users';
 
 const DRAWER_SX = {
     borderTopLeftRadius: '26px',
@@ -30,17 +32,6 @@ const DRAWER_SX = {
     width: '100%',
     mx: 'auto',
     maxHeight: '60vh'
-};
-
-const isValidPublicKey = (key: string | null | undefined): boolean => {
-    if (!key) return false;
-    try {
-        const normalized = key.replace(/-/g, '+').replace(/_/g, '/');
-        const binary = atob(normalized);
-        return binary.length === 32;
-    } catch {
-        return false;
-    }
 };
 
 export function NewChatDrawer({
@@ -82,14 +73,37 @@ export function NewChatDrawer({
     const startChat = useCallback(async (targetUser: any) => {
         if (!user) return;
         const targetUserId = targetUser.id || targetUser.$id;
+
+        let recipientPublicKey =
+            typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null;
+
+        if (mode === 'secure') {
+            try {
+                const profile = await UsersService.getProfileById(targetUserId);
+                recipientPublicKey = profile?.publicKey || recipientPublicKey;
+            } catch (error) {
+                console.warn('[NewChatDrawer] Failed to refresh recipient profile:', error);
+            }
+        }
+
+        const recipientReadyForSecureChat = isValidX25519PublicKey(recipientPublicKey);
         const useThreadFlow =
             mode === 'thread' ||
             !ecosystemSecurity.status.isUnlocked ||
-            !isValidPublicKey(targetUser.publicKey);
+            !recipientReadyForSecureChat;
 
         if (useThreadFlow) {
             try {
-                toast.loading(copy.loading, { id: 'ghost-init' });
+                if (mode === 'secure' && ecosystemSecurity.status.isUnlocked && !recipientReadyForSecureChat) {
+                    toast(
+                        recipientPublicKey
+                            ? "This person hasn't finished secure chat setup yet. Starting a thread instead."
+                            : "This person hasn't set up secure chat yet. Starting a thread instead.",
+                        { id: 'ghost-init' }
+                    );
+                } else {
+                    toast.loading(copy.loading, { id: 'ghost-init' });
+                }
                 const existingGhosts = await listGhostNoteChats();
                 const foundGhost = existingGhosts.find((c: any) => {
                     let metadataObj: any = {};
@@ -114,7 +128,7 @@ export function NewChatDrawer({
                 onClose();
             } catch (error: any) {
                 console.error('Failed to create thread chat:', error);
-                toast.error(`${copy.errorPrefix}: ${error?.message || 'Unknown error'}`, { id: 'ghost-init' });
+                toast.error(formatSecureChatStartError(error, mode), { id: 'ghost-init' });
             }
             return;
         }
@@ -140,7 +154,7 @@ export function NewChatDrawer({
                     router.push(`/connect/chat/${newConv.$id}`);
                     onClose();
                 } catch (error: any) {
-                    toast.error(`${copy.errorPrefix}: ${error.message}`);
+                    toast.error(formatSecureChatStartError(error, mode), { id: 'ghost-init' });
                 }
             }
         });

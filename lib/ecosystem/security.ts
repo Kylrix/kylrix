@@ -8,6 +8,7 @@ import { MeshProtocol } from './mesh';
 import { tablesDB } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { Query, ID } from 'appwrite';
+import { decodeBase64ToBytes, normalizeStoredSecretString } from '@/lib/crypto/public-key';
 
 const PW_DB = APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER;
 
@@ -138,17 +139,16 @@ export class EcosystemSecurity {
 
   public decodeBase64(base64: string): Uint8Array {
     try {
-        const normalized = base64.replace(/-/g, '+').replace(/_/g, '/');
-        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-        
-        const binary = atob(padded);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) {
-            bytes[i] = binary.charCodeAt(i);
-        }
-        return bytes;
+      return decodeBase64ToBytes(base64);
     } catch (e) {
-        throw new Error(`Invalid base64 string: ${e instanceof Error ? e.message : 'unknown'}`);
+      const detail = e instanceof Error ? e.message : 'unknown';
+      if (detail.startsWith('INVALID_BASE64:')) {
+        throw new Error(`Invalid base64 string: ${detail.slice('INVALID_BASE64:'.length)}`);
+      }
+      if (detail === 'INVALID_PUBLIC_KEY_FORMAT') {
+        throw new Error('Invalid public key format');
+      }
+      throw new Error(`Invalid base64 string: ${detail}`);
     }
   }
 
@@ -612,9 +612,18 @@ export class EcosystemSecurity {
 
     if (res.rows[0]) {
       const doc = res.rows[0];
-      const decryptedPriv = await this.decrypt(doc.passkeyBlob);
-      const privKeyBytes = this.decodeBase64(decryptedPriv);
-      const pubKeyBytes = this.decodeBase64(doc.publicKey);
+      const decryptedPrivRaw = await this.decrypt(doc.passkeyBlob);
+      const decryptedPriv = normalizeStoredSecretString(decryptedPrivRaw);
+
+      let privKeyBytes: Uint8Array;
+      let pubKeyBytes: Uint8Array;
+      try {
+        privKeyBytes = this.decodeBase64(decryptedPriv);
+        pubKeyBytes = this.decodeBase64(doc.publicKey);
+      } catch (error) {
+        console.error('[Security] Failed to decode stored E2E identity keys:', error);
+        throw new Error('Your secure identity keys could not be loaded. Unlock your vault in Settings and try again.');
+      }
 
       const privKey = await crypto.subtle.importKey('pkcs8', privKeyBytes as BufferSource, { name: 'X25519' }, true, ['deriveKey', 'deriveBits']);
       const pubKey = await crypto.subtle.importKey('raw', pubKeyBytes as BufferSource, { name: 'X25519' }, true, []);
@@ -700,7 +709,13 @@ export class EcosystemSecurity {
   private async deriveSharedSecret(targetPublicKeyBase64: string): Promise<CryptoKey> {
     if (!this.identityKeyPair) throw new Error("E2E Identity not initialized");
 
-    const targetRaw = this.decodeBase64(targetPublicKeyBase64);
+    let targetRaw: Uint8Array;
+    try {
+      targetRaw = this.decodeBase64(targetPublicKeyBase64);
+    } catch (error) {
+      console.error('[Security] Failed to decode recipient public key:', error);
+      throw new Error("This person hasn't completed secure chat setup, or their public key is invalid.");
+    }
     
     if (targetRaw.length !== 32) {
         throw new Error(`X25519 target key must be 32 bytes (256 bits). Received ${targetRaw.length} bytes. The recipient's public key might be corrupted or in an unsupported format.`);

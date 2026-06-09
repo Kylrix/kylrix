@@ -12,6 +12,7 @@ import { usePresence } from '../providers/PresenceProvider';
 import { useSection } from '@/context/SectionContext';
 import { showIslandNotification } from '@/lib/island-notification';
 import { createGhostNoteChat, listGhostNoteChats, deleteGhostThread } from '@/lib/actions/client-ops';
+import { isValidX25519PublicKey, formatSecureChatStartError } from '@/lib/crypto/public-key';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { 
     Trash2, 
@@ -577,10 +578,33 @@ export const ChatList = ({
         if (!user) return;
         const targetUserId = targetUser.userId || targetUser.$id;
 
-        // If E2EE is locked, OR the target user has no publicKey, OR we are in the Threads tab, start a huddle thread
-        if (!isUnlocked || !targetUser.publicKey || activeTab === 'public') {
+        let recipientPublicKey =
+            typeof targetUser.publicKey === 'string' ? targetUser.publicKey : null;
+
+        if (activeTab === 'secure') {
             try {
-                toast.loading('Initializing huddle...', { id: 'ghost-init' });
+                const profile = await UsersService.getProfileById(targetUserId);
+                recipientPublicKey = profile?.publicKey || recipientPublicKey;
+            } catch (error) {
+                console.warn('[ChatList] Failed to refresh recipient profile:', error);
+            }
+        }
+
+        const recipientReadyForSecureChat = isValidX25519PublicKey(recipientPublicKey);
+
+        // If vault is locked, recipient isn't secure-ready, or we're on Threads, use a thread.
+        if (!isUnlocked || !recipientReadyForSecureChat || activeTab === 'public') {
+            try {
+                if (activeTab === 'secure' && isUnlocked && !recipientReadyForSecureChat) {
+                    toast(
+                        recipientPublicKey
+                            ? "This person hasn't finished secure chat setup yet. Starting a thread instead."
+                            : "This person hasn't set up secure chat yet. Starting a thread instead.",
+                        { id: 'ghost-init' }
+                    );
+                } else {
+                    toast.loading('Initializing thread...', { id: 'ghost-init' });
+                }
                 const existingGhosts = await listGhostNoteChats();
                 const foundGhost = existingGhosts.find((c: any) => {
                     let metadataObj: any = {};
@@ -610,8 +634,8 @@ export const ChatList = ({
                     router.push(`/connect/chat/${newGhost.$id}`);
                 }
             } catch (error: any) {
-                console.error('Failed to create huddle:', error);
-                toast.error(`Failed: ${error?.message || 'Unknown error'}`, { id: 'ghost-init' });
+                console.error('Failed to create thread:', error);
+                toast.error(formatSecureChatStartError(error, activeTab === 'public' ? 'thread' : 'secure'), { id: 'ghost-init' });
             }
             return;
         }
@@ -644,7 +668,7 @@ export const ChatList = ({
                     }
                 } catch (error: any) {
                     console.error('Failed to create chat:', error);
-                    toast.error(`Failed to create chat: ${error?.message || 'Unknown error'}`);
+                    toast.error(formatSecureChatStartError(error, 'secure'));
                 }
             }
         });

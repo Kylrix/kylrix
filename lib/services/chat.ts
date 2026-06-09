@@ -4,6 +4,7 @@ import { APPWRITE_CONFIG } from '../appwrite/config';
 import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { ecosystemSecurity } from '../ecosystem/security';
+import { isValidX25519PublicKey } from '@/lib/crypto/public-key';
 import { UsersService } from './users';
 import { seedIdentityCache } from '@/lib/identity-cache';
 import { sendKylrixEmailNotification } from '../email-notifications';
@@ -964,14 +965,9 @@ export const ChatService = {
                         const profile = await UsersService.getProfileById(participantId);
                         if (!profile?.publicKey) return null;
 
-                        // Validate key length for X25519 (32 bytes decoded)
-                        try {
-                            const normalized = profile.publicKey.replace(/-/g, '+').replace(/_/g, '/');
-                            const binary = atob(normalized);
-                            if (binary.length !== 32) throw new Error('Invalid length');
-                        } catch (e) {
+                        if (!isValidX25519PublicKey(profile.publicKey)) {
                             console.error(`[ChatService] Invalid public key for user ${participantId}:`, profile.publicKey);
-                            throw new Error(`${profile.displayName || profile.username || 'A participant'} has an invalid secure identity key. They must refresh their security settings before joining secure chats.`);
+                            throw new Error(`${profile.displayName || profile.username || 'A participant'} hasn't finished secure chat setup yet. Ask them to unlock their vault in Settings and try again.`);
                         }
 
                         return {

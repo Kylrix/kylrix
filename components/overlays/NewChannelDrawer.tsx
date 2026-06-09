@@ -31,6 +31,7 @@ import { useSudo } from '@/context/SudoContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
+import { isValidX25519PublicKey } from '@/lib/crypto/public-key';
 
 const DRAWER_SX = {
     borderTopLeftRadius: '26px',
@@ -41,17 +42,6 @@ const DRAWER_SX = {
     width: '100%',
     mx: 'auto',
     maxHeight: '60vh'
-};
-
-const isValidPublicKey = (key: string | null | undefined): boolean => {
-    if (!key) return false;
-    try {
-        const normalized = key.replace(/-/g, '+').replace(/_/g, '/');
-        const binary = atob(normalized);
-        return binary.length === 32;
-    } catch {
-        return false;
-    }
 };
 
 export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -148,7 +138,7 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
                             placeholder="Search verified users..."
                             selectedUsers={selectedUsers}
                             onSelect={(u) => {
-                                if (!isValidPublicKey(u.publicKey)) {
+                                if (!isValidX25519PublicKey(u.publicKey)) {
                                     toast.error(`${u.displayName || u.username} hasn't set up their secure identity correctly (invalid key).`);
                                     return;
                                 }
