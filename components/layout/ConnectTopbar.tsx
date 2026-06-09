@@ -332,7 +332,7 @@ export default function ConnectTopbar({
     // 1. Dynamic recommendations based on current app route
     const routeSuggestions = {
       note: [
-        { id: 'create-note', title: 'Write a New Note', description: 'Create a private note inside your workspace', href: '/note/notes', kind: 'note', accent: '#EC4899' },
+        { id: 'create-note', title: 'Write a New Note', description: 'Create a private note inside your workspace', href: '/note', kind: 'note', accent: '#EC4899' },
         { id: 'view-settings', title: 'Security Preferences', description: 'Adjust your notes security & encryption rules', href: '/settings', kind: 'system', accent: '#6366F1' }
       ],
       projects: [
@@ -340,7 +340,7 @@ export default function ConnectTopbar({
         { id: 'view-wf', title: 'Manage Action Workflows', description: 'Automate repetitive workflows', href: '/projects/workflows', kind: 'note', accent: '#A855F7' }
       ],
       flow: [
-        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flow/tasks', kind: 'flow', accent: '#A855F7' }
+        { id: 'manage-tasks', title: 'View Outstanding Tasks', description: 'Review scheduled deliverables and actions', href: '/flow', kind: 'flow', accent: '#A855F7' }
       ],
       vault: [
         { id: 'share-secrets', title: 'Audit Ephemeral Secrets', description: 'Review sharing keychains and rules', href: '/vault/sharing', kind: 'vault', accent: '#10B981' }
@@ -373,7 +373,7 @@ export default function ConnectTopbar({
         id: 'hist-note',
         title: 'Review Recent Notes',
         description: 'You spent a lot of time in workspace notes recently. Resume writing?',
-        href: '/note/notes',
+        href: '/note',
         kind: 'note',
         accent: '#EC4899'
       });
@@ -382,11 +382,12 @@ export default function ConnectTopbar({
         id: 'hist-flow',
         title: 'Coordinate Action Items',
         description: 'Manage outstanding roadmaps and deliverables',
-        href: '/flow/tasks',
+        href: '/flow',
         kind: 'flow',
         accent: '#A855F7'
       });
-    } else if (topNiche === 'security' && activeApp !== 'vault') {
+    }
+ else if (topNiche === 'security' && activeApp !== 'vault') {
       historicalSuggestions.push({
         id: 'hist-vault',
         title: 'Audit Vault Keychain',
