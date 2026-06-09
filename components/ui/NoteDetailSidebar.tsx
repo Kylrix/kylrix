@@ -60,6 +60,7 @@ import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { formatFileSize } from '@/lib/utils';
 import { StorageService } from '@/lib/services/storage';
 import { useCallLauncher } from '@/context/CallLauncherContext';
+import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAutosave } from '@/hooks/useAutosave';
 import ProjectLinker from '@/components/projects/ProjectLinker';
@@ -791,18 +792,18 @@ export function NoteDetailSidebar({
         {/* Row 2: Action Buttons Row */}
         <div className="flex items-center gap-1.5 flex-wrap">
           {/* Public/Private visibility status toggle */}
-          <button
-            type="button"
-            onClick={handleTogglePublic}
-            className={`p-1.5 rounded-lg transition-colors flex items-center justify-center border ${
-              isPublic 
-                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20' 
-                : 'bg-white/5 border-white/5 text-white/60 hover:text-white hover:bg-white/10'
-            }`}
-            title={isPublic ? 'Make Private' : 'Make Public'}
-          >
-            {isPublic ? <PublicIcon className="w-4 h-4" /> : <LockIcon className="w-4 h-4" />}
-          </button>
+          <ShareLockButton 
+            resourceType="note"
+            resourceId={note.$id}
+            isPublic={!!isPublic}
+            isGuest={!!(note as any).isGuest}
+            accentColor={isPublic ? '#10B981' : '#A855F7'}
+            onPublished={({ isPublic, isGuest }) => {
+                const updated = { ...note, isPublic, isGuest };
+                onUpdate(updated);
+            }}
+            canPublish={true}
+          />
 
           {/* Action Hub */}
           <button 
