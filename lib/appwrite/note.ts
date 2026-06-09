@@ -124,6 +124,33 @@ import { fetchOptimized, invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
 const LIST_TTL = 1000 * 60 * 15; // 15 mins
 const DOC_TTL = 1000 * 60 * 60;  // 1 hour
 
+const noteRowClientCache = new Map<string, { payload: Notes; at: number }>();
+const noteRowClientInflight = new Map<string, Promise<Notes>>();
+const NOTE_ROW_CLIENT_TTL_MS = 1000 * 60 * 5; // 5 minutes
+
+const queryCache = new Map<string, { data: any; expiresAt: number }>();
+function isCacheExpired(expiresAt: number): boolean {
+  return Date.now() > expiresAt;
+}
+
+function getCacheKey(...args: any[]): string {
+  return args.join(':');
+}
+
+function getCached<T>(key: string): T | null {
+  const entry = queryCache.get(key);
+  if (!entry) return null;
+  if (isCacheExpired(entry.expiresAt)) {
+    queryCache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function setCached(key: string, data: any, ttlMs: number = LIST_TTL) {
+  queryCache.set(key, { data, expiresAt: Date.now() + ttlMs });
+}
+
 function cloneNoteForCacheReturn(doc: Notes): Notes {
   const d = doc as any;
   const next: any = { ...d };
