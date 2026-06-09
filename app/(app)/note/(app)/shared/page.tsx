@@ -1,68 +1,139 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Notes } from '@/types/appwrite';
 import NoteCard from '@/components/ui/NoteCard';
-import { getSharedNotes, listPublicNotesByUser, getCurrentUser } from '@/lib/appwrite';
+import { getSharedNotes, listPublicNotesByUser } from '@/lib/appwrite';
+import { getNotePublicState } from '@/lib/appwrite/note';
 import { useNotes } from '@/context/NotesContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import { useDataNexus } from '@/context/DataNexusContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
-import { 
-  Search as SearchIcon, 
-  Globe as GlobeIcon, 
+import {
+  getSessionSharedNotes,
+  setSessionSharedNotes,
+  partitionSharedNotes,
+  sharedNotesCacheKey,
+  myPublicNotesCacheKey,
+  mergeNotesById,
+  type SharedNoteRow,
+} from '@/lib/note/shared-notes-cache';
+import {
+  Search as SearchIcon,
+  Globe as GlobeIcon,
   Lock as LockIcon,
   Loader2 as SpinnerIcon
 } from 'lucide-react';
 
-interface SharedNote extends Notes {
-  sharedPermission?: string;
-  sharedAt?: string;
-  sharedBy?: { name: string; email: string } | null;
+function buildPublicTab(ownedPublic: Notes[], sharedPublic: SharedNoteRow[]): Notes[] {
+  return mergeNotesById(ownedPublic, sharedPublic);
+}
+
+function hasInstantSharedData(
+  privateNotes: SharedNoteRow[],
+  publicNotes: Notes[],
+): boolean {
+  return privateNotes.length > 0 || publicNotes.length > 0;
 }
 
 export default function SharedNotesPage() {
-  const [privateNotes, setPrivateNotes] = useState<SharedNote[]>([]);
-  const [publicNotes, setPublicNotes] = useState<Notes[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(0);
-  const { isPinned } = useNotes();
+  const { isPinned, notes: ownedNotes } = useNotes();
+  const { user } = useAuth();
+  const { getCachedDataAsync, setCachedData } = useDataNexus();
 
-  // Fetch shared and public notes once on mount
+  const sessionRows = getSessionSharedNotes();
+  const sessionPartition = sessionRows ? partitionSharedNotes(sessionRows) : null;
+  const ownedPublicSeed = useMemo(
+    () => ownedNotes.filter((n) => getNotePublicState(n)),
+    [ownedNotes],
+  );
+
+  const [privateNotes, setPrivateNotes] = useState<SharedNoteRow[]>(
+    () => sessionPartition?.privateNotes ?? [],
+  );
+  const [publicNotes, setPublicNotes] = useState<Notes[]>(() =>
+    sessionPartition
+      ? buildPublicTab(ownedPublicSeed, sessionPartition.sharedPublicNotes)
+      : ownedPublicSeed,
+  );
+  const [loading, setLoading] = useState(
+    () => !hasInstantSharedData(sessionPartition?.privateNotes ?? [], sessionPartition ? buildPublicTab(ownedPublicSeed, sessionPartition.sharedPublicNotes) : ownedPublicSeed),
+  );
+  const [activeTab, setActiveTab] = useState(0);
+
+  const applySharedPayload = useCallback(
+    (sharedDocs: SharedNoteRow[], myPublicNotes: Notes[]) => {
+      const { privateNotes: nextPrivate, sharedPublicNotes } = partitionSharedNotes(sharedDocs);
+      const ownedPublic = ownedNotes.filter((n) => getNotePublicState(n));
+      setPrivateNotes(nextPrivate);
+      setPublicNotes(buildPublicTab(myPublicNotes.length ? myPublicNotes : ownedPublic, sharedPublicNotes));
+    },
+    [ownedNotes],
+  );
+
+  // Merge owned public notes as NotesContext cold-starts (same RxDB substrate as /note).
   useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        setLoading(true);
-        
-        const [sharedResult, user] = await Promise.all([
-          getSharedNotes(),
-          getCurrentUser()
+    if (ownedPublicSeed.length === 0) return;
+    setPublicNotes((prev) => {
+      const sharedFromOthers = prev.filter((n) => n.userId && n.userId !== user?.$id);
+      return buildPublicTab(ownedPublicSeed, sharedFromOthers as SharedNoteRow[]);
+    });
+    setLoading(false);
+  }, [ownedPublicSeed, user?.$id]);
+
+  useEffect(() => {
+    if (!user?.$id) {
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
+    const hydrateAndRefresh = async () => {
+      // RxDB / memory mirror — instant on cold start when /note already warmed the cache.
+      if (!getSessionSharedNotes()) {
+        const [cachedShared, cachedMyPublic] = await Promise.all([
+          getCachedDataAsync<SharedNoteRow[]>(sharedNotesCacheKey(user.$id)),
+          getCachedDataAsync<Notes[]>(myPublicNotesCacheKey(user.$id)),
         ]);
 
-        if (user && user.$id) {
-          const myPublicResult = await listPublicNotesByUser(user.$id);
-          const myPublicNotes = myPublicResult.rows as unknown as Notes[];
-          
-          // Partition shared notes into private and public
-          const sharedDocs = sharedResult.rows as SharedNote[];
-          const sharedPrivate = sharedDocs.filter(n => !n.isPublic);
-          const sharedPublic = sharedDocs.filter(n => n.isPublic);
+        if (!mounted) return;
 
-          setPrivateNotes(sharedPrivate);
-          
-          // Public tab = (My Public Notes) + (Notes shared with me that are public)
-          setPublicNotes([...myPublicNotes, ...sharedPublic]);
-        } else {
-          setPrivateNotes([]);
-          setPublicNotes([]);
+        if (cachedShared?.length || cachedMyPublic?.length) {
+          setSessionSharedNotes(cachedShared || []);
+          applySharedPayload(cachedShared || [], cachedMyPublic || []);
+          setLoading(false);
         }
-      } catch (error: any) {
+      }
+
+      try {
+        const [sharedResult, myPublicResult] = await Promise.all([
+          getSharedNotes(),
+          listPublicNotesByUser(user.$id),
+        ]);
+
+        if (!mounted) return;
+
+        const sharedDocs = (sharedResult.rows || []) as SharedNoteRow[];
+        const myPublicNotes = (myPublicResult.rows || []) as unknown as Notes[];
+
+        setSessionSharedNotes(sharedDocs);
+        void setCachedData(sharedNotesCacheKey(user.$id), sharedDocs);
+        void setCachedData(myPublicNotesCacheKey(user.$id), myPublicNotes);
+        applySharedPayload(sharedDocs, myPublicNotes);
+      } catch (error: unknown) {
         console.error('Error fetching shared notes:', error);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
-    fetchNotes();
-  }, []);
+    void hydrateAndRefresh();
+
+    return () => {
+      mounted = false;
+    };
+  }, [user?.$id, getCachedDataAsync, setCachedData, applySharedPayload]);
 
   const sortedPrivateNotes = useMemo(() => {
     return [...privateNotes].sort((a, b) => {
@@ -90,7 +161,7 @@ export default function SharedNotesPage() {
     <div className="relative flex flex-col min-h-screen bg-[#0A0908] text-white overflow-x-hidden">
       <div className="flex-1 w-full max-w-[1440px] mx-auto px-4 md:px-6 pt-6 pb-24 md:pb-12">
         <MultiSectionContainer panels={['tags', 'huddles', 'projects']}>
-          
+
           {/* Header Section */}
           <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-5 mb-8 bg-white/[0.01] border border-white/8 rounded-[32px] shadow-2xl relative select-none">
             <div className="absolute top-[-1px] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-[#EC4899] to-transparent" />
@@ -102,8 +173,8 @@ export default function SharedNotesPage() {
                 Notes shared with you and your public notes
               </p>
             </div>
-            
-            <button 
+
+            <button
               className="h-10 px-4 rounded-xl bg-white/3 border border-white/8 hover:border-white/15 flex items-center justify-center text-white/60 hover:text-white font-bold text-xs gap-1.5 transition-all"
             >
               <SearchIcon size={16} />
@@ -155,9 +226,9 @@ export default function SharedNotesPage() {
                 {activeTab === 0 ? 'No Private Shared Notes' : 'No Public Notes'}
               </h4>
               <p className="text-white/40 text-xs font-semibold max-w-xs leading-relaxed">
-                {activeTab === 0 
+                {activeTab === 0
                   ? "When others share notes with you, they'll appear here. Start collaborating by sharing your own notes!"
-                  : "When you make your notes public, they’ll appear here."
+                  : "When you make your notes public, they'll appear here."
                 }
               </p>
             </div>
@@ -166,11 +237,11 @@ export default function SharedNotesPage() {
               {currentNotes.map((note) => (
                 <div key={note.$id} className="flex flex-col gap-2">
                   <NoteCard note={note} />
-                  
+
                   <div className="flex flex-col items-center gap-1.5 select-none">
-                    {activeTab === 0 && (note as SharedNote).sharedBy && (
+                    {activeTab === 0 && (note as SharedNoteRow).sharedBy && (
                       <span className="block text-[9px] font-black font-mono uppercase tracking-wider text-white/40">
-                        BY: {((note as SharedNote).sharedBy?.name || (note as SharedNote).sharedBy?.email || 'Collaborator').toUpperCase()}
+                        BY: {((note as SharedNoteRow).sharedBy?.name || (note as SharedNoteRow).sharedBy?.email || 'Collaborator').toUpperCase()}
                       </span>
                     )}
                     {['write', 'admin'].includes(String((note as any).sharedPermission || '')) && (

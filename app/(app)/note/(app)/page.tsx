@@ -30,6 +30,13 @@ import {
   Info
 } from 'lucide-react';
 import { getSharedNotes } from '@/lib/appwrite';
+import { useDataNexus } from '@/context/DataNexusContext';
+import { useAuth } from '@/context/auth/AuthContext';
+import {
+  getSessionSharedNotes,
+  setSessionSharedNotes,
+  sharedNotesCacheKey,
+} from '@/lib/note/shared-notes-cache';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import CreateNoteForm from './notes/CreateNoteForm';
 import { useSidebar } from '@/components/ui/SidebarContext';
@@ -40,7 +47,6 @@ import { NotesErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PinnedNotesSidebar } from '@/components/ui/PinnedNotesSidebar';
 
 // Client-side persistence cache to resist reload flicker
-let cachedSharedNotes: any[] | null = null;
 let cachedProjects: any[] | null = null;
 
 // Lightweight custom hook to track responsive breakpoint without MUI
@@ -79,6 +85,8 @@ export default function NotesPage() {
   const openNoteIdParam = searchParams.get('openNoteId');
 
   const isDesktop = useIsDesktop();
+  const { user } = useAuth();
+  const { setCachedData } = useDataNexus();
 
   // Collapsible accordion state for the desktop right pane
   const [sharedNotesOpen, setSharedNotesOpen] = useState(true);
@@ -89,8 +97,8 @@ export default function NotesPage() {
   const [projectsLoading, setProjectsLoading] = useState(() => !cachedProjects);
 
   // Shared Notes data state
-  const [sharedNotes, setSharedNotes] = useState<any[]>(() => cachedSharedNotes || []);
-  const [sharedNotesLoading, setSharedNotesLoading] = useState(() => !cachedSharedNotes);
+  const [sharedNotes, setSharedNotes] = useState<any[]>(() => getSessionSharedNotes() || []);
+  const [sharedNotesLoading, setSharedNotesLoading] = useState(() => !getSessionSharedNotes());
 
   useEffect(() => {
     let mounted = true;
@@ -115,8 +123,12 @@ export default function NotesPage() {
         getSharedNotes()
           .then(res => {
             if (mounted) {
-              cachedSharedNotes = res.rows || [];
-              setSharedNotes(res.rows || []);
+              const rows = res.rows || [];
+              setSessionSharedNotes(rows);
+              if (user?.$id) {
+                void setCachedData(sharedNotesCacheKey(user.$id), rows);
+              }
+              setSharedNotes(rows);
               setSharedNotesLoading(false);
             }
           })
@@ -134,7 +146,7 @@ export default function NotesPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [setCachedData, user?.$id]);
 
   const visibleNotes = useMemo(() => {
     const safeNotes = Array.isArray(allNotes) ? allNotes : [];
