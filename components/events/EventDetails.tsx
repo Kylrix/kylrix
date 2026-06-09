@@ -8,6 +8,7 @@ import { events as eventApi } from '@/lib/kylrixflow';
 import { generateEventPattern } from '@/utils/patternGenerator';
 import { Event as AppwriteEvent } from '@/types/kylrixflow';
 import { Event as LocalEvent } from '@/types';
+import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useSection } from '@/context/SectionContext';
@@ -37,6 +38,7 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
   const [event, setEvent] = useState<AppwriteEvent | LocalEvent | null>(initialData || null);
   const [loading, setLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
+  const [organizer, setOrganizer] = useState<any>(null);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -58,6 +60,25 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
         fetchEvent();
     }
   }, [eventId, initialData]);
+
+  useEffect(() => {
+    if (event) {
+      const fetchOrganizer = async () => {
+        const userId = (event as any).userId || (event as any).creatorId;
+        if (!userId) return;
+        try {
+          const { getGlobalProfileStatusSecure } = await import('@/lib/actions/secure-ops');
+          const res = await getGlobalProfileStatusSecure(userId);
+          if (res?.exists) {
+            setOrganizer(res.profile);
+          }
+        } catch (err) {
+          console.error('Failed to fetch organizer profile', err);
+        }
+      };
+      fetchOrganizer();
+    }
+  }, [event]);
 
   // Helper to normalize event data access
   const getId = (evt: any) => evt?.$id || evt?.id;
@@ -185,6 +206,29 @@ export default function EventDetails({ eventId, initialData, onBack, onClose }: 
             </div>
           </div>
         </div>
+
+        {/* Organizer */}
+        {((event as any).userId || (event as any).creatorId) && (
+          <div className="flex flex-col gap-2">
+            <span className="text-[10px] font-mono font-bold tracking-wider text-[#8E8A86] uppercase">Organizer</span>
+            <div className="p-3 rounded-[20px] bg-[#0A0908] border border-white/[0.04] flex items-center gap-3">
+              <IdentityAvatar 
+                userId={(event as any).userId || (event as any).creatorId} 
+                size={36} 
+              />
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-bold text-white truncate">
+                  {organizer?.displayName || organizer?.username || 'Organizer'}
+                </span>
+                {organizer?.username && (
+                  <span className="text-[10px] text-[#8E8A86] truncate">
+                    @{organizer.username.replace(/^@/, '')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Description */}
         <div className="flex flex-col gap-2">
