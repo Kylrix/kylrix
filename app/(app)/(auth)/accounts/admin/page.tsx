@@ -198,10 +198,11 @@ function AdminDashboard() {
             </div>
           </div>
 
-          <Link href="/accounts/admin/users" passHref legacyBehavior>
-            <a className="w-full text-center py-3.5 rounded-xl bg-white/[0.03] border border-white/5 text-white hover:bg-white/[0.06] hover:border-white/10 transition-all font-bold text-xs cursor-pointer block mt-6">
-              Manage All Users
-            </a>
+          <Link
+            href="/accounts/admin/users"
+            className="w-full text-center py-3.5 rounded-xl bg-white/[0.03] border border-white/5 text-white hover:bg-white/[0.06] hover:border-white/10 transition-all font-bold text-xs cursor-pointer block mt-6"
+          >
+            Manage All Users
           </Link>
         </div>
       </div>

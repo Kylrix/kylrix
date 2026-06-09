@@ -38,6 +38,19 @@ const parsePositiveInteger = (value: unknown, fallback = 1) => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+async function buildAlreadyClaimedCouponResponse(userId: string, coupon: any, metadata: Record<string, any>) {
+  const ent = await getVerifiedProEntitlementForUser(userId).catch(() => null);
+  return {
+    ok: true,
+    claimed: true,
+    alreadyClaimed: true,
+    couponId: coupon.$id,
+    subscriptionId: metadata.subscriptionId || null,
+    currentPeriodEnd: ent?.expiresAt || metadata.currentPeriodEnd || null,
+    message: 'This coupon is already applied to your account.',
+  };
+}
+
 /**
  * Resolves a secure billing country code by combining Appwrite session locale/logs,
  * Edge header fallbacks, and a threshold-gated historical account IP consensus check.
@@ -364,6 +377,16 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     if (!coupon) return { ok: true, claimed: false, message: 'No active coupon found' };
   }
 
+  const metadata = parseMetadata(coupon.metadata);
+  const claimedBy = String(metadata.claimedBy || '').trim();
+  const claimState = String(metadata.claimState || '').trim();
+  const sameUserAlreadyApplied =
+    claimedBy === user.$id && (claimState === 'applied' || Boolean(metadata.appliedAt));
+
+  if (sameUserAlreadyApplied) {
+    return buildAlreadyClaimedCouponResponse(user.$id, coupon, metadata);
+  }
+
   const existingStatus = String(coupon.status || '').toLowerCase();
   if (['depleted', 'revoked', 'expired'].includes(existingStatus)) throw new Error('Coupon is no longer valid');
   
@@ -374,14 +397,12 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     throw new Error('Coupon redemption limit reached');
   }
 
-  const metadata = parseMetadata(coupon.metadata);
   const planId = String(metadata.planId || 'PRO_MONTH');
   const months = parsePositiveInteger(metadata.months || 1, 1);
   const payerUserId = String(coupon.createdBy || '');
   const payerName = String(metadata.payerName || '');
   const giftMessage = String(metadata.giftMessage || coupon.note || 'Your gift subscription has been claimed.');
   const targetUserId = String(coupon.targetUserId || '').trim();
-  const claimedBy = String(metadata.claimedBy || '').trim();
   const discountPercent = Number(coupon.discountPercent);
   
   if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) throw new Error('Invalid coupon discount');
@@ -499,6 +520,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     subscriptionId: subscription.$id,
     currentPeriodEnd: currentPeriodEnd.toISOString(),
     payerUserId: payerUserId || null,
+    message: 'Coupon applied successfully.',
   };
 }
 

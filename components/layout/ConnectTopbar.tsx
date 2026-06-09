@@ -1814,7 +1814,7 @@ export default function ConnectTopbar({
             {/* Left: App Logo / Menu Trigger */}
             <Box sx={{ display: 'flex', justifyContent: 'flex-start' }}>
               <Box onClick={user ? openAppMenu : () => openUnified('login')} sx={{ cursor: 'pointer', flexShrink: 0 }}>
-                <Logo app={activeApp} size={32} variant={isDesktop ? 'full' : 'icon'} />
+                <Logo app={activeApp} size={32} variant="full" />
               </Box>
             </Box>
 

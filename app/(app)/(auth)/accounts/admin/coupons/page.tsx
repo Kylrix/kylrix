@@ -451,10 +451,11 @@ export default function AdminCouponsPage() {
                     <Copy size={14} />
                     <span>Copy Link</span>
                   </button>
-                  <Link href={`/accounts/coupon/${coupon.$id}`} passHref legacyBehavior>
-                    <a className="px-4 py-2.5 rounded-full text-xs font-black text-[#6366F1] hover:text-[#5254E8] transition-colors cursor-pointer">
-                      Open Coupon Page
-                    </a>
+                  <Link
+                    href={`/accounts/coupon/${coupon.$id}`}
+                    className="px-4 py-2.5 rounded-full text-xs font-black text-[#6366F1] hover:text-[#5254E8] transition-colors cursor-pointer"
+                  >
+                    Open Coupon Page
                   </Link>
                   {String(coupon.status || 'active') !== 'revoked' && (
                     <button

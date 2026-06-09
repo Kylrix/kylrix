@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, use } from 'react';
+import { useEffect, useMemo, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography, alpha } from '@/lib/mui-tailwind/material';
 import { CheckCircle2, Loader2, ShieldCheck, Ticket } from 'lucide-react';
@@ -11,6 +11,7 @@ import { account } from '@/lib/appwrite/client';
 type CouponClaimResponse = {
   ok?: boolean;
   claimed?: boolean;
+  alreadyClaimed?: boolean;
   requiresPayment?: boolean;
   couponId?: string;
   discountPercent?: number;
@@ -29,6 +30,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
   const [state, setState] = useState<'loading' | 'ready' | 'claimed' | 'error'>('loading');
   const [message, setMessage] = useState<string>('Resolving coupon...');
   const [coupon, setCoupon] = useState<CouponClaimResponse | null>(null);
+  const claimStartedRef = useRef(false);
 
   useEffect(() => {
     if (isLoading) return;
@@ -39,6 +41,9 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
       router.push(url.toString());
       return;
     }
+
+    if (claimStartedRef.current) return;
+    claimStartedRef.current = true;
 
     const run = async () => {
       try {
@@ -57,6 +62,12 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
           return;
         }
 
+        if (data.claimed === false) {
+          setState('error');
+          setMessage(data.message || 'No active coupon found for this account.');
+          return;
+        }
+
         setState('claimed');
         setMessage(data.message || 'Coupon applied successfully.');
         const successUrl = new URL('/accounts/pro/success', window.location.origin);
@@ -68,7 +79,7 @@ export default function CouponLandingPage(props: { params: Promise<{ id: string 
       }
     };
 
-    run();
+    void run();
   }, [couponId, isLoading, user, router]);
 
   return (

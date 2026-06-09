@@ -113,7 +113,7 @@ const Logo: React.FC<LogoProps> = ({
       {WireframeCube}
       
       {variant === 'full' && (
-        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+        <Box className="hidden sm:block">
           <Typography sx={{ 
             fontWeight: 900, 
             letterSpacing: '-0.04em', 
