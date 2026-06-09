@@ -56,6 +56,73 @@ const GenericCacheSchema = {
     required: ['id', 'data', 'timestamp']
 };
 
+const TagSchema = {
+    version: 0,
+    primaryKey: 'id',
+    type: 'object',
+    properties: {
+        id: { type: 'string', maxLength: 100 },
+        name: { type: 'string' },
+        color: { type: 'string' },
+        userId: { type: 'string' },
+        timestamp: { type: 'number' }
+    },
+    required: ['id', 'name', 'userId']
+};
+
+const TaskSchema = {
+    version: 0,
+    primaryKey: 'id',
+    type: 'object',
+    properties: {
+        id: { type: 'string', maxLength: 100 },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        status: { type: 'string' },
+        priority: { type: 'string' },
+        userId: { type: 'string' },
+        projectId: { type: 'string' },
+        labels: { type: 'array', items: { type: 'string' } },
+        updatedAt: { type: 'string', format: 'date-time' },
+        _deleted: { type: 'boolean' }
+    },
+    required: ['id', 'title', 'userId']
+};
+
+const FormSchema = {
+    version: 0,
+    primaryKey: 'id',
+    type: 'object',
+    properties: {
+        id: { type: 'string', maxLength: 100 },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        schema: { type: 'string' },
+        status: { type: 'string' },
+        userId: { type: 'string' },
+        isPublic: { type: 'boolean' },
+        updatedAt: { type: 'string', format: 'date-time' }
+    },
+    required: ['id', 'title', 'userId']
+};
+
+const EventSchema = {
+    version: 0,
+    primaryKey: 'id',
+    type: 'object',
+    properties: {
+        id: { type: 'string', maxLength: 100 },
+        title: { type: 'string' },
+        startTime: { type: 'string' },
+        endTime: { type: 'string' },
+        location: { type: 'string' },
+        userId: { type: 'string' },
+        isPublic: { type: 'boolean' },
+        updatedAt: { type: 'string', format: 'date-time' }
+    },
+    required: ['id', 'title', 'startTime', 'userId']
+};
+
 let dbPromise: Promise<RxDatabase> | null = null;
 
 export async function getRxDB(): Promise<RxDatabase> {
@@ -73,6 +140,10 @@ export async function getRxDB(): Promise<RxDatabase> {
 
         await db.addCollections({
             notes: { schema: NoteSchema },
+            tags: { schema: TagSchema },
+            tasks: { schema: TaskSchema },
+            forms: { schema: FormSchema },
+            events: { schema: EventSchema },
             cache: { schema: GenericCacheSchema }
         });
 
