@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth/AuthContext';
 import { hasAuthSessionHint } from '@/lib/appwrite/client';
 import { EcosystemProviders } from './EcosystemProviders';
+import { AppDynamicSidebarPortal } from '@/components/ui/AppDynamicSidebarPortal';
 
 export default function AppLayout({
   children,
@@ -76,7 +77,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen bg-[#0A0908]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" /></div>}>
-      <EcosystemProviders>{children}</EcosystemProviders>
+      <EcosystemProviders>
+        {children}
+        <AppDynamicSidebarPortal />
+      </EcosystemProviders>
     </Suspense>
   );
 }

@@ -233,7 +233,7 @@ export default function GlobalShell({ children }: { children: ReactNode }) {
       {unifiedDrawerActive !== 'navbar' && <UnifiedBottomDrawer />}
       {showProUpgrade && <ProUpgradeDrawer />}
       {taskDialogOpen && <TaskDialog />}
-      {isDynamicSidebarOpen && <DynamicSidebar />}
+      {isDynamicSidebarOpen && !isAppRoute && <DynamicSidebar />}
       {secondarySidebar.isOpen && <RightSidebar />}
       {isAgenticDrawerOpen && <AgenticDrawer />}
     <Suspense fallback={null}>

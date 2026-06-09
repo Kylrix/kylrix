@@ -44,10 +44,6 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
 
   const openSidebar = useCallback(
     (newContent: ReactNode, key: string | null = null, newOptions: DynamicSidebarOptions | null = null) => {
-      const state = stateRef.current;
-      if (state.isOpen && key && state.activeContentKey === key) {
-        return;
-      }
       setContent(newContent);
       setActiveContentKey(key);
       setOptions(newOptions);
@@ -56,7 +52,7 @@ export function DynamicSidebarProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('kylrixnote_dynamic_sidebar_key', key);
       }
     },
-    [] // Stable identity
+    [],
   );
 
   const closeSidebar = useCallback(() => {
