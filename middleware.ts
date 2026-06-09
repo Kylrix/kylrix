@@ -64,17 +64,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Instant Route Forwards
-  if (pathname === '/note' || pathname === '/note/') {
-    return NextResponse.redirect(new URL('/note/notes', request.url));
+  // Instant Route Forwards (Legacy -> Canonical)
+  if (pathname === '/note/notes' || pathname === '/note/notes/') {
+    return NextResponse.redirect(new URL('/note', request.url));
   }
   
-  if (pathname === '/flow' || pathname === '/flow/') {
-    return NextResponse.redirect(new URL('/flow/tasks', request.url));
+  if (pathname === '/flow/tasks' || pathname === '/flow/tasks/' || pathname === '/flow/goals' || pathname === '/flow/goals/') {
+    return NextResponse.redirect(new URL('/flow', request.url));
   }
 
-  if (pathname === '/vault' || pathname === '/vault/') {
-    return NextResponse.redirect(new URL('/vault/dashboard', request.url));
+  if (pathname === '/vault/dashboard' || pathname === '/vault/dashboard/') {
+    return NextResponse.redirect(new URL('/vault', request.url));
   }
 
   // ─── REDIRECT LOOP DEFENSE ────────────────────────────────────────────

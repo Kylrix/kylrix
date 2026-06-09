@@ -33,9 +33,9 @@ export function getEcosystemUrl(subdomain: string) {
   // Map subdomain to unified app paths
   const appPaths: Record<string, string> = {
     'accounts': '/accounts',
-    'note': '/note/notes',
-    'vault': '/vault/dashboard',
-    'flow': '/flow/tasks',
+    'note': '/note',
+    'vault': '/vault',
+    'flow': '/flow',
     'connect': '/connect',
     'id': '/accounts',
     'kylrix': '/'
