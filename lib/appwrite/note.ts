@@ -119,35 +119,10 @@ async function notifyNoteShare(params: {
 }
 
 
-// Simple in-memory cache for query results with TTL
-const queryCache = new Map<string, { data: any; expiresAt: number }>();
+import { fetchOptimized, invalidateCache } from '@/lib/ecosystem/nexus-fetcher';
 
-function getCacheKey(prefix: string, params: any): string {
-  return `${prefix}:${JSON.stringify(params)}`;
-}
-
-function isCacheExpired(expiresAt: number): boolean {
-  return Date.now() > expiresAt;
-}
-
-function getCached<T>(key: string): T | null {
-  const entry = queryCache.get(key);
-  if (!entry) return null;
-  if (isCacheExpired(entry.expiresAt)) {
-    queryCache.delete(key);
-    return null;
-  }
-  return entry.data as T;
-}
-
-function setCached<T>(key: string, data: T, ttlMs: number = 5 * 60 * 1000): void {
-  queryCache.set(key, { data, expiresAt: Date.now() + ttlMs });
-}
-
-/** Single-tab SPA: coalesce + short TTL client cache for note rows (tags pivot included). Server/RSC bypasses cache. */
-const NOTE_ROW_CLIENT_TTL_MS = 12 * 60 * 1000;
-const noteRowClientCache = new Map<string, { payload: Notes; at: number }>();
-const noteRowClientInflight = new Map<string, Promise<Notes>>();
+const LIST_TTL = 1000 * 60 * 15; // 15 mins
+const DOC_TTL = 1000 * 60 * 60;  // 1 hour
 
 function cloneNoteForCacheReturn(doc: Notes): Notes {
   const d = doc as any;
