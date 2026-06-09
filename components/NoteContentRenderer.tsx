@@ -24,16 +24,6 @@ export function NoteContentRenderer({
   format = 'text',
   emptyFallback = <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.3)' }}>This note is empty.</Typography>,
 }: NoteContentRendererProps) {
-  if (format === 'doodle') {
-    return (
-      <Box>
-        <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.4)' }}>
-          Sketch notes are no longer supported. Create a new text note to continue.
-        </Typography>
-      </Box>
-    );
-  }
-
   const parts = useMemo(() => {
     const trimmed = content?.trim();
     if (!trimmed) return [];
@@ -41,6 +31,16 @@ export function NoteContentRenderer({
     const voiceNoteRegex = /(\[voice:[a-zA-Z0-9_-]+\])/g;
     return trimmed.split(voiceNoteRegex);
   }, [content]);
+
+  if (format === 'doodle') {
+    return (
+      <Box>
+        <Typography variant="body2" sx={{ fontStyle: 'italic', color: 'rgba(255, 255, 255, 0.3)' }}>
+          Sketch notes are no longer supported. Create a new text note to continue.
+        </Typography>
+      </Box>
+    );
+  }
 
   if (parts.length === 0) {
     return <Box>{emptyFallback}</Box>;
