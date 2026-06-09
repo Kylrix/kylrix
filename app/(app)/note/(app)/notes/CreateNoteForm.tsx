@@ -7,7 +7,6 @@ import {
   Mic, 
   Square, 
   FileText, 
-  PenTool, 
   Lock, 
   Globe, 
   ChevronUp, 
@@ -23,7 +22,6 @@ import { useToast } from '@/components/ui/Toast';
 import { getNote, getNotePublicState, toggleNoteVisibility, getAllTags } from '@/lib/appwrite';
 import { createNote, updateNote } from '@/lib/actions/client-ops';
 import type { Notes } from '@/types/appwrite';
-import DoodleCanvas from '@/components/DoodleCanvas';
 import { useNotes } from '@/context/NotesContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -39,7 +37,6 @@ interface CreateNoteFormProps {
     content?: string;
     tags?: string[];
   };
-  initialFormat?: 'text' | 'doodle';
   noteKind?: 'note' | 'project';
   noteId?: string;
   onClose?: () => void;
@@ -52,7 +49,6 @@ const normalizeTags = (tags: string[] = []) => Array.from(new Set(tags.map((tag)
 export default function CreateNoteForm({
   onNoteCreated,
   initialContent,
-  initialFormat = 'text',
   noteKind = 'note',
   noteId,
   onClose,
@@ -70,14 +66,12 @@ export default function CreateNoteForm({
 
   const [title, setTitle] = useState(initialContent?.title || '');
   const [content, setContent] = useState(initialContent?.content || '');
-  const [format, setFormat] = useState<'text' | 'doodle'>(initialFormat);
   const [tags, setTags] = useState<string[]>(normalizeTags(initialContent?.tags || []));
   const [isPublic, setIsPublic] = useState(false);
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
   const [currentTag, setCurrentTag] = useState('');
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [showDoodleEditor, setShowDoodleEditor] = useState(initialFormat === 'doodle');
   const [resolvedNoteId, setResolvedNoteId] = useState<string | undefined>(noteId);
   const [persistedIsPublic, setPersistedIsPublic] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -236,8 +230,6 @@ export default function CreateNoteForm({
         if (draft.title) setTitle(draft.title);
         if (draft.content) setContent(draft.content);
         if (draft.tags) setTags(draft.tags);
-        if (draft.format) setFormat(draft.format);
-        if (draft.format === 'doodle') setShowDoodleEditor(true);
         setIsTitleManuallyEdited(draft.isTitleManuallyEdited || false);
       } catch (e) {
         console.error('Failed to parse draft', e);

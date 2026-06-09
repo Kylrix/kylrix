@@ -29,7 +29,6 @@ import { useDynamicSidebar } from './ui/DynamicSidebar';
 import { NoteDetailSidebar } from './ui/NoteDetailSidebar';
 import { useNotes } from '@/context/NotesContext';
 import type { Notes } from '@/types/appwrite';
-import { DoodleStroke } from '@/types/notes';
 import { sidebarIgnoreProps } from '@/constants/sidebar';
 import { ShareNoteDrawer } from './overlays/ShareNoteDrawer';
 import { DeleteNoteDrawer } from './overlays/DeleteNoteDrawer';
@@ -68,7 +67,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const { promptSudo } = useSudo();
   const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError, showInfo } = useToast();
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -223,38 +221,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     handleRotate();
   };
 
-  // Render doodle preview on canvas
-  useEffect(() => {
-    if (note.format !== 'doodle' || !note.content || !canvasRef.current) return;
-
-    try {
-      const strokes: DoodleStroke[] = JSON.parse(note.content);
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      strokes.forEach((stroke) => {
-        if (stroke.points.length < 2) return;
-        ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.size;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = stroke.opacity ?? 1;
-        ctx.beginPath();
-        ctx.moveTo(stroke.points[0][0], stroke.points[0][1]);
-        for (let i = 1; i < stroke.points.length; i++) {
-          ctx.lineTo(stroke.points[i][0], stroke.points[i][1]);
-        }
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      });
-    } catch {
-      console.error('Failed to render doodle preview');
-    }
-  }, [note.format, note.content]);
-
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
     openMenu({
@@ -349,23 +315,14 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
               {/* Summary / Content Preview */}
               <div className="text-sm text-white/50 font-medium leading-relaxed mt-2 overflow-hidden">
-                {note.format === 'doodle' ? (
-                  <div className="w-full h-[64px] rounded-xl border border-white/5 bg-white/[0.02] overflow-hidden relative">
-                    <canvas
-                      ref={canvasRef}
-                      width={300}
-                      height={200}
-                      className="w-full h-full block object-contain"
-                    />
-                  </div>
-                ) : (
-                  <p className="line-clamp-2 break-words select-text">
-                    {isEncryptedNote 
-                      ? '🔒 Encrypted note' 
+                <p className="line-clamp-2 break-words select-text">
+                  {isEncryptedNote 
+                    ? '🔒 Encrypted note' 
+                    : note.format === 'doodle'
+                      ? 'Sketch note (no longer supported)'
                       : (note.content || '').replace(/\[voice:[a-zA-Z0-9_-]+\]/g, '🎙️ Voice Note')
-                    }
-                  </p>
-                )}
+                  }
+                </p>
               </div>
             </div>
 

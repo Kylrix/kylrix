@@ -226,38 +226,6 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     handleRotate();
   };
 
-  // Render doodle preview on canvas
-  useEffect(() => {
-    if (note.format !== 'doodle' || !note.content || !canvasRef.current) return;
-
-    try {
-      const strokes: DoodleStroke[] = JSON.parse(note.content);
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      strokes.forEach((stroke) => {
-        if (stroke.points.length < 2) return;
-        ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.size;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = stroke.opacity ?? 1;
-        ctx.beginPath();
-        ctx.moveTo(stroke.points[0][0], stroke.points[0][1]);
-        for (let i = 1; i < stroke.points.length; i++) {
-          ctx.lineTo(stroke.points[i][0], stroke.points[i][1]);
-        }
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      });
-    } catch {
-      console.error('Failed to render doodle preview');
-    }
-  }, [note.format, note.content]);
-
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
