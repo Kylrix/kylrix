@@ -8,6 +8,7 @@ import UserSearch from '@/components/UserSearch';
 import { useSection } from '@/context/SectionContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 import EventDetails from './EventDetails';
 
 interface User {
@@ -47,6 +48,7 @@ const fromLocalISO = (str: string) => {
 
 export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmit }) => {
   const { setActiveDetail } = useSection();
+  const { setIsDrawerOpen } = useDrawerState();
   const [isMobile, setIsMobile] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [title, setTitle] = useState('');
@@ -69,6 +71,11 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  useEffect(() => {
+    setIsDrawerOpen(open);
+    return () => setIsDrawerOpen(false);
+  }, [open, setIsDrawerOpen]);
 
   // Load draft when dialog opens
   useEffect(() => {
@@ -203,7 +210,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[2000] flex justify-end overflow-hidden pointer-events-none">
+    <div className="fixed inset-0 z-[9999] flex justify-end overflow-hidden pointer-events-none">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto"
@@ -212,8 +219,12 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
 
       {/* Dialog Pane */}
       <div
-        className={`fixed bg-[#161412] border-[#34322F] pointer-events-auto transition-all duration-300 flex flex-col z-[2000] md:inset-y-0 md:right-0 md:left-auto md:w-full md:max-w-[600px] md:h-full md:border-l md:rounded-none inset-x-0 bottom-0 border-t rounded-t-[28px] ${
-          isMobile ? (isExpanded ? 'h-[100dvh]' : 'h-[60dvh]') : 'h-full'
+        className={`fixed bg-[#161412] border-[#34322F] pointer-events-auto transition-all duration-300 flex flex-col z-[9999] md:inset-y-0 md:top-[88px] md:right-0 md:left-auto md:w-full md:max-w-[600px] md:h-[calc(100dvh-88px)] md:border-l md:rounded-none ${
+          isMobile
+            ? isExpanded
+              ? 'inset-0 h-[100dvh] max-h-[100dvh] rounded-none border-0'
+              : 'inset-x-0 bottom-0 h-[60dvh] border-t rounded-t-[28px]'
+            : 'inset-x-0 bottom-0 h-full'
         }`}
       >
         {/* Header */}
@@ -415,7 +426,7 @@ export const EventDialog: React.FC<EventDialogProps> = ({ open, onClose, onSubmi
         </div>
 
         {/* Footer */}
-        <div className="p-6 pt-2 gap-3 flex flex-col border-t border-[#34322F] bg-[#161412] flex-shrink-0">
+        <div className="p-6 pt-2 gap-3 flex flex-col border-t border-[#34322F] bg-[#161412] flex-shrink-0 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={handleClose}
