@@ -5,7 +5,7 @@ import { useResourcePins } from '@/context/ResourcePinContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 
-export function MomentItem({ moment, isOwnPost, creatorId, creatorAvatar, momentCardSx, userAvatarUrl, handleEditMoment, handleDeletePost }: any) {
+export function MomentItem({ moment, isOwnPost, creatorId, creatorAvatar, momentCardSx, handleEditMoment, handleDeletePost }: any) {
   const { isPinned: isResourcePinned, togglePin } = useResourcePins();
   const pinned = isResourcePinned('moment', moment.$id, creatorId, moment.isPinned);
   const { openMenu } = useContextMenu();
@@ -59,7 +59,7 @@ export function MomentItem({ moment, isOwnPost, creatorId, creatorAvatar, moment
 
   return (
     <Card key={moment.$id} onContextMenu={handleRightClick} sx={{ ...momentCardSx, mb: { xs: 2.5, md: 3 } }} elevation={0}>
-        {/* The rest of the Card content goes here */}
+        {/* Card content... */}
     </Card>
   );
 }

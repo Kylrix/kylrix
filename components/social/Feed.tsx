@@ -149,7 +149,7 @@ const feedActionCountSx = {
     opacity: 0.5,
     fontSize: '0.72rem',
     lineHeight: 1,
-// eslint-disable-next-line react-hooks/rules-of-hooks
+
 } as const;
 
 const readFeedCache = (view: string): FeedCacheRecord | null => {
@@ -1880,9 +1880,9 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                 const creatorName = isOwnPost ? (user?.name || 'You') : resolvedCreator.displayName;
                 const creatorAvatar = isOwnPost ? userAvatarUrl : (moment.creator?.avatar || cachedCreator?.avatar || undefined);
 
-// eslint-disable-next-line react-hooks/rules-of-hooks
+
                 const { isPinned: isResourcePinned, togglePin } = useResourcePins();
-// eslint-disable-next-line react-hooks/rules-of-hooks
+
                 const pinned = isResourcePinned('moment', moment.$id, creatorId, moment.isPinned);
                 const { openMenu } = useContextMenu();
 
@@ -1904,7 +1904,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                   } catch (err: any) {
                     console.error('Failed to toggle pin:', err);
                   }
-// eslint-disable-next-line react-hooks/rules-of-hooks
+
                 };
 
                 const accessControlItems = useAccessControlMenuItems({
