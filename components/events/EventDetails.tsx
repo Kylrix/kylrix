@@ -9,6 +9,7 @@ import { generateEventPattern } from '@/utils/patternGenerator';
 import { Event as AppwriteEvent } from '@/types/kylrixflow';
 import { Event as LocalEvent } from '@/types';
 import { useOverlay } from '@/components/ui/OverlayContext';
+import { useSection } from '@/context/SectionContext';
 import toast from 'react-hot-toast';
 
 interface EventDetailsProps {
@@ -20,6 +21,7 @@ interface EventDetailsProps {
 export default function EventDetails({ eventId, initialData, onBack }: EventDetailsProps) {
   const { closeSecondarySidebar } = useLayout();
   const { closeOverlay } = useOverlay();
+  const { setActiveDetail } = useSection();
   
   const handleClose = () => {
     if (onBack) {
@@ -27,6 +29,7 @@ export default function EventDetails({ eventId, initialData, onBack }: EventDeta
     }
     closeOverlay();
     closeSecondarySidebar();
+    setActiveDetail(null); // Force exit global detail overlay
   };
   const [event, setEvent] = useState<AppwriteEvent | LocalEvent | null>(initialData || null);
   const [loading, setLoading] = useState(!initialData);
