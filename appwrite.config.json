@@ -4089,13 +4089,12 @@
         {
             "$id": "contacts",
             "$permissions": [
-                "read(\"users\")",
-                "read(\"any\")"
+                "read(\"users\")"
             ],
             "databaseId": "passwordManagerDb",
             "name": "Contacts",
             "enabled": true,
-            "rowSecurity": true,
+            "rowSecurity": false,
             "columns": [
                 {
                     "key": "userId",
@@ -4229,12 +4228,12 @@
         {
             "$id": "follows",
             "$permissions": [
-                "read(\"any\")"
+                "read(\"users\")"
             ],
             "databaseId": "passwordManagerDb",
             "name": "Follows",
             "enabled": true,
-            "rowSecurity": true,
+            "rowSecurity": false,
             "columns": [
                 {
                     "key": "followerId",
@@ -4422,12 +4421,12 @@
         {
             "$id": "interactions",
             "$permissions": [
-                "read(\"any\")"
+                "read(\"users\")"
             ],
             "databaseId": "passwordManagerDb",
             "name": "Interactions",
             "enabled": true,
-            "rowSecurity": true,
+            "rowSecurity": false,
             "columns": [
                 {
                     "key": "messageId",
@@ -4497,12 +4496,12 @@
         {
             "$id": "moments",
             "$permissions": [
-                "read(\"any\")"
+                "read(\"users\")"
             ],
             "databaseId": "passwordManagerDb",
             "name": "Moments",
             "enabled": true,
-            "rowSecurity": true,
+            "rowSecurity": false,
             "columns": [
                 {
                     "key": "userId",
@@ -4701,12 +4700,12 @@
         {
             "$id": "calls",
             "$permissions": [
-                "read(\"any\")"
+                "read(\"users\")"
             ],
             "databaseId": "passwordManagerDb",
             "name": "Calls",
             "enabled": true,
-            "rowSecurity": true,
+            "rowSecurity": false,
             "columns": [
                 {
                     "key": "userId",
@@ -9502,7 +9501,7 @@
             "$permissions": [
                 "read(\"users\")"
             ],
-            "fileSecurity": false,
+            "fileSecurity": true,
             "name": "Message Attachments",
             "enabled": true,
             "maximumFileSize": 100000000,
@@ -9516,7 +9515,7 @@
             "$permissions": [
                 "read(\"users\")"
             ],
-            "fileSecurity": false,
+            "fileSecurity": true,
             "name": "Voice Messages",
             "enabled": true,
             "maximumFileSize": 50000000,
@@ -9544,7 +9543,7 @@
             "$permissions": [
                 "read(\"any\")"
             ],
-            "fileSecurity": false,
+            "fileSecurity": true,
             "name": "event_covers",
             "enabled": true,
             "maximumFileSize": 5242880,
