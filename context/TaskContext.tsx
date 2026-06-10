@@ -567,6 +567,7 @@ interface TaskContextType extends TaskState {
   ecosystemTags: Tags[];
   refreshEcosystemTags: () => Promise<void>;
   getTagFilterOptions: () => string[];
+  refreshTasks: () => Promise<void>;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -704,6 +705,20 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       console.error('[TaskContext] Failed to load ecosystem tags', error);
     }
   }, []);
+
+  const refreshTasks = useCallback(async () => {
+    if (!state.userId || state.userId === 'guest') return;
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const data = await fetchBatch(state.userId, true);
+      dispatchSyncedData(data);
+      await refreshEcosystemTags();
+    } catch (error) {
+      console.error('[TaskContext] Manual refresh failed:', error);
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }, [state.userId, fetchBatch, dispatchSyncedData, refreshEcosystemTags]);
 
   const dispatchSyncedData = useCallback((data: { tasks: Task[]; projects: Project[] }) => {
     dispatch({
@@ -1528,6 +1543,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     ecosystemTags: state.ecosystemTags,
     refreshEcosystemTags,
     getTagFilterOptions,
+    refreshTasks,
   }), [
     state,
     addTask,
@@ -1567,7 +1583,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     getSelectedProject,
     state.ecosystemTags,
     refreshEcosystemTags,
-    getTagFilterOptions]);
+    getTagFilterOptions,
+    refreshTasks]);
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
 }
