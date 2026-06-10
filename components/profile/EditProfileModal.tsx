@@ -1,11 +1,71 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Camera, Trash2 } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/lib/auth';
-import { account } from '@/lib/appwrite/client';
+import { account, client } from '@/lib/appwrite/client';
+import { Storage } from 'appwrite';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
+import { secureUploadFile } from '@/lib/actions/client-ops';
+
+const storage = new Storage(client);
+const AVATAR_BUCKET_ID = 'profile_pictures';
+
+const compressImage = (file: File, maxWidth = 512, maxHeight = 512, quality = 0.7): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Canvas compression failed'));
+              return;
+            }
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error('Failed to load image for compression'));
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.readAsDataURL(file);
+  });
+};
 
 interface EditProfileModalProps {
     open: boolean;
@@ -28,6 +88,11 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // Profile picture local state
+    const [profilePic, setProfilePic] = useState<File | null>(null);
+    const [profilePicUrl, setProfilePicUrl] = useState<string | null>(null);
+    const [removePicRequested, setRemovePicRequested] = useState(false);
+
     const profileId = profile?.$id;
     useEffect(() => {
         if (profile) {
@@ -38,6 +103,20 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
             setIsGuest(profile.isGuest ?? true);
             setIsAvatar(profile.isAvatar ?? true);
             setIsContact(profile.isContact ?? true);
+            setProfilePic(null);
+            setProfilePicUrl(null);
+            setRemovePicRequested(false);
+            
+            // Set initial picture preview url if profile has avatar field
+            const targetAvatarId = profile.userId || profile.$id;
+            if (targetAvatarId) {
+                try {
+                    const url = storage.getFilePreview(AVATAR_BUCKET_ID, targetAvatarId, 160, 160);
+                    setProfilePicUrl(url.toString());
+                } catch (err) {
+                    console.warn('Failed to fetch initial profile preview:', err);
+                }
+            }
         }
     }, [profileId, open]);
 
@@ -68,6 +147,37 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
         return () => clearTimeout(timer);
     }, [username, profile?.username]);
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (!file.type.startsWith('image/')) {
+                setError('Only image files are allowed.');
+                return;
+            }
+            if (file.size > 1024 * 1024) {
+                setError('Maximum file size of 1MB exceeded.');
+                return;
+            }
+            setError('');
+            try {
+                const compressed = await compressImage(file, 512, 512, 0.7);
+                setProfilePic(compressed);
+                setProfilePicUrl(URL.createObjectURL(compressed));
+                setRemovePicRequested(false);
+            } catch (err) {
+                setProfilePic(file);
+                setProfilePicUrl(URL.createObjectURL(file));
+                setRemovePicRequested(false);
+            }
+        }
+    };
+
+    const handleRemovePic = () => {
+        setProfilePic(null);
+        setProfilePicUrl(null);
+        setRemovePicRequested(true);
+    };
+
     const handleSave = async () => {
         if (!profile?.$id) return;
         
@@ -80,6 +190,40 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
         setError('');
         try {
             const userId = profile.userId || profile.$id;
+            
+            // 1. Process profile picture delete + upload logic using userId as ID
+            if (removePicRequested) {
+                try {
+                    await storage.deleteFile(AVATAR_BUCKET_ID, userId);
+                } catch (e) {
+                    console.warn('Best effort deletion of profile photo failed:', e);
+                }
+                const currentPrefs = user?.prefs || {};
+                await account.updatePrefs({ ...currentPrefs, profilePicId: null });
+            }
+
+            if (profilePic) {
+                if (profilePic.size > 1024 * 1024) {
+                    throw new Error('Maximum file size of 1MB exceeded.');
+                }
+                // Try deleting any existing file under the userId first
+                try {
+                    await storage.deleteFile(AVATAR_BUCKET_ID, userId);
+                } catch (e) {
+                    // best effort
+                }
+                
+                const formData = new FormData();
+                formData.append('file', profilePic);
+                formData.append('bucketId', AVATAR_BUCKET_ID);
+                formData.append('fileId', userId); // Upload using userId directly
+                
+                const uploadedFile = await secureUploadFile(formData);
+                const currentPrefs = user?.prefs || {};
+                await account.updatePrefs({ ...currentPrefs, profilePicId: uploadedFile.$id });
+            }
+
+            // 2. Setup public key E2E identity if unlocked
             let publicKey: string | undefined;
             try {
                 if (ecosystemSecurity.status.isUnlocked) {
@@ -152,6 +296,39 @@ export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfi
 
                 {/* Body */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {/* Profile Picture Uploader section */}
+                    <div className="flex flex-col items-center gap-4 pb-2">
+                        <div className="relative w-24 h-24 rounded-3xl overflow-hidden border-2 border-white/10 bg-white/5 flex items-center justify-center">
+                            {profilePicUrl ? (
+                                <img src={profilePicUrl} alt="Preview" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-white/30 text-2xl font-bold">
+                                    {(displayName || username || 'U').slice(0, 1).toUpperCase()}
+                                </span>
+                            )}
+                            <label className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-all gap-1">
+                                <Camera size={18} className="text-white" />
+                                <span className="text-[10px] font-bold text-white uppercase tracking-wider">Change</span>
+                                <input hidden accept="image/*" type="file" onChange={handleFileChange} />
+                            </label>
+                        </div>
+                        <div className="flex gap-2">
+                            <label className="py-1.5 px-3 rounded-lg border border-white/8 hover:bg-white/5 text-[11px] font-bold cursor-pointer transition-all">
+                                Upload Photo
+                                <input hidden accept="image/*" type="file" onChange={handleFileChange} />
+                            </label>
+                            {profilePicUrl && (
+                                <button
+                                    onClick={handleRemovePic}
+                                    className="py-1.5 px-3 rounded-lg border border-red-500/20 hover:bg-red-500/10 text-red-400 text-[11px] font-bold flex items-center gap-1 transition-all"
+                                >
+                                    <Trash2 size={12} />
+                                    <span>Remove</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Username */}
                     <div className="space-y-2">
                         <label className="text-xs font-black tracking-wider text-white/40 uppercase">Ecosystem Handle</label>

@@ -181,7 +181,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       }
 
       // Try server hydration first for initial load or forced refresh
-      if (force || (!tokenBalance && wallets.length === 0)) {
+      if (force) {
         const serverData = await BillingCacheService.hydrateFromServer();
         if (serverData?.billing) {
             setTokenBalance({ amount: serverData.billing.balance.amount, symbol: serverData.billing.balance.symbol });
@@ -203,7 +203,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       setTierLoading(false);
       setBalanceLoading(false);
     }
-  }, [user, authLoading, tokenBalance, wallets.length, checkSubscriptionExpiry]);
+  }, [user?.$id, authLoading, checkSubscriptionExpiry]);
 
   useEffect(() => {
     void applyRegionPrefs();

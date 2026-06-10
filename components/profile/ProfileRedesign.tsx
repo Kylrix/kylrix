@@ -92,7 +92,10 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   const tabParam = searchParams.get('tab');
   const [selectedTab, setSelectedTab] = useState<TabKey>(() => normalizeTab(tabParam));
   const targetUserId = profile?.userId || profile?.$id || null;
-  const isOwnProfile = Boolean(currentUser && targetUserId && currentUser.$id === targetUserId);
+  const isOwnProfile = useMemo(() => {
+    if (!currentUser?.$id || !targetUserId) return false;
+    return currentUser.$id === targetUserId;
+  }, [currentUser?.$id, targetUserId]);
 
   const identityFlags = computeIdentityFlags({
     createdAt: profile?.$createdAt || profile?.createdAt || null,
@@ -172,13 +175,21 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
     [currentUser],
   );
 
+  const currentUserId = currentUser?.$id;
+  const myProfileId = myProfile?.$id;
+
   const loadProfile = useCallback(async () => {
     const stagedProfile = normalizedUsername ? (preloadedProfile || cachedUsernameProfile) : null;
 
     if (stagedProfile) {
       seedIdentityCache(stagedProfile);
       stageProfileView(stagedProfile as any, null);
-      setProfile(stagedProfile);
+      setProfile((prev: any) => {
+        if (prev && prev.$id === stagedProfile.$id && prev.username === stagedProfile.username && prev.displayName === stagedProfile.displayName && prev.bio === stagedProfile.bio && prev.avatar === stagedProfile.avatar) {
+          return prev;
+        }
+        return stagedProfile;
+      });
       setError(null);
       setLoading(false);
       void loadRelatedData(stagedProfile);
@@ -210,7 +221,12 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
 
       seedIdentityCache(data);
       stageProfileView(data, null);
-      setProfile(data);
+      setProfile((prev: any) => {
+        if (prev && prev.$id === data.$id && prev.username === data.username && prev.displayName === data.displayName && prev.bio === data.bio && prev.avatar === data.avatar) {
+          return prev;
+        }
+        return data;
+      });
       void loadRelatedData(data);
     } catch (loadErr) {
       console.error('Failed to load profile:', loadErr);
@@ -219,7 +235,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
     } finally {
       setLoading(false);
     }
-  }, [cachedUsernameProfile, loadRelatedData, normalizedUsername, preloadedProfile, username, currentUser, myProfile]);
+  }, [cachedUsernameProfile, loadRelatedData, normalizedUsername, preloadedProfile, username, currentUserId, myProfileId]);
 
   useEffect(() => {
     loadProfile();
