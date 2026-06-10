@@ -1,23 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-    Drawer, 
-    Button, 
-    TextField, 
-    Box, 
-    Typography,
-    CircularProgress,
-    InputAdornment,
-    useTheme,
-    useMediaQuery,
-    FormControlLabel,
-    Switch,
-    Divider,
-    Stack
-} from '@/lib/mui-tailwind/material';
-import CheckCircleIcon from '@/lib/mui-tailwind/icons';
-import ErrorIcon from '@/lib/mui-tailwind/icons';
+import { X, CheckCircle, AlertCircle } from 'lucide-react';
 import { UsersService } from '@/lib/services/users';
 import { useAuth } from '@/lib/auth';
 import { account } from '@/lib/appwrite/client';
@@ -30,9 +14,7 @@ interface EditProfileModalProps {
     onUpdate: () => void;
 }
 
-export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfileModalProps) => {
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+export function EditProfileModal({ open, onClose, profile, onUpdate }: EditProfileModalProps) {
     const { user } = useAuth();
     const [username, setUsername] = useState(profile?.username || '');
     const [bio, setBio] = useState(profile?.bio || '');
@@ -46,6 +28,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const profileId = profile?.$id;
     useEffect(() => {
         if (profile) {
             setUsername(profile.username || '');
@@ -56,7 +39,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
             setIsAvatar(profile.isAvatar ?? true);
             setIsContact(profile.isContact ?? true);
         }
-    }, [profile, open]);
+    }, [profileId, open]);
 
     useEffect(() => {
         const checkUsername = async () => {
@@ -96,7 +79,7 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
         setLoading(true);
         setError('');
         try {
-            const userId = profile.userId || profile.$id; // Fallback to $id if userId is missing for some reason
+            const userId = profile.userId || profile.$id;
             let publicKey: string | undefined;
             try {
                 if (ecosystemSecurity.status.isUnlocked) {
@@ -118,7 +101,6 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
                 isContact
             });
 
-            // Update global account name and username preference for ecosystem coherence
             try {
                 if (displayName || username) {
                     if (displayName) await account.updateName(displayName);
@@ -142,125 +124,174 @@ export const EditProfileModal = ({ open, onClose, profile, onUpdate }: EditProfi
         }
     };
 
+    if (!open) return null;
+
     return (
-        <Drawer anchor={isMobile ? 'bottom' : 'right'} open={open} onClose={onClose}
-            PaperProps={{
-                sx: {
-                    width: isMobile ? '100%' : 'min(100vw, 500px)',
-                    maxWidth: '100%',
-                    height: isMobile ? 'auto' : '100%',
-                    maxHeight: isMobile ? '92dvh' : '100%',
-                    borderRadius: isMobile ? '24px 24px 0 0' : '0',
-                    display: 'flex',
-                    flexDirection: 'column',
-                }
-            }}
-        >
-            <Box sx={{ fontWeight: 'bold', px: 3, pt: 3, pb: 2, borderBottom: '1px solid rgba(255, 255, 255, 0.05)', flexShrink: 0 }}>Edit Profile</Box>
-            <Box sx={{ px: 3, py: 2, flex: 1, overflowY: 'auto' }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
-                    <TextField
-                        label="Username"
-                        fullWidth
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-0_]/g, ''))}
-                        error={isAvailable === false && username !== profile?.username}
-                        helperText={
-                            isAvailable === false && username !== profile?.username 
-                            ? 'Username is already taken' 
-                            : 'Only letters, numbers, and underscores allowed'
-                        }
-                        InputProps={{
-                            startAdornment: <InputAdornment position="start">@</InputAdornment>,
-                            endAdornment: (
-                                <InputAdornment position="end">
-                                    {isChecking && <CircularProgress size={20} />}
-                                    {!isChecking && isAvailable === true && username !== profile?.username && <CheckCircleIcon color="success" />}
-                                    {!isChecking && isAvailable === false && username !== profile?.username && <ErrorIcon color="error" />}
-                                </InputAdornment>
-                            )
-                        }}
-                    />
+        <>
+            {/* Backdrop */}
+            <div 
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1100] transition-opacity duration-300 ease-in-out cursor-default"
+                onClick={onClose}
+            />
 
-                    <TextField
-                        label="Display Name"
-                        fullWidth
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                    />
+            {/* Custom Drawer */}
+            <div className="fixed bottom-0 left-0 right-0 max-h-[90vh] md:max-h-none md:top-0 md:right-0 md:left-auto md:w-[450px] bg-[#161412] border-t md:border-t-0 md:border-l border-white/8 rounded-t-[28px] md:rounded-t-none z-[1200] text-white flex flex-col animate-slide-up md:animate-slide-in">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-white/8">
+                    <div>
+                        <h3 className="text-white text-lg font-black tracking-tight leading-tight">Edit Profile</h3>
+                        <p className="text-white/40 text-[11px] font-bold mt-1">Configure your public handle & visibility</p>
+                    </div>
+                    <button 
+                        onClick={onClose}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white bg-white/2 hover:bg-white/5 transition-all"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
 
-                    <TextField
-                        label="Bio"
-                        fullWidth
-                        multiline
-                        rows={4}
-                        value={bio}
-                        onChange={(e) => setBio(e.target.value)}
-                        placeholder="Tell the world about yourself..."
-                    />
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {/* Username */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-black tracking-wider text-white/40 uppercase">Ecosystem Handle</label>
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00F0FF] font-black">@</span>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                                className="w-full bg-white/4 border border-white/8 focus:border-[#00F0FF] rounded-xl pl-8 pr-12 py-3 text-sm font-semibold focus:outline-none transition-all"
+                                placeholder="handle"
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                                {isChecking && <div className="w-4 h-4 border-2 border-[#00F0FF] border-t-transparent rounded-full animate-spin" />}
+                                {!isChecking && isAvailable === true && username !== profile?.username && <CheckCircle size={16} className="text-[#10B981]" />}
+                                {!isChecking && isAvailable === false && username !== profile?.username && <AlertCircle size={16} className="text-[#EF4444]" />}
+                            </div>
+                        </div>
+                        <p className="text-[10px] font-bold text-white/40">
+                            {isAvailable === false && username !== profile?.username 
+                                ? 'Username is already taken' 
+                                : 'Only lowercase letters, numbers, and underscores allowed'}
+                        </p>
+                    </div>
 
-                    <Divider sx={{ my: 1, opacity: 0.1 }} />
+                    {/* Display Name */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-black tracking-wider text-white/40 uppercase">Display Name</label>
+                        <input
+                            type="text"
+                            value={displayName}
+                            onChange={(e) => setDisplayName(e.target.value)}
+                            className="w-full bg-white/4 border border-white/8 focus:border-[#00F0FF] rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none transition-all"
+                            placeholder="Name"
+                        />
+                    </div>
 
-                    <Typography variant="overline" sx={{ fontWeight: 800, color: 'text.secondary' }}>
-                        Privacy & Visibility
-                    </Typography>
-                    
-                    <Stack spacing={1}>
-                        <FormControlLabel
-                            control={<Switch size="small" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />}
-                            label={
-                                <Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Public Profile</Typography>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>Allow anyone to find your profile</Typography>
-                                </Box>
-                            }
+                    {/* Bio */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-black tracking-wider text-white/40 uppercase">Bio</label>
+                        <textarea
+                            value={bio}
+                            onChange={(e) => setBio(e.target.value)}
+                            rows={4}
+                            className="w-full bg-white/4 border border-white/8 focus:border-[#00F0FF] rounded-xl px-4 py-3 text-sm font-semibold focus:outline-none transition-all resize-none"
+                            placeholder="Tell the world about yourself..."
                         />
-                        <FormControlLabel
-                            control={<Switch size="small" checked={isGuest} onChange={(e) => setIsGuest(e.target.checked)} disabled={!isPublic} />}
-                            label={
-                                <Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Guest Visibility</Typography>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>Allow non-logged in users to see your profile</Typography>
-                                </Box>
-                            }
-                        />
-                        <FormControlLabel
-                            control={<Switch size="small" checked={isAvatar} onChange={(e) => setIsAvatar(e.target.checked)} />}
-                            label={
-                                <Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Show Avatar</Typography>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>Make your profile picture visible to others</Typography>
-                                </Box>
-                            }
-                        />
-                        <FormControlLabel
-                            control={<Switch size="small" checked={isContact} onChange={(e) => setIsContact(e.target.checked)} />}
-                            label={
-                                <Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 700 }}>Allow Contact</Typography>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>Allow others to send you direct messages</Typography>
-                                </Box>
-                            }
-                        />
-                    </Stack>
-                </Box>
-                {error && (
-                    <Typography color="error" variant="body2" sx={{ mt: 2 }}>
-                        {error}
-                    </Typography>
-                )}
-            </Box>
-            <Box sx={{ p: 3, display: 'flex', gap: 1, borderTop: '1px solid rgba(255, 255, 255, 0.05)', flexShrink: 0 }}>
-                <Button onClick={onClose} disabled={loading}>Cancel</Button>
-                <Button 
-                    variant="contained" 
-                    onClick={handleSave} 
-                    disabled={loading || (isAvailable === false && username !== profile?.username)}
-                    sx={{ boxShadow: 'none' }}
-                >
-                    {loading ? <CircularProgress size={24} /> : 'Save Changes'}
-                </Button>
-            </Box>
-        </Drawer>
+                    </div>
+
+                    <div className="h-px bg-white/8" />
+
+                    {/* Privacy & Visibility */}
+                    <div className="space-y-4">
+                        <h4 className="text-xs font-black tracking-wider text-[#F59E0B] uppercase">Privacy & Visibility</h4>
+                        
+                        <div className="space-y-4">
+                            {/* Public Profile */}
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-bold text-white">Public Profile</p>
+                                    <p className="text-xs text-white/40 font-semibold">Allow anyone to find your profile</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={isPublic}
+                                    onChange={(e) => setIsPublic(e.target.checked)}
+                                    className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#00F0FF] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform"
+                                />
+                            </div>
+
+                            {/* Guest Visibility */}
+                            <div className="flex items-center justify-between opacity-80">
+                                <div>
+                                    <p className="text-sm font-bold text-white">Guest Visibility</p>
+                                    <p className="text-xs text-white/40 font-semibold">Allow non-logged in users to view details</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={isGuest}
+                                    disabled={!isPublic}
+                                    onChange={(e) => setIsGuest(e.target.checked)}
+                                    className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#00F0FF] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform disabled:opacity-40 disabled:cursor-not-allowed"
+                                />
+                            </div>
+
+                            {/* Show Avatar */}
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-bold text-white">Show Avatar</p>
+                                    <p className="text-xs text-white/40 font-semibold">Make your profile picture visible</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={isAvatar}
+                                    onChange={(e) => setIsAvatar(e.target.checked)}
+                                    className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#00F0FF] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform"
+                                />
+                            </div>
+
+                            {/* Allow Contact */}
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-bold text-white">Allow Contact</p>
+                                    <p className="text-xs text-white/40 font-semibold">Allow direct messages</p>
+                                </div>
+                                <input
+                                    type="checkbox"
+                                    checked={isContact}
+                                    onChange={(e) => setIsContact(e.target.checked)}
+                                    className="w-9 h-5 bg-white/10 rounded-full appearance-none checked:bg-[#00F0FF] cursor-pointer relative transition-all before:content-[''] before:absolute before:w-4 before:h-4 before:bg-white before:rounded-full before:top-0.5 before:left-0.5 checked:before:translate-x-4 before:transition-transform"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {error && (
+                        <p className="text-xs font-bold text-[#EF4444] bg-[#EF4444]/10 border border-[#EF4444]/20 p-3 rounded-xl">
+                            {error}
+                        </p>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="p-6 border-t border-white/8 flex gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={loading}
+                        className="flex-1 py-3 px-4 rounded-xl border border-white/8 hover:bg-white/5 text-sm font-bold transition-all disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        disabled={loading || (isAvailable === false && username !== profile?.username)}
+                        className="flex-1 py-3 px-4 rounded-xl bg-[#00F0FF] hover:bg-[#33f3ff] text-black text-sm font-black transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {loading ? <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" /> : 'Save Changes'}
+                    </button>
+                </div>
+            </div>
+        </>
     );
-};
+}

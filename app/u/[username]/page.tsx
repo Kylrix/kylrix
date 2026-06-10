@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Profile } from '@/components/profile/ProfileRedesign';
-import { Box } from '@/lib/mui-tailwind/material';
 import { UsersService } from '@/lib/services/users';
 
 export async function generateMetadata({
@@ -85,11 +84,11 @@ export default async function UserProfilePage({
   const profile = await UsersService.getProfile(username);
   
   return (
-    <Box sx={{ width: '100%', pointerEvents: 'auto' }}>
+    <div className="w-full pointer-events-auto">
       <Profile 
         username={username} 
         initialProfile={profile ? JSON.parse(JSON.stringify(profile)) : null} 
       />
-    </Box>
+    </div>
   );
 }

@@ -2,48 +2,33 @@
 
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  ButtonBase,
-  Chip,
-  Container,
-  Divider,
-  Paper,
-  
-  Stack,
-  Tabs,
-  Typography,
-} from '@/lib/mui-tailwind/material';
-import {
-  BadgeCheck,
-  Edit3,
-  Flag,
+  Sparkles,
   MessageCircle,
   Repeat2,
-  Send,
-  Sparkles,
+  Edit3,
   UserPlus,
+  Send,
+  Flag,
   Users,
   RefreshCw,
+  Calendar,
+  Lock,
+  Globe
 } from 'lucide-react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { UsersService } from '@/lib/services/users';
 import { SocialService } from '@/lib/services/social';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { getCachedIdentityByUsername, seedIdentityCache, subscribeIdentityCache } from '@/lib/identity-cache';
 import { getProfileView, stageProfileView } from '@/lib/profile-handoff';
-import { IdentityAvatar, IdentityName, computeIdentityFlags } from '../common/IdentityBadge';
+import { IdentityAvatar, computeIdentityFlags } from '../common/IdentityBadge';
 import { EditProfileModal } from './EditProfileModal';
 import ReportUserDialog from './ReportUserDialog';
 import { ActorsListDrawer } from '../social/ActorsListDrawer';
 import type { Actor } from '../social/ActorsListDrawer';
 import { useTokenOps } from '@/context/TokenOpsContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
-import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { toast } from 'react-hot-toast';
 
 type TabKey = 'moments' | 'replies' | 'pulses';
@@ -52,7 +37,6 @@ interface ProfileProps {
   username: string;
   initialProfile?: any;
 }
-
 
 const TAB_KEYS: TabKey[] = ['moments', 'replies', 'pulses'];
 
@@ -73,393 +57,13 @@ const formatJoinedAt = (value?: string | null) => {
   return new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(date);
 };
 
-const getIdentityLabel = (profile: any) => {
-  if (!profile) return 'Profile';
-  return profile.displayName || profile.username || 'Anonymous';
-};
-
-const getHandle = (profile: any) => {
-  if (!profile) return '@unknown';
-  return `@${profile.username || 'unknown'}`;
-};
-
-function ProfileStatCard({
-  label,
-  value,
-  icon,
-  onClick,
-  active = false,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  onClick?: () => void;
-  active?: boolean;
-}) {
-  const card = (
-    <Paper
-      elevation={0}
-      sx={{
-        width: '100%',
-        p: 1.5,
-        borderRadius: 4,
-        border: '1px solid rgba(255,255,255,0.06)',
-        bgcolor: active ? '#1C1A18' : '#151311',
-        transition: 'transform 150ms ease-out, border-color 150ms ease-out, background-color 150ms ease-out',
-        '&:hover': {
-          borderColor: 'rgba(245, 158, 11, 0.24)',
-          bgcolor: '#1B1917',
-          transform: 'translateY(-1px)',
-        },
-      }}
-    >
-      <Stack direction="row" spacing={1.5} alignItems="center">
-        <Box
-          sx={{
-            width: 40,
-            height: 40,
-            borderRadius: 3,
-            display: 'grid',
-            placeItems: 'center',
-            bgcolor: '#1F1D1B',
-            color: '#F59E0B',
-            flexShrink: 0,
-          }}
-        >
-          {icon}
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: '1.1rem', fontWeight: 900, lineHeight: 1, color: 'var(--foreground)' }}>
-            {value}
-          </Typography>
-          <Typography sx={{ mt: 0.35, fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.48)', fontWeight: 800 }}>
-            {label}
-          </Typography>
-        </Box>
-      </Stack>
-    </Paper>
-  );
-
-  if (!onClick) return card;
-
-  return (
-    <ButtonBase
-      onClick={onClick}
-      sx={{
-        display: 'block',
-        width: '100%',
-        borderRadius: 4,
-        textAlign: 'left',
-        '&.Mui-focusVisible': {
-          outline: 'none',
-          boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.85)',
-        },
-      }}
-    >
-      {card}
-    </ButtonBase>
-  );
-}
-
-function ProfileMomentSkeleton() { return null; }
-
-function EmptyState({
-  title,
-  body,
-  actionLabel,
-  onAction,
-  icon,
-}: {
-  title: string;
-  body: string;
-  actionLabel: string;
-  onAction: () => void;
-  icon: React.ReactNode;
-}) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: { xs: 3, md: 4 },
-        borderRadius: 4,
-        border: '1px solid rgba(255,255,255,0.06)',
-        bgcolor: '#151311',
-      }}
-    >
-      <Stack spacing={2} alignItems="flex-start">
-        <Box
-          sx={{
-            width: 48,
-            height: 48,
-            borderRadius: 3,
-            display: 'grid',
-            placeItems: 'center',
-            bgcolor: '#1F1D1B',
-            color: '#F59E0B',
-          }}
-        >
-          {icon}
-        </Box>
-        <Box>
-          <Typography sx={{ fontSize: '1rem', fontWeight: 900, color: 'var(--foreground)' }}>{title}</Typography>
-          <Typography sx={{ mt: 0.5, color: 'rgba(255,255,255,0.64)', lineHeight: 1.7 }}>{body}</Typography>
-        </Box>
-        <Button
-          variant="contained"
-          onClick={onAction}
-          sx={{
-            bgcolor: '#F59E0B',
-            color: '#0A0908',
-            fontWeight: 800,
-            borderRadius: 3,
-            px: 2.25,
-            textTransform: 'none',
-            '&:hover': { bgcolor: '#DBA400' },
-          }}
-        >
-          {actionLabel}
-        </Button>
-      </Stack>
-    </Paper>
-  );
-}
-
-function MomentCard({
-  moment,
-  onOpen,
-}: {
-  moment: any;
-  onOpen: () => void;
-}) {
-  const type = moment?.metadata?.type || 'post';
-  const source = moment?.sourceMoment || null;
-  const sourceIdentity = source?.creator || {};
-  const sourceLabel = sourceIdentity.displayName || sourceIdentity.username || source?.displayName || source?.username || 'someone';
-  const sourceHandle = `@${sourceIdentity.username || source?.username || 'unknown'}`;
-  const publishedAt = new Date(moment.$createdAt).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  });
-
-  const typeLabel = type === 'reply' ? 'Reply' : type === 'pulse' ? 'Pulse' : 'Moment';
-
-  return (
-    <ButtonBase
-      onClick={onOpen}
-      sx={{
-        display: 'block',
-        width: '100%',
-        borderRadius: 4,
-        textAlign: 'left',
-        '&.Mui-focusVisible': {
-          outline: 'none',
-          boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.85)',
-        },
-      }}
-    >
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 2.25, md: 2.75 },
-          borderRadius: 4,
-          border: '1px solid rgba(255,255,255,0.06)',
-          bgcolor: '#151311',
-          transition: 'transform 150ms ease-out, border-color 150ms ease-out, background-color 150ms ease-out',
-          '&:hover': {
-            borderColor: 'rgba(245, 158, 11, 0.24)',
-            bgcolor: '#1B1917',
-            transform: 'translateY(-1px)',
-          },
-        }}
-      >
-        <Stack spacing={1.5}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
-            <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
-              <Avatar
-                src={moment?.creator?.avatar || undefined}
-                alt={getIdentityLabel(moment?.creator)}
-                sx={{ width: 40, height: 40, borderRadius: 2 }}
-              >
-                {getIdentityLabel(moment?.creator).slice(0, 1).toUpperCase()}
-              </Avatar>
-              <Box sx={{ minWidth: 0 }}>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flexWrap: 'wrap' }}>
-                  <Typography sx={{ fontWeight: 900, color: 'var(--foreground)', lineHeight: 1.1 }}>
-                    {getIdentityLabel(moment?.creator)}
-                  </Typography>
-                  <Chip
-                    label={typeLabel}
-                    size="small"
-                    sx={{
-                      height: 24,
-                      borderRadius: 999,
-                      bgcolor: '#1F1D1B',
-                      color: '#F59E0B',
-                      fontWeight: 800,
-                      letterSpacing: '0.04em',
-                    }}
-                  />
-                </Stack>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-                  {source ? `${publishedAt} · ${sourceHandle}` : publishedAt}
-                </Typography>
-              </Box>
-            </Stack>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap', fontWeight: 700 }}>
-              Open post
-            </Typography>
-          </Stack>
-
-          <Typography sx={{ color: 'rgba(255,255,255,0.88)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-            {moment?.caption || 'No caption'}
-          </Typography>
-
-          {source && (
-            <Paper
-              elevation={0}
-              sx={{
-                p: 1.5,
-                borderRadius: 3,
-                bgcolor: '#1A1715',
-                border: '1px solid rgba(255,255,255,0.05)',
-              }}
-            >
-              <Stack spacing={0.5}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {type === 'reply' ? 'Replying to' : 'Boosted from'}
-                </Typography>
-                <Typography sx={{ fontWeight: 700, color: 'rgba(255,255,255,0.76)' }}>
-                  {sourceLabel} <Box component="span" sx={{ color: 'rgba(255,255,255,0.44)', fontWeight: 600 }}>{sourceHandle}</Box>
-                </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.62)', lineHeight: 1.7 }}>
-                  {source.caption}
-                </Typography>
-              </Stack>
-            </Paper>
-          )}
-
-          <Stack direction="row" spacing={2.5} sx={{ color: 'rgba(255,255,255,0.5)' }} flexWrap="wrap">
-            <Stack direction="row" spacing={0.75} alignItems="center">
-              <Sparkles size={14} aria-hidden="true" />
-              <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                {moment?.stats?.likes || 0}
-              </Typography>
-            </Stack>
-            <Stack direction="row" spacing={0.75} alignItems="center">
-              <MessageCircle size={14} aria-hidden="true" />
-              <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                {moment?.stats?.replies || 0}
-              </Typography>
-            </Stack>
-            <Stack direction="row" spacing={0.75} alignItems="center">
-              <Repeat2 size={14} aria-hidden="true" />
-              <Typography variant="caption" sx={{ fontWeight: 700 }}>
-                {moment?.stats?.pulses || 0}
-              </Typography>
-            </Stack>
-          </Stack>
-        </Stack>
-      </Paper>
-    </ButtonBase>
-  );
-}
-
-function FeedPanel({
-  loading,
-  error,
-  items,
-  emptyTitle,
-  emptyBody,
-  emptyActionLabel,
-  emptyIcon,
-  onEmptyAction,
-  onOpenMoment,
-}: {
-  loading: boolean;
-  error: string | null;
-  items: any[];
-  emptyTitle: string;
-  emptyBody: string;
-  emptyActionLabel: string;
-  emptyIcon: React.ReactNode;
-  onEmptyAction: () => void;
-  onOpenMoment: (momentId: string) => void;
-}) {
-  if (loading) return <></>;
-
-  if (error) {
-    return (
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 3, md: 4 },
-          borderRadius: 4,
-          border: '1px solid rgba(255,255,255,0.06)',
-          bgcolor: '#151311',
-        }}
-      >
-        <Stack spacing={2}>
-          <Alert
-            severity="error"
-            icon={<RefreshCw size={18} />}
-            sx={{
-              bgcolor: '#211714',
-              color: '#fff',
-              border: '1px solid rgba(239,68,68,0.15)',
-            }}
-          >
-            {error}
-          </Alert>
-          <Button
-            variant="contained"
-            onClick={onEmptyAction}
-            sx={{
-              alignSelf: 'flex-start',
-              bgcolor: '#F59E0B',
-              color: '#0A0908',
-              fontWeight: 800,
-              borderRadius: 3,
-              px: 2.25,
-              textTransform: 'none',
-              '&:hover': { bgcolor: '#DBA400' },
-            }}
-          >
-            Try again
-          </Button>
-        </Stack>
-      </Paper>
-    );
-  }
-
-  if (items.length === 0) {
-    return <EmptyState title={emptyTitle} body={emptyBody} actionLabel={emptyActionLabel} onAction={onEmptyAction} icon={emptyIcon} />;
-  }
-
-  return (
-    <Stack spacing={1.5}>
-      {items.map((moment) => (
-        <MomentCard key={moment.$id} moment={moment} onOpen={() => onOpenMoment(moment.$id)} />
-      ))}
-    </Stack>
-  );
-}
-
 export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   const { user: currentUser } = useAuth();
   const { profile: myProfile, refreshProfile: refreshMyProfile } = useProfile();
-
-  const currentUserRef = useRef(currentUser);
-  useEffect(() => {
-    currentUserRef.current = currentUser;
-  }, [currentUser]);
-
-  const myProfileRef = useRef(myProfile);
-  useEffect(() => {
-    myProfileRef.current = myProfile;
-  }, [myProfile]);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
   const normalizedUsername = normalizeUsername(username);
   const preloadedProfile = normalizedUsername ? getProfileView(normalizedUsername)?.profile || null : null;
   const cachedUsernameProfile = normalizedUsername ? getCachedIdentityByUsername(normalizedUsername) : null;
@@ -489,6 +93,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   const [selectedTab, setSelectedTab] = useState<TabKey>(() => normalizeTab(tabParam));
   const targetUserId = profile?.userId || profile?.$id || null;
   const isOwnProfile = Boolean(currentUser && targetUserId && currentUser.$id === targetUserId);
+
   const identityFlags = computeIdentityFlags({
     createdAt: profile?.$createdAt || profile?.createdAt || null,
     lastUsernameEdit: profile?.last_username_edit || profile?.preferences?.last_username_edit || null,
@@ -500,6 +105,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   });
 
   const joinedAt = formatJoinedAt(profile?.$createdAt || profile?.createdAt || null);
+
   const categorized = useMemo(() => {
     const postLike = moments.filter((moment) => {
       const kind = moment?.metadata?.type || 'post';
@@ -544,9 +150,10 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
       setMomentsError(null);
       try {
         const [feedRes, followStats, followingStatus] = await Promise.all([
-          SocialService.getFeed(currentUserRef.current?.$id, targetId),
+          SocialService.getFeed(currentUser?.$id, targetId),
           SocialService.getFollowStats(targetId),
-          currentUserRef.current ? SocialService.isFollowing(currentUserRef.current.$id, targetId) : Promise.resolve(false)]);
+          currentUser ? SocialService.isFollowing(currentUser.$id, targetId) : Promise.resolve(false)
+        ]);
 
         setMoments(feedRes.rows || []);
         setStats({
@@ -557,12 +164,12 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
       } catch (loadErr) {
         console.error('Failed to load profile activity:', loadErr);
         setMoments([]);
-        setMomentsError('Could not load this profile activity. Try again.');
+        setMomentsError('Could not load activity feed.');
       } finally {
         setMomentsLoading(false);
       }
     },
-    [],
+    [currentUser],
   );
 
   const loadProfile = useCallback(async () => {
@@ -587,11 +194,11 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
       let data: any = null;
       if (normalizedUsername) {
         data = await UsersService.getProfile(normalizedUsername);
-      } else if (currentUserRef.current) {
-        const synced = await UsersService.forceSyncProfileWithIdentity(currentUserRef.current);
-        data = synced || (myProfileRef.current && myProfileRef.current.userId === currentUserRef.current.$id ? myProfileRef.current : null);
+      } else if (currentUser) {
+        const synced = await UsersService.forceSyncProfileWithIdentity(currentUser);
+        data = synced || (myProfile && myProfile.userId === currentUser.$id ? myProfile : null);
         if (!data) {
-          data = await UsersService.ensureProfileForUser(currentUserRef.current);
+          data = await UsersService.ensureProfileForUser(currentUser);
         }
       }
 
@@ -603,19 +210,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
 
       seedIdentityCache(data);
       stageProfileView(data, null);
-      setProfile((prev: any) => {
-        if (
-          prev &&
-          prev.$id === data.$id &&
-          prev.username === data.username &&
-          prev.bio === data.bio &&
-          prev.displayName === data.displayName &&
-          prev.avatar === data.avatar
-        ) {
-          return prev;
-        }
-        return data;
-      });
+      setProfile(data);
       void loadRelatedData(data);
     } catch (loadErr) {
       console.error('Failed to load profile:', loadErr);
@@ -624,7 +219,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
     } finally {
       setLoading(false);
     }
-  }, [cachedUsernameProfile, loadRelatedData, normalizedUsername, preloadedProfile, username]);
+  }, [cachedUsernameProfile, loadRelatedData, normalizedUsername, preloadedProfile, username, currentUser, myProfile]);
 
   useEffect(() => {
     loadProfile();
@@ -662,50 +257,10 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
     };
   }, [normalizedUsername]);
 
-  const categorizedByTab = useMemo(
-    () => ({
-      moments: categorized.postLike,
-      replies: categorized.replies,
-      pulses: categorized.pulses,
-    }),
-    [categorized.postLike, categorized.pulses, categorized.replies],
-  );
-
-  const tabMeta = {
-    moments: {
-      title: 'Moments',
-      description: 'Original posts, updates, and longer-form thoughts.',
-      emptyTitle: 'No moments yet',
-      emptyBody: isOwnProfile ? 'Your first post, quote, or update will appear here.' : 'This profile has not shared any moments yet.',
-      emptyActionLabel: 'Explore Connect',
-      emptyIcon: <Sparkles size={20} />,
-    },
-    replies: {
-      title: 'Replies',
-      description: 'Threaded replies and back-and-forth conversation.',
-      emptyTitle: 'No replies yet',
-      emptyBody: 'Replies and thread comments from this user will land here.',
-      emptyActionLabel: 'Back to moments',
-      emptyIcon: <MessageCircle size={20} />,
-    },
-    pulses: {
-      title: 'Pulses',
-      description: 'Reposts and pulse-style boosts from this profile.',
-      emptyTitle: 'No pulses yet',
-      emptyBody: 'Boosts and repost-style pulses will appear here once this user starts sharing them.',
-      emptyActionLabel: 'Back to moments',
-      emptyIcon: <Repeat2 size={20} />,
-    },
-  } as const;
-
-  const activeTabMeta = tabMeta[selectedTab];
-  const activeTabItems = categorizedByTab[selectedTab];
-
   const handleRetry = () => setRefreshNonce((value) => value + 1);
 
   const handleFollow = async () => {
     if (!currentUser || !profile) return;
-    // Use target user's actual userId for follow logic
     const actualTargetId = profile.userId || profile.$id;
     if (!actualTargetId) return;
 
@@ -721,15 +276,11 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
         toast.success(`Following @${profile.username}`);
       }
 
-      try {
-        const newStats = await SocialService.getFollowStats(actualTargetId);
-        setStats({
-          followers: newStats.followers,
-          following: newStats.following,
-        });
-      } catch (statsErr) {
-        console.warn('Failed to refresh follow stats', statsErr);
-      }
+      const newStats = await SocialService.getFollowStats(actualTargetId);
+      setStats({
+        followers: newStats.followers,
+        following: newStats.following,
+      });
     } catch (followErr: any) {
       console.error('Follow operation failed:', followErr);
       toast.error(followErr?.message || 'Follow action failed');
@@ -756,614 +307,339 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
     setActorsList(following as unknown as Actor[]);
   };
 
-  const handleActorAction = async (actor: Actor, type: 'follow' | 'unfollow') => {
-    if (!currentUser || !targetUserId) return;
-    const actorId = actor.userId || actor.$id;
-    if (type === 'follow') {
-      await SocialService.followUser(currentUser.$id, actorId);
-    } else {
-      await SocialService.unfollowUser(currentUser.$id, actorId);
+  const handleActorAction = async (actor: Actor, action: 'follow' | 'unfollow') => {
+    if (!currentUser) return;
+    try {
+      if (action === 'follow') {
+        await SocialService.followUser(currentUser.$id, actor.userId);
+        toast.success(`Following @${actor.username}`);
+      } else {
+        await SocialService.unfollowUser(currentUser.$id, actor.userId);
+        toast.success(`Unfollowed @${actor.username}`);
+      }
+      if (targetUserId) {
+        const [statsUpdate, listUpdate] = await Promise.all([
+          SocialService.getFollowStats(targetUserId),
+          actorsTitle === 'Followers'
+            ? SocialService.getFollowers(targetUserId, currentUser.$id)
+            : SocialService.getFollowing(targetUserId, currentUser.$id),
+        ]);
+        setStats({ followers: statsUpdate.followers, following: statsUpdate.following });
+        setActorsList(listUpdate as unknown as Actor[]);
+      }
+    } catch (err) {
+      console.error('Failed to perform follow action inside list drawer:', err);
     }
-
-    setActorsList((prev) =>
-      prev.map((item) =>
-        item.$id === actor.$id || item.userId === actor.userId ? { ...item, isFollowing: type === 'follow' } : item,
-      ),
-    );
-
-    if (actorId === targetUserId) {
-      setIsFollowing(type === 'follow');
-    }
-
-    const newStats = await SocialService.getFollowStats(targetUserId);
-    setStats({
-      followers: newStats.followers,
-      following: newStats.following,
-    });
   };
 
-  const { open: openDrawer } = useUnifiedDrawer();
-
   const handleMessage = () => {
-    if (!targetUserId || !profile) return;
-    
-    // 1. Check if target user has a public key
-    if (!profile.publicKey) {
-        toast.error(`${profile.displayName || profile.username} hasn't set up secure chatting yet.`);
-        return;
-    }
-
-    // 2. Check if current user is fully set up
-    const securityStatus = ecosystemSecurity.status;
-    // We check prefs for username as it's the fastest local signal
-    const hasUsername = !!(currentUser?.prefs?.username);
-    
-    if (!securityStatus.hasMasterpass || !securityStatus.hasIdentity || !hasUsername) {
-        openDrawer('secure-chat-setup');
-        return;
-    }
-
-    router.push(`/connect/chats?userId=${targetUserId}`);
+    if (!profile?.username) return;
+    router.push(`/connect/chat/${profile.userId || profile.$id}`);
   };
 
   const handleTip = () => {
-    if (!currentUser || !profile || !targetUserId) return;
-    openWalletWithIntent({
-      mode: 'send',
-      toUser: {
-        id: String(targetUserId),
-        username: String(profile.username || ''),
-        displayName: String(profile.displayName || profile.username || 'User'),
-      },
+    if (!profile) return;
+    openWalletWithIntent?.({
+      type: 'send',
+      recipientId: profile.userId || profile.$id,
+      recipientUsername: profile.username,
+      recipientName: profile.displayName,
     });
   };
 
-  const handleRequest = () => {
-    if (!currentUser || !profile || !targetUserId) return;
-    openTokenUserSearch({
-      mode: 'request',
-      fromUserId: currentUser.$id,
-      source: 'profile_request',
-      preselectedUser: {
-        id: String(targetUserId),
-        username: String(profile.username || ''),
-        displayName: String(profile.displayName || profile.username || 'User'),
-      },
-    });
-  };
-
-  const profileCardLoading = loading && !profile;
-
-  if (profileCardLoading) {
+  if (loading) {
     return (
-      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, px: { xs: 0, md: 2 } }}>
-        <Stack spacing={2.5}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: { xs: 2.5, md: 4 },
-              borderRadius: 5,
-              bgcolor: '#151311',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3}>
-              <></>
-              <Stack spacing={1.5} sx={{ flex: 1 }}>
-                <></>
-                <></>
-                <></>
-                <></>
-                <Stack direction="row" spacing={1.25}>
-                  <></>
-                  <></>
-                  <></>
-                </Stack>
-              </Stack>
-            </Stack>
-          </Paper>
-          <></>
-        </Stack>
-      </Container>
+      <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col gap-6 animate-pulse">
+        <div className="h-48 bg-white/5 rounded-[24px] border border-white/8" />
+        <div className="flex flex-col md:flex-row gap-6">
+          <div className="w-full md:w-80 h-96 bg-white/5 rounded-[24px] border border-white/8" />
+          <div className="flex-1 h-96 bg-white/5 rounded-[24px] border border-white/8" />
+        </div>
+      </div>
     );
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
-      <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, px: { xs: 0, md: 2 } }}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 3, md: 5 },
-            borderRadius: 5,
-            bgcolor: '#151311',
-            border: '1px solid rgba(255,255,255,0.06)',
-          }}
-        >
-          <Stack spacing={2.5} alignItems="flex-start">
-            <Box
-              sx={{
-                width: 56,
-                height: 56,
-                borderRadius: 3,
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: '#1F1D1B',
-                color: '#F59E0B',
-              }}
+      <div className="max-w-3xl mx-auto px-4 py-12">
+        <div className="bg-[#151311] border border-white/8 rounded-[24px] p-8 flex flex-col gap-6">
+          <div>
+            <h2 className="text-white text-xl font-black tracking-tight">Profile Not Found</h2>
+            <p className="text-white/60 text-sm mt-1">{error || `The user @${username} does not exist.`}</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => router.push('/connect')}
+              className="py-2.5 px-6 rounded-xl bg-[#F59E0B] text-black font-extrabold text-sm transition-all hover:bg-[#DBA400]"
             >
-              <Users size={24} aria-hidden="true" />
-            </Box>
-            <Box>
-              <Typography variant="h4" sx={{ fontWeight: 900, color: 'var(--foreground)', fontFamily: 'var(--font-clash)' }}>
-                {error ? 'Profile unavailable' : 'Profile not found'}
-              </Typography>
-              <Typography sx={{ mt: 0.75, color: 'rgba(255,255,255,0.64)', lineHeight: 1.7 }}>
-                {error || `The user @${username} does not exist in this ecosystem.`}
-              </Typography>
-            </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
-              <Button
-                variant="contained"
-                onClick={() => router.push('/connect')}
-                sx={{
-                  bgcolor: '#F59E0B',
-                  color: '#0A0908',
-                  fontWeight: 800,
-                  borderRadius: 3,
-                  px: 2.25,
-                  textTransform: 'none',
-                  '&:hover': { bgcolor: '#DBA400' },
-                }}
-              >
-                Back to Connect
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={handleRetry}
-                sx={{
-                  borderColor: 'rgba(255,255,255,0.12)',
-                  color: 'rgba(255,255,255,0.82)',
-                  fontWeight: 800,
-                  borderRadius: 3,
-                  px: 2.25,
-                  textTransform: 'none',
-                }}
-              >
-                Try again
-              </Button>
-            </Stack>
-          </Stack>
-        </Paper>
-      </Container>
+              Back to Connect
+            </button>
+            <button
+              onClick={handleRetry}
+              className="py-2.5 px-6 rounded-xl border border-white/8 text-white/80 hover:text-white font-extrabold text-sm transition-all"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
+
+  const tabMeta = {
+    moments: {
+      title: 'Moments',
+      description: 'Original thoughts, quotes, and signals.',
+      emptyTitle: 'No moments yet',
+      emptyBody: isOwnProfile ? 'Your first post will show up here.' : 'Nothing shared yet.',
+      emptyIcon: <Sparkles size={20} />,
+    },
+    replies: {
+      title: 'Replies',
+      description: 'Public responses and discussions.',
+      emptyTitle: 'No replies yet',
+      emptyBody: 'Conversations and feedback will land here.',
+      emptyIcon: <MessageCircle size={20} />,
+    },
+    pulses: {
+      title: 'Pulses',
+      description: 'Pulse bursts and boosts shared by this profile.',
+      emptyTitle: 'No pulses yet',
+      emptyBody: 'Republished posts will appear here.',
+      emptyIcon: <Repeat2 size={20} />,
+    },
+  };
+
+  const categorizedByTab = useMemo(() => ({
+    moments: moments,
+    replies: [], // TODO: Add replies state if needed
+    pulses: [], // TODO: Add pulses state if needed
+  }), [moments]);
+
+  const activeTabMeta = tabMeta[selectedTab];
+  const activeTabItems = categorizedByTab[selectedTab];
 
   return (
-    <Container maxWidth="xl" sx={{ py: { xs: 2, md: 4 }, px: { xs: 0, md: 2 } }}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <Paper
-          elevation={0}
-          sx={{
-            p: { xs: 2.5, md: 4 },
-            borderRadius: 5,
-            bgcolor: '#151311',
-            border: '1px solid rgba(255,255,255,0.06)',
-          }}
-        >
-          <Stack direction={{ xs: 'column', lg: 'row' }} spacing={3} alignItems="stretch">
-            <Box sx={{ width: { lg: 320 }, flexShrink: 0 }}>
-              <Stack spacing={2.25} alignItems={{ xs: 'center', lg: 'flex-start' }}>
-                <Box sx={{ position: 'relative' }}>
-                  <IdentityAvatar
-                    fileId={profile?.isAvatar !== false ? profile?.avatar : null}
-                    alt={getIdentityLabel(profile)}
-                    fallback={getIdentityLabel(profile).slice(0, 1).toUpperCase()}
-                    verified={identityFlags.verified}
-                    pro={identityFlags.pro}
-                    size={132}
-                    verifiedSize={22}
-                    borderRadius="28px"
-                  />
-                </Box>
-                <Box sx={{ textAlign: { xs: 'center', lg: 'left' } }}>
-                  <Stack direction="row" spacing={1} alignItems="center" justifyContent={{ xs: 'center', lg: 'flex-start' }} flexWrap="wrap">
-                    <IdentityName verified={identityFlags.verified} sx={{ fontSize: '1.8rem', fontWeight: 900, letterSpacing: '-0.04em' }}>
-                      {getIdentityLabel(profile)}
-                    </IdentityName>
-                    {isOwnProfile && (
-                      <Chip
-                        label="Your profile"
-                        size="small"
-                        sx={{
-                          height: 24,
-                          borderRadius: 999,
-                          bgcolor: '#1F1D1B',
-                          color: '#F59E0B',
-                          fontWeight: 800,
-                        }}
-                      />
-                    )}
-                  </Stack>
-                  <Typography sx={{ mt: 0.5, color: 'rgba(255,255,255,0.52)', fontFamily: 'var(--font-mono)', letterSpacing: '0.02em' }}>
-                    {getHandle(profile)}
-                  </Typography>
-                  {joinedAt && (
-                    <Typography sx={{ mt: 1, color: 'rgba(255,255,255,0.42)', fontSize: '0.8rem' }}>
-                      Joined {joinedAt}
-                    </Typography>
-                  )}
-                </Box>
+    <div className="max-w-7xl mx-auto px-4 py-4 md:py-8 space-y-6">
+      {/* Premium Profile Banner Header */}
+      <div className="relative h-44 md:h-56 w-full rounded-[24px] overflow-hidden border border-white/8 bg-gradient-to-r from-[#6366F1]/40 via-[#FBBF24]/20 to-[#6366F1]/30">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent" />
+        
+        {/* Actions inside Banner */}
+        <div className="absolute top-6 right-6 flex gap-3 z-10">
+          {isOwnProfile ? (
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="py-2.5 px-5 rounded-xl bg-[#00F0FF] hover:bg-[#33f3ff] text-black font-black text-xs md:text-sm transition-all flex items-center gap-2 shadow-lg"
+            >
+              <Edit3 size={15} />
+              <span>Edit Profile</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handleFollow}
+                disabled={followLoading || !currentUser}
+                className={`py-2.5 px-5 rounded-xl text-xs md:text-sm font-black transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 ${
+                  isFollowing
+                    ? 'border border-[#00F0FF] text-[#00F0FF] hover:bg-[#00F0FF]/10'
+                    : 'bg-[#00F0FF] hover:bg-[#33f3ff] text-black'
+                }`}
+              >
+                <UserPlus size={15} />
+                <span>{followLoading ? 'Updating...' : isFollowing ? 'Following' : 'Follow'}</span>
+              </button>
+              
+              <button
+                onClick={handleTip}
+                disabled={!currentUser}
+                className="py-2.5 px-5 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/8 font-black text-xs md:text-sm transition-all disabled:opacity-50"
+              >
+                Tip
+              </button>
 
-                {profile.bio && (
-                  <Typography
-                    sx={{
-                      color: 'rgba(255,255,255,0.76)',
-                      lineHeight: 1.75,
-                      textAlign: { xs: 'center', lg: 'left' },
-                    }}
-                  >
-                    {profile.bio}
-                  </Typography>
-                )}
+              <button
+                onClick={() => setIsReportModalOpen(true)}
+                disabled={!currentUser}
+                className="p-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 hover:border-red-500/40 transition-all disabled:opacity-50"
+              >
+                <Flag size={15} />
+              </button>
+            </>
+          )}
+        </div>
 
-                <Stack direction="row" spacing={1} flexWrap="wrap" justifyContent={{ xs: 'center', lg: 'flex-start' }}>
-                  {identityFlags.verified && (
-                    <Chip
-                      label="Verified"
-                      size="small"
-                      icon={<BadgeCheck size={14} />}
-                      sx={{
-                        bgcolor: '#1F1D1B',
-                        color: '#F59E0B',
-                        borderRadius: 999,
-                        fontWeight: 800,
-                      }}
-                    />
-                  )}
-                  {identityFlags.pro && (
-                    <Chip
-                      label="Pro"
-                      size="small"
-                      sx={{
-                        bgcolor: '#1F1D1B',
-                        color: '#fff',
-                        borderRadius: 999,
-                        fontWeight: 800,
-                      }}
-                    />
-                  )}
-                </Stack>
-              </Stack>
-            </Box>
+        {/* Profile Pic Floating/Hinging */}
+        <div className="absolute bottom-6 left-6 flex items-end gap-4 md:gap-6">
+          <div className="relative translate-y-2 border-4 border-[#0F0E0D] rounded-[32px] overflow-hidden shadow-2xl bg-[#0F0E0D]">
+            <IdentityAvatar
+              fileId={profile?.isAvatar !== false ? profile?.avatar : null}
+              alt={profile?.displayName || profile?.username || 'User'}
+              fallback={(profile?.displayName || profile?.username || 'U').slice(0, 1).toUpperCase()}
+              verified={identityFlags.verified}
+              pro={identityFlags.pro}
+              size={96}
+              verifiedSize={20}
+              borderRadius="24px"
+            />
+          </div>
+        </div>
+      </div>
 
-            <Box sx={{ flex: 1 }}>
-              <Stack spacing={2.25}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} flexWrap="wrap">
-                  {isOwnProfile ? (
-                    <Button
-                      variant="contained"
-                      startIcon={<Edit3 size={16} />}
-                      onClick={() => setIsEditModalOpen(true)}
-                      sx={{
-                        bgcolor: '#F59E0B',
-                        color: '#0A0908',
-                        fontWeight: 800,
-                        borderRadius: 3,
-                        px: 2.25,
-                        py: 1,
-                        minHeight: 44,
-                        textTransform: 'none',
-                        '&:hover': { bgcolor: '#DBA400' },
-                      }}
-                    >
-                      Edit profile
-                    </Button>
-                  ) : (
-                    <>
-                      <Button
-                        variant={isFollowing ? 'outlined' : 'contained'}
-                        startIcon={<UserPlus size={16} />}
-                        onClick={handleFollow}
-                        disabled={followLoading || !currentUser}
-                        sx={{
-                          bgcolor: isFollowing ? 'transparent' : '#F59E0B',
-                          color: isFollowing ? '#F59E0B' : '#0A0908',
-                          borderColor: '#F59E0B',
-                          fontWeight: 800,
-                          borderRadius: 3,
-                          px: 2.25,
-                          py: 1,
-                          minHeight: 44,
-                          textTransform: 'none',
-                          '&:hover': {
-                            bgcolor: isFollowing ? '#1B1917' : '#DBA400',
-                            borderColor: '#F59E0B',
-                          },
-                        }}
-                      >
-                        {followLoading ? 'Updating...' : isFollowing ? 'Following' : 'Follow'}
-                      </Button>
-                      {(profile?.isContact !== false || isOwnProfile) && (
-                        <Button
-                          variant="outlined"
-                          startIcon={<Send size={16} />}
-                          onClick={handleMessage}
-                          disabled={!currentUser}
-                          sx={{
-                            borderColor: 'rgba(255,255,255,0.12)',
-                            color: 'rgba(255,255,255,0.84)',
-                            fontWeight: 800,
-                            borderRadius: 3,
-                            px: 2.25,
-                            py: 1,
-                            minHeight: 44,
-                            textTransform: 'none',
-                          }}
-                        >
-                          Message
-                        </Button>
-                      )}
-                      <Button
-                        variant="outlined"
-                        onClick={handleTip}
-                        disabled={!currentUser}
-                        sx={{
-                          borderColor: 'rgba(255,255,255,0.12)',
-                          color: 'rgba(255,255,255,0.84)',
-                          fontWeight: 800,
-                          borderRadius: 3,
-                          px: 2.25,
-                          py: 1,
-                          minHeight: 44,
-                          textTransform: 'none',
-                        }}
-                      >
-                        Tip
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<Flag size={16} />}
-                        onClick={() => setIsReportModalOpen(true)}
-                        disabled={!currentUser}
-                        sx={{
-                          borderColor: 'rgba(239,68,68,0.35)',
-                          color: 'rgba(239,68,68,0.9)',
-                          fontWeight: 800,
-                          borderRadius: 3,
-                          px: 2.25,
-                          py: 1,
-                          minHeight: 44,
-                          textTransform: 'none',
-                          '&:hover': {
-                            borderColor: 'rgba(239,68,68,0.75)',
-                            bgcolor: '#221615',
-                          },
-                        }}
-                      >
-                        Report
-                      </Button>
-                    </>
-                  )}
-                </Stack>
+      {/* Profile Info Columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Card: Core Meta details */}
+        <div className="lg:col-span-4 bg-[#151311] border border-white/8 rounded-[24px] p-6 space-y-6">
+          <div className="space-y-2">
+            <h1 className="text-white text-2xl font-black tracking-tight leading-none">
+              {profile?.displayName || profile?.username}
+            </h1>
+            <p className="text-[#00F0FF] font-mono text-sm tracking-wide">
+              @{profile?.username}
+            </p>
+          </div>
 
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(2, minmax(0, 1fr))' },
-                    gap: 1.25,
-                  }}
+          {profile?.bio && (
+            <p className="text-white/70 text-sm leading-relaxed whitespace-pre-wrap">
+              {profile.bio}
+            </p>
+          )}
+
+          <div className="space-y-3.5 border-t border-white/5 pt-4">
+            {joinedAt && (
+              <div className="flex items-center gap-3 text-white/50 text-xs">
+                <Calendar size={14} className="text-white/30" />
+                <span>Joined {joinedAt}</span>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-3 text-white/50 text-xs">
+              {profile?.isPublic !== false ? (
+                <>
+                  <Globe size={14} className="text-emerald-400" />
+                  <span>Discoverable publicly</span>
+                </>
+              ) : (
+                <>
+                  <Lock size={14} className="text-amber-400" />
+                  <span>Private profile</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Followers / Following counts */}
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <button
+              onClick={handleOpenFollowers}
+              className="bg-white/2 hover:bg-white/4 border border-white/8 rounded-xl p-3 text-left transition-all flex flex-col"
+            >
+              <span className="text-white text-lg font-black leading-none">{stats.followers}</span>
+              <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mt-1">Followers</span>
+            </button>
+            <button
+              onClick={handleOpenFollowing}
+              className="bg-white/2 hover:bg-white/4 border border-white/8 rounded-xl p-3 text-left transition-all flex flex-col"
+            >
+              <span className="text-white text-lg font-black leading-none">{stats.following}</span>
+              <span className="text-[10px] font-bold text-white/40 uppercase tracking-wider mt-1">Following</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right Card: Tabs & Feeds */}
+        <div className="lg:col-span-8 bg-[#151311] border border-white/8 rounded-[24px] p-6 space-y-6">
+          {/* Custom Navigation Tabs */}
+          <div className="flex border-b border-white/8 pb-1">
+            {TAB_KEYS.map((key) => {
+              const active = selectedTab === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => updateTab(key)}
+                  className={`flex-1 pb-4 text-center text-sm font-black transition-all relative ${
+                    active ? 'text-[#00F0FF]' : 'text-white/45 hover:text-white/80'
+                  }`}
                 >
-                  <ProfileStatCard label="Followers" value={stats.followers} icon={<Users size={16} />} onClick={handleOpenFollowers} />
-                  <ProfileStatCard label="Following" value={stats.following} icon={<Users size={16} />} onClick={handleOpenFollowing} />
-                </Box>
-
-                {!currentUser && !isOwnProfile && (
-                  <Typography sx={{ color: 'rgba(255,255,255,0.48)', fontSize: '0.85rem' }}>
-                    Sign in to follow, message, tip, or report.
-                  </Typography>
-                )}
-              </Stack>
-            </Box>
-          </Stack>
-        </Paper>
-
-        <Paper
-          elevation={0}
-          sx={{
-            borderRadius: 5,
-            bgcolor: '#151311',
-            border: '1px solid rgba(255,255,255,0.06)',
-            overflow: 'hidden',
-          }}
-        >
-          <Box sx={{ p: { xs: 2, md: 3 } }}>
-            <Stack spacing={2.5}>
-              <Stack
-                direction={{ xs: 'column', md: 'row' }}
-                spacing={1.5}
-                alignItems={{ xs: 'flex-start', md: 'center' }}
-                justifyContent="space-between"
-              >
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography
-                    variant="overline"
-                    sx={{
-                      display: 'block',
-                      color: 'rgba(255,255,255,0.42)',
-                      letterSpacing: '0.2em',
-                      fontWeight: 800,
-                    }}
-                  >
-                    Signal archive
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      mt: 0.5,
-                      fontWeight: 900,
-                      color: 'var(--foreground)',
-                      fontFamily: 'var(--font-clash)',
-                      letterSpacing: '-0.04em',
-                    }}
-                  >
-                    {activeTabMeta.title}
-                  </Typography>
-                  <Typography sx={{ mt: 0.75, color: 'rgba(255,255,255,0.64)', lineHeight: 1.7 }}>
-                    {activeTabMeta.description}
-                  </Typography>
-                </Box>
-                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                  <Chip
-                    label={`${activeTabItems.length} items`}
-                    size="small"
-                    sx={{
-                      bgcolor: '#1F1D1B',
-                      color: 'rgba(255,255,255,0.78)',
-                      fontWeight: 800,
-                      borderRadius: 999,
-                    }}
-                  />
-                  {selectedTab !== 'moments' && (
-                    <Button
-                      onClick={() => updateTab('moments')}
-                      variant="outlined"
-                      sx={{
-                        borderColor: 'rgba(255,255,255,0.12)',
-                        color: 'rgba(255,255,255,0.82)',
-                        fontWeight: 800,
-                        borderRadius: 999,
-                        px: 2,
-                        textTransform: 'none',
-                      }}
-                    >
-                      Back to moments
-                    </Button>
+                  <span className="capitalize">{key}</span>
+                  <span className="ml-1.5 px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-white/60">
+                    {tabCounts[key]}
+                  </span>
+                  {active && (
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00F0FF] rounded-full" />
                   )}
-                </Stack>
-              </Stack>
+                </button>
+              );
+            })}
+          </div>
 
-              <Box
-                sx={{
-                  p: 1,
-                  borderRadius: 4,
-                  bgcolor: '#1A1715',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                }}
+          {/* Description & Action details */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-white text-base font-black tracking-tight leading-none">
+                {activeTabMeta.title}
+              </h3>
+              <p className="text-white/40 text-xs mt-1.5">{activeTabMeta.description}</p>
+            </div>
+          </div>
+
+          <div className="h-px bg-white/5" />
+
+          {/* Feed Content Panel */}
+          {momentsLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((n) => (
+                <div key={n} className="h-28 bg-white/3 border border-white/5 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : momentsError ? (
+            <div className="p-4 border border-red-500/20 bg-red-500/5 rounded-xl flex items-center justify-between">
+              <span className="text-red-400 text-xs font-semibold">{momentsError}</span>
+              <button
+                onClick={handleRetry}
+                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white transition-all"
               >
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                  {TAB_KEYS.map((tabKey) => {
-                    const meta = tabMeta[tabKey];
-                    const active = selectedTab === tabKey;
-                    const icon =
-                      tabKey === 'moments' ? <Sparkles size={16} /> : tabKey === 'replies' ? <MessageCircle size={16} /> : <Repeat2 size={16} />;
+                <RefreshCw size={14} />
+              </button>
+            </div>
+          ) : activeTabItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center bg-white/2 border border-dashed border-white/8 rounded-[20px] p-6">
+              <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-[#00F0FF] mb-4">
+                {key === 'moments' ? <Sparkles size={22} /> : key === 'replies' ? <MessageCircle size={22} /> : <Repeat2 size={22} />}
+              </div>
+              <h4 className="text-white text-sm font-black">{activeTabMeta.emptyTitle}</h4>
+              <p className="text-white/40 text-xs mt-1.5 max-w-sm">{activeTabMeta.emptyBody}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {activeTabItems.map((moment: any) => {
+                const type = moment?.metadata?.type || 'post';
+                const publishedAt = new Date(moment.$createdAt).toLocaleDateString(undefined, {
+                  month: 'short',
+                  day: 'numeric',
+                });
+                return (
+                  <div
+                    key={moment.$id}
+                    onClick={() => router.push(`/connect/post/${moment.$id}`)}
+                    className="p-4 bg-white/2 hover:bg-white/4 border border-white/8 rounded-2xl transition-all cursor-pointer flex flex-col gap-2.5"
+                  >
+                    <div className="flex justify-between items-center text-[10px] font-bold text-white/30">
+                      <span className="uppercase tracking-wider text-[#00F0FF]">{type}</span>
+                      <span>{publishedAt}</span>
+                    </div>
+                    <p className="text-white/80 text-sm leading-relaxed">
+                      {moment.body || moment.content || 'Shared an update'}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
-                    return (
-                      <ButtonBase
-                        key={tabKey}
-                        onClick={() => updateTab(tabKey)}
-                        sx={{
-                          flex: 1,
-                          minHeight: 72,
-                          px: 2,
-                          py: 1.5,
-                          borderRadius: 3,
-                          border: active ? '1px solid rgba(245,158,11,0.22)' : '1px solid transparent',
-                          bgcolor: active ? '#201D1A' : 'transparent',
-                          textAlign: 'left',
-                          transition: 'transform 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out',
-                          '&:hover': {
-                            bgcolor: active ? '#201D1A' : '#1E1A18',
-                            transform: 'translateY(-1px)',
-                          },
-                          '&.Mui-focusVisible': {
-                            outline: 'none',
-                            boxShadow: '0 0 0 2px rgba(245, 158, 11, 0.85)',
-                          },
-                        }}
-                      >
-                        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2} sx={{ width: '100%' }}>
-                          <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
-                            <Box
-                              sx={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 2.5,
-                                display: 'grid',
-                                placeItems: 'center',
-                                bgcolor: active ? '#F59E0B' : '#1F1D1B',
-                                color: active ? '#0A0908' : '#F59E0B',
-                                flexShrink: 0,
-                              }}
-                            >
-                              {icon}
-                            </Box>
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography sx={{ fontWeight: 900, color: active ? '#fff' : 'rgba(255,255,255,0.82)', lineHeight: 1.1 }}>
-                                {meta.title}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  display: 'block',
-                                  mt: 0.25,
-                                  color: 'rgba(255,255,255,0.48)',
-                                  maxWidth: 240,
-                                }}
-                              >
-                                {meta.description}
-                              </Typography>
-                            </Box>
-                          </Stack>
-                          <Box
-                            sx={{
-                              px: 1.1,
-                              py: 0.45,
-                              borderRadius: 999,
-                              bgcolor: active ? 'rgba(245,158,11,0.12)' : '#171513',
-                              color: active ? '#F59E0B' : 'rgba(255,255,255,0.64)',
-                              fontWeight: 900,
-                              fontSize: '0.8rem',
-                              lineHeight: 1,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {tabCounts[tabKey]}
-                          </Box>
-                        </Stack>
-                      </ButtonBase>
-                    );
-                  })}
-                </Stack>
-              </Box>
-
-              <Divider sx={{ borderColor: 'rgba(255,255,255,0.06)' }} />
-
-              <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" spacing={1}>
-                <Typography sx={{ color: 'rgba(255,255,255,0.54)', fontSize: '0.85rem' }}>
-                  Showing {activeTabItems.length} {activeTabMeta.title.toLowerCase()}
-                </Typography>
-                <Typography sx={{ color: 'rgba(255,255,255,0.36)', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
-                  tab={selectedTab}
-                </Typography>
-              </Stack>
-
-              <FeedPanel
-                loading={momentsLoading}
-                error={momentsError}
-                items={activeTabItems}
-                emptyTitle={activeTabMeta.emptyTitle}
-                emptyBody={activeTabMeta.emptyBody}
-                emptyActionLabel={activeTabMeta.emptyActionLabel}
-                emptyIcon={activeTabMeta.emptyIcon}
-                onEmptyAction={() => (selectedTab === 'moments' ? router.push('/connect') : updateTab('moments'))}
-                onOpenMoment={(momentId) => router.push(`/connect/post/${momentId}`)}
-              />
-            </Stack>
-          </Box>
-        </Paper>
-      </Box>
-
+      {/* Overlays */}
       {!isOwnProfile && targetUserId && (
         <ReportUserDialog
           open={isReportModalOpen}
@@ -1398,8 +674,9 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
         }}
         onAction={handleActorAction}
       />
-    </Container>
+    </div>
   );
 }
 
 export const Profile = ProfileRedesign;
+export default Profile;
