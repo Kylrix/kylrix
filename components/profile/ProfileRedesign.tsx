@@ -33,6 +33,7 @@ import type { Actor } from '../social/ActorsListDrawer';
 import { useTokenOps } from '@/context/TokenOpsContext';
 import { useWalletOverlay } from '@/context/WalletOverlayContext';
 import { toast } from 'react-hot-toast';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 
 type TabKey = 'moments' | 'replies' | 'pulses';
 
@@ -250,6 +251,18 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   useEffect(() => {
     loadProfile();
   }, [loadProfile, refreshNonce]);
+
+  useEffect(() => {
+    if (loading || !profile || !isOwnProfile) return;
+    const isPro = currentUser ? hasPaidKylrixPlan(currentUser) : false;
+    if (!isPro) {
+      toast('Upgrade to Kylrix Pro to unlock unlimited collaboration, E2EE identity publication, and customization!', {
+        icon: '💎',
+        duration: 5000,
+        id: 'pro-upgrade-toast'
+      });
+    }
+  }, [loading, profile, isOwnProfile, currentUser]);
 
   useEffect(() => {
     if (!normalizedUsername) return;
