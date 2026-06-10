@@ -21,6 +21,8 @@
     "@scure/bip32": "^2.2.0",
     "@scure/bip39": "^2.2.0",
     "@simplewebauthn/browser": "^13.2.2",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
     "appwrite": "^21.5.0",
     "dexie": "^4.4.3",
     "dompurify": "^3.4.7",
