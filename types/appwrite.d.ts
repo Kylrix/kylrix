@@ -71,6 +71,208 @@ export enum UserResourcePinsResourceType {
     MESSAGE = "message"
 }
 
+export enum NotesStatus {
+    DRAFT = "draft",
+    PUBLISHED = "published",
+    ARCHIVED = "archived"
+}
+
+export enum ReactionsTargetType {
+    NOTE = "note",
+    COMMENT = "comment"
+}
+
+export enum SubscriptionsPlan {
+    FREE = "free",
+    PRO = "pro",
+    ORG = "org"
+}
+
+export enum SubscriptionsStatus {
+    ACTIVE = "active",
+    CANCELED = "canceled",
+    TRIALING = "trialing"
+}
+
+export enum BillingTransactionsStatus {
+    PENDING = "pending",
+    PROCESSING = "processing",
+    COMPLETED = "completed",
+    FAILED = "failed",
+    REFUNDED = "refunded"
+}
+
+export enum BillingTransactionsProvider {
+    BLOCKBEE = "blockbee",
+    STRIPE = "stripe",
+    MANUAL = "manual"
+}
+
+export enum BillingWebhookLogsProvider {
+    BLOCKBEE = "blockbee",
+    STRIPE = "stripe"
+}
+
+export enum BillingWebhookLogsStatus {
+    SUCCESS = "success",
+    SIGNATURE_FAILED = "signature_failed",
+    FAILED = "failed"
+}
+
+export enum CouponsStatus {
+    ACTIVE = "active",
+    REVOKED = "revoked",
+    DEPLETED = "depleted",
+    EXPIRED = "expired"
+}
+
+export enum UserResourcePinsResourceType {
+    NOTE = "note",
+    CREDENTIAL = "credential",
+    TOTP = "totp",
+    TASK = "task",
+    CALENDAR = "calendar",
+    EVENT = "event",
+    FORM = "form",
+    PROJECT = "project",
+    CONVERSATION = "conversation",
+    MESSAGE = "message"
+}
+
+export enum MessagesType {
+    TEXT = "text",
+    IMAGE = "image",
+    VIDEO = "video",
+    AUDIO = "audio",
+    FILE = "file",
+    CALL_SIGNAL = "call_signal",
+    SYSTEM = "system"
+}
+
+export enum ConversationsType {
+    DIRECT = "direct",
+    GROUP = "group",
+    CHANNEL = "channel",
+    BROADCAST = "broadcast",
+    COMMUNITY = "community"
+}
+
+export enum ContactsRelationship {
+    FRIEND = "friend",
+    FAMILY = "family",
+    COLLEAGUE = "colleague",
+    ACQUAINTANCE = "acquaintance",
+    BLOCKED = "blocked",
+    FAVORITE = "favorite"
+}
+
+export enum FollowsStatus {
+    PENDING = "pending",
+    ACCEPTED = "accepted",
+    BLOCKED = "blocked"
+}
+
+export enum AppActivityStatus {
+    ONLINE = "online",
+    OFFLINE = "offline",
+    AWAY = "away",
+    BUSY = "busy"
+}
+
+export enum MomentsType {
+    IMAGE = "image",
+    VIDEO = "video"
+}
+
+export enum CallsType {
+    AUDIO = "audio",
+    VIDEO = "video"
+}
+
+export enum JoinRequestsStatus {
+    PENDING = "pending",
+    ACCEPTED = "accepted",
+    REJECTED = "rejected"
+}
+
+export enum UnorganicEmailsStatus {
+    QUEUED = "queued",
+    SENDING = "sending",
+    SENT = "sent",
+    SUPPRESSED = "suppressed",
+    FAILED = "failed"
+}
+
+export enum ProjectsVisibility {
+    PRIVATE = "private",
+    SHARED = "shared",
+    PUBLIC = "public"
+}
+
+export enum ProjectsStatus {
+    ACTIVE = "active",
+    PAUSED = "paused",
+    ARCHIVED = "archived"
+}
+
+export enum CallSignalsType {
+    OFFER = "offer",
+    ANSWER = "answer",
+    CANDIDATE = "candidate"
+}
+
+export enum AccountEventsStatus {
+    ACTIVE = "active",
+    USED = "used",
+    REVOKED = "revoked",
+    APPLIED = "applied",
+    REDEEMED = "redeemed",
+    PENDING = "pending"
+}
+
+export enum FormsStatus {
+    DRAFT = "draft",
+    PUBLISHED = "published",
+    CLOSED = "closed"
+}
+
+export enum FormsVisibility {
+    PRIVATE = "private",
+    PUBLIC = "public",
+    WORKSPACE = "workspace"
+}
+
+export enum FormSubmissionsStatus {
+    UNREAD = "unread",
+    READ = "read",
+    ARCHIVED = "archived",
+    FLAGGED = "flagged"
+}
+
+export enum CollaboratorsPermission {
+    READ = "read",
+    WRITE = "write",
+    ADMIN = "admin"
+}
+
+export enum CollaboratorsStatus {
+    PENDING = "pending",
+    ACCEPTED = "accepted",
+    DECLINED = "declined",
+    REVOKED = "revoked"
+}
+
+export enum ActionThreadsStatus {
+    RUNNING = "running",
+    COMPLETED = "completed",
+    FAILED = "failed"
+}
+
+export enum NotificationsType {
+    DIRECT = "direct",
+    SUGGESTED = "suggested"
+}
+
 export enum MessagesType {
     TEXT = "text",
     IMAGE = "image",
@@ -239,6 +441,7 @@ export type Notes = Models.Row & {
     source: string | null;
     keepPermission: boolean | null;
     crdt: string | null;
+    isDeleted: boolean;
 }
 
 export type Comments = Models.Row & {
@@ -351,6 +554,7 @@ export type ResourceTags = Models.Row & {
     isPublic: boolean;
     isGuest: boolean;
     isPinned: boolean | null;
+    isDeleted: boolean;
 }
 
 export type Coupons = Models.Row & {
@@ -533,6 +737,695 @@ export type Wallets = Models.Row & {
     chain: string;
     encryptedSecret: string;
     type: string;
+}
+
+export type Notes = Models.Row & {
+    id: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    userId: string | null;
+    isPublic: boolean | null;
+    status: NotesStatus | null;
+    parentNoteId: string | null;
+    title: string | null;
+    content: string | null;
+    tags: string[] | null;
+    comments: string[] | null;
+    extensions: string[] | null;
+    collaborators: string[] | null;
+    metadata: string | null;
+    attachments: string | null;
+    format: string | null;
+    isGhost: boolean;
+    isThread: boolean;
+    isPinned: boolean | null;
+    isChat: boolean;
+    creatorId: string | null;
+    resourceId: string | null;
+    resourceType: string | null;
+    isGuest: boolean;
+    isEncrypted: boolean;
+    isPass: boolean;
+    isTask: boolean;
+    isFile: boolean;
+    isTotp: boolean;
+    isDiscussion: boolean;
+    source: string | null;
+    keepPermission: boolean | null;
+    crdt: string | null;
+    isDeleted: boolean;
+}
+
+export type Comments = Models.Row & {
+    noteId: string;
+    userId: string;
+    content: string;
+    createdAt: string;
+    parentCommentId: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    isVoice: boolean;
+    metadata: string | null;
+    isEncrypted: boolean;
+}
+
+export type Extensions = Models.Row & {
+    name: string;
+    description: string | null;
+    version: string | null;
+    authorId: string | null;
+    enabled: boolean | null;
+    settings: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type Reactions = Models.Row & {
+    targetType: ReactionsTargetType;
+    emoji: string;
+    createdAt: string;
+    targetId: string;
+    userId: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type ActivityLog = Models.Row & {
+    userId: string;
+    action: string;
+    targetType: string;
+    targetId: string;
+    timestamp: string;
+    details: string | null;
+}
+
+export type Settings = Models.Row & {
+    userId: string;
+    settings: string;
+    createdAt: string | null;
+    updatedAt: string | null;
+    mode: string | null;
+}
+
+export type Subscriptions = Models.Row & {
+    userId: string;
+    plan: SubscriptionsPlan;
+    status: SubscriptionsStatus | null;
+    currentPeriodStart: string | null;
+    currentPeriodEnd: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type BillingTransactions = Models.Row & {
+    paymentId: string;
+    userId: string;
+    plan: string;
+    amountUsd: string;
+    status: BillingTransactionsStatus;
+    provider: BillingTransactionsProvider;
+    couponId: string | null;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type BillingWebhookLogs = Models.Row & {
+    paymentId: string | null;
+    provider: BillingWebhookLogsProvider;
+    payload: string;
+    headers: string | null;
+    status: BillingWebhookLogsStatus;
+    errorMessage: string | null;
+    metadata: string | null;
+    createdAt: string | null;
+}
+
+export type Tags = Models.Row & {
+    name: string;
+    nameLower: string;
+    userId: string | null;
+    metadata: string | null;
+    isPublic: boolean;
+    isGuest: boolean;
+}
+
+export type ResourceTags = Models.Row & {
+    tagId: string;
+    tag: string;
+    resourceId: string;
+    resourceType: string;
+    userId: string | null;
+    metadata: string | null;
+    isPublic: boolean;
+    isGuest: boolean;
+    isPinned: boolean | null;
+    isDeleted: boolean;
+}
+
+export type Coupons = Models.Row & {
+    status: CouponsStatus;
+    expiresAt: string | null;
+    targetUserId: string | null;
+    createdBy: string;
+    metadata: string | null;
+    note: string | null;
+    title: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export type UserResourcePins = Models.Row & {
+    userId: string;
+    resourceType: UserResourcePinsResourceType;
+    resourceId: string;
+    pinnedAt: string | null;
+}
+
+export type Messages = Models.Row & {
+    conversationId: string;
+    senderId: string;
+    createdAt: string;
+    updatedAt: string;
+    type: MessagesType;
+    content: string | null;
+    attachments: string[] | null;
+    replyTo: string | null;
+    readBy: string[] | null;
+    isPinned: boolean | null;
+    isVoice: boolean;
+    metadata: string | null;
+}
+
+export type Conversations = Models.Row & {
+    type: ConversationsType;
+    name: string | null;
+    lastMessageId: string | null;
+    lastMessageAt: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    creatorId: string;
+    participants: string[] | null;
+    admins: string[] | null;
+    description: string | null;
+    avatarUrl: string | null;
+    avatarFileId: string | null;
+    avatar: string | null;
+    participantCount: number;
+    maxParticipants: number;
+    isEncrypted: boolean;
+    encryptionVersion: string | null;
+    encryptionKey: string | null;
+    isPinned: string[];
+    isMuted: string[];
+    isArchived: string[];
+    lastMessageText: string | null;
+    lastMessageSenderId: string | null;
+    unreadCount: string | null;
+    settings: string | null;
+    isPublic: boolean;
+    inviteLink: string | null;
+    inviteLinkExpiry: string | null;
+    category: string | null;
+    tags: string[];
+    contextType: string | null;
+    contextId: string | null;
+    inviteMeta: string | null;
+}
+
+export type Contacts = Models.Row & {
+    userId: string;
+    contactUserId: string;
+    nickname: string | null;
+    relationship: ContactsRelationship;
+    isBlocked: boolean;
+    isFavorite: boolean;
+    notes: string | null;
+    tags: string[];
+    lastInteraction: string | null;
+    addedAt: string | null;
+    updatedAt: string | null;
+}
+
+export type Follows = Models.Row & {
+    followerId: string;
+    followingId: string;
+    status: FollowsStatus;
+    isCloseFriend: boolean;
+    notificationsEnabled: boolean;
+    createdAt: string | null;
+}
+
+export type AppActivity = Models.Row & {
+    userId: string;
+    status: AppActivityStatus;
+    lastSeen: string | null;
+    customStatus: string | null;
+}
+
+export type Interactions = Models.Row & {
+    messageId: string;
+    userId: string;
+    emoji: string;
+    createdAt: string;
+}
+
+export type Moments = Models.Row & {
+    userId: string;
+    fileId: string;
+    type: MomentsType;
+    caption: string | null;
+    createdAt: string;
+    expiresAt: string;
+    momentKind: string | null;
+    sourceId: string | null;
+    searchTitle: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type Calls = Models.Row & {
+    userId: string;
+    type: CallsType;
+    title: string | null;
+    startsAt: string | null;
+    expiresAt: string | null;
+    metadata: string | null;
+    receiverId: string | null;
+    conversationId: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type Epochs = Models.Row & {
+    resourceId: string;
+    epochNumber: number;
+    createdBy: string;
+}
+
+export type ConversationMembers = Models.Row & {
+    conversationId: string;
+    userId: string;
+}
+
+export type Profiles = Models.Row & {
+    username: string;
+    displayName: string | null;
+    bio: string | null;
+    avatar: string | null;
+    walletAddress: string | null;
+    publicKey: string | null;
+    status: string;
+    preferences: string | null;
+    userId: string;
+    isPublic: boolean;
+    isGuest: boolean;
+    isAvatar: boolean;
+    isContact: boolean;
+    isOnlineVisible: boolean;
+}
+
+export type MessageReactions = Models.Row & {
+    conversationId: string;
+    messageId: string;
+    userId: string;
+    emoji: string;
+    createdAt: string;
+}
+
+export type JoinRequests = Models.Row & {
+    resourceType: string;
+    resourceId: string;
+    requesterId: string;
+    status: JoinRequestsStatus | null;
+    createdAt: string | null;
+    resolvedAt: string | null;
+    resolvedBy: string | null;
+}
+
+export type UnorganicEmails = Models.Row & {
+    eventType: string;
+    sourceApp: string;
+    actorId: string | null;
+    recipientId: string | null;
+    recipientEmail: string | null;
+    resourceType: string | null;
+    resourceId: string | null;
+    templateKey: string;
+    priority: number;
+    status: UnorganicEmailsStatus;
+    dedupeKey: string;
+    attempts: number;
+    sentAt: string | null;
+    expiresAt: string | null;
+    processedAt: string | null;
+    blockedReason: string | null;
+    metadata: string | null;
+}
+
+export type KylrixTokenLedger = Models.Row & {
+    rowType: string;
+    txId: string;
+    idempotencyKey: string;
+    eventType: string | null;
+    userId: string | null;
+    counterpartyUserId: string | null;
+    amountMicro: string | null;
+    deltaMicro: string | null;
+    balanceAfterMicro: string | null;
+    status: string;
+    sourceType: string | null;
+    sourceId: string | null;
+    metadata: string | null;
+    createdAt: string;
+    genesisAt: string | null;
+    contractVersion: string | null;
+    maxSupplyMicro: string | null;
+    totalMintedMicro: string | null;
+    totalBurnedMicro: string | null;
+    circulatingMicro: string | null;
+    rootBalanceMicro: string | null;
+    riskLevel: string | null;
+    lastActivityAt: string | null;
+    lastSpikeAt: string | null;
+    updatedAt: string | null;
+}
+
+export type EngagementViews = Models.Row & {
+    rowType: string;
+    eventId: string;
+    idempotencyKey: string;
+    appId: string;
+    contentType: string;
+    contentId: string;
+    ownerUserId: string | null;
+    viewerKind: string;
+    viewerUserId: string | null;
+    viewerTokenHash: string | null;
+    fingerprintHash: string | null;
+    ipHash: string | null;
+    uaHash: string | null;
+    conversationId: string | null;
+    messageId: string | null;
+    receiptType: string | null;
+    isCounted: boolean;
+    bucketDay: string;
+    bucketMonth: string;
+    occurredAt: string;
+    metadata: string | null;
+}
+
+export type EngagementViewRollups = Models.Row & {
+    rowType: string;
+    rollupKey: string;
+    metricType: string;
+    appId: string;
+    scopeType: string;
+    scopeId: string;
+    contentType: string | null;
+    contentId: string | null;
+    ownerUserId: string | null;
+    bucketDay: string;
+    bucketMonth: string;
+    uniqueViewCount: number;
+    totalViewCount: number;
+    receiptCount: number;
+    weightedScore: number;
+    trustScore: number;
+    lastEventAt: string | null;
+    updatedAt: string;
+    metadata: string | null;
+}
+
+export type AccountLedger = Models.Row & {
+    userId: string;
+    attentionBalance: number | null;
+    successTaxRate: number | null;
+    reputationScore: number | null;
+    lastPeakVelocity: number | null;
+    thermalCacheScore: number | null;
+    updatedAt: string | null;
+}
+
+export type SystemPulse = Models.Row & {
+    metricKey: string;
+    metricValue: number;
+}
+
+export type Projects = Models.Row & {
+    title: string;
+    summary: string | null;
+    ownerId: string;
+    visibility: ProjectsVisibility;
+    status: ProjectsStatus;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    isPinned: boolean | null;
+}
+
+export type ProjectObjects = Models.Row & {
+    projectId: string;
+    entityKind: string;
+    entityId: string;
+    role: string | null;
+    metadata: string | null;
+    createdAt: string | null;
+    updatedAt: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    isGeneral: boolean | null;
+}
+
+export type TelegramConnections = Models.Row & {
+    pair_code: string | null;
+    tg_chat_id: string | null;
+    tg_username: string | null;
+    is_verified: boolean;
+}
+
+export type SourceControl = Models.Row & {
+    projectId: string;
+    provider: string;
+    repoName: string | null;
+    ownerName: string | null;
+    accessToken: string | null;
+    enabled: boolean;
+    metadata: string | null;
+}
+
+export type CallSignals = Models.Row & {
+    callId: string;
+    senderId: string;
+    type: CallSignalsType;
+    payload: string;
+}
+
+export type AccountEvents = Models.Row & {
+    type: string;
+    userId: string;
+    actorId: string;
+    relatedUserId: string | null;
+    status: AccountEventsStatus;
+    delta: string | null;
+    expiresAt: string | null;
+    metadata: string | null;
+}
+
+export type FocusSessions = Models.Row & {
+    userId: string;
+    taskId: string | null;
+    startTime: string;
+    endTime: string | null;
+    status: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type EventGuests = Models.Row & {
+    eventId: string;
+    userId: string | null;
+    email: string | null;
+    status: string;
+    role: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type Events = Models.Row & {
+    title: string;
+    description: string | null;
+    startTime: string;
+    endTime: string;
+    location: string | null;
+    meetingUrl: string | null;
+    visibility: string;
+    status: string;
+    coverImageId: string | null;
+    recurrenceRule: string | null;
+    calendarId: string;
+    userId: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    isPinned: boolean | null;
+    source: string | null;
+    keepPermission: boolean | null;
+    isDeleted: boolean;
+}
+
+export type Calendars = Models.Row & {
+    name: string;
+    color: string;
+    isDefault: boolean;
+    userId: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    isPinned: boolean | null;
+}
+
+export type Tasks = Models.Row & {
+    title: string;
+    description: string | null;
+    status: string;
+    priority: string;
+    dueDate: string | null;
+    recurrenceRule: string | null;
+    tags: string[] | null;
+    assigneeIds: string[] | null;
+    attachmentIds: string[] | null;
+    eventId: string | null;
+    userId: string;
+    parentId: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    isPinned: boolean | null;
+    source: string | null;
+    keepPermission: boolean | null;
+    isArchived: boolean | null;
+    comments: string[] | null;
+    discussionId: string | null;
+    isDeleted: boolean;
+}
+
+export type Forms = Models.Row & {
+    userId: string;
+    title: string;
+    description: string | null;
+    schema: string;
+    settings: string | null;
+    status: FormsStatus;
+    visibility: FormsVisibility;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    isPinned: boolean | null;
+    source: string | null;
+    keepPermission: boolean | null;
+}
+
+export type FormSubmissions = Models.Row & {
+    formId: string;
+    submitterId: string | null;
+    payload: string;
+    status: FormSubmissionsStatus;
+    metadata: string | null;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+    source: string | null;
+}
+
+export type Agents = Models.Row & {
+    ownerId: string;
+    parentId: string | null;
+    publicKey: string;
+    config: string;
+    status: string;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type Collaborators = Models.Row & {
+    resourceId: string;
+    resourceType: string;
+    userId: string;
+    permission: CollaboratorsPermission;
+    inviterId: string | null;
+    status: CollaboratorsStatus;
+    invitedAt: string | null;
+    accepted: boolean | null;
+    expiresAt: string | null;
+    role: string | null;
+    metadata: string | null;
+}
+
+export type UserKeys = Models.Row & {
+    userId: string;
+    provider: string;
+    encrypted_key: string;
+    iv: string;
+    config: string | null;
+}
+
+export type ComputeBalances = Models.Row & {
+    userId: string;
+    tier: string;
+    lastResetAt: string | null;
+}
+
+export type ComputeLedger = Models.Row & {
+    userId: string;
+    timestamp: string;
+}
+
+export type ActionThreads = Models.Row & {
+    threadId: string;
+    parentThreadId: string | null;
+    niche: string;
+    app: string;
+    status: ActionThreadsStatus;
+    isPublic: boolean | null;
+    isGuest: boolean | null;
+}
+
+export type AppActivityLogs = Models.Row & {
+    userId: string;
+    niche: string;
+    app: string;
+    action: string;
+    threadId: string | null;
+    metadata: string | null;
+}
+
+export type AnonymizedTelemetry = Models.Row & {
+    niche: string;
+    app: string;
+    action: string;
+    intent: string | null;
+    threadId: string | null;
+    metadata: string | null;
+}
+
+export type Notifications = Models.Row & {
+    originatorId: string;
+    targets: string[];
+    targetPointer: string | null;
+    type: NotificationsType;
+    metadata: string | null;
+}
+
+export type Workflows = Models.Row & {
+    workflowId: string;
+    name: string;
+    description: string | null;
+    niche: string;
+    isPublic: boolean;
+    isAnonymized: boolean;
+    steps: string;
+    metadata: string | null;
+    isGuest: boolean | null;
 }
 
 export type Messages = Models.Row & {
@@ -914,6 +1807,7 @@ export type Events = Models.Row & {
     isPinned: boolean | null;
     source: string | null;
     keepPermission: boolean | null;
+    isDeleted: boolean;
 }
 
 export type Calendars = Models.Row & {
@@ -947,6 +1841,7 @@ export type Tasks = Models.Row & {
     isArchived: boolean | null;
     comments: string[] | null;
     discussionId: string | null;
+    isDeleted: boolean;
 }
 
 export type Forms = Models.Row & {
