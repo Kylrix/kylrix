@@ -731,6 +731,16 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   }, [fetchOptimized]);
 
+  const dispatchSyncedData = useCallback((data: { tasks: Task[]; projects: Project[] }) => {
+    dispatch({
+      type: 'SET_DATA',
+      payload: {
+        tasks: applyPendingPatches(data.tasks),
+        projects: data.projects,
+      },
+    });
+  }, [applyPendingPatches]);
+
   const refreshTasks = useCallback(async () => {
     if (!state.userId || state.userId === 'guest') return;
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -747,6 +757,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const invalidateTasksNexus = useCallback((uid: string) => invalidate(`f_tasks_${uid}`), [invalidate]);
   const invalidateCalendarsNexus = useCallback((uid: string) => invalidate(`f_calendars_${uid}`), [invalidate]);
 
+  const pathname = usePathname();
+  const lastPathnameRef = useRef<string | null>(null);
 
   // Initial Data Fetch & Cold Hydration
   useEffect(() => {
