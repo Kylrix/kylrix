@@ -52,7 +52,7 @@
         },
         {
             "$id": "passwordManagerDb",
-            "name": "PasswordManagerDB",
+            "name": "kylrixdb",
             "enabled": true
         },
         {
