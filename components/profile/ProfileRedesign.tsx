@@ -607,7 +607,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                 <RefreshCw size={14} />
               </button>
             </div>
-          ) : activeTabItems.length === 0 ? (
+          ) : (activeTabItems || []).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center bg-white/2 border border-dashed border-white/8 rounded-[20px] p-6">
               <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-[#00F0FF] mb-4">
                 {selectedTab === 'moments' ? <Sparkles size={22} /> : selectedTab === 'replies' ? <MessageCircle size={22} /> : <Repeat2 size={22} />}
