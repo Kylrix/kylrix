@@ -1,20 +1,20 @@
 export const APPWRITE_CONFIG = {
     ENDPOINT: 'https://api.kylrix.space/v1',
     PROJECT_ID: '67fe9627001d97e37ef3',
-    DATABASE_ID: '67ff05a9000296822396', // Alias for NOTE database
-    NOTE_DATABASE_ID: '67ff05a9000296822396',
+    DATABASE_ID: 'passwordManagerDb', // Consolidated database survivor
+    NOTE_DATABASE_ID: 'passwordManagerDb',
     VAULT_DATABASE_ID: 'passwordManagerDb',
-    FLOW_DATABASE_ID: 'whisperrflow',
-    CONNECT_DATABASE_ID: 'chat',
+    FLOW_DATABASE_ID: 'passwordManagerDb',
+    CONNECT_DATABASE_ID: 'passwordManagerDb',
     DATABASES: {
-        NOTE: '67ff05a9000296822396',
+        NOTE: 'passwordManagerDb',
         VAULT: 'passwordManagerDb',
-        FLOW: 'whisperrflow',
-        CONNECT: 'chat',
-        CHAT: 'chat',
+        FLOW: 'passwordManagerDb',
+        CONNECT: 'passwordManagerDb',
+        CHAT: 'passwordManagerDb',
         PASSWORD_MANAGER: 'passwordManagerDb',
-        KYLRIXNOTE: '67ff05a9000296822396',
-        KYLRIXFLOW: 'whisperrflow'
+        KYLRIXNOTE: 'passwordManagerDb',
+        KYLRIXFLOW: 'passwordManagerDb'
     },
     TABLES: {
         // Flat aliases for common tables
