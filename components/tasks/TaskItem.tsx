@@ -36,6 +36,7 @@ import { useOverlay } from '@/components/ui/OverlayContext';
 import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { ShareLockButton } from '../share/ShareLockButton';
 import { useAccessControlMenuItems } from '../share/AccessControlMenuItems';
+import { useToast } from '@/components/ui/Toast';
 import TaskDetails from './TaskDetails';
 
 interface TaskItemProps {
@@ -71,6 +72,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
     getTagFilterOptions,
   } = useTask();
   const { isPinned: isResourcePinned } = useResourcePins();
+  const { showSuccess, showError } = useToast();
   const taskPinned = isResourcePinned('task', task.id, task.creatorId, task.isPinned);
 
   const handlePinToggle = async (e?: React.MouseEvent) => {
@@ -80,8 +82,10 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
     }
     try {
       await togglePinTask(task.id);
+      showSuccess(taskPinned ? 'Goal unpinned' : 'Goal pinned');
     } catch (err: any) {
       console.error('Failed to toggle pin:', err);
+      showError(err.message || 'Failed to update pin status');
     }
   };
 
