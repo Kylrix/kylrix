@@ -43,3 +43,11 @@ All files uploaded to the ecosystem must be classified into one of the following
 3. **`video`**: Rendered inside a HTML5 `<video />` player with native play/pause overlays.
 4. **`document`** (PDF, Doc, Sheets): Rendered using an inline document preview iframe or dynamic page viewer.
 5. **`other`** (Zip, Tar, Binary): Rendered as a lightweight download card with metadata details.
+
+---
+
+## 👤 Profile Picture Preview Policy
+
+To optimize load speed and avoid complex server-side authorization challenges on restricted buckets, **always retrieve and render profile pictures on the client-side** using `getProfilePicturePreview(fileId)`.
+* Since every user-owned file has read permissions readable via client-side cookie/auth headers, client-side fetches leverage existing user credentials.
+* Do not route profile picture preview retrieval through server-side fetch actions (`getFilePreviewSecure`) to eliminate unauthenticated backend request failures.
