@@ -12,7 +12,8 @@ export interface StoragePort {
   uploadFile(
     bucketId: string,
     fileId: string | null,
-    file: FileUploadPayload
+    file: FileUploadPayload,
+    permissions?: string[]
   ): Promise<any>;
 
   /**

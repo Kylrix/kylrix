@@ -133,3 +133,14 @@ export async function getPublicResource(rowId: string) {
 ```
 
 This hybrid model combines performance and absolute privacy, protecting the ecosystem from data scraping exploits.
+136: 
+137: ---
+138: 
+139: ## 4. Mandate: Zero-Write Permissions on Content
+140: 
+141: All files and database entries created in the ecosystem must enforce **zero write permissions on the client layer**, restricting access strictly to:
+142: - **Read-only permissions** for owners and verified collaborators.
+143: 
+144: ### The Rationale
+145: By restricting permissions to read-only, we prevent malicious modifications and client-side database manipulation. This allows the client to directly and securely fetch resources synchronously using its credentials (like active browser cookies or session tokens). This design ensures snappy, low-latency client-side information retrieval—covering 90% of real-world user interactions—without the overhead of server-to-server gateway validation hops.
+146: 
