@@ -57,6 +57,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { useLocalContext } from '@/lib/context-engine';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 const BRAND_INDIGO = '#6366F1';
 
@@ -131,6 +132,14 @@ export default function ConnectTopbar({
   const isPro = hasPaidKylrixPlan(user) || currentTier === 'PRO';
   const router = useRouter();
   const pathname = usePathname();
+  const { isDrawerOpen } = useDrawerState();
+  
+  // To let any drawer communicate full state expansion globally:
+  const isDrawerExpanded = typeof window !== 'undefined' && document.body.classList.contains('drawer-expanded');
+  
+  if (isDrawerExpanded) {
+    return null;
+  }
   
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));

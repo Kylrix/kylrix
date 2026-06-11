@@ -47,6 +47,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useDrawerState } from '@/components/ui/DrawerStateContext';
 
 import {
   DndContext, 
@@ -120,11 +121,15 @@ function SortableField({
       style={style}
       sx={{ 
         p: 3, 
-        bgcolor: isDragging ? alpha('#6366F1', 0.05) : 'rgba(255, 255, 255, 0.01)', 
-        border: isDragging ? '1px solid var(--color-primary)' : '1px solid rgba(255, 255, 255, 0.04)',
+        bgcolor: isDragging ? alpha('#6366F1', 0.05) : '#0B0A09', 
+        border: isDragging ? '1px solid var(--color-primary)' : '1px solid rgba(255, 255, 255, 0.05)',
         borderRadius: '20px',
-        transition: 'border-color 0.2s ease, background-color 0.2s ease',
-        '&:hover': { borderColor: 'rgba(255, 255, 255, 0.1)' },
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        '&:hover': { 
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          transform: 'scale(1.01)',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)'
+        },
         position: 'relative'
       }}
     >
@@ -357,6 +362,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const { user } = useAuth();
   const { openProUpgrade } = useProUpgrade();
   const { invalidate } = useDataNexus();
+  const { setIsDrawerOpen } = useDrawerState();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'draft' | 'published' | 'archived'>('draft');
@@ -365,6 +372,33 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const [isRestored, setIsRestored] = useState(false);
   
   const initialLoadRef = useRef(true);
+
+  // Sync isDrawerOpen global state when open
+  useEffect(() => {
+    setIsDrawerOpen(open);
+    return () => {
+      setIsDrawerOpen(false);
+      if (typeof window !== 'undefined') {
+        document.body.classList.remove('drawer-expanded');
+      }
+    };
+  }, [open, setIsDrawerOpen]);
+
+  // Sync document body class when expanded changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (open && isExpanded) {
+        document.body.classList.add('drawer-expanded');
+      } else {
+        document.body.classList.remove('drawer-expanded');
+      }
+    }
+  }, [open, isExpanded]);
+
+  const handleClose = () => {
+    setIsExpanded(false);
+    onClose();
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -584,30 +618,49 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
 
   return (
     <Drawer 
-      anchor={isMobile ? 'bottom' : 'right'}
+      anchor="bottom"
       open={open} 
-      onClose={onClose}
+      onClose={handleClose}
       ModalProps={{ keepMounted: false, disablePortal: true }}
       PaperProps={{
         sx: { 
-          width: isMobile ? '100%' : 'min(100vw, 800px)',
-          maxWidth: '100%',
-          height: isMobile ? 'auto' : '100%',
-          maxHeight: isMobile ? '92dvh' : '100%',
-          bgcolor: 'rgba(10, 10, 10, 0.9)', 
-          backdropFilter: 'blur(30px) saturate(200%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: isMobile ? '28px 28px 0 0' : '0',
+          width: '100%',
+          maxWidth: 720,
+          mx: 'auto',
+          height: isExpanded ? '92dvh' : '60dvh',
+          transition: 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          bgcolor: '#161412', 
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          borderLeft: '1px solid rgba(255, 255, 255, 0.05)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+          borderRadius: '28px 28px 0 0',
           backgroundImage: 'none',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+          boxShadow: '0 -12px 48px rgba(0,0,0,0.6)',
           display: 'flex',
           flexDirection: 'column',
+          pointerEvents: 'auto'
         }
       }}
     >
+      {/* Expand Handle bar */}
+      <Box 
+        sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            py: 1.5, 
+            cursor: 'pointer',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+            flexShrink: 0,
+            pointerEvents: 'auto'
+        }}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: 'rgba(255, 255, 255, 0.15)' }} aria-hidden />
+      </Box>
+
       <Box sx={{ 
         px: 4, 
-        py: 3, 
+        py: 2.5, 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
@@ -616,7 +669,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
       }}>
         <Box>
             <Stack direction="row" spacing={1.5} alignItems="center">
-                <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em' }}>
+                <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', fontSize: '1.2rem' }}>
                 {form ? 'Refine Design' : 'Create Intelligence Portal'}
                 </Typography>
                 {hasUnsavedChanges && (
@@ -660,7 +713,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             >
                 Insert Field
             </Button>
-            <IconButton onClick={onClose} size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.05)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' } }}>
+            <IconButton onClick={handleClose} size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.05)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' } }}>
                 <CloseIcon fontSize="small" />
             </IconButton>
         </Box>
@@ -697,7 +750,18 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., Nexus Registration"
-                InputProps={{ disableUnderline: true, sx: { borderRadius: '16px', fontWeight: 800, fontSize: '1.1rem' } }}
+                InputProps={{ 
+                  disableUnderline: true, 
+                  sx: { 
+                    borderRadius: '16px', 
+                    fontWeight: 800, 
+                    fontSize: '1.1rem',
+                    bgcolor: '#0B0A09',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    '&:hover': { bgcolor: '#0B0A09' },
+                    '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
+                  } 
+                }}
               />
               <TextField
                 fullWidth
@@ -708,16 +772,31 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Briefly describe the objective..."
-                InputProps={{ disableUnderline: true, sx: { borderRadius: '16px' } }}
+                InputProps={{ 
+                  disableUnderline: true, 
+                  sx: { 
+                    borderRadius: '16px',
+                    bgcolor: '#0B0A09',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    '&:hover': { bgcolor: '#0B0A09' },
+                    '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
+                  } 
+                }}
               />
               <FormControl fullWidth variant="filled">
-                <InputLabel>Deployment Status</InputLabel>
+                <InputLabel sx={{ color: 'rgba(255,255,255,0.4)', '&.Mui-focused': { color: 'var(--color-primary)' } }}>Deployment Status</InputLabel>
                 <Select
                   value={status}
                   label="Deployment Status"
                   onChange={(e) => setStatus(e.target.value as any)}
                   disableUnderline
-                  sx={{ borderRadius: '16px' }}
+                  sx={{ 
+                    borderRadius: '16px',
+                    bgcolor: '#0B0A09',
+                    border: '1px solid rgba(255, 255, 255, 0.05)',
+                    '&:hover': { bgcolor: '#0B0A09' },
+                    '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
+                  }}
                 >
                   <MenuItem value="draft">DRAFT (INTERNAL)</MenuItem>
                   <MenuItem value="published">PUBLISHED (PUBLIC ACCESS)</MenuItem>
