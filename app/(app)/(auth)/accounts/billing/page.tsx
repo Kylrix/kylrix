@@ -55,6 +55,26 @@ export default function BillingPage() {
   const resolveUserRegion = async () => {
     try {
       setLoadingRegion(true);
+      
+      // Try to determine country from client-side logs first
+      const logList = await account.listLogs();
+      const logs = logList.logs || [];
+      const validLogs = logs.filter(l => l.countryCode && l.countryCode !== '—');
+      
+      if (validLogs.length > 0) {
+        // Find the most frequent country code in logs
+        const counts: Record<string, number> = {};
+        validLogs.forEach(l => {
+          counts[l.countryCode] = (counts[l.countryCode] || 0) + 1;
+        });
+        const resolvedCountry = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+        if (resolvedCountry) {
+          setRegion(resolvedCountry);
+          setLoadingRegion(false);
+          return;
+        }
+      }
+
       const jwtRes = await account.createJWT().then(res => res.jwt).catch(() => undefined);
       const secureRegion = await getUserBillingRegionAction(jwtRes);
       if (secureRegion) {
