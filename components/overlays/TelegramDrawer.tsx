@@ -246,12 +246,35 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
   // Initialize pairing code on mount
   useEffect(() => {
     if (open) {
-      handleInitializeRef.current();
+      const checkAndInit = async () => {
+        setLoading(true);
+        setError(null);
+        setPairCode(null);
+        setDeepLink(null);
+        setVerifiedUsername(null);
+        
+        try {
+          const jwt = await getOrUpdateJWT();
+          const res = await checkTelegramConnection(jwt);
+          if (res.success && res.isVerified) {
+            setVerifiedUsername(res.tgUsername || 'User');
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to check Telegram connection on mount:', err);
+        }
+        
+        // If not verified, proceed to initialize the pairing flow
+        handleInitializeRef.current();
+      };
+      
+      checkAndInit();
     }
     return () => {
       stopPolling();
     };
-  }, [open, stopPolling]);
+  }, [open, stopPolling, getOrUpdateJWT]);
 
   const handleManualCheck = async () => {
     setIsVerifying(true);
