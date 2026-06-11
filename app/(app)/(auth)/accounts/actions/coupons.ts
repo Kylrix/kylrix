@@ -111,7 +111,7 @@ export async function createCouponAction(input: {
   return { count: created.length, coupons: created };
 }
 
-export async function getMyCouponsAction(jwt?: string) {
+async function getMyCouponsAction(jwt?: string) {
   const user = await getActor(jwt);
   if (!user) {
     throw new Error('Unauthorized');
@@ -124,4 +124,5 @@ export async function getMyCouponsAction(jwt?: string) {
     Query.limit(50)
   ]);
   return result.documents;
+}
 }

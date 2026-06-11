@@ -452,7 +452,7 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
                     <div className="p-8 text-center rounded-[28px] bg-[#161412] border border-white/5">
                         <h2 className="text-xl font-bold font-clash text-white mb-2">No Questions Defined</h2>
                         <p className="text-zinc-400 font-satoshi text-sm">
-                            This form doesn't contain any visible logic fields.
+                            This form doesn&apos;t contain any visible logic fields.
                         </p>
                     </div>
                 ) : (

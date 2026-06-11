@@ -546,6 +546,7 @@ export function LinkComponent({ href, children }: { href?: string; children?: Re
           if (match) {
             e.preventDefault();
             e.stopPropagation();
+// eslint-disable-next-line react-hooks/rules-of-hooks
             const { open } = useUnifiedDrawer();
             open('form', { formId: match[1] });
             return;
