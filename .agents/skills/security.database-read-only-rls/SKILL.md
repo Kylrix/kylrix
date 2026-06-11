@@ -133,14 +133,18 @@ export async function getPublicResource(rowId: string) {
 ```
 
 This hybrid model combines performance and absolute privacy, protecting the ecosystem from data scraping exploits.
-136: 
-137: ---
-138: 
-139: ## 4. Mandate: Zero-Write Permissions on Content
-140: 
-141: All files and database entries created in the ecosystem must enforce **zero write permissions on the client layer**, restricting access strictly to:
-142: - **Read-only permissions** for owners and verified collaborators.
-143: 
-144: ### The Rationale
-145: By restricting permissions to read-only, we prevent malicious modifications and client-side database manipulation. This allows the client to directly and securely fetch resources synchronously using its credentials (like active browser cookies or session tokens). This design ensures snappy, low-latency client-side information retrieval—covering 90% of real-world user interactions—without the overhead of server-to-server gateway validation hops.
-146: 
+
+---
+
+## 4. Mandate: Zero-Write Permissions on Content
+
+All files and database entries created in the ecosystem must enforce **zero write permissions on the client layer**, restricting database-level ACL access strictly to:
+- **Read-only permissions** for owners and verified collaborators.
+
+### A. Temporary Collaborator Access & Mathematical Revocation
+Access granted to collaborators is strictly temporary:
+* When a collaborator is removed from a resource, their read permissions must be immediately and mathematically revoked from the database/file ACL.
+* For encrypted data/vaults/notes, removal of a collaborator also requires purging associated cryptographic key mappings (e.g., in envelope encryption envelopes) to ensure zero lingering traces.
+
+### B. The Snappy Client Rationale
+By restricting permissions to read-only, we prevent malicious client-side modifications while enabling the browser to directly and securely fetch resources synchronously (leveraging existing session cookies/auth tokens). This delivers highly responsive, low-latency client-side information retrieval—covering 90% of real-world user interactions—without forcing unnecessary server-to-server gateway validation roundtrips.

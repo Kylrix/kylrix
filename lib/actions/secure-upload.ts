@@ -4,7 +4,7 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { getActor } from './secure-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan } from '@/lib/utils';
-import { ID } from 'node-appwrite';
+import { ID, Permission, Role } from 'node-appwrite';
 import { Registry } from '@/lib/core/di/registry';
 import { InputFile } from 'node-appwrite/file';
 import { IDSchema, JWTSchema } from '@/lib/validations/schemas';
@@ -88,12 +88,17 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    const permissions: string[] = [];
+    if (actor?.$id) {
+      permissions.push(Permission.read(Role.user(actor.$id)));
+    }
+
     const uploadedFile = await Registry.getStorage().uploadFile(bucketId, fileId, {
       name: file.name,
       type: file.type,
       size: file.size,
       buffer,
-    });
+    }, permissions);
     
     return JSON.parse(JSON.stringify(uploadedFile));
   } catch (error: any) {

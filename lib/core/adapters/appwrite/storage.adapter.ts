@@ -11,7 +11,8 @@ export class AppwriteStorageAdapter implements StoragePort {
   async uploadFile(
     bucketId: string,
     fileId: string | null,
-    file: FileUploadPayload
+    file: FileUploadPayload,
+    permissions?: string[]
   ): Promise<any> {
     const { ID } = await import('node-appwrite');
     const resolvedFileId = fileId || ID.unique();
@@ -21,12 +22,12 @@ export class AppwriteStorageAdapter implements StoragePort {
     if (typeof window !== 'undefined') {
         // Browser environment: use standard File/Blob
         const browserFile = new File([file.buffer as any], file.name, { type: file.type });
-        uploadedFile = await storage.createFile(bucketId, resolvedFileId, browserFile);
+        uploadedFile = await storage.createFile(bucketId, resolvedFileId, browserFile, permissions);
     } else {
         // Server environment: use InputFile (safe to import node-appwrite/file here)
         const { InputFile } = await import('node-appwrite/file');
         const inputFile = InputFile.fromBuffer(file.buffer, file.name);
-        uploadedFile = await storage.createFile(bucketId, resolvedFileId, inputFile);
+        uploadedFile = await storage.createFile(bucketId, resolvedFileId, inputFile, permissions);
     }
 
     return JSON.parse(JSON.stringify(uploadedFile));
