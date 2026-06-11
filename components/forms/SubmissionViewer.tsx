@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { FormSubmissions } from '@/generated/appwrite/types';
-import ResponseDetailSidebar from './ResponseDetailSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 const SubmissionViewerTable = ({ submissions, headers, schemaMap, parsePayload, renderValue, onToggleRead, onToggleFlag, onRowClick }: any) => (
@@ -104,13 +103,6 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<FormSubmissions | null>(null);
 
-  const handleRowClick = (sub: FormSubmissions) => {
-    openDrawer('form-response-detail', {
-      submission: sub,
-      schemaMap
-    });
-  };
-
   // Map of field IDs to labels
   const schemaMap = React.useMemo(() => {
     if (!formSchema) return {};
@@ -169,8 +161,10 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
   };
 
   const handleRowClick = (sub: FormSubmissions) => {
-    setSelectedSubmission(sub);
-    setSidebarOpen(true);
+    openDrawer('form-response-detail', {
+      submission: sub,
+      schemaMap
+    });
     if (!(sub as any).read) {
         handleToggleRead(sub.$id, true);
     }
@@ -290,14 +284,6 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
             onToggleFlag={handleToggleFlag}
             onRowClick={handleRowClick}
         />
-        {sidebarOpen && (
-          <ResponseDetailSidebar 
-              open={sidebarOpen} 
-              onClose={() => setSidebarOpen(false)} 
-              submission={selectedSubmission} 
-              schemaMap={schemaMap}
-          />
-        )}
     </div>
   );
 }
