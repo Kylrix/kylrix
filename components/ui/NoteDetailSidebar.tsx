@@ -25,6 +25,7 @@ import {
   CheckSquare as TaskIcon,
   Calendar as EventIcon,
   Key as KeyIcon,
+  Copy as CopyIcon,
 } from 'lucide-react';
 
 import { useToast } from '@/components/ui/Toast';
@@ -852,6 +853,20 @@ export function NoteDetailSidebar({
             </div>
             
             <div className="flex items-center gap-2">
+              {!shouldMaskEncrypted && content && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(content);
+                    showSuccess('Copied', 'Note content copied to clipboard');
+                  }}
+                  className="h-7 w-7 rounded-lg flex items-center justify-center transition-all bg-white/5 border border-white/5 text-white/60 hover:text-white hover:bg-white/10"
+                  title="Copy content"
+                >
+                  <CopyIcon className="w-3.5 h-3.5" />
+                </button>
+              )}
               {!shouldMaskEncrypted && (
                 <button
                   type="button"

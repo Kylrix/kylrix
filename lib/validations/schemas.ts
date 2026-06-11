@@ -50,6 +50,7 @@ export const NoteSchema = z.object({
   format: z.enum(['markdown', 'text']).default('markdown'),
   tags: z.array(z.string()).optional(),
   isPublic: z.boolean().optional(),
+  isGuest: z.boolean().optional(),
   metadata: z.string().nullable().optional(),
 });
 

@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { Notes } from '@/types/appwrite';
 import NoteCard from '@/components/ui/NoteCard';
@@ -9,6 +8,9 @@ import { useNotes } from '@/context/NotesContext';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { MultiSectionContainer } from '@/context/SectionContext';
+import { useFAB } from '@/context/FABContext';
+import { useOverlay } from '@/components/ui/OverlayContext';
+import CreateNoteForm from '../notes/CreateNoteForm';
 import {
   getSessionSharedNotes,
   setSessionSharedNotes,
@@ -22,7 +24,8 @@ import {
   Search as SearchIcon,
   Globe as GlobeIcon,
   Lock as LockIcon,
-  Loader2 as SpinnerIcon
+  Loader2 as SpinnerIcon,
+  Plus as PlusIcon
 } from 'lucide-react';
 
 function buildPublicTab(ownedPublic: Notes[], sharedPublic: SharedNoteRow[]): Notes[] {
@@ -40,6 +43,51 @@ export default function SharedNotesPage() {
   const { isPinned, notes: ownedNotes } = useNotes();
   const { user } = useAuth();
   const { getCachedDataAsync, setCachedData } = useDataNexus();
+  const { openOverlay, closeOverlay } = useOverlay();
+  const { setConfiguration, resetConfiguration } = useFAB();
+
+  const openComposer = useCallback(() => {
+    let createdNoteId: string | null = null;
+
+    const handleNoteCreated = (note: any) => {
+      createdNoteId = note.$id;
+    };
+
+    const handleClose = () => {
+      closeOverlay();
+      if (createdNoteId) {
+        const shareUrl = `${window.location.origin}/note/shared/${createdNoteId}`;
+        navigator.clipboard.writeText(shareUrl);
+        import('react-hot-toast').then(({ default: toast }) => {
+          toast.success('Public link copied to clipboard!');
+        });
+      }
+    };
+
+    openOverlay(
+      <CreateNoteForm
+        onNoteCreated={handleNoteCreated}
+        noteKind="note"
+        initialContent={{
+          isPublic: true,
+          isGuest: true
+        } as any}
+        onClose={handleClose}
+      />
+    );
+  }, [openOverlay, closeOverlay]);
+
+  useEffect(() => {
+    setConfiguration({
+      isVisible: true,
+      mainColor: '#EC4899',
+      onMainClick: () => openComposer(),
+      actions: [
+        { id: 'new-shared-note', label: 'NEW PUBLIC NOTE', icon: <PlusIcon size={16} />, onClick: () => openComposer() },
+      ]
+    });
+    return () => resetConfiguration();
+  }, [setConfiguration, resetConfiguration, openComposer]);
 
   const sessionRows = getSessionSharedNotes();
   const sessionPartition = sessionRows ? partitionSharedNotes(sessionRows) : null;

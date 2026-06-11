@@ -67,13 +67,15 @@ export default function CreateNoteForm({
   const [title, setTitle] = useState(initialContent?.title || '');
   const [content, setContent] = useState(initialContent?.content || '');
   const [tags, setTags] = useState<string[]>(normalizeTags(initialContent?.tags || []));
-  const [isPublic, setIsPublic] = useState(false);
+  const [isPublic, setIsPublic] = useState(initialContent?.isPublic || false);
+  const [isGuest, setIsGuest] = useState(initialContent?.isGuest || false);
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
   const [currentTag, setCurrentTag] = useState('');
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [resolvedNoteId, setResolvedNoteId] = useState<string | undefined>(noteId);
-  const [persistedIsPublic, setPersistedIsPublic] = useState(false);
+  const [persistedIsPublic, setPersistedIsPublic] = useState(initialContent?.isPublic || false);
+  const [persistedIsGuest, setPersistedIsGuest] = useState(initialContent?.isGuest || false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
   const [hasPaywall, setHasPaywall] = useState(false);
@@ -293,10 +295,11 @@ export default function CreateNoteForm({
     tags: normalizeTags(tags),
     composerKind,
     isPublic,
+    isGuest,
     hasPaywall,
     paywallAmount: typeof paywallAmount === 'number' ? paywallAmount : parseFloat(paywallAmount as any) || 0,
     resolvedNoteId: resolvedNoteId || null,
-  }), [title, content, tags, composerKind, isPublic, hasPaywall, paywallAmount, resolvedNoteId]);
+  }), [title, content, tags, composerKind, isPublic, isGuest, hasPaywall, paywallAmount, resolvedNoteId]);
 
   const isDirty = snapshot !== lastSavedSnapshot;
 
@@ -319,8 +322,11 @@ export default function CreateNoteForm({
         setTags(normalizeTags(cached.tags || []));
         setComposerKind(nextComposerKind);
         const cachedPublic = getNotePublicState(cached as Notes);
+        const cachedGuest = !!(cached as any).isGuest;
         setIsPublic(cachedPublic);
         setPersistedIsPublic(cachedPublic);
+        setIsGuest(cachedGuest);
+        setPersistedIsGuest(cachedGuest);
         const paywall = (cached as any).metadata?.paywall;
         setHasPaywall(!!paywall?.enabled);
         setPaywallAmount(paywall?.amount || 0);
@@ -331,6 +337,7 @@ export default function CreateNoteForm({
           tags: normalizeTags(cached.tags || []),
           composerKind: nextComposerKind,
           isPublic: cachedPublic,
+          isGuest: cachedGuest,
           hasPaywall: !!paywall?.enabled,
           paywallAmount: paywall?.amount || 0,
           resolvedNoteId: cached.$id,
@@ -347,8 +354,11 @@ export default function CreateNoteForm({
         setTags(normalizeTags(loaded.tags || []));
         setComposerKind(nextComposerKind);
         const loadedPublic = getNotePublicState(loaded as Notes);
+        const loadedGuest = !!(loaded as any).isGuest;
         setIsPublic(loadedPublic);
         setPersistedIsPublic(loadedPublic);
+        setIsGuest(loadedGuest);
+        setPersistedIsGuest(loadedGuest);
         const paywall = (loaded as any).metadata?.paywall;
         setHasPaywall(!!paywall?.enabled);
         setPaywallAmount(paywall?.amount || 0);
@@ -359,6 +369,7 @@ export default function CreateNoteForm({
           tags: normalizeTags(loaded.tags || []),
           composerKind: nextComposerKind,
           isPublic: loadedPublic,
+          isGuest: loadedGuest,
           hasPaywall: !!paywall?.enabled,
           paywallAmount: paywall?.amount || 0,
           resolvedNoteId: loaded.$id,
@@ -472,6 +483,7 @@ export default function CreateNoteForm({
         tags: normalizedTags,
         kind: composerKind,
         isPublic,
+        isGuest,
         metadata: JSON.stringify({
           paywall: hasPaywall && paywallAmount ? {
             enabled: true,
@@ -501,13 +513,15 @@ export default function CreateNoteForm({
           saved = (await updateNote(resolvedNoteId, {
             ...payload,
             isPublic: persistedIsPublic,
+            isGuest: persistedIsGuest,
             title: generatedTitle,
           })) as Notes;
           upsertNote(saved);
         } else {
           saved = (await createNote({
             ...payload,
-            isPublic: false,
+            isPublic: payload.isPublic,
+            isGuest: payload.isGuest,
             title: generatedTitle,
           })) as Notes;
           setResolvedNoteId(saved.$id);
@@ -553,8 +567,11 @@ export default function CreateNoteForm({
           }
 
           const livePublicState = getNotePublicState(saved);
+          const liveGuestState = !!(saved as any).isGuest;
           setPersistedIsPublic(livePublicState);
           setIsPublic(livePublicState);
+          setPersistedIsGuest(liveGuestState);
+          setIsGuest(liveGuestState);
           setCachedData(`note_${saved.$id}`, saved);
           const paywall = (saved as any).metadata?.paywall;
           setLastSavedSnapshot(JSON.stringify({
@@ -564,6 +581,7 @@ export default function CreateNoteForm({
             tags: normalizeTags((saved.tags || []) as string[]),
             composerKind,
             isPublic: livePublicState,
+            isGuest: liveGuestState,
             hasPaywall: !!paywall?.enabled,
             paywallAmount: paywall?.amount || 0,
             resolvedNoteId: saved.$id,
@@ -588,7 +606,7 @@ export default function CreateNoteForm({
     } finally {
       persistInFlightRef.current = null;
     }
-  }, [composerKind, content, hasPaywall, isPublic, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
+  }, [composerKind, content, hasPaywall, isPublic, isGuest, persistedIsGuest, onNoteCreated, paywallAmount, persistedIsPublic, promptSudo, resolvedNoteId, setCachedData, showError, showSuccess, tags, title]);
 
   const handleMorphToDetail = useCallback(async () => {
     try {

@@ -303,7 +303,6 @@ const NOTE_VIRTUAL_ATTRIBUTE_KEYS = new Set([
   'clientDecrypted',
   'decryptionKey',
   'dek',
-  'isGuest',
   'sharedFrom',
   'keepPermission',
   'source',
@@ -411,7 +410,7 @@ export function sanitizeNoteUpdatePatch(
 
 function filterNoteData(data: Record<string, any>): Record<string, any> {
   const schemaKeys = [
-    'id', 'createdAt', 'updatedAt', 'userId', 'isPublic', 'status', 
+    'id', 'createdAt', 'updatedAt', 'userId', 'isPublic', 'isGuest', 'status', 
     'parentNoteId', 'title', 'content', 'tags', 'comments', 
     'extensions', 'collaborators', 'metadata', 'attachments', 'format',
     'isGhost', 'isThread', 'isPinned', 'creatorId'
