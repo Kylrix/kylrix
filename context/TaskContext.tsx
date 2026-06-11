@@ -966,6 +966,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       if (updates.attachments !== undefined) {
         apiUpdates.attachmentIds = updates.attachments;
       }
+      if (updates.isPinned !== undefined) apiUpdates.isPinned = updates.isPinned;
+      if (updates.isPublic !== undefined) apiUpdates.isPublic = updates.isPublic;
+      if (updates.isGuest !== undefined) apiUpdates.isGuest = updates.isGuest;
+
       if (updates.labels !== undefined || updates.linkedNotes !== undefined || updates.projectId !== undefined) {
         const projectId = updates.projectId || currentTask.projectId;
 

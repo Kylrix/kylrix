@@ -63,13 +63,14 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
     completeTask,
     deleteTask,
     updateTask,
+    togglePinTask,
     addTask,
     labels,
     projects,
     selectTask,
     getTagFilterOptions,
   } = useTask();
-  const { isPinned: isResourcePinned, togglePin } = useResourcePins();
+  const { isPinned: isResourcePinned } = useResourcePins();
   const taskPinned = isResourcePinned('task', task.id, task.creatorId, task.isPinned);
 
   const handlePinToggle = async (e?: React.MouseEvent) => {
@@ -78,15 +79,7 @@ export default React.memo(function TaskItem({ task, onClick, compact = false }: 
       e.preventDefault();
     }
     try {
-      await togglePin({
-        resourceType: 'task',
-        resourceId: task.id,
-        ownerId: task.creatorId,
-        rowIsPinned: task.isPinned,
-        setOwnerRowPin: async (nextPinned) => {
-          await updateTask(task.id, { isPinned: nextPinned });
-        },
-      });
+      await togglePinTask(task.id);
     } catch (err: any) {
       console.error('Failed to toggle pin:', err);
     }
