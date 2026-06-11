@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/auth';
 import { UserPresenceState } from '@/lib/services/presence';
 import { storage } from '@/lib/appwrite/client';
 
+import { getCachedIdentityById, resolveIdentityById, subscribeIdentityCache } from '@/lib/identity-cache';
+
 const RING_COLORS = ['#6366F1', '#34D399', '#D8B4FE', '#FBBF24', '#F472B6'];
 const RING_GRADIENT = `conic-gradient(from 180deg, ${RING_COLORS.join(', ')}, #6366F1)`;
 
@@ -85,42 +87,46 @@ export function IdentityAvatar({
   const [resolvedSrc, setResolvedSrc] = useState<string | null>(src || null);
   const [imageError, setImageError] = useState(false);
 
-  // 1. Fetch the user's profile status row securely using Server Action if userId is provided
+  // 1. Fetch the user's profile status row securely using Identity Cache if userId is provided
   useEffect(() => {
     if (!userId) return;
 
-    if (profileCache.has(userId)) {
-      setProfileRecord(profileCache.get(userId));
-      return;
+    let active = true;
+
+    // Load from cache instantly
+    const cached = getCachedIdentityById(userId);
+    if (cached) {
+      setProfileRecord(cached);
     }
 
-    let active = true;
-    const fetchProfile = async () => {
+    const loadProfile = async () => {
       try {
         const { getGlobalProfileStatus } = await import('@/lib/actions/client-ops');
-        const res = await getGlobalProfileStatus(userId);
-        if (res?.exists && res.profile) {
-          if (active) {
-            profileCache.set(userId, res.profile);
-            setProfileRecord(res.profile);
-          }
-        } else {
-          if (active) {
-            profileCache.set(userId, null);
-            setProfileRecord(null);
-          }
+        const identity = await resolveIdentityById(userId, async () => {
+          const res = await getGlobalProfileStatus(userId);
+          return res?.exists ? res.profile : null;
+        });
+        if (identity && active) {
+          setProfileRecord(identity);
         }
       } catch (err) {
         console.warn('[IdentityAvatar] Failed to fetch secure profile row:', err);
-        if (active) {
-          profileCache.set(userId, null);
-          setProfileRecord(null);
-        }
       }
     };
 
-    fetchProfile();
-    return () => { active = false; };
+    loadProfile();
+
+    // Listen to profile updates live!
+    const unsubscribe = subscribeIdentityCache((identity) => {
+      if (identity.userId === userId && active) {
+        setProfileRecord(identity);
+      }
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [userId]);
 
   // 2. Resolve visibilities dynamically using the fetched profile row

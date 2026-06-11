@@ -318,7 +318,7 @@ export default function SettingsPage() {
                     {/* Profile */}
                     <div className="flex-shrink-0">
                         <IdentityAvatar 
-                            src={profileAvatarUrl}
+                            userId={user?.$id}
                             pro={isPro}
                             size={56}
                             fallback={getEffectiveDisplayName(user).slice(0, 1).toUpperCase()}

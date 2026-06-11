@@ -11,6 +11,11 @@ export type CachedIdentity = {
   cachedAt: number;
   source?: string;
   socialStats?: any;
+  isPublic?: boolean | null;
+  isGuest?: boolean | null;
+  isAvatar?: boolean | null;
+  isContact?: boolean | null;
+  tier?: string | null;
 };
 
 type IdentityInput = Partial<CachedIdentity> & {
@@ -26,6 +31,11 @@ type IdentityInput = Partial<CachedIdentity> & {
   preferences?: any | null;
   bio?: string | null;
   walletAddress?: string | null;
+  isPublic?: boolean | null;
+  isGuest?: boolean | null;
+  isAvatar?: boolean | null;
+  isContact?: boolean | null;
+  tier?: string | null;
 };
 
 const STORAGE_KEY = 'kylrix_connect_identity_cache_v1';
@@ -105,6 +115,11 @@ export function normalizeIdentity(input: IdentityInput | null | undefined): Cach
   const preferences = input.preferences || null;
   const bio = input.bio || null;
   const walletAddress = input.walletAddress || null;
+  const isPublic = input.isPublic !== undefined ? input.isPublic : null;
+  const isGuest = input.isGuest !== undefined ? input.isGuest : null;
+  const isAvatar = input.isAvatar !== undefined ? input.isAvatar : null;
+  const isContact = input.isContact !== undefined ? input.isContact : null;
+  const tier = input.tier || null;
 
   return {
     $id: input.$id || userId,
@@ -116,6 +131,11 @@ export function normalizeIdentity(input: IdentityInput | null | undefined): Cach
     preferences,
     bio,
     walletAddress,
+    isPublic,
+    isGuest,
+    isAvatar,
+    isContact,
+    tier,
     cachedAt: input.cachedAt || Date.now(),
     source: input.source,
   };

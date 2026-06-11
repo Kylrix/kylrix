@@ -1198,12 +1198,12 @@ export default function ConnectTopbar({
                               '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
                             }}
                           >
-                            <Avatar
-                              src={person.avatar || undefined}
-                              sx={{ width: 36, height: 36, borderRadius: '10px', bgcolor: 'rgba(255,255,255,0.06)', color: 'white', fontSize: '0.75rem', fontWeight: 800 }}
-                            >
-                              {(person.displayName || person.name || String(person.username || person.prefs?.username || 'U').replace(/^@+/, '') || 'U')[0].toUpperCase()}
-                            </Avatar>
+                            <IdentityAvatar
+                              userId={person.userId || person.$id}
+                              size={36}
+                              fallback={(person.displayName || person.name || String(person.username || 'U').replace(/^@+/, '') || 'U')[0].toUpperCase()}
+                              borderRadius="10px"
+                            />
                             <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
                               <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
                                 {person.displayName || person.name}
@@ -1320,7 +1320,7 @@ export default function ConnectTopbar({
                 <Box sx={{ display: 'grid', gap: 1.25, maxHeight: '58vh', overflowY: 'auto', pr: 0.5, pb: 0.5 }}>
                 <Box sx={{ display: 'flex', gap: 1.25, alignItems: 'center', p: 0.75 }}>
                   <IdentityAvatar
-                    src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl : null}
+                    userId={user?.$id}
                     size={88}
                     pro={isPro}
                     fallback={profileName.slice(0, 1).toUpperCase()}
@@ -1543,7 +1543,6 @@ export default function ConnectTopbar({
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 1.75, p: 2, borderRadius: '26px', bgcolor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)' }}>
               <Box sx={{ position: 'relative' }}>
                 <IdentityAvatar
-                  src={isRenderableImageSrc(profileAvatarUrl) ? profileAvatarUrl : null}
                   userId={user?.$id}
                   size={88}
                   pro={isPro}
@@ -2215,7 +2214,6 @@ export default function ConnectTopbar({
                     </IconButton>
                     <ButtonBase onClick={openProfileMenu} sx={{ borderRadius: '50%', transition: 'all 0.2s', '&:hover': { transform: 'scale(1.05)' } }}>
                       <IdentityAvatar 
-                        src={profileAvatarUrl} 
                         userId={user?.$id}
                         size={38} 
                         pro={isPro} 
