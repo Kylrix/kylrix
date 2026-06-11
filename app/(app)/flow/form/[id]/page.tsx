@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
-import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ChevronDown } from 'lucide-react';
+import { Send, CheckCircle2, Upload as UploadIcon, X as XIcon, ChevronDown, ArrowLeft } from 'lucide-react';
 import { FormsService } from '@/lib/services/forms';
 import { Forms } from '@/generated/appwrite/types';
 import { useDataNexus } from '@/context/DataNexusContext';
@@ -121,6 +121,15 @@ export default function PublicFormPage({ params }: { params: Promise<{ id: strin
         }
         return actualVal === expectedVal;
     };
+
+    let schema: any[] = [];
+    if (form?.schema) {
+        try {
+            schema = JSON.parse(form.schema);
+        } catch (_e) {
+            console.error("Failed to parse form schema", _e);
+        }
+    }
 
     const visibleFields = schema.filter(isFieldVisible);
     const [currentStep, setCurrentStep] = useState(0);

@@ -164,7 +164,7 @@ export default function SettingsPage() {
         }
     };
 
-    const FEATURE_FORM_ID = '6a19dc99002634bd33ae';
+    const FEATURE_FORM_ID = '6a2a653f002b0f296958';
 
     const handleManualMint = async () => {
         setMinting(true);

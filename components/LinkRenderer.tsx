@@ -16,9 +16,9 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { usePresence } from '@/components/providers/PresenceProvider';
 import { HuddleChatWindow } from '@/components/chat/HuddleChatWindow';
-import { useCallLauncher } from '@/context/CallLauncherContext';
 import { getRowSecure } from '@/lib/actions/secure-ops';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export function VoiceNotePlayer({ fileId }: { fileId: string }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -519,6 +519,13 @@ export function LinkComponent({ href, children }: { href?: string; children?: Re
     return <FlowPresencePulseLink href={href}>{children}</FlowPresencePulseLink>;
   }
 
+  // Parse for `/flow/form/[id]` internal or absolute kylrix form links
+  const formUrlMatch = href.match(/(?:\/flow\/form\/|source:kylrixform:)([a-zA-Z0-9_-]+)/);
+  if (formUrlMatch) {
+    const formId = formUrlMatch[1];
+    return <KylrixFormBadgeLink href={href} formId={formId}>{children}</KylrixFormBadgeLink>;
+  }
+
   // Parse for `/send/[id]/[key]` or `/send/[id]`
   const sendMatch = href.match(/\/send\/([a-zA-Z0-9_-]+)(?:\/([a-zA-Z0-9_-]+))?/);
   if (sendMatch) {
@@ -532,7 +539,20 @@ export function LinkComponent({ href, children }: { href?: string; children?: Re
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        // Intercept form links if they are standard absolute links on kylrix domains
+        if (href.includes('/flow/form/')) {
+          const match = href.match(/\/flow\/form\/([a-zA-Z0-9_-]+)/);
+          if (match) {
+            e.preventDefault();
+            e.stopPropagation();
+            const { open } = useUnifiedDrawer();
+            open('form', { formId: match[1] });
+            return;
+          }
+        }
+        e.stopPropagation();
+      }}
       sx={{
         color: '#6366F1',
         textDecoration: 'none',
@@ -1389,6 +1409,70 @@ export function FlowPresencePulseLink({ href, children }: { href: string; childr
         />
       )}
     </>
+  );
+}
+
+export function KylrixFormBadgeLink({ href, formId, children }: { href: string; formId: string; children?: React.ReactNode }) {
+  const { open } = useUnifiedDrawer();
+  const { getCachedData, setCachedData } = useDataNexus();
+  const [formTitle, setFormTitle] = useState<string>('');
+
+  useEffect(() => {
+    if (!formId) return;
+    const cacheKey = `form_title_meta_${formId}`;
+    const cached = getCachedData<string>(cacheKey);
+    if (cached) {
+      setFormTitle(cached);
+      return;
+    }
+    
+    // Asynchronously fetch name/title of form to enrich label
+    import('@/lib/services/forms').then(async ({ FormsService }) => {
+      try {
+        const data = await FormsService.getForm(formId);
+        if (data?.title) {
+          setFormTitle(data.title);
+          setCachedData(cacheKey, data.title);
+        }
+      } catch (e) {
+        console.warn('[KylrixFormBadgeLink] Fail to fetch form title:', e);
+      }
+    });
+  }, [formId, getCachedData, setCachedData]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    open('form', { formId });
+  };
+
+  return (
+    <Box
+      component="span"
+      onClick={handleClick}
+      sx={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 0.75,
+        color: '#10B981', // green accent color for forms/intake
+        fontWeight: 700,
+        cursor: 'pointer',
+        verticalAlign: 'middle',
+        mx: 0.5,
+        borderBottom: '1px solid transparent',
+        transition: 'all 0.2s ease-in-out',
+        '&:hover': {
+          color: alpha('#10B981', 0.85),
+          borderBottomColor: alpha('#10B981', 0.4),
+          bgcolor: alpha('#10B981', 0.05),
+          borderRadius: '4px',
+          px: 0.5,
+          mx: 0
+        }
+      }}
+    >
+      <span>{children || formTitle || 'Fill Form'}</span>
+    </Box>
   );
 }
 
