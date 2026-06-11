@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { account, AppwriteService } from '@/lib/appwrite';
-import { getMyCouponsAction } from '../actions/coupons';
+import { listCouponsAction as getMyCouponsAction } from '../actions/coupons';
 import { getUserBillingRegionAction } from '../actions/billing';
 import toast from 'react-hot-toast';
 
