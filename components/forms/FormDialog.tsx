@@ -669,8 +669,8 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
       }}>
         <Box>
             <Stack direction="row" spacing={1.5} alignItems="center">
-                <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', fontSize: '1.2rem' }}>
-                {form ? 'Refine Design' : 'Create Intelligence Portal'}
+                <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', fontSize: '1.1rem' }}>
+                {form ? 'Edit Form' : 'New Form'}
                 </Typography>
                 {hasUnsavedChanges && (
                     <Chip 
@@ -688,9 +688,6 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                     />
                 )}
             </Stack>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, letterSpacing: '0.1em' }}>
-                KYLRIX FLOW / FORMS ENGINE
-            </Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Button 
@@ -711,7 +708,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                     }
                 }}
             >
-                Insert Field
+                Insert
             </Button>
             <IconButton onClick={handleClose} size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.05)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' } }}>
                 <CloseIcon fontSize="small" />
@@ -857,18 +854,18 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         <Box sx={{ flexGrow: 1 }}>
             {hasUnsavedChanges && (
                 <Typography variant="caption" sx={{ color: '#FFB020', fontWeight: 700, ml: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <SyncIcon sx={{ fontSize: 14 }} /> LOCAL AUTOSAVE ACTIVE
+                    <SyncIcon sx={{ fontSize: 14 }} /> AUTOSAVE
                 </Typography>
             )}
         </Box>
-        <Button onClick={onClose} disabled={loading} sx={{ fontWeight: 800, color: 'text.secondary' }}>Cancel</Button>
+        <Button onClick={handleClose} disabled={loading} sx={{ fontWeight: 800, color: 'rgba(255,255,255,0.4)', '&:hover': { color: 'white' } }}>Cancel</Button>
         <Button 
           variant="contained" 
           onClick={handleSave} 
           disabled={loading || !title}
           sx={{ 
             borderRadius: '16px', 
-            px: 5, 
+            px: 4, 
             py: 1.5,
             fontWeight: 900,
             bgcolor: 'var(--color-primary)',
@@ -877,7 +874,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             '&:hover': { bgcolor: alpha('#6366F1', 0.9) }
           }}
         >
-          {loading ? 'Encrypting...' : (form ? 'Commit Changes' : 'Initialize Portal')}
+          {loading ? 'Saving...' : (form ? 'Save' : 'Create')}
         </Button>
       </Box>
     </Drawer>
