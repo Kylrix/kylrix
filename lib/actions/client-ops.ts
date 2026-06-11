@@ -55,6 +55,7 @@ import {
   toggleResourcePublicGuestSecure,
   getResourcePublicGuestSecure,
   getPublicGoalDataSecure,
+  getGlobalProfileStatusSecure,
 } from './secure-ops';
 import { PublicResourceType } from '@/lib/share/resource-types';
 
@@ -392,6 +393,10 @@ export async function getResourcePublicGuest(params: {
 
 export async function getPublicGoalData(goalId: string) {
   return getPublicGoalDataSecure(goalId);
+}
+
+export async function getGlobalProfileStatus(userId: string) {
+  return getGlobalProfileStatusSecure(userId);
 }
 
 

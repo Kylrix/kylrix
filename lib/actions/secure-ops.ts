@@ -3715,12 +3715,27 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
     throw new Error('Unauthorized: Session expired or invalid');
   }
 
-  const isAllowed = await verifyFormPermission(formId, actor.$id, 'admin');
+  // Clear memory row cache to prevent stale ownership/permission state from blocking the delete
+  const cacheKey = `${APPWRITE_CONFIG.DATABASES.FLOW}:${APPWRITE_CONFIG.TABLES.FLOW.FORMS}:${formId}`;
+  rowCache.delete(cacheKey);
+
+  // Directly retrieve the form details using system privileges to verify owner identity
+  const systemTables = createSystemTablesDB();
+  let formRow = null;
+  try {
+      formRow = await systemTables.getRow(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, formId);
+  } catch (err) {
+      console.warn('[deleteFormSecure] Failed to retrieve form row:', err);
+  }
+
+  // If the actor is the direct owner, bypass the regular permission check to avoid any issues
+  const isOwner = formRow && String(formRow.userId || '').trim() === actor.$id;
+  const isAllowed = isOwner || (await verifyFormPermission(formId, actor.$id, 'admin'));
+
   if (!isAllowed) {
     throw new Error('Forbidden: Insufficient permissions to delete this form');
   }
 
-  const tables = createSystemTablesDB();
   const { databases } = createSystemClient();
   try {
     await executeCascadeDeleteSecure(APPWRITE_CONFIG.DATABASES.FLOW, APPWRITE_CONFIG.TABLES.FLOW.FORMS, formId);
@@ -3733,6 +3748,9 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
       rowId: formId,
     });
+
+  // Also remove the cache entry post-delete
+  rowCache.delete(cacheKey);
 
   return JSON.parse(JSON.stringify(result));
 }

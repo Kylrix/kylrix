@@ -97,8 +97,8 @@ export function IdentityAvatar({
     let active = true;
     const fetchProfile = async () => {
       try {
-        const { getGlobalProfileStatusSecure } = await import('@/lib/actions/secure-ops');
-        const res = await getGlobalProfileStatusSecure(userId);
+        const { getGlobalProfileStatus } = await import('@/lib/actions/client-ops');
+        const res = await getGlobalProfileStatus(userId);
         if (res?.exists && res.profile) {
           if (active) {
             profileCache.set(userId, res.profile);
