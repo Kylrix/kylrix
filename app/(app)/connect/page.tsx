@@ -44,8 +44,9 @@ function ConnectHomeContent() {
       isVisible: true,
       mainColor: '#F59E0B',
       mainIcon: <Plus size={32} strokeWidth={3} />,
-      onMainClick: () => openUnified('new-chat', { mode: 'secure' }),
+      onMainClick: () => window.dispatchEvent(new CustomEvent('kylrix:open-moment-composer')),
       actions: [
+        { id: 'moment', label: 'CREATE MOMENT', icon: <Plus size={20} />, onClick: () => window.dispatchEvent(new CustomEvent('kylrix:open-moment-composer')) },
         { id: 'chat', label: 'SECURE CHAT', icon: <MessageSquare size={20} />, onClick: () => openUnified('new-chat', { mode: 'secure' }) },
         { id: 'channel', label: 'NEW CHANNEL', icon: <Plus size={20} />, onClick: () => openUnified('new-channel') },
         { id: 'huddle', label: 'START HUDDLE', icon: <Phone size={20} />, onClick: () => router.push('/connect/calls?start=1') }]
