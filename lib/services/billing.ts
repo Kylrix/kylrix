@@ -107,28 +107,19 @@ export const BillingCacheService = {
                     };
                     entitlementCache = { data, expiresAt: Date.now() + TTL };
                     lastEntitlementFetch = Date.now();
+                    if (typeof window !== 'undefined') {
+                        localStorage.setItem(`kylrix_entitlement_${userId}`, JSON.stringify(data));
+                    }
                     return data;
                 }
             } catch {
                 /* fall through */
             }
 
-            try {
-                const prefs = await account.getPrefs().catch(() => null);
-                const data = {
-                    uiTier: normalizeBillingPrefsTier(prefs as Record<string, unknown> | null),
-                    active: false,
-                    expiresAt: null,
-                };
-                entitlementCache = { data, expiresAt: Date.now() + TTL };
-                lastEntitlementFetch = Date.now();
-                return data;
-            } catch {
-                const data = { uiTier: 'FREE' as BillingUiTier, active: false, expiresAt: null };
-                entitlementCache = { data, expiresAt: Date.now() + TTL };
-                lastEntitlementFetch = Date.now();
-                return data;
-            }
+            const data = { uiTier: 'FREE' as BillingUiTier, active: false, expiresAt: null };
+            entitlementCache = { data, expiresAt: Date.now() + TTL };
+            lastEntitlementFetch = Date.now();
+            return data;
         })().finally(() => {
             entitlementInFlight = null;
         });

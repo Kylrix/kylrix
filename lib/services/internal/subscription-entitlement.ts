@@ -55,31 +55,6 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
     // fall through to prefs
   }
 
-  try {
-    const prefs = (await users.getPrefs(userId)) as Record<string, unknown>;
-    const tier = normalizeBillingPrefsTier(prefs);
-    const expRaw = prefs.subscriptionExpiresAt;
-
-    if (tier === 'LIFETIME') {
-      return {
-        active: true,
-        expiresAt: null,
-        source: 'prefs_lifetime',
-        uiTier: 'LIFETIME',
-      };
-    }
-    if (tier === 'ORG') {
-      return {
-        active: true,
-        expiresAt: typeof expRaw === 'string' ? expRaw : null,
-        source: 'prefs_org',
-        uiTier: 'ORG',
-      };
-    }
-  } catch {
-    // ignore
-  }
-
   return {
     active: false,
     expiresAt: null,

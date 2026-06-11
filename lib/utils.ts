@@ -40,6 +40,24 @@ export function getUserWalletAddress(user: any): string | null {
  */
 export function getUserSubscriptionTier(user: any): string {
   if (!user) return 'FREE';
+
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem(`kylrix_entitlement_${user.$id}`);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.expiresAt) {
+          const end = new Date(parsed.expiresAt);
+          if (end > new Date()) {
+            return parsed.uiTier;
+          }
+        } else if (parsed.active && (parsed.uiTier === 'PRO' || parsed.uiTier === 'LIFETIME' || parsed.uiTier === 'ORG')) {
+          return parsed.uiTier;
+        }
+      } catch {}
+    }
+  }
+
   const base = user.prefs && typeof user.prefs === 'object' ? { ...(user.prefs as object) } : {};
   const merged: Record<string, unknown> = { ...base };
   const sub = getUserField<string>(user, 'subscriptionTier');

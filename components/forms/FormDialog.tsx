@@ -99,7 +99,8 @@ function SortableField({
   isChoiceType,
   user,
   openProUpgrade,
-  openSelectorDrawer
+  openSelectorDrawer,
+  openSettingsDrawer
 }: any) {
   const {
     attributes,
@@ -242,157 +243,16 @@ function SortableField({
             <Tooltip title="Field Settings">
                 <IconButton 
                     size="small" 
-                    onClick={() => updateField(fIdx, { showSettings: !field.showSettings })}
+                    onClick={() => openSettingsDrawer(fIdx)}
                     sx={{ 
-                        color: field.showSettings ? 'var(--color-primary)' : 'rgba(255,255,255,0.3)',
-                        bgcolor: field.showSettings ? alpha('#6366F1', 0.1) : 'transparent',
-                        '&:hover': { bgcolor: alpha('#6366F1', 0.1) } 
+                        color: 'rgba(255,255,255,0.3)',
+                        '&:hover': { bgcolor: alpha('#6366F1', 0.1), color: 'var(--color-primary)' } 
                     }}
                 >
                     <SettingsIcon fontSize="small" />
                 </IconButton>
             </Tooltip>
         </Stack>
-
-        {field.showSettings && (
-            <Box sx={{ pl: { md: 5 }, pr: 2 }}>
-                <Paper sx={{ p: 2, bgcolor: '#161412', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 900, mb: 2, display: 'block', letterSpacing: '0.05em' }}>
-                        VALIDATION CONSTRAINTS
-                    </Typography>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} width="100%">
-                        {(field.type === 'text' || field.type === 'textarea') && (
-                            <>
-                                <TextField
-                                    label="MIN LEN"
-                                    type="number"
-                                    size="small"
-                                    variant="filled"
-                                    value={field.validation?.minLength || ''}
-                                    onChange={(e) => updateField(fIdx, { 
-                                        validation: { ...field.validation, minLength: e.target.value } 
-                                    })}
-                                    InputProps={{ 
-                                      disableUnderline: true, 
-                                      sx: { 
-                                        borderRadius: '12px', 
-                                        fontSize: '0.75rem',
-                                        bgcolor: '#0B0A09',
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                        color: 'white',
-                                        '&:hover': { bgcolor: '#0B0A09' },
-                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
-                                      } 
-                                    }}
-                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
-                                    sx={{ width: { xs: '100%', sm: 100 } }}
-                                />
-                                <TextField
-                                    label="MAX LEN"
-                                    type="number"
-                                    size="small"
-                                    variant="filled"
-                                    value={field.validation?.maxLength || ''}
-                                    onChange={(e) => updateField(fIdx, { 
-                                        validation: { ...field.validation, maxLength: e.target.value } 
-                                    })}
-                                    InputProps={{ 
-                                      disableUnderline: true, 
-                                      sx: { 
-                                        borderRadius: '12px', 
-                                        fontSize: '0.75rem',
-                                        bgcolor: '#0B0A09',
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                        color: 'white',
-                                        '&:hover': { bgcolor: '#0B0A09' },
-                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
-                                      } 
-                                    }}
-                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
-                                    sx={{ width: { xs: '100%', sm: 100 } }}
-                                />
-                                <TextField
-                                    label="REGEX PATTERN"
-                                    size="small"
-                                    variant="filled"
-                                    placeholder="^[a-zA-Z]+$"
-                                    value={field.validation?.pattern || ''}
-                                    onChange={(e) => updateField(fIdx, { 
-                                        validation: { ...field.validation, pattern: e.target.value } 
-                                    })}
-                                    InputProps={{ 
-                                      disableUnderline: true, 
-                                      sx: { 
-                                        borderRadius: '12px', 
-                                        fontSize: '0.75rem',
-                                        bgcolor: '#0B0A09',
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                        color: 'white',
-                                        '&:hover': { bgcolor: '#0B0A09' },
-                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
-                                      } 
-                                    }}
-                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
-                                    sx={{ flexGrow: 1 }}
-                                />
-                            </>
-                        )}
-                        {field.type === 'number' && (
-                            <>
-                                <TextField
-                                    label="MIN VALUE"
-                                    type="number"
-                                    size="small"
-                                    variant="filled"
-                                    value={field.validation?.min || ''}
-                                    onChange={(e) => updateField(fIdx, { 
-                                        validation: { ...field.validation, min: e.target.value } 
-                                    })}
-                                    InputProps={{ 
-                                      disableUnderline: true, 
-                                      sx: { 
-                                        borderRadius: '12px', 
-                                        fontSize: '0.75rem',
-                                        bgcolor: '#0B0A09',
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                        color: 'white',
-                                        '&:hover': { bgcolor: '#0B0A09' },
-                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
-                                      } 
-                                    }}
-                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
-                                    sx={{ width: { xs: '100%', sm: 120 } }}
-                                />
-                                <TextField
-                                    label="MAX VALUE"
-                                    type="number"
-                                    size="small"
-                                    variant="filled"
-                                    value={field.validation?.max || ''}
-                                    onChange={(e) => updateField(fIdx, { 
-                                        validation: { ...field.validation, max: e.target.value } 
-                                    })}
-                                    InputProps={{ 
-                                      disableUnderline: true, 
-                                      sx: { 
-                                        borderRadius: '12px', 
-                                        fontSize: '0.75rem',
-                                        bgcolor: '#0B0A09',
-                                        border: '1px solid rgba(255,255,255,0.05)',
-                                        color: 'white',
-                                        '&:hover': { bgcolor: '#0B0A09' },
-                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
-                                      } 
-                                    }}
-                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
-                                    sx={{ width: { xs: '100%', sm: 120 } }}
-                                />
-                            </>
-                        )}
-                    </Stack>
-                </Paper>
-            </Box>
-        )}
 
         {isChoiceType(field.type) && (
             <Box sx={{ pl: { md: 5 } }}>
@@ -473,6 +333,13 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const [isRestored, setIsRestored] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [activeFieldIndex, setActiveFieldIndex] = useState<number | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [activeSettingsFieldIndex, setActiveSettingsFieldIndex] = useState<number | null>(null);
+  
+  const openSettingsDrawer = (fIdx: number) => {
+    setActiveSettingsFieldIndex(fIdx);
+    setSettingsOpen(true);
+  };
   
   const openSelectorDrawer = (fIdx: number) => {
     setActiveFieldIndex(fIdx);
@@ -968,6 +835,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                       user={user}
                       openProUpgrade={openProUpgrade}
                       openSelectorDrawer={openSelectorDrawer}
+                      openSettingsDrawer={openSettingsDrawer}
                     />
                   ))}
                 </SortableContext>
@@ -1144,6 +1012,314 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
           </Button>
         ))}
       </Box>
+    </Drawer>
+
+    {/* Bottom Drawer Field Settings & Conditional Branching */}
+    <Drawer
+      anchor="bottom"
+      open={settingsOpen && activeSettingsFieldIndex !== null}
+      onClose={() => setSettingsOpen(false)}
+      ModalProps={{ keepMounted: false, disablePortal: true }}
+      PaperProps={{
+        sx: {
+          width: '100%',
+          maxWidth: 720,
+          mx: 'auto',
+          borderRadius: '28px 28px 0 0',
+          bgcolor: '#161412',
+          borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+          borderLeft: '1px solid rgba(255, 255, 255, 0.05)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.05)',
+          backgroundImage: 'none',
+          p: 4,
+          pb: 6,
+          zIndex: 1400,
+          maxHeight: '80vh',
+          overflowY: 'auto'
+        }
+      }}
+    >
+      {activeSettingsFieldIndex !== null && fields[activeSettingsFieldIndex] && (() => {
+        const field = fields[activeSettingsFieldIndex];
+        const precedingChoiceFields = fields.slice(0, activeSettingsFieldIndex).filter(f => ['select', 'radio', 'checkbox'].includes(f.type));
+        
+        return (
+          <Stack spacing={4}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', color: 'white', letterSpacing: '-0.01em' }}>
+                Settings: {field.label || 'Question'}
+              </Typography>
+              <IconButton onClick={() => setSettingsOpen(false)} size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.05)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' } }}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+
+            <Stack spacing={3}>
+              <FormControlLabel
+                control={
+                  <Switch 
+                    checked={!!field.required} 
+                    onChange={(e) => updateField(activeSettingsFieldIndex, { required: e.target.checked })} 
+                  />
+                }
+                label={<Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>Required Field</Typography>}
+              />
+
+              {/* Validation section depending on field type */}
+              {(field.type === 'text' || field.type === 'textarea') && (
+                <Stack spacing={2}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, letterSpacing: '0.05em' }}>
+                    VALIDATION CONSTRAINTS
+                  </Typography>
+                  <Stack direction="row" spacing={2}>
+                    <TextField
+                      label="Min Length"
+                      type="number"
+                      size="small"
+                      variant="filled"
+                      value={field.validation?.minLength || ''}
+                      onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                        validation: { ...field.validation, minLength: e.target.value } 
+                      })}
+                      InputProps={{ 
+                        disableUnderline: true, 
+                        sx: { 
+                          borderRadius: '12px', 
+                          fontSize: '0.75rem',
+                          bgcolor: '#0B0A09',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          color: 'white',
+                          '&:hover': { bgcolor: '#0B0A09' }
+                        } 
+                      }}
+                      InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                      sx={{ flex: 1 }}
+                    />
+                    <TextField
+                      label="Max Length"
+                      type="number"
+                      size="small"
+                      variant="filled"
+                      value={field.validation?.maxLength || ''}
+                      onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                        validation: { ...field.validation, maxLength: e.target.value } 
+                      })}
+                      InputProps={{ 
+                        disableUnderline: true, 
+                        sx: { 
+                          borderRadius: '12px', 
+                          fontSize: '0.75rem',
+                          bgcolor: '#0B0A09',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          color: 'white',
+                          '&:hover': { bgcolor: '#0B0A09' }
+                        } 
+                      }}
+                      InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                      sx={{ flex: 1 }}
+                    />
+                  </Stack>
+                  <TextField
+                    label="Pattern Regex"
+                    size="small"
+                    variant="filled"
+                    placeholder="e.g., ^[a-zA-Z]+$"
+                    value={field.validation?.pattern || ''}
+                    onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                      validation: { ...field.validation, pattern: e.target.value } 
+                    })}
+                    InputProps={{ 
+                      disableUnderline: true, 
+                      sx: { 
+                        borderRadius: '12px', 
+                        fontSize: '0.75rem',
+                        bgcolor: '#0B0A09',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        color: 'white',
+                        '&:hover': { bgcolor: '#0B0A09' }
+                      } 
+                    }}
+                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                    sx={{ width: '100%' }}
+                  />
+                </Stack>
+              )}
+
+              {field.type === 'number' && (
+                <Stack spacing={2}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, letterSpacing: '0.05em' }}>
+                    VALIDATION CONSTRAINTS
+                  </Typography>
+                  <Stack direction="row" spacing={2}>
+                    <TextField
+                      label="Min Value"
+                      type="number"
+                      size="small"
+                      variant="filled"
+                      value={field.validation?.min || ''}
+                      onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                        validation: { ...field.validation, min: e.target.value } 
+                      })}
+                      InputProps={{ 
+                        disableUnderline: true, 
+                        sx: { 
+                          borderRadius: '12px', 
+                          fontSize: '0.75rem',
+                          bgcolor: '#0B0A09',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          color: 'white',
+                          '&:hover': { bgcolor: '#0B0A09' }
+                        } 
+                      }}
+                      InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                      sx={{ flex: 1 }}
+                    />
+                    <TextField
+                      label="Max Value"
+                      type="number"
+                      size="small"
+                      variant="filled"
+                      value={field.validation?.max || ''}
+                      onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                        validation: { ...field.validation, max: e.target.value } 
+                      })}
+                      InputProps={{ 
+                        disableUnderline: true, 
+                        sx: { 
+                          borderRadius: '12px', 
+                          fontSize: '0.75rem',
+                          bgcolor: '#0B0A09',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          color: 'white',
+                          '&:hover': { bgcolor: '#0B0A09' }
+                        } 
+                      }}
+                      InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                      sx={{ flex: 1 }}
+                    />
+                  </Stack>
+                </Stack>
+              )}
+
+              {/* Conditional Branching Logic */}
+              <Divider sx={{ opacity: 0.08 }} />
+              
+              <Stack spacing={2}>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, letterSpacing: '0.05em' }}>
+                  CONDITIONAL BRANCHING
+                </Typography>
+
+                {precedingChoiceFields.length === 0 ? (
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
+                    Create choice questions (radio, checkbox, dropdown) before this step to enable branching logic.
+                  </Typography>
+                ) : (
+                  <Stack spacing={2}>
+                    <FormControlLabel
+                      control={
+                        <Switch 
+                          checked={!!field.logic?.enabled} 
+                          onChange={(e) => {
+                            const enabled = e.target.checked;
+                            updateField(activeSettingsFieldIndex, {
+                              logic: {
+                                ...field.logic,
+                                enabled,
+                                showIfFieldId: enabled ? (field.logic?.showIfFieldId || precedingChoiceFields[0].id) : '',
+                                showIfValue: enabled ? (field.logic?.showIfValue || precedingChoiceFields[0].options?.[0] || '') : ''
+                              }
+                            });
+                          }} 
+                        />
+                      }
+                      label={<Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>Enable logic branch</Typography>}
+                    />
+
+                    {field.logic?.enabled && (
+                      <Stack spacing={2} sx={{ pl: 1 }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800 }}>
+                          Show this question only if:
+                        </Typography>
+                        
+                        <Select
+                          value={field.logic.showIfFieldId || precedingChoiceFields[0].id}
+                          onChange={(e) => {
+                            const targetId = e.target.value;
+                            const targetField = precedingChoiceFields.find(f => f.id === targetId);
+                            updateField(activeSettingsFieldIndex, {
+                              logic: {
+                                ...field.logic,
+                                showIfFieldId: targetId,
+                                showIfValue: targetField?.options?.[0] || ''
+                              }
+                            });
+                          }}
+                          disableUnderline
+                          sx={{
+                            borderRadius: '12px',
+                            bgcolor: '#0B0A09',
+                            border: '1px solid rgba(255, 255, 255, 0.05)',
+                            px: 2,
+                            py: 1,
+                            color: 'white',
+                            fontSize: '0.85rem',
+                            fontWeight: 700
+                          }}
+                        >
+                          {precedingChoiceFields.map(f => (
+                            <MenuItem key={f.id} value={f.id} sx={{ fontSize: '0.85rem' }}>
+                              {f.label || `Question (${f.id})`}
+                            </MenuItem>
+                          ))}
+                        </Select>
+
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800 }}>
+                          equals value:
+                        </Typography>
+
+                        {(() => {
+                          const parentField = precedingChoiceFields.find(f => f.id === (field.logic.showIfFieldId || precedingChoiceFields[0].id));
+                          const options = parentField?.options || [];
+                          return (
+                            <Select
+                              value={field.logic.showIfValue || options[0] || ''}
+                              onChange={(e) => {
+                                updateField(activeSettingsFieldIndex, {
+                                  logic: {
+                                    ...field.logic,
+                                    showIfValue: e.target.value
+                                  }
+                                });
+                              }}
+                              disableUnderline
+                              sx={{
+                                borderRadius: '12px',
+                                bgcolor: '#0B0A09',
+                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                px: 2,
+                                py: 1,
+                                color: 'white',
+                                fontSize: '0.85rem',
+                                fontWeight: 700
+                              }}
+                            >
+                              {options.map(opt => (
+                                <MenuItem key={opt} value={opt} sx={{ fontSize: '0.85rem' }}>
+                                  {opt}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          );
+                        })()}
+                      </Stack>
+                    )}
+                  </Stack>
+                )}
+              </Stack>
+            </Stack>
+          </Stack>
+        );
+      })()}
     </Drawer>
     </>
   );
