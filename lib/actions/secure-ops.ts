@@ -5274,7 +5274,12 @@ export async function getFilePreviewSecure(bucketId: string, fileId: string, wid
   try {
     const url = storage.getFilePreview(bucketId, fileId, width, height);
     // Fetch preview content from the server-side context where we have full credentials
-    const res = await fetch(url.toString());
+    const res = await fetch(url.toString(), {
+      headers: {
+        'X-Appwrite-Project': APPWRITE_CONFIG.PROJECT_ID,
+        'X-Appwrite-Key': process.env.APPWRITE_API || '',
+      },
+    });
     if (!res.ok) {
       console.warn('[getFilePreviewSecure] Failed to fetch url:', url.toString(), 'status:', res.status);
       return null;

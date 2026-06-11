@@ -70,7 +70,8 @@ export class CryptoPaymentProvider implements PaymentProvider {
 
 
       if (data.status !== 'success') {
-        throw new Error(`BlockBee API Error: ${data.message || 'Unknown error'}`);
+        const errMsg = data.error || data.message || (typeof data === 'object' ? JSON.stringify(data) : String(data));
+        throw new Error(`BlockBee API Error: ${errMsg}`);
       }
 
       const paymentId = String(data.payment_id || '').trim();
