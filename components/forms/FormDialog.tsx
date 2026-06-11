@@ -679,12 +679,31 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         flexDirection: 'column',
         gap: 2.5
       }}>
-        {/* Row 1: Header title and dismiss */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', fontSize: '1.4rem' }}>
-            {form ? 'Edit Form' : 'New Form'}
-          </Typography>
-          <IconButton onClick={handleClose} size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.05)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' } }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4 }}>
+          <TextField
+            fullWidth
+            variant="standard"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Form Title..."
+            InputProps={{ 
+              disableUnderline: true, 
+              sx: { 
+                fontSize: '1.25rem', 
+                fontWeight: 900, 
+                fontFamily: 'var(--font-clash)',
+                letterSpacing: '-0.02em',
+                color: 'white',
+                px: 2,
+                py: 1.25,
+                borderRadius: '12px',
+                bgcolor: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+                '&::placeholder': { color: 'rgba(255,255,255,0.25)' }
+              } 
+            }}
+          />
+          <IconButton onClick={handleClose} size="small" sx={{ bgcolor: 'rgba(255, 255, 255, 0.05)', '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }, flexShrink: 0 }}>
               <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
@@ -735,59 +754,15 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
 
       <Box sx={{ p: 4, pt: 1, flex: 1, overflowY: 'auto', overflowX: 'hidden', maxHeight: 'calc(100vh - 180px)' }}>
         <Stack spacing={5}>
-          {isRestored && (
-            <Alert 
-                severity="warning" 
-                action={
-                    <Button color="inherit" size="small" onClick={discardDraft} sx={{ fontWeight: 800 }}>
-                        DISCARD
-                    </Button>
-                }
-                sx={{ 
-                    borderRadius: '16px', 
-                    bgcolor: alpha('#FFB020', 0.05), 
-                    color: '#FFB020', 
-                    border: '1px solid rgba(255, 176, 32, 0.1)',
-                    '& .MuiAlert-icon': { color: '#FFB020' }
-                }}
-            >
-                Restored from local cache. Your changes are unsynced.
-            </Alert>
-          )}
+
 
           <Box>
             <Stack spacing={3}>
-              <Stack spacing={1}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, letterSpacing: '0.05em', ml: 1 }}>
-                  IDENTITY LABEL
-                </Typography>
-                <TextField
-                  fullWidth
-                  variant="standard"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., Nexus Registration"
-                  InputProps={{ 
-                    disableUnderline: true, 
-                    sx: { 
-                      borderRadius: '16px', 
-                      fontWeight: 800, 
-                      fontSize: '1.1rem',
-                      bgcolor: '#0B0A09',
-                      border: '1px solid rgba(255, 255, 255, 0.05)',
-                      px: 2.5,
-                      py: 1.5,
-                      color: 'white',
-                      '&:hover': { bgcolor: '#0B0A09' },
-                      '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
-                    } 
-                  }}
-                />
-              </Stack>
+
 
               <Stack spacing={1}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, letterSpacing: '0.05em', ml: 1 }}>
-                  MISSION BRIEF
+                  FORM DESCRIPTION
                 </Typography>
                 <TextField
                   fullWidth
@@ -796,7 +771,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                   rows={2}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Briefly describe the objective..."
+                  placeholder="Briefly describe the purpose of this form..."
                   InputProps={{ 
                     disableUnderline: true, 
                     sx: { 
@@ -912,9 +887,14 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             py: 1.5,
             fontWeight: 900,
             bgcolor: 'var(--color-primary)',
-            color: 'black',
+            color: 'white',
             boxShadow: `0 8px 32px ${alpha('#6366F1', 0.3)}`,
-            '&:hover': { bgcolor: alpha('#6366F1', 0.9) }
+            '&:hover': { bgcolor: alpha('#6366F1', 0.9) },
+            '&.Mui-disabled': {
+              bgcolor: 'rgba(255, 255, 255, 0.05)',
+              color: 'rgba(255, 255, 255, 0.2)',
+              boxShadow: 'none'
+            }
           }}
         >
           {loading ? 'Saving...' : (form ? 'Save' : 'Create')}
