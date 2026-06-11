@@ -36,3 +36,10 @@ Avoid generic Tailwind/SaaS templates (as seen in legacy `/flow` structures) by 
 1. **Low-contrast Borders**: Never use flat white or bright gray borders. Use `border-white/5` or `border-[#34322F]`.
 2. **Top Spotlight Ambient Gradients**: Layer subtle radial gradients matching the page context (e.g., Amber `rgba(245,158,11,0.08)` for Connect, Indigo `rgba(99,102,241,0.08)` for core Kylrix).
 3. **Typography Rhythm**: Use `font-clash` strictly for core headers and `font-satoshi` for settings/descriptions.
+
+## 5. Layout and Input Modals (Note Detail & settings standard)
+- **Outer Panel Surface**: For root/primary components (drawers, panels, details), always use our signature muted ash background (`#161412`). Never stack pure black elements directly on black layout backgrounds (black-on-black is forbidden).
+- **Drawer / Select Panels**: Do not use standard inline Select dropdowns or menus which bloat the viewport. Handle choice configurations or type assignments inside dedicated bottom drawer selectors.
+- **Scroll Constraints (Viewport Boundaries)**: For fullscreen layouts, set strict scroll heights (e.g., `maxHeight: 'calc(100vh - 180px)'`) on scrollable wrappers to guarantee footer buttons are always visible, fully balanced, and never cut off by viewport edges. Horizontal page overflows (forcing side-to-side scrolling) are strictly prohibited.
+- **Action Button Placement (Anti-Overflow)**: Place cancel, delete, or dismiss buttons for row-level inputs (e.g. lists of options, dynamic fields) to the *left* of the input field. Placing them on the far right pushes elements off the screen bounds on smaller viewports and creates layout breakage.
+- **Padding Integrity**: Ensure all text inputs, descriptions, and indicators maintain a minimum of `12px` (or `pl-3`/`pr-3`) padding from parent card edges to block clipping.

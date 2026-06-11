@@ -245,7 +245,7 @@ function SortableField({
                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 900, mb: 2, display: 'block', letterSpacing: '0.05em' }}>
                         VALIDATION CONSTRAINTS
                     </Typography>
-                    <Stack direction="row" spacing={2}>
+                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} width="100%">
                         {(field.type === 'text' || field.type === 'textarea') && (
                             <>
                                 <TextField
@@ -257,8 +257,20 @@ function SortableField({
                                     onChange={(e) => updateField(fIdx, { 
                                         validation: { ...field.validation, minLength: e.target.value } 
                                     })}
-                                    InputProps={{ disableUnderline: true, sx: { borderRadius: '8px', fontSize: '0.75rem' } }}
-                                    sx={{ width: 100 }}
+                                    InputProps={{ 
+                                      disableUnderline: true, 
+                                      sx: { 
+                                        borderRadius: '12px', 
+                                        fontSize: '0.75rem',
+                                        bgcolor: '#0B0A09',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        '&:hover': { bgcolor: '#0B0A09' },
+                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
+                                      } 
+                                    }}
+                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                                    sx={{ width: { xs: '100%', sm: 100 } }}
                                 />
                                 <TextField
                                     label="MAX LEN"
@@ -269,8 +281,20 @@ function SortableField({
                                     onChange={(e) => updateField(fIdx, { 
                                         validation: { ...field.validation, maxLength: e.target.value } 
                                     })}
-                                    InputProps={{ disableUnderline: true, sx: { borderRadius: '8px', fontSize: '0.75rem' } }}
-                                    sx={{ width: 100 }}
+                                    InputProps={{ 
+                                      disableUnderline: true, 
+                                      sx: { 
+                                        borderRadius: '12px', 
+                                        fontSize: '0.75rem',
+                                        bgcolor: '#0B0A09',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        '&:hover': { bgcolor: '#0B0A09' },
+                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
+                                      } 
+                                    }}
+                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                                    sx={{ width: { xs: '100%', sm: 100 } }}
                                 />
                                 <TextField
                                     label="REGEX PATTERN"
@@ -281,7 +305,19 @@ function SortableField({
                                     onChange={(e) => updateField(fIdx, { 
                                         validation: { ...field.validation, pattern: e.target.value } 
                                     })}
-                                    InputProps={{ disableUnderline: true, sx: { borderRadius: '8px', fontSize: '0.75rem' } }}
+                                    InputProps={{ 
+                                      disableUnderline: true, 
+                                      sx: { 
+                                        borderRadius: '12px', 
+                                        fontSize: '0.75rem',
+                                        bgcolor: '#0B0A09',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        '&:hover': { bgcolor: '#0B0A09' },
+                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
+                                      } 
+                                    }}
+                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
                                     sx={{ flexGrow: 1 }}
                                 />
                             </>
@@ -297,8 +333,20 @@ function SortableField({
                                     onChange={(e) => updateField(fIdx, { 
                                         validation: { ...field.validation, min: e.target.value } 
                                     })}
-                                    InputProps={{ disableUnderline: true, sx: { borderRadius: '8px', fontSize: '0.75rem' } }}
-                                    sx={{ width: 120 }}
+                                    InputProps={{ 
+                                      disableUnderline: true, 
+                                      sx: { 
+                                        borderRadius: '12px', 
+                                        fontSize: '0.75rem',
+                                        bgcolor: '#0B0A09',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        '&:hover': { bgcolor: '#0B0A09' },
+                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
+                                      } 
+                                    }}
+                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                                    sx={{ width: { xs: '100%', sm: 120 } }}
                                 />
                                 <TextField
                                     label="MAX VALUE"
@@ -309,8 +357,20 @@ function SortableField({
                                     onChange={(e) => updateField(fIdx, { 
                                         validation: { ...field.validation, max: e.target.value } 
                                     })}
-                                    InputProps={{ disableUnderline: true, sx: { borderRadius: '8px', fontSize: '0.75rem' } }}
-                                    sx={{ width: 120 }}
+                                    InputProps={{ 
+                                      disableUnderline: true, 
+                                      sx: { 
+                                        borderRadius: '12px', 
+                                        fontSize: '0.75rem',
+                                        bgcolor: '#0B0A09',
+                                        border: '1px solid rgba(255,255,255,0.05)',
+                                        color: 'white',
+                                        '&:hover': { bgcolor: '#0B0A09' },
+                                        '&.Mui-focused': { bgcolor: '#0B0A09', borderColor: 'var(--color-primary)' }
+                                      } 
+                                    }}
+                                    InputLabelProps={{ style: { color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem' } }}
+                                    sx={{ width: { xs: '100%', sm: 120 } }}
                                 />
                             </>
                         )}
@@ -326,19 +386,36 @@ function SortableField({
                 </Typography>
                 <Stack spacing={1}>
                     {(field.options || []).map((opt: string, oIdx: number) => (
-                        <Stack key={oIdx} direction="row" spacing={1} alignItems="center">
-                            <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'rgba(255,255,255,0.1)' }} />
+                        <Stack key={oIdx} direction="row" spacing={1.5} alignItems="center">
+                            <IconButton 
+                              size="small" 
+                              onClick={() => removeOption(fIdx, oIdx)} 
+                              sx={{ 
+                                color: 'rgba(255,255,255,0.25)', 
+                                '&:hover': { color: '#ef4444', bgcolor: 'rgba(239,68,68,0.1)' } 
+                              }}
+                            >
+                                <CloseIcon style={{ fontSize: 14 }} />
+                            </IconButton>
                             <TextField
                                 fullWidth
                                 size="small"
                                 variant="standard"
                                 value={opt}
                                 onChange={(e) => updateOption(fIdx, oIdx, e.target.value)}
-                                InputProps={{ disableUnderline: true, sx: { fontSize: '0.85rem' } }}
+                                InputProps={{ 
+                                  disableUnderline: true, 
+                                  sx: { 
+                                    fontSize: '0.85rem', 
+                                    color: 'white',
+                                    bgcolor: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.05)',
+                                    borderRadius: '8px',
+                                    px: 1.5,
+                                    py: 0.5
+                                  } 
+                                }}
                             />
-                            <IconButton size="small" onClick={() => removeOption(fIdx, oIdx)} sx={{ opacity: 0.3 }}>
-                                <CloseIcon fontSize="inherit" />
-                            </IconButton>
                         </Stack>
                     ))}
                     <Button 
@@ -638,6 +715,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
   const isChoiceType = (type: string) => ['select', 'radio', 'checkbox'].includes(type);
 
   return (
+    <>
     <Drawer 
       anchor="bottom"
       open={open} 
@@ -724,7 +802,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
         </Box>
       </Box>
 
-      <Box sx={{ p: 4, pt: 1, flex: 1, overflowY: 'auto' }}>
+      <Box sx={{ p: 4, pt: 1, flex: 1, overflowY: 'auto', maxHeight: 'calc(100vh - 180px)' }}>
         <Stack spacing={5}>
           {isRestored && (
             <Alert 
