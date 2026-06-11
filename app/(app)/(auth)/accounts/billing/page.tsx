@@ -30,7 +30,8 @@ export default function BillingPage() {
   const [loadingPlan, setLoadingPlan] = useState(true);
 
   // Region states
-  const [region, setRegion] = useState('US');
+  const [region, setRegion] = useState('');
+  const [loadingRegion, setLoadingRegion] = useState(true);
   const [savingRegion, setSavingRegion] = useState(false);
 
   // Coupon states
@@ -53,10 +54,12 @@ export default function BillingPage() {
 
   const resolveUserRegion = async () => {
     try {
+      setLoadingRegion(true);
       const jwtRes = await account.createJWT().then(res => res.jwt).catch(() => undefined);
       const secureRegion = await getUserBillingRegionAction(jwtRes);
       if (secureRegion) {
         setRegion(secureRegion);
+        setLoadingRegion(false);
         return;
       }
     } catch (err) {
@@ -64,7 +67,10 @@ export default function BillingPage() {
     }
     if (user?.prefs?.region) {
       setRegion(user.prefs.region);
+    } else {
+      setRegion('US');
     }
+    setLoadingRegion(false);
   };
 
   const loadSubscriptionStatus = async () => {
@@ -246,20 +252,26 @@ export default function BillingPage() {
                   <select
                     value={region}
                     onChange={handleSaveRegion}
-                    disabled={savingRegion}
+                    disabled={savingRegion || loadingRegion}
                     className="w-full bg-white/4 border border-white/8 focus:border-[#6366F1] rounded-xl px-4 py-3.5 text-sm font-semibold text-white focus:outline-none appearance-none cursor-pointer"
                   >
-                    <option value="US">United States</option>
-                    <option value="GB">United Kingdom</option>
-                    <option value="CA">Canada</option>
-                    <option value="DE">Germany</option>
-                    <option value="FR">France</option>
-                    <option value="AU">Australia</option>
-                    <option value="SG">Singapore</option>
-                    <option value="CH">Switzerland</option>
-                    <option value="NL">Netherlands</option>
-                    <option value="ZA">South Africa</option>
-                    <option value="NG">Nigeria</option>
+                    {loadingRegion ? (
+                      <option value="" disabled>Loading secure billing region...</option>
+                    ) : (
+                      <>
+                        <option value="US">United States</option>
+                        <option value="GB">United Kingdom</option>
+                        <option value="CA">Canada</option>
+                        <option value="DE">Germany</option>
+                        <option value="FR">France</option>
+                        <option value="AU">Australia</option>
+                        <option value="SG">Singapore</option>
+                        <option value="CH">Switzerland</option>
+                        <option value="NL">Netherlands</option>
+                        <option value="ZA">South Africa</option>
+                        <option value="NG">Nigeria</option>
+                      </>
+                    )}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-white/30">
                     ▼
