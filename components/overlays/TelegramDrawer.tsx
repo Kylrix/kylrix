@@ -386,11 +386,12 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 2.25,
+                    gap: 2.5,
                   }}
                 >
-                  {/* Top: Icon + Title */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  {/* Top section: Icon + Text Column */}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    {/* Left: fixed icon slot */}
                     <Box
                       sx={{
                         width: 42,
@@ -406,20 +407,28 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
                     >
                       <TelegramIcon sx={{ fontSize: 20 }} />
                     </Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+
+                    {/* Right: Stacked text column */}
+                    <Box
+                      sx={{
+                        minWidth: 0,
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0.5,
+                      }}
+                    >
                       <Typography component="span" sx={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#6366F1', fontWeight: 800, letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
                         Step 1
                       </Typography>
                       <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.94rem', color: 'white', fontFamily: 'var(--font-clash)', lineHeight: 1.25 }}>
                         Start Telegram Assistant
                       </Typography>
+                      <Typography component="span" sx={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.82rem', fontFamily: 'var(--font-satoshi)', fontWeight: 600, lineHeight: 1.45, mt: 0.5 }}>
+                        Launch the helper bot to establish a secure, encrypted notification bridge for real-time updates.
+                      </Typography>
                     </Box>
                   </Box>
-
-                  {/* Middle: Description */}
-                  <Typography component="span" sx={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: '0.82rem', fontFamily: 'var(--font-satoshi)', fontWeight: 600, lineHeight: 1.45 }}>
-                    Launch the helper bot to establish a secure, encrypted notification bridge for real-time updates.
-                  </Typography>
 
                   {/* Bottom: Action Button */}
                   <Button
@@ -459,11 +468,12 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
                     border: '1px solid rgba(255, 255, 255, 0.05)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 2.25,
+                    gap: 2.5,
                   }}
                 >
-                  {/* Top: Icon + Title */}
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  {/* Top section: Icon + Text Column */}
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+                    {/* Left: fixed icon slot */}
                     <Box
                       sx={{
                         width: 42,
@@ -479,20 +489,28 @@ export function TelegramDrawer({ open, onClose, onSuccess }: TelegramDrawerProps
                     >
                       <CheckCircle2 size={20} />
                     </Box>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+
+                    {/* Right: Stacked text column */}
+                    <Box
+                      sx={{
+                        minWidth: 0,
+                        flex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0.5,
+                      }}
+                    >
                       <Typography component="span" sx={{ fontSize: '0.7rem', textTransform: 'uppercase', color: '#6366F1', fontWeight: 800, letterSpacing: '0.08em', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
                         Step 2
                       </Typography>
                       <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.94rem', color: 'white', fontFamily: 'var(--font-clash)', lineHeight: 1.25 }}>
                         Authenticate Connection
                       </Typography>
+                      <Typography component="span" sx={{ color: 'rgba(255, 255, 255, 0.42)', fontSize: '0.82rem', fontFamily: 'var(--font-satoshi)', fontWeight: 600, lineHeight: 1.45, mt: 0.5 }}>
+                        Provide this authorization code if requested by the assistant bot. Code expires in 3 minutes.
+                      </Typography>
                     </Box>
                   </Box>
-
-                  {/* Middle: Description */}
-                  <Typography component="span" sx={{ color: 'rgba(255, 255, 255, 0.42)', fontSize: '0.82rem', fontFamily: 'var(--font-satoshi)', fontWeight: 600, lineHeight: 1.45 }}>
-                    Provide this authorization code if requested by the assistant bot. Code expires in 3 minutes.
-                  </Typography>
 
                   {/* Bottom: Code display & Copy action */}
                   <Box
