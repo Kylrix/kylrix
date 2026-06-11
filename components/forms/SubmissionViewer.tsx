@@ -144,8 +144,9 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
 
   const handleToggleRead = async (id: string, read: boolean) => {
     try {
-      await FormsService.updateSubmission(id, { read } as any);
-      setSubmissions(prev => prev.map(s => s.$id === id ? { ...s, read } : s));
+      const status = read ? 'read' : 'unread';
+      await FormsService.updateSubmission(id, { status } as any);
+      setSubmissions(prev => prev.map(s => s.$id === id ? { ...s, status } : s));
     } catch (_e) {
         console.error("Failed to update read status", _e);
     }
@@ -153,8 +154,9 @@ export default function SubmissionViewer({ formId, formSchema }: { formId: strin
 
   const handleToggleFlag = async (id: string, flagged: boolean) => {
     try {
-      await FormsService.updateSubmission(id, { flagged } as any);
-      setSubmissions(prev => prev.map(s => s.$id === id ? { ...s, flagged } : s));
+      const status = flagged ? 'flagged' : 'unread';
+      await FormsService.updateSubmission(id, { status } as any);
+      setSubmissions(prev => prev.map(s => s.$id === id ? { ...s, status } : s));
     } catch (_e) {
         console.error("Failed to update flagged status", _e);
     }
