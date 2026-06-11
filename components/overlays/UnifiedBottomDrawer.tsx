@@ -124,8 +124,8 @@ export function UnifiedBottomDrawer() {
                             bgcolor: '#161412',
                             borderTop: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: '32px 32px 0 0',
-                            maxHeight: activeContent === 'form-response-detail' ? '90dvh' : '90dvh',
-                            overflow: 'hidden'
+                            maxHeight: '90dvh',
+                            overflowY: 'auto'
                         }
                     }}
                 >
@@ -147,7 +147,7 @@ export function UnifiedBottomDrawer() {
                             height: '100%',
                             maxWidth: 480,
                             width: '100%',
-                            overflow: 'hidden'
+                            overflowY: 'auto'
                         }
                     }}
                 >
