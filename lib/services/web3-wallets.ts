@@ -2,24 +2,19 @@ import { createPublicClient, http, formatEther, parseEther } from 'viem';
 import { mainnet, base, arbitrum, polygon } from 'viem/chains';
 import { WalletService, type SupportedWalletChain } from './wallets';
 
-// DRPC Default endpoint endpoints (Ethereum, Base, Arbitrum, Polygon chains)
-const DRPC_CONFIGS: Record<string, { chain: any; rpcUrl: string }> = {
-  eth: {
-    chain: mainnet,
-    rpcUrl: 'https://lb.drpc.org/ogrpc?network=ethereum&dkey=an_drpc_key_placeholder'
-  },
-  base: {
-    chain: base,
-    rpcUrl: 'https://lb.drpc.org/ogrpc?network=base&dkey=an_drpc_key_placeholder'
-  },
-  arbitrum: {
-    chain: arbitrum,
-    rpcUrl: 'https://lb.drpc.org/ogrpc?network=arbitrum&dkey=an_drpc_key_placeholder'
-  },
-  polygon: {
-    chain: polygon,
-    rpcUrl: 'https://lb.drpc.org/ogrpc?network=polygon&dkey=an_drpc_key_placeholder'
-  }
+// DRPC configuration mapping
+const DRPC_CHAINS: Record<string, any> = {
+  eth: mainnet,
+  base: base,
+  arbitrum: arbitrum,
+  polygon: polygon
+};
+
+const DRPC_NETWORK_NAMES: Record<string, string> = {
+  eth: 'ethereum',
+  base: 'base',
+  arbitrum: 'arbitrum',
+  polygon: 'polygon'
 };
 
 export interface Web3Balance {
