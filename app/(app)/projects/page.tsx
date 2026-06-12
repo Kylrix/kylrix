@@ -734,36 +734,35 @@ export default function ProjectsPage() {
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
               Projects ({projects.length})
             </Typography>
-            <Button
+            <IconButton
               size="small"
               onClick={async () => {
+                setIsRefreshing(true);
                 try {
-                  await fetchProjects();
+                  await fetchProjects(true);
                   showSuccess('Projects list updated');
                 } catch (err: any) {
                   showError('Failed to refresh projects', err.message);
+                } finally {
+                  setTimeout(() => setIsRefreshing(false), 600);
                 }
               }}
-              startIcon={<RotateCcw size={12} />}
+              disabled={isRefreshing}
               sx={{
-                color: 'rgba(255,255,255,0.4)',
-                fontWeight: 800,
-                textTransform: 'none',
-                fontSize: '0.7rem',
-                border: '1px solid rgba(255,255,255,0.06)',
-                bgcolor: 'rgba(255,255,255,0.02)',
+                color: isRefreshing ? '#6366F1' : 'rgba(255, 255, 255, 0.4)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                bgcolor: 'rgba(255, 255, 255, 0.02)',
                 borderRadius: '8px',
-                px: 1.5,
-                py: 0.5,
+                p: 0.75,
                 '&:hover': {
                   color: '#fff',
-                  bgcolor: 'rgba(255,255,255,0.05)',
-                  borderColor: 'rgba(255,255,255,0.12)',
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  borderColor: 'rgba(255, 255, 255, 0.12)',
                 }
               }}
             >
-              Refresh
-            </Button>
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+            </IconButton>
         </Stack>
         
         {loading ? (
