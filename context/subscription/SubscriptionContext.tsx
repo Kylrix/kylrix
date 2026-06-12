@@ -138,7 +138,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     } finally {
       setRegionLoading(false);
     }
-  }, []);
+  }, [user, authLoading]);
 
   const refreshEntitlement = useCallback(async (force = false) => {
     if (authLoading || !user?.$id) return;
@@ -249,7 +249,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     void applyRegionPrefs();
-  }, [applyRegionPrefs]);
+  }, [applyRegionPrefs, user?.$id, user?.prefs?.region]);
 
   useEffect(() => {
     void hydrateSubscriptionState();
