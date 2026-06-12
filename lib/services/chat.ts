@@ -1050,7 +1050,7 @@ export const ChatService = {
             throw new Error('You are not a participant in this conversation');
         }
 
-        if ((type === 'text' || type === 'attachment') && ecosystemSecurity.status.isUnlocked) {
+        if ((type === 'text' || type === 'attachment') && conversation?.isEncrypted && ecosystemSecurity.status.isUnlocked) {
             const convKey = conversation ? await resolveConversationKey(conversation, senderId, null, permissionSyncAuth) : null;
             if (!convKey) throw new Error('Conversation key not available');
             finalContent = await ecosystemSecurity.encryptWithKey(content, convKey);

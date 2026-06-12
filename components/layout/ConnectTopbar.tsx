@@ -158,6 +158,11 @@ export default function ConnectTopbar({
   const [profileMenuAnchorEl, setProfileMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [appMenuAnchorEl, setAppMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   const [copyState, setCopyState] = useState<'idle' | 'copied-userid' | 'copied-username'>('idle');
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -2167,7 +2172,7 @@ export default function ConnectTopbar({
                         <IconButton size="small" onClick={() => setSearchOpen(false)} sx={{ color: 'white/40' }}><CloseIcon size={16} /></IconButton>
                       </Paper>
                     </motion.div>
-                  ) : (
+                  ) : isMounted ? (
                     <motion.div 
                       key="island-rest"
                       initial={{ scale: 0.8, opacity: 0 }} 
@@ -2200,6 +2205,35 @@ export default function ConnectTopbar({
                         {unreadNotifCount > 0 && <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: '#EC4899', ml: -0.5 }} />}
                       </Box>
                     </motion.div>
+                  ) : (
+                    <div 
+                      onClick={openSearch} 
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <Box sx={{ 
+                        width: { xs: 44, md: 160 }, 
+                        height: 44, 
+                        borderRadius: '999px', 
+                        bgcolor: 'rgba(255,255,255,0.02)', 
+                        border: '1px solid rgba(255,255,255,0.08)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        gap: 1.25, 
+                        color: 'white', 
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: 'rgba(99, 102, 241, 0.4)',
+                          bgcolor: 'rgba(99, 102, 241, 0.03)',
+                          boxShadow: '0 0 20px rgba(99, 102, 241, 0.15)'
+                        }
+                      }}>
+                        <Search size={18} strokeWidth={2.5} />
+                        <Typography sx={{ display: { xs: 'none', md: 'block' }, fontFamily: 'var(--font-satoshi)', fontWeight: 600, fontSize: '0.8rem' }}>Search</Typography>
+                        {unreadNotifCount > 0 && <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: '#EC4899', ml: -0.5 }} />}
+                      </Box>
+                    </div>
                   )}
                 </AnimatePresence>
               ) : <Box sx={{ height: 44 }} />}
