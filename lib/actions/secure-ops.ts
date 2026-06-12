@@ -3084,24 +3084,76 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
 }
 
 export async function getProjectInviteDetailsSecure(projectId: string, jwt?: string) {
-  const actor = await getActor(jwt);
-  if (!actor || !actor.$id) {
-    throw new Error('Unauthorized');
-  }
+  const actor = jwt ? await getActor(jwt).catch(() => null) : null;
 
   const tables = createSystemTablesDB();
-  const project = await tables.getRow({
+  const project = await tables.getRow<any>({
     databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
     tableId: 'projects',
     rowId: projectId,
   }).catch(() => null);
 
   if (!project) {
-    throw new Error('Project not found, or you do not have access');
+    throw new Error('Project not found');
   }
 
-  // 1. Check if they are the owner
-  if (project.ownerId === actor.$id) {
+  const isPublic = project.visibility === 'public';
+  const isGuestEnabled = !!project.isGuest;
+
+  // 1. If project is private, user must be authenticated
+  if (!isPublic && (!actor || !actor.$id)) {
+    throw new Error('Unauthorized');
+  }
+
+  // 2. Resolve role & status if authenticated
+  let status = '';
+  let role = '';
+  let isCollaborator = false;
+
+  if (actor?.$id) {
+    if (project.ownerId === actor.$id) {
+      return {
+        project: {
+          $id: project.$id,
+          title: project.title,
+          summary: project.summary,
+          status: project.status,
+          ownerId: project.ownerId,
+          visibility: project.visibility,
+          isGuest: !!project.isGuest
+        },
+        isOwner: true,
+        isPending: false,
+        role: 'admin'
+      };
+    }
+
+    const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+    const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+    try {
+      const collabsRes = await tables.listRows({
+        databaseId: FLOW_DATABASE_ID,
+        tableId: COLLABORATORS_TABLE,
+        queries: [
+          Query.equal('resourceId', projectId),
+          Query.equal('resourceType', 'project'),
+          Query.equal('userId', actor.$id)
+        ] as any
+      });
+      if (collabsRes.rows.length > 0) {
+        const c = collabsRes.rows[0];
+        status = c.status || 'pending';
+        role = c.permission === 'admin' ? 'admin' : (c.permission === 'write' ? 'editor' : 'viewer');
+        isCollaborator = true;
+      }
+    } catch (err) {
+      console.error('[getProjectInviteDetailsSecure] Failed to query status:', err);
+    }
+  }
+
+  // If authenticated and is already an active collaborator/invite accepted, or pending invite
+  if (isCollaborator) {
     return {
       project: {
         $id: project.$id,
@@ -3109,69 +3161,101 @@ export async function getProjectInviteDetailsSecure(projectId: string, jwt?: str
         summary: project.summary,
         status: project.status,
         ownerId: project.ownerId,
+        visibility: project.visibility,
+        isGuest: !!project.isGuest
       },
-      isOwner: true,
-      isPending: false,
-      role: 'admin'
+      isOwner: false,
+      isPending: status === 'pending' || status === 'requested',
+      role: role,
+      status: status
     };
   }
 
-  // 2. Query polymorphic status and role
+  // If not a collaborator:
+  if (isPublic) {
+    // If guest access is disabled, we require authentication
+    if (!isGuestEnabled && (!actor || !actor.$id)) {
+      throw new Error('Unauthorized: Authentication required to view this public project.');
+    }
+
+    // Return metadata preview with option to request access
+    return {
+      project: {
+        $id: project.$id,
+        title: project.title,
+        summary: project.summary,
+        status: project.status,
+        ownerId: project.ownerId,
+        visibility: project.visibility,
+        isGuest: !!project.isGuest
+      },
+      isOwner: false,
+      isPending: false,
+      isPublicPreview: true,
+      requiresAuth: !isGuestEnabled && (!actor || !actor.$id)
+    };
+  }
+
+  // Private project and not invited -> flatly denied
+  throw new Error('You do not have permission to access this private project.');
+}
+
+export async function requestProjectAccessSecure(projectId: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const tables = createSystemTablesDB();
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
-  
-  let status = 'pending';
-  let role = 'viewer';
-  let isInvited = false;
 
-  try {
-    const collabsRes = await tables.listRows({
-      databaseId: FLOW_DATABASE_ID,
-      tableId: COLLABORATORS_TABLE,
-      queries: [
-        Query.equal('resourceId', projectId),
-        Query.equal('resourceType', 'project'),
-        Query.equal('userId', actor.$id)
-      ] as any
-    });
-    if (collabsRes.rows.length > 0) {
-      const c = collabsRes.rows[0];
-      status = c.status || 'pending';
-      role = c.permission === 'admin' ? 'admin' : (c.permission === 'write' ? 'editor' : 'viewer');
-      isInvited = true;
-    } else {
-      // Legacy fallback to metadata.collaborators
-      let metadata: any = {};
-      try {
-        metadata = JSON.parse(project.metadata || '{}');
-      } catch {}
-      const collaborators = metadata.collaborators || {};
-      if (collaborators[actor.$id]) {
-        status = 'pending';
-        role = collaborators[actor.$id];
-        isInvited = true;
-      }
+  // Get project
+  const project = await tables.getRow<any>({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    rowId: projectId,
+  }).catch(() => null);
+
+  if (!project) throw new Error('Project not found');
+  if (project.visibility !== 'public') {
+    throw new Error('Forbidden: Cannot request access to a private project');
+  }
+
+  // Check if they already have an entry
+  const existingCollab = await tables.listRows({
+    databaseId: FLOW_DATABASE_ID,
+    tableId: COLLABORATORS_TABLE,
+    queries: [
+      Query.equal('resourceId', projectId),
+      Query.equal('resourceType', 'project'),
+      Query.equal('userId', actor.$id)
+    ] as any
+  });
+
+  if (existingCollab.rows.length > 0) {
+    // If already exists, return success
+    return { success: true, status: existingCollab.rows[0].status };
+  }
+
+  // Create a collaborator row with status: 'requested'
+  await tables.createRow({
+    databaseId: FLOW_DATABASE_ID,
+    tableId: COLLABORATORS_TABLE,
+    rowId: ID.unique(),
+    data: {
+      resourceId: projectId,
+      resourceType: 'project',
+      userId: actor.$id,
+      permission: 'viewer', // default request permission
+      invitedAt: new Date().toISOString(),
+      accepted: false,
+      status: 'requested',
+      role: 'collaborator'
     }
-  } catch (err) {
-    console.error('[getProjectInviteDetailsSecure] Failed to query polymorphic status:', err);
-  }
+  });
 
-  if (!isInvited) {
-    throw new Error('Project not found, or you do not have access');
-  }
-
-  return {
-    project: {
-      $id: project.$id,
-      title: project.title,
-      summary: project.summary,
-      status: project.status,
-      ownerId: project.ownerId,
-    },
-    isOwner: false,
-    isPending: status === 'pending',
-    role: role
-  };
+  return { success: true, status: 'requested' };
 }
 
 export async function acceptProjectInviteSecure(projectId: string, jwt?: string) {

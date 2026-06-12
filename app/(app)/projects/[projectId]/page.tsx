@@ -1363,55 +1363,6 @@ export default function ProjectDetailPage() {
 
             {/* Right Sidebar Column */}
             <div className="flex flex-col gap-6">
-                {/* Join Requests (Admins / Owners only) */}
-                {isAdmin && joinRequests.length > 0 && (
-                    <div className="relative flex flex-col gap-4 p-6 w-full rounded-[28px] bg-[#161412] border border-red-900/20 hover:border-red-900/30 transition-all duration-300 ease-out select-none">
-                        <div className="border-b border-red-900/10 pb-2.5">
-                            <h3 className="text-white text-base font-black tracking-tight leading-tight">
-                                Join Requests
-                            </h3>
-                        </div>
-                        <div className="flex flex-col gap-3">
-                            {joinRequests.map((req) => (
-                                <div key={req.$id || req.userId} className="p-3 rounded-[16px] bg-[#0A0908] border border-white/4 flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <IdentityAvatar 
-                                            size={34} 
-                                            fileId={req.avatar || req.profilePicId} 
-                                            alt={req.displayName || req.name || 'Requester'} 
-                                            fallback={(req.displayName || req.name || 'R').charAt(0).toUpperCase()} 
-                                            verified={req.verified} 
-                                            isAvatar={req.isAvatar ?? true}
-                                        />
-                                        <div className="min-w-0">
-                                            <span className="text-white text-sm font-black tracking-tight block truncate">
-                                                {req.displayName || req.name || req.email}
-                                            </span>
-                                            <span className="text-[10px] text-white/40 font-semibold block truncate">
-                                                Requested access
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-1.5 shrink-0">
-                                        <button
-                                            onClick={() => handleApproveJoinRequest(req.userId || req.$id)}
-                                            className="px-2.5 py-1.5 rounded-lg bg-[#10B981] hover:bg-[#10B981]/80 text-black text-[10px] font-black transition cursor-pointer"
-                                        >
-                                            Grant
-                                        </button>
-                                        <button
-                                            onClick={() => handleRejectJoinRequest(req.userId || req.$id)}
-                                            className="px-2.5 py-1.5 rounded-lg bg-red-950/20 border border-red-900/30 hover:border-red-500/20 text-red-400 text-[10px] font-black transition cursor-pointer"
-                                        >
-                                            Deny
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 {/* Participants */}
                 <div className="relative flex flex-col gap-4 p-6 w-full rounded-[28px] bg-[#161412] border border-white/6 hover:border-white/12 transition-all duration-300 ease-out select-none">
                     <div className="flex items-center justify-between gap-4 pb-2.5 border-b border-white/4">
@@ -1505,6 +1456,66 @@ export default function ProjectDetailPage() {
                         ))}
                     </div>
                 </div>
+
+                {/* Join Requests (Admins / Owners only) */}
+                {isAdmin && (
+                    <div className="relative flex flex-col gap-4 p-6 w-full rounded-[28px] bg-[#161412] border border-white/6 hover:border-white/12 transition-all duration-300 ease-out select-none">
+                        <div className="border-b border-white/4 pb-2.5 flex items-center justify-between">
+                            <h3 className="text-white text-base font-black tracking-tight leading-tight">
+                                Join Requests
+                            </h3>
+                            {joinRequests.length > 0 && (
+                                <span className="bg-[#10B981]/15 text-[#10B981] text-[9px] font-black tracking-wider px-2 py-0.5 rounded border border-[#10B981]/20 uppercase">
+                                    {joinRequests.length} Pending
+                                </span>
+                            )}
+                        </div>
+                        {joinRequests.length === 0 ? (
+                            <div className="text-center py-4 opacity-40">
+                                <p className="text-xs font-semibold text-white">No pending join requests.</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                {joinRequests.map((req) => (
+                                    <div key={req.$id || req.userId} className="p-3 rounded-[16px] bg-[#0A0908] border border-white/4 flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <IdentityAvatar 
+                                                size={34} 
+                                                fileId={req.avatar || req.profilePicId} 
+                                                alt={req.displayName || req.name || 'Requester'} 
+                                                fallback={(req.displayName || req.name || 'R').charAt(0).toUpperCase()} 
+                                                verified={req.verified} 
+                                                isAvatar={req.isAvatar ?? true}
+                                            />
+                                            <div className="min-w-0">
+                                                <span className="text-white text-sm font-black tracking-tight block truncate">
+                                                    {req.displayName || req.name || req.email}
+                                                </span>
+                                                <span className="text-[10px] text-white/40 font-semibold block truncate">
+                                                    Requested access
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1.5 shrink-0">
+                                            <button
+                                                onClick={() => handleApproveJoinRequest(req.userId || req.$id)}
+                                                className="px-2.5 py-1.5 rounded-lg bg-[#10B981] hover:bg-[#10B981]/80 text-black text-[10px] font-black transition cursor-pointer"
+                                            >
+                                                Grant
+                                            </button>
+                                            <button
+                                                onClick={() => handleRejectJoinRequest(req.userId || req.$id)}
+                                                className="px-2.5 py-1.5 rounded-lg bg-red-950/20 border border-red-900/30 hover:border-red-500/20 text-red-400 text-[10px] font-black transition cursor-pointer"
+                                            >
+                                                Deny
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Project Insights */}
                 <div className="relative flex flex-col gap-4 p-6 w-full rounded-[28px] bg-[#161412] border border-white/6 hover:border-white/12 transition-all duration-300 ease-out select-none">

@@ -10,6 +10,8 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { getProjectInviteDetailsSecure, acceptProjectInviteSecure } from '@/lib/actions/secure-ops';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { AppwriteService } from '@/lib/appwrite';
+import { ProjectsService } from '@/lib/appwrite/projects';
+import toast from 'react-hot-toast';
 
 export default function ProjectInvitePage() {
   const { projectId } = useParams();
@@ -22,20 +24,16 @@ export default function ProjectInvitePage() {
   const [inviteData, setInviteDetails] = useState<any | null>(null);
   const [ownerProfile, setOwnerProfile] = useState<any | null>(null);
   const [accepting, setAccepting] = useState(false);
+  const [requesting, setRequesting] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
-    
-    if (!user) {
-      setLoading(false);
-      return;
-    }
 
     const loadDetails = async () => {
       setLoading(true);
       setError(null);
       try {
-        const { jwt } = await account.createJWT();
+        const jwt = user ? (await account.createJWT()).jwt : undefined;
         const data = await getProjectInviteDetailsSecure(projectId as string, jwt);
         
         if (!data) {
@@ -58,7 +56,7 @@ export default function ProjectInvitePage() {
         }
 
         // If they are already an active collaborator or owner, redirect to the full app projects dashboard!
-        if (!data.isPending) {
+        if (user && !data.isPending && !data.isPublicPreview) {
           router.replace(`/projects/${projectId}`);
         }
       } catch (err: any) {
@@ -85,6 +83,23 @@ export default function ProjectInvitePage() {
     }
   };
 
+  const handleRequestAccess = async () => {
+    if (requesting) return;
+    setRequesting(true);
+    try {
+      await ProjectsService.requestProjectAccess(projectId as string);
+      toast.success('Access request submitted successfully!');
+      // Reload details to update status
+      const jwt = user ? (await account.createJWT()).jwt : undefined;
+      const data = await getProjectInviteDetailsSecure(projectId as string, jwt);
+      setInviteDetails(data);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit request.');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
   const renderShell = (content: React.ReactNode) => (
     <Box sx={{ minHeight: '85vh', bgcolor: '#0A0908', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 3 }}>
       <Container maxWidth="xs" sx={{ p: 0 }}>
@@ -105,31 +120,7 @@ export default function ProjectInvitePage() {
     );
   }
 
-  // 2. Unauthenticated State
-  if (!user) {
-    return renderShell(
-      <Paper elevation={0} sx={{ p: 4, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', textAlign: 'center' }}>
-        <ShieldAlert size={48} style={{ color: '#F59E0B', marginBottom: '16px' }} />
-        <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', mb: 1, letterSpacing: '-0.02em' }}>
-          Secure Workspace
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)', lineHeight: 1.6, mb: 4 }}>
-          This project details page is private and secure. Please log in or pair your account to view the invitation.
-        </Typography>
-        <Button
-          variant="contained"
-          fullWidth
-          startIcon={<LogIn size={18} />}
-          onClick={() => openUnified('login')}
-          sx={{ borderRadius: '14px', py: 1.75, bgcolor: '#6366F1', color: '#000', fontWeight: 900, fontFamily: 'var(--font-satoshi)', textTransform: 'none', '&:hover': { bgcolor: alpha('#6366F1', 0.9) } }}
-        >
-          Sign In to Join
-        </Button>
-      </Paper>
-    );
-  }
-
-  // 3. Error / Access Denied States
+  // 2. Error / Access Denied States
   if (error) {
     return renderShell(
       <Paper elevation={0} sx={{ p: 4, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', textAlign: 'center' }}>
@@ -152,7 +143,119 @@ export default function ProjectInvitePage() {
     );
   }
 
-  // 4. Pending Invitation Screen
+  // 3. Unauthenticated State (Private project only)
+  if (!user && inviteData?.project?.visibility !== 'public') {
+    return renderShell(
+      <Paper elevation={0} sx={{ p: 4, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', textAlign: 'center' }}>
+        <ShieldAlert size={48} style={{ color: '#F59E0B', marginBottom: '16px' }} />
+        <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', mb: 1, letterSpacing: '-0.02em' }}>
+          Secure Workspace
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)', lineHeight: 1.6, mb: 4 }}>
+          This project details page is private and secure. Please log in or pair your account to view the invitation.
+        </Typography>
+        <Button
+          variant="contained"
+          fullWidth
+          startIcon={<LogIn size={18} />}
+          onClick={() => openUnified('login')}
+          sx={{ borderRadius: '14px', py: 1.75, bgcolor: '#6366F1', color: '#000', fontWeight: 900, fontFamily: 'var(--font-satoshi)', textTransform: 'none', '&:hover': { bgcolor: alpha('#6366F1', 0.9) } }}
+        >
+          Sign In to Join
+        </Button>
+      </Paper>
+    );
+  }
+
+  // 4. Public Project Preview Screen
+  if (inviteData?.isPublicPreview) {
+    const hasRequested = inviteData.status === 'requested';
+    return renderShell(
+      <Paper elevation={0} sx={{ p: 4, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', textAlign: 'center' }}>
+        <Stack spacing={3} alignItems="center" sx={{ mb: 4 }}>
+          {/* Owner Identity Badge */}
+          <Box sx={{ position: 'relative' }}>
+            <IdentityAvatar
+              size={64}
+              fileId={ownerProfile?.profilePicId || ownerProfile?.avatar || null}
+              alt={ownerProfile?.displayName || ownerProfile?.name || 'Owner'}
+              fallback={(ownerProfile?.displayName || ownerProfile?.name || 'O').charAt(0).toUpperCase()}
+              verified={ownerProfile?.verified ?? true}
+            />
+          </Box>
+          <Box>
+            <Chip 
+              label="Public Preview" 
+              size="small" 
+              sx={{ height: 20, fontSize: '0.65rem', fontWeight: 900, fontFamily: 'var(--font-satoshi)', bgcolor: 'rgba(99, 102, 241, 0.1)', color: '#6366F1', border: '1px solid rgba(99, 102, 241, 0.15)', mb: 1.5 }} 
+            />
+            <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', mb: 1 }}>
+              {inviteData.project?.title || 'Project Workspace'}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-satoshi)', lineHeight: 1.5 }}>
+              This project is public. You can read its metadata details, or request full access to participate.
+            </Typography>
+          </Box>
+        </Stack>
+
+        {/* Project Summary Preview Box */}
+        {inviteData.project?.summary && (
+          <Box sx={{ p: 2, borderRadius: '16px', bgcolor: '#0A0908', border: '1px solid #1C1A18', textAlign: 'left', mb: 4 }}>
+            <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', mb: 1, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-satoshi)' }}>
+              Project Scope
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-satoshi)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+              {inviteData.project.summary}
+            </Typography>
+          </Box>
+        )}
+
+        <Stack spacing={2}>
+          {hasRequested ? (
+            <Button
+              variant="outlined"
+              fullWidth
+              disabled
+              sx={{ borderRadius: '14px', py: 1.75, borderColor: 'rgba(245, 158, 11, 0.3)', color: '#F59E0B', fontWeight: 900, fontFamily: 'var(--font-satoshi)', textTransform: 'none' }}
+            >
+              Access Requested
+            </Button>
+          ) : user ? (
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={handleRequestAccess}
+              disabled={requesting}
+              endIcon={requesting ? <CircularProgress size={18} color="inherit" /> : <ArrowRight size={18} />}
+              sx={{ borderRadius: '14px', py: 1.75, bgcolor: '#6366F1', color: '#000', fontWeight: 900, fontFamily: 'var(--font-satoshi)', textTransform: 'none', '&:hover': { bgcolor: alpha('#6366F1', 0.9) } }}
+            >
+              {requesting ? 'Submitting...' : 'Request Access to Project'}
+            </Button>
+          ) : (
+            <Button
+              variant="contained"
+              fullWidth
+              startIcon={<LogIn size={18} />}
+              onClick={() => openUnified('login')}
+              sx={{ borderRadius: '14px', py: 1.75, bgcolor: '#6366F1', color: '#000', fontWeight: 900, fontFamily: 'var(--font-satoshi)', textTransform: 'none', '&:hover': { bgcolor: alpha('#6366F1', 0.9) } }}
+            >
+              Sign In to Request Access
+            </Button>
+          )}
+          <Button
+            variant="outlined"
+            fullWidth
+            onClick={() => router.push('/projects')}
+            sx={{ borderRadius: '14px', py: 1.5, borderColor: '#1C1A18', color: 'rgba(255,255,255,0.6)', fontWeight: 800, fontFamily: 'var(--font-satoshi)', textTransform: 'none', '&:hover': { borderColor: 'rgba(255,255,255,0.15)', bgcolor: 'rgba(255,255,255,0.01)' } }}
+          >
+            Return to Dashboard
+          </Button>
+        </Stack>
+      </Paper>
+    );
+  }
+
+  // 5. Pending Invitation Screen (Private/Public Invited)
   if (inviteData?.isPending) {
     return renderShell(
       <Paper elevation={0} sx={{ p: 4, borderRadius: '28px', bgcolor: '#161412', border: '1px solid #1C1A18', textAlign: 'center' }}>

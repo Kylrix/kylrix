@@ -89,6 +89,13 @@ export const ProjectsService = {
     return await approveProjectJoinRequestSecure(projectId, userId, role);
   },
 
+  async requestProjectAccess(projectId: string) {
+    const { requestProjectAccessSecure } = await import('@/lib/actions/secure-ops');
+    const { account } = await import('@/lib/appwrite/client');
+    const { jwt } = await account.createJWT();
+    return await requestProjectAccessSecure(projectId, jwt);
+  },
+
   async removeCollaborator(projectId: string, userId: string) {
     if (typeof window !== 'undefined') {
       const { removeProjectCollaborator } = await import('@/lib/actions/client-ops');
