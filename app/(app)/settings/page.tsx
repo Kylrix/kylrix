@@ -311,7 +311,13 @@ export default function SettingsPage() {
             </button>
 
             {/* Header Title Section / Compact Account Summary */}
-            <header className="mb-6 p-5 bg-[#161412] border border-white/5 rounded-[24px] shadow-xl overflow-hidden relative group">
+            <header 
+                onClick={() => {
+                    const username = getEffectiveUsername(user);
+                    if (username) router.push(`/u/${username}`);
+                }}
+                className="mb-6 p-5 bg-[#161412] border border-white/5 rounded-[24px] shadow-xl overflow-hidden relative group cursor-pointer hover:border-white/10 hover:bg-[#1C1A18] transition-all"
+            >
                 <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#6366F1]/5 blur-[40px] rounded-full" />
                 
                 <div className="flex flex-col md:flex-row gap-6 items-center relative z-10">
