@@ -83,7 +83,17 @@ export function IdentityAvatar({
   accountName?: string | null;
   email?: string | null;
 }) {
-  const [profileRecord, setProfileRecord] = useState<any>(null);
+  const [profileRecord, setProfileRecord] = useState<any>(() => {
+    if (userId) {
+      try {
+        const { getCachedIdentityById } = require('@/lib/identity-cache');
+        return getCachedIdentityById(userId) || null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
   const [resolvedSrc, setResolvedSrc] = useState<string | null>(() => {
     if (src) return src;
     const targetFileId = fileId || userId;
