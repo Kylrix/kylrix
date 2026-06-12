@@ -41,7 +41,14 @@ export default function PasswordGenerator({ onPasswordSelect, currentPassword }:
     if (onPasswordSelect) {
       onPasswordSelect(newPassword);
     }
-  }, [length, currentPassword, onPasswordSelect]);
+  }, [length]);
+
+  // Sync state if currentPassword is changed externally (e.g. reset button)
+  useEffect(() => {
+    if (currentPassword && currentPassword !== password) {
+      setPassword(currentPassword);
+    }
+  }, [currentPassword]);
 
   const handleGenerate = () => {
     const newPassword = generateRandomPassword(length);

@@ -913,65 +913,97 @@ export function SendComposer() {
         </motion.div>
 
         {!createdUrl ? (
-          <div className="flex flex-col gap-6">
-            {/* Format selection trigger buttons */}
-            <div className="flex gap-3 mb-4 flex-wrap">
-              <button
-                onClick={() => setKindDrawerOpen(true)}
-                className="bg-white/[0.02] border rounded-xl px-5 py-3.5 text-white text-sm font-black font-clash flex items-center gap-2 hover:bg-[#1C1A18] transition duration-200"
-                style={{ borderColor: `${KIND_COLORS[kind]}40` }}
-              >
-                {React.createElement(KINDS.find(k => k.id === kind)?.Icon || FileText, { size: 18, color: KIND_COLORS[kind] })}
-                <span>{KINDS.find(k => k.id === kind)?.label || 'Note'}</span>
-                <ChevronDown size={14} className="opacity-60 ml-1" />
-              </button>
-
-              {(!isMandatorySecure) && (
+          <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] gap-8 items-start">
+            {/* Desktop Sidebar / Mobile Trigger buttons */}
+            <div className="flex flex-col gap-4">
+              {/* Mobile trigger button (hidden on desktop) */}
+              <div className="flex gap-3 lg:hidden flex-wrap">
                 <button
-                  onClick={() => setSecurityDrawerOpen(true)}
+                  type="button"
+                  onClick={() => setKindDrawerOpen(true)}
                   className="bg-white/[0.02] border rounded-xl px-5 py-3.5 text-white text-sm font-black font-clash flex items-center gap-2 hover:bg-[#1C1A18] transition duration-200"
                   style={{ borderColor: `${KIND_COLORS[kind]}40` }}
                 >
-                  {effectiveSecureMode ? <Lock size={16} style={{ color: KIND_COLORS[kind] }} /> : <Unlock size={16} className="text-[#10B981]" />}
-                  <span>{effectiveSecureMode ? 'Private Sharing' : 'Public Preview'}</span>
+                  {React.createElement(KINDS.find(k => k.id === kind)?.Icon || FileText, { size: 18, color: KIND_COLORS[kind] })}
+                  <span>{KINDS.find(k => k.id === kind)?.label || 'Note'}</span>
                   <ChevronDown size={14} className="opacity-60 ml-1" />
                 </button>
-              )}
+              </div>
+
+              {/* Desktop Sidebar panel (hidden on mobile) */}
+              <div className="hidden lg:flex flex-col gap-2 p-5 bg-[#161412] border border-[#34322F] rounded-3xl">
+                <span className="text-[10px] font-black text-white/30 tracking-widest uppercase mb-3 block">
+                  Select Format
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {KINDS.map(({ id, label, blurb, Icon }) => {
+                    const selected = kind === id;
+                    const itemColor = KIND_COLORS[id];
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                          setKind(id);
+                          if (id !== 'file') {
+                            setSendFile(null);
+                            setFileName(null);
+                          }
+                        }}
+                        className="p-3 rounded-xl border text-left flex items-center gap-3 transition duration-200 w-full cursor-pointer hover:bg-white/[0.02]"
+                        style={{
+                          borderColor: selected ? itemColor : 'transparent',
+                          backgroundColor: selected ? `${itemColor}14` : 'transparent',
+                        }}
+                      >
+                        <div style={{ color: itemColor }}>
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <p className={`text-xs font-black font-clash ${selected ? 'text-white' : 'text-white/60'}`}>{label}</p>
+                          <p className="text-[10px] text-white/30 font-satoshi truncate mt-0.5 max-w-[190px]">{blurb}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
-            {kind === 'note' && (
-              <NoteComposerCard
-                noteTitle={noteTitle}
-                setNoteTitle={setNoteTitle}
-                noteBody={noteBody}
-                setNoteBody={setNoteBody}
-                isTitleManuallyEdited={isTitleManuallyEdited}
-                setIsTitleManuallyEdited={setIsTitleManuallyEdited}
-                handleCreateLink={handleCreateLink}
-                renderHeaderActions={renderHeaderActions}
-                draftValid={draftValid}
-                isCreating={isCreating}
-                effectiveSecureMode={effectiveSecureMode}
-                themeColor={themeColor}
-              />
-            )}
+            <div className="flex flex-col gap-6">
+              {kind === 'note' && (
+                <NoteComposerCard
+                  noteTitle={noteTitle}
+                  setNoteTitle={setNoteTitle}
+                  noteBody={noteBody}
+                  setNoteBody={setNoteBody}
+                  isTitleManuallyEdited={isTitleManuallyEdited}
+                  setIsTitleManuallyEdited={setIsTitleManuallyEdited}
+                  handleCreateLink={handleCreateLink}
+                  renderHeaderActions={renderHeaderActions}
+                  draftValid={draftValid}
+                  isCreating={isCreating}
+                  effectiveSecureMode={effectiveSecureMode}
+                  themeColor={themeColor}
+                />
+              )}
 
-            {kind === 'discussion' && (
-              <DiscussionComposerCard
-                noteTitle={noteTitle}
-                setNoteTitle={setNoteTitle}
-                noteBody={noteBody}
-                setNoteBody={setNoteBody}
-                isTitleManuallyEdited={isTitleManuallyEdited}
-                setIsTitleManuallyEdited={setIsTitleManuallyEdited}
-                handleCreateLink={handleCreateLink}
-                renderHeaderActions={renderHeaderActions}
-                draftValid={draftValid}
-                isCreating={isCreating}
-                user={user}
-                themeColor={themeColor}
-              />
-            )}
+              {kind === 'discussion' && (
+                <DiscussionComposerCard
+                  noteTitle={noteTitle}
+                  setNoteTitle={setNoteTitle}
+                  noteBody={noteBody}
+                  setNoteBody={setNoteBody}
+                  isTitleManuallyEdited={isTitleManuallyEdited}
+                  setIsTitleManuallyEdited={setIsTitleManuallyEdited}
+                  handleCreateLink={handleCreateLink}
+                  renderHeaderActions={renderHeaderActions}
+                  draftValid={draftValid}
+                  isCreating={isCreating}
+                  user={user}
+                  themeColor={themeColor}
+                />
+              )}
 
             {kind === 'password' && (
               <div className="rounded-[24px] bg-[#161412] border border-[#34322F] p-6 shadow-[0_4px_4px_-4px_rgba(0,0,0,0.9),_0_2px_3px_-3px_rgba(37,35,33,0.9)] focus-within:border-[#10B981]/50 focus-within:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5),_0_0_15px_rgba(16,185,129,0.15)] transition duration-200">
@@ -1285,7 +1317,6 @@ export function SendComposer() {
               className="w-full py-4 rounded-2xl font-black text-sm text-black transition duration-300 hover:brightness-110 active:scale-[0.99] flex items-center justify-center gap-2 font-clash disabled:bg-white/5 disabled:text-white/15 disabled:cursor-not-allowed"
               style={{
                 backgroundColor: draftValid && !isCreating ? themeColor : undefined,
-                boxShadow: draftValid && !isCreating ? `0 12px 40px ${themeColor}33` : undefined,
               }}
             >
               {isCreating ? (
@@ -1294,11 +1325,18 @@ export function SendComposer() {
                 <span>Create {effectiveSecureMode ? 'Secure' : 'Send'} Link</span>
               )}
             </button>
-
-            <p className="text-center text-xs text-[#9B9691] px-4 leading-relaxed">
+            <p className="text-center text-xs text-[#9B9691] px-4 leading-relaxed mt-4">
               {effectiveSecureMode ? 'Securely stored' : 'Stored'} for this link — they clear automatically after 7 days.
               {effectiveSecureMode && ' The key stays in the link fragment only.'}
             </p>
+            </div>
+
+            {/* Desktop Sidebar Stash (hidden on mobile) */}
+            {sendSparks.length > 0 && (
+              <div className="hidden lg:block bg-[#161412] border border-[#34322F] rounded-3xl p-5 w-full">
+                <SendSparkShelf sparks={sendSparks} onSaveSparks={saveSendSparks} onClaim={handleClaimSendSpark} />
+              </div>
+            )}
           </div>
         ) : (
           <div className="p-8 md:p-12 rounded-[40px] bg-[#161412] border border-[#34322F] text-center shadow-[0_32px_80px_rgba(0,0,0,0.6)]">
