@@ -16,7 +16,9 @@ interface CryptoPaymentDrawerProps {
 const SUPPORTED_COINS = [
   { id: 'ltc', name: 'Litecoin', symbol: 'LTC' },
   { id: 'btc', name: 'Bitcoin', symbol: 'BTC' },
-  { id: 'trx_usdt', name: 'Tether (TRC20)', symbol: 'USDT' }
+  { id: 'eth', name: 'Ethereum', symbol: 'ETH' },
+  { id: 'trx_usdt', name: 'Tether (TRC20)', symbol: 'USDT' },
+  { id: 'doge', name: 'Dogecoin', symbol: 'DOGE' }
 ];
 
 export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
@@ -124,12 +126,12 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
     <>
       {/* Backdrop with Blur */}
       <div 
-        className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 transition-opacity duration-300 ease-in-out cursor-default"
+        className="fixed inset-0 bg-black/70 backdrop-blur-md z-[10000] transition-opacity duration-300 ease-in-out cursor-default"
         onClick={onClose}
       />
       
       {/* Responsive Slide-up Drawer (Mobile) or Right-side Sidebar (Desktop) */}
-      <div className="fixed bottom-0 md:bottom-auto md:top-0 right-0 left-0 md:left-auto w-full md:w-[480px] h-[85vh] md:h-screen bg-gradient-to-b from-[#161412] to-[#0B0A09] border-t md:border-t-0 md:border-l border-white/5 shadow-[0_-12px_36px_rgba(0,0,0,0.5),0_16px_48px_rgba(0,0,0,0.7)] z-[100] text-white p-6 md:p-8 flex flex-col gap-6 animate-slide-in-right overflow-y-auto font-satoshi">
+      <div className="fixed bottom-0 md:bottom-auto md:top-0 right-0 left-0 md:left-auto w-full md:w-[480px] h-[85vh] md:h-screen bg-gradient-to-b from-[#161412] to-[#0B0A09] border-t md:border-t-0 md:border-l border-white/5 shadow-[0_-12px_36px_rgba(0,0,0,0.5),0_16px_48px_rgba(0,0,0,0.7)] z-[10001] text-white p-6 md:p-8 flex flex-col gap-6 animate-slide-in-right overflow-y-auto font-satoshi">
         
         {/* Spotlight Ambient Glow */}
         <div className="absolute top-0 right-0 left-0 h-64 bg-radial-glow pointer-events-none opacity-20" 
