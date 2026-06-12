@@ -6562,6 +6562,107 @@ function getResourceConfig(type: PublicResourceType) {
   }
 }
 
+export async function approveProjectJoinRequestSecure(projectId: string, targetUserId: string, permissionLevel: 'admin' | 'editor' | 'viewer' = 'viewer', jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const tables = createSystemTablesDB();
+  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+  // 1. Get project
+  const project = await tables.getRow({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    rowId: projectId,
+  }).catch(() => null);
+
+  if (!project) throw new Error('Project not found');
+
+  // Verify requester is owner or admin of the project
+  const isOwner = project.ownerId === actor.$id;
+  let isAdmin = false;
+  if (!isOwner) {
+    const collabs = await tables.listRows({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      queries: [
+        Query.equal('resourceId', projectId),
+        Query.equal('resourceType', 'project'),
+        Query.equal('userId', actor.$id),
+        Query.equal('status', 'accepted')
+      ] as any
+    });
+    if (collabs.rows.length > 0 && collabs.rows[0].permission === 'admin') {
+      isAdmin = true;
+    }
+  }
+
+  if (!isOwner && !isAdmin) {
+    throw new Error('Forbidden: Only owners and admins can approve join requests');
+  }
+
+  // 2. Find request row
+  const existingCollab = await tables.listRows({
+    databaseId: FLOW_DATABASE_ID,
+    tableId: COLLABORATORS_TABLE,
+    queries: [
+      Query.equal('resourceId', projectId),
+      Query.equal('resourceType', 'project'),
+      Query.equal('userId', targetUserId)
+    ] as any
+  });
+
+  if (existingCollab.rows.length > 0) {
+    await tables.updateRow({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      rowId: existingCollab.rows[0].$id,
+      data: {
+        permission: permissionLevel === 'admin' ? 'admin' : (permissionLevel === 'editor' ? 'write' : 'read'),
+        status: 'accepted',
+        accepted: true,
+        role: 'collaborator'
+      }
+    });
+  } else {
+    // If no request exists, just create an accepted collaborator
+    await tables.createRow({
+      databaseId: FLOW_DATABASE_ID,
+      tableId: COLLABORATORS_TABLE,
+      rowId: ID.unique(),
+      data: {
+        resourceId: projectId,
+        resourceType: 'project',
+        userId: targetUserId,
+        permission: permissionLevel === 'admin' ? 'admin' : (permissionLevel === 'editor' ? 'write' : 'read'),
+        invitedAt: new Date().toISOString(),
+        accepted: true,
+        status: 'accepted',
+        role: 'collaborator'
+      }
+    });
+  }
+
+  // 3. Grant Appwrite read permissions
+  const newPermissions = new Set(project.$permissions || []);
+  newPermissions.add(`read("user:${targetUserId}")`);
+
+  const { databases } = createSystemClient();
+  const permissionsList = Array.from(newPermissions);
+  await databases.updateDocument(
+    APPWRITE_CONFIG.DATABASES.CHAT,
+    'projects',
+    projectId,
+    { $permissions: permissionsList },
+    permissionsList
+  );
+
+  return { success: true };
+}
+
 
 
 

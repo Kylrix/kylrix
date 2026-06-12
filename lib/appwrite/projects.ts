@@ -84,6 +84,11 @@ export const ProjectsService = {
     return await addProjectCollaboratorSecure(projectId, userId, role);
   },
 
+  async approveJoinRequest(projectId: string, userId: string, role: 'admin' | 'editor' | 'viewer' = 'viewer') {
+    const { approveProjectJoinRequestSecure } = await import('@/lib/actions/secure-ops');
+    return await approveProjectJoinRequestSecure(projectId, userId, role);
+  },
+
   async removeCollaborator(projectId: string, userId: string) {
     if (typeof window !== 'undefined') {
       const { removeProjectCollaborator } = await import('@/lib/actions/client-ops');
