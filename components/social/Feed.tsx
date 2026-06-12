@@ -1648,13 +1648,21 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
         }
     };
 
-    const loadFeed = useCallback(async () => {
+    const loadFeed = useCallback(async (force?: boolean) => {
         if (view === 'search') {
             setLoading(false);
             return;
         }
 
         const requestId = ++feedLoadSeqRef.current;
+
+        if (force) {
+            delete feedCacheRef.current[view];
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem(`${CACHE_KEY}_${view}`);
+            }
+        }
+
         const cached = feedCacheRef.current[view];
 
         // Keep the cached view visible while we decide whether to refresh.
@@ -2481,7 +2489,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                 </span>
                 <button
                     onClick={() => {
-                        void loadFeed();
+                        void loadFeed(true);
                     }}
                     disabled={loading}
                     className="w-10 h-10 rounded-xl bg-white/3 border border-white/8 hover:border-white/15 flex items-center justify-center transition-all duration-300 disabled:opacity-40"
