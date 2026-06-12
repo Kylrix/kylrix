@@ -15,6 +15,8 @@ export interface CryptoInvoiceResponse {
   expected_crypto?: number;
   expected_usd?: number;
   paymentId?: string;
+  ticker?: string;
+  months?: number;
   error?: string;
 }
 
@@ -125,7 +127,9 @@ export async function createCryptoInvoiceAction(input: {
       minimum_transaction_coin: minimumLimit,
       expected_crypto: expectedCrypto,
       expected_usd: usdAmount,
-      paymentId: paymentId
+      paymentId: paymentId,
+      ticker: ticker.toUpperCase(),
+      months: normalizedMonths
     };
 
   } catch (err: any) {
@@ -158,5 +162,51 @@ export async function checkCryptoTransactionStatusAction(input: {
     return { status: doc.status || 'pending' };
   } catch {
     return { status: 'unknown' };
+  }
+}
+
+export async function getActivePendingCryptoInvoiceAction(input: {
+  jwt?: string;
+}): Promise<CryptoInvoiceResponse | null> {
+  try {
+    const user = await getAuthenticatedUserForBillingAction({ jwt: input.jwt });
+    if (!user) return null;
+
+    const { databases } = createSystemClient();
+    const list = await databases.listDocuments(
+      NOTE_DB_ID,
+      'billing_transactions',
+      [
+        Query.equal('userId', user.$id),
+        Query.equal('status', 'pending'),
+        Query.equal('provider', 'blockbee'),
+        Query.orderDesc('createdAt'),
+        Query.limit(1)
+      ]
+    );
+
+    const doc = list.rows[0];
+    if (!doc) return null;
+
+    const meta = doc.metadata ? JSON.parse(doc.metadata) : {};
+    
+    // Validate if the session is older than 2 hours to avoid stale transactions
+    const createdAtMs = new Date(meta.createdAt || doc.$createdAt).getTime();
+    if (Date.now() - createdAtMs > 2 * 60 * 60 * 1000) {
+      return null;
+    }
+
+    return {
+      success: true,
+      address_in: meta.address_in,
+      minimum_transaction_coin: meta.minimum_transaction_coin || 0,
+      expected_crypto: meta.expected_crypto,
+      expected_usd: doc.amountCents ? doc.amountCents / 100 : parseFloat(String(doc.amountUsd || '').replace('$', '')),
+      paymentId: doc.paymentId,
+      ticker: meta.ticker,
+      months: doc.months
+    };
+  } catch {
+    return null;
   }
 }

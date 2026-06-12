@@ -11,6 +11,7 @@ import { getEcosystemUrl } from '@/lib/ecosystem';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { account } from '@/lib/appwrite';
 import { getUserBillingRegionAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { getActivePendingCryptoInvoiceAction } from '@/app/(app)/(auth)/accounts/actions/checkout';
 import { PPP_DATA, calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 
 export default function PricingPage() {
@@ -25,7 +26,22 @@ export default function PricingPage() {
 
   React.useEffect(() => {
     resolveUserRegion();
+    checkPendingTransactions();
   }, [user]);
+
+  const checkPendingTransactions = async () => {
+    if (!user) return;
+    try {
+      const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => undefined);
+      const pending = await getActivePendingCryptoInvoiceAction({ jwt });
+      if (pending && pending.success) {
+        if (pending.months) {
+          setMonths(pending.months);
+        }
+        setPaymentDrawerOpen(true);
+      }
+    } catch {}
+  };
 
   const resolveUserRegion = async () => {
     try {
