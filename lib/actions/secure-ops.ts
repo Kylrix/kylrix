@@ -6770,6 +6770,21 @@ export async function approveProjectJoinRequestSecure(projectId: string, targetU
   return { success: true };
 }
 
+export async function getProfilePicturePreviewSecure(fileId: string): Promise<string | null> {
+  const targetId = String(fileId || '').trim();
+  if (!targetId) return null;
+
+  try {
+    const { storage } = createSystemClient();
+    const fileBuffer = await storage.getFilePreview('profile_pictures', targetId, 160, 160);
+    const base64 = Buffer.from(fileBuffer).toString('base64');
+    return `data:image/png;base64,${base64}`;
+  } catch (err: any) {
+    console.error('[secure-ops] getProfilePicturePreviewSecure failed:', err);
+    return null;
+  }
+}
+
 
 
 

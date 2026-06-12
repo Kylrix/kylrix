@@ -54,20 +54,41 @@ export async function fetchProfilePreview(fileId?: string | null, width: number 
     if (!urlObj) throw new Error('Failed to generate preview URL');
     const str = urlObj.toString();
     
-    // Background: Save to Pulse directly if it is already a base64 data url, otherwise convert
-    if (pulse?.profilePicId === fileId || pulse?.$id === fileId) {
-        if (str.startsWith('data:')) {
-            setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, str);
-        } else {
-            convertUrlToBase64(str).then(base64 => {
-                setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, base64);
-            }).catch(() => {});
-        }
-    }
+    let isAccessible = false;
+    try {
+      const res = await fetch(str, { method: 'HEAD' });
+      if (res.ok) isAccessible = true;
+    } catch {}
 
-    previewCache.set(fileId, str);
-    persistCache();
-    return str;
+    if (isAccessible) {
+      // Background: Save to Pulse directly if it is already a base64 data url, otherwise convert
+      if (pulse?.profilePicId === fileId || pulse?.$id === fileId) {
+          if (str.startsWith('data:')) {
+              setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, str);
+          } else {
+              convertUrlToBase64(str).then(base64 => {
+                  setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, base64);
+              }).catch(() => {});
+          }
+      }
+
+      previewCache.set(fileId, str);
+      persistCache();
+      return str;
+    } else {
+      // Fallback: Fetch securely via server action
+      const { getProfilePicturePreviewSecure } = await import('@/lib/actions/secure-ops');
+      const secureBase64 = await getProfilePicturePreviewSecure(fileId);
+      if (secureBase64) {
+        if (pulse?.profilePicId === fileId || pulse?.$id === fileId) {
+          setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: fileId } }, secureBase64);
+        }
+        previewCache.set(fileId, secureBase64);
+        persistCache();
+        return secureBase64;
+      }
+      return null;
+    }
   } catch (err) {
     return null;
   }
