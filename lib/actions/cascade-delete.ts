@@ -155,6 +155,55 @@ export async function executeCascadeDeleteSecure(
 
   const VOICE_BUCKET = APPWRITE_CONFIG.BUCKETS.VOICE || 'voice';
 
+  // --- 0. AUTHORITATIVE OBJECTS CLEANUP (Unified Attachments) ---
+  try {
+    const objectsTable = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
+    const objectsRes = await tables.listRows({
+      databaseId: FLOW_DB,
+      tableId: objectsTable,
+      queries: [Query.equal('parentId', rowId), Query.limit(1000)] as any,
+    });
+
+    const linkedObjects = (objectsRes.rows as any[]) || [];
+    if (linkedObjects.length > 0) {
+      console.log(`[Cascade Delete] Found ${linkedObjects.length} linked objects for parent ${rowId}`);
+      await Promise.all(linkedObjects.map(async (obj) => {
+        // A. If child is a file, purge from storage
+        if (obj.childKind === 'voice') {
+          await storage.deleteFile(VOICE_BUCKET, obj.childId).catch(() => null);
+        } else if (obj.childKind === 'file') {
+          const buckets = [APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS, APPWRITE_CONFIG.BUCKETS.CHAT_UPLOADS, APPWRITE_CONFIG.BUCKETS.FORM_ATTACHMENTS];
+          for (const b of buckets) {
+            try { await storage.deleteFile(b, obj.childId); break; } catch {}
+          }
+        }
+
+        // B. Delete the relationship entry
+        await tables.deleteRow({
+          databaseId: FLOW_DB,
+          tableId: objectsTable,
+          rowId: obj.$id,
+        });
+      }));
+    }
+
+    // Also remove any links where THIS resource is the child (preventing dead links)
+    const reverseLinksRes = await tables.listRows({
+        databaseId: FLOW_DB,
+        tableId: objectsTable,
+        queries: [Query.equal('childId', rowId), Query.limit(1000)] as any,
+    });
+    await Promise.all((reverseLinksRes.rows || []).map((obj: any) => 
+        tables.deleteRow({
+            databaseId: FLOW_DB,
+            tableId: objectsTable,
+            rowId: obj.$id,
+        })
+    ));
+  } catch (err) {
+    console.error(`[Cascade Delete] Authoritative objects cleanup failed for ${rowId}:`, err);
+  }
+
   // --- 1. CASCADE FOR NOTES ---
   if (databaseId === NOTE_DB && tableId === NOTE_TABLE) {
     console.log(`[Cascade Delete] Triggered note cascade cleanup for: ${rowId}`);

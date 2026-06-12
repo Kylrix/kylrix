@@ -29,6 +29,7 @@ export const APPWRITE_CONFIG = {
         PROFILES: 'profiles',
         KEYCHAIN: 'keychain',
         USER_RESOURCE_PINS: 'user_resource_pins',
+        OBJECTS: 'objects',
 
         NOTE: {
             USERS: '67ff05c900247b5673d3',
@@ -78,7 +79,8 @@ export const APPWRITE_CONFIG = {
             COLLABORATORS: 'Collaborators',
             FORMS: 'forms',
             FORM_SUBMISSIONS: 'formSubmissions',
-            AGENTS: 'agents'
+            AGENTS: 'agents',
+            OBJECTS: 'objects'
         },
         CONNECT: {
             USERS: 'users',

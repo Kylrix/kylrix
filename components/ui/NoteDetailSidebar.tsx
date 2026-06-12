@@ -62,6 +62,7 @@ import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useAutosave } from '@/hooks/useAutosave';
 import { pickNoteAutosavePayload } from '@/lib/appwrite/note';
+import { attachObject } from '@/lib/actions/client-ops';
 import ProjectLinker from '@/components/projects/ProjectLinker';
 
 export interface NoteDetailSidebarProps {
@@ -618,6 +619,25 @@ export function NoteDetailSidebar({
 
           try {
             const uploaded = await StorageService.uploadFile(audioFile, 'voice');
+            
+            // AUTHORITATIVE SYNC: Wire into objects table to prevent zombie attachments
+            try {
+              await attachObject({
+                parentId: liveNote.$id,
+                parentKind: 'note',
+                childId: uploaded.$id,
+                childKind: 'voice',
+                metadata: {
+                  filename: audioFile.name,
+                  mimeType: audioFile.type,
+                  size: audioFile.size,
+                  duration: recordingDuration
+                }
+              });
+            } catch (attachErr) {
+              console.warn('[NoteDetailSidebar] Failed to register attachment in objects table:', attachErr);
+            }
+
             insertTextAtCursor(` [voice:${uploaded.$id}] `);
             showSuccess('Voice note recorded', 'Inserted into your note content.');
           } catch (error) {

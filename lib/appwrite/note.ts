@@ -2568,6 +2568,25 @@ export async function addAttachmentToNote(noteId: string, file: File, userId?: s
   } catch (e: any) {
     console.error('dual-write attachment record failed', e);
   }
+
+  // Authoritative sync to polymorphic objects table
+  try {
+    const { attachObject } = await import('@/lib/actions/client-ops');
+    await attachObject({
+      parentId: noteId,
+      parentKind: 'note',
+      childId: meta.id,
+      childKind: 'file',
+      metadata: {
+        filename: meta.name,
+        mimetype: meta.mime,
+        size: meta.size
+      }
+    });
+  } catch (e: any) {
+    console.warn('[attachments] Authoritative objects sync failed:', e);
+  }
+
   return meta;
 }
 
@@ -2636,6 +2655,18 @@ export async function removeAttachmentFromNote(noteId: string, attachmentId: str
   if (remaining.length === existingMetas.length) return { removed: false };
   const serialized = remaining.map(serializeAttachmentMeta);
   await updateNote(noteId, { attachments: serialized } as any);
+  
+  // Authoritative sync: remove from polymorphic objects table
+  try {
+    const { detachObjectByRelation } = await import('@/lib/actions/client-ops');
+    await detachObjectByRelation({
+        parentId: noteId,
+        childId: attachmentId
+    });
+  } catch (e) {
+      console.warn('[attachments] Authoritative objects sync failed (detach):', e);
+  }
+
   try { await deleteNoteAttachment(attachmentId); } catch (e: any) { /* non-fatal */ }
   return { removed: true };
 }

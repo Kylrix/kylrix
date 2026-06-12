@@ -3660,6 +3660,33 @@ export async function addObjectToProjectSecure(
       permissions: permissions,
     });
 
+  // Authoritative sync to polymorphic objects table
+  try {
+    const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
+    const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
+    await tables.createRow({
+      databaseId,
+      tableId,
+      rowId: ID.unique(),
+      data: {
+        parentId: projectId,
+        parentKind: 'project',
+        childId: entityId,
+        childKind: entityKind,
+        userId: actor.$id,
+        metadata: metadata ? (typeof metadata === 'string' ? metadata : JSON.stringify(metadata)) : null,
+        createdAt: now,
+        updatedAt: now,
+        isPublic: !!obj.isPublic,
+        isGuest: !!obj.isGuest,
+        isGeneral: !!obj.isGeneral
+      },
+      permissions: permissions
+    });
+  } catch (e) {
+    console.warn('[projects] Generic objects sync failed:', e);
+  }
+
   return JSON.parse(JSON.stringify(obj));
 }
 
@@ -6768,6 +6795,114 @@ export async function approveProjectJoinRequestSecure(projectId: string, targetU
   );
 
   return { success: true };
+}
+
+export async function attachObjectSecure(params: {
+  parentId: string;
+  parentKind: string;
+  childId: string;
+  childKind: string;
+  metadata?: any;
+  jwt?: string;
+}) {
+  const actor = await getActor(params.jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const tables = createSystemTablesDB();
+  const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
+  const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
+
+  // Enforce 3-object limit for FREE tier
+  if (!hasPaidKylrixPlan(actor)) {
+    const existing = await tables.listRows({
+      databaseId,
+      tableId,
+      queries: [
+        Query.equal('parentId', params.parentId),
+        Query.equal('parentKind', params.parentKind)
+      ] as any
+    });
+    if (existing.rows.length >= 3) {
+      throw new Error('Attachment limit reached: Free plan allows up to 3 attached objects. Upgrade to PRO for unlimited attachments.');
+    }
+  }
+
+  const now = new Date().toISOString();
+  const obj = await tables.createRow({
+    databaseId,
+    tableId,
+    rowId: ID.unique(),
+    data: {
+      parentId: params.parentId,
+      parentKind: params.parentKind,
+      childId: params.childId,
+      childKind: params.childKind,
+      userId: actor.$id,
+      metadata: params.metadata ? (typeof params.metadata === 'string' ? params.metadata : JSON.stringify(params.metadata)) : null,
+      createdAt: now,
+      updatedAt: now,
+      isPublic: false,
+      isGuest: false,
+      isGeneral: false
+    },
+    permissions: [
+      Permission.read(Role.user(actor.$id)),
+      Permission.write(Role.user(actor.$id)),
+      Permission.delete(Role.user(actor.$id))
+    ]
+  });
+
+  return JSON.parse(JSON.stringify(obj));
+}
+
+export async function detachObjectSecure(objectId: string, jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const tables = createSystemTablesDB();
+  const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
+  const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
+
+  await tables.deleteRow({
+    databaseId,
+    tableId,
+    rowId: objectId
+  });
+
+  return { success: true };
+}
+
+export async function detachObjectByRelationSecure(params: {
+  parentId: string;
+  childId: string;
+  jwt?: string;
+}) {
+  const actor = await getActor(params.jwt);
+  if (!actor?.$id) throw new Error('Unauthorized');
+
+  const tables = createSystemTablesDB();
+  const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
+  const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
+
+  const res = await tables.listRows({
+    databaseId,
+    tableId,
+    queries: [
+      Query.equal('parentId', params.parentId),
+      Query.equal('childId', params.childId),
+      Query.limit(10)
+    ] as any
+  });
+
+  await Promise.all(res.rows.map((row: any) => 
+    tables.deleteRow({
+      databaseId,
+      tableId,
+      rowId: row.$id
+    })
+  ));
+
+  return { success: true, count: res.rows.length };
 }
 
 export async function getProfilePicturePreviewSecure(fileId: string): Promise<string | null> {

@@ -56,6 +56,9 @@ import {
   getResourcePublicGuestSecure,
   getPublicGoalDataSecure,
   getGlobalProfileStatusSecure,
+  attachObjectSecure,
+  detachObjectSecure,
+  detachObjectByRelationSecure,
 } from './secure-ops';
 import { PublicResourceType } from '@/lib/share/resource-types';
 
@@ -397,6 +400,30 @@ export async function getPublicGoalData(goalId: string) {
 
 export async function getGlobalProfileStatus(userId: string) {
   return getGlobalProfileStatusSecure(userId);
+}
+
+export async function attachObject(params: {
+  parentId: string;
+  parentKind: string;
+  childId: string;
+  childKind: string;
+  metadata?: any;
+}) {
+  const jwt = await getJwt();
+  return attachObjectSecure({ ...params, jwt });
+}
+
+export async function detachObject(objectId: string) {
+  const jwt = await getJwt();
+  return detachObjectSecure(objectId, jwt);
+}
+
+export async function detachObjectByRelation(params: {
+  parentId: string;
+  childId: string;
+}) {
+  const jwt = await getJwt();
+  return detachObjectByRelationSecure({ ...params, jwt });
 }
 
 
