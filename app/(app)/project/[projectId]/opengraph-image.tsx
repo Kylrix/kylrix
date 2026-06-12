@@ -103,24 +103,36 @@ export default async function ProjectOGImage(props: { params: Promise<{ projectI
               gap: 12,
             }}
           >
-            {/* Minimalist Grid Logo */}
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: '#161412',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+            {/* Official wireframe cube logo SVG */}
+            <svg
+              viewBox="0 0 100 100"
+              width="38"
+              height="38"
+              fill="none"
+              style={{ display: 'flex' }}
             >
-              <div style={{ width: 14, height: 14, background: '#6366F1', borderRadius: 3 }} />
-            </div>
+              <line x1="15" y1="30" x2="50" y2="10" stroke="#EC4899" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1="50" y1="10" x2="85" y2="30" stroke="#10B981" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1="85" y1="30" x2="85" y2="70" stroke="#EC4899" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1="85" y1="70" x2="50" y2="90" stroke="#A855F7" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1="50" y1="90" x2="15" y2="70" stroke="#EC4899" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1="15" y1="70" x2="15" y2="30" stroke="#F59E0B" strokeWidth="4.5" strokeLinecap="round" />
+
+              <line x1="50" y1="50" x2="15" y2="30" stroke="#A855F7" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1="50" y1="50" x2="85" y2="30" stroke="#F59E0B" strokeWidth="4.5" strokeLinecap="round" />
+              <line x1="50" y1="50" x2="50" y2="90" stroke="#10B981" strokeWidth="4.5" strokeLinecap="round" />
+
+              <circle cx="50" cy="10" r="5" fill="#6366F1" stroke="#000000" strokeWidth="1.8" />
+              <circle cx="15" cy="30" r="5" fill="#6366F1" stroke="#000000" strokeWidth="1.8" />
+              <circle cx="85" cy="30" r="5" fill="#6366F1" stroke="#000000" strokeWidth="1.8" />
+              <circle cx="15" cy="70" r="5" fill="#6366F1" stroke="#000000" strokeWidth="1.8" />
+              <circle cx="50" cy="90" r="5" fill="#6366F1" stroke="#000000" strokeWidth="1.8" />
+              <circle cx="85" cy="70" r="5" fill="#6366F1" stroke="#000000" strokeWidth="1.8" />
+              <circle cx="50" cy="50" r="7" fill="#6366F1" stroke="#000000" strokeWidth="2.2" />
+            </svg>
             <span
               style={{
-                fontSize: 20,
+                fontSize: 22,
                 fontWeight: 900,
                 color: '#fff',
                 letterSpacing: '-0.02em',

@@ -3178,11 +3178,6 @@ export async function getProjectInviteDetailsSecure(projectId: string, jwt?: str
 
   // If not a collaborator:
   if (isPublic) {
-    // If guest access is disabled, we require authentication
-    if (!isGuestEnabled && (!actor || !actor.$id)) {
-      throw new Error('Unauthorized: Authentication required to view this public project.');
-    }
-
     // Return metadata preview with option to request access
     return {
       project: {
