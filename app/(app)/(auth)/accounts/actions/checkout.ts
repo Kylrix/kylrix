@@ -105,8 +105,6 @@ export async function createCryptoInvoiceAction(input: {
         paymentId: paymentId,
         userId: user.$id,
         plan: planId,
-        months: normalizedMonths,
-        amountCents: Math.round(usdAmount * 100),
         amountUsd: `$${usdAmount.toFixed(2)}`,
         status: 'pending',
         provider: 'blockbee',
@@ -115,6 +113,8 @@ export async function createCryptoInvoiceAction(input: {
           address_in: addressIn,
           expected_crypto: expectedCrypto,
           countryCode: countryCode,
+          months: normalizedMonths,
+          amountCents: Math.round(usdAmount * 100),
           createdAt: new Date().toISOString(),
         }),
       },
@@ -201,10 +201,10 @@ export async function getActivePendingCryptoInvoiceAction(input: {
       address_in: meta.address_in,
       minimum_transaction_coin: meta.minimum_transaction_coin || 0,
       expected_crypto: meta.expected_crypto,
-      expected_usd: doc.amountCents ? doc.amountCents / 100 : parseFloat(String(doc.amountUsd || '').replace('$', '')),
+      expected_usd: meta.amountCents ? meta.amountCents / 100 : parseFloat(String(doc.amountUsd || '').replace('$', '')),
       paymentId: doc.paymentId,
       ticker: meta.ticker,
-      months: doc.months
+      months: meta.months || doc.months
     };
   } catch {
     return null;
@@ -229,14 +229,18 @@ export async function getActiveBlockBeeCoinsAction(input: { jwt?: string }): Pro
       `https://api.blockbee.io/info/?apikey=${blockbeeApiKey}`
     ).then(r => r.json()).catch(() => null);
 
+    const allowedTickers = new Set(['btc', 'ltc', 'sol', 'eth', 'trx_usdt', 'trc20_usdt']);
+
     if (!infoRes || infoRes.status === 'error') {
       // Fallback if API fails
       return {
         success: true,
         coins: [
-          { id: 'ltc', name: 'Litecoin', symbol: 'LTC' },
           { id: 'btc', name: 'Bitcoin', symbol: 'BTC' },
-          { id: 'trx_usdt', name: 'Tether (TRC20)', symbol: 'USDT' }
+          { id: 'ltc', name: 'Litecoin', symbol: 'LTC' },
+          { id: 'sol', name: 'Solana', symbol: 'SOL' },
+          { id: 'eth', name: 'Ethereum', symbol: 'ETH' },
+          { id: 'trc20_usdt', name: 'Tether (TRC20)', symbol: 'USDT' }
         ]
       };
     }
@@ -244,23 +248,23 @@ export async function getActiveBlockBeeCoinsAction(input: { jwt?: string }): Pro
     const symbolMap: Record<string, string> = {
       btc: 'BTC',
       ltc: 'LTC',
+      sol: 'SOL',
       eth: 'ETH',
       trx_usdt: 'USDT (TRC20)',
-      erc20_usdt: 'USDT (ERC20)',
-      bep20_usdt: 'USDT (BEP20)',
-      trx: 'TRX',
-      doge: 'DOGE',
-      bch: 'BCH',
-      usdc: 'USDC'
+      trc20_usdt: 'USDT (TRC20)'
     };
 
     const coins = Object.entries(infoRes)
-      .filter(([key, val]: [string, any]) => val && typeof val === 'object' && val.coin)
+      .filter(([key, val]: [string, any]) => allowedTickers.has(key.toLowerCase()) && val && typeof val === 'object' && val.coin)
       .map(([key, val]: [string, any]) => ({
         id: key,
         name: val.coin,
         symbol: symbolMap[key.toLowerCase()] || key.toUpperCase()
       }));
+
+    // Sort according to user preference sequence (BTC, LTC, SOL, ETH, USDT)
+    const order = ['btc', 'ltc', 'sol', 'eth', 'trc20_usdt', 'trx_usdt'];
+    coins.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 
     return { success: true, coins };
   } catch (err: any) {

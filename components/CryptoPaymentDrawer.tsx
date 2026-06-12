@@ -48,10 +48,10 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
           setCoins(coinsRes.coins);
         }
 
-        // Restore pending invoice if exists
         const pending = await getActivePendingCryptoInvoiceAction({ jwt });
         if (pending && pending.success) {
-          setSelectedCoin(pending.ticker?.toLowerCase() === 'usdt' ? 'trx_usdt' : pending.ticker?.toLowerCase() || null);
+          const tick = pending.ticker?.toLowerCase() || '';
+          setSelectedCoin(tick.includes('usdt') ? 'trc20_usdt' : tick || null);
           setInvoice(pending);
         }
       } catch {} finally {
@@ -254,7 +254,7 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
 
                 <div className="flex justify-center py-5 bg-[#161412] rounded-xl border border-white/5 shadow-inner">
                   <img
-                    src={`https://api.blockbee.io/${selectedCoin.toLowerCase()}/qrcode/?address=${invoice.address_in}&value=${invoice.expected_crypto}&size=180&apikey=${process.env.BLOCKBEE_API || ''}`}
+                    src={`https://api.blockbee.io/${selectedCoin.toLowerCase()}/qrcode/?address=${invoice.address_in}&value=${invoice.expected_crypto}&size=180`}
                     alt="Invoice QR Code"
                     className="rounded-lg bg-white p-2.5 shadow-md border border-white/10"
                   />

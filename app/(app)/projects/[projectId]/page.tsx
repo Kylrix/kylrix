@@ -46,6 +46,7 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import ProjectExtractGoalsModal from '@/components/projects/ProjectExtractGoalsModal';
 import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjectModal';
+import ProjectSettingsDrawer from '@/components/projects/ProjectSettingsDrawer';
 import { databases, storage } from '@/lib/appwrite/client';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -1455,6 +1456,14 @@ export default function ProjectDetailPage() {
       )}
 
       {/* Project Settings Bottom Drawer */}
+      {isSettingsOpen && project && (
+        <ProjectSettingsDrawer
+          open={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          project={project}
+          onSave={handleSaveSettings}
+        />
+      )}
 
       {isAddSubProjectModalOpen && (
         <ProjectAddSubProjectModal

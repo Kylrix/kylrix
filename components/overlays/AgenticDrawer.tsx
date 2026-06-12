@@ -84,25 +84,27 @@ function DrawerShell({
 }: DrawerShellProps) {
   if (!isOpen) return null;
 
+  const isFullscreen = !isDesktop && isExpanded;
+
   return (
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${zIndexClass}`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${isFullscreen ? 'z-[10000]' : zIndexClass}`}
         onClick={onClose}
       />
       {/* Drawer Body */}
       <div
-        className={`fixed bg-[#161412] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${zIndexClass} ${
-          isDesktop
-            ? 'top-[88px] right-0 h-[calc(100vh-88px)] w-[460px] border-l border-t rounded-tl-[24px]'
-            : `bottom-0 left-0 right-0 border-t rounded-t-[24px] ${
-                isExpanded ? 'h-[100dvh]' : 'h-[75dvh]'
-              }`
+        className={`fixed bg-[#161412] border-[#34322F] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+          isFullscreen
+            ? 'z-[10001] inset-0 h-[100dvh] max-h-[100dvh] w-full rounded-none border-0'
+            : isDesktop
+              ? `${zIndexClass} top-[88px] right-0 h-[calc(100vh-88px)] w-[460px] border-l border-t rounded-tl-[24px]`
+              : `${zIndexClass} bottom-0 left-0 right-0 h-[60dvh] border-t rounded-t-[24px]`
         }`}
       >
         {/* Mobile Drag Handle */}
-        {!isDesktop && showDragHandle && (
+        {!isDesktop && showDragHandle && !isFullscreen && (
           <div
             className="flex justify-center py-3 cursor-pointer select-none"
             onClick={onClose}
