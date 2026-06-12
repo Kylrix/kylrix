@@ -172,8 +172,10 @@ export function IdentityAvatar({
       return;
     }
 
-    const targetFileId = profileRecord?.avatar || fileId || userId;
-    if (!targetFileId) {
+    const targetFileId = (profileRecord?.avatar && profileRecord.avatar !== 'null' && profileRecord.avatar !== 'undefined')
+      ? profileRecord.avatar
+      : (fileId || userId);
+    if (!targetFileId || targetFileId === 'null' || targetFileId === 'undefined') {
       setResolvedSrc(null);
       return;
     }

@@ -69,7 +69,6 @@ export async function fetchProfilePreview(fileId?: string | null, width: number 
     persistCache();
     return str;
   } catch (err) {
-    previewCache.set(fileId, null);
     return null;
   }
 }
