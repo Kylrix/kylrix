@@ -51,6 +51,7 @@ export async function dispatchSecureNotification(input: SecureNotificationInput)
       : 'group_member_added',
     sourceApp: 'kylrix',
     actorName: input.actorName || 'A teammate',
+    recipientIds: [input.targetUserId],
     recipientEmails: targetEmail ? [targetEmail] : [],
     resourceId: input.resourceId || null,
     resourceTitle: input.resourceTitle || null,
