@@ -233,7 +233,10 @@ function ConnectHomeContent() {
                                 }
                               });
                             } else if (isRequested) {
-                              toast.success('Your request to join this project is pending approval. You will gain access once accepted.');
+                              openUnified('project-invite', {
+                                project: proj,
+                                isRequested: true
+                              });
                             } else {
                               router.push(`/projects/${proj.$id}`);
                             }
