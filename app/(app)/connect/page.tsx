@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { MessageSquare, Phone, Plus, ChevronDown, ChevronUp, Maximize2, FolderKanban } from 'lucide-react';
+import { CallHistory } from '@/components/call/CallHistory';
 
 function ConnectHomeContent() {
   const searchParams = useSearchParams();
@@ -23,7 +24,7 @@ function ConnectHomeContent() {
   const { setConfiguration, resetConfiguration } = useFAB();
   const { open: openUnified } = useUnifiedDrawer();
 
-  // Flexible right panel sizes
+  // Flexible panel sizes
   const [threadsOpen, setThreadsOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
 
@@ -117,9 +118,33 @@ function ConnectHomeContent() {
 
   if (isDesktop) {
     return (
-      <div className="max-w-7xl mx-auto py-4 px-4 md:px-6 pointer-events-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 items-start">
-          {/* Moments Column */}
+      <div className="max-w-[1600px] mx-auto py-4 px-4 md:px-6 pointer-events-auto">
+        <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] lg:grid-cols-[320px_1fr_360px] gap-6 lg:gap-8 items-start">
+          
+          {/* Left Column: Secure Chats & Huddles */}
+          <div className="max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 flex flex-col gap-6 md:sticky md:top-[108px]">
+            {/* Section 1: Secure Chats */}
+            <div className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden h-[380px]">
+              <h3 className="text-lg font-black font-clash text-white mb-4">
+                Secure Chats
+              </h3>
+              <div className="flex-1 overflow-y-auto pr-1">
+                <ChatList activeTab="secure" hideTabs={true} />
+              </div>
+            </div>
+
+            {/* Section 2: Huddles */}
+            <div className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden h-[380px]">
+              <h3 className="text-lg font-black font-clash text-white mb-4">
+                Huddles
+              </h3>
+              <div className="flex-1 overflow-y-auto pr-1">
+                <CallHistory />
+              </div>
+            </div>
+          </div>
+
+          {/* Center Column: Moments Feed */}
           <div>
             <h2 className="text-2xl font-black font-clash text-white mb-6">
               Moments
@@ -127,7 +152,7 @@ function ConnectHomeContent() {
             <Feed view="personal" composeIntent={composeIntent} />
           </div>
 
-          {/* Sticky Interactive Dashboard Side column */}
+          {/* Right Column: Public Threads & Projects */}
           <div className="max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 flex flex-col gap-6 lg:sticky lg:top-[108px]">
             
             {/* Section 1: Huddle Threads */}
@@ -250,6 +275,7 @@ function ConnectHomeContent() {
               )}
             </div>
           </div>
+
         </div>
       </div>
     );
