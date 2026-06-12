@@ -227,6 +227,28 @@ export default function ProjectDetailPage() {
     });
   };
 
+  const handleApproveJoinRequest = async (targetUserId: string) => {
+    if (!projectId) return;
+    try {
+      await ProjectsService.approveJoinRequest(projectId as string, targetUserId, 'viewer');
+      showSuccess('Access request granted successfully!');
+      fetchProjectData();
+    } catch (err: any) {
+      showError('Failed to grant request', err.message);
+    }
+  };
+
+  const handleRejectJoinRequest = async (targetUserId: string) => {
+    if (!projectId) return;
+    try {
+      await ProjectsService.removeCollaborator(projectId as string, targetUserId);
+      showSuccess('Access request denied.');
+      fetchProjectData();
+    } catch (err: any) {
+      showError('Failed to deny request', err.message);
+    }
+  };
+
   const tabLongPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const tabTouchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -320,6 +342,12 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [credentials, setCredentials] = useState<Credentials[]>([]);
   const [collaborators, setCollaborators] = useState<any[]>([]);
+  const isOwner = user?.$id === project?.ownerId;
+  const currentCollaborator = useMemo(() => collaborators.find(c => (c.userId || c.$id) === user?.$id), [collaborators, user?.$id]);
+  const isAdmin = isOwner || currentCollaborator?.permissionLevel === 'admin' || currentCollaborator?.level === 'admin';
+
+  const joinRequests = useMemo(() => collaborators.filter(c => c.status === 'requested'), [collaborators]);
+  const activeCollaborators = useMemo(() => collaborators.filter(c => c.status !== 'requested'), [collaborators]);
   const [subProjects, setSubProjects] = useState<Projects[]>([]);
   const [forms, setForms] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
@@ -1326,7 +1354,7 @@ export default function ProjectDetailPage() {
                             <p className="text-xs text-white/40 font-medium leading-relaxed min-h-[36px]">
                                 {gitIntegration?.enabled 
                                     ? `Connected to ${gitIntegration.ownerName}/${gitIntegration.repoName}` 
-                                    : 'Link your GitHub repository to sync tasks, issues, and pull requests.'}
+                                            : 'Link your GitHub repository to sync tasks, issues, and pull requests.'}
                             </p>
                         </div>
                     </div>
@@ -1335,6 +1363,55 @@ export default function ProjectDetailPage() {
 
             {/* Right Sidebar Column */}
             <div className="flex flex-col gap-6">
+                {/* Join Requests (Admins / Owners only) */}
+                {isAdmin && joinRequests.length > 0 && (
+                    <div className="relative flex flex-col gap-4 p-6 w-full rounded-[28px] bg-[#161412] border border-red-900/20 hover:border-red-900/30 transition-all duration-300 ease-out select-none">
+                        <div className="border-b border-red-900/10 pb-2.5">
+                            <h3 className="text-white text-base font-black tracking-tight leading-tight">
+                                Join Requests
+                            </h3>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            {joinRequests.map((req) => (
+                                <div key={req.$id || req.userId} className="p-3 rounded-[16px] bg-[#0A0908] border border-white/4 flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <IdentityAvatar 
+                                            size={34} 
+                                            fileId={req.avatar || req.profilePicId} 
+                                            alt={req.displayName || req.name || 'Requester'} 
+                                            fallback={(req.displayName || req.name || 'R').charAt(0).toUpperCase()} 
+                                            verified={req.verified} 
+                                            isAvatar={req.isAvatar ?? true}
+                                        />
+                                        <div className="min-w-0">
+                                            <span className="text-white text-sm font-black tracking-tight block truncate">
+                                                {req.displayName || req.name || req.email}
+                                            </span>
+                                            <span className="text-[10px] text-white/40 font-semibold block truncate">
+                                                Requested access
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-1.5 shrink-0">
+                                        <button
+                                            onClick={() => handleApproveJoinRequest(req.userId || req.$id)}
+                                            className="px-2.5 py-1.5 rounded-lg bg-[#10B981] hover:bg-[#10B981]/80 text-black text-[10px] font-black transition cursor-pointer"
+                                        >
+                                            Grant
+                                        </button>
+                                        <button
+                                            onClick={() => handleRejectJoinRequest(req.userId || req.$id)}
+                                            className="px-2.5 py-1.5 rounded-lg bg-red-950/20 border border-red-900/30 hover:border-red-500/20 text-red-400 text-[10px] font-black transition cursor-pointer"
+                                        >
+                                            Deny
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Participants */}
                 <div className="relative flex flex-col gap-4 p-6 w-full rounded-[28px] bg-[#161412] border border-white/6 hover:border-white/12 transition-all duration-300 ease-out select-none">
                     <div className="flex items-center justify-between gap-4 pb-2.5 border-b border-white/4">
@@ -1386,7 +1463,7 @@ export default function ProjectDetailPage() {
                         </div>
 
                         {/* Collaborators Section (Active and Pending) */}
-                        {collaborators.map(user => (
+                        {activeCollaborators.map(user => (
                             <div 
                                 key={user.$id || user.userId} 
                                 onClick={() => {
