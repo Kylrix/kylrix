@@ -8,7 +8,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useFAB } from '@/context/FABContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { MessageSquare, Phone, Plus, ChevronDown, ChevronUp, Maximize2, FolderKanban } from 'lucide-react';
-import { CallHistory } from '@/components/call/CallHistory';
 
 function ConnectHomeContent() {
   const searchParams = useSearchParams();
@@ -111,11 +110,12 @@ function ConnectHomeContent() {
       {/* Top spotlight ambient glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[300px] bg-gradient-to-b from-amber-500/[0.04] to-transparent rounded-full blur-3xl pointer-events-none" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px_340px] gap-6 lg:gap-8 items-start relative z-10">
+      {/* Grid reflow container (Centered max-w on mobile/tablet, expands on desktop) */}
+      <div className="max-w-3xl md:max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_340px] gap-8 items-start relative z-10">
         
-        {/* Primary Column: Moments Feed (Always first in DOM and visually primary) */}
+        {/* Left Column: Moments Feed (Always first in DOM and visually primary) */}
         <div className="min-w-0 w-full flex flex-col gap-6">
-          <div className="flex items-center justify-between">
+          <div className="flex items-between justify-between">
             <h2 className="text-2xl font-black font-clash text-white tracking-tight">
               Moments
             </h2>
@@ -123,50 +123,8 @@ function ConnectHomeContent() {
           <Feed view="personal" composeIntent={composeIntent} />
         </div>
 
-        {/* Column 2: Communications Pocket (Secure Chats & Huddles) */}
-        <div className="w-full flex flex-col gap-6 max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 lg:sticky lg:top-[108px]">
-          
-          {/* Pocket 1: Secure Chats */}
-          <div className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300 h-[380px]">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
-                  Secure Chats
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-white/30 bg-white/5 px-2 py-0.5 rounded">
-                SECURE
-              </span>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
-              <ChatList activeTab="secure" hideTabs={true} skipSecureLoad={false} skipThreadsLoad={true} />
-            </div>
-          </div>
-
-          {/* Pocket 2: Active Huddles */}
-          <div className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300 h-[380px]">
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
-                  Huddles
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-white/30 bg-white/5 px-2 py-0.5 rounded">
-                VOICE
-              </span>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
-              <CallHistory />
-            </div>
-          </div>
-        </div>
-
-        {/* Column 3: Collaboration Pocket (Threads & Projects) */}
-        <div className="w-full flex flex-col gap-6 max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 lg:sticky lg:top-[108px]">
+        {/* Right Column: Collaboration Sidebar (Threads & Projects) - Hidden on mobile, visible on tablet/desktop */}
+        <div className="hidden md:flex w-full flex-col gap-8 max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 md:sticky md:top-[108px]">
           
           {/* Pocket 1: Discussion Threads */}
           <div 
@@ -181,7 +139,7 @@ function ConnectHomeContent() {
                 <div className="w-2 h-2 rounded-full bg-indigo-500" />
                 <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
                   Threads
-                </h3>
+                  </h3>
               </div>
               <div className="flex gap-1 items-center">
                 <button 
@@ -201,7 +159,7 @@ function ConnectHomeContent() {
 
             {threadsOpen && (
               <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
-                <ChatList activeTab="public" hideTabs={true} skipSecureLoad={true} skipThreadsLoad={false} />
+                <ChatList activeTab="public" hideTabs={true} skipSecureLoad={true} />
               </div>
             )}
           </div>
@@ -268,15 +226,15 @@ function ConnectHomeContent() {
                         <div 
                           className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
                           style={{
-                            backgroundColor: `${proj.color || '#6366F1'}1F`,
-                            color: proj.color || '#6366F1'
+                            backgroundColor: `${(proj as any).color || '#6366F1'}1F`,
+                            color: (proj as any).color || '#6366F1'
                           }}
                         >
                           <FolderKanban size={16} />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-xs font-bold text-white truncate">
-                            {proj.name}
+                            {proj.title}
                           </div>
                           <div className="text-[9px] text-white/40 font-mono uppercase truncate mt-0.5">
                             STATUS: {(proj.status || 'Active').toUpperCase()}
@@ -289,6 +247,7 @@ function ConnectHomeContent() {
               </div>
             )}
           </div>
+
         </div>
 
       </div>

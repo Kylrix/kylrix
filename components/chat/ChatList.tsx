@@ -146,9 +146,10 @@ export const ChatList = ({
     }>>({});
     const [activePreviewConversationId, setActivePreviewConversationId] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
-    const [activeTab, setActiveTabState] = useState<'secure' | 'public'>(() => {
+    const [activeTabState, setActiveTabState] = useState<'secure' | 'public'>(() => {
         return propActiveTab || (ecosystemSecurity.status.isUnlocked ? 'secure' : 'public');
     });
+    const activeTab = propActiveTab || activeTabState;
 
     const [ghostConversations, setGhostConversations] = useState<any[]>(() => initialThreadsCache);
     const [loadingGhost, setLoadingGhost] = useState(() => !skipThreadsLoad && initialThreadsCache.length === 0);
