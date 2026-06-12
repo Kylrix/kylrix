@@ -70,7 +70,7 @@ export async function createCryptoInvoiceAction(input: {
     // 3. Request input address
     const paymentId = `invoice_${user.$id}_${Date.now()}`;
     const resolvedBaseUrl = String(baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.space').replace(/\/+$/, '');
-    const callbackUrl = encodeURIComponent(`${resolvedBaseUrl}/accounts/api/pro/notify?order_id=${user.$id}&plan_id=${planId}&months=${normalizedMonths}`);
+    const callbackUrl = encodeURIComponent(`${resolvedBaseUrl}/accounts/api/pro/notify?payment_id=${paymentId}&order_id=${user.$id}&plan_id=${planId}&months=${normalizedMonths}`);
 
     const createRes = await fetch(
       `https://api.blockbee.io/${ticker.toLowerCase()}/create/?callback=${callbackUrl}&apikey=${blockbeeApiKey}&pending=1&post=1&json=1`
@@ -81,6 +81,17 @@ export async function createCryptoInvoiceAction(input: {
     }
 
     const addressIn = createRes.address_in;
+
+    // Register inside BlockBee pending checkout registry for the webhook notify endpoint
+    const { registerBlockBeePendingCheckout } = await import('@/lib/services/internal/blockbee-pending-checkout');
+    await registerBlockBeePendingCheckout({
+      paymentId: paymentId,
+      payerUserId: user.$id,
+      planId: planId,
+      months: normalizedMonths,
+      countryCode: countryCode,
+      expectedAmountUsd: usdAmount,
+    });
 
     // 4. Record pending transaction in Appwrite database
     const { databases } = createSystemClient();
