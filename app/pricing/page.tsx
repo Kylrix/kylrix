@@ -9,16 +9,90 @@ import PaymentMethodDrawer from '@/components/PaymentMethodDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getEcosystemUrl } from '@/lib/ecosystem';
 import { useSubscription } from '@/context/subscription/SubscriptionContext';
+import { account } from '@/lib/appwrite';
+import { getUserBillingRegionAction } from '@/app/(app)/(auth)/accounts/actions/billing';
+import { PPP_DATA, calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 
 export default function PricingPage() {
   const router = useRouter();
-  const { isAuthenticated, openIDMWindow } = useAuth();
-  const { prices, detectedRegion, isLoading } = useSubscription();
+  const { isAuthenticated, openIDMWindow, user } = useAuth();
   const [months, setMonths] = useState(1);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
 
-  const basePrice = prices['PRO'] || 10;
+  // Match account billing page logic precisely
+  const [region, setRegion] = useState('US');
+  const [loadingRegion, setLoadingRegion] = useState(true);
+
+  React.useEffect(() => {
+    resolveUserRegion();
+  }, [user]);
+
+  const resolveUserRegion = async () => {
+    try {
+      setLoadingRegion(true);
+      
+      const logList = await account.listLogs();
+      const logs = logList.logs || [];
+      
+      // Get the primary IP used
+      const ipCounts: Record<string, number> = {};
+      logs.forEach(l => {
+        if (l.ip) ipCounts[l.ip] = (ipCounts[l.ip] || 0) + 1;
+      });
+      const topIp = Object.entries(ipCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+
+      // Try finding countryCode directly from logs first
+      const validLogs = logs.filter(l => l.countryCode && l.countryCode !== '—');
+      if (validLogs.length > 0) {
+        const counts: Record<string, number> = {};
+        validLogs.forEach(l => {
+          counts[l.countryCode] = (counts[l.countryCode] || 0) + 1;
+        });
+        const resolvedCountry = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+        if (resolvedCountry) {
+          setRegion(resolvedCountry.toUpperCase());
+          setLoadingRegion(false);
+          return;
+        }
+      }
+
+      // If logs have an IP but no country code (e.g. Appwrite geoip database missing or outdated), query a public API
+      if (topIp && topIp !== '127.0.0.1' && topIp !== '::1') {
+        const geoRes = await fetch(`https://ipapi.co/${topIp}/json/`).then(r => r.json()).catch(() => null);
+        if (geoRes && geoRes.country_code) {
+          setRegion(geoRes.country_code.toUpperCase());
+          setLoadingRegion(false);
+          return;
+        }
+      }
+
+      const jwtRes = await account.createJWT().then(res => res.jwt).catch(() => undefined);
+      const secureRegion = await getUserBillingRegionAction(jwtRes);
+      if (secureRegion) {
+        setRegion(secureRegion);
+        setLoadingRegion(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Failed to resolve secure billing region:', err);
+    }
+    if (user?.prefs?.region) {
+      setRegion(user.prefs.region);
+    } else {
+      setRegion('US');
+    }
+    setLoadingRegion(false);
+  };
+
+  const detectedRegion = useMemo(() => {
+    return PPP_DATA[region] || PPP_DATA.DEFAULT;
+  }, [region]);
+
+  const basePrice = useMemo(() => {
+    return calculateSubscriptionPrice('PRO', region, 'CRYPTO');
+  }, [region]);
+
   const isYearly = months >= 12;
   
   // Calculate display price: if 12+ months, apply the 10-for-12 discount
@@ -37,7 +111,7 @@ export default function PricingPage() {
 
   const handlePaymentMethodSelect = (method: 'kylrix' | 'external') => {
     const planId = months >= 12 ? 'PRO_YEAR' : 'PRO_MONTH';
-    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=${detectedRegion.countryCode}&paymentMethod=${method}&source=${encodeURIComponent(window.location.href)}`;
+    const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=${region}&paymentMethod=${method}&source=${encodeURIComponent(window.location.href)}`;
     
     if (!isAuthenticated) {
       openIDMWindow(checkoutUrl);
@@ -132,7 +206,7 @@ export default function PricingPage() {
 
             {/* Right Pricing Summary Box */}
             <div className="p-6 rounded-[24px] bg-[#1F1D1B] border border-white/8 text-center flex flex-col items-center justify-center gap-4 min-h-[200px]">
-              {isLoading ? (
+              {loadingRegion ? (
                 <div className="flex flex-col items-center gap-2 py-8">
                   <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                   <span className="text-white/40 text-xs font-bold font-mono">Resolving Regional Rate...</span>
@@ -148,13 +222,13 @@ export default function PricingPage() {
                     </span>
                   </div>
 
-                  {detectedRegion.countryCode !== 'US' && (
-                    <div className="flex flex-col items-center gap-1">
-                      <span className="text-[#6366F1] font-black text-xs">
-                        Regional Price Applied ({detectedRegion.name})
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[#6366F1] font-black text-xs">
+                      {detectedRegion.countryCode !== 'US' 
+                        ? `Regional Price Applied (${detectedRegion.name})`
+                        : `Billing Region: ${detectedRegion.name}`}
+                    </span>
+                  </div>
 
                   <button 
                     onClick={handleSubscribe}
