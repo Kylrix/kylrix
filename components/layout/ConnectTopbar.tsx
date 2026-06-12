@@ -1492,27 +1492,7 @@ export default function ConnectTopbar({
                   </Button>
                 </Stack>
 
-                <Button
-                  onClick={handleOpenFullProfile}
-                  disabled={!profileSeed.username}
-                  variant="contained"
-                  sx={{
-                    width: '100%',
-                    borderRadius: '14px',
-                    px: 2,
-                    py: 1.15,
-                    textTransform: 'none',
-                    fontWeight: 900,
-                    fontSize: '0.88rem',
-                    bgcolor: appAccent,
-                    color: '#000',
-                    '&:hover': { bgcolor: alpha(appAccent, 0.86) },
-                    '&.Mui-disabled': { bgcolor: alpha(appAccent, 0.22), color: 'rgba(255,255,255,0.5)' },
-                  }}
-                >
-                  See full profile
-                </Button>
-            </Box>
+             </Box>
           </Box>
         </Paper>
       </Box>
