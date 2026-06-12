@@ -32,7 +32,9 @@ import {
   Users,
   Globe,
   Check,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { ProjectsService } from '@/lib/appwrite/projects';
 import { useToast } from '@/components/ui/Toast';
@@ -82,6 +84,8 @@ export function NewProjectDrawer() {
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [visibility, setVisibility] = useState<'private' | 'public'>('private');
+  const [isGuest, setIsGuest] = useState(true);
+  const [isGuestExpanded, setIsGuestExpanded] = useState(false);
 
   const fetchResources = useCallback(async () => {
     if (!user?.$id) return;
@@ -107,6 +111,8 @@ export function NewProjectDrawer() {
       setSummary(template?.summary || '');
       setVisibility('private');
       setIsExpanded(false);
+      setIsGuest(true);
+      setIsGuestExpanded(false);
 
       const preSelectedId = drawerData?.selectedResourceId || drawerData?.formId || '';
       setSelectedResourceId(preSelectedId);
@@ -168,7 +174,7 @@ export function NewProjectDrawer() {
         summary: summary.trim(),
         visibility,
         isPublic: visibility === 'public',
-        isGuest: visibility === 'public',
+        isGuest: visibility === 'public' ? isGuest : false,
         status: 'active',
         metadata: JSON.stringify(metadata)
       } as any);
@@ -575,7 +581,12 @@ export function NewProjectDrawer() {
                 type="button"
                 onClick={() => {
                   setVisibility(opt.id as any);
-                  setIsVisibilityDrawerOpen(false);
+                  if (opt.id === 'public') {
+                    setIsGuest(true);
+                    setIsGuestExpanded(true);
+                  } else {
+                    setIsVisibilityDrawerOpen(false);
+                  }
                 }}
                 sx={{
                   width: '100%',
@@ -620,6 +631,97 @@ export function NewProjectDrawer() {
             );
           })}
         </Stack>
+
+        {visibility === 'public' && (
+          <Box sx={{ border: BORDER, borderRadius: '16px', bgcolor: VOID, overflow: 'hidden', mt: 2 }}>
+            <Box
+              component="button"
+              type="button"
+              onClick={() => setIsGuestExpanded(!isGuestExpanded)}
+              sx={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                p: 2,
+                bgcolor: 'transparent',
+                border: 0,
+                cursor: 'pointer',
+                color: TEXT_MUTED,
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.01)' }
+              }}
+            >
+              <Typography component="span" sx={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: fontDisplay }}>
+                Advanced Access Control
+              </Typography>
+              {isGuestExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </Box>
+
+            {isGuestExpanded && (
+              <Box sx={{ p: 2, pt: 0, borderTop: `1px solid ${BORDER_HAIRLINE}`, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifySpace: 'space-between', gap: 2, mt: 2 }}>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography component="span" sx={{ fontWeight: 800, fontSize: '0.75rem', color: '#fff', display: 'block' }}>
+                      Anonymous Guest View
+                    </Typography>
+                    <Typography component="span" sx={{ fontSize: '0.68rem', color: TEXT_MUTED, display: 'block', mt: 0.5, maxWidth: 280, lineHeight: 1.4 }}>
+                      Allow anyone with the link to read project details without registering.
+                    </Typography>
+                  </Box>
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={() => setIsGuest(!isGuest)}
+                    sx={{
+                      width: 44,
+                      height: 24,
+                      borderRadius: 999,
+                      p: '2px',
+                      border: 0,
+                      cursor: 'pointer',
+                      bgcolor: isGuest ? SYSTEM_PRIMARY : 'rgba(255,255,255,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      transition: 'background-color 0.2s',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: '50%',
+                        bgcolor: '#fff',
+                        boxShadow: 2,
+                        transform: isGuest ? 'translateX(20px)' : 'translateX(0px)',
+                        transition: 'transform 0.2s',
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {visibility === 'public' && (
+          <Button
+            fullWidth
+            onClick={() => setIsVisibilityDrawerOpen(false)}
+            sx={{
+              mt: 3,
+              bgcolor: SYSTEM_PRIMARY,
+              color: '#fff',
+              fontWeight: 800,
+              fontSize: '0.88rem',
+              py: 1.5,
+              borderRadius: RADIUS_SMALL,
+              textTransform: 'none',
+              '&:hover': { bgcolor: SYSTEM_HOVER }
+            }}
+          >
+            Confirm Visibility
+          </Button>
+        )}
       </Drawer>
     </Drawer>
   );
