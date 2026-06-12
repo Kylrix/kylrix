@@ -130,27 +130,27 @@ function renderMessageText(text: string): React.ReactNode {
 function secretChatBubbleSx(isOutgoing: boolean) {
   return {
     p: 1.5,
-    px: 2,
+    px: 2.25,
     width: 'fit-content',
     maxWidth: '100%',
     alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
-    borderRadius: isOutgoing ? '20px 4px 20px 20px' : '4px 20px 20px 20px',
-    bgcolor: isOutgoing ? '#1C1A18' : '#0B0A09',
+    borderRadius: '16px',
+    bgcolor: isOutgoing ? 'rgba(99, 102, 241, 0.08)' : '#0B0A09',
     backgroundImage: 'none',
     border: '1px solid',
-    borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+    borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.05)',
     color: '#FFFFFF',
     boxShadow: isOutgoing 
-      ? '0 4px 16px rgba(99, 102, 241, 0.04), 0 1px 3px rgba(99, 102, 241, 0.08)' 
-      : '0 4px 12px rgba(0, 0, 0, 0.4)',
+      ? '0 4px 16px rgba(99, 102, 241, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05)' 
+      : '0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.02)',
     position: 'relative' as const,
     zIndex: 2,
-    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
     '&:hover': {
       transform: 'translateY(-1px)',
       boxShadow: isOutgoing 
         ? '0 6px 20px rgba(99, 102, 241, 0.08)' 
-        : '0 6px 16px rgba(0, 0, 0, 0.5)',
+        : '0 6px 16px rgba(0, 0, 0, 0.4)',
       borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.1)',
     },
   };
