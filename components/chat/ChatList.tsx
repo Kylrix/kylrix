@@ -295,6 +295,7 @@ export const ChatList = ({
     // Restore tab intent from localStorage on mount
     useEffect(() => {
         if (typeof window === 'undefined') return;
+        if (propActiveTab) return;
         try {
             const storedTab = localStorage.getItem('kylrix_connect_active_tab');
             if (storedTab === 'secure' || storedTab === 'public') {
@@ -305,7 +306,7 @@ export const ChatList = ({
         } catch (e) {
             console.warn('[ChatList] Failed to restore active tab:', e);
         }
-    }, [onTabChange]);
+    }, [onTabChange, propActiveTab]);
 
     // Query MasterPass status when user is loaded
     useEffect(() => {
