@@ -2838,10 +2838,13 @@ export async function listProjectsWithCollaborationsSecure(jwt?: string) {
         for (const proj of collaboratedProjectsRes.rows) {
             const collabRow = projectsToFetch.find(r => r.resourceId === proj.$id);
             if (collabRow) {
+                const isRealInvite = collabRow.status === 'pending' && collabRow.inviterId && collabRow.inviterId !== '';
+                const isJoinRequest = collabRow.status === 'pending' && (!collabRow.inviterId || collabRow.inviterId === '');
                 projectsListMap.set(proj.$id, {
                     ...proj,
-                    collabStatus: collabRow.status,
-                    isPending: collabRow.status === 'pending' || !collabRow.accepted,
+                    collabStatus: isJoinRequest ? 'requested' : collabRow.status,
+                    isPending: isRealInvite,
+                    isRequested: isJoinRequest,
                     role: collabRow.permission === 'admin' ? 'admin' : (collabRow.permission === 'write' ? 'editor' : 'viewer'),
                 });
             }
@@ -3167,7 +3170,7 @@ export async function getProjectInviteDetailsSecure(projectId: string, jwt?: str
         isGuest: !!project.isGuest
       },
       isOwner: false,
-      isPending: status === 'pending' || status === 'requested',
+      isPending: status === 'pending',
       role: role,
       status: status
     };

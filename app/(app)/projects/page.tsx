@@ -257,6 +257,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin }: {
 
   const getStatusColor = () => {
     if ((project as any).isPending) return '#F59E0B';
+    if ((project as any).isRequested) return '#F59E0B';
     switch (project.status) {
       case 'active': return '#10B981';
       case 'paused': return '#F59E0B';
@@ -322,7 +323,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin }: {
         </div>
 
         {/* Top-Right Inline Actions (Pin, Delete) */}
-        {!(project as any).isPending ? (
+        {!(project as any).isPending && !(project as any).isRequested ? (
           <div className="flex items-center gap-1 flex-shrink-0">
             <button
               onClick={(e) => {
@@ -343,6 +344,10 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin }: {
               <Trash2 size={16} />
             </button>
           </div>
+        ) : (project as any).isRequested ? (
+          <span className="flex-shrink-0 bg-[#F59E0B]/10 text-[#F59E0B] text-[9px] font-black font-mono px-2 py-0.5 rounded border border-[#F59E0B]/20">
+            REQUESTED
+          </span>
         ) : (
           <span className="flex-shrink-0 bg-[#6366F1]/10 text-[#818CF8] text-[9px] font-black font-mono px-2 py-0.5 rounded border border-[#6366F1]/20">
             INVITED
@@ -371,7 +376,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin }: {
             borderColor: `${statusColor}33`,
           }}
         >
-          {(project as any).isPending ? 'invite pending' : project.status}
+          {(project as any).isPending ? 'invite pending' : ((project as any).isRequested ? 'requested' : project.status)}
         </span>
       </div>
     </div>
@@ -589,6 +594,8 @@ export default function ProjectsPage() {
           });
         }
       });
+    } else if (selectedProj && (selectedProj as any).isRequested) {
+      router.push(`/project/${projectId}`);
     } else {
       router.push(`/projects/${projectId}`);
     }

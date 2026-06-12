@@ -378,6 +378,124 @@ export default function ProjectInvitePage() {
     );
   }
 
+  // 4.5. Requested Access Screen (Pending admin approval)
+  if (inviteData?.status === 'requested') {
+    const projectTitle = inviteData.project?.title || 'Project Workspace';
+    const projectInitial = projectTitle.charAt(0).toUpperCase();
+
+    return renderShell(
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: 4, 
+          borderRadius: '28px', 
+          bgcolor: '#161412', 
+          border: '1px solid rgba(255, 255, 255, 0.05)', 
+          textAlign: 'center',
+          boxShadow: '0 -12px 36px rgba(0, 0, 0, 0.5), 0 16px 48px rgba(0, 0, 0, 0.7)'
+        }}
+      >
+        <Stack spacing={3} alignItems="center" sx={{ mb: 4 }}>
+          {/* Project Minimalist Badge using Project Name First Character */}
+          <Box
+            sx={{
+              width: 64,
+              height: 64,
+              borderRadius: '18px',
+              bgcolor: 'rgba(245, 158, 11, 0.08)',
+              border: '1px solid rgba(245, 158, 11, 0.22)',
+              color: '#F59E0B',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '1.8rem',
+              fontWeight: 900,
+              fontFamily: 'var(--font-clash)',
+              boxShadow: '0 0 16px rgba(245, 158, 11, 0.08)',
+            }}
+          >
+            {projectInitial}
+          </Box>
+          <Box>
+            <Chip 
+              label="Request Pending" 
+              size="small" 
+              sx={{ 
+                height: 20, 
+                fontSize: '0.65rem', 
+                fontWeight: 900, 
+                fontFamily: 'var(--font-satoshi)', 
+                bgcolor: 'rgba(245, 158, 11, 0.1)', 
+                color: '#F59E0B', 
+                border: '1px solid rgba(245, 158, 11, 0.15)', 
+                mb: 1.5,
+                letterSpacing: '0.04em'
+              }} 
+            />
+            <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', letterSpacing: '-0.02em', mb: 1, color: '#fff' }}>
+              {projectTitle}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)', lineHeight: 1.5 }}>
+              Your request to join this project has been sent. It is pending approval from the project owner/admin.
+            </Typography>
+          </Box>
+        </Stack>
+
+        {/* Project Summary Preview Box */}
+        {inviteData.project?.summary && (
+          <Box sx={{ p: 2.5, borderRadius: '16px', bgcolor: '#0B0A09', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'left', mb: 4 }}>
+            <Typography variant="caption" sx={{ display: 'block', fontSize: '0.65rem', fontWeight: 900, color: 'rgba(255,255,255,0.35)', mb: 1, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
+              Project Scope
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-satoshi)', fontSize: '0.85rem', lineHeight: 1.55 }}>
+              {inviteData.project.summary}
+            </Typography>
+          </Box>
+        )}
+
+        <Stack spacing={2}>
+          <Button
+            variant="outlined"
+            fullWidth
+            disabled
+            sx={{ 
+              borderRadius: '14px', 
+              py: 1.75, 
+              borderColor: 'rgba(245, 158, 11, 0.3)', 
+              color: '#F59E0B', 
+              fontWeight: 900, 
+              fontFamily: 'var(--font-satoshi)', 
+              textTransform: 'none',
+              "&.Mui-disabled": {
+                borderColor: 'rgba(245, 158, 11, 0.3)',
+                color: '#F59E0B',
+              }
+            }}
+          >
+            Access Requested
+          </Button>
+          <Button
+            variant="outlined"
+            fullWidth
+            onClick={() => router.push('/projects')}
+            sx={{ 
+              borderRadius: '14px', 
+              py: 1.5, 
+              borderColor: 'rgba(255, 255, 255, 0.08)', 
+              color: 'rgba(255,255,255,0.6)', 
+              fontWeight: 800, 
+              fontFamily: 'var(--font-satoshi)', 
+              textTransform: 'none', 
+              '&:hover': { borderColor: 'rgba(255, 255, 255, 0.15)', bgcolor: 'rgba(255, 255, 255, 0.02)' } 
+            }}
+          >
+            Return to Dashboard
+          </Button>
+        </Stack>
+      </Paper>
+    );
+  }
+
   // 5. Pending Invitation Screen (Private/Public Invited)
   if (inviteData?.isPending) {
     const projectTitle = inviteData.project?.title || 'Project Workspace';
