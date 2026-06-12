@@ -103,12 +103,12 @@ function renderMessageText(text: string): React.ReactNode {
         sx={{
           color: '#818CF8',
           fontWeight: 800,
-          bgcolor: 'rgba(129, 140, 248, 0.08)',
+          bgcolor: 'rgba(129, 140, 248, 0.1)',
           px: 0.5,
           py: 0.25,
           borderRadius: '4px',
           fontFamily: 'var(--font-mono)',
-          fontSize: '0.9em',
+          fontSize: '0.92em',
         }}
       >
         @{username}
@@ -121,7 +121,7 @@ function renderMessageText(text: string): React.ReactNode {
   if (lastIndex < text.length) pieces.push(text.slice(lastIndex));
 
   return (
-    <Typography component="span" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'var(--font-satoshi)', fontSize: '0.85rem', lineHeight: 1.5 }}>
+    <Typography component="span" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'var(--font-satoshi)', fontSize: '0.92rem', lineHeight: 1.55, color: '#F5F2ED' }}>
       {pieces}
     </Typography>
   );
@@ -129,29 +129,29 @@ function renderMessageText(text: string): React.ReactNode {
 
 function secretChatBubbleSx(isOutgoing: boolean) {
   return {
-    p: 1.5,
-    px: 2.25,
+    py: 1.75,
+    px: 2.5,
     width: 'fit-content',
     maxWidth: '100%',
     alignSelf: isOutgoing ? 'flex-end' : 'flex-start',
-    borderRadius: '16px',
-    bgcolor: isOutgoing ? 'rgba(99, 102, 241, 0.08)' : '#0B0A09',
+    borderRadius: isOutgoing ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+    bgcolor: isOutgoing ? '#1E1A3C' : '#1C1A18',
     backgroundImage: 'none',
     border: '1px solid',
-    borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+    borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.08)',
     color: '#FFFFFF',
     boxShadow: isOutgoing 
-      ? '0 4px 16px rgba(99, 102, 241, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.05)' 
-      : '0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.02)',
+      ? '0 4px 16px rgba(99, 102, 241, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.08)' 
+      : '0 4px 16px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
     position: 'relative' as const,
     zIndex: 2,
     transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
     '&:hover': {
       transform: 'translateY(-1px)',
       boxShadow: isOutgoing 
-        ? '0 6px 20px rgba(99, 102, 241, 0.08)' 
-        : '0 6px 16px rgba(0, 0, 0, 0.4)',
-      borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+        ? '0 6px 20px rgba(99, 102, 241, 0.1)' 
+        : '0 6px 20px rgba(0, 0, 0, 0.5)',
+      borderColor: isOutgoing ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.15)',
     },
   };
 }
