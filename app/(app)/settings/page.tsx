@@ -114,7 +114,8 @@ export default function SettingsPage() {
                     if (mounted) setProfileAvatarUrl(cached ?? null);
                     return;
                 }
-                const url = await getProfilePicturePreview(profilePicId, 80, 80);
+                const { fetchProfilePreview } = await import('@/lib/profile-preview');
+                const url = await fetchProfilePreview(profilePicId, 80, 80);
                 if (mounted) setProfileAvatarUrl(url);
             } catch (e) {
                 if (mounted) setProfileAvatarUrl(null);

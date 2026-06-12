@@ -236,7 +236,8 @@ export default function ConnectTopbar({
   const previewManager = useMemo(
     () =>
       createProfilePreviewManager(async (fileId, width, height) => {
-        const preview = await getProfilePicturePreview(fileId, width, height);
+        const { fetchProfilePreview } = await import('@/lib/profile-preview');
+        const preview = await fetchProfilePreview(fileId, width, height);
         return typeof preview === 'string' ? preview : null;
       }),
     [],

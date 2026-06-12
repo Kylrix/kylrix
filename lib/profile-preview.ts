@@ -103,3 +103,16 @@ export function getCachedProfilePreview(fileId?: string | null): string | null |
 
   return previewCache.get(fileId);
 }
+
+export function invalidateProfilePreview(fileId?: string | null) {
+  if (!fileId) return;
+  previewCache.delete(fileId);
+  persistCache();
+  
+  // Clear from Pulse if matching current user
+  const pulse = getKylrixPulse();
+  if (pulse && (pulse.profilePicId === fileId || pulse.$id === fileId)) {
+    setKylrixPulse({ $id: pulse.$id, name: pulse.name, prefs: { profilePicId: null } }, null);
+  }
+}
+

@@ -98,6 +98,8 @@ export function IdentityAvatar({
     return null;
   });
   const [imageError, setImageError] = useState(false);
+  const [hasAttemptedRecovery, setHasAttemptedRecovery] = useState(false);
+
 
   // 1. Fetch the user's profile status row securely using Identity Cache if userId is provided
   useEffect(() => {
@@ -164,6 +166,33 @@ export function IdentityAvatar({
   
   const canFetchAvatar = isOwner || (isAvatarSatisfied && isPublicOrGuestSatisfied);
 
+  const targetFileId = (profileRecord?.avatar && profileRecord.avatar !== 'null' && profileRecord.avatar !== 'undefined')
+    ? profileRecord.avatar
+    : (fileId || userId);
+
+  const handleImageError = async () => {
+    setImageError(true);
+    if (hasAttemptedRecovery) return;
+    if (!targetFileId || targetFileId === 'null' || targetFileId === 'undefined') return;
+
+    setHasAttemptedRecovery(true);
+    try {
+      const { invalidateProfilePreview } = await import('@/lib/profile-preview');
+      invalidateProfilePreview(targetFileId);
+
+      const { getProfilePicturePreviewSecure } = await import('@/lib/actions/secure-ops');
+      const secureBase64 = await getProfilePicturePreviewSecure(targetFileId);
+
+      if (secureBase64) {
+        setResolvedSrc(secureBase64);
+        setImageError(false);
+      }
+    } catch (err) {
+      console.warn('[IdentityAvatar] Secure recovery failed on image error:', err);
+    }
+  };
+
+
   // 3. Retrieve the secure profile picture preview URL asynchronously
   useEffect(() => {
     if (src) {
@@ -172,9 +201,6 @@ export function IdentityAvatar({
       return;
     }
 
-    const targetFileId = (profileRecord?.avatar && profileRecord.avatar !== 'null' && profileRecord.avatar !== 'undefined')
-      ? profileRecord.avatar
-      : (fileId || userId);
     if (!targetFileId || targetFileId === 'null' || targetFileId === 'undefined') {
       setResolvedSrc(null);
       return;
@@ -280,7 +306,7 @@ export function IdentityAvatar({
           component="img"
           src={resolvedSrc}
           alt={alt || ''}
-          onError={() => setImageError(true)}
+          onError={handleImageError}
           sx={{
             width: '100%',
             height: '100%',
