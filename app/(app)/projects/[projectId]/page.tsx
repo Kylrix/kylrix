@@ -208,6 +208,25 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleDeleteProject = () => {
+    if (!project) return;
+    openUnified('delete-confirm', {
+      title: `Delete "${project.title}"?`,
+      resourceName: 'this project',
+      confirmLabel: 'Delete Project',
+      isProject: true,
+      onConfirm: async (deleteMode?: 'detach' | 'created_within' | 'all') => {
+        try {
+          await ProjectsService.deleteProject(project.$id, deleteMode);
+          showSuccess('Project deleted successfully');
+          router.push('/projects');
+        } catch (err: any) {
+          showError('Failed to delete project', err.message);
+        }
+      }
+    });
+  };
+
   const tabLongPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const tabTouchStartPosRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -1443,6 +1462,16 @@ export default function ProjectDetailPage() {
                                 <History size={14} />
                                 <span className="text-sm font-black">{new Date(project.updatedAt || '').toLocaleDateString()}</span>
                             </div>
+                        </div>
+                        <div className="p-3 rounded-[16px] bg-[#1A0C0C]/50 border border-red-900/30 flex flex-col gap-2">
+                            <span className="text-[9px] text-red-500/60 font-black uppercase tracking-wider">Danger Zone</span>
+                            <button
+                                onClick={handleDeleteProject}
+                                className="w-full py-2.5 rounded-xl border border-red-950 bg-red-950/20 hover:bg-red-950/40 text-red-400 hover:text-red-300 font-extrabold text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                                <Trash2 size={14} />
+                                <span>Delete Project</span>
+                            </button>
                         </div>
                     </div>
                 </div>
