@@ -46,7 +46,6 @@ import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import ProjectAddObjectModal from '@/components/projects/ProjectAddObjectModal';
 import ProjectExtractGoalsModal from '@/components/projects/ProjectExtractGoalsModal';
 import ProjectAddSubProjectModal from '@/components/projects/ProjectAddSubProjectModal';
-import ProjectSettingsDrawer from '@/components/projects/ProjectSettingsDrawer';
 import { databases, storage } from '@/lib/appwrite/client';
 import { hasPaidKylrixPlan } from '@/lib/utils';
 import { useAuth } from '@/context/auth/AuthContext';
@@ -176,7 +175,6 @@ export default function ProjectDetailPage() {
   const [discussionMenuAnchor, setDiscussionMenuAnchor] = useState<HTMLElement | null>(null);
   const [tabMenuAnchorEl, setTabMenuAnchorEl] = useState<{ x: number, y: number } | null>(null);
   const [activeTabMenuIndex, setActiveTabMenuIndex] = useState<number | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [ownerProfile, setOwnerProfile] = useState<any | null>(null);
 
   const handleSaveSettings = async (title: string, summary: string, status: 'active' | 'completed' | 'archived' | 'paused' | 'on_hold') => {
@@ -855,7 +853,7 @@ export default function ProjectDetailPage() {
                 </button>
 
                 <button
-                    onClick={() => setIsSettingsOpen(true)}
+                    onClick={() => openUnified('project-settings', { project, onSave: handleSaveSettings })}
                     className="h-11 rounded-[14px] border border-white/6 hover:border-white/20 text-white/60 hover:text-white px-4 font-black text-xs inline-flex items-center justify-center gap-1.5 transition-all bg-white/2 hover:bg-white/4"
                 >
                     <SettingsIcon size={16} />
@@ -1455,15 +1453,7 @@ export default function ProjectDetailPage() {
         />
       )}
 
-      {/* Project Settings Bottom Drawer */}
-      {isSettingsOpen && project && (
-        <ProjectSettingsDrawer
-          open={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-          project={project}
-          onSave={handleSaveSettings}
-        />
-      )}
+
 
       {isAddSubProjectModalOpen && (
         <ProjectAddSubProjectModal
