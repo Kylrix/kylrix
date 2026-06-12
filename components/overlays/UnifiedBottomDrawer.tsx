@@ -26,6 +26,7 @@ const UnifiedFormContent = dynamic(() => import('../forms/UnifiedFormContent').t
 const GithubIntegrationDrawer = dynamic(() => import('./GithubIntegrationDrawer').then(mod => mod.GithubIntegrationDrawer), { ssr: false });
 const TaskAddToProjectDrawerHost = dynamic(() => import('./TaskAddToProjectDrawer').then(mod => mod.TaskAddToProjectDrawerHost), { ssr: false });
 const ResponseDetailDrawer = dynamic(() => import('../forms/ResponseDetailDrawer').then(mod => mod.ResponseDetailDrawer), { ssr: false });
+const ProjectSettingsDrawer = dynamic(() => import('../projects/ProjectSettingsDrawer'), { ssr: false });
 
 export function UnifiedBottomDrawer() {
   const { activeContent, drawerData, close } = useUnifiedDrawer();
@@ -101,6 +102,8 @@ export function UnifiedBottomDrawer() {
             />;
         case 'github-integration':
             return <GithubIntegrationDrawer isOpen={true} onClose={close} {...drawerData} />;
+        case 'project-settings':
+            return <ProjectSettingsDrawer isOpen={true} onClose={close} project={drawerData?.project} onSave={drawerData?.onSave} />;
         default: return null;
     }
   };

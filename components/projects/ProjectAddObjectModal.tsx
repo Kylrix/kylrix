@@ -45,6 +45,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useOverlay } from '@/components/ui/OverlayContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useTask } from '@/context/TaskContext';
+import { useNotes } from '@/context/NotesContext';
 
 // Service Imports
 import { FormsService } from '@/lib/services/forms';
@@ -175,6 +176,7 @@ export default function ProjectAddObjectModal({ open, onClose, projectId, onAdde
   const { openOverlay, closeOverlay } = useOverlay();
   const { open: openUnified } = useUnifiedDrawer();
   const { setTaskDialogOpen } = useTask();
+  const { notes: cachedNotes } = useNotes();
 
   const [tab, setTab] = useState(initialTab);
   const [query, setQuery] = useState('');
@@ -203,9 +205,12 @@ export default function ProjectAddObjectModal({ open, onClose, projectId, onAdde
 
         switch (tab) {
           case 0: { // Note
-            const notesRes = await listNotes(queries);
-            const notes = notesRes.rows || [];
-            return notes.filter((n: any) => {
+            const filtered = (cachedNotes || []).filter((n: any) => {
+              const matchesQuery = !query.trim() || 
+                (n.title || '').toLowerCase().includes(query.toLowerCase()) ||
+                (n.content || '').toLowerCase().includes(query.toLowerCase());
+              if (!matchesQuery) return false;
+              
               try {
                 const meta = JSON.parse(n.metadata || '{}');
                 return !(meta.isEncrypted === true || meta.isEncrypted === 'true' || n.isEncrypted === true);
@@ -213,6 +218,7 @@ export default function ProjectAddObjectModal({ open, onClose, projectId, onAdde
                 return !n.isEncrypted;
               }
             });
+            return filtered;
           }
           case 1: { // Goal
             const taskRes = await listFlowTasks(queries);
@@ -301,7 +307,7 @@ export default function ProjectAddObjectModal({ open, onClose, projectId, onAdde
     } finally {
       setLoading(false);
     }
-  }, [tab, query, user?.$id, fetchOptimized]);
+  }, [tab, query, user?.$id, fetchOptimized, cachedNotes]);
 
   useEffect(() => {
     if (open) fetchResults();
