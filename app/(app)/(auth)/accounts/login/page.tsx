@@ -203,18 +203,19 @@ function LoginContent() {
       const redirect = searchParams.get('redirect_uri');
         const returnTo = searchParams.get('return_to');
       
-      let success = `${window.location.origin}/`;
+      let success = `${window.location.origin}/?auth=success`;
         if (returnTo) {
           const target = new URL(returnTo, window.location.origin);
           if (source) target.searchParams.set('source', source);
           if (redirect) target.searchParams.set('redirect_uri', redirect);
+          target.searchParams.set('auth', 'success');
           success = target.toString();
         } else if (source && redirect) {
-          success = `${window.location.origin}/login?source=${encodeURIComponent(source)}&redirect_uri=${encodeURIComponent(redirect)}`;
+          success = `${window.location.origin}/login?source=${encodeURIComponent(source)}&redirect_uri=${encodeURIComponent(redirect)}&auth=success`;
         } else if (source) {
-          success = `${window.location.origin}/?source=${encodeURIComponent(source)}`;
+          success = `${window.location.origin}/?source=${encodeURIComponent(source)}&auth=success`;
         } else if (redirect) {
-          success = `${window.location.origin}/login?redirect_uri=${encodeURIComponent(redirect)}`;
+          success = `${window.location.origin}/login?redirect_uri=${encodeURIComponent(redirect)}&auth=success`;
         }
 
         let failure = `${window.location.origin}/login?error=oauth_failed`;

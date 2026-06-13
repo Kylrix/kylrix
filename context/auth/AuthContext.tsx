@@ -109,7 +109,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const refreshUser = useCallback(async (forceRefresh = false): Promise<User | null> => {
     try {
-      if (!forceRefresh && !hasAuthSessionHint()) {
+      const isOAuthSuccess = typeof window !== 'undefined' && window.location.search.includes('auth=success');
+      if (!forceRefresh && !hasAuthSessionHint() && !isOAuthSuccess) {
         setUser(null);
         setIsLoading(false);
         return null;

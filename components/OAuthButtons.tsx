@@ -49,7 +49,7 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
     localStorage.setItem('kylrix_last_auth_method', provider);
 
     try {
-      const success = `${window.location.origin}/`;
+      const success = `${window.location.origin}/?auth=success`;
       const failure = `${window.location.origin}/?error=oauth_failed`;
       await account.createOAuth2Session(
         provider,
