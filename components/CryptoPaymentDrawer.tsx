@@ -332,11 +332,21 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
                 </div>
 
                 <div className="flex justify-center py-5 bg-[#161412] rounded-xl border border-white/5 shadow-inner">
-                  <img
-                    src={`https://api.blockbee.io/${selectedCoin.toLowerCase()}/qrcode/?address=${invoice.address_in}&value=${invoice.expected_crypto}&size=180`}
-                    alt="Invoice QR Code"
-                    className="rounded-lg bg-white p-2.5 shadow-md border border-white/10"
-                  />
+                  {(() => {
+                    const cleanTicker = selectedCoin.toLowerCase().split('/').pop() || '';
+                    const paymentUri = cleanTicker === 'btc' ? `bitcoin:${invoice.address_in}?amount=${invoice.expected_crypto}` :
+                                       cleanTicker === 'ltc' ? `litecoin:${invoice.address_in}?amount=${invoice.expected_crypto}` :
+                                       cleanTicker === 'eth' ? `ethereum:${invoice.address_in}?amount=${invoice.expected_crypto}` :
+                                       cleanTicker === 'sol' ? `solana:${invoice.address_in}?amount=${invoice.expected_crypto}` :
+                                       invoice.address_in;
+                    return (
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(paymentUri)}`}
+                        alt="Invoice QR Code"
+                        className="rounded-lg bg-white p-2.5 shadow-md border border-white/10"
+                      />
+                    );
+                  })()}
                 </div>
 
                 <div className="flex gap-2.5 items-start text-[11px] text-white/40 leading-relaxed font-medium">
