@@ -546,6 +546,10 @@ export default function ProjectsPage() {
   }, [projects, syncProjects]);
 
   const openCreateDrawer = useCallback((template?: typeof projectTemplates[0]) => {
+    if (!hasPaidKylrixPlan(user) && projects.length >= 1) {
+      openProUpgrade('New Project');
+      return;
+    }
     if (template?.isPro && !hasPaidKylrixPlan(user)) {
       openProUpgrade(`The "${template.title}" template`);
       return;
@@ -554,7 +558,7 @@ export default function ProjectsPage() {
         onCreated: handleCreated,
         template: template 
     });
-  }, [open, handleCreated, user, openProUpgrade]);
+  }, [open, handleCreated, user, openProUpgrade, projects.length]);
 
   const openCreateDrawerRef = useRef(openCreateDrawer);
   useEffect(() => {
