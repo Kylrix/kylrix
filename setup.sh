@@ -42,6 +42,28 @@ echo "  ║  One-click config for devs & self-hosters.       ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo -e "${RESET}"
 
+# ── Port Check ──────────────────────────────────────────────────────────────
+PORT=3005
+PORT_BUSY=false
+
+if command -v lsof &>/dev/null && lsof -i :3005 -t &>/dev/null; then
+    PORT_BUSY=true
+elif command -v ss &>/dev/null && ss -tuln | grep -q :3005; then
+    PORT_BUSY=true
+elif command -v netstat &>/dev/null && netstat -tuln | grep -q :3005; then
+    PORT_BUSY=true
+fi
+
+if [ "$PORT_BUSY" = true ]; then
+    warn "A process is already running on port 3005."
+    echo -ne "  Are you already running a development version of Kylrix? (Y/n): "
+    read -r ALREADY_RUNNING
+    if [[ "$ALREADY_RUNNING" =~ ^[Nn]$ ]]; then
+        prompt PORT "Enter a different port for Kylrix" "3006"
+    fi
+fi
+echo ""
+
 # ── Select Mode ──────────────────────────────────────────────────────────────
 echo -e "  ${BOLD}Select your deployment/development mode:${RESET}"
 echo ""
@@ -65,7 +87,7 @@ echo ""
 
 # Defaults
 DOMAIN="localhost"
-APP_URL="http://localhost:3005"
+APP_URL="http://localhost:${PORT}"
 APPWRITE_ENDPOINT="https://api.kylrix.space/v1"
 APPWRITE_PROJECT_ID="67fe9627001d97e37ef3"
 DATABASE_PROVIDER="appwrite"
@@ -117,7 +139,7 @@ elif [ "$MODE" = "4" ]; then
     ok "Configuring Local Appwrite Stack..."
     SELFHOST_MODE="true"
     prompt DOMAIN "Local Domain" "localhost"
-    prompt APP_URL "Kylrix Web App URL" "http://localhost:3005"
+    prompt APP_URL "Kylrix Web App URL" "http://localhost:${PORT}"
     APPWRITE_ENDPOINT="http://localhost/v1"
     prompt APPWRITE_PROJECT_ID "Appwrite Project ID" "kylrix-local"
     prompt APPWRITE_API_KEY "Appwrite API Key" ""
@@ -134,6 +156,7 @@ cat > "$ENV_FILE" << EOF
 # ─────────────────────────────────────────────────────────────────────────────
 
 # ── Core ──
+PORT=${PORT}
 NEXT_PUBLIC_APP_URL=${APP_URL}
 NEXT_PUBLIC_APP_URI=${APP_URL}
 NEXT_PUBLIC_ORIGIN=${APP_URL}

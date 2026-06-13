@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack -H localhost -p 3005",
+    "dev": "next dev --turbopack -H localhost -p ${PORT:-3005}",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint . --ignore-pattern '.agents' --max-warnings 50"
