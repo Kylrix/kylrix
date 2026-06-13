@@ -229,7 +229,7 @@ export async function getActiveBlockBeeCoinsAction(input: { jwt?: string }): Pro
       `https://api.blockbee.io/info/?apikey=${blockbeeApiKey}`
     ).then(r => r.json()).catch(() => null);
 
-    const allowedTickers = new Set(['btc', 'ltc', 'sol', 'eth', 'trx_usdt', 'trc20_usdt']);
+    const allowedTickers = new Set(['btc', 'ltc', 'sol', 'eth', 'trx_usdt', 'trc20_usdt', 'trc20/usdt']);
 
     if (!infoRes || infoRes.status === 'error') {
       // Fallback if API fails
@@ -240,7 +240,7 @@ export async function getActiveBlockBeeCoinsAction(input: { jwt?: string }): Pro
           { id: 'ltc', name: 'Litecoin', symbol: 'LTC' },
           { id: 'sol', name: 'Solana', symbol: 'SOL' },
           { id: 'eth', name: 'Ethereum', symbol: 'ETH' },
-          { id: 'trc20_usdt', name: 'Tether (TRC20)', symbol: 'USDT' }
+          { id: 'trc20/usdt', name: 'Tether (TRC20)', symbol: 'USDT' }
         ]
       };
     }
@@ -251,19 +251,20 @@ export async function getActiveBlockBeeCoinsAction(input: { jwt?: string }): Pro
       sol: 'SOL',
       eth: 'ETH',
       trx_usdt: 'USDT (TRC20)',
-      trc20_usdt: 'USDT (TRC20)'
+      trc20_usdt: 'USDT (TRC20)',
+      'trc20/usdt': 'USDT (TRC20)'
     };
 
     const coins = Object.entries(infoRes)
-      .filter(([key, val]: [string, any]) => allowedTickers.has(key.toLowerCase()) && val && typeof val === 'object' && val.coin)
+      .filter(([key, val]: [string, any]) => allowedTickers.has(key.toLowerCase()) && val && typeof val === 'object')
       .map(([key, val]: [string, any]) => ({
-        id: key,
-        name: val.coin,
+        id: key.toLowerCase(),
+        name: val.coin || symbolMap[key.toLowerCase()] || key.toUpperCase(),
         symbol: symbolMap[key.toLowerCase()] || key.toUpperCase()
       }));
 
     // Sort according to user preference sequence (BTC, LTC, SOL, ETH, USDT)
-    const order = ['btc', 'ltc', 'sol', 'eth', 'trc20_usdt', 'trx_usdt'];
+    const order = ['btc', 'ltc', 'sol', 'eth', 'trc20/usdt', 'trc20_usdt', 'trx_usdt'];
     coins.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
 
     return { success: true, coins };
