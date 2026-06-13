@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { tablesDB, realtime } from '@/lib/appwrite/client';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { formatTime } from '@/lib/time-util';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 import {
     Box,
     Paper,
@@ -467,6 +468,7 @@ const ChatDraftInput = React.memo(function ChatDraftInput({
 
 export const ChatWindow = ({ conversationId, onBack }: { conversationId: string; onBack?: () => void }) => {
     const { user } = useAuth();
+    const { openProUpgrade } = useProUpgrade();
     const { markConversationRead: markConversationReadInContext } = useChatNotifications();
     const { openCallLauncher } = useCallLauncher();
     const { globalPresence, setMyState } = usePresence();
@@ -1323,6 +1325,10 @@ export const ChatWindow = ({ conversationId, onBack }: { conversationId: string;
             setIsRecording(false);
         } else {
             // Start recording
+            if (!hasPaidKylrixPlan(user)) {
+                openProUpgrade('Voice recording');
+                return;
+            }
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 

@@ -74,8 +74,6 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
   // 2. Enforce Pro subscription for restricted buckets
   const allowedFreeBuckets = [
     APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES,
-    // Using string literal 'voice' as it's defined in lib/services/storage.ts
-    'voice', 
   ];
 
   if (!allowedFreeBuckets.includes(bucketId) && actor) {

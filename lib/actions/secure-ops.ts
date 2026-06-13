@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { createHmac, randomBytes } from 'node:crypto';
 import { ID, Permission, Query, Role, Databases, TablesDB, Account } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { hasPaidKylrixPlan } from '@/lib/utils';
+import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { Registry } from '@/lib/core/di/registry';
 import { createServerClient } from '@/lib/appwrite/server';
@@ -1713,8 +1713,13 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
       ] as any
     });
 
-    if (existingCollabsRes.rows.length >= 8 && !hasPaidKylrixPlan(requester)) {
-        throw new Error(`Limit reached: Free plan is limited to 8 collaborators per ${input.resourceType}. Upgrade to PRO for unlimited sharing.`);
+    const userTier = getUserSubscriptionTier(requester);
+    if (userTier === 'FREE') {
+      throw new Error(`Adding collaborators is a premium feature. Upgrade to PRO or TEAMS to collaborate on your ${input.resourceType}.`);
+    }
+    const maxCollabs = userTier === 'PRO' ? 8 : Infinity;
+    if (existingCollabsRes.rows.length >= maxCollabs) {
+      throw new Error(`Limit reached: PRO tier is limited to 8 collaborators per ${input.resourceType}. Upgrade to TEAMS for unlimited team members.`);
     }
 
     const existingCollab = await tables.listRows({
@@ -2866,6 +2871,25 @@ export async function createProjectSecure(data: any, jwt?: string) {
   // Rigorous runtime validation
   const validated = ProjectSchema.parse(data);
 
+  const userTier = getUserSubscriptionTier(actor);
+  const tables = createSystemTablesDB();
+  const existingProjects = await tables.listRows({
+    databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+    tableId: 'projects',
+    queries: [
+      Query.equal('ownerId', actor.$id)
+    ] as any
+  });
+  let maxProjects = 1;
+  if (userTier === 'PRO') {
+    maxProjects = 10;
+  } else if (userTier === 'TEAMS' || userTier === 'ORG' || userTier === 'LIFETIME') {
+    maxProjects = Infinity;
+  }
+  if (existingProjects.rows.length >= maxProjects) {
+    throw new Error(`Limit reached: ${userTier} plan is limited to ${maxProjects} project${maxProjects === 1 ? '' : 's'}. Upgrade to PRO or TEAMS to create more projects.`);
+  }
+
   // Mathematically tie the create operation to the current user
   const projectData: any = {
     ...validated,
@@ -2882,7 +2906,6 @@ export async function createProjectSecure(data: any, jwt?: string) {
     throw new Error('Forbidden: Create operation must be mathematically tied to the current user');
   }
 
-  const tables = createSystemTablesDB();
   const { databases, teams } = createSystemClient();
   const now = new Date().toISOString();
   const projectId = ID.unique();
@@ -3019,10 +3042,15 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
   // Fetch owner to check plan
   const { users } = createSystemClient();
   const owner = await users.get(project.ownerId);
-  const isPro = hasPaidKylrixPlan(owner);
+  const ownerTier = getUserSubscriptionTier(owner);
 
-  if (existingCollabsRes.rows.length >= 8 && !isPro) {
-      throw new Error('Limit reached: Free plan is limited to 8 collaborators. Upgrade to PRO for unlimited team members.');
+  if (ownerTier === 'FREE') {
+    throw new Error('Adding collaborators is a premium feature. Upgrade the project owner to PRO or TEAMS to add collaborators.');
+  }
+
+  const maxCollabs = ownerTier === 'PRO' ? 8 : Infinity;
+  if (existingCollabsRes.rows.length >= maxCollabs) {
+    throw new Error(`Limit reached: PRO tier is limited to 8 collaborators. Upgrade the project owner to TEAMS for unlimited team members.`);
   }
 
   // 2. Create polymorphic collaborator row with status: 'pending' and accepted: false!
@@ -6812,19 +6840,63 @@ export async function attachObjectSecure(params: {
   const databaseId = APPWRITE_CONFIG.DATABASES.FLOW;
   const tableId = APPWRITE_CONFIG.TABLES.FLOW.OBJECTS || 'objects';
 
-  // Enforce object limit for FREE tier (10 for projects, 5 for other resources)
-  if (!hasPaidKylrixPlan(actor)) {
-    const existing = await tables.listRows({
+  const userTier = getUserSubscriptionTier(actor);
+  const { users } = createSystemClient();
+
+  // Get parent resource (e.g. project) to check the parent's owner tier
+  let parentOwnerId = actor.$id;
+  if (params.parentKind === 'project') {
+    try {
+      const parentProject = await tables.getRow({
+        databaseId: APPWRITE_CONFIG.DATABASES.CHAT,
+        tableId: 'projects',
+        rowId: params.parentId
+      });
+      if (parentProject && parentProject.ownerId) {
+        parentOwnerId = parentProject.ownerId;
+      }
+    } catch {}
+  }
+
+  // Get parent owner's tier
+  const parentOwner = parentOwnerId === actor.$id ? actor : await users.get(parentOwnerId).catch(() => actor);
+  const parentOwnerTier = getUserSubscriptionTier(parentOwner);
+
+  // Total limit of the parent container
+  let containerLimit = 3; // Free default
+  if (parentOwnerTier === 'PRO') {
+    containerLimit = 10;
+  } else if (parentOwnerTier === 'TEAMS' || parentOwnerTier === 'ORG' || parentOwnerTier === 'LIFETIME') {
+    containerLimit = Infinity;
+  }
+
+  // Count existing attachments for the container
+  const containerExisting = await tables.listRows({
+    databaseId,
+    tableId,
+    queries: [
+      Query.equal('parentId', params.parentId),
+      Query.equal('parentKind', params.parentKind)
+    ] as any
+  });
+
+  if (containerExisting.rows.length >= containerLimit) {
+    throw new Error(`Attachment limit reached: This ${params.parentKind} has reached its limit of ${containerLimit} attachments on the ${parentOwnerTier} plan.`);
+  }
+
+  // Actor-specific limit: Free user can upload max 3 objects even inside a Pro project
+  if (userTier === 'FREE') {
+    const actorExisting = await tables.listRows({
       databaseId,
       tableId,
       queries: [
         Query.equal('parentId', params.parentId),
-        Query.equal('parentKind', params.parentKind)
+        Query.equal('parentKind', params.parentKind),
+        Query.equal('userId', actor.$id)
       ] as any
     });
-    const limit = params.parentKind === 'project' ? 10 : 5;
-    if (existing.rows.length >= limit) {
-      throw new Error(`Attachment limit reached: Free plan allows up to ${limit} attached objects for ${params.parentKind === 'project' ? 'projects' : 'this resource'}. Upgrade to PRO for unlimited attachments.`);
+    if (actorExisting.rows.length >= 3) {
+      throw new Error(`Attachment limit reached: Free users can attach up to 3 objects per resource. Upgrade to PRO to attach more.`);
     }
   }
 

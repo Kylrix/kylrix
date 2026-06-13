@@ -2,7 +2,7 @@ import { ID, Permission, Query, Role } from 'appwrite';
 import { account, storage, tablesDB, getCurrentUser } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
-import { hasPaidKylrixPlan } from '@/lib/utils';
+import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { isValidX25519PublicKey } from '@/lib/crypto/public-key';
 import { UsersService } from './users';
@@ -827,11 +827,15 @@ export const ChatService = {
         const isSelf = type === 'direct' && participants.length === 1 && participants[0] === participants[participants.length - 1];
         const uniqueParticipants = isSelf ? [participants[0], participants[0]] : Array.from(new Set(participants));
 
-        // GUARD: Enforce 16-member limit for hangouts (groups) on FREE tier
-        if (type === 'group' && uniqueParticipants.length > 16) {
+        // GUARD: Enforce hangout (groups) limits based on tier
+        if (type === 'group') {
             const currentUser = await getCurrentUser();
-            if (!hasPaidKylrixPlan(currentUser)) {
-                throw new Error('Limit reached: Hangouts on free plan are limited to 16 members. Upgrade to PRO for unlimited group sizes.');
+            const userTier = getUserSubscriptionTier(currentUser);
+            if (userTier === 'FREE') {
+                throw new Error('Creating hangouts (groups) is a premium feature. Upgrade to PRO or TEAMS to create group chats.');
+            }
+            if (userTier === 'PRO' && uniqueParticipants.length > 16) {
+                throw new Error('Limit reached: Hangouts on PRO plan are limited to 16 members. Upgrade to TEAMS for unlimited group sizes.');
             }
         }
 

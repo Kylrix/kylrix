@@ -45,6 +45,8 @@ import { StorageService } from '@/lib/services/storage';
 import MuralPattern from '@/components/chat/MuralPattern';
 import { searchGlobalUsers } from '@/lib/ecosystem/identity';
 import { formatTime } from '@/lib/time-util';
+import { hasPaidKylrixPlan } from '@/lib/utils';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 
 interface ProjectDiscussionSidebarProps {
   project: Projects;
@@ -177,6 +179,7 @@ export function ProjectDiscussionSidebar({
   user,
 }: ProjectDiscussionSidebarProps) {
   const { closeSidebar } = useDynamicSidebar();
+  const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError } = useToast();
 
   const [messages, setMessages] = useState<DiscussionMessage[]>([]);
@@ -459,6 +462,10 @@ export function ProjectDiscussionSidebar({
       return;
     }
 
+    if (!hasPaidKylrixPlan(user)) {
+      openProUpgrade('Voice recording');
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const options: MediaRecorderOptions = { audioBitsPerSecond: 16000 };

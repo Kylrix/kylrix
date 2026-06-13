@@ -44,11 +44,12 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
     });
     const latest = pickLatestSubscription(unexpired);
     if (latest) {
+      const plan = String(latest.plan || 'PRO').toUpperCase();
       return {
         active: true,
         expiresAt: latest.currentPeriodEnd || null,
         source: 'subscription_row',
-        uiTier: 'PRO',
+        uiTier: plan === 'TEAMS' ? 'TEAMS' : 'PRO',
       };
     }
   } catch {

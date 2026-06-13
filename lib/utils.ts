@@ -51,11 +51,15 @@ export function getUserSubscriptionTier(user: any): string {
           if (end > new Date()) {
             return parsed.uiTier;
           }
-        } else if (parsed.active && (parsed.uiTier === 'PRO' || parsed.uiTier === 'LIFETIME' || parsed.uiTier === 'ORG')) {
+        } else if (parsed.active && (parsed.uiTier === 'PRO' || parsed.uiTier === 'TEAMS' || parsed.uiTier === 'LIFETIME' || parsed.uiTier === 'ORG')) {
           return parsed.uiTier;
         }
       } catch {}
     }
+  }
+
+  if (user.prefs) {
+    return normalizeBillingPrefsTier(user.prefs);
   }
 
   return 'FREE';

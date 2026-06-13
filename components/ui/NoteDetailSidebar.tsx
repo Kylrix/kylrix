@@ -34,6 +34,8 @@ import { useSudo } from '@/context/SudoContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
 import { useDynamicSidebar } from '@/components/ui/DynamicSidebar';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useAuth } from '@/lib/auth';
+import { hasPaidKylrixPlan } from '@/lib/utils';
 import { IdentityAvatar } from '@/components/common/IdentityBadge';
 import { useNotes } from '@/context/NotesContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
@@ -87,6 +89,8 @@ export function NoteDetailSidebar({
 }: NoteDetailSidebarProps) {
   const successColor = '#10B981';
   const { open: openUnified } = useUnifiedDrawer();
+  const { openProUpgrade } = useProUpgrade();
+  const { user } = useAuth();
   const { promptSudo } = useSudo();
   const { setIsDrawerOpen } = useDrawerState();
   const { showSuccess, showError } = useToast();
@@ -616,6 +620,10 @@ export function NoteDetailSidebar({
       }
       setIsRecording(false);
     } else {
+      if (!hasPaidKylrixPlan(user)) {
+        openProUpgrade('Voice recording');
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         let options = { audioBitsPerSecond: 16000 };

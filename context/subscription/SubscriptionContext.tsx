@@ -81,6 +81,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const prices = useMemo(
     () => ({
       PRO: calculateSubscriptionPrice('PRO', regionCode, paymentMethod),
+      TEAMS: calculateSubscriptionPrice('TEAMS', regionCode, paymentMethod),
     }),
     [regionCode, paymentMethod],
   );

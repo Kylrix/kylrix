@@ -3,7 +3,7 @@
  * Base: USD = 1.0
  */
 
-export type SubscriptionTier = 'PRO';
+export type SubscriptionTier = 'PRO' | 'TEAMS';
 export type PaymentMethod = 'CRYPTO' | 'CARD';
 
 export interface RegionConfig {
@@ -16,6 +16,7 @@ export interface RegionConfig {
 export const GLOBAL_SUBSCRIPTION_CONFIG = {
   tier_multipliers: {
     pro: 1.0,        // Base reference
+    teams: 5.0,      // 5x Pro price flat rate
   },
   base_pro_price: 10, // Base Pro price in USD
   card_surcharge_multiplier: 1.25, // 25% overhead for legacy banking
@@ -84,15 +85,19 @@ export const calculateSubscriptionPrice = (
   const region = PPP_DATA[countryCode] || PPP_DATA.DEFAULT;
   const baseProPrice = GLOBAL_SUBSCRIPTION_CONFIG.base_pro_price;
   
-  // Base Pro price adjusted by PPP
-  const pppAdjustedProUsd = baseProPrice * region.multiplier;
+  // Base price adjusted by PPP
+  let basePrice = baseProPrice * region.multiplier;
+  
+  if (String(tier).toUpperCase() === 'TEAMS') {
+    basePrice = basePrice * GLOBAL_SUBSCRIPTION_CONFIG.tier_multipliers.teams;
+  }
   
   const paymentMultiplier = method === 'CARD' 
     ? GLOBAL_SUBSCRIPTION_CONFIG.card_surcharge_multiplier 
     : 1.0;
 
-  // Final Price in USD: PPP_Adjusted_Pro_USD * Card_Surcharge
-  const finalPrice = pppAdjustedProUsd * paymentMultiplier * Math.max(1, months);
+  // Final Price in USD: BasePrice * Card_Surcharge
+  const finalPrice = basePrice * paymentMultiplier * Math.max(1, months);
   
   return Math.round(finalPrice * 100) / 100;
 };

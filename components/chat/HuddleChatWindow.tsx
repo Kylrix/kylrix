@@ -41,6 +41,8 @@ import { TargetType } from '@/types/appwrite';
 import MuralPattern from '@/components/chat/MuralPattern';
 import { VoiceMessage } from '@/components/chat/VoiceMessage';
 import { StorageService } from '@/lib/services/storage';
+import { hasPaidKylrixPlan } from '@/lib/utils';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
 
 interface HuddleChatWindowProps {
   chatNoteId: string;
@@ -55,6 +57,7 @@ interface HuddleChatWindowProps {
 
 export function HuddleChatWindow({ chatNoteId, user, title, participants = [], onBack, standalone = false, expiresAt, shareLink }: HuddleChatWindowProps) {
   const router = useRouter();
+  const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError } = useToast();
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -418,6 +421,10 @@ export function HuddleChatWindow({ chatNoteId, user, title, participants = [], o
       }
       setIsRecording(false);
     } else {
+      if (!hasPaidKylrixPlan(user)) {
+        openProUpgrade('Voice recording');
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         
