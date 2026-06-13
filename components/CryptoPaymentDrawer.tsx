@@ -93,7 +93,8 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
 
   const handleSelectCoin = async (coinId: string, overrideMonths?: number) => {
     const activeMonths = overrideMonths !== undefined ? overrideMonths : localMonths;
-    const activePlanId = activeMonths >= 12 ? 'PRO_YEAR' : 'PRO_MONTH';
+    const tierPrefix = String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO';
+    const activePlanId = activeMonths >= 12 ? `${tierPrefix}_YEAR` : `${tierPrefix}_MONTH`;
 
     setSelectedCoin(coinId);
     setLoading(true);

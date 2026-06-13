@@ -104,9 +104,11 @@ export default function PricingPage() {
     return PPP_DATA[region] || PPP_DATA.DEFAULT;
   }, [region]);
 
+  const [selectedTier, setSelectedTier] = useState<'PRO' | 'TEAMS'>('PRO');
+
   const basePrice = useMemo(() => {
-    return calculateSubscriptionPrice('PRO', region, 'CRYPTO');
-  }, [region]);
+    return calculateSubscriptionPrice(selectedTier, region, 'CRYPTO');
+  }, [selectedTier, region]);
 
   const isYearly = months >= 12;
   
@@ -121,8 +123,8 @@ export default function PricingPage() {
   }, [months, basePrice]);
 
   const handleSubscribe = () => {
+    const planId = months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`;
     if (!isAuthenticated) {
-      const planId = months >= 12 ? 'PRO_YEAR' : 'PRO_MONTH';
       const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=${region}&paymentMethod=CRYPTO&source=${encodeURIComponent(window.location.href)}`;
       openIDMWindow(checkoutUrl);
       return;
@@ -139,7 +141,7 @@ export default function PricingPage() {
           onClose={() => setPaymentDrawerOpen(false)}
           months={months}
           countryCode={region}
-          planId={months >= 12 ? 'PRO_YEAR' : 'PRO_MONTH'}
+          planId={months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`}
         />
       )}
 
@@ -154,13 +156,48 @@ export default function PricingPage() {
         </button>
 
         {/* Header Section */}
-        <div className="text-center mb-10 md:mb-14">
+        <div className="text-center mb-6">
           <h1 className="text-white font-black text-4xl md:text-6xl tracking-tight leading-tight mb-3 font-mono">
-            Kylrix Pro
+            Kylrix {selectedTier === 'PRO' ? 'Pro' : 'Teams'}
           </h1>
           <p className="text-white/60 text-sm md:text-base font-medium max-w-xl mx-auto leading-relaxed">
             Get full access to the ecosystem with a plan that scales with you and respects your local economy.
           </p>
+        </div>
+
+        {/* Zero Support Policy Banner */}
+        <div className="mb-8 p-4 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-200 text-xs md:text-sm font-medium leading-relaxed flex items-start gap-3 max-w-2xl mx-auto">
+          <Info size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <strong className="font-bold block mb-0.5 text-red-300">Blunt Policy: Zero Support</strong>
+            Kylrix is open source. There is Zero support whatsoever. Any requests can be created as a PR or an issue which the community is not obligated to tackle, but might if they want to.
+          </div>
+        </div>
+
+        {/* Plan Selector Toggle */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex p-1 bg-[#161514] border border-white/8 rounded-[16px]">
+            <button
+              onClick={() => setSelectedTier('PRO')}
+              className={`px-6 py-2 rounded-[12px] text-xs md:text-sm font-black transition-all ${
+                selectedTier === 'PRO'
+                  ? 'bg-[#6366F1] text-black'
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              Kylrix Pro
+            </button>
+            <button
+              onClick={() => setSelectedTier('TEAMS')}
+              className={`px-6 py-2 rounded-[12px] text-xs md:text-sm font-black transition-all ${
+                selectedTier === 'TEAMS'
+                  ? 'bg-[#6366F1] text-black'
+                  : 'text-white/60 hover:text-white'
+              }`}
+            >
+              Kylrix Teams
+            </button>
+          </div>
         </div>
 
         {/* Main Box Card */}
@@ -199,14 +236,21 @@ export default function PricingPage() {
 
               {/* Feature Checklist */}
               <div className="flex flex-col gap-3.5 pt-2">
-                {[
+                {(selectedTier === 'PRO' ? [
                   { icon: ShieldCheck, text: 'Unlimited Vault & Notes storage' },
                   { icon: Globe, text: 'Universal Identity across all apps' },
-                  { icon: Sparkles, text: 'Full AI Neural Graph access' }
-                ].map((feat, i) => (
+                  { icon: Sparkles, text: 'Full AI Neural Graph access' },
+                  { icon: ShieldCheck, text: 'Up to 10 Projects (Free gets 1)' },
+                  { icon: ShieldCheck, text: 'Up to 8 collaborators per object/project, 16 on groups' }
+                ] : [
+                  { icon: ShieldCheck, text: 'Unlimited Projects & Vault' },
+                  { icon: ShieldCheck, text: 'Unlimited Collaborators & team members' },
+                  { icon: Sparkles, text: 'Full AI Neural Graph access' },
+                  { icon: Globe, text: 'Universal Identity across all apps' }
+                ]).map((feat, i) => (
                   <div key={i} className="flex items-center gap-3">
-                    <feat.icon size={18} className="text-[#6366F1] flex-shrink-0" />
-                    <span className="text-sm font-bold text-white/80">{feat.text}</span>
+                     <feat.icon size={18} className="text-[#6366F1] flex-shrink-0" />
+                     <span className="text-sm font-bold text-white/80">{feat.text}</span>
                   </div>
                 ))}
               </div>
@@ -223,7 +267,7 @@ export default function PricingPage() {
                 <>
                   <div>
                     <span className="text-white/40 text-[11px] font-bold block mb-1">
-                      Total Amount
+                      Total Amount ({selectedTier})
                     </span>
                     <span className="text-4xl md:text-5xl font-black text-white font-mono leading-none tracking-tight">
                       ${totalPrice.toFixed(2)}
@@ -246,7 +290,7 @@ export default function PricingPage() {
                   </button>
                   
                   <p className="text-[10px] text-white/30 font-medium leading-normal px-2 mt-2">
-                    Your subscription time is calculated based on your contribution. Any payment amount is automatically converted into active Pro time.
+                    Your subscription time is calculated based on your contribution. Any payment amount is automatically converted into active {selectedTier === 'PRO' ? 'Pro' : 'Teams'} time.
                   </p>
                 </>
               )}

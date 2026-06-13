@@ -44,6 +44,8 @@ import { useToast } from '@/components/ui/Toast';
 import { AppwriteService } from '@/lib/appwrite';
 import { IdentityAvatar } from '@/components/IdentityBadge';
 import ProjectLinker from '@/components/projects/ProjectLinker';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
 
 const priorityColors: Record<Priority, string> = {
   low: '#A1A1AA',
@@ -123,6 +125,10 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
       subtasks: [...(current.subtasks || []), ...childSubtasks],
     };
   }, [tasks, taskId]);
+
+  const { openProUpgrade } = useProUpgrade();
+  const { currentTier } = useSubscription();
+  const isPaid = currentTier === 'PRO' || currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
 
   const [newSubtask, setNewSubtask] = useState('');
   const [newComment, setNewComment] = useState('');
@@ -262,6 +268,10 @@ export default function TaskDetails({ taskId, onBack }: TaskDetailsProps) {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || huddleSending || !discussionNoteId) return;
+    if (!isPaid) {
+      openProUpgrade('Discussions');
+      return;
+    }
     setHuddleSending(true);
     try {
       await createComment(discussionNoteId, newComment.trim());
