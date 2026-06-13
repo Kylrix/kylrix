@@ -3442,6 +3442,24 @@
                     "array": false,
                     "default": null,
                     "format": ""
+                },
+                {
+                    "key": "discountPercent",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 100
+                },
+                {
+                    "key": "discountPercentage",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": null,
+                    "min": 0,
+                    "max": 100
                 }
             ],
             "indexes": [
