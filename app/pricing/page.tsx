@@ -169,8 +169,11 @@ export default function PricingPage() {
         <div className="mb-8 p-4 rounded-[16px] bg-red-500/10 border border-red-500/20 text-red-200 text-xs md:text-sm font-medium leading-relaxed flex items-start gap-3 max-w-2xl mx-auto">
           <Info size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <strong className="font-bold block mb-0.5 text-red-300">Blunt Policy: Zero Support</strong>
-            Kylrix is open source. There is Zero support whatsoever. Any requests can be created as a PR or an issue which the community is not obligated to tackle, but might if they want to.
+            <strong className="font-bold block mb-0.5 text-red-300">⚠️ Sovereign Infrastructure Warning: Read Before Funding</strong>
+            <p className="mb-2">Kylrix is decentralized, autonomous workspace infrastructure provided strictly AS IS and AS AVAILABLE.</p>
+            <p className="mb-2"><strong>Zero Support:</strong> There is no help desk, no ticketing system, and no human support team. If you experience an issue, the highest tier of resolution is opening a Pull Request on our public repository.</p>
+            <p className="mb-2"><strong>No Service Guarantees:</strong> We provide no uptime guarantees, no SLAs, and no liability coverage for business interruptions or data state synchronization delays.</p>
+            <p><strong>Built for High-Agency Teams:</strong> If your organization requires dedicated account managers, customer success calls, or corporate hand-holding, do not fund this node. Kylrix is built solely for independent engineers and self-sovereign teams who manage their own stack.</p>
           </div>
         </div>
 
