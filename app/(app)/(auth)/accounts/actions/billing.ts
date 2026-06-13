@@ -419,6 +419,30 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   
   if (couponId) {
     coupon = await databases.getDocument(NOTE_DB_ID, COUPONS_TABLE_ID, couponId).catch(() => null);
+    if (!coupon) {
+      const eventCoupon = await databases.getDocument(
+        APPWRITE_CONFIG.DATABASES.CHAT,
+        APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
+        couponId
+      ).catch(() => null);
+      if (eventCoupon && eventCoupon.type === 'coupon') {
+        const meta = parseMetadata(eventCoupon.metadata);
+        coupon = {
+          $id: eventCoupon.$id,
+          $createdAt: eventCoupon.$createdAt,
+          status: eventCoupon.status || 'active',
+          expiresAt: eventCoupon.expiresAt || null,
+          targetUserId: eventCoupon.relatedUserId || null,
+          createdBy: eventCoupon.actorId,
+          discountPercent: eventCoupon.discountPercent ?? 100,
+          redemptionLimit: 1,
+          redemptionCount: eventCoupon.status === 'applied' ? 1 : 0,
+          metadata: eventCoupon.metadata,
+          note: meta.gift?.giftMessage || '',
+          isEventCoupon: true,
+        };
+      }
+    }
     if (!coupon) throw new Error('Coupon not found');
   } else {
     // If no explicit ID is provided, look for an active targeted coupon for this user
@@ -429,6 +453,39 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       Query.limit(1)
     ]);
     coupon = couponResult.rows[0];
+
+    if (!coupon) {
+      const eventCouponResult = await databases.listDocuments(
+        APPWRITE_CONFIG.DATABASES.CHAT,
+        APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
+        [
+          Query.equal('relatedUserId', user.$id),
+          Query.equal('type', 'coupon'),
+          Query.equal('status', 'active'),
+          Query.orderDesc('$createdAt'),
+          Query.limit(1)
+        ]
+      );
+      const eventCoupon = eventCouponResult.rows[0];
+      if (eventCoupon) {
+        const meta = parseMetadata(eventCoupon.metadata);
+        coupon = {
+          $id: eventCoupon.$id,
+          $createdAt: eventCoupon.$createdAt,
+          status: eventCoupon.status || 'active',
+          expiresAt: eventCoupon.expiresAt || null,
+          targetUserId: eventCoupon.relatedUserId || null,
+          createdBy: eventCoupon.actorId,
+          discountPercent: eventCoupon.discountPercent ?? 100,
+          redemptionLimit: 1,
+          redemptionCount: eventCoupon.status === 'applied' ? 1 : 0,
+          metadata: eventCoupon.metadata,
+          note: meta.gift?.giftMessage || '',
+          isEventCoupon: true,
+        };
+      }
+    }
+
     if (!coupon) return { ok: true, claimed: false, message: 'No active coupon found' };
   }
 
@@ -443,7 +500,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   }
 
   const existingStatus = String(coupon.status || '').toLowerCase();
-  if (['depleted', 'revoked', 'expired'].includes(existingStatus)) throw new Error('Coupon is no longer valid');
+  if (['depleted', 'revoked', 'expired', 'applied'].includes(existingStatus)) throw new Error('Coupon is no longer valid');
   
   const redemptionLimit = Number(coupon.redemptionLimit || 1);
   const redemptionCount = Number(coupon.redemptionCount || 0);
@@ -452,8 +509,8 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     throw new Error('Coupon redemption limit reached');
   }
 
-  const planId = String(metadata.planId || 'PRO_MONTH');
-  const months = parsePositiveInteger(metadata.months || 1, 1);
+  const planId = String(metadata.planId || metadata.gift?.planId || 'PRO_MONTH');
+  const months = parsePositiveInteger(metadata.months || metadata.gift?.months || 1, 1);
   const payerUserId = String(coupon.createdBy || '');
   const payerName = String(metadata.payerName || '');
   const giftMessage = String(metadata.giftMessage || coupon.note || 'Your gift subscription has been claimed.');
@@ -506,16 +563,34 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     [Permission.read(Role.user(user.$id))],
   );
 
-  await databases.updateDocument(NOTE_DB_ID, COUPONS_TABLE_ID, coupon.$id, {
-    status: isLastRedemption ? 'depleted' : 'active',
-    redemptionCount: newRedemptionCount,
-    metadata: JSON.stringify({
-      ...nextMetadata,
-      appliedAt: new Date().toISOString(), 
-      subscriptionId: subscription.$id, 
-      claimState: 'applied'
-    }),
-  });
+  if (coupon.isEventCoupon) {
+    await databases.updateDocument(
+      APPWRITE_CONFIG.DATABASES.CHAT,
+      APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
+      coupon.$id,
+      {
+        status: 'applied',
+        metadata: JSON.stringify({
+          ...metadata,
+          claimedBy: user.$id,
+          appliedAt: new Date().toISOString(),
+          subscriptionId: subscription.$id,
+          claimState: 'applied'
+        }),
+      }
+    );
+  } else {
+    await databases.updateDocument(NOTE_DB_ID, COUPONS_TABLE_ID, coupon.$id, {
+      status: isLastRedemption ? 'depleted' : 'active',
+      redemptionCount: newRedemptionCount,
+      metadata: JSON.stringify({
+        ...nextMetadata,
+        appliedAt: new Date().toISOString(), 
+        subscriptionId: subscription.$id, 
+        claimState: 'applied'
+      }),
+    });
+  }
 
   try {
     const prefs = (await users.getPrefs(user.$id)) as Record<string, unknown>;

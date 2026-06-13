@@ -37,6 +37,13 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
   const [copiedAmount, setCopiedAmount] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string>('pending');
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [localMonths, setLocalMonths] = useState(months);
+  const [upsellDetails, setUpsellDetails] = useState<{
+    ticker: string;
+    minimumLimit: number;
+    expectedCrypto: number;
+    expectedUsd: number;
+  } | null>(null);
 
   useEffect(() => {
     const initializeDrawer = async () => {
@@ -64,19 +71,23 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
     initializeDrawer();
   }, []);
 
-  const handleSelectCoin = async (coinId: string) => {
+  const handleSelectCoin = async (coinId: string, overrideMonths?: number) => {
+    const activeMonths = overrideMonths !== undefined ? overrideMonths : localMonths;
+    const activePlanId = activeMonths >= 12 ? 'PRO_YEAR' : 'PRO_MONTH';
+
     setSelectedCoin(coinId);
     setLoading(true);
     setInvoice(null);
     setPaymentStatus('pending');
     setPaymentError(null);
+    setUpsellDetails(null);
 
     try {
       const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => undefined);
       const res = await createCryptoInvoiceAction({
         ticker: coinId,
-        planId,
-        months,
+        planId: activePlanId,
+        months: activeMonths,
         countryCode,
         jwt,
         baseUrl: window.location.origin
@@ -84,6 +95,13 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
 
       if (res.success) {
         setInvoice(res);
+      } else if (res.minimum_transaction_coin) {
+        setUpsellDetails({
+          ticker: res.ticker || coinId.toUpperCase(),
+          minimumLimit: res.minimum_transaction_coin,
+          expectedCrypto: res.expected_crypto || 0,
+          expectedUsd: res.expected_usd || 0,
+        });
       } else {
         setPaymentError(res.error || 'Failed to generate invoice');
         setSelectedCoin(null);
@@ -193,7 +211,45 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
             </div>
           )}
 
-          {!paymentError && !selectedCoin && (
+          {upsellDetails && (
+            <div className="flex-1 flex flex-col justify-center gap-5 py-4 animate-slide-in-right">
+              <div className="p-5 rounded-2xl bg-[#161412] border border-white/5 flex flex-col gap-4 shadow-lg">
+                <div className="flex items-center gap-2 text-amber-400">
+                  <Info size={16} />
+                  <span className="text-xs font-black font-mono uppercase tracking-wider">Payment Limit Intercept</span>
+                </div>
+                <p className="text-xs text-white/80 leading-relaxed font-satoshi">
+                  {upsellDetails.ticker.replace('TRX_', '')} requires a minimum checkout of <code className="font-mono text-amber-400 font-bold">{upsellDetails.minimumLimit} {upsellDetails.ticker.replace('TRX_', '')}</code>.
+                </p>
+                <p className="text-xs text-white/50 leading-relaxed font-satoshi">
+                  To unlock {upsellDetails.ticker.replace('TRX_', '')} checkout, you can extend your plan duration to meet this limit, or choose a low-fee asset like LTC or SOL.
+                </p>
+              </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={async () => {
+                    const nextMonths = localMonths < 3 ? 3 : 12;
+                    setLocalMonths(nextMonths);
+                    await handleSelectCoin(selectedCoin!, nextMonths);
+                  }}
+                  className="w-full py-3.5 bg-[#6366F1] hover:bg-[#5356e3] active:scale-[0.98] rounded-xl text-xs font-black text-white transition-all uppercase tracking-wider font-mono shadow-[0_4px_12px_rgba(99,102,241,0.2)]"
+                >
+                  Upgrade to {localMonths < 3 ? '3-Month Plan' : '12-Month Plan'}
+                </button>
+                <button
+                  onClick={() => {
+                    setUpsellDetails(null);
+                    setSelectedCoin(null);
+                  }}
+                  className="w-full py-3.5 border border-white/5 hover:border-white/10 bg-white/2 hover:bg-white/4 rounded-xl text-xs font-black text-white/60 hover:text-white transition-all uppercase tracking-wider font-mono"
+                >
+                  Pay with LTC / SOL Instead
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!paymentError && !upsellDetails && !selectedCoin && (
             <div className="flex flex-col gap-4 py-2">
               <span className="text-[10px] text-white/40 font-black uppercase tracking-wider block font-mono">
                 Select Network Asset
@@ -230,14 +286,14 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
             </div>
           )}
 
-          {selectedCoin && loading && (
+          {selectedCoin && !upsellDetails && loading && (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16">
               <div className="w-8 h-8 border-2 border-white/20 border-t-[#6366F1] rounded-full animate-spin" />
               <span className="text-white/40 text-xs font-bold font-mono">Requesting secure invoice...</span>
             </div>
           )}
 
-          {selectedCoin && !loading && invoice && (
+          {selectedCoin && !upsellDetails && !loading && invoice && (
             <div className="flex flex-col gap-5">
               <div className="p-5 rounded-2xl bg-[#0B0A09] border border-white/5 flex flex-col gap-4 shadow-inner">
                 
