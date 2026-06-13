@@ -21,7 +21,9 @@ prompt() {
     else
         echo -ne "  ${BOLD}${label}${RESET}: "
     fi
-    read -r value < /dev/tty
+    if ! read -r value < /dev/tty; then
+        value=""
+    fi
     value="${value:-$default}"
     eval "$varname=\"\$value\""
 }
@@ -41,17 +43,38 @@ echo -e "${RESET}"
 
 # ── Directory Check & Auto-Clone ─────────────────────────────────────────────
 if [ ! -f "package.json" ] || ! grep -q '"name": "kylrix"' package.json; then
-    warn "You are not inside the Kylrix project directory."
-    echo -ne "  Would you like to clone the Kylrix repository to the current directory? (Y/n): "
-    read -r CLONE_REPO < /dev/tty
-    if [[ ! "$CLONE_REPO" =~ ^[Nn]$ ]]; then
-        info "Cloning Kylrix repository..."
-        git clone https://github.com/Kylrix/kylrix.git
+    # Automatically check if a "kylrix" subfolder contains the project
+    if [ -d "kylrix" ] && [ -f "kylrix/package.json" ] && grep -q '"name": "kylrix"' "kylrix/package.json"; then
+        info "Found Kylrix project in './kylrix'. Moving into it..."
         cd kylrix
     else
-        err "Please run this script inside the cloned kylrix repository."
-        exit 1
+        warn "You are not inside the Kylrix project directory."
+        echo -ne "  Would you like to clone the Kylrix repository to the current directory? (Y/n): "
+        if ! read -r CLONE_REPO < /dev/tty; then
+            CLONE_REPO="y"
+        fi
+        if [[ ! "$CLONE_REPO" =~ ^[Nn]$ ]]; then
+            info "Cloning Kylrix repository..."
+            git clone https://github.com/Kylrix/kylrix.git || {
+                err "Failed to clone repository. Please clone manually and run setup.sh inside it."
+                exit 1
+            }
+            cd kylrix || {
+                err "Failed to change directory to cloned repository."
+                exit 1
+            }
+        else
+            err "Please run this script inside the cloned kylrix repository."
+            exit 1
+        fi
     fi
+fi
+
+# Hard safety gate to verify we are actually in the right directory before proceeding
+if [ ! -f "package.json" ] || ! grep -q '"name": "kylrix"' package.json; then
+    err "Setup failed: package.json not found or is not the Kylrix project."
+    err "Please run this script from the root of the Kylrix repository."
+    exit 1
 fi
 
 PROJECT_DIR="$(pwd)"
@@ -72,7 +95,9 @@ fi
 if [ "$PORT_BUSY" = true ]; then
     warn "A process is already running on port 3005."
     echo -ne "  Are you already running a development version of Kylrix? (Y/n): "
-    read -r ALREADY_RUNNING < /dev/tty
+    if ! read -r ALREADY_RUNNING < /dev/tty; then
+        ALREADY_RUNNING="y"
+    fi
     if [[ "$ALREADY_RUNNING" =~ ^[Nn]$ ]]; then
         prompt PORT "Enter a different port for Kylrix" "3006"
     fi
@@ -126,7 +151,9 @@ elif [ "$MODE" = "3" ]; then
     if ! command -v appwrite &>/dev/null; then
         warn "Appwrite CLI is required to deploy database schemas automatically."
         echo -ne "  ${BOLD}Install Appwrite CLI globally now? (Y/n)${RESET}: "
-        read -r INSTALL_CLI < /dev/tty
+        if ! read -r INSTALL_CLI < /dev/tty; then
+            INSTALL_CLI="y"
+        fi
         if [[ ! "$INSTALL_CLI" =~ ^[Nn]$ ]]; then
             info "Installing Appwrite CLI..."
             npm install -g appwrite-cli || sudo npm install -g appwrite-cli || true
@@ -227,7 +254,9 @@ fi
 
 ok "Recommending: ${PKG_MGR}"
 echo -ne "  ${BOLD}Install dependencies with ${PKG_MGR} now? (Y/n)${RESET}: "
-read -r INSTALL_DEPS < /dev/tty
+if ! read -r INSTALL_DEPS < /dev/tty; then
+    INSTALL_DEPS="y"
+fi
 if [[ ! "$INSTALL_DEPS" =~ ^[Nn]$ ]]; then
     info "Installing dependencies..."
     $PKG_MGR install
