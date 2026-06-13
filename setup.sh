@@ -21,7 +21,7 @@ prompt() {
     else
         echo -ne "  ${BOLD}${label}${RESET}: "
     fi
-    read -r value
+    read -r value < /dev/tty
     value="${value:-$default}"
     eval "$varname=\"\$value\""
 }
@@ -29,9 +29,6 @@ prompt() {
 gen_secret() {
     openssl rand -hex "${1:-32}" 2>/dev/null || head -c "${1:-32}" /dev/urandom | xxd -p | tr -d '\n' || echo "kylrix_secure_default_secret_key_placeholder_$(date +%s)"
 }
-
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${PROJECT_DIR}/.env"
 
 clear 2>/dev/null || true
 echo -e "${BOLD}"
@@ -41,6 +38,24 @@ echo "  ╠═══════════════════════
 echo "  ║  One-click config for devs & self-hosters.       ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo -e "${RESET}"
+
+# ── Directory Check & Auto-Clone ─────────────────────────────────────────────
+if [ ! -f "package.json" ] || ! grep -q '"name": "kylrix"' package.json; then
+    warn "You are not inside the Kylrix project directory."
+    echo -ne "  Would you like to clone the Kylrix repository to the current directory? (Y/n): "
+    read -r CLONE_REPO < /dev/tty
+    if [[ ! "$CLONE_REPO" =~ ^[Nn]$ ]]; then
+        info "Cloning Kylrix repository..."
+        git clone https://github.com/Kylrix/kylrix.git
+        cd kylrix
+    else
+        err "Please run this script inside the cloned kylrix repository."
+        exit 1
+    fi
+fi
+
+PROJECT_DIR="$(pwd)"
+ENV_FILE="${PROJECT_DIR}/.env"
 
 # ── Port Check ──────────────────────────────────────────────────────────────
 PORT=3005
@@ -57,7 +72,7 @@ fi
 if [ "$PORT_BUSY" = true ]; then
     warn "A process is already running on port 3005."
     echo -ne "  Are you already running a development version of Kylrix? (Y/n): "
-    read -r ALREADY_RUNNING
+    read -r ALREADY_RUNNING < /dev/tty
     if [[ "$ALREADY_RUNNING" =~ ^[Nn]$ ]]; then
         prompt PORT "Enter a different port for Kylrix" "3006"
     fi
@@ -111,7 +126,7 @@ elif [ "$MODE" = "3" ]; then
     if ! command -v appwrite &>/dev/null; then
         warn "Appwrite CLI is required to deploy database schemas automatically."
         echo -ne "  ${BOLD}Install Appwrite CLI globally now? (Y/n)${RESET}: "
-        read -r INSTALL_CLI
+        read -r INSTALL_CLI < /dev/tty
         if [[ ! "$INSTALL_CLI" =~ ^[Nn]$ ]]; then
             info "Installing Appwrite CLI..."
             npm install -g appwrite-cli || sudo npm install -g appwrite-cli || true
@@ -212,7 +227,7 @@ fi
 
 ok "Recommending: ${PKG_MGR}"
 echo -ne "  ${BOLD}Install dependencies with ${PKG_MGR} now? (Y/n)${RESET}: "
-read -r INSTALL_DEPS
+read -r INSTALL_DEPS < /dev/tty
 if [[ ! "$INSTALL_DEPS" =~ ^[Nn]$ ]]; then
     info "Installing dependencies..."
     $PKG_MGR install
