@@ -44,6 +44,26 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
     expectedCrypto: number;
     expectedUsd: number;
   } | null>(null);
+  const [showConfirmExit, setShowConfirmExit] = useState(false);
+
+  const handleCloseAttempt = () => {
+    if (selectedCoin || invoice) {
+      setShowConfirmExit(true);
+    } else {
+      onClose();
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCloseAttempt();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedCoin, invoice]);
 
   useEffect(() => {
     const initializeDrawer = async () => {
@@ -158,7 +178,7 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
       {/* Backdrop with Blur */}
       <div 
         className="fixed inset-0 bg-black/70 backdrop-blur-md z-[10000] transition-opacity duration-300 ease-in-out cursor-default"
-        onClick={onClose}
+        onClick={handleCloseAttempt}
       />
       
       {/* Responsive Slide-up Drawer (Mobile) or Right-side Sidebar (Desktop) */}
@@ -169,7 +189,7 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
              style={{ backgroundImage: 'radial-gradient(circle at top, rgba(99,102,241,0.15) 0%, transparent 70%)' }} />
              
         <div className="w-10 h-1 bg-white/10 rounded-[2px] mx-auto mb-2 flex-shrink-0 md:hidden" />
-
+ 
         {/* Title / Close Header */}
         <div className="flex items-start justify-between gap-4 relative z-10">
           <div>
@@ -181,7 +201,7 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
             </p>
           </div>
           <button 
-            onClick={onClose}
+            onClick={handleCloseAttempt}
             className="w-9 h-9 rounded-xl flex items-center justify-center text-white/40 hover:text-white bg-white/2 hover:bg-white/5 transition-all hover:scale-105 border border-white/5"
           >
             <X size={18} />
@@ -390,6 +410,56 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
 
         </div>
 
+      </div>
+
+      {showConfirmExit && (
+        <ConfirmationDrawer
+          onConfirm={onClose}
+          onCancel={() => setShowConfirmExit(false)}
+          title="Abandon Checkout?"
+          description="If you have already sent cryptocurrency, closing this drawer will cancel active payment tracking. Are you sure you want to exit?"
+        />
+      )}
+    </>
+  );
+};
+
+export const ConfirmationDrawer: React.FC<{
+  onConfirm: () => void;
+  onCancel: () => void;
+  title: string;
+  description: string;
+}> = ({ onConfirm, onCancel, title, description }) => {
+  return (
+    <>
+      <div 
+        className="fixed inset-0 bg-black/80 z-[10002] transition-opacity duration-300 backdrop-blur-sm"
+        onClick={onCancel}
+      />
+      <div className="fixed bottom-0 left-0 right-0 w-full max-h-[40vh] bg-[#161412] border-t border-white/10 rounded-t-[32px] p-6 flex flex-col gap-5 z-[10003] animate-slide-up text-white font-satoshi shadow-[0_-16px_48px_rgba(0,0,0,0.8)]">
+        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-2 flex-shrink-0" />
+        <div className="flex flex-col gap-2">
+          <h4 className="text-white text-lg font-black font-clash tracking-tight">
+            {title}
+          </h4>
+          <p className="text-white/60 text-xs leading-relaxed font-medium">
+            {description}
+          </p>
+        </div>
+        <div className="flex gap-3 mt-2">
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-3.5 bg-red-500 hover:bg-red-600 active:scale-[0.98] rounded-xl text-xs font-black text-white transition-all uppercase tracking-wider font-mono shadow-[0_4px_12px_rgba(239,68,68,0.2)]"
+          >
+            Yes, Exit
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 py-3.5 border border-white/10 hover:border-white/20 bg-white/2 hover:bg-white/4 rounded-xl text-xs font-black text-white/80 transition-all uppercase tracking-wider font-mono"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </>
   );
