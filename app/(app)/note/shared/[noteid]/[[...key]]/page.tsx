@@ -31,33 +31,60 @@ export async function generateMetadata({
       };
     }
 
+    const keyParam = key?.join('/') || undefined;
     const meta = parseSendGhostMetadata(note.metadata);
+    let decryptedTitle = note.title || '';
+    let decryptedContent = note.content || '';
     const isEncrypted = note.isEncrypted === true || meta.isEncrypted === true;
 
     if (isEncrypted) {
-      return {
-        title: 'Protected Note · Kylrix',
-        description: 'This note is secure and password-protected.',
-        openGraph: {
+      if (!keyParam) {
+        return {
           title: 'Protected Note · Kylrix',
           description: 'This note is secure and password-protected.',
-          images: [{ url: `/note/shared/${noteid}/opengraph-image`, width: 1200, height: 630 }],
-        },
-        twitter: {
-          card: 'summary_large_image',
+          openGraph: {
+            title: 'Protected Note · Kylrix',
+            description: 'This note is secure and password-protected.',
+            images: [{ url: `/note/shared/${noteid}/opengraph-image`, width: 1200, height: 630 }],
+          },
+          twitter: {
+            card: 'summary_large_image',
+            title: 'Protected Note · Kylrix',
+            description: 'This note is secure and password-protected.',
+            images: [`/note/shared/${noteid}/opengraph-image`],
+          },
+        };
+      }
+      try {
+        const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+        decryptedTitle = await decryptGhostData(note.title || '', keyParam);
+        decryptedContent = await decryptGhostData(note.content || '', keyParam);
+      } catch (err) {
+        console.warn('Failed server-side decryption of shared note metadata preview:', err);
+        return {
           title: 'Protected Note · Kylrix',
           description: 'This note is secure and password-protected.',
-          images: [`/note/shared/${noteid}/opengraph-image`],
-        },
-      };
+          openGraph: {
+            title: 'Protected Note · Kylrix',
+            description: 'This note is secure and password-protected.',
+            images: [{ url: `/note/shared/${noteid}/opengraph-image`, width: 1200, height: 630 }],
+          },
+          twitter: {
+            card: 'summary_large_image',
+            title: 'Protected Note · Kylrix',
+            description: 'This note is secure and password-protected.',
+            images: [`/note/shared/${noteid}/opengraph-image`],
+          },
+        };
+      }
     }
 
-    const titleText = note.title || 'Shared Note';
+    const titleText = decryptedTitle || 'Shared Note';
     const displayTitle = `${titleText} · Kylrix`;
-    const displayDesc = note.content
-      ? note.content.substring(0, 160).trim() + '…'
+    const displayDesc = decryptedContent
+      ? decryptedContent.substring(0, 160).trim() + '…'
       : 'View this note shared securely via Kylrix Note.';
-    const ogImage = `/note/shared/${noteid}/opengraph-image`;
+    const ogImage = `/note/shared/${noteid}/opengraph-image${keyParam ? `?key=${encodeURIComponent(keyParam)}` : ''}`;
 
     return {
       title: displayTitle,

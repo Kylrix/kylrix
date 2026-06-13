@@ -8,9 +8,13 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const runtime = 'nodejs';
 
-export default async function SharedNoteOGImage(props: { params: Promise<{ noteid: string }> }) {
+export default async function SharedNoteOGImage(props: { 
+  params: Promise<{ noteid: string }>;
+  searchParams?: Promise<{ key?: string }>;
+}) {
   const params = await props.params;
   const noteId = params.noteid;
+  const { key } = (await props.searchParams) || {};
 
   let noteTitle = 'Shared Note';
   let noteDesc = 'View this secure shared note on Kylrix.';
@@ -23,13 +27,28 @@ export default async function SharedNoteOGImage(props: { params: Promise<{ notei
     const note = await validatePublicNoteAccess(noteId);
 
     if (note) {
-      noteTitle = note.title || 'Untitled Note';
       const meta = parseSendGhostMetadata(note.metadata);
       isEncrypted = note.isEncrypted === true || meta.isEncrypted === true;
       
-      if (!isEncrypted && note.content) {
+      let rawTitle = note.title || 'Untitled Note';
+      let rawContent = note.content || '';
+      
+      if (isEncrypted && key) {
+        try {
+          const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+          rawTitle = await decryptGhostData(rawTitle, key);
+          rawContent = await decryptGhostData(rawContent, key);
+          isEncrypted = false;
+        } catch (err) {
+          console.warn('Failed to decrypt note in OG image generation:', err);
+        }
+      }
+      
+      noteTitle = rawTitle;
+      
+      if (!isEncrypted && rawContent) {
         // Strip markdown and get a clean preview
-        let cleanContent = note.content
+        let cleanContent = rawContent
           .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
           .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
           .replace(/```[\s\S]*?```/g, '')
