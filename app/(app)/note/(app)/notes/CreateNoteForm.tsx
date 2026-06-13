@@ -30,6 +30,9 @@ import { useSection } from '@/context/SectionContext';
 
 import { useRouter } from 'next/navigation';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { hasPaidKylrixPlan } from '@/lib/utils';
+import { useAuth } from '@/lib/auth';
 
 interface CreateNoteFormProps {
   onNoteCreated: (note: Notes) => void;
@@ -64,6 +67,8 @@ export default function CreateNoteForm({
   const { setActiveDetail } = useSection();
   const router = useRouter();
   const { open: openUnified } = useUnifiedDrawer();
+  const { user } = useAuth();
+  const { openProUpgrade } = useProUpgrade();
   const hasMasterKey = ecosystemSecurity.status.hasKey;
 
   const [title, setTitle] = useState(initialContent?.title || '');
@@ -142,6 +147,10 @@ export default function CreateNoteForm({
       }
       setIsRecording(false);
     } else {
+      if (!hasPaidKylrixPlan(user)) {
+        openProUpgrade('Voice recording');
+        return;
+      }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         let options = { audioBitsPerSecond: 16000 };
