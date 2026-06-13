@@ -41,7 +41,38 @@ echo "  ║  One-click config for devs & self-hosters.       ║"
 echo "  ╚══════════════════════════════════════════════════╝"
 echo -e "${RESET}"
 
-# ── Directory Check & Auto-Clone ─────────────────────────────────────────────
+# ── Environment Detection ───────────────────────────────────────────────────
+HAS_GIT=false
+HAS_NODE=false
+HAS_DOCKER=false
+
+if command -v git &>/dev/null; then HAS_GIT=true; fi
+if command -v node &>/dev/null; then HAS_NODE=true; fi
+if command -v docker &>/dev/null; then HAS_DOCKER=true; fi
+
+# Recommend default intent based on system environment
+if [ "$HAS_NODE" = true ] && [ "$HAS_GIT" = true ]; then
+    RECOMMENDED_INTENT="Contribute"
+    DEFAULT_INTENT="1"
+else
+    RECOMMENDED_INTENT="Self-Host"
+    DEFAULT_INTENT="2"
+fi
+
+# ── Select Goal / Intent ────────────────────────────────────────────────────
+echo -e "  ${BOLD}What is your main goal?${RESET}"
+echo ""
+echo -e "    ${CYAN}1${RESET}) ${BOLD}Contribute / Local Development${RESET} $([ "$RECOMMENDED_INTENT" = "Contribute" ] && echo -e "${GREEN}(Recommended for your system)${RESET}")"
+echo -e "       - You have Git and Node.js. Setup local environment for code contributions."
+echo ""
+echo -e "    ${CYAN}2${RESET}) ${BOLD}Self-Host / Production Deployment${RESET} $([ "$RECOMMENDED_INTENT" = "Self-Host" ] && echo -e "${GREEN}(Recommended for your system)${RESET}")"
+echo -e "       - Deploy a production instance of Kylrix on this machine."
+echo ""
+
+prompt INTENT "Choice" "$DEFAULT_INTENT"
+echo ""
+
+# ── Directory Check & Auto-Clone based on Intent ─────────────────────────────
 if [ ! -f "package.json" ] || ! grep -q '"name": "kylrix"' package.json; then
     # Automatically check if a "kylrix" subfolder contains the project
     if [ -d "kylrix" ] && [ -f "kylrix/package.json" ] && grep -q '"name": "kylrix"' "kylrix/package.json"; then
@@ -49,23 +80,47 @@ if [ ! -f "package.json" ] || ! grep -q '"name": "kylrix"' package.json; then
         cd kylrix
     else
         warn "You are not inside the Kylrix project directory."
-        echo -ne "  Would you like to clone the Kylrix repository to the current directory? (Y/n): "
-        if ! read -r CLONE_REPO < /dev/tty; then
-            CLONE_REPO="y"
-        fi
-        if [[ ! "$CLONE_REPO" =~ ^[Nn]$ ]]; then
-            info "Cloning Kylrix repository..."
-            git clone https://github.com/Kylrix/kylrix.git || {
-                err "Failed to clone repository. Please clone manually and run setup.sh inside it."
+        
+        if [ "$INTENT" = "2" ]; then
+            # Self-Host path: Recommend shallow clone
+            echo -ne "  To self-host, we need the configuration and docker files.\n  Perform a fast shallow clone of the repository? (Y/n): "
+            if ! read -r CLONE_REPO < /dev/tty; then
+                CLONE_REPO="y"
+            fi
+            if [[ ! "$CLONE_REPO" =~ ^[Nn]$ ]]; then
+                info "Cloning Kylrix repository (shallow)..."
+                git clone --depth 1 https://github.com/Kylrix/kylrix.git || {
+                    err "Failed to clone repository. Please clone manually and run setup.sh."
+                    exit 1
+                }
+                cd kylrix || {
+                    err "Failed to enter cloned repository."
+                    exit 1
+                }
+            else
+                err "Cannot proceed without repository files. Please run setup.sh inside the Kylrix directory."
                 exit 1
-            }
-            cd kylrix || {
-                err "Failed to change directory to cloned repository."
-                exit 1
-            }
+            fi
         else
-            err "Please run this script inside the cloned kylrix repository."
-            exit 1
+            # Contributor path: Standard clone
+            echo -ne "  Would you like to clone the full Kylrix repository to the current directory? (Y/n): "
+            if ! read -r CLONE_REPO < /dev/tty; then
+                CLONE_REPO="y"
+            fi
+            if [[ ! "$CLONE_REPO" =~ ^[Nn]$ ]]; then
+                info "Cloning Kylrix repository..."
+                git clone https://github.com/Kylrix/kylrix.git || {
+                    err "Failed to clone repository. Please clone manually and run setup.sh inside it."
+                    exit 1
+                }
+                cd kylrix || {
+                    err "Failed to change directory to cloned repository."
+                    exit 1
+                }
+            else
+                err "Please run this script inside the cloned kylrix repository."
+                exit 1
+            fi
         fi
     fi
 fi
@@ -104,8 +159,25 @@ if [ "$PORT_BUSY" = true ]; then
 fi
 echo ""
 
+# Determine recommended mode
+if [ "$INTENT" = "1" ]; then
+    RECOMMENDED_MODE="1"
+    RECOMMENDED_TEXT="Contributor Mode"
+else
+    if [ "$HAS_DOCKER" = true ]; then
+        RECOMMENDED_MODE="4"
+        RECOMMENDED_TEXT="Self-Host Local Appwrite (Docker)"
+    elif [ "$HAS_NODE" = true ]; then
+        RECOMMENDED_MODE="2"
+        RECOMMENDED_TEXT="Zero-Setup SQLite Mode"
+    else
+        RECOMMENDED_MODE="3"
+        RECOMMENDED_TEXT="Self-Host via Appwrite Cloud"
+    fi
+fi
+
 # ── Select Mode ──────────────────────────────────────────────────────────────
-echo -e "  ${BOLD}Select your deployment/development mode:${RESET}"
+echo -e "  ${BOLD}Select your deployment/development mode:${RESET} ${GREEN}(Recommended: ${RECOMMENDED_TEXT})${RESET}"
 echo ""
 echo -e "    ${CYAN}1${RESET}) ${BOLD}Contributor Mode (Kylrix Cloud)${RESET}"
 echo -e "       - Zero-setup local development."
@@ -122,7 +194,7 @@ echo -e "    ${CYAN}4${RESET}) ${BOLD}Self-Host Local Appwrite (Docker)${RESET}"
 echo -e "       - Provisions a complete local Docker Appwrite stack."
 echo ""
 
-prompt MODE "Choice" "1"
+prompt MODE "Choice" "$RECOMMENDED_MODE"
 echo ""
 
 # Defaults
