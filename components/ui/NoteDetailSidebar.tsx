@@ -94,7 +94,6 @@ export function NoteDetailSidebar({
   const { promptSudo } = useSudo();
   const { setIsDrawerOpen } = useDrawerState();
   const { showSuccess, showError } = useToast();
-  const { openProUpgrade } = useProUpgrade();
   const { closeSidebar } = useDynamicSidebar();
   const { openCallLauncher } = useCallLauncher();
 
