@@ -36,6 +36,7 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
   const [copiedAddress, setCopiedAddress] = useState(false);
   const [copiedAmount, setCopiedAmount] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string>('pending');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeDrawer = async () => {
@@ -68,6 +69,7 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
     setLoading(true);
     setInvoice(null);
     setPaymentStatus('pending');
+    setPaymentError(null);
 
     try {
       const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => undefined);
@@ -83,11 +85,11 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
       if (res.success) {
         setInvoice(res);
       } else {
-        toast.error(res.error || 'Failed to generate invoice');
+        setPaymentError(res.error || 'Failed to generate invoice');
         setSelectedCoin(null);
       }
     } catch (err: any) {
-      toast.error('An unexpected error occurred generating payment details');
+      setPaymentError('An unexpected error occurred generating payment details');
       setSelectedCoin(null);
     } finally {
       setLoading(false);
@@ -171,7 +173,27 @@ export const CryptoPaymentDrawer: React.FC<CryptoPaymentDrawerProps> = ({
         {/* Content Body */}
         <div className="flex-1 flex flex-col justify-between relative z-10 gap-6">
           
-          {!selectedCoin && (
+          {paymentError && (
+            <div className="flex-1 flex flex-col justify-center gap-5 py-4 animate-slide-in-right">
+              <div className="p-5 rounded-2xl bg-red-500/10 border border-red-500/20 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-red-400">
+                  <Info size={16} />
+                  <span className="text-xs font-black font-mono uppercase tracking-wider">Payment Limit Warning</span>
+                </div>
+                <p className="text-xs text-white/70 leading-relaxed font-satoshi">
+                  {paymentError}
+                </p>
+              </div>
+              <button
+                onClick={() => setPaymentError(null)}
+                className="w-full py-3.5 bg-[#6366F1] hover:bg-[#5356e3] active:scale-[0.98] rounded-xl text-xs font-black text-white transition-all uppercase tracking-wider font-mono shadow-[0_4px_12px_rgba(99,102,241,0.2)]"
+              >
+                Choose Another Asset
+              </button>
+            </div>
+          )}
+
+          {!paymentError && !selectedCoin && (
             <div className="flex flex-col gap-4 py-2">
               <span className="text-[10px] text-white/40 font-black uppercase tracking-wider block font-mono">
                 Select Network Asset
