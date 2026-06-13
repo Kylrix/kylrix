@@ -208,7 +208,7 @@ Please submit a [kylrix bug report](https://www.kylrix.space/flow/form/6a19dc990
 You can set up and run the entire repository in one click—whether you are developing locally with SQLite, connecting to the public Kylrix sandbox, or self-hosting on Appwrite:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/setup.sh)"
+curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/setup.sh | bash
 ```
 
 Alternatively, to set up manually:
