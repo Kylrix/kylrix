@@ -448,11 +448,13 @@ export async function POST(req: Request) {
       }
     }
 
+    const planTier = String(meta.planId || 'PRO').toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO';
+
     try {
       const prefs = (await users.getPrefs(meta.payerUserId)) as Record<string, unknown>;
       await users.updatePrefs(
         meta.payerUserId,
-        applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString()),
+        applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier),
       );
     } catch (err) {
       console.error('[BlockBee IPN] Failed to update user prefs:', err);
@@ -464,7 +466,7 @@ export async function POST(req: Request) {
 
       if (profileRes.total > 0) {
         await databases.updateDocument(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
-          tier: 'PRO',
+          tier: planTier,
         });
       }
     } catch (err) {

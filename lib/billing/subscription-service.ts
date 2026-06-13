@@ -32,9 +32,11 @@ export class SubscriptionService {
       ratio,
     );
 
+    const planTier = String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO';
+
     const subData = {
       userId: targetUserId,
-      plan: 'pro',
+      plan: planTier.toLowerCase(),
       status: 'active',
       currentPeriodStart: currentPeriodStart.toISOString(),
       currentPeriodEnd: currentPeriodEnd.toISOString(),
@@ -48,7 +50,7 @@ export class SubscriptionService {
 
     try {
       const prefs = (await users.getPrefs(targetUserId)) as Record<string, unknown>;
-      await users.updatePrefs(targetUserId, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString()));
+      await users.updatePrefs(targetUserId, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), planTier));
     } catch (err) {
       console.warn('[SubscriptionService] Failed to update user prefs:', err);
     }
@@ -59,7 +61,7 @@ export class SubscriptionService {
         Query.limit(2)]);
       if (profileRes.total > 0) {
         await databases.updateRow(CHAT_DB_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
-          tier: 'PRO',
+          tier: planTier,
         });
       }
     } catch (err) {

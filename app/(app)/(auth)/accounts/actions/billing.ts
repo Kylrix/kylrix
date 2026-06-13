@@ -283,7 +283,7 @@ export async function createBillingCheckoutSessionAction(input: {
         const prefs = (await users.getPrefs(user.$id)) as Record<string, unknown>;
         await users.updatePrefs(
           user.$id,
-          applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString()),
+          applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO'),
         );
       } catch {}
 
@@ -594,7 +594,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
 
   try {
     const prefs = (await users.getPrefs(user.$id)) as Record<string, unknown>;
-    await users.updatePrefs(user.$id, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString()));
+    await users.updatePrefs(user.$id, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO'));
   } catch {}
 
   await databases.createDocument(
