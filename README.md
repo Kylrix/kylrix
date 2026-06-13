@@ -203,7 +203,15 @@ Please submit a [kylrix bug report](https://www.kylrix.space/flow/form/6a19dc990
 
 ---
 
-<h2 align="center">🛠️ Get Started in 60 Seconds</h2>
+<h2 align="center">🛠️ One-Click Setup & Development</h2>
+
+You can set up and run the entire repository in one click—whether you are developing locally with SQLite, connecting to the public Kylrix sandbox, or self-hosting on Appwrite:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Kylrix/kylrix/master/setup.sh)"
+```
+
+Alternatively, to set up manually:
 
 1. **Clone the Source Tree:**
    ```bash
@@ -211,9 +219,9 @@ Please submit a [kylrix bug report](https://www.kylrix.space/flow/form/6a19dc990
    cd kylrix
    ```
 
-2. **Install & Launch:**
+2. **Configure and Run:**
    ```bash
-   pnpm install
+   ./setup.sh
    pnpm dev
    ```
 

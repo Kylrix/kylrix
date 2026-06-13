@@ -1,6 +1,6 @@
 export const APPWRITE_CONFIG = {
-    ENDPOINT: 'https://api.kylrix.space/v1',
-    PROJECT_ID: '67fe9627001d97e37ef3',
+    ENDPOINT: process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT || 'https://api.kylrix.space/v1',
+    PROJECT_ID: process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID || '67fe9627001d97e37ef3',
     DATABASE_ID: 'passwordManagerDb', // Consolidated database survivor
     NOTE_DATABASE_ID: 'passwordManagerDb',
     VAULT_DATABASE_ID: 'passwordManagerDb',

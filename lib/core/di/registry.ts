@@ -19,7 +19,12 @@ export class Registry {
 
   static getDatabase(): DatabasePort {
     if (!this.db) {
-      this.db = new AppwriteDatabaseAdapter();
+      if (process.env.DATABASE_PROVIDER === 'sqlite' || process.env.NEXT_PUBLIC_DATABASE_PROVIDER === 'sqlite') {
+        const { SqliteDatabaseAdapter } = require('../adapters/sqlite/database.adapter');
+        this.db = new SqliteDatabaseAdapter();
+      } else {
+        this.db = new AppwriteDatabaseAdapter();
+      }
     }
     return this.db;
   }

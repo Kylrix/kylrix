@@ -7,7 +7,7 @@ const initAppwrite = () => {
     if (typeof APPWRITE_CONFIG === 'undefined') return;
     
     // Use the api subdomain for the endpoint
-    const endpoint = `https://api.kylrix.space/v1`;
+    const endpoint = APPWRITE_CONFIG.ENDPOINT;
     client.setEndpoint(endpoint);
 
     if (APPWRITE_CONFIG.PROJECT_ID) {
