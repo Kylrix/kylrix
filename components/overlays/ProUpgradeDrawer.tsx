@@ -16,6 +16,29 @@ import { Zap, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { TOPBAR_DRAWER_BACKDROP_SLOT } from '@/lib/ui/topbar-drawer-slot';
 
+const featureDescriptions: Record<string, { desc: string; fix: string }> = {
+  'Voice recording': {
+    desc: 'Voice notes require encrypted media storage.',
+    fix: 'Upgrade to Pro to unlock voice capture and upload audio thoughts instantly.'
+  },
+  'Discussions': {
+    desc: 'Task discussion comments require secondary object sync privileges.',
+    fix: 'Upgrade to Pro to post, edit, and collaborate in real-time on task comments and threads.'
+  },
+  'New Project': {
+    desc: 'The Free plan is limited to 1 active project.',
+    fix: 'Upgrade to Pro to create up to 10 projects, or Teams for unlimited team workspaces.'
+  },
+  'New Channel': {
+    desc: 'Creating custom group channels requires secure group huddle channels.',
+    fix: 'Upgrade to Pro or Teams to coordinate group channels with more than 2 participants.'
+  },
+  'Collaborators': {
+    desc: 'Collaborative projects and shared resources require a premium tier.',
+    fix: 'Upgrade to Pro to add up to 8 collaborators per resource, or Teams for unlimited peers.'
+  }
+};
+
 export function ProUpgradeDrawer() {
   const router = useRouter();
   const { showProUpgrade, closeProUpgrade, feature } = useProUpgrade();
@@ -23,6 +46,7 @@ export function ProUpgradeDrawer() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const featureName = feature ? ` ${feature}` : '';
+  const spec = feature ? featureDescriptions[feature] : null;
 
   return (
     <Drawer
@@ -90,7 +114,16 @@ export function ProUpgradeDrawer() {
               mb: 2.5,
             }}
           >
-            {featureName ? `${featureName} is a Pro feature.` : 'This feature requires a Pro subscription.'} Unlock full premium capabilities.
+            {spec ? (
+              <>
+                <strong style={{ display: 'block', color: '#fff', marginBottom: '6px' }}>{spec.desc}</strong>
+                <span>{spec.fix}</span>
+              </>
+            ) : (
+              <>
+                {featureName ? `${featureName} is a Pro feature.` : 'This feature requires a Pro subscription.'} Unlock full premium capabilities.
+              </>
+            )}
           </Typography>
 
           <Stack spacing={1.5} sx={{ mb: 2 }}>

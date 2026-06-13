@@ -32,6 +32,8 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import toast from 'react-hot-toast';
 import UserSearch from '@/components/UserSearch';
 import { isValidX25519PublicKey } from '@/lib/crypto/public-key';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { useSubscription } from '@/context/subscription/SubscriptionContext';
 
 const DRAWER_SX = {
     borderTopLeftRadius: '26px',
@@ -48,6 +50,9 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
     const { user } = useAuth();
     const router = useRouter();
     const { requestSudo } = useSudo();
+    const { openProUpgrade } = useProUpgrade();
+    const { currentTier } = useSubscription();
+    const isPaid = currentTier === 'PRO' || currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
 
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
     const [channelName, setChannelName] = useState('');
@@ -55,6 +60,10 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
 
     const handleCreateChannel = async () => {
         if (!user) return;
+        if (!isPaid) {
+            openProUpgrade('New Channel');
+            return;
+        }
         if (!channelName.trim()) {
             toast.error("Please enter a channel name.");
             return;
