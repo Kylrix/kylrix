@@ -546,7 +546,8 @@ export default function ProjectsPage() {
   }, [projects, syncProjects]);
 
   const openCreateDrawer = useCallback((template?: typeof projectTemplates[0]) => {
-    if (!hasPaidKylrixPlan(user) && projects.length >= 1) {
+    const ownedProjectsCount = projects.filter((p: any) => p.ownerId === user?.$id).length;
+    if (!hasPaidKylrixPlan(user) && ownedProjectsCount >= 1) {
       openProUpgrade('New Project');
       return;
     }
@@ -558,7 +559,7 @@ export default function ProjectsPage() {
         onCreated: handleCreated,
         template: template 
     });
-  }, [open, handleCreated, user, openProUpgrade, projects.length]);
+  }, [open, handleCreated, user, openProUpgrade, projects]);
 
   const openCreateDrawerRef = useRef(openCreateDrawer);
   useEffect(() => {
