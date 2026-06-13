@@ -829,6 +829,7 @@ export type CouponsCreate = {
     "discountPercentage"?: number | null;
     "redemptionLimit"?: number;
     "redemptionCount"?: number;
+    "seats"?: number;
 }
 
 export type Coupons = Models.Row & {
@@ -845,6 +846,7 @@ export type Coupons = Models.Row & {
     "discountPercentage"?: number | null;
     "redemptionLimit"?: number;
     "redemptionCount"?: number;
+    "seats"?: number;
 }
 
 export type UserResourcePinsCreate = {
@@ -2692,6 +2694,7 @@ export type DatabaseTableMap = {
         "discountPercentage"?: number | null;
         "redemptionLimit"?: number;
         "redemptionCount"?: number;
+        "seats"?: number;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Coupons>;
       get: (id: string) => Promise<Coupons>;
       update: (id: string, data: Partial<{
@@ -2708,6 +2711,7 @@ export type DatabaseTableMap = {
         "discountPercentage"?: number | null;
         "redemptionLimit"?: number;
         "redemptionCount"?: number;
+        "seats"?: number;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Coupons>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Coupons>>(field: K, value: QueryableFieldValue<Coupons, K>) => string; notEqual: <K extends QueryableKeys<Coupons>>(field: K, value: QueryableFieldValue<Coupons, K>) => string; lessThan: <K extends QueryableKeys<Coupons>>(field: K, value: QueryableFieldValue<Coupons, K>) => string; lessThanEqual: <K extends QueryableKeys<Coupons>>(field: K, value: QueryableFieldValue<Coupons, K>) => string; greaterThan: <K extends QueryableKeys<Coupons>>(field: K, value: QueryableFieldValue<Coupons, K>) => string; greaterThanEqual: <K extends QueryableKeys<Coupons>>(field: K, value: QueryableFieldValue<Coupons, K>) => string; contains: <K extends QueryableKeys<Coupons>>(field: K, value: QueryableFieldValue<Coupons, K>) => string; search: <K extends QueryableKeys<Coupons>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Coupons>>(field: K) => string; isNotNull: <K extends QueryableKeys<Coupons>>(field: K) => string; startsWith: <K extends QueryableKeys<Coupons>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Coupons>>(field: K, value: string) => string; between: <K extends QueryableKeys<Coupons>>(field: K, start: QueryableFieldValue<Coupons, K>, end: QueryableFieldValue<Coupons, K>) => string; select: <K extends keyof Coupons>(fields: K[]) => string; orderAsc: <K extends keyof Coupons>(field: K) => string; orderDesc: <K extends keyof Coupons>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Coupons[] }>;

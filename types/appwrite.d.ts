@@ -463,6 +463,7 @@ export type Subscriptions = Models.Row & {
     currentPeriodEnd: string | null;
     createdAt: string | null;
     updatedAt: string | null;
+    seats: number;
 }
 
 export type BillingTransactions = Models.Row & {
@@ -526,6 +527,7 @@ export type Coupons = Models.Row & {
     discountPercentage: number | null;
     redemptionLimit: number;
     redemptionCount: number;
+    seats: number;
 }
 
 export type UserResourcePins = Models.Row & {
