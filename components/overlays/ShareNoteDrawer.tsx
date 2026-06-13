@@ -158,7 +158,7 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
   const inviteUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
     if (resourceType === 'project') return `${window.location.origin}/project/${activeResourceId}`;
-    if (resourceType === 'note') return `${window.location.origin}/note/shared/${activeResourceId}`;
+    if (resourceType === 'note') return `${window.location.origin}/note/${activeResourceId}`;
     return `${window.location.origin}/shared/${resourceType}/${activeResourceId}`;
   }, [resourceType, activeResourceId]);
 

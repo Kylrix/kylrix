@@ -1,209 +1,138 @@
-"use client";
+import type { Metadata } from 'next';
+import NoteEditorPageClient from './NoteEditorPageClient';
+import { validatePublicNoteAccess } from '@/lib/appwrite';
+import { parseSendGhostMetadata } from '@/lib/send/metadata';
 
-import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { getNote } from '@/lib/appwrite';
-import { deleteNote } from '@/lib/actions/client-ops';
-import type { Notes } from '@/types/appwrite';
-import { NoteDetailSidebar } from '@/components/ui/NoteDetailSidebar';
-import { 
-  Box, 
-  Typography, 
-  Button, 
-  CircularProgress, 
-  Container,
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions,
-  alpha
-} from '@/lib/mui-tailwind/material';
-import { useToast } from '@/components/ui/Toast';
-import CommentsSection from '@/app/(app)/note/(app)/notes/Comments';
-import NoteReactions from '@/app/(app)/note/(app)/notes/NoteReactions';
-import { useDataNexus } from '@/context/DataNexusContext';
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ key?: string }>;
+}): Promise<Metadata> {
+  try {
+    const { id } = await params;
+    const { key } = await searchParams;
 
-export default function NoteEditorPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const [rawNote, setRawNote] = useState<Notes | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const { showSuccess, showError } = useToast();
-  const { fetchOptimized, setCachedData, invalidate, getCachedData } = useDataNexus();
+    const note = await validatePublicNoteAccess(id);
+    const fallbackImage = 'https://kylrix.space/logo_social.png';
 
-  const CACHE_KEY = useMemo(() => id ? `note_${id}` : null, [id]);
-
-  const note = rawNote || (isLoading ? {
-    $id: id as string,
-    title: 'Loading Note...',
-    content: 'Fetching secure note contents and decryption keys...',
-    tags: [],
-    $createdAt: new Date().toISOString(),
-    $updatedAt: new Date().toISOString(),
-  } as any : null);
-
-  useEffect(() => {
-    let mounted = true;
-  
-    if (!id || !CACHE_KEY) {
-      setIsLoading(false);
-      return;
+    if (!note) {
+      return {
+        title: 'Note · Kylrix',
+        description: 'View and collaborate on this note securely.',
+        openGraph: {
+          title: 'Note · Kylrix',
+          description: 'View and collaborate on this note securely.',
+          images: [{ url: fallbackImage, width: 1200, height: 630 }],
+        },
+        twitter: {
+          card: 'summary_large_image',
+          title: 'Note · Kylrix',
+          description: 'View and collaborate on this note securely.',
+          images: [fallbackImage],
+        },
+      };
     }
-  
-    // Try to get from cache first for instant UI
-    const cached = getCachedData<Notes>(CACHE_KEY);
-    if (cached) {
-      setRawNote(cached);
-      setIsLoading(false);
-    }
-  
-    (async () => {
-      if (!cached) setIsLoading(true);
-      try {
-        const fetched = await fetchOptimized(CACHE_KEY, () => getNote(id as string));
-        if (mounted) {
-          setRawNote(fetched);
-        }
-      } catch (error: any) {
-        console.error('Failed to load note', error);
-        showError('Failed to load note', 'Please try again later.');
-      } finally {
-        if (mounted) setIsLoading(false);
+
+    const meta = parseSendGhostMetadata(note.metadata);
+    let decryptedTitle = note.title || '';
+    let decryptedContent = note.content || '';
+    const isEncrypted = note.isEncrypted === true || meta.isEncrypted === true;
+
+    if (isEncrypted) {
+      if (!key) {
+        return {
+          title: 'Protected Note · Kylrix',
+          description: 'This note is secure and password-protected.',
+          openGraph: {
+            title: 'Protected Note · Kylrix',
+            description: 'This note is secure and password-protected.',
+            images: [{ url: `/note/${id}/opengraph-image`, width: 1200, height: 630 }],
+          },
+          twitter: {
+            card: 'summary_large_image',
+            title: 'Protected Note · Kylrix',
+            description: 'This note is secure and password-protected.',
+            images: [`/note/${id}/opengraph-image`],
+          },
+        };
       }
-    })();
-  
-    return () => {
-      mounted = false;
-    };
-  }, [id, CACHE_KEY, showError, fetchOptimized, getCachedData]);
-
-  const handleUpdate = (updated: Notes) => {
-    setRawNote(updated);
-    if (CACHE_KEY) setCachedData(CACHE_KEY, updated);
-  };
-
-  const handleDelete = async (noteId: string) => {
-    setIsDeleting(true);
-    try {
-      await deleteNote(noteId);
-      // Invalidate cache
-      if (CACHE_KEY) invalidate(CACHE_KEY);
-      showSuccess('Deleted', 'Note removed');
-      router.push('/note');
-    } catch (error: any) {
-      console.error('Delete failed', error);
-      showError('Delete failed', 'Could not delete the note.');
-    } finally {
-      setIsDeleting(false);
+      try {
+        const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+        decryptedTitle = await decryptGhostData(note.title || '', key);
+        decryptedContent = await decryptGhostData(note.content || '', key);
+      } catch (err) {
+        console.warn('Failed server-side decryption of note metadata preview:', err);
+        return {
+          title: 'Protected Note · Kylrix',
+          description: 'This note is secure and password-protected.',
+          openGraph: {
+            title: 'Protected Note · Kylrix',
+            description: 'This note is secure and password-protected.',
+            images: [{ url: `/note/${id}/opengraph-image`, width: 1200, height: 630 }],
+          },
+          twitter: {
+            card: 'summary_large_image',
+            title: 'Protected Note · Kylrix',
+            description: 'This note is secure and password-protected.',
+            images: [`/note/${id}/opengraph-image`],
+          },
+        };
+      }
     }
-  };
 
-  if (!isLoading && !note) {
-    return (
-      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-        <Typography color="text.secondary">Note not found.</Typography>
-      </Box>
-    );
+    const titleText = decryptedTitle || 'Shared Note';
+    const displayTitle = `${titleText} · Kylrix`;
+    const displayDesc = decryptedContent
+      ? decryptedContent.substring(0, 160).trim() + '…'
+      : 'View this note shared securely via Kylrix Note.';
+    const ogImage = `/note/${id}/opengraph-image${key ? `?key=${encodeURIComponent(key)}` : ''}`;
+
+    return {
+      title: displayTitle,
+      description: displayDesc,
+      openGraph: {
+        title: displayTitle,
+        description: displayDesc,
+        type: 'article',
+        images: [
+          {
+            url: ogImage,
+            width: 1200,
+            height: 630,
+            alt: displayTitle,
+          },
+        ],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: displayTitle,
+        description: displayDesc,
+        images: [ogImage],
+      },
+    };
+  } catch (error) {
+    console.error('Error generating metadata for Note:', error);
+    const fallbackImage = 'https://kylrix.space/logo_social.png';
+    return {
+      title: 'Note · Kylrix',
+      description: 'View notes securely.',
+      openGraph: {
+        title: 'Note · Kylrix',
+        description: 'View notes securely.',
+        images: [{ url: fallbackImage, width: 1200, height: 630 }],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: 'Note · Kylrix',
+        description: 'View notes securely.',
+        images: [fallbackImage],
+      },
+    };
   }
+}
 
-  return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#161412' }}>
-      <Container maxWidth={false} disableGutters sx={{ px: { xs: 0.5, sm: 1, md: 1.5 }, py: 1.25 }}>
-        <Box component="main" sx={{ 
-          perspective: '1200px',
-          '& > *': {
-            transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-          }
-        }}>
-          <NoteDetailSidebar
-            note={note}
-            onUpdate={handleUpdate}
-            onDelete={handleDelete}
-            showExpandButton={false}
-            showHeaderDeleteButton={false}
-            isLoading={isLoading}
-          />
-        </Box>
-
-        <Box sx={{ 
-          mt: 5, 
-          pt: 4, 
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 3
-        }}>
-          <Box sx={{ 
-            p: 4, 
-            bgcolor: '#0A0908',
-            borderRadius: '32px',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-          }}>
-            <NoteReactions targetId={id as string} />
-          </Box>
-          
-          <Box sx={{ 
-            p: 4, 
-            bgcolor: '#0A0908',
-            borderRadius: '32px',
-            border: '1px solid rgba(255, 255, 255, 0.05)',
-          }}>
-            <CommentsSection noteId={id as string} />
-          </Box>
-        </Box>
-      </Container>
-
-      <Dialog
-        open={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        PaperProps={{
-          sx: {
-            borderRadius: 6,
-            bgcolor: 'rgba(28, 26, 24, 0.98)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backgroundImage: 'none',
-            p: 2
-          }
-        }}
-      >
-        <DialogTitle sx={{ fontWeight: 900, fontSize: '1.5rem' }}>Confirm delete</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ color: 'text.secondary' }}>
-            Deleting this note is permanent. Are you sure?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 3, gap: 2 }}>
-          <Button 
-            variant="contained" 
-            color="error"
-            fullWidth
-            onClick={() => {
-              if (note?.$id) {
-                handleDelete(note.$id);
-              }
-              setShowDeleteConfirm(false);
-            }}
-            disabled={isDeleting}
-            sx={{ borderRadius: 3 }}
-          >
-            Delete note
-          </Button>
-          <Button 
-            variant="outlined" 
-            fullWidth
-            onClick={() => setShowDeleteConfirm(false)}
-            sx={{ 
-              borderRadius: 3,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              color: 'text.primary'
-            }}
-          >
-            Cancel
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
+export default function NotePage() {
+  return <NoteEditorPageClient />;
 }
