@@ -35,9 +35,10 @@ interface ProjectCardProps {
   onClick: (projectId: string) => void;
   onDelete: (projectId: string) => void;
   onTogglePin?: (projectId: string) => void;
+  onUpdate?: (updated: Projects) => void;
 }
 
-export default function ProjectCard({ project, onClick, onDelete, onTogglePin }: ProjectCardProps) {
+export default function ProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }: ProjectCardProps) {
   const { openMenu } = useContextMenu();
   const { isPinned: isResourcePinned } = useResourcePins();
   const pinned = (project as any).isPinned || isResourcePinned('project', project.$id, project.ownerId, (project as any).isPinned);
@@ -49,7 +50,12 @@ export default function ProjectCard({ project, onClick, onDelete, onTogglePin }:
     isGuest: project.visibility === 'public', // Projects currently mirror public/guest
     resourceTitle: project.title,
     onUpdate: () => {
-       // Refresh via parent
+      const { ProjectsService } = require('@/lib/appwrite/projects');
+      ProjectsService.getProject(project.$id).then((updated: Projects) => {
+        if (updated && onUpdate) {
+          onUpdate(updated);
+        }
+      }).catch(() => {});
     }
   });
 
@@ -169,7 +175,14 @@ export default function ProjectCard({ project, onClick, onDelete, onTogglePin }:
                   isPublic={project.visibility === 'public'}
                   isGuest={project.visibility === 'public'}
                   accentColor="#6366F1"
-                  onPublished={() => {}}
+                  onPublished={(res) => {
+                    if (onUpdate) {
+                      onUpdate({
+                        ...project,
+                        visibility: res.isPublic ? 'public' : 'private'
+                      });
+                    }
+                  }}
                 />
               </Box>
             ) : (
