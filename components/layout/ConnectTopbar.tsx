@@ -59,6 +59,91 @@ import { useSubscription } from '@/context/subscription/SubscriptionContext';
 import { useProfile } from '@/components/providers/ProfileProvider';
 import { useLocalContext } from '@/lib/context-engine';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { useNotes } from '@/context/NotesContext';
+import { useTask } from '@/context/TaskContext';
+
+interface PageMatch {
+  text: string;
+  tag: string;
+  element: HTMLElement;
+}
+
+function searchOnPage(query: string): PageMatch[] {
+  if (typeof window === 'undefined' || !query) return [];
+  const lowercaseQuery = query.toLowerCase();
+  const matches: PageMatch[] = [];
+  
+  const walker = document.createTreeWalker(
+    document.body,
+    NodeFilter.SHOW_TEXT,
+    {
+      acceptNode: (node) => {
+        const parent = node.parentElement;
+        if (!parent) return NodeFilter.FILTER_REJECT;
+        
+        const skipTags = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'INPUT', 'TEXTAREA', 'BUTTON', 'HEADER', 'NAV'];
+        if (skipTags.includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
+        
+        if (
+          parent.closest('.kylrix-topbar') || 
+          parent.closest('[data-note-search-surface]') || 
+          parent.closest('.MuiDrawer-root')
+        ) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        
+        const rect = parent.getBoundingClientRect();
+        if (rect.width === 0 && rect.height === 0) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }
+  );
+
+  let currentNode = walker.nextNode();
+  while (currentNode) {
+    const text = currentNode.nodeValue?.trim();
+    if (text && text.toLowerCase().includes(lowercaseQuery) && text.length < 200) {
+      const parent = currentNode.parentElement;
+      if (parent) {
+        if (!matches.some(m => m.element === parent)) {
+          matches.push({
+            text,
+            tag: parent.tagName.toLowerCase(),
+            element: parent
+          });
+        }
+      }
+    }
+    if (matches.length >= 8) break;
+    currentNode = walker.nextNode();
+  }
+  
+  return matches;
+}
+
+function highlightElement(el: HTMLElement) {
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  
+  const originalTransition = el.style.transition;
+  const originalOutline = el.style.outline;
+  const originalBoxShadow = el.style.boxShadow;
+  
+  el.style.transition = 'all 0.3s ease';
+  el.style.outline = '2px solid #6366F1';
+  el.style.boxShadow = '0 0 16px rgba(99, 102, 241, 0.6)';
+  el.style.borderRadius = '4px';
+  
+  setTimeout(() => {
+    el.style.outline = originalOutline;
+    el.style.boxShadow = originalBoxShadow;
+    setTimeout(() => {
+      el.style.transition = originalTransition;
+    }, 300);
+  }, 2000);
+}
 
 const BRAND_INDIGO = '#6366F1';
 
@@ -134,6 +219,8 @@ export default function ConnectTopbar({
   const router = useRouter();
   const pathname = usePathname();
   const { isDrawerOpen } = useDrawerState();
+  const { notes = [] } = useNotes();
+  const { tasks = [], projects = [] } = useTask();
   
   // To let any drawer communicate full state expansion globally:
   const isDrawerExpanded = typeof window !== 'undefined' && document.body.classList.contains('drawer-expanded');
@@ -172,6 +259,44 @@ export default function ConnectTopbar({
   const [peopleResults, setPeopleResults] = useState<any[]>([]);
   const [searchingPeople, setSearchingPeople] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [onPageResults, setOnPageResults] = useState<PageMatch[]>([]);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setOnPageResults([]);
+      return;
+    }
+    const matches = searchOnPage(query);
+    setOnPageResults(matches);
+  }, [searchQuery]);
+
+  const localNoteResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return notes.filter(note => 
+      note.title?.toLowerCase().includes(q) || 
+      note.content?.toLowerCase().includes(q)
+    );
+  }, [notes, searchQuery]);
+
+  const localTaskResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return tasks.filter(task => 
+      task.title?.toLowerCase().includes(q) || 
+      task.description?.toLowerCase().includes(q)
+    );
+  }, [tasks, searchQuery]);
+
+  const localProjectResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return projects.filter(proj => 
+      proj.name?.toLowerCase().includes(q) || 
+      proj.description?.toLowerCase().includes(q)
+    );
+  }, [projects, searchQuery]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headerRef = useRef<HTMLDivElement | null>(null);
 
@@ -709,436 +834,247 @@ export default function ConnectTopbar({
     const hasQuery = query.length >= 2;
 
     const searchContent = (
-        <Box
-          onWheel={(event) => {
-            if (isDesktop) return;
-            const node = event.currentTarget;
-            if (event.deltaY < 0 && isTopbarScrollAtTop(node)) {
-              event.preventDefault();
-              handleCloseAll();
-            }
-          }}
-          sx={{
-            width: '100%',
-            px: isDesktop ? 0 : { xs: 2.25, md: 4 },
-            py: isDesktop ? 0 : 1.25,
-            maxHeight: isDesktop ? 'none' : '45vh',
-            overflowY: isDesktop ? 'visible' : 'auto',
-          }}
-        >
-          {!isDesktop && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
-              {/* Header with Title and Cancel button */}
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-                  <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
-                    <Logo app={activeApp} size={14} variant="icon" />
-                  </Box>
-                  <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem' }}>
-                    Search Ecosystem
-                  </Typography>
+      <Box
+        onWheel={(event) => {
+          if (isDesktop) return;
+          const node = event.currentTarget;
+          if (event.deltaY < 0 && isTopbarScrollAtTop(node)) {
+            event.preventDefault();
+            handleCloseAll();
+          }
+        }}
+        sx={{
+          width: '100%',
+          px: isDesktop ? 0 : { xs: 2.25, md: 4 },
+          py: isDesktop ? 0 : 1.25,
+          maxHeight: isDesktop ? 'none' : '45vh',
+          overflowY: isDesktop ? 'visible' : 'auto',
+        }}
+      >
+        {/* For Mobile Search Input */}
+        {!isDesktop && (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1, borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                <Box sx={{ width: 32, height: 32, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0 }}>
+                  <Logo app={activeApp} size={14} variant="icon" />
                 </Box>
-                <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
-                  <CloseIcon size={16} />
-                </IconButton>
+                <Typography sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1rem' }}>
+                  Search Ecosystem
+                </Typography>
               </Box>
+              <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+                <CloseIcon size={16} />
+              </IconButton>
+            </Box>
 
-              {/* Solid search input container */}
-              <Box
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                bgcolor: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '16px',
+                px: 2,
+                py: 0.5,
+                transition: 'all 0.2s',
+                '&:focus-within': {
+                  borderColor: '#6366F1',
+                  boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
+                  bgcolor: 'rgba(0, 0, 0, 0.4)',
+                }
+              }}
+            >
+              <Search size={16} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 8, flexShrink: 0 }} />
+              <InputBase
+                id="topbar-search-field"
+                inputRef={searchInputRef}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search note, flow, vault, connect..."
+                fullWidth
+                autoFocus
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  bgcolor: 'rgba(0, 0, 0, 0.25)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '16px',
-                  px: 2,
-                  py: 0.5,
-                  transition: 'all 0.2s',
-                  '&:focus-within': {
-                    borderColor: '#6366F1',
-                    boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
-                    bgcolor: 'rgba(0, 0, 0, 0.4)',
+                  color: 'white',
+                  fontFamily: 'var(--font-satoshi)',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 },
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') {
+                    handleCloseAll();
                   }
                 }}
-              >
-                <Search size={16} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 8, flexShrink: 0 }} />
-                <InputBase
-                  id="topbar-search-field"
-                  inputRef={searchInputRef}
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search notes, systems..."
-                  fullWidth
-                  autoFocus
-                  sx={{
-                    color: 'white',
-                    fontFamily: 'var(--font-satoshi)',
-                    fontWeight: 600,
-                    fontSize: '0.9rem',
-                    '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 },
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Escape') {
-                      handleCloseAll();
-                    }
-                  }}
-                />
-                {searchQuery && (
-                  <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5 }}>
-                    <CloseIcon size={14} />
-                  </IconButton>
-                )}
-              </Box>
+              />
+              {searchQuery && (
+                <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5 }}>
+                  <CloseIcon size={14} />
+                </IconButton>
+              )}
             </Box>
-          )}
+          </Box>
+        )}
 
-          <Stack spacing={2} sx={{ mt: isDesktop ? 0 : 1.5 }}>
-            {!hasQuery ? (
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', md: '1.2fr 1fr' },
-                  gap: 2.5,
-                }}
-              >
-                {/* Left Column: Contextual Action Flow & Proactive Insights */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {/* Proactive Confident AI Suggestions if any */}
-                  {suggestions.length > 0 && (
-                    <Box sx={{ display: 'grid', gap: 1 }}>
-                      <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75, px: 0.5 }}>
-                        <Sparkles size={11} style={{ color: '#6366F1' }} />
-                        Smart Insights
+        <Stack spacing={2.5} sx={{ mt: isDesktop ? 0 : 1.5 }}>
+          {!hasQuery ? (
+            <>
+              {/* Applications section */}
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                  Apps
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.25 }}>
+                  {[
+                    { name: 'note', label: 'Note', color: '#EC4899', href: '/note' },
+                    { name: 'flow', label: 'Flow', color: '#A855F7', href: '/flow' },
+                    { name: 'vault', label: 'Vault', color: '#10B981', href: '/vault' },
+                    { name: 'connect', label: 'Connect', color: '#F59E0B', href: '/connect' }
+                  ].map((app) => (
+                    <ButtonBase
+                      key={app.name}
+                      onClick={() => {
+                        handleCloseAll();
+                        router.push(app.href);
+                      }}
+                      sx={{
+                        borderRadius: '20px',
+                        bgcolor: 'rgba(255, 255, 255, 0.015)',
+                        border: '1px solid rgba(255, 255, 255, 0.04)',
+                        p: 1.75,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          bgcolor: 'rgba(255, 255, 255, 0.035)',
+                          borderColor: alpha(app.color, 0.3),
+                          transform: 'translateY(-2px)'
+                        }
+                      }}
+                    >
+                      <Box sx={{ width: 34, height: 34, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${app.color}12`, color: app.color }}>
+                        <Logo app={app.name as any} size={16} variant="icon" />
+                      </Box>
+                      <Typography sx={{ color: 'white', fontWeight: 800, fontSize: '0.8rem' }}>
+                        {app.label}
                       </Typography>
-                      <Box sx={{ display: 'grid', gap: 1 }}>
-                        {suggestions.map((suggestion) => (
-                          <Box
-                            key={suggestion.id}
-                            sx={{
-                              p: 1.75,
-                              borderRadius: '22px',
-                              bgcolor: 'rgba(99, 102, 241, 0.04)',
-                              border: '1px solid rgba(99, 102, 241, 0.12)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 1.25,
-                              position: 'relative',
-                              overflow: 'hidden',
-                              transition: 'all 0.2s',
-                              '&:hover': {
-                                bgcolor: 'rgba(99, 102, 241, 0.06)',
-                                borderColor: 'rgba(99, 102, 241, 0.2)',
-                              }
-                            }}
-                          >
-                            <Box sx={{ display: 'flex', gap: 1.25 }}>
-                              <Box sx={{
-                                width: 34,
-                                height: 34,
-                                borderRadius: '10px',
-                                bgcolor: 'rgba(99, 102, 241, 0.1)',
-                                color: '#6366F1',
-                                display: 'grid',
-                                placeItems: 'center',
-                                flexShrink: 0
-                              }}>
-                                <Bot size={16} />
-                              </Box>
-                              <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
-                                <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.84rem', lineHeight: 1.2 }}>
-                                  {suggestion.title}
-                                </Typography>
-                                <Typography component="span" sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.74rem', lineHeight: 1.3 }}>
-                                  {suggestion.description}
-                                </Typography>
-                              </Box>
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'flex-end', zIndex: 1 }}>
-                              <Button
-                                size="small"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  dismissSuggestion(suggestion.id);
-                                }}
-                                sx={{
-                                  color: 'rgba(255,255,255,0.35)',
-                                  textTransform: 'none',
-                                  fontSize: '0.7rem',
-                                  fontWeight: 700,
-                                  borderRadius: '9px',
-                                  px: 1.25,
-                                  '&:hover': { color: '#FF4D4D', bgcolor: 'rgba(255, 77, 77, 0.06)' }
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                              {suggestion.actionHref && (
-                                <Button
-                                  size="small"
-                                  onClick={() => {
-                                    handleCloseAll();
-                                    router.push(suggestion.actionHref!);
-                                  }}
-                                  variant="contained"
-                                  sx={{
-                                    bgcolor: '#6366F1',
-                                    color: 'white',
-                                    textTransform: 'none',
-                                    fontSize: '0.7rem',
-                                    fontWeight: 800,
-                                    borderRadius: '9px',
-                                    px: 1.75,
-                                    '&:hover': { bgcolor: '#5254E8' }
-                                  }}
-                                >
-                                  {suggestion.actionLabel || 'Run'}
-                                </Button>
-                              )}
-                            </Box>
-                          </Box>
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
-
-                  {/* Contextual Suggestions */}
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75, px: 0.5 }}>
-                      <Activity size={11} style={{ color: '#F59E0B' }} />
-                      Quick Actions
-                    </Typography>
-                    <Box sx={{ display: 'grid', gap: 0.75 }}>
-                      {dynamicQuickActions.length === 0 ? (
-                        <Box sx={{ p: 2, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.06)', textAlign: 'center' }}>
-                          <Typography sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem' }}>
-                            Explore to build context!
-                          </Typography>
-                        </Box>
-                      ) : (
-                        dynamicQuickActions.map((action) => (
-                          <Box
-                            key={action.id}
-                            component="button"
-                            onClick={() => {
-                              handleCloseAll();
-                              router.push(action.href);
-                            }}
-                            sx={{
-                              width: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.25,
-                              px: 2,
-                              py: 1.25,
-                              borderRadius: '20px',
-                              bgcolor: 'rgba(255,255,255,0.01)',
-                              border: '1px solid rgba(255,255,255,0.04)',
-                              color: 'white',
-                              textAlign: 'left',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              '&:hover': {
-                                bgcolor: 'rgba(255,255,255,0.03)',
-                                borderColor: 'rgba(255,255,255,0.08)',
-                                transform: 'translateX(2px)'
-                              }
-                            }}
-                          >
-                            <Box sx={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: '10px',
-                              display: 'grid',
-                              placeItems: 'center',
-                              bgcolor: `${action.accent}12`,
-                              color: action.accent,
-                              flexShrink: 0
-                            }}>
-                              <Logo app={action.kind as any} size={15} variant="icon" />
-                            </Box>
-                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
-                              <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                                {action.title}
-                              </Typography>
-                              <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
-                                {action.description}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        ))
-                      )}
-                    </Box>
-                  </Box>
+                    </ButtonBase>
+                  ))}
                 </Box>
+              </Box>
 
-                {/* Right Column: Platform Alerts & Notifications */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 0.5 }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Bell size={11} style={{ color: '#EC4899' }} />
-                      Alerts
-                    </Typography>
-                    {notifications.filter(n => !n.read).length > 0 && (
-                      <Box sx={{
-                        px: 0.75,
-                        py: 0.1,
-                        borderRadius: '6px',
-                        bgcolor: '#6366F1',
-                        color: 'white',
-                        fontSize: '0.64rem',
-                        fontWeight: 900
-                      }}>
-                        {notifications.filter(n => !n.read).length} New
-                      </Box>
-                    )}
+              {/* Quick Actions section including Send */}
+              <Box sx={{ display: 'grid', gap: 1 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                  Quick Actions
+                </Typography>
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  {/* Primary Send action */}
+                  <Box
+                    component="button"
+                    onClick={() => {
+                      handleCloseAll();
+                      router.push('/send');
+                    }}
+                    sx={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1.25,
+                      px: 2,
+                      py: 1.25,
+                      borderRadius: '20px',
+                      bgcolor: 'rgba(255,255,255,0.015)',
+                      border: '1px solid rgba(255,255,255,0.04)',
+                      color: 'white',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        bgcolor: 'rgba(255,255,255,0.035)',
+                        borderColor: '#10B98133',
+                        transform: 'translateX(2px)'
+                      }
+                    }}
+                  >
+                    <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(16, 185, 129, 0.12)', color: '#10B981', flexShrink: 0 }}>
+                      <Logo app="send" size={15} variant="icon" />
+                    </Box>
+                    <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                      <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }}>
+                        Send
+                      </Typography>
+                      <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
+                        Share secure files and notes
+                      </Typography>
+                    </Box>
                   </Box>
 
-                  <Box sx={{ display: 'grid', gap: 0.75 }}>
-                    {notifications.length === 0 ? (
-                      <Box sx={{ px: 2, py: 1.5, borderRadius: '18px', border: '1px dashed rgba(255,255,255,0.06)', textAlign: 'center' }}>
-                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.78rem', lineHeight: 1.4, display: 'block' }}>
-                          System stable.
+                  {/* Rest of the dynamic quick actions */}
+                  {dynamicQuickActions.filter(a => a.id !== 'hist-note' && a.id !== 'hist-flow').map((action) => (
+                    <Box
+                      key={action.id}
+                      component="button"
+                      onClick={() => {
+                        handleCloseAll();
+                        router.push(action.href);
+                      }}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 2,
+                        py: 1.25,
+                        borderRadius: '20px',
+                        bgcolor: 'rgba(255,255,255,0.01)',
+                        border: '1px solid rgba(255,255,255,0.04)',
+                        color: 'white',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          bgcolor: 'rgba(255,255,255,0.03)',
+                          borderColor: 'rgba(255,255,255,0.08)',
+                          transform: 'translateX(2px)'
+                        }
+                      }}
+                    >
+                      <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}>
+                        <Logo app={action.kind as any} size={15} variant="icon" />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                        <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                          {action.title}
+                        </Typography>
+                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }}>
+                          {action.description}
                         </Typography>
                       </Box>
-                    ) : (
-                      notifications.map((notif) => (
-                        <Box
-                          key={notif.id}
-                          component="div"
-                          onClick={() => markNotificationRead(notif.id)}
-                          sx={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 1.25,
-                            px: 2,
-                            py: 1.25,
-                            borderRadius: '20px',
-                            bgcolor: notif.read ? 'rgba(255,255,255,0.005)' : 'rgba(255,255,255,0.015)',
-                            border: '1px solid',
-                            borderColor: notif.read ? 'rgba(255,255,255,0.02)' : alpha(notif.accent, 0.18),
-                            color: 'white',
-                            textAlign: 'left',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            '&:hover': {
-                              bgcolor: 'rgba(255,255,255,0.03)',
-                              borderColor: notif.read ? 'rgba(255,255,255,0.05)' : alpha(notif.accent, 0.3),
-                            },
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: '10px',
-                              display: 'grid',
-                              placeItems: 'center',
-                              flexShrink: 0,
-                              bgcolor: alpha(notif.accent, notif.read ? 0.04 : 0.1),
-                              color: notif.accent,
-                              position: 'relative',
-                            }}
-                          >
-                            <Bell size={14} />
-                            {!notif.read && (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  top: 4,
-                                  right: 4,
-                                  width: 7,
-                                  height: 7,
-                                  borderRadius: '999px',
-                                  bgcolor: notif.accent,
-                                  border: '1.5px solid #161412',
-                                }}
-                              />
-                            )}
-                          </Box>
-
-                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
-                            <Typography
-                              component="span"
-                              sx={{
-                                color: 'white',
-                                fontWeight: 800,
-                                fontSize: '0.82rem',
-                                lineHeight: 1.2,
-                                opacity: notif.read ? 0.65 : 1,
-                                display: 'block',
-                              }}
-                            >
-                              {notif.title}
-                            </Typography>
-                            <Typography
-                              component="span"
-                              sx={{
-                                color: 'rgba(255,255,255,0.38)',
-                                fontSize: '0.66rem',
-                                fontWeight: 600,
-                                lineHeight: 1.3,
-                                display: 'block',
-                              }}
-                            >
-                              {notif.time}
-                            </Typography>
-                            <Typography
-                              component="span"
-                              sx={{
-                                color: 'rgba(255,255,255,0.58)',
-                                fontSize: '0.74rem',
-                                lineHeight: 1.35,
-                                fontWeight: 500,
-                                display: 'block',
-                                mt: 0.5
-                              }}
-                            >
-                              {notif.message}
-                            </Typography>
-                          </Box>
-
-                          <IconButton
-                            size="small"
-                            aria-label="Dismiss alert"
-                            onClick={(e) => dismissNotification(notif.id, e)}
-                            sx={{
-                              flexShrink: 0,
-                              mt: -0.25,
-                              color: 'rgba(255,255,255,0.25)',
-                              width: 26,
-                              height: 26,
-                              borderRadius: '8px',
-                              '&:hover': {
-                                color: 'white',
-                                bgcolor: 'rgba(255,255,255,0.06)',
-                              },
-                            }}
-                          >
-                            <CloseIcon size={11} />
-                          </IconButton>
-                        </Box>
-                      ))
-                    )}
-                  </Box>
+                    </Box>
+                  ))}
                 </Box>
               </Box>
-            ) : (
-              /* If hasQuery is true, show Search Results */
-              <Box sx={{ display: 'grid', gap: 1.5 }}>
-                <Box sx={{ display: 'grid', gap: 0.5 }}>
+            </>
+          ) : (
+            /* Results View */
+            <Box sx={{ display: 'grid', gap: 2 }}>
+              {/* Local Notes Matches */}
+              {localNoteResults.length > 0 && (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
                   <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
-                    {searchSurface.searchAcrossLabel}
+                    Notes ({localNoteResults.length})
                   </Typography>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', sm: '1fr 1fr' }, gap: 0.75 }}>
-                    {searchSurface.searchTargets.slice(0, 4).map((action) => (
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    {localNoteResults.slice(0, 4).map((note) => (
                       <Box
-                        key={action.id}
+                        key={note.$id}
                         component="button"
                         onClick={() => {
                           handleCloseAll();
-                          router.push(action.href);
+                          router.push(`/note?id=${note.$id}`);
                         }}
                         sx={{
                           width: '100%',
@@ -1156,85 +1092,266 @@ export default function ConnectTopbar({
                           '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
                         }}
                       >
-                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}>
-                          <Logo app={action.kind as any} size={15} variant="icon" />
+                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(236, 72, 153, 0.12)', color: '#EC4899', flexShrink: 0 }}>
+                          <Logo app="note" size={15} variant="icon" />
                         </Box>
-                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
+                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                           <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                            {action.title}
+                            {note.title || 'Untitled Note'}
                           </Typography>
                           <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
-                            {action.description}
+                            {note.content?.slice(0, 60) || 'Empty content'}
                           </Typography>
                         </Box>
                       </Box>
                     ))}
                   </Box>
                 </Box>
+              )}
 
-                {(searchingPeople || peopleResults.length > 0) && (
-                  <Box sx={{ display: 'grid', gap: 0.5 }}>
-                    <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
-                      People
-                    </Typography>
-                    {searchingPeople ? (
-                      <Typography sx={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.8rem', px: 0.5 }}>
-                        Searching...
-                      </Typography>
-                    ) : (
-                      <Box sx={{ display: 'grid', gap: 0.75 }}>
-                        {peopleResults.slice(0, 3).map((person) => (
-                          <Box
-                            key={person.$id || person.id}
-                            component="button"
-                            onClick={() => {
-                              const username = person.username || person.prefs?.username;
-                              if (username) {
-                                stageProfileView(person, person.avatar || null);
-                                handleCloseAll();
-                                router.push(`/u/${encodeURIComponent(username.replace(/^@+/, ''))}?transition=profile`);
-                              }
-                            }}
-                            sx={{
-                              width: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.25,
-                              px: 2,
-                              py: 1.25,
-                              borderRadius: '20px',
-                              bgcolor: 'rgba(255,255,255,0.01)',
-                              border: '1px solid rgba(255,255,255,0.04)',
-                              color: 'white',
-                              textAlign: 'left',
-                              cursor: 'pointer',
-                              '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
-                            }}
-                          >
-                            <IdentityAvatar
-                              userId={person.userId || person.$id}
-                              size={36}
-                              fallback={(person.displayName || person.name || String(person.username || 'U').replace(/^@+/, '') || 'U')[0].toUpperCase()}
-                              borderRadius="10px"
-                            />
-                            <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25, pr: 0.5 }}>
-                              <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
-                                {person.displayName || person.name}
-                              </Typography>
-                              <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
-                                @{String(person.username || person.prefs?.username || 'user').replace(/^@+/, '')}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        ))}
+              {/* Local Tasks & Projects Matches */}
+              {(localTaskResults.length > 0 || localProjectResults.length > 0) && (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                    Flow & Projects
+                  </Typography>
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    {localProjectResults.slice(0, 2).map((proj) => (
+                      <Box
+                        key={proj.id}
+                        component="button"
+                        onClick={() => {
+                          handleCloseAll();
+                          router.push(`/projects/${proj.id}`);
+                        }}
+                        sx={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.25,
+                          px: 2,
+                          py: 1.25,
+                          borderRadius: '20px',
+                          bgcolor: 'rgba(255,255,255,0.01)',
+                          border: '1px solid rgba(255,255,255,0.04)',
+                          color: 'white',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
+                        }}
+                      >
+                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(168, 85, 247, 0.12)', color: '#A855F7', flexShrink: 0 }}>
+                          <Logo app="flow" size={15} variant="icon" />
+                        </Box>
+                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                            Project: {proj.name}
+                          </Typography>
+                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
+                            {proj.description || 'Active project container'}
+                          </Typography>
+                        </Box>
                       </Box>
-                    )}
+                    ))}
+                    {localTaskResults.slice(0, 3).map((task) => (
+                      <Box
+                        key={task.id}
+                        component="button"
+                        onClick={() => {
+                          handleCloseAll();
+                          router.push(`/flow?task=${task.id}`);
+                        }}
+                        sx={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.25,
+                          px: 2,
+                          py: 1.25,
+                          borderRadius: '20px',
+                          bgcolor: 'rgba(255,255,255,0.01)',
+                          border: '1px solid rgba(255,255,255,0.04)',
+                          color: 'white',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
+                        }}
+                      >
+                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(168, 85, 247, 0.12)', color: '#A855F7', flexShrink: 0 }}>
+                          <Logo app="flow" size={15} variant="icon" />
+                        </Box>
+                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                            Task: {task.title}
+                          </Typography>
+                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
+                            {task.description || 'Active task in roadmap'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
                   </Box>
-                )}
+                </Box>
+              )}
+
+              {/* On-Page Results Matches */}
+              {onPageResults.length > 0 && (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                    On-Page Matches ({onPageResults.length})
+                  </Typography>
+                  <Box sx={{ display: 'grid', gap: 0.75 }}>
+                    {onPageResults.map((match, idx) => (
+                      <Box
+                        key={idx}
+                        component="button"
+                        onClick={() => {
+                          handleCloseAll();
+                          highlightElement(match.element);
+                        }}
+                        sx={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.25,
+                          px: 2,
+                          py: 1.25,
+                          borderRadius: '20px',
+                          bgcolor: 'rgba(255,255,255,0.01)',
+                          border: '1px solid rgba(255,255,255,0.04)',
+                          color: 'white',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
+                        }}
+                      >
+                        <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: 'rgba(99, 102, 241, 0.12)', color: '#6366F1', flexShrink: 0 }}>
+                          <Search size={15} />
+                        </Box>
+                        <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                          <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                            {match.text}
+                          </Typography>
+                          <Typography component="span" sx={{ color: 'rgba(255,255,255,0.38)', fontWeight: 600, fontSize: '0.68rem', textTransform: 'uppercase', tracking: '0.05em' }}>
+                            element: &lt;{match.tag}&gt;
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              )}
+
+              {/* People Search Results */}
+              {(searchingPeople || peopleResults.length > 0) && (
+                <Box sx={{ display: 'grid', gap: 0.75 }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                    People
+                  </Typography>
+                  {searchingPeople ? (
+                    <Typography sx={{ color: 'rgba(255,255,255,0.38)', fontSize: '0.8rem', px: 0.5 }}>
+                      Searching users...
+                    </Typography>
+                  ) : (
+                    <Box sx={{ display: 'grid', gap: 0.75 }}>
+                      {peopleResults.slice(0, 3).map((person) => (
+                        <Box
+                          key={person.$id || person.id}
+                          component="button"
+                          onClick={() => {
+                            const username = person.username || person.prefs?.username;
+                            if (username) {
+                              stageProfileView(person, person.avatar || null);
+                              handleCloseAll();
+                              router.push(`/u/${encodeURIComponent(username.replace(/^@+/, ''))}?transition=profile`);
+                            }
+                          }}
+                          sx={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.25,
+                            px: 2,
+                            py: 1.25,
+                            borderRadius: '20px',
+                            bgcolor: 'rgba(255,255,255,0.01)',
+                            border: '1px solid rgba(255,255,255,0.04)',
+                            color: 'white',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
+                          }}
+                        >
+                          <IdentityAvatar
+                            userId={person.userId || person.$id}
+                            size={36}
+                            fallback={(person.displayName || person.name || String(person.username || 'U').replace(/^@+/, '') || 'U')[0].toUpperCase()}
+                            borderRadius="10px"
+                          />
+                          <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                            <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                              {person.displayName || person.name}
+                            </Typography>
+                            <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
+                              @{String(person.username || person.prefs?.username || 'user').replace(/^@+/, '')}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+              )}
+
+              {/* Fallback Search Targets */}
+              <Box sx={{ display: 'grid', gap: 0.75 }}>
+                <Typography sx={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', px: 0.5 }}>
+                  Ecosystem Search
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: isDesktop ? '1fr' : { xs: '1fr', sm: '1fr 1fr' }, gap: 0.75 }}>
+                  {searchSurface.searchTargets.slice(0, 4).map((action) => (
+                    <Box
+                      key={action.id}
+                      component="button"
+                      onClick={() => {
+                        handleCloseAll();
+                        router.push(action.href);
+                      }}
+                      sx={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        px: 2,
+                        py: 1.25,
+                        borderRadius: '20px',
+                        bgcolor: 'rgba(255,255,255,0.01)',
+                        border: '1px solid rgba(255,255,255,0.04)',
+                        color: 'white',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.08)' }
+                      }}
+                    >
+                      <Box sx={{ width: 36, height: 36, borderRadius: '10px', display: 'grid', placeItems: 'center', bgcolor: `${action.accent}12`, color: action.accent, flexShrink: 0 }}>
+                        <Logo app={action.kind as any} size={15} variant="icon" />
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                        <Typography component="span" sx={{ color: 'white', fontWeight: 800, fontSize: '0.86rem', lineHeight: 1.2 }} noWrap>
+                          {action.title}
+                        </Typography>
+                        <Typography component="span" sx={{ color: 'rgba(255,255,255,0.58)', fontWeight: 600, fontSize: '0.74rem', lineHeight: 1.3 }} noWrap>
+                          {action.description}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
-            )}
-          </Stack>
-        </Box>
+            </Box>
+          )}
+        </Stack>
+      </Box>
     );
 
     if (isDesktop) {
@@ -1248,7 +1365,7 @@ export default function ConnectTopbar({
           PaperProps={{
             sx: {
               bgcolor: '#161412',
-              width: 360,
+              width: 320,
               height: '100vh',
               borderRight: '1px solid rgba(255, 255, 255, 0.06)',
               p: 2.75,
@@ -1259,13 +1376,60 @@ export default function ConnectTopbar({
           }}
         >
           {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2.75 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3.5 }}>
             <Typography variant="h6" sx={{ fontFamily: 'var(--font-clash)', fontWeight: 900, color: '#fff', fontSize: '1.1rem' }}>
-              Search Ecosystem
+              Search System
             </Typography>
-            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white' }, width: 32, height: 32 }}>
+            <IconButton onClick={handleCloseAll} sx={{ color: 'rgba(255,255,255,0.3)', '&:hover': { color: 'white', bgcolor: 'rgba(255,255,255,0.06)' }, width: 32, height: 32 }}>
               <CloseIcon size={16} />
             </IconButton>
+          </Box>
+          
+          {/* Search Input for Desktop */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: 'rgba(0, 0, 0, 0.25)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              px: 2,
+              py: 1.25,
+              mb: 3,
+              transition: 'all 0.2s',
+              '&:focus-within': {
+                borderColor: '#6366F1',
+                boxShadow: '0 0 0 4px rgba(99, 102, 241, 0.15)',
+                bgcolor: 'rgba(0, 0, 0, 0.4)',
+              }
+            }}
+          >
+            <Search size={18} style={{ color: 'rgba(255,255,255,0.35)', marginRight: 10, flexShrink: 0 }} />
+            <InputBase
+              inputRef={searchInputRef}
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search globally..."
+              fullWidth
+              autoFocus
+              sx={{
+                color: 'white',
+                fontFamily: 'var(--font-satoshi)',
+                fontWeight: 600,
+                fontSize: '0.92rem',
+                '& input::placeholder': { color: 'rgba(255,255,255,0.25)', opacity: 1 },
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  handleCloseAll();
+                }
+              }}
+            />
+            {searchQuery && (
+              <IconButton size="small" onClick={() => setSearchQuery('')} sx={{ color: 'rgba(255,255,255,0.4)', ml: 0.5 }}>
+                <CloseIcon size={14} />
+              </IconButton>
+            )}
           </Box>
           
           <Box sx={{ flex: 1, overflowY: 'auto', mx: -2.75, px: 2.75 }}>
