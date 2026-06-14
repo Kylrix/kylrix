@@ -580,13 +580,13 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.35, duration: 0.6 }}
-            className="text-5xl sm:text-6xl md:text-8xl font-black font-clash leading-[0.95] tracking-tight"
+            className="text-4xl sm:text-6xl md:text-8xl font-black font-clash leading-[1.05] sm:leading-[0.95] tracking-tight px-4 sm:px-0"
           >
             <span className="bg-gradient-to-b from-white via-white/90 to-white/50 bg-clip-text text-transparent">
               your productivity tools and agent...
             </span>
-            <br />
-            <span className="text-[#6366F1]">all in one workspace</span>
+            <br className="hidden sm:inline" />
+            <span className="text-[#6366F1] block sm:inline mt-2 sm:mt-0">all in one workspace</span>
           </motion.h1>
 
           {/* Typing line */}
@@ -594,11 +594,11 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="h-8 flex items-center justify-center"
+            className="h-8 flex items-center justify-center px-4"
           >
-            <span className="font-mono text-base md:text-lg text-white/40">
+            <span className="font-mono text-sm md:text-lg text-white/40 text-center">
               {typedText}
-              <span className="inline-block w-0.5 h-5 bg-[#6366F1] ml-0.5 animate-pulse" />
+              <span className="inline-block w-0.5 h-4 md:h-5 bg-[#6366F1] ml-0.5 align-middle animate-pulse" />
             </span>
           </motion.div>
 
@@ -607,18 +607,18 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
-            className="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-md"
+            className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4 w-full max-w-xs sm:max-w-md px-4 sm:px-0"
           >
             <button
               onClick={() => openIDMWindow()}
               disabled={isAuthenticating}
-              className="flex-1 px-8 py-4 bg-[#6366F1] hover:bg-[#5254E8] text-black font-black text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 shadow-[0_0_40px_rgba(99,102,241,0.3)] active:scale-[0.98] disabled:opacity-50 cursor-pointer hover:shadow-[0_0_60px_rgba(99,102,241,0.4)]"
+              className="w-full sm:flex-1 px-6 sm:px-8 py-3.5 sm:py-4 bg-[#6366F1] hover:bg-[#5254E8] text-black font-black text-xs sm:text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 shadow-[0_0_40px_rgba(99,102,241,0.3)] active:scale-[0.98] disabled:opacity-50 cursor-pointer hover:shadow-[0_0_60px_rgba(99,102,241,0.4)]"
             >
               Get Started Free
             </button>
             <NextLink
               href="/docs"
-              className="flex-1 px-8 py-4 border border-white/10 hover:border-white/20 hover:bg-white/[0.03] text-white font-black text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 text-center active:scale-[0.98]"
+              className="w-full sm:flex-1 px-6 sm:px-8 py-3.5 sm:py-4 border border-white/10 hover:border-white/20 hover:bg-white/[0.03] text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 text-center active:scale-[0.98]"
             >
               Read Docs
             </NextLink>
@@ -865,30 +865,30 @@ export default function LandingPage() {
       {/* ═══════════════════ CTA BANNER ═══════════════════ */}
       <Section className="px-6 py-20 md:py-32" id="cta">
         <div className="max-w-5xl mx-auto">
-          <div className="p-10 md:p-16 rounded-[36px] bg-[#161412] border border-white/5 relative overflow-hidden text-center"
+          <div className="p-8 md:p-16 rounded-[36px] bg-[#161412] border border-white/5 relative overflow-hidden text-center"
             style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}
           >
             {/* Ambient */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none opacity-20" style={{ backgroundImage: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 60%)' }} />
 
             <div className="relative z-10 flex flex-col items-center gap-6">
-              <h3 className="text-3xl md:text-5xl font-black font-clash text-white leading-tight">
+              <h3 className="text-3xl md:text-5xl font-black font-clash text-white leading-tight px-2">
                 Ready to own your workflow?
               </h3>
-              <p className="text-base text-white/40 max-w-xl font-satoshi">
+              <p className="text-sm md:text-base text-white/40 max-w-xl font-satoshi px-4">
                 Free forever. No credit card. No tracking. Just tools that respect you.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 mt-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4 w-full max-w-xs sm:max-w-md">
                 <button
                   onClick={() => openIDMWindow()}
                   disabled={isAuthenticating}
-                  className="px-10 py-4 bg-[#6366F1] hover:bg-[#5254E8] text-black font-black text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 shadow-[0_0_40px_rgba(99,102,241,0.25)] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                  className="w-full sm:flex-1 px-8 py-3.5 bg-[#6366F1] hover:bg-[#5254E8] text-black font-black text-xs sm:text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 shadow-[0_0_40px_rgba(99,102,241,0.25)] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                 >
                   Create Free Account
                 </button>
                 <NextLink
                   href="/pricing"
-                  className="px-10 py-4 border border-white/10 hover:border-white/20 hover:bg-white/[0.03] text-white font-black text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 text-center active:scale-[0.98]"
+                  className="w-full sm:flex-1 px-8 py-3.5 border border-white/10 hover:border-white/20 hover:bg-white/[0.03] text-white font-black text-xs sm:text-sm uppercase tracking-wider rounded-2xl transition-all duration-200 text-center active:scale-[0.98]"
                 >
                   View Pricing
                 </NextLink>
