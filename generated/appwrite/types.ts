@@ -709,6 +709,7 @@ export type SubscriptionsCreate = {
     "currentPeriodEnd"?: string | null;
     "createdAt"?: string | null;
     "updatedAt"?: string | null;
+    "seats"?: number;
 }
 
 export type Subscriptions = Models.Row & {
@@ -719,6 +720,7 @@ export type Subscriptions = Models.Row & {
     "currentPeriodEnd"?: string | null;
     "createdAt"?: string | null;
     "updatedAt"?: string | null;
+    "seats"?: number;
 }
 
 export type BillingTransactionsCreate = {
@@ -2559,6 +2561,7 @@ export type DatabaseTableMap = {
         "currentPeriodEnd"?: string | null;
         "createdAt"?: string | null;
         "updatedAt"?: string | null;
+        "seats"?: number;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Subscriptions>;
       get: (id: string) => Promise<Subscriptions>;
       update: (id: string, data: Partial<{
@@ -2569,6 +2572,7 @@ export type DatabaseTableMap = {
         "currentPeriodEnd"?: string | null;
         "createdAt"?: string | null;
         "updatedAt"?: string | null;
+        "seats"?: number;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Subscriptions>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
       list: (options?: { queries?: (q: { equal: <K extends QueryableKeys<Subscriptions>>(field: K, value: QueryableFieldValue<Subscriptions, K>) => string; notEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: QueryableFieldValue<Subscriptions, K>) => string; lessThan: <K extends QueryableKeys<Subscriptions>>(field: K, value: QueryableFieldValue<Subscriptions, K>) => string; lessThanEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: QueryableFieldValue<Subscriptions, K>) => string; greaterThan: <K extends QueryableKeys<Subscriptions>>(field: K, value: QueryableFieldValue<Subscriptions, K>) => string; greaterThanEqual: <K extends QueryableKeys<Subscriptions>>(field: K, value: QueryableFieldValue<Subscriptions, K>) => string; contains: <K extends QueryableKeys<Subscriptions>>(field: K, value: QueryableFieldValue<Subscriptions, K>) => string; search: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; isNull: <K extends QueryableKeys<Subscriptions>>(field: K) => string; isNotNull: <K extends QueryableKeys<Subscriptions>>(field: K) => string; startsWith: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; endsWith: <K extends QueryableKeys<Subscriptions>>(field: K, value: string) => string; between: <K extends QueryableKeys<Subscriptions>>(field: K, start: QueryableFieldValue<Subscriptions, K>, end: QueryableFieldValue<Subscriptions, K>) => string; select: <K extends keyof Subscriptions>(fields: K[]) => string; orderAsc: <K extends keyof Subscriptions>(field: K) => string; orderDesc: <K extends keyof Subscriptions>(field: K) => string; limit: (value: number) => string; offset: (value: number) => string; cursorAfter: (documentId: string) => string; cursorBefore: (documentId: string) => string; or: (...queries: string[]) => string; and: (...queries: string[]) => string }) => string[] }) => Promise<{ total: number; rows: Subscriptions[] }>;
