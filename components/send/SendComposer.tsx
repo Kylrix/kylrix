@@ -638,7 +638,7 @@ export function SendComposer() {
         sendObject: sendObjectPayload,
       });
 
-      if (selectedUsers.length > 0) {
+      if (selectedUsers.length > 0 && hasPaidKylrixPlan(user)) {
         const { createCollaborator } = await import('@/lib/appwrite/note');
         await Promise.all(selectedUsers.map(u => 
           createCollaborator({
@@ -781,23 +781,25 @@ export function SendComposer() {
         </button>
 
         {/* Discrete Sharing Button */}
-        <button 
-          type="button"
-          onClick={() => setDiscreteDrawerOpen(true)}
-          className={`p-2.5 rounded-xl border transition duration-200 flex items-center justify-center ${
-            isSharingCustomized 
-              ? 'text-white border-[#34322F] bg-white/5' 
-              : 'text-white/40 border-transparent hover:text-white hover:bg-white/5'
-          }`}
-          style={{ 
-            color: isSharingCustomized ? themeColor : undefined,
-            backgroundColor: isSharingCustomized ? `${themeColor}14` : undefined,
-            borderColor: isSharingCustomized ? `${themeColor}33` : undefined,
-          }}
-          title={isSharingCustomized ? `${selectedUsers.length} collaborator(s) added` : "Discrete Sharing (Optional)"}
-        >
-          <UsersIcon size={18} />
-        </button>
+        {hasPaidKylrixPlan(user) && (
+          <button 
+            type="button"
+            onClick={() => setDiscreteDrawerOpen(true)}
+            className={`p-2.5 rounded-xl border transition duration-200 flex items-center justify-center ${
+              isSharingCustomized 
+                ? 'text-white border-[#34322F] bg-white/5' 
+                : 'text-white/40 border-transparent hover:text-white hover:bg-white/5'
+            }`}
+            style={{ 
+              color: isSharingCustomized ? themeColor : undefined,
+              backgroundColor: isSharingCustomized ? `${themeColor}14` : undefined,
+              borderColor: isSharingCustomized ? `${themeColor}33` : undefined,
+            }}
+            title={isSharingCustomized ? `${selectedUsers.length} collaborator(s) added` : "Discrete Sharing (Optional)"}
+          >
+            <UsersIcon size={18} />
+          </button>
+        )}
 
         {/* Main Share/Link Generation Button */}
         <button 
