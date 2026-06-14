@@ -539,6 +539,8 @@ type ThreadPostViewProps = {
     onPulse?: (event: React.MouseEvent) => void;
     onCopyLink?: (event: React.MouseEvent) => void;
     liked?: boolean;
+    onActionMenu?: (event: any, data: any) => void;
+    momentData?: any;
 };
 
 const ThreadPostView = ({
@@ -563,24 +565,79 @@ const ThreadPostView = ({
     onPulse,
     onCopyLink,
     liked,
-}: ThreadPostViewProps) => (
-    <Box
-        component="article"
-        onClick={onClick}
-        sx={{
-            display: 'flex',
-            px: 2,
-            py: 1.5,
-            position: 'relative',
-            cursor: onClick ? 'pointer' : 'default',
-            bgcolor: variant === 'card' ? '#161412' : 'transparent',
-            border: variant === 'card' ? '1px solid #34322F' : 'none',
-            borderRadius: variant === 'card' ? '20px' : 0,
-            boxShadow: 'none',
-            overflow: 'hidden',
-            '&:hover': onClick ? { bgcolor: variant === 'card' ? '#161412' : 'rgba(255,255,255,0.02)', borderColor: '#34322F' } : undefined,
-        }}
-    >
+    onActionMenu,
+    momentData,
+}: ThreadPostViewProps) => {
+    const touchTimeoutRef = useRef<any>(null);
+    const hasMovedRef = useRef<boolean>(false);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (!onActionMenu || !momentData) return;
+        hasMovedRef.current = false;
+        if (touchTimeoutRef.current) clearTimeout(touchTimeoutRef.current);
+        
+        const touch = e.touches[0] || e.changedTouches[0];
+        const clientX = touch.clientX;
+        const clientY = touch.clientY;
+        
+        touchTimeoutRef.current = setTimeout(() => {
+            if (!hasMovedRef.current) {
+                onActionMenu({
+                    preventDefault: () => {},
+                    stopPropagation: () => {},
+                    type: 'touchstart',
+                    clientX,
+                    clientY,
+                }, momentData);
+            }
+        }, 500);
+    };
+
+    const handleTouchEnd = () => {
+        if (touchTimeoutRef.current) {
+            clearTimeout(touchTimeoutRef.current);
+            touchTimeoutRef.current = null;
+        }
+    };
+
+    const handleTouchMove = () => {
+        hasMovedRef.current = true;
+        if (touchTimeoutRef.current) {
+            clearTimeout(touchTimeoutRef.current);
+            touchTimeoutRef.current = null;
+        }
+    };
+
+    const handleContextMenu = (e: React.MouseEvent) => {
+        if (onActionMenu && momentData) {
+            onActionMenu(e, momentData);
+        }
+    };
+
+    return (
+        <Box
+            component="article"
+            onClick={onClick}
+            onContextMenu={handleContextMenu}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onTouchMove={handleTouchMove}
+            sx={{
+                display: 'flex',
+                px: 2,
+                py: 1.5,
+                position: 'relative',
+                cursor: onClick ? 'pointer' : 'default',
+                bgcolor: variant === 'card' ? '#161412' : 'transparent',
+                border: variant === 'card' ? '1px solid #34322F' : 'none',
+                borderRadius: variant === 'card' ? '20px' : 0,
+                boxShadow: 'none',
+                overflow: 'hidden',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                '&:hover': onClick ? { bgcolor: variant === 'card' ? '#161412' : 'rgba(255,255,255,0.02)', borderColor: '#34322F' } : undefined,
+            }}
+        >
         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mr: 1.5, flexShrink: 0, width: 48 }}>
             <Box sx={{ position: 'relative', width: 48, height: '100%', display: 'flex', justifyContent: 'center' }}>
                 {(threadLineMode === 'up' || threadLineMode === 'both') && (
@@ -700,8 +757,8 @@ const ThreadPostView = ({
                 </Box>
             </Box>
         </Box>
-    </Box>
-);
+    );
+};
 
 const QuoteMomentView = ({
     name,
@@ -1091,6 +1148,13 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
     const [shareDrawerOpen, setShareDrawerOpen] = useState(false);
     const [replyDrawerOpen, setReplyDrawerOpen] = useState(false);
     const [exportingImage, setExportingImage] = useState(false);
+    const [actionMenuAnchor, setActionMenuAnchor] = useState<{
+        x: number;
+        y: number;
+        moment: { id: string; creatorId: string; caption: string; isLiked: boolean };
+    } | null>(null);
+    const [editingMoment, setEditingMoment] = useState<{ id: string; caption: string } | null>(null);
+    const [editContent, setEditContent] = useState('');
     const [threadAncestors, setThreadAncestors] = useState<any[]>([]);
     const [showAncestors, setShowAncestors] = useState(false);
     const [ancestorLoading, setAncestorLoading] = useState(false);
