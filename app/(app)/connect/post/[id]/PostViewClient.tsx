@@ -37,6 +37,7 @@ import {
     Link2,
     Send,
     Edit,
+    X,
     Image as ImageIcon,
     Download,
     BarChart3,
@@ -1522,15 +1523,18 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                 width: '100%',
                 maxWidth: 600,
                 mx: 'auto',
+                height: '100dvh',
+                display: 'flex',
+                flexDirection: 'column',
                 pt: { xs: 1.5, sm: 2.5 },
-                pb: { xs: 3, sm: 4 },
+                pb: { xs: 2, sm: 4 },
                 px: 0,
                 borderLeft: '1px solid rgba(255,255,255,0.08)',
                 borderRight: '1px solid rgba(255,255,255,0.08)',
                 pointerEvents: 'auto',
             }}
         >
-                <Box sx={{ px: 2, mb: 1.5, mt: { xs: '60px', sm: 0 } }}>
+                <Box sx={{ px: 2, mb: 1.5, flexShrink: 0 }}>
                     <Button
                         onClick={handleBackToFeed}
                         startIcon={<ArrowLeft size={18} />}
@@ -1629,6 +1633,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                             boxShadow: 'none',
                             borderRadius: '20px',
                             overflow: 'hidden',
+                            flexShrink: 0,
                         }}
                     >
                         {showAncestors && threadAncestors.length > 0 && threadAncestors.map((ancestor, index) => {
@@ -1748,6 +1753,11 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                     sx={{
                         pt: 2,
                         pr: 0.5,
+                        flex: 1,
+                        minHeight: 0,
+                        overflowY: 'auto',
+                        overscrollBehavior: 'contain',
+                        WebkitOverflowScrolling: 'touch',
                     }}
                 >
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, mb: 1 }}>
@@ -1878,6 +1888,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                             mt: 2,
                             borderRadius: '18px',
                             border: '1px solid #34322F',
+                            flexShrink: 0,
                         }}
                     >
                         <Stack direction="row" spacing={2}>
@@ -1925,31 +1936,34 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                         onClose={() => setReplyDrawerOpen(false)}
                         PaperProps={{
                             sx: {
-                                bgcolor: 'rgba(22, 20, 18, 0.98)',
+                                bgcolor: '#161514',
                                 borderTopLeftRadius: '24px',
                                 borderTopRightRadius: '24px',
-                                border: '1px solid rgba(255,255,255,0.08)',
+                                border: '1px solid rgba(255,255,255,0.1)',
                                 backgroundImage: 'none',
                                 maxWidth: 600,
                                 mx: 'auto',
                                 width: '100%',
-                                boxShadow: '0 -20px 50px rgba(0,0,0,0.55)',
-                                pb: 'calc(1.5rem + env(safe-area-inset-bottom))',
+                                boxShadow: '0 -10px 40px rgba(0,0,0,0.8)',
+                                pb: 'calc(16px + env(safe-area-inset-bottom))',
                             }
                         }}
                     >
-                        <Box sx={{ px: 2.5, pt: 1.5, pb: 2 }}>
-                            <Box sx={{ width: 42, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.12)', mx: 'auto', mb: 2 }} />
-                            <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', mb: 0.5, color: '#fff' }}>
-                                Reply to Moment
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
-                                Post your comment below.
-                            </Typography>
+                        <Box sx={{ p: 2 }}>
+                            {/* Close button row */}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                                <IconButton onClick={() => setReplyDrawerOpen(false)} sx={{ color: 'rgba(255,255,255,0.3)' }}>
+                                    <X size={20} />
+                                </IconButton>
+                            </Box>
 
-                            <Stack direction="row" spacing={2} sx={{ bgcolor: '#161412', border: '1px solid #34322F', borderRadius: '20px', p: 2, boxShadow: 'none' }}>
-                                <Avatar src={userAvatarUrl || undefined} sx={{ width: 32, height: 32, borderRadius: '8px' }}>
-                                    {user.name?.charAt(0)}
+                            {/* Avatar & Input */}
+                            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                                <Avatar
+                                    src={userAvatarUrl || undefined}
+                                    sx={{ bgcolor: alpha('#F59E0B', 0.1), color: '#F59E0B', fontWeight: 800 }}
+                                >
+                                    {user.name?.charAt(0).toUpperCase() || 'U'}
                                 </Avatar>
                                 <TextField
                                     inputRef={replyInputRef}
@@ -1958,35 +1972,39 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                     placeholder="Write your reply..."
                                     variant="standard"
                                     multiline
-                                    maxRows={8}
+                                    rows={4}
                                     value={replyContent}
                                     onChange={(e) => setReplyContent(e.target.value)}
                                     InputProps={{
                                         disableUnderline: true,
-                                        sx: { color: 'white', py: 0.5, fontSize: '0.95rem' },
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <IconButton
-                                                    onClick={async (e) => {
-                                                        await handleReply(e);
-                                                        setReplyDrawerOpen(false);
-                                                    }}
-                                                    disabled={!replyContent.trim() || replying}
-                                                    sx={{
-                                                        p: 0.9,
-                                                        bgcolor: '#F59E0B',
-                                                        color: 'black',
-                                                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
-                                                        '&.Mui-disabled': { bgcolor: 'rgba(245, 158, 11, 0.2)', color: 'rgba(0,0,0,0.3)' }
-                                                    }}
-                                                >
-                                                    {replying ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
-                                                </IconButton>
-                                            </InputAdornment>
-                                        )
+                                        sx: { color: 'white', py: 0.5, fontSize: '0.95rem' }
                                     }}
                                 />
-                            </Stack>
+                            </Box>
+
+                            {/* Footer action bar */}
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                <Button
+                                    onClick={async (e) => {
+                                        await handleReply(e);
+                                        setReplyDrawerOpen(false);
+                                    }}
+                                    disabled={!replyContent.trim() || replying}
+                                    sx={{
+                                        px: 3,
+                                        py: 1,
+                                        bgcolor: '#F59E0B',
+                                        color: 'black',
+                                        fontWeight: 800,
+                                        borderRadius: '30px',
+                                        textTransform: 'none',
+                                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
+                                        '&.Mui-disabled': { bgcolor: 'rgba(245, 158, 11, 0.2)', color: 'rgba(0,0,0,0.3)' }
+                                    }}
+                                >
+                                    {replying ? <CircularProgress size={16} color="inherit" /> : 'Reply'}
+                                </Button>
+                            </Box>
                         </Box>
                     </Drawer>
                 )}
