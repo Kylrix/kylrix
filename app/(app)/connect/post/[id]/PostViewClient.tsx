@@ -1327,10 +1327,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
             mainColor: '#F59E0B',
             mainIcon: <MessageCircle size={28} strokeWidth={2.5} />,
             onMainClick: () => {
-                if (replyInputRef.current) {
-                    replyInputRef.current.focus();
-                    replyInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
+                setReplyDrawerOpen(true);
             },
             actions: [],
         });
@@ -1526,7 +1523,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                 maxWidth: 600,
                 mx: 'auto',
                 pt: { xs: '80px', sm: 2.5 },
-                pb: { xs: 'calc(110px + env(safe-area-inset-bottom))', sm: 4 },
+                pb: { xs: 3, sm: 4 },
                 px: 0,
                 borderLeft: '1px solid rgba(255,255,255,0.08)',
                 borderRight: '1px solid rgba(255,255,255,0.08)',
