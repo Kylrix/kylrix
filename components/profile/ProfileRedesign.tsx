@@ -118,22 +118,22 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
   const joinedAt = formatJoinedAt(profile?.$createdAt || profile?.createdAt || null);
 
   const categorized = useMemo(() => {
-    const postLike = moments.filter((moment) => {
+    const momentsList = moments.filter((moment) => {
       const kind = moment?.metadata?.type || 'post';
       return kind === 'post' || kind === 'quote' || !kind;
     });
     const replies = moments.filter((moment) => moment?.metadata?.type === 'reply');
     const pulses = moments.filter((moment) => moment?.metadata?.type === 'pulse');
-    return { postLike, replies, pulses };
+    return { moments: momentsList, replies, pulses };
   }, [moments]);
 
   const tabCounts = useMemo(
     () => ({
-      moments: categorized.postLike.length,
+      moments: categorized.moments.length,
       replies: categorized.replies.length,
       pulses: categorized.pulses.length,
     }),
-    [categorized.postLike.length, categorized.pulses.length, categorized.replies.length],
+    [categorized.moments.length, categorized.pulses.length, categorized.replies.length],
   );
 
   useEffect(() => {
@@ -740,7 +740,7 @@ export function ProfileRedesign({ username, initialProfile }: ProfileProps) {
                       <span>{publishedAt}</span>
                     </div>
                     <p className="text-white/80 text-sm leading-relaxed">
-                      {moment.body || moment.content || 'Shared an update'}
+                      {moment.body || moment.content || moment.caption || 'Shared an update'}
                     </p>
                   </div>
                 );
