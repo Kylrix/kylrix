@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSection } from '@/context/SectionContext';
 import { SocialService } from '@/lib/services/social';
@@ -8,6 +8,7 @@ import { UsersService } from '@/lib/services/users';
 import { getEcosystemUrl } from '@/lib/constants';
 import { useAuth } from '@/lib/auth';
 import { useProfile } from '@/components/providers/ProfileProvider';
+import { useFAB } from '@/context/FABContext';
 import {
     Box,
     Avatar,
@@ -535,6 +536,7 @@ type ThreadPostViewProps = {
     onClick?: () => void;
     onLike?: (event: React.MouseEvent) => void;
     onPulse?: (event: React.MouseEvent) => void;
+    onCopyLink?: (event: React.MouseEvent) => void;
     liked?: boolean;
 };
 
@@ -558,6 +560,7 @@ const ThreadPostView = ({
     onClick,
     onLike,
     onPulse,
+    onCopyLink,
     liked,
 }: ThreadPostViewProps) => (
     <Box
@@ -670,17 +673,24 @@ const ThreadPostView = ({
                     <Typography sx={{ fontSize: '0.8rem', color: '#536471' }}>{stats.replies || 0}</Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                    <IconButton size="small" onClick={onPulse} sx={{ p: 0.35, color: '#10B981' }}>
-                        <Repeat2 size={16} strokeWidth={1.8} />
-                    </IconButton>
-                    <Typography sx={{ fontSize: '0.8rem', color: '#10B981' }}>{stats.pulses || 0}</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                     <IconButton size="small" onClick={onLike} sx={{ p: 0.35, color: liked ? '#F59E0B' : '#536471' }}>
                         <Heart size={16} fill={liked ? '#F59E0B' : 'none'} strokeWidth={1.8} />
                     </IconButton>
                     <Typography sx={{ fontSize: '0.8rem', color: liked ? '#F59E0B' : '#536471' }}>{stats.likes || 0}</Typography>
                 </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <IconButton size="small" onClick={onPulse} sx={{ p: 0.35, color: '#10B981' }}>
+                        <Repeat2 size={16} strokeWidth={1.8} />
+                    </IconButton>
+                    <Typography sx={{ fontSize: '0.8rem', color: '#10B981' }}>{stats.pulses || 0}</Typography>
+                </Box>
+                {onCopyLink && (
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <IconButton size="small" onClick={onCopyLink} sx={{ p: 0.35, color: '#536471', '&:hover': { color: '#F59E0B' } }}>
+                            <Link2 size={16} strokeWidth={1.8} />
+                        </IconButton>
+                    </Box>
+                )}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                     <IconButton size="small" sx={{ p: 0.35, color: '#536471' }}>
                         <BarChart3 size={16} strokeWidth={1.8} />
@@ -1068,6 +1078,8 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
     const { user } = useAuth();
     const { profile: myProfile } = useProfile();
     const { setActiveDetail } = useSection();
+    const { setConfiguration, resetConfiguration } = useFAB();
+    const replyInputRef = useRef<HTMLInputElement>(null);
     const hasPreviewRef = React.useRef(Boolean(getCachedMomentPreview(momentId)));
     const [moment, setMoment] = useState<any>(() => getCachedMomentPreview(momentId) || null);
     const [replies, setReplies] = useState<any[]>([]);
@@ -1308,6 +1320,22 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
             ancestors: showAncestors ? threadAncestors : [],
         });
     }, [momentId, moment, replies, showAncestors, threadAncestors]);
+
+    useEffect(() => {
+        setConfiguration({
+            isVisible: true,
+            mainColor: '#F59E0B',
+            mainIcon: <MessageCircle size={28} strokeWidth={2.5} />,
+            onMainClick: () => {
+                if (replyInputRef.current) {
+                    replyInputRef.current.focus();
+                    replyInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            },
+            actions: [],
+        });
+        return () => resetConfiguration();
+    }, [setConfiguration, resetConfiguration]);
 
     const handleToggleLike = async (targetMoment?: any) => {
         if (!user) {
@@ -1642,6 +1670,11 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                         e.stopPropagation();
                                         openActorsList('Pulsed by', async () => await fetchActorsForPulses(ancestor.$id));
                                     }}
+                                    onCopyLink={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(`${window.location.origin}/connect/post/${ancestor.$id}`);
+                                        toast.success('Moment link copied!');
+                                    }}
                                     liked={ancestor.isLiked}
                                 />
                             );
@@ -1705,6 +1738,11 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                 onPulse={(e) => {
                                     e.stopPropagation();
                                     setPulseMenuAnchorEl(e.currentTarget as HTMLElement);
+                                }}
+                                onCopyLink={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(`${window.location.origin}/connect/post/${moment.$id}`);
+                                    toast.success('Moment link copied!');
                                 }}
                                 liked={moment.isLiked}
                             />
@@ -1800,6 +1838,11 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                             e.stopPropagation();
                                             setPulseMenuAnchorEl(e.currentTarget as HTMLElement);
                                         }}
+                                        onCopyLink={(e) => {
+                                            e.stopPropagation();
+                                            navigator.clipboard.writeText(`${window.location.origin}/connect/post/${reply.$id}`);
+                                            toast.success('Moment link copied!');
+                                        }}
                                         liked={reply.isLiked}
                                     />
                                 );
@@ -1836,13 +1879,14 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                     </MenuItem>
                 </Menu>
 
-                {user && !isMobile && (
+                {user && (
                     <Box id="reply-box" sx={{ mt: 2, p: 1.5, bgcolor: '#161412', borderRadius: '18px', border: '1px solid #34322F', boxShadow: 'none' }}>
                         <Stack direction="row" spacing={2}>
                             <Avatar src={userAvatarUrl || undefined} sx={{ width: 30, height: 30, borderRadius: '8px' }}>
                                 {user.name?.charAt(0)}
                             </Avatar>
                             <TextField
+                                inputRef={replyInputRef}
                                 fullWidth
                                 placeholder="Post your reply"
                                 variant="standard"
@@ -1874,74 +1918,6 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                             />
                         </Stack>
                     </Box>
-                )}
-
-                {user && isMobile && (
-                    <Drawer
-                        anchor="bottom"
-                        open={replyDrawerOpen}
-                        onClose={() => setReplyDrawerOpen(false)}
-                        PaperProps={{
-                            sx: {
-                                bgcolor: 'rgba(22, 20, 18, 0.98)',
-                                borderTopLeftRadius: '24px',
-                                borderTopRightRadius: '24px',
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                backgroundImage: 'none',
-                                maxWidth: 720,
-                                mx: 'auto',
-                                width: '100%',
-                                boxShadow: '0 -20px 50px rgba(0,0,0,0.55)',
-                                pb: 'env(safe-area-inset-bottom)',
-                            }
-                        }}
-                    >
-                        <Box sx={{ px: 2, pt: 1.5, pb: 2 }}>
-                            <Box sx={{ width: 42, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.12)', mx: 'auto', mb: 2 }} />
-                            <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', mb: 0.5 }}>
-                                Comment
-                            </Typography>
-                            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
-                                Add your reply below.
-                            </Typography>
-
-                            <Stack direction="row" spacing={2} sx={{ bgcolor: '#161412', border: '1px solid #34322F', borderRadius: '20px', p: 1.5, boxShadow: 'none' }}>
-                                <Avatar src={userAvatarUrl || undefined} sx={{ width: 30, height: 30, borderRadius: '8px' }}>
-                                    {user.name?.charAt(0)}
-                                </Avatar>
-                                <TextField
-                                    fullWidth
-                                    placeholder="Write a comment"
-                                    variant="standard"
-                                    multiline
-                                    maxRows={10}
-                                    value={replyContent}
-                                    onChange={(e) => setReplyContent(e.target.value)}
-                                    InputProps={{
-                                        disableUnderline: true,
-                                        sx: { color: 'white', py: 0.5, fontSize: '0.92rem' },
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <IconButton
-                                                    onClick={handleReply}
-                                                    disabled={!replyContent.trim() || replying}
-                                                    sx={{
-                                                        p: 0.8,
-                                                        bgcolor: '#F59E0B',
-                                                        color: 'black',
-                                                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
-                                                        '&.Mui-disabled': { bgcolor: 'rgba(245, 158, 11, 0.2)', color: 'rgba(0,0,0,0.3)' }
-                                                    }}
-                                                >
-                                                    {replying ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
-                                                </IconButton>
-                                            </InputAdornment>
-                                        )
-                                    }}
-                                />
-                            </Stack>
-                        </Box>
-                    </Drawer>
                 )}
 
                 <Drawer
