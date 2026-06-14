@@ -1525,7 +1525,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                 width: '100%',
                 maxWidth: 600,
                 mx: 'auto',
-                pt: { xs: 1.5, sm: 2.5 },
+                pt: { xs: '80px', sm: 2.5 },
                 pb: { xs: 'calc(110px + env(safe-area-inset-bottom))', sm: 4 },
                 px: 0,
                 borderLeft: '1px solid rgba(255,255,255,0.08)',
@@ -1632,10 +1632,6 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                             boxShadow: 'none',
                             borderRadius: '20px',
                             overflow: 'hidden',
-                            maxHeight: { xs: '58dvh', md: '60dvh' },
-                            overflowY: 'auto',
-                            overscrollBehavior: 'contain',
-                            WebkitOverflowScrolling: 'touch',
                         }}
                     >
                         {showAncestors && threadAncestors.length > 0 && threadAncestors.map((ancestor, index) => {
@@ -1754,10 +1750,6 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                     id="comments-section"
                     sx={{
                         pt: 2,
-                        maxHeight: { xs: '36dvh', md: '30dvh' },
-                        overflowY: 'auto',
-                        overscrollBehavior: 'contain',
-                        WebkitOverflowScrolling: 'touch',
                         pr: 0.5,
                     }}
                 >
