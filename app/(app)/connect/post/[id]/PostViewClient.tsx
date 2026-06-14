@@ -1522,7 +1522,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                 width: '100%',
                 maxWidth: 600,
                 mx: 'auto',
-                pt: { xs: '80px', sm: 2.5 },
+                pt: { xs: 1.5, sm: 2.5 },
                 pb: { xs: 3, sm: 4 },
                 px: 0,
                 borderLeft: '1px solid rgba(255,255,255,0.08)',
@@ -1530,7 +1530,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                 pointerEvents: 'auto',
             }}
         >
-                <Box sx={{ px: 2, mb: 1.5 }}>
+                <Box sx={{ px: 2, mb: 1.5, mt: { xs: '60px', sm: 0 } }}>
                     <Button
                         onClick={handleBackToFeed}
                         startIcon={<ArrowLeft size={18} />}
@@ -1868,24 +1868,16 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                     </MenuItem>
                 </Menu>
 
-                {user && (
+                {user && !isMobile && (
                     <Box
                         id="reply-box"
                         sx={{
                             bgcolor: '#161412',
                             boxShadow: 'none',
                             p: 1.5,
-                            position: { xs: 'fixed', md: 'static' },
-                            bottom: { xs: 0, md: 'auto' },
-                            left: { xs: 0, md: 'auto' },
-                            right: { xs: 0, md: 'auto' },
-                            zIndex: { xs: 1100, md: 'auto' },
-                            borderTop: { xs: '1px solid rgba(255,255,255,0.08)', md: 'none' },
-                            border: { xs: 'none', md: '1px solid #34322F' },
-                            borderRadius: { xs: '24px 24px 0 0', md: '18px' },
-                            pb: { xs: 'calc(1.5rem + env(safe-area-inset-bottom))', md: 1.5 },
-                            mt: { xs: 0, md: 2 },
-                            boxShadow: { xs: '0 -10px 30px rgba(0, 0, 0, 0.55)', md: 'none' }
+                            mt: 2,
+                            borderRadius: '18px',
+                            border: '1px solid #34322F',
                         }}
                     >
                         <Stack direction="row" spacing={2}>
@@ -1893,7 +1885,6 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                 {user.name?.charAt(0)}
                             </Avatar>
                             <TextField
-                                inputRef={replyInputRef}
                                 fullWidth
                                 placeholder="Post your reply"
                                 variant="standard"
@@ -1925,6 +1916,79 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                             />
                         </Stack>
                     </Box>
+                )}
+
+                {user && (
+                    <Drawer
+                        anchor="bottom"
+                        open={replyDrawerOpen}
+                        onClose={() => setReplyDrawerOpen(false)}
+                        PaperProps={{
+                            sx: {
+                                bgcolor: 'rgba(22, 20, 18, 0.98)',
+                                borderTopLeftRadius: '24px',
+                                borderTopRightRadius: '24px',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                backgroundImage: 'none',
+                                maxWidth: 600,
+                                mx: 'auto',
+                                width: '100%',
+                                boxShadow: '0 -20px 50px rgba(0,0,0,0.55)',
+                                pb: 'calc(1.5rem + env(safe-area-inset-bottom))',
+                            }
+                        }}
+                    >
+                        <Box sx={{ px: 2.5, pt: 1.5, pb: 2 }}>
+                            <Box sx={{ width: 42, height: 4, borderRadius: 999, bgcolor: 'rgba(255,255,255,0.12)', mx: 'auto', mb: 2 }} />
+                            <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'var(--font-clash)', mb: 0.5, color: '#fff' }}>
+                                Reply to Moment
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2.5 }}>
+                                Post your comment below.
+                            </Typography>
+
+                            <Stack direction="row" spacing={2} sx={{ bgcolor: '#161412', border: '1px solid #34322F', borderRadius: '20px', p: 2, boxShadow: 'none' }}>
+                                <Avatar src={userAvatarUrl || undefined} sx={{ width: 32, height: 32, borderRadius: '8px' }}>
+                                    {user.name?.charAt(0)}
+                                </Avatar>
+                                <TextField
+                                    inputRef={replyInputRef}
+                                    fullWidth
+                                    autoFocus
+                                    placeholder="Write your reply..."
+                                    variant="standard"
+                                    multiline
+                                    maxRows={8}
+                                    value={replyContent}
+                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    InputProps={{
+                                        disableUnderline: true,
+                                        sx: { color: 'white', py: 0.5, fontSize: '0.95rem' },
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    onClick={async (e) => {
+                                                        await handleReply(e);
+                                                        setReplyDrawerOpen(false);
+                                                    }}
+                                                    disabled={!replyContent.trim() || replying}
+                                                    sx={{
+                                                        p: 0.9,
+                                                        bgcolor: '#F59E0B',
+                                                        color: 'black',
+                                                        '&:hover': { bgcolor: alpha('#F59E0B', 0.8) },
+                                                        '&.Mui-disabled': { bgcolor: 'rgba(245, 158, 11, 0.2)', color: 'rgba(0,0,0,0.3)' }
+                                                    }}
+                                                >
+                                                    {replying ? <CircularProgress size={16} color="inherit" /> : <Send size={16} />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        )
+                                    }}
+                                />
+                            </Stack>
+                        </Box>
+                    </Drawer>
                 )}
 
                 <Drawer
