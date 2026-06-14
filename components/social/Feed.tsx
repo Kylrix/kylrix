@@ -1387,6 +1387,31 @@ return (
             </Box>
         </Tooltip>
 
+<Tooltip title="Heart">
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <IconButton 
+            size="small"
+            onClick={(e) => onToggleLike(e, moment)}
+            sx={{ 
+                p: 0.75,
+                color: moment.isLiked ? '#F59E0B' : 'inherit',
+                '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.1) } 
+            }}
+        >
+            <Heart size={17} fill={moment.isLiked ? '#F59E0B' : 'none'} strokeWidth={1.5} />
+        </IconButton>
+        <Box
+            onClick={(e) => {
+                e.stopPropagation();
+                openActorsList('Likes', async () => await fetchActorsForLikes(moment.$id));
+            }}
+            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
+        >
+            <Typography sx={feedActionCountSx} variant="caption">{moment.stats?.likes || 0}</Typography>
+        </Box>
+    </Box>
+</Tooltip>
+
         <Tooltip title="Pulse or Quote">
             <Box
                 onClick={(e) => {
@@ -1415,30 +1440,22 @@ return (
             </Box>
         </Tooltip>
 
-<Tooltip title="Heart">
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <IconButton 
-            size="small"
-            onClick={(e) => onToggleLike(e, moment)}
-            sx={{ 
-                p: 0.75,
-                color: moment.isLiked ? '#F59E0B' : 'inherit',
-                '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.1) } 
-            }}
-        >
-            <Heart size={17} fill={moment.isLiked ? '#F59E0B' : 'none'} strokeWidth={1.5} />
-        </IconButton>
-        <Box
-            onClick={(e) => {
-                e.stopPropagation();
-                openActorsList('Likes', async () => await fetchActorsForLikes(moment.$id));
-            }}
-            sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer' }}
-        >
-            <Typography sx={feedActionCountSx} variant="caption">{moment.stats?.likes || 0}</Typography>
-        </Box>
-    </Box>
-</Tooltip>
+        <Tooltip title="Copy Link">
+            <IconButton 
+                size="small"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(`${window.location.origin}/connect/post/${moment.$id}`);
+                    toast.success('Moment link copied!');
+                }}
+                sx={{ 
+                    p: 0.75,
+                    '&:hover': { color: '#F59E0B', bgcolor: alpha('#F59E0B', 0.1) } 
+                }}
+            >
+                <LinkIcon size={17} strokeWidth={1.5} />
+            </IconButton>
+        </Tooltip>
 
         <Tooltip title="Bookmark">
             <IconButton 

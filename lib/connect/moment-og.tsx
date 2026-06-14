@@ -28,6 +28,13 @@ function pickAvatarFileId(profile: any | null): string | null {
 }
 
 function pickAvatarHref(profile: any | null): string | null {
+    if (!profile) return null;
+    
+    // Check if that user made their avatar available for all: isAvatar is null or true
+    if (profile.isAvatar !== undefined && profile.isAvatar === false) {
+        return null; // Not public!
+    }
+
     const id = pickAvatarFileId(profile);
     if (!id) {
         const url = profile?.avatarUrl;
@@ -206,9 +213,9 @@ export async function createMomentOpenGraphImage(momentId: string) {
                     <div style={{ display: 'flex', flexDirection: 'row', gap: 36, alignItems: 'flex-start', flex: 1 }}>
                         <div
                             style={{
-                                width: 132,
-                                height: 132,
-                                borderRadius: 36,
+                                width: 144,
+                                height: 144,
+                                borderRadius: '50%',
                                 overflow: 'hidden',
                                 flexShrink: 0,
                                 border: '2px solid rgba(255,255,255,0.12)',
@@ -225,8 +232,8 @@ export async function createMomentOpenGraphImage(momentId: string) {
                                 // eslint-disable-next-line @next/next/no-img-element -- OG raster markup with avatarDataUri
                                 <img
                                     src={avatarDataUri}
-                                    width={132}
-                                    height={132}
+                                    width={144}
+                                    height={144}
                                     alt=""
                                     style={{
                                         width: '100%',
