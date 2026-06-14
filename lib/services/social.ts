@@ -247,6 +247,8 @@ export const SocialService = {
 
         const enriched = { 
             ...moment, 
+            isPublic: moment.isPublic !== false,
+            isGuest: moment.isGuest !== false,
             metadata, 
             stats: { likes: 0, replies: 0, pulses: 0 },
             isLiked: false
