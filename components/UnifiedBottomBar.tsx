@@ -152,6 +152,7 @@ export function UnifiedBottomBar() {
   const isNoteFullPageDetail = Boolean(pathname?.match(/^\/note\/notes\/[^/]+$/));
   const isConnectCallDetail = Boolean(pathname?.match(/^\/connect\/call\/[^/]+$/));
   const isSpecificChatPage = Boolean(pathname?.match(/^\/connect\/chat\/[^/]+$/));
+  const isSpecificPostPage = Boolean(pathname?.match(/^\/connect\/post\/[^/]+$/));
   const isSpecificProjectPage = Boolean(pathname?.match(/^\/projects\/[^/]+$/));
   const isPublicFormPage = Boolean(pathname?.match(/^\/flow\/form\/[^/]+$/));
 
@@ -162,6 +163,7 @@ export function UnifiedBottomBar() {
     isSpecificChatPage ||
     isSpecificProjectPage ||
     isPublicFormPage ||
+    isSpecificPostPage ||
     pathname?.includes('/settings') ||
     activeContent !== 'navbar' ||
     mode === 'compact' ||
