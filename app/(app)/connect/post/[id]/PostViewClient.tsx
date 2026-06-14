@@ -1148,6 +1148,8 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
     const [replying, setReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [pulseMenuAnchorEl, setPulseMenuAnchorEl] = useState<null | HTMLElement>(null);
+    const [pulseTarget, setPulseTarget] = useState<any>(null);
+    const [replyTargetId, setReplyTargetId] = useState<string>(momentId);
     const [shareDrawerOpen, setShareDrawerOpen] = useState(false);
     const [replyDrawerOpen, setReplyDrawerOpen] = useState(false);
     const [exportingImage, setExportingImage] = useState(false);
@@ -1886,6 +1888,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                 onLike={(e) => { e.stopPropagation(); handleToggleLike(); }}
                                 onPulse={(e) => {
                                     e.stopPropagation();
+                                    setPulseTarget(moment);
                                     setPulseMenuAnchorEl(e.currentTarget as HTMLElement);
                                 }}
                                 onCopyLink={(e) => {
@@ -1988,6 +1991,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                         }}
                                         onPulse={(e) => {
                                             e.stopPropagation();
+                                            setPulseTarget(reply);
                                             setPulseMenuAnchorEl(e.currentTarget as HTMLElement);
                                         }}
                                         onCopyLink={(e) => {
