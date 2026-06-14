@@ -1324,7 +1324,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
 
     useEffect(() => {
         setConfiguration({
-            isVisible: true,
+            isVisible: !replyDrawerOpen,
             mainColor: '#F59E0B',
             mainIcon: <MessageCircle size={28} strokeWidth={2.5} />,
             onMainClick: () => {
@@ -1333,7 +1333,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
             actions: [],
         });
         return () => resetConfiguration();
-    }, [setConfiguration, resetConfiguration]);
+    }, [setConfiguration, resetConfiguration, replyDrawerOpen]);
 
     const handleToggleLike = async (targetMoment?: any) => {
         if (!user) {
