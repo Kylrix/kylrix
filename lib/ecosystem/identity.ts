@@ -1,4 +1,4 @@
-import { databases, CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, Query, Permission, Role } from '../appwrite';
+import { databases, CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, Query, Permission, Role } from '../appwrite';
 import { getEcosystemUrl } from '@/constants/ecosystem';
 
 const PROFILE_SYNC_KEY = 'kylrix_identity_synced_v2';
@@ -39,7 +39,7 @@ export async function ensureGlobalIdentity(user: any, force = false) {
         const { account } = await import('../appwrite');
         const [prefs, profile] = await Promise.all([
             account.getPrefs(),
-            databases.getRow(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id).catch(() => null)
+            databases.getRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, user.$id).catch(() => null)
         ]);
 
         let username = user.username || prefs?.username || user.name || user.email?.split('@')[0];
@@ -63,7 +63,7 @@ export async function ensureGlobalIdentity(user: any, force = false) {
                     createdAt: new Date().toISOString()
                 };
 
-                await databases.createRow(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id, payload, [
+                await databases.createRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, user.$id, payload, [
                     Permission.read(Role.any())]);
                 await syncProfileEvent({
                     type: 'username_change',
@@ -82,7 +82,7 @@ export async function ensureGlobalIdentity(user: any, force = false) {
             if (profile.username !== username || profile.avatar !== picId || profile.displayName !== profileData.displayName) {
                 try {
                     const payload = { ...profileData };
-                    await databases.updateRow(CONNECT_DATABASE_ID, CONNECT_COLLECTION_ID_USERS, user.$id, payload);
+                    await databases.updateRow(CONNECT_DATABASE_ID, CONNECT_TABLE_ID_USERS, user.$id, payload);
                     await syncProfileEvent({
                         type: profile.username !== username ? 'username_change' : 'profile_sync',
                         userId: user.$id,
@@ -148,7 +148,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
 
             const res = await databases.listRows(
                 CONNECT_DATABASE_ID,
-                CONNECT_COLLECTION_ID_USERS,
+                CONNECT_TABLE_ID_USERS,
                 queries
             );
             results = res.rows.map(doc => ({
@@ -172,7 +172,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
             if (e.message?.includes('Query.or')) {
                 const res = await databases.listRows(
                     CONNECT_DATABASE_ID,
-                    CONNECT_COLLECTION_ID_USERS,
+                    CONNECT_TABLE_ID_USERS,
                     [
                         Query.startsWith('username', cleaned.toLowerCase()),
                         Query.limit(limit),
@@ -202,7 +202,7 @@ export async function searchGlobalUsers(query: string, limit = 10) {
             try {
                 const noteRes = await databases.listRows(
                     CONNECT_DATABASE_ID,
-                    CONNECT_COLLECTION_ID_USERS,
+                    CONNECT_TABLE_ID_USERS,
                     [
                         Query.search('displayName', cleaned),
                         Query.limit(5)
