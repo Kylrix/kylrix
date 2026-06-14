@@ -46,12 +46,13 @@ function readResumePathFromCookie(request: NextRequest): string | null {
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // Kill the landing page — instant entry routing before any client JS loads.
-  if ((pathname === '/' || pathname === '') && !searchParams.has('stay')) {
-    const target = hasAuthSessionHint(request)
-      ? resolveAuthenticatedEntryPath(readResumePathFromCookie(request))
-      : DEFAULT_GUEST_ROUTE;
-    return NextResponse.redirect(new URL(target, request.url));
+  // Redirect to app if logged in. Guests stay on the landing page.
+  if (pathname === '/' || pathname === '') {
+    if (hasAuthSessionHint(request)) {
+      const target = resolveAuthenticatedEntryPath(readResumePathFromCookie(request));
+      return NextResponse.redirect(new URL(target, request.url));
+    }
+    // Guest traffic stays on the landing page /
   }
 
   // Skip static assets, API routes, and Next.js internals entirely — zero overhead

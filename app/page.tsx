@@ -1,6 +1,3 @@
-import { redirect } from 'next/navigation';
+import LandingPage from './(app)/note/landing/page';
 
-/** Fallback only — middleware should redirect `/` before this runs. */
-export default function RootLanding() {
-  redirect('/send');
-}
+export default LandingPage;

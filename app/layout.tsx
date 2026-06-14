@@ -92,12 +92,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             } catch(e) {}
 
             try {
-              if (location.pathname === '/' && !/[?&]stay(?:=|$)/.test(location.search)) {
+              if (location.pathname === '/') {
                 var hasPulse = document.documentElement.getAttribute('data-kylrix-pulse') === 'true';
                 var hasSession = document.cookie.indexOf('a_session_') !== -1;
-                var dest = '/send';
                 if (hasPulse || hasSession) {
-                  dest = '/connect/chats';
+                  var dest = '/connect/chats';
                   try {
                     var hist = localStorage.getItem('kylrix_ecosystem_state_tracker');
                     if (hist) {
@@ -111,8 +110,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       }
                     }
                   } catch (e) {}
+                  location.replace(dest);
                 }
-                location.replace(dest);
               }
             } catch(e) {}
           })();
