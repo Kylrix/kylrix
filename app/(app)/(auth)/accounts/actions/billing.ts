@@ -52,111 +52,17 @@ async function buildAlreadyClaimedCouponResponse(userId: string, coupon: any, me
 }
 
 /**
- * Resolves a secure billing country code by combining Appwrite session locale/logs,
- * Edge header fallbacks, and a threshold-gated historical account IP consensus check.
+ * Resolves a billing country code. 
+ * PPP is deprecated, so we now default to a fixed Global rate (US).
  */
-async function resolveSecureCountryCode(userId: string, clientCountryCode?: string): Promise<string> {
-  if (clientCountryCode) {
-    return clientCountryCode.toUpperCase();
-  }
-  let edgeCountry: string | null = null;
-  
-  // 1. Edge/CDN Geolocation Fallback check
-  try {
-    const { headers } = await import('next/headers');
-    const headerStore = await headers();
-    edgeCountry = headerStore.get('x-vercel-ip-country') || 
-                  headerStore.get('cf-ipcountry') || 
-                  null;
-  } catch {}
-
-  const { users } = createSystemClient();
-  try {
-    // 2. Fetch as many logs as possible (up to 100)
-    const logsRes = await users.listLogs(userId, [Query.limit(100)]);
-    const logs = logsRes.logs || [];
-
-    if (logs.length > 0) {
-      // Group by IP
-      const ipCounts: Record<string, { count: number; countryCode: string }> = {};
-      logs.forEach((log: any) => {
-        if (log.ip && log.countryCode && log.countryCode !== '—') {
-          if (!ipCounts[log.ip]) {
-            ipCounts[log.ip] = { count: 0, countryCode: log.countryCode };
-          }
-          ipCounts[log.ip].count++;
-        }
-      });
-
-      // Sort IPs by count desc
-      const sortedIps = Object.entries(ipCounts).sort((a, b) => b[1].count - a[1].count);
-
-      if (sortedIps.length > 0) {
-        const totalLogCount = logs.length;
-        const top1Ip = sortedIps[0];
-        const top1IpCount = top1Ip[1].count;
-
-        let candidateCountries: string[] = [];
-
-        // If top 1 IP is a stark majority (>= 50%)
-        if (top1IpCount >= totalLogCount * 0.5) {
-          candidateCountries.push(top1Ip[1].countryCode);
-        } else {
-          // Check top 2-3 IPs if they together make a stark majority (>= 60%)
-          const top2Ip = sortedIps[1];
-          const top3Ip = sortedIps[2];
-          
-          let combinedCount = top1IpCount;
-          candidateCountries.push(top1Ip[1].countryCode);
-
-          if (top2Ip) {
-            combinedCount += top2Ip[1].count;
-            candidateCountries.push(top2Ip[1].countryCode);
-          }
-          if (top3Ip) {
-            combinedCount += top3Ip[1].count;
-            candidateCountries.push(top3Ip[1].countryCode);
-          }
-
-          // If not making a stark majority, check all unique countries present in logs
-          if (combinedCount < totalLogCount * 0.6) {
-            candidateCountries = Array.from(new Set(logs.map((l: any) => l.countryCode).filter((c: string) => c && c !== '—')));
-          }
-        }
-
-        const uniqueCandidates = Array.from(new Set(candidateCountries)).filter(Boolean);
-
-        if (uniqueCandidates.length > 0) {
-          const { PPP_DATA } = await import('@/lib/subscription/ppp');
-          let highestCountry = uniqueCandidates[0];
-          let highestMultiplier = (PPP_DATA[highestCountry] || PPP_DATA.DEFAULT).multiplier;
-
-          for (const c of uniqueCandidates) {
-            const m = (PPP_DATA[c] || PPP_DATA.DEFAULT).multiplier;
-            if (m > highestMultiplier) {
-              highestMultiplier = m;
-              highestCountry = c;
-            }
-          }
-
-          console.log(`[Billing Location] SECURE CONSENSUS: Resolved ${highestCountry} (multiplier: ${highestMultiplier}) from candidates ${uniqueCandidates.join(', ')}.`);
-          return highestCountry;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[Billing Location] SECURE CONSENSUS: Failed to calculate from account activity logs:', err);
-  }
-
-  // 3. Fallback path: Edge Location -> Client Input -> US default
-  return edgeCountry || 'US';
+async function resolveSecureCountryCode(_userId: string, clientCountryCode?: string): Promise<string> {
+  return clientCountryCode?.toUpperCase() || 'US';
 }
 
 export async function getUserBillingRegionAction(jwt?: string) {
   const user = await getAuthenticatedUserForBillingAction({ jwt: jwt ?? undefined });
   if (!user) throw new Error('Authentication required');
-  const code = await resolveSecureCountryCode(user.$id);
-  return code;
+  return 'US';
 }
 
 async function calculateStackedPeriod(databases: ReturnType<typeof createSystemClient>['databases'], userId: string, planId: string, months: number) {
@@ -201,7 +107,6 @@ export async function createBillingCheckoutSessionAction(input: {
   if (!user) throw new Error('Authentication required');
   if (!planId || !method) throw new Error('Missing parameters');
 
-  // Resolve secure billing location using edge headers and account IP history consensus
   const resolvedCountryCode = await resolveSecureCountryCode(user.$id, countryCode);
 
   const provider = billingManager.getProvider(method as PaymentMethod);
@@ -231,7 +136,6 @@ export async function createBillingCheckoutSessionAction(input: {
     if (!Number.isFinite(couponDiscountPercent) || couponDiscountPercent < 0 || couponDiscountPercent > 100) throw new Error('Invalid coupon discount');
     if (status === 'revoked' || status === 'expired' || status === 'depleted') throw new Error('Coupon is no longer valid');
     
-    // Check redemption limit
     const redemptionLimit = Number(couponRow.redemptionLimit || 1);
     const redemptionCount = Number(couponRow.redemptionCount || 0);
     if (redemptionCount >= redemptionLimit) throw new Error('Coupon redemption limit reached');
@@ -445,7 +349,6 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     }
     if (!coupon) throw new Error('Coupon not found');
   } else {
-    // If no explicit ID is provided, look for an active targeted coupon for this user
     const couponResult = await databases.listDocuments(NOTE_DB_ID, COUPONS_TABLE_ID, [
       Query.equal('targetUserId', user.$id),
       Query.equal('status', 'active'),
@@ -531,7 +434,6 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     redemptionIndex: newRedemptionCount,
   };
 
-  // Update coupon state (If < 100%, we don't mark as depleted/applied until successful checkout, we just leave it active unless we want to track pending states. We will leave active but maybe update metadata).
   if (discountPercent < 100) {
     return {
       ok: true,
@@ -675,10 +577,6 @@ export async function verifyProEntitlementAction(jwt?: string | null) {
   };
 }
 
-/**
- * Consolidated hydration for the current session.
- * Achievement: returns profile, billing, token, and presence in one server trip.
- */
 export async function hydrateSessionAction(jwt?: string | null) {
   const user = await getAuthenticatedUserForBillingAction({ jwt: jwt ?? undefined });
   if (!user) {
@@ -699,7 +597,6 @@ export async function hydrateSessionAction(jwt?: string | null) {
         Query.equal('userId', userId),
         Query.limit(1)]),
       getVerifiedProEntitlementForUser(userId),
-      // Use internal service logic for direct server access
       (async () => {
           const { InternalKylrixTokenService } = await import('@/lib/services/internal/kylrix-token');
           return InternalKylrixTokenService.getUserBalance(userId);
@@ -750,10 +647,6 @@ export async function hydrateSessionAction(jwt?: string | null) {
   }
 }
 
-/**
- * Server Action: Triggers a high-priority subscription expiry reminder email
- * bypassing ordinary rate limits.
- */
 export async function sendSubscriptionExpiryReminderAction(jwtInput?: string) {
   const user = await getAuthenticatedUserForBillingAction({ jwt: jwtInput });
   if (!user || !user.email) throw new Error('Authentication required');
@@ -792,4 +685,3 @@ export async function listBillingTransactionsAction(jwtInput?: string) {
     return { success: false, error: error?.message || 'Failed to list transactions' };
   }
 }
-
