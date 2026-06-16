@@ -20,10 +20,6 @@ export default function PricingPage() {
   const [months, setMonths] = useState(1);
   const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
 
-  // Match account billing page logic precisely
-  const [region, setRegion] = useState('US');
-  const [loadingRegion, setLoadingRegion] = useState(true);
-
   const checkPendingTransactions = async () => {
     if (!user) return;
     try {
@@ -38,77 +34,15 @@ export default function PricingPage() {
     } catch {}
   };
 
-  const resolveUserRegion = async () => {
-    try {
-      setLoadingRegion(true);
-      
-      const logList = await account.listLogs();
-      const logs = logList.logs || [];
-      
-      // Get the primary IP used
-      const ipCounts: Record<string, number> = {};
-      logs.forEach(l => {
-        if (l.ip) ipCounts[l.ip] = (ipCounts[l.ip] || 0) + 1;
-      });
-      const topIp = Object.entries(ipCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
-
-      // Try finding countryCode directly from logs first
-      const validLogs = logs.filter(l => l.countryCode && l.countryCode !== '—');
-      if (validLogs.length > 0) {
-        const counts: Record<string, number> = {};
-        validLogs.forEach(l => {
-          counts[l.countryCode] = (counts[l.countryCode] || 0) + 1;
-        });
-        const resolvedCountry = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
-        if (resolvedCountry) {
-          setRegion(resolvedCountry.toUpperCase());
-          setLoadingRegion(false);
-          return;
-        }
-      }
-
-      // If logs have an IP but no country code (e.g. Appwrite geoip database missing or outdated), query a public API
-      if (topIp && topIp !== '127.0.0.1' && topIp !== '::1') {
-        const geoRes = await fetch(`https://ipapi.co/${topIp}/json/`).then(r => r.json()).catch(() => null);
-        if (geoRes && geoRes.country_code) {
-          setRegion(geoRes.country_code.toUpperCase());
-          setLoadingRegion(false);
-          return;
-        }
-      }
-
-      const jwtRes = await account.createJWT().then(res => res.jwt).catch(() => undefined);
-      const secureRegion = await getUserBillingRegionAction(jwtRes);
-      if (secureRegion) {
-        setRegion(secureRegion);
-        setLoadingRegion(false);
-        return;
-      }
-    } catch (err) {
-      console.warn('Failed to resolve secure billing region:', err);
-    }
-    if (user?.prefs?.region) {
-      setRegion(user.prefs.region);
-    } else {
-      setRegion('US');
-    }
-    setLoadingRegion(false);
-  };
-
   React.useEffect(() => {
-    resolveUserRegion();
     checkPendingTransactions();
   }, [user]);
-
-  const detectedRegion = useMemo(() => {
-    return PPP_DATA[region] || PPP_DATA.DEFAULT;
-  }, [region]);
 
   const [selectedTier, setSelectedTier] = useState<'PRO' | 'TEAMS'>('PRO');
 
   const basePrice = useMemo(() => {
-    return calculateSubscriptionPrice(selectedTier, region, 'CRYPTO');
-  }, [selectedTier, region]);
+    return calculateSubscriptionPrice(selectedTier, 'DEFAULT', 'CRYPTO');
+  }, [selectedTier]);
 
   const isYearly = months >= 12;
   
@@ -125,7 +59,7 @@ export default function PricingPage() {
   const handleSubscribe = () => {
     const planId = months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`;
     if (!isAuthenticated) {
-      const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=${region}&paymentMethod=CRYPTO&source=${encodeURIComponent(window.location.href)}`;
+      const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=US&paymentMethod=CRYPTO&source=${encodeURIComponent(window.location.href)}`;
       openIDMWindow(checkoutUrl);
       return;
     }
@@ -140,7 +74,7 @@ export default function PricingPage() {
         <CryptoPaymentDrawer
           onClose={() => setPaymentDrawerOpen(false)}
           months={months}
-          countryCode={region}
+          countryCode="US"
           planId={months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`}
         />
       )}
@@ -161,7 +95,7 @@ export default function PricingPage() {
             Kylrix {selectedTier === 'PRO' ? 'Pro' : 'Teams'}
           </h1>
           <p className="text-white/60 text-sm md:text-base font-medium max-w-xl mx-auto leading-relaxed">
-            Get full access to the ecosystem with a plan that scales with you and respects your local economy.
+            Get full access to the ecosystem with a plan that scales with you.
           </p>
         </div>
 
@@ -249,12 +183,6 @@ export default function PricingPage() {
 
             {/* Right Pricing Summary Box */}
             <div className="p-6 rounded-[24px] bg-[#1F1D1B] border border-white/8 text-center flex flex-col items-center justify-center gap-4 min-h-[200px]">
-              {loadingRegion ? (
-                <div className="flex flex-col items-center gap-2 py-8">
-                  <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                  <span className="text-white/40 text-xs font-bold font-mono">Resolving Regional Rate...</span>
-                </div>
-              ) : (
                 <>
                   <div>
                     <span className="text-white/40 text-[11px] font-bold block mb-1">
@@ -267,9 +195,7 @@ export default function PricingPage() {
 
                   <div className="flex flex-col items-center gap-1">
                     <span className="text-[#6366F1] font-black text-xs">
-                      {detectedRegion.countryCode !== 'US' 
-                        ? `Regional Price Applied (${detectedRegion.name})`
-                        : `Billing Region: ${detectedRegion.name}`}
+                      Universal Global Rate
                     </span>
                   </div>
 
@@ -284,7 +210,6 @@ export default function PricingPage() {
                     Your subscription time is calculated based on your contribution. Any payment amount is automatically converted into active {selectedTier === 'PRO' ? 'Pro' : 'Teams'} time.
                   </p>
                 </>
-              )}
             </div>
 
           </div>

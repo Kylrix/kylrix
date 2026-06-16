@@ -41,13 +41,13 @@ export function SubscriptionProvider({
   const account = useMemo(() => new Account(client), [client]);
 
   const detectedRegion = useMemo(() => {
-    const data = PPP_DATA[regionCode] || PPP_DATA.DEFAULT;
-    return { ...data, countryCode: regionCode === 'DEFAULT' ? 'US' : regionCode };
-  }, [regionCode]);
+    return { ...PPP_DATA.DEFAULT, countryCode: 'US' };
+  }, []);
 
   const prices = useMemo(() => ({
-    PRO: calculateSubscriptionPrice('PRO', regionCode, paymentMethod),
-  }), [regionCode, paymentMethod]);
+    PRO: calculateSubscriptionPrice('PRO', 'DEFAULT', paymentMethod),
+    TEAMS: calculateSubscriptionPrice('TEAMS', 'DEFAULT', paymentMethod),
+  }), [paymentMethod]);
 
   useEffect(() => {
     const initSubscription = async () => {
@@ -59,32 +59,11 @@ export function SubscriptionProvider({
           setCurrentTier('FREE');
         }
 
-        if (prefs && prefs.region && PPP_DATA[prefs.region]) {
-          setRegionCode(prefs.region);
-        } else {
-          // Fallback to IP detection if no pref
-          try {
-            const response = await fetch('https://ipapi.co/json/');
-            const data = await response.json();
-            if (data.country_code && PPP_DATA[data.country_code]) {
-              setRegionCode(data.country_code);
-            }
-          } catch (_e) {
-            console.error('IP detection failed', _e);
-          }
-        }
-
+        setRegionCode('DEFAULT');
         setIsLoading(false);
       } catch (_error) {
         setCurrentTier('FREE');
-        // Still try IP detection for logged out users
-        try {
-          const response = await fetch('https://ipapi.co/json/');
-          const data = await response.json();
-          if (data.country_code && PPP_DATA[data.country_code]) {
-            setRegionCode(data.country_code);
-          }
-        } catch (_e) {}
+        setRegionCode('DEFAULT');
         setIsLoading(false);
       }
     };
