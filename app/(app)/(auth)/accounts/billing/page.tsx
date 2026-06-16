@@ -19,7 +19,7 @@ import {
 import { useAuth } from '@/context/auth/AuthContext';
 import { account, AppwriteService } from '@/lib/appwrite';
 import { listCouponsAction as getMyCouponsAction } from '../actions/coupons';
-import { getUserBillingRegionAction, listBillingTransactionsAction } from '../actions/billing';
+import { listBillingTransactionsAction } from '../actions/billing';
 import toast from 'react-hot-toast';
 
 export default function BillingPage() {
@@ -31,7 +31,7 @@ export default function BillingPage() {
   const [currentTier, setCurrentTier] = useState('FREE');
   const [loadingPlan, setLoadingPlan] = useState(true);
 
-  // Region states
+  // Global settings
   const region = 'DEFAULT';
 
   // Coupon states
@@ -360,14 +360,14 @@ export default function BillingPage() {
             Billing & Subscriptions
           </h1>
           <p className="text-white/40 text-sm mt-2 font-medium">
-            Manage your local regional settings, active coupons, subscription details, and gift options.
+            Manage your active coupons, subscription details, and gift options at the universal global rate.
           </p>
         </div>
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
-          {/* Left / Main Section (Plan, Region, Coupons) */}
+          {/* Left / Main Section (Plan, Billing, Coupons) */}
           <div className="md:col-span-2 space-y-8">
             
             {/* Plan Info Card */}
@@ -412,14 +412,14 @@ export default function BillingPage() {
               </div>
             </div>
 
-            {/* Region Card */}
+            {/* Billing Card */}
             <div className="bg-[#161412] border border-white/5 rounded-[32px] p-6 md:p-8 space-y-6">
               <div className="flex items-center gap-3 border-b border-white/8 pb-4">
                 <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/10 flex items-center justify-center text-[#F59E0B]">
                   <Globe size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black tracking-tight">Billing Region</h3>
+                  <h3 className="text-lg font-black tracking-tight">Billing Settings</h3>
                   <p className="text-xs text-white/40 font-bold">Standard fixed rate for all territories</p>
                 </div>
               </div>
