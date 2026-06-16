@@ -420,25 +420,16 @@ export default function BillingPage() {
                 </div>
                 <div>
                   <h3 className="text-lg font-black tracking-tight">Billing Region</h3>
-                  <p className="text-xs text-white/40 font-bold">Configure your country settings for checkout routing</p>
+                  <p className="text-xs text-white/40 font-bold">Standard fixed rate for all territories</p>
                 </div>
               </div>
 
-
               <div className="space-y-4">
-                <label className="text-xs font-black text-white/40 uppercase tracking-wider block">Country / Territory</label>
+                <label className="text-xs font-black text-white/40 uppercase tracking-wider block">Territory Group</label>
                 <div className="w-full bg-white/4 border border-white/8 rounded-xl px-4 py-3.5 text-sm font-semibold text-white/90">
-                  {loadingRegion ? (
-                    <span className="text-white/40">Resolving secure region...</span>
-                  ) : (() => {
-                    const pppData = require('@/lib/subscription/ppp').PPP_DATA;
-                    const data = pppData[region] || pppData.DEFAULT;
-                    return (
-                      <div className="flex justify-between items-center">
-                        <span>{data.name} ({region})</span>
-                      </div>
-                    );
-                  })()}
+                  <div className="flex justify-between items-center">
+                    <span>Universal Global ($)</span>
+                  </div>
                 </div>
               </div>
             </div>
