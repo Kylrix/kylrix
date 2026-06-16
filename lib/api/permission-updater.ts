@@ -17,7 +17,7 @@ function getResourceTypeFromTableId(tableId: string): string | null {
 
 /**
  * Hybrid Collaboration Architecture: Provision Background Team
- * Dynamically spins up an Appwrite Team when a resource exceeds 8 collaborators.
+ * Dynamically spins up an Appwrite Team when a resource exceeds 3 collaborators.
  */
 export async function provisionHybridTeamExpansionSecure(
   databases: Databases,
@@ -46,7 +46,7 @@ export async function provisionHybridTeamExpansionSecure(
   }
 
   // If under limit, no team needed
-  if (uniqueCollabIds.length <= 8) {
+  if (uniqueCollabIds.length <= 3) {
       return { isTeamExpanded: false, newAcl: null };
   }
 
@@ -55,7 +55,7 @@ export async function provisionHybridTeamExpansionSecure(
   const isPro = owner ? hasPaidKylrixPlan(owner) : false;
 
   if (!isPro) {
-      throw new Error('Limit reached: Free plan is limited to 8 collaborators. Upgrade to PRO for unlimited team members.');
+      throw new Error('Limit reached: Free plan is limited to 3 collaborators. Upgrade to PRO for more team members.');
   }
 
   const teamId = `rt_${resourceId.replace(/[^a-zA-Z0-9_]/g, '').slice(0, 30)}`;
@@ -68,7 +68,7 @@ export async function provisionHybridTeamExpansionSecure(
           try {
               await teams.create(teamId, `${resourceType.toUpperCase()} Expansion: ${resourceId}`);
               
-              // Seed the team with the owner and existing 8 collaborators
+              // Seed the team with the owner and existing collaborators
               await teams.createMembership(teamId, ['owner'], undefined, ownerId).catch(() => null);
 
               for (const row of existingCollabsRes.rows) {

@@ -810,10 +810,10 @@ export default function ProjectDetailPage() {
   };
 
   const handleAddCollaborator = () => {
-      // Check limit of 8 collaborators (7 + owner) for free plans
+      // Check limit of 3 collaborators for free plans
       const isPaid = hasPaidKylrixPlan(user);
-      if (!isPaid && collaborators.length >= 7) {
-          showError('Free plan is limited to 8 total collaborators. Upgrade to Pro to add more!');
+      if (!isPaid && collaborators.length >= 3) {
+          showError('Free plan is limited to 3 total collaborators. Upgrade to Pro to add more!');
           openUnified('pro-upgrade', {});
           return;
       }

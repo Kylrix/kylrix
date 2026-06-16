@@ -1703,7 +1703,7 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
     const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
-    // Enforce 8-collaborator limit for FREE tier
+    // Enforce 3-collaborator limit for FREE tier
     const existingCollabsRes = await tables.listRows({
       databaseId: FLOW_DATABASE_ID,
       tableId: COLLABORATORS_TABLE,
@@ -1717,9 +1717,9 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     if (userTier === 'FREE') {
       throw new Error(`Adding collaborators is a premium feature. Upgrade to PRO or TEAMS to collaborate on your ${input.resourceType}.`);
     }
-    const maxCollabs = userTier === 'PRO' ? 8 : Infinity;
+    const maxCollabs = userTier === 'PRO' ? 3 : Infinity;
     if (existingCollabsRes.rows.length >= maxCollabs) {
-      throw new Error(`Limit reached: PRO tier is limited to 8 collaborators per ${input.resourceType}. Upgrade to TEAMS for unlimited team members.`);
+      throw new Error(`Limit reached: PRO tier is limited to 3 collaborators per ${input.resourceType}. Upgrade to TEAMS for unlimited team members.`);
     }
 
     const existingCollab = await tables.listRows({
@@ -3026,7 +3026,7 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
       rowId: projectId,
     });
 
-  // Enforce 8-collaborator limit for FREE tier
+  // Enforce 3-collaborator limit for FREE tier
   const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
   const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
 
@@ -3048,9 +3048,9 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
     throw new Error('Adding collaborators is a premium feature. Upgrade the project owner to PRO or TEAMS to add collaborators.');
   }
 
-  const maxCollabs = ownerTier === 'PRO' ? 8 : Infinity;
+  const maxCollabs = ownerTier === 'PRO' ? 3 : Infinity;
   if (existingCollabsRes.rows.length >= maxCollabs) {
-    throw new Error(`Limit reached: PRO tier is limited to 8 collaborators. Upgrade the project owner to TEAMS for unlimited team members.`);
+    throw new Error(`Limit reached: PRO tier is limited to 3 collaborators. Upgrade the project owner to TEAMS for unlimited team members.`);
   }
 
   // 2. Create polymorphic collaborator row with status: 'pending' and accepted: false!

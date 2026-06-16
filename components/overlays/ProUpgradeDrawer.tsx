@@ -30,12 +30,12 @@ const featureDescriptions: Record<string, { desc: string; fix: string }> = {
     fix: 'Upgrade to Pro to create up to 10 projects, or Teams for unlimited team workspaces.'
   },
   'New Channel': {
-    desc: 'Creating custom group channels requires secure group huddle channels.',
-    fix: 'Upgrade to Pro or Teams to coordinate group channels with more than 2 participants.'
+    desc: 'Creating custom group channels requires a Teams plan.',
+    fix: 'Upgrade to Teams to coordinate group channels. Pro users can use resource discussions for collaboration.'
   },
   'Collaborators': {
     desc: 'Collaborative projects and shared resources require a premium tier.',
-    fix: 'Upgrade to Pro to add up to 8 collaborators per resource, or Teams for unlimited peers.'
+    fix: 'Upgrade to Pro to add up to 3 collaborators per resource, or Teams for unlimited peers.'
   }
 };
 

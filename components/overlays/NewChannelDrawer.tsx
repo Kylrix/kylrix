@@ -52,7 +52,7 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
     const { requestSudo } = useSudo();
     const { openProUpgrade } = useProUpgrade();
     const { currentTier } = useSubscription();
-    const isPaid = currentTier === 'PRO' || currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
+    const isTeams = currentTier === 'TEAMS' || currentTier === 'ORG' || currentTier === 'LIFETIME';
 
     const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
     const [channelName, setChannelName] = useState('');
@@ -60,7 +60,7 @@ export function NewChannelDrawer({ isOpen, onClose }: { isOpen: boolean; onClose
 
     const handleCreateChannel = async () => {
         if (!user) return;
-        if (!isPaid) {
+        if (!isTeams) {
             openProUpgrade('New Channel');
             return;
         }

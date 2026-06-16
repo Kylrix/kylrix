@@ -163,7 +163,7 @@ export default function PricingPage() {
                   { icon: Globe, text: 'Universal Identity across all apps' },
                   { icon: Sparkles, text: 'Full AI Neural Graph access' },
                   { icon: ShieldCheck, text: 'Up to 10 Projects (Free gets 1)' },
-                  { icon: ShieldCheck, text: 'Up to 8 collaborators per object/project, 16 on groups' }
+                  { icon: ShieldCheck, text: 'Up to 3 collaborators per object/project' }
                 ] : [
                   { icon: ShieldCheck, text: 'Unlimited Projects & Vault' },
                   { icon: ShieldCheck, text: 'Unlimited Collaborators & team members' },

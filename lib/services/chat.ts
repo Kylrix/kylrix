@@ -831,11 +831,8 @@ export const ChatService = {
         if (type === 'group') {
             const currentUser = await getCurrentUser();
             const userTier = getUserSubscriptionTier(currentUser);
-            if (userTier === 'FREE') {
-                throw new Error('Creating hangouts (groups) is a premium feature. Upgrade to PRO or TEAMS to create group chats.');
-            }
-            if (userTier === 'PRO' && uniqueParticipants.length > 16) {
-                throw new Error('Limit reached: Hangouts on PRO plan are limited to 16 members. Upgrade to TEAMS for unlimited group sizes.');
+            if (userTier === 'FREE' || userTier === 'PRO') {
+                throw new Error('Creating hangouts (groups) is a TEAMS feature. Use resource discussions for collaboration, or upgrade to TEAMS for group chats.');
             }
         }
 
@@ -1320,11 +1317,12 @@ export const ChatService = {
         const conv = await this.getConversationById(conversationId);
         const participants = conv.participants || [];
 
-        // GUARD: Enforce 16-member limit for hangouts (groups) on FREE tier
-        if (conv.type === 'group' && participants.length >= 16) {
+        // GUARD: Enforce hangouts (groups) are Teams-only
+        if (conv.type === 'group') {
             const currentUser = await getCurrentUser();
-            if (!hasPaidKylrixPlan(currentUser)) {
-                throw new Error('Limit reached: Hangouts on free plan are limited to 16 members. Upgrade to PRO for unlimited group sizes.');
+            const userTier = getUserSubscriptionTier(currentUser);
+            if (userTier === 'FREE' || userTier === 'PRO') {
+                throw new Error('Hangouts (groups) are a TEAMS feature. Use resource discussions for collaboration, or upgrade to TEAMS.');
             }
         }
         const requiresRotation = conv?.type === 'group' && String(conv?.encryptionVersion || '').toUpperCase() === 'T4';

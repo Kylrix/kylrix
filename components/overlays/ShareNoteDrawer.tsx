@@ -215,10 +215,10 @@ export function ShareNoteDrawer({ isOpen, onClose, noteId, noteTitle, resourceTy
   const handleGrant = async () => {
     if (selectedUsers.length === 0 || !user?.$id) return;
 
-    // Free plan collaborators count ceiling gating (strict limit of 8 total collaborators)
+    // Collaborator count ceiling gating
     const isPaid = hasPaidKylrixPlan(user);
-    if (!isPaid && collaboratorProfiles.length + selectedUsers.length >= 8) {
-      toast.error(`Limit reached: Free plans are limited to 8 collaborators per resource. Upgrade to PRO to add more!`);
+    if (!isPaid && collaboratorProfiles.length + selectedUsers.length >= 3) {
+      toast.error(`Limit reached: Free plans are limited to 3 collaborators per resource. Upgrade to PRO to add more!`);
       open('pro-upgrade', {});
       return;
     }
