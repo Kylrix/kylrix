@@ -4,7 +4,7 @@ import React, { useEffect, useState, Suspense, useMemo } from 'react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Rocket, Heart, Globe, Clock } from 'lucide-react';
-import { calculateSubscriptionPrice, PPP_DATA } from '@/lib/subscription/ppp';
+import { calculateTotalSubscriptionPrice } from '@/lib/subscription/ppp';
 import { createBillingCheckoutSessionAction } from '../../../actions/billing';
 import { account } from '@/lib/appwrite/client';
 
@@ -39,11 +39,11 @@ function CheckoutContent() {
   const countryCode = 'US';
 
   const expectedPrice = useMemo(() => {
-    return calculateSubscriptionPrice(planId, countryCode, 'CRYPTO', months);
+    return calculateTotalSubscriptionPrice(planId, months, 'CRYPTO');
   }, [planId, countryCode, months]);
 
   const monthlyPrice = useMemo(() => {
-    return calculateSubscriptionPrice('PRO_MONTH', countryCode, 'CRYPTO', 1);
+    return calculateTotalSubscriptionPrice('PRO_MONTH', 1, 'CRYPTO');
   }, [countryCode]);
 
   const markBillingSyncPending = (userId: string) => {

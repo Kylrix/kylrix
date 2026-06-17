@@ -67,26 +67,8 @@ export function calculateTotalSubscriptionPrice(
 
 export const calculateSubscriptionPrice = (
   tier: SubscriptionTier | string,
-  _countryCode: string, // Ignored
+  _countryCode: string,
   method: PaymentMethod,
-  months = 1
-): number => {
-  const baseProPrice = GLOBAL_SUBSCRIPTION_CONFIG.base_pro_price;
-  
-  // Fixed base price
-  let basePrice = baseProPrice;
-  
-  if (String(tier).toUpperCase().startsWith('TEAMS')) {
-    basePrice = basePrice * GLOBAL_SUBSCRIPTION_CONFIG.tier_multipliers.teams;
-  }
-  
-  const paymentMultiplier = method === 'CARD' 
-    ? GLOBAL_SUBSCRIPTION_CONFIG.card_surcharge_multiplier 
-    : 1.0;
-
-  // Final Price in USD: BasePrice * Card_Surcharge * months
-  const finalPrice = basePrice * paymentMultiplier * Math.max(1, months);
-  
-  return Math.round(finalPrice * 100) / 100;
-};
+  months = 1,
+): number => calculateTotalSubscriptionPrice(tier, months, method);
 
