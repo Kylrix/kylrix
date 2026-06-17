@@ -311,7 +311,7 @@ export default function Topbar({
         }}
       >
         <Box
-          onWheel={(event) => {
+          onWheel={(event: React.WheelEvent<HTMLDivElement>) => {
             const node = event.currentTarget;
             if (event.deltaY < 0 && isTopbarScrollAtTop(node)) {
               event.preventDefault();
@@ -333,7 +333,7 @@ export default function Topbar({
             <TextField
               inputRef={searchInputRef}
               value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
+              onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
               placeholder="Search notes, tags, shared links, people"
               variant="standard"
               fullWidth
@@ -896,7 +896,7 @@ export default function Topbar({
                       id="topbar-search-input"
                       inputRef={searchInputRef}
                       value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
+                      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(event.target.value)}
                       placeholder="Search people by name or username"
                       sx={{
                         flex: 1,

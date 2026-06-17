@@ -9,7 +9,7 @@ import {
   Eye,
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
-import { EMAIL_TEMPLATES } from '@/lib/email-template-catalog';
+import { EMAIL_TEMPLATES, type EmailTemplateId } from '@/lib/email-template-catalog';
 import { getAdminUsersAction } from '../../actions/admin';
 import { sendAdminEmailsAction } from '../../actions/emails';
 import { useAuth } from '@/context/auth/AuthContext';
