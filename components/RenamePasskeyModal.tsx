@@ -96,7 +96,7 @@ export default function RenamePasskeyModal({
             fullWidth
             label="Passkey Name"
             value={newName}
-            onChange={(e) => setNewName(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
             variant="filled"
             autoFocus
             InputProps={{
