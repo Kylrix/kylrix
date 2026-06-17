@@ -131,7 +131,7 @@ const GhostClock = ({ createdAt, expiresAt }: { createdAt: string, expiresAt: st
                         cy={center}
                     />
                     <circle
-                        stroke={isExpired ? theme.palette.error.main : theme.palette.primary.main}
+                        stroke={isExpired ? '#FF4D4D' : '#10B981'}
                         strokeWidth={strokeWidth}
                         strokeDasharray={`${circumference} ${circumference}`}
                         style={{ 
@@ -195,7 +195,7 @@ const GhostSparkShelf = React.memo(({
                         {activeSparks.map((note) => (
                             <Card
                                 key={note.id}
-                                onContextMenu={(e) => onContextMenu(e, note.id)}
+                                onContextMenu={(e: React.MouseEvent) => onContextMenu(e, note.id)}
                                 sx={{
                                     bgcolor: '#1C1A18',
                                     borderRadius: '20px',
@@ -258,7 +258,7 @@ const GhostSparkShelf = React.memo(({
                         {staleSparks.map((note) => (
                             <Card
                                 key={note.id}
-                                onContextMenu={(e) => onContextMenu(e, note.id)}
+                                onContextMenu={(e: React.MouseEvent) => onContextMenu(e, note.id)}
                                 sx={{
                                     bgcolor: '#0F0D0C',
                                     borderRadius: '20px',
