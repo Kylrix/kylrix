@@ -226,7 +226,7 @@ export default function EventPage() {
     loadHuddleComments();
 
     const unsubscribe = client.subscribe(
-      `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.collections.comments.documents`,
+      `databases.${APPWRITE_CONFIG.DATABASES.NOTE}.tables.comments.rows`,
       async (response: any) => {
         if (!active) return;
         const events = response.events;

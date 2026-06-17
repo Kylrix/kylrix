@@ -193,7 +193,7 @@ export function PublicCall({ id }: { id: string }) {
         if (!localUser || requestStatus !== 'pending') return;
 
         const unsubscribe = client.subscribe(
-            `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.collections.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.documents`,
+            `databases.${APPWRITE_CONFIG.DATABASES.CHAT}.tables.${APPWRITE_CONFIG.TABLES.CHAT.APP_ACTIVITY}.rows`,
             (response: any) => {
                 if (response.events.some((e: string) => e.includes('.update') || e.includes('.create'))) {
                     const activity = response.payload;

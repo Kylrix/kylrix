@@ -9,7 +9,7 @@ Surgical synchronization of Flow event guests and real-time invitations.
 ### Appwrite Scopes (Permissions)
 - `messaging.write`
 - `databases.read`
-- `documents.read`
+- `rows.read`
 
 ### Usage
 Triggers whenever a guest is added to an event in `flow`, sending a push notification and ensuring the event is mirrored to their personal schedule.

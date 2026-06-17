@@ -109,41 +109,41 @@ function createProxiedDatabases(client: Client) {
     get(target, prop, receiver) {
       if (prop === 'listRows') {
         return async (databaseId: string, tableId: string, queries?: any[]) => {
-          const res = await target.listDocuments(databaseId, tableId, queries);
+          const res = await target.listRows(databaseId, tableId, queries);
           return {
             ...res,
-            rows: res.documents
+            rows: res.rows
           };
         };
       }
       if (prop === 'getRow') {
         return (databaseId: string, tableId: string, rowId: string, queries?: any[]) => {
-          return target.getDocument(databaseId, tableId, rowId, queries);
+          return target.getRow(databaseId, tableId, rowId, queries);
         };
       }
       if (prop === 'createRow') {
         return (databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[]) => {
-          return target.createDocument(databaseId, tableId, rowId, data, permissions);
+          return target.createRow(databaseId, tableId, rowId, data, permissions);
         };
       }
       if (prop === 'updateRow') {
         return (databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[]) => {
-          return target.updateDocument(databaseId, tableId, rowId, data, permissions);
+          return target.updateRow(databaseId, tableId, rowId, data, permissions);
         };
       }
       if (prop === 'deleteRow') {
         return (databaseId: string, tableId: string, rowId: string) => {
-          return target.deleteDocument(databaseId, tableId, rowId);
+          return target.deleteRow(databaseId, tableId, rowId);
         };
       }
-      if (prop === 'listDocuments' || prop === 'getDocument' || prop === 'createDocument' || prop === 'updateDocument' || prop === 'deleteDocument') {
+      if (prop === 'listRows' || prop === 'getRow' || prop === 'createRow' || prop === 'updateRow' || prop === 'deleteRow') {
         const originalMethod = (target as any)[prop];
         return async (...args: any[]) => {
           const res = await originalMethod.apply(target, args);
-          if (prop === 'listDocuments' && res && typeof res === 'object') {
+          if (prop === 'listRows' && res && typeof res === 'object') {
             return {
               ...res,
-              rows: res.documents
+              rows: res.rows
             };
           }
           return res;

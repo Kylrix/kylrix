@@ -10,7 +10,7 @@ Cleans up active communication links and archives call metadata when a call ends
 - `databases.write`
 - `tables.write`
 - `rows.write`
-- `documents.write`
+- `rows.write`
 
 ### Usage
 Triggers automatically whenever a call link is deleted from the `chat` database, ensuring that a persistent log is created and any temporary call-active states are cleared.

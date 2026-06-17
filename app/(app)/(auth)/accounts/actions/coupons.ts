@@ -29,7 +29,7 @@ export async function invalidateCouponAction(couponId: string, jwt?: string) {
   requireAdmin(user);
   
   const { databases } = createAdminClient(user.email);
-  await databases.updateDocument(NOTE_DB_ID, COUPONS_TABLE_ID, couponId, {
+  await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId, {
     status: 'revoked'
   });
   return { success: true };

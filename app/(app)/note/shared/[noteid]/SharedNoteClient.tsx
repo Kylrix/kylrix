@@ -360,7 +360,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
         try {
           const { getSharedProfilesSecure } = await import('@/lib/actions/secure-ops');
           const profilesRes = await getSharedProfilesSecure([note.userId]);
-          const author = profilesRes.documents?.[0];
+          const author = profilesRes.rows?.[0];
           if (author) {
             setAuthorProfile(author as any);
           }
@@ -413,7 +413,7 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   useEffect(() => {
     if (!noteId) return;
 
-    const channel = `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_CONFIG.DATABASES.NOTE}.notes.documents.${noteId}`;
+    const channel = `databases.${APPWRITE_DATABASE_ID}.tables.${APPWRITE_CONFIG.DATABASES.NOTE}.notes.rows.${noteId}`;
 
     const sub = realtime.subscribe(channel, (response) => {
       const isUpdate = response.events.some(e => e.endsWith('.update'));

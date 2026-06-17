@@ -65,7 +65,7 @@
                 "tables.write",
                 "collections.write",
                 "rows.write",
-                "documents.write"
+                "rows.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
@@ -93,7 +93,7 @@
                 "tables.read",
                 "collections.read",
                 "rows.read",
-                "documents.read",
+                "rows.read",
                 "messages.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
@@ -123,7 +123,7 @@
                 "tables.read",
                 "collections.read",
                 "rows.read",
-                "documents.read",
+                "rows.read",
                 "messages.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
@@ -150,7 +150,7 @@
                 "tables.read",
                 "collections.read",
                 "rows.read",
-                "documents.read",
+                "rows.read",
                 "messages.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
@@ -179,7 +179,7 @@
                 "tables.write",
                 "collections.write",
                 "rows.write",
-                "documents.write"
+                "rows.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
@@ -208,7 +208,7 @@
                 "tables.read",
                 "collections.read",
                 "rows.read",
-                "documents.read"
+                "rows.read"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
@@ -238,9 +238,9 @@
                 "tables.write",
                 "collections.write",
                 "rows.read",
-                "documents.read",
+                "rows.read",
                 "rows.write",
-                "documents.write"
+                "rows.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
@@ -266,7 +266,7 @@
                 "tables.write",
                 "collections.write",
                 "rows.write",
-                "documents.write"
+                "rows.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
@@ -317,8 +317,8 @@
                 "tables.write",
                 "rows.read",
                 "rows.write",
-                "documents.read",
-                "documents.write"
+                "rows.read",
+                "rows.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
@@ -348,8 +348,8 @@
                 "collections.write",
                 "rows.read",
                 "rows.write",
-                "documents.read",
-                "documents.write",
+                "rows.read",
+                "rows.write",
                 "functions.write"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
@@ -374,7 +374,7 @@
                 "tables.read",
                 "collections.read",
                 "rows.read",
-                "documents.read"
+                "rows.read"
             ],
             "buildSpecification": "s-0.5vcpu-512mb",
             "runtimeSpecification": "s-0.5vcpu-512mb",
@@ -419,9 +419,9 @@
                 "tables.write",
                 "collections.write",
                 "rows.read",
-                "documents.read",
+                "rows.read",
                 "rows.write",
-                "documents.write",
+                "rows.write",
                 "files.write",
                 "buckets.write"
             ],

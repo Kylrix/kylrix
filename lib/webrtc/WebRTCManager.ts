@@ -62,7 +62,7 @@ export class WebRTCManager {
   private setupRealtimeSignaling() {
       if (typeof window === 'undefined' || !this.callId) return;
 
-      const channel = `databases.${DB_ID}.collections.${SIGNALS_TABLE}.documents`;
+      const channel = `databases.${DB_ID}.tables.${SIGNALS_TABLE}.rows`;
       const unsub = realtime.subscribe(channel, (event) => {
           const row = event.payload as any;
           if (row.callId !== this.callId) return;
@@ -104,7 +104,7 @@ export class WebRTCManager {
   private async sendAppwriteSignal(type: 'offer' | 'answer' | 'candidate', payload: string, senderId: string, targetId: string) {
       if (!this.callId) return;
       try {
-          await databases.createDocument(DB_ID, SIGNALS_TABLE, ID.unique(), {
+          await databases.createRow(DB_ID, SIGNALS_TABLE, ID.unique(), {
               callId: this.callId,
               senderId: senderId,
               type,
@@ -497,13 +497,13 @@ export class WebRTCManager {
     if (this.callId) {
         try {
             const currentUserId = (window as any).__KYLRIX_PULSE__?.$id;
-            const res = await databases.listDocuments(DB_ID, SIGNALS_TABLE, [
+            const res = await databases.listRows(DB_ID, SIGNALS_TABLE, [
                 Query.equal('callId', this.callId)
             ]);
             
             // Concurrent deletions for active signaling blocks
             await Promise.all(
-                res.documents.map(doc => databases.deleteDocument(DB_ID, SIGNALS_TABLE, doc.$id))
+                res.rows.map(doc => databases.deleteRow(DB_ID, SIGNALS_TABLE, doc.$id))
             );
             console.log(`[WebRTCManager] Purged ${res.total} signaling rows for call ${this.callId}`);
         } catch (err) {

@@ -101,7 +101,7 @@ export async function createCryptoInvoiceAction(input: {
 
     // 4. Record pending transaction in Appwrite database
     const { databases } = createSystemClient();
-    await databases.createDocument(
+    await databases.createRow(
       NOTE_DB_ID,
       'billing_transactions',
       ID.unique(),
@@ -151,7 +151,7 @@ export async function checkCryptoTransactionStatusAction(input: {
     if (!user) throw new Error('Unauthenticated');
 
     const { databases } = createSystemClient();
-    const list = await databases.listDocuments(
+    const list = await databases.listRows(
       NOTE_DB_ID,
       'billing_transactions',
       [
@@ -177,7 +177,7 @@ export async function getActivePendingCryptoInvoiceAction(input: {
     if (!user) return null;
 
     const { databases } = createSystemClient();
-    const list = await databases.listDocuments(
+    const list = await databases.listRows(
       NOTE_DB_ID,
       'billing_transactions',
       [

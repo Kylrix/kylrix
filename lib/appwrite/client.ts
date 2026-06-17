@@ -89,7 +89,7 @@ function parseTablesDBListArgs(args: any[]) {
 const databasesProxy = new Proxy(originalDatabases, {
     get(target: any, prop: string | symbol, receiver: any) {
         // Standardized method names (Primary)
-        if (prop === 'createRow' || prop === 'createDocument') {
+        if (prop === 'createRow' || prop === 'createRow') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
                 const payload = data ? { ...data } : {};
@@ -99,7 +99,7 @@ const databasesProxy = new Proxy(originalDatabases, {
                 return await createRowSecure(databaseId, tableId, payload, permissions, jwt);
             };
         }
-        if (prop === 'updateRow' || prop === 'updateDocument') {
+        if (prop === 'updateRow' || prop === 'updateRow') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId, data, permissions } = parseDatabasesArgs(args);
                 const jwt = await getJwt();
@@ -107,7 +107,7 @@ const databasesProxy = new Proxy(originalDatabases, {
                 return await updateRowSecure(databaseId, tableId, rowId, data, permissions, jwt);
             };
         }
-        if (prop === 'listRows' || prop === 'listDocuments') {
+        if (prop === 'listRows' || prop === 'listRows') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, queries } = parseTablesDBListArgs(args);
                 const jwt = await getJwt();
@@ -116,11 +116,11 @@ const databasesProxy = new Proxy(originalDatabases, {
                 return { 
                     total: res.total, 
                     rows: res.rows,
-                    documents: res.rows 
+                    rows: res.rows 
                 };
             };
         }
-        if (prop === 'getRow' || prop === 'getDocument') {
+        if (prop === 'getRow' || prop === 'getRow') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
                 const jwt = await getJwt();
@@ -128,7 +128,7 @@ const databasesProxy = new Proxy(originalDatabases, {
                 return await getRowSecure(databaseId, tableId, rowId, jwt);
             };
         }
-        if (prop === 'deleteRow' || prop === 'deleteDocument') {
+        if (prop === 'deleteRow' || prop === 'deleteRow') {
             return async (...args: any[]) => {
                 const { databaseId, tableId, rowId } = parseDatabasesDeleteArgs(args);
                 const jwt = await getJwt();

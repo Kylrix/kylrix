@@ -54,7 +54,7 @@ export default function OverviewPage() {
         let totpCount = 0;
         try {
           const totpResp = await fetchOptimized(`v_totp_total_${user.$id}`, () =>
-            appwriteDatabases.listDocuments(
+            appwriteDatabases.listRows(
               APPWRITE_DATABASE_ID,
               APPWRITE_COLLECTION_TOTPSECRETS_ID,
               [Query.equal("userId", user.$id), Query.limit(1)],
@@ -64,7 +64,7 @@ export default function OverviewPage() {
             (
               totpResp as {
                 total?: number;
-                documents: Array<Record<string, unknown>>;
+                rows: Array<Record<string, unknown>>;
                 rows: Array<Record<string, unknown>>;
               }
             ).total ?? totpResp.rows.length;

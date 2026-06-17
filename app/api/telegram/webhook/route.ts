@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     // 1. Retrieve the connection document
     let doc = null;
     try {
-      doc = await databases.getDocument(
+      doc = await databases.getRow(
         APPWRITE_CONFIG.DATABASES.CONNECT,
         APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
         userId
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Update Connection Document to verified status
-    await databases.updateDocument(
+    await databases.updateRow(
       APPWRITE_CONFIG.DATABASES.CONNECT,
       APPWRITE_CONFIG.TABLES.CONNECT.TELEGRAM_CONNECTIONS,
       userId,

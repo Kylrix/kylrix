@@ -10,7 +10,7 @@ System-wide security auditing for sensitive actions across the Kylrix ecosystem.
 
 ### Appwrite Scopes (Permissions)
 - `databases.write`
-- `documents.write`
+- `rows.write`
 
 ### Usage
 Records sensitive activity (decryption, login attempts) to a central `system_audit` collection for review and security monitoring.

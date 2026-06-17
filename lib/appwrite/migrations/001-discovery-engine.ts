@@ -20,7 +20,7 @@ export async function migrateDiscoveryEngine() {
         }
       );
     } catch (e: any) {
-      if (!e.message.includes('Document with the requested ID')) throw e;
+      if (!e.message.includes('Row with the requested ID')) throw e;
     }
   }
 }

@@ -3,14 +3,14 @@ import { KylrixVault } from './vault';
 
 describe('KylrixVault', () => {
   it('should successfully get credentials with standard queries', async () => {
-    const mockDocuments = [
+    const mockRows = [
       { $id: 'cred-1', label: 'GitHub Personal Token' },
       { $id: 'cred-2', label: 'Vercel API Key' }];
 
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
-        documents: mockDocuments,
-        rows: mockDocuments,
+        rows: mockRows,
+        rows: mockRows,
         total: 2,
       }),
       createRow: vi.fn(),
@@ -23,14 +23,14 @@ describe('KylrixVault', () => {
 
     expect(mockSdk.listRows).toHaveBeenCalledTimes(1);
     expect(mockSdk.listRows).toHaveBeenCalledWith('db-id', 'table-id', queries);
-    expect(result.rows).toEqual(mockDocuments);
+    expect(result.rows).toEqual(mockRows);
     expect(result.total).toBe(2);
   });
 
   it('should use default empty query list when no queries are specified', async () => {
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
-        documents: [],
+        rows: [],
         rows: [],
       }),
       createRow: vi.fn(),
@@ -75,7 +75,7 @@ describe('KylrixVault', () => {
 
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
-        documents: [mockSettings],
+        rows: [mockSettings],
         rows: [mockSettings],
       }),
       createRow: vi.fn(),
@@ -93,7 +93,7 @@ describe('KylrixVault', () => {
   it('should return null when no vault settings are found', async () => {
     const mockSdk = {
       listRows: vi.fn().mockResolvedValue({
-        documents: [],
+        rows: [],
         rows: [],
       }),
       createRow: vi.fn(),

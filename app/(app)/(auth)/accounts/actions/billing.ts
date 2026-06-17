@@ -69,7 +69,7 @@ async function calculateStackedPeriod(databases: ReturnType<typeof createSystemC
   const now = new Date();
   let currentPeriodStart = now;
   try {
-    const existingSubs = await databases.listDocuments(NOTE_DB_ID, SUBSCRIPTIONS_TABLE_ID, [
+    const existingSubs = await databases.listRows(NOTE_DB_ID, SUBSCRIPTIONS_TABLE_ID, [
       Query.equal('userId', userId),
       Query.equal('status', 'active'),
       Query.orderDesc('updatedAt'),
@@ -152,7 +152,7 @@ export async function createBillingCheckoutSessionAction(input: {
       const currentPeriodEnd = new Date(currentPeriodStart.getTime() + (normalizedMonths >= 12
         ? (normalizedMonths === 12 ? 365 : 30 * normalizedMonths) * 24 * 60 * 60 * 1000
         : 30 * 24 * 60 * 60 * 1000 * normalizedMonths));
-      const subscription = await databases.createDocument(
+      const subscription = await databases.createRow(
         NOTE_DB_ID,
         SUBSCRIPTIONS_TABLE_ID,
         ID.unique(),
@@ -172,7 +172,7 @@ export async function createBillingCheckoutSessionAction(input: {
       const newRedemptionCount = redemptionCount + 1;
       const isLastRedemption = newRedemptionCount >= redemptionLimit;
 
-      await databases.updateDocument(NOTE_DB_ID, COUPONS_TABLE_ID, couponRow.$id, {
+      await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponRow.$id, {
         status: isLastRedemption ? 'depleted' : 'active',
         redemptionCount: newRedemptionCount,
         metadata: JSON.stringify({
@@ -200,7 +200,7 @@ export async function createBillingCheckoutSessionAction(input: {
         bodyCopy: 'Your coupon fully covered the subscription and access is now live.',
       }).catch(() => {});
 
-      await databases.createDocument(
+      await databases.createRow(
         NOTE_DB_ID,
         'billing_transactions',
         ID.unique(),
@@ -256,7 +256,7 @@ export async function createBillingCheckoutSessionAction(input: {
         : calculateSubscriptionPrice(String(planId), resolvedCountryCode, method as any, normalizedMonths);
 
     const { databases } = createSystemClient();
-    await databases.createDocument(
+    await databases.createRow(
       NOTE_DB_ID,
       'billing_transactions',
       ID.unique(),
@@ -322,9 +322,9 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   let coupon: any = null;
   
   if (couponId) {
-    coupon = await databases.getDocument(NOTE_DB_ID, COUPONS_TABLE_ID, couponId).catch(() => null);
+    coupon = await databases.getRow(NOTE_DB_ID, COUPONS_TABLE_ID, couponId).catch(() => null);
     if (!coupon) {
-      const eventCoupon = await databases.getDocument(
+      const eventCoupon = await databases.getRow(
         APPWRITE_CONFIG.DATABASES.CHAT,
         APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
         couponId
@@ -349,7 +349,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     }
     if (!coupon) throw new Error('Coupon not found');
   } else {
-    const couponResult = await databases.listDocuments(NOTE_DB_ID, COUPONS_TABLE_ID, [
+    const couponResult = await databases.listRows(NOTE_DB_ID, COUPONS_TABLE_ID, [
       Query.equal('targetUserId', user.$id),
       Query.equal('status', 'active'),
       Query.orderDesc('$createdAt'),
@@ -358,7 +358,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     coupon = couponResult.rows[0];
 
     if (!coupon) {
-      const eventCouponResult = await databases.listDocuments(
+      const eventCouponResult = await databases.listRows(
         APPWRITE_CONFIG.DATABASES.CHAT,
         APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
         [
@@ -448,7 +448,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     };
   }
 
-  const subscription = await databases.createDocument(
+  const subscription = await databases.createRow(
     NOTE_DB_ID,
     SUBSCRIPTIONS_TABLE_ID,
     ID.unique(),
@@ -466,7 +466,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   );
 
   if (coupon.isEventCoupon) {
-    await databases.updateDocument(
+    await databases.updateRow(
       APPWRITE_CONFIG.DATABASES.CHAT,
       APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS,
       coupon.$id,
@@ -482,7 +482,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
       }
     );
   } else {
-    await databases.updateDocument(NOTE_DB_ID, COUPONS_TABLE_ID, coupon.$id, {
+    await databases.updateRow(NOTE_DB_ID, COUPONS_TABLE_ID, coupon.$id, {
       status: isLastRedemption ? 'depleted' : 'active',
       redemptionCount: newRedemptionCount,
       metadata: JSON.stringify({
@@ -499,7 +499,7 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
     await users.updatePrefs(user.$id, applyProSubscriptionWindowToPrefs(prefs, currentPeriodEnd.toISOString(), String(planId).toUpperCase().startsWith('TEAMS') ? 'TEAMS' : 'PRO'));
   } catch {}
 
-  await databases.createDocument(
+  await databases.createRow(
     NOTE_DB_ID,
     'billing_transactions',
     ID.unique(),
@@ -525,12 +525,12 @@ export async function claimCouponAction(couponIdInput?: string, jwtInput?: strin
   });
 
   try {
-    const profileResult = await databases.listDocuments(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
+    const profileResult = await databases.listRows(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
       Query.equal('userId', user.$id),
       Query.limit(1),
       Query.select(['$id', 'userId', 'tier'])]);
     if (profileResult.total > 0) {
-      await databases.updateDocument(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, profileResult.rows[0].$id, {
+      await databases.updateRow(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, profileResult.rows[0].$id, {
         tier: 'PRO',
       });
     }
@@ -593,7 +593,7 @@ export async function hydrateSessionAction(jwt?: string | null) {
 
   try {
     const [profileRes, entitlement, tokenBal, walletsRes, activityRes] = await Promise.all([
-      databases.listDocuments(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
+      databases.listRows(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
         Query.equal('userId', userId),
         Query.limit(1)]),
       getVerifiedProEntitlementForUser(userId),
@@ -601,11 +601,11 @@ export async function hydrateSessionAction(jwt?: string | null) {
           const { InternalKylrixTokenService } = await import('@/lib/services/internal/kylrix-token');
           return InternalKylrixTokenService.getUserBalance(userId);
       })(),
-      databases.listDocuments(APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS, [
+      databases.listRows(APPWRITE_CONFIG.DATABASES.PASSWORD_MANAGER, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.WALLETS, [
         Query.equal('ownerId', `user:${userId}`),
         Query.equal('type', 'main'),
         Query.limit(10)]),
-      databases.listDocuments(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, [
+      databases.listRows(CHAT_DB_ID, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, [
         Query.equal('userId', userId),
         Query.orderDesc('$updatedAt'),
         Query.limit(1)])
@@ -674,7 +674,7 @@ export async function listBillingTransactionsAction(jwtInput?: string) {
 
   const { databases } = createSystemClient();
   try {
-    const list = await databases.listDocuments(NOTE_DB_ID, 'billing_transactions', [
+    const list = await databases.listRows(NOTE_DB_ID, 'billing_transactions', [
       Query.equal('userId', user.$id),
       Query.orderDesc('createdAt'),
       Query.limit(100),

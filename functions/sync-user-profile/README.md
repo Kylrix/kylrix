@@ -9,7 +9,7 @@ Syncs Appwrite Auth users to the Global Directory (`chat.users`) to ensure ecosy
 ### Appwrite Scopes (Permissions)
 - `users.read`
 - `databases.write`
-- `documents.write`
+- `rows.write`
 
 ### Environment Variables
 - `DATABASE_ID_CHAT`: (Default: `chat`)

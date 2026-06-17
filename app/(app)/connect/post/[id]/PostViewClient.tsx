@@ -63,6 +63,8 @@ import { FormattedText } from '@/components/common/FormattedText';
 import toast from 'react-hot-toast';
 import { formatPostTimestamp } from '@/lib/time';
 import { useCachedProfilePreview } from '@/hooks/useCachedProfilePreview';
+import { getLastEcosystemRoute } from '@/lib/ecosystem/state-tracker';
+import { usePathname } from 'next/navigation';
 
 const EXPORT_CARD = '#161514';
 const EXPORT_PAD = 16;
@@ -1137,6 +1139,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
     const params = useParams();
     const momentId = propId || (Array.isArray(params.id) ? params.id[0] : params.id);
     const router = useRouter();
+    const pathname = usePathname();
     const { user } = useAuth();
     const { profile: myProfile } = useProfile();
     const { setActiveDetail } = useSection();
@@ -1689,8 +1692,9 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
         if (onBack) {
             onBack();
         } else {
-            if (typeof window !== 'undefined' && window.history.length > 2) {
-                router.back();
+            const lastRoute = getLastEcosystemRoute();
+            if (lastRoute && lastRoute.path !== pathname) {
+                router.push(lastRoute.path);
             } else {
                 router.push('/connect');
             }

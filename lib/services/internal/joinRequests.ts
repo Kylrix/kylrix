@@ -88,7 +88,7 @@ async function isConversationMember(databases: ReturnType<typeof createSystemCli
   const memberRows = await databases.listRows(CHAT_DB_ID, CONVERSATION_MEMBERS_TABLE_ID, [
     Query.equal('conversationId', conversation.$id),
     Query.equal('userId', userId),
-    Query.limit(1)]).catch(() => ({ documents: [] as any[], rows: [] as any[] }));
+    Query.limit(1)]).catch(() => ({ rows: [] as any[], rows: [] as any[] }));
   return Boolean(memberRows.rows[0]);
 }
 

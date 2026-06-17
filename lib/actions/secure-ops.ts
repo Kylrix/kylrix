@@ -554,7 +554,7 @@ export async function burnEphemeralNoteSecure(params: any, jwt?: string) {
   // Parallel Fetch: Actor identity + Note document
   const [actor, doc] = await Promise.all([
     getActor(validatedJwt),
-    databases.getDocument(dbId, tableId, noteId).catch(() => null)
+    databases.getRow(dbId, tableId, noteId).catch(() => null)
   ]);
 
   // We don't strictly REQUIRE actor for burning as it's often done anonymously via secret link
@@ -588,7 +588,7 @@ export async function burnEphemeralNoteSecure(params: any, jwt?: string) {
   // Recursive cleanup for storage files, comments, reactions, etc.
   await executeCascadeDeleteSecure(dbId, tableId, noteId);
 
-  await databases.deleteDocument(dbId, tableId, noteId);
+  await databases.deleteRow(dbId, tableId, noteId);
   return { success: true };
 }
 
@@ -611,7 +611,7 @@ export async function consumeEphemeralNoteSecure(params: any, jwt?: string) {
   // Parallel Fetch: Actor identity + Note document
   const [actor, doc] = await Promise.all([
     getActor(validatedJwt),
-    databases.getDocument(dbId, tableId, noteId).catch(() => null)
+    databases.getRow(dbId, tableId, noteId).catch(() => null)
   ]);
 
   if (!actor?.$id) {
@@ -648,7 +648,7 @@ export async function consumeEphemeralNoteSecure(params: any, jwt?: string) {
     await storage.deleteFile(sendObj.bucketId, sendObj.fileId).catch(() => undefined);
   }
 
-  await databases.deleteDocument(dbId, tableId, noteId);
+  await databases.deleteRow(dbId, tableId, noteId);
   return { success: true };
 }
 
@@ -719,7 +719,7 @@ export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
   if (!actor?.$id) throw new Error('Unauthorized');
 
   if (!Array.isArray(userIds) || userIds.length === 0) {
-    return { documents: [] };
+    return { rows: [] };
   }
 
   // Limit to 100 users per request for safety
@@ -729,7 +729,7 @@ export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
   const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
-  const res = await databases.listDocuments(
+  const res = await databases.listRows(
     dbId,
     tableId,
     [
@@ -739,7 +739,7 @@ export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
     ]
   );
 
-  const publicProfiles = res.documents.map(doc => ({
+  const publicProfiles = res.rows.map(doc => ({
     $id: doc.$id,
     name: doc.displayName || doc.username,
     displayName: doc.displayName || null,
@@ -750,7 +750,7 @@ export async function getSharedProfilesSecure(userIds: string[], jwt?: string) {
     publicKey: doc.publicKey || null,
   }));
 
-  return { documents: publicProfiles };
+  return { rows: publicProfiles };
 }
 
 /**
@@ -813,7 +813,7 @@ export async function getPublicNoteCommentsSecure(noteId: string) {
   if (!note) throw new Error('Note not found or not public');
 
   const { databases } = createSystemClient();
-  const res = await databases.listDocuments(
+  const res = await databases.listRows(
     APPWRITE_CONFIG.DATABASES.NOTE,
     APPWRITE_CONFIG.TABLES.NOTE.COMMENTS,
     [
@@ -822,7 +822,7 @@ export async function getPublicNoteCommentsSecure(noteId: string) {
       Query.limit(200)
     ]
   );
-  return { rows: res.documents };
+  return { rows: res.rows };
 }
 
 /**
@@ -834,7 +834,7 @@ export async function getPublicNoteReactionsSecure(noteId: string, targetId?: st
   if (!note) throw new Error('Note not found or not public');
 
   const { databases } = createSystemClient();
-  const res = await databases.listDocuments(
+  const res = await databases.listRows(
     APPWRITE_CONFIG.DATABASES.NOTE,
     APPWRITE_CONFIG.TABLES.NOTE.REACTIONS,
     [
@@ -844,7 +844,7 @@ export async function getPublicNoteReactionsSecure(noteId: string, targetId?: st
       Query.limit(500)
     ]
   );
-  return { rows: res.documents };
+  return { rows: res.rows };
 }
 
 /**
@@ -859,20 +859,20 @@ export async function getReferralStatusSecure(jwt?: string) {
   const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
   
   const [profiles, events] = await Promise.all([
-    databases.listDocuments(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
+    databases.listRows(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
       Query.equal('userId', actor.$id),
       Query.limit(1)
     ]),
-    databases.listDocuments(dbId, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, [
+    databases.listRows(dbId, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, [
       Query.equal('userId', actor.$id),
       Query.equal('type', 'referral'),
       Query.limit(1)
     ]),
   ]);
-  const profile = profiles.documents[0] || null;
-  const referralEvent = events.documents[0] || null;
+  const profile = profiles.rows[0] || null;
+  const referralEvent = events.rows[0] || null;
 
-  const referrerProfile = referralEvent?.actorId ? await databases.getDocument(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, referralEvent.actorId).catch(() => null) : null;
+  const referrerProfile = referralEvent?.actorId ? await databases.getRow(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, referralEvent.actorId).catch(() => null) : null;
 
   const username = profile?.username || (actor as any).prefs?.username || null;
   const referralLink = username ? `https://www.kylrix.space/referral/${encodeURIComponent(username)}` : null;
@@ -907,7 +907,7 @@ export async function applyReferralSecure(params: { referrerUsername?: string; r
   const eventsTableId = APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS;
 
   // Check existing
-  const existing = await databases.listDocuments(dbId, eventsTableId, [
+  const existing = await databases.listRows(dbId, eventsTableId, [
     Query.equal('userId', actor.$id),
     Query.equal('type', 'referral'),
     Query.limit(1)
@@ -916,13 +916,13 @@ export async function applyReferralSecure(params: { referrerUsername?: string; r
 
   let referrerProfile = null;
   if (params.referrerUserId) {
-    referrerProfile = await databases.getDocument(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, params.referrerUserId).catch(() => null);
+    referrerProfile = await databases.getRow(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, params.referrerUserId).catch(() => null);
   } else if (params.referrerUsername) {
-    const res = await databases.listDocuments(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
+    const res = await databases.listRows(dbId, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [
       Query.equal('username', params.referrerUsername),
       Query.limit(1)
     ]);
-    referrerProfile = res.documents[0] || null;
+    referrerProfile = res.rows[0] || null;
   }
 
   if (!referrerProfile) throw new Error('Referrer not found');
@@ -930,7 +930,7 @@ export async function applyReferralSecure(params: { referrerUsername?: string; r
 
   const referrerId = referrerProfile.userId || referrerProfile.$id;
 
-  const event = await databases.createDocument(dbId, eventsTableId, ID.unique(), {
+  const event = await databases.createRow(dbId, eventsTableId, ID.unique(), {
     userId: actor.$id,
     type: 'referral',
     actorId: referrerId,
@@ -946,7 +946,7 @@ export async function applyReferralSecure(params: { referrerUsername?: string; r
   }, [Permission.read(Role.user(actor.$id))]);
 
   // Reward referrer
-  await databases.createDocument(dbId, eventsTableId, ID.unique(), {
+  await databases.createRow(dbId, eventsTableId, ID.unique(), {
     userId: referrerId,
     type: 'reputation',
     actorId: actor.$id,
@@ -976,12 +976,12 @@ export async function getReferralProfileSecure(username: string) {
   const dbId = APPWRITE_CONFIG.DATABASES.CHAT;
   const tableId = APPWRITE_CONFIG.TABLES.CHAT.PROFILES;
 
-  const res = await databases.listDocuments(dbId, tableId, [
+  const res = await databases.listRows(dbId, tableId, [
     Query.equal('username', cleaned),
     Query.limit(1)
   ]);
 
-  const profile = res.documents[0] || null;
+  const profile = res.rows[0] || null;
   if (!profile || !profile.username) throw new Error('Profile not found');
 
   return {
@@ -1020,51 +1020,51 @@ export async function executeMasterPurgeSecure(jwt?: string) {
     profilesRes
   ] = await Promise.all([
     // 1. Vault
-    databases.listDocuments(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, [Query.equal('userId', userId), Query.limit(1000)]),
-    databases.listDocuments(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', [Query.equal('userId', userId), Query.limit(1000)]).catch(() => ({ documents: [] })),
+    databases.listRows(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, [Query.equal('userId', userId), Query.limit(1000)]),
+    databases.listRows(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', [Query.equal('userId', userId), Query.limit(1000)]).catch(() => ({ rows: [] })),
     // 2. Connect
-    databases.listDocuments(chatDb, 'conversationMembers', [Query.equal('userId', userId), Query.limit(1000)]),
+    databases.listRows(chatDb, 'conversationMembers', [Query.equal('userId', userId), Query.limit(1000)]),
     // 3. Keychain
-    databases.listDocuments(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, [Query.equal('userId', userId), Query.limit(100)]),
-    databases.listDocuments(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, [
+    databases.listRows(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, [Query.equal('userId', userId), Query.limit(100)]),
+    databases.listRows(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, [
         Query.or([Query.equal('grantee', userId), Query.contains('metadata', userId), Query.equal('resourceId', userId)]),
         Query.limit(1000)
     ]),
     // 4. Profiles
-    databases.listDocuments(chatDb, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [Query.equal('userId', userId), Query.limit(1)])
+    databases.listRows(chatDb, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, [Query.equal('userId', userId), Query.limit(1)])
   ]);
 
   // Parallel Execution Phase: Trigger all deletions and updates concurrently
   const purgeActions: Promise<any>[] = [];
 
   // 1. Purge Vault
-  credsRes.documents.forEach((c: any) => purgeActions.push(databases.deleteDocument(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, c.$id)));
-  totpsRes.documents.forEach((t: any) => purgeActions.push(databases.deleteDocument(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', t.$id)));
+  credsRes.rows.forEach((c: any) => purgeActions.push(databases.deleteRow(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN, c.$id)));
+  totpsRes.rows.forEach((t: any) => purgeActions.push(databases.deleteRow(vaultDb, APPWRITE_CONFIG.TABLES.VAULT.TOTP_SECRETS || 'totpSecrets', t.$id)));
 
   // 2. Purge Connect (Direct Messages)
-  const conversationIds = Array.from(new Set(memberRowsRes.documents.map((row: any) => row.conversationId).filter(Boolean)));
+  const conversationIds = Array.from(new Set(memberRowsRes.rows.map((row: any) => row.conversationId).filter(Boolean)));
   if (conversationIds.length > 0) {
     // This is still a bit complex for a flat Promise.all, let's keep it sequential or sub-parallel
     purgeActions.push((async () => {
-        const convsRes = await databases.listDocuments(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, [Query.equal('$id', conversationIds), Query.equal('type', 'direct')]);
+        const convsRes = await databases.listRows(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, [Query.equal('$id', conversationIds), Query.equal('type', 'direct')]);
         const subActions: Promise<any>[] = [];
-        for (const conv of convsRes.documents) {
+        for (const conv of convsRes.rows) {
           const isSelfChat = conv.participants.every((p: string) => p === userId);
-          const msgsRes = await databases.listDocuments(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, [Query.equal('conversationId', conv.$id), Query.equal('senderId', userId), Query.limit(1000)]);
-          msgsRes.documents.forEach(m => subActions.push(databases.deleteDocument(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, m.$id)));
-          if (isSelfChat) subActions.push(databases.deleteDocument(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, conv.$id));
+          const msgsRes = await databases.listRows(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, [Query.equal('conversationId', conv.$id), Query.equal('senderId', userId), Query.limit(1000)]);
+          msgsRes.rows.forEach(m => subActions.push(databases.deleteRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.MESSAGES, m.$id)));
+          if (isSelfChat) subActions.push(databases.deleteRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.CONVERSATIONS, conv.$id));
         }
         await Promise.all(subActions);
     })());
   }
 
   // 3. Purge Keychain
-  identitiesRes.documents.forEach(id => purgeActions.push(databases.deleteDocument(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, id.$id)));
-  mappingsRes.documents.forEach(m => purgeActions.push(databases.deleteDocument(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, m.$id)));
+  identitiesRes.rows.forEach(id => purgeActions.push(databases.deleteRow(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.IDENTITIES, id.$id)));
+  mappingsRes.rows.forEach(m => purgeActions.push(databases.deleteRow(passwordDb, APPWRITE_CONFIG.TABLES.PASSWORD_MANAGER.KEY_MAPPING, m.$id)));
 
   // 4. Reset Profiles
   if (profilesRes.total > 0) {
-    purgeActions.push(databases.updateDocument(chatDb, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, profilesRes.documents[0].$id, { publicKey: null, updatedAt: new Date().toISOString() }));
+    purgeActions.push(databases.updateRow(chatDb, APPWRITE_CONFIG.TABLES.CHAT.PROFILES, profilesRes.rows[0].$id, { publicKey: null, updatedAt: new Date().toISOString() }));
   }
 
   // 5. Update User Prefs
@@ -1170,7 +1170,7 @@ export async function createReportSecure(params: any, jwt?: string) {
       }),
     };
 
-    const row = await databases.createDocument(dbId, tableId, ID.unique(), payload, [Permission.read(Role.user(actor.$id))]);
+    const row = await databases.createRow(dbId, tableId, ID.unique(), payload, [Permission.read(Role.user(actor.$id))]);
     created.push(row);
   }
 
@@ -1192,7 +1192,7 @@ export async function listReportsSecure(statusFilter?: string, jwt?: string) {
   ];
   if (statusFilter) queries.push(Query.equal('status', statusFilter.toLowerCase()));
 
-  const result = await databases.listDocuments(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, queries);
+  const result = await databases.listRows(APPWRITE_CONFIG.DATABASES.CHAT, APPWRITE_CONFIG.TABLES.CHAT.ACCOUNT_EVENTS, queries);
   return { success: true, reports: result.rows };
 }
 
@@ -1227,7 +1227,7 @@ export async function createAccountEventSecure(params: any, jwt?: string) {
       metadata: typeof params.metadata === 'string' ? params.metadata : JSON.stringify(params.metadata || {}),
     };
 
-    const row = await databases.createDocument(dbId, tableId, ID.unique(), payload, [Permission.read(Role.user(targetUserId))]);
+    const row = await databases.createRow(dbId, tableId, ID.unique(), payload, [Permission.read(Role.user(targetUserId))]);
     created.push(row);
   }
 
@@ -1326,13 +1326,13 @@ export async function syncNotesDeltaSecure(localManifest: { id: string; updatedA
 
   // 1. Fetch all server-side note IDs and their updatedAt timestamps for this user
   // This is a lightweight metadata-only fetch
-  const serverRows = await databases.listDocuments(dbId, tableId, [
+  const serverRows = await databases.listRows(dbId, tableId, [
     Query.equal('userId', actor.$id),
     Query.select(['$id', '$updatedAt']),
     Query.limit(5000)
   ]);
 
-  const serverManifest = new Map(serverRows.documents.map(d => [d.$id, d.$updatedAt]));
+  const serverManifest = new Map(serverRows.rows.map(d => [d.$id, d.$updatedAt]));
   const localMap = new Map(localManifest.map(m => [m.id, m.updatedAt]));
 
   const toFetch: string[] = [];
@@ -1360,11 +1360,11 @@ export async function syncNotesDeltaSecure(localManifest: { id: string; updatedA
     const CHUNK_SIZE = 100;
     for (let i = 0; i < toFetch.length; i += CHUNK_SIZE) {
         const chunk = toFetch.slice(i, i + CHUNK_SIZE);
-        const res = await databases.listDocuments(dbId, tableId, [
+        const res = await databases.listRows(dbId, tableId, [
             Query.equal('$id', chunk),
             Query.limit(CHUNK_SIZE)
         ]);
-        patches.push(...res.documents);
+        patches.push(...res.rows);
     }
   }
 
@@ -1399,9 +1399,9 @@ export async function pullNotesDeltaSecure(params: { lastCheckpoint: string | nu
     queries.push(Query.greaterThan('$updatedAt', params.lastCheckpoint));
   }
 
-  const res = await databases.listDocuments(dbId, tableId, queries);
+  const res = await databases.listRows(dbId, tableId, queries);
 
-  const documents = res.documents.map(doc => ({
+  const documents = res.rows.map(doc => ({
     id: doc.$id,
     title: doc.title,
     content: doc.content,
@@ -1438,7 +1438,7 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
     const noteId = newDocumentState.id;
 
     // 1. Fetch current master state
-    const currentMaster = await databases.getDocument(dbId, tableId, noteId).catch(() => null);
+    const currentMaster = await databases.getRow(dbId, tableId, noteId).catch(() => null);
 
     if (currentMaster) {
       // 2. Authorization: Verify ownership
@@ -1474,7 +1474,7 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
       }
 
       // 4. No conflict: Update
-      await databases.updateDocument(dbId, tableId, noteId, {
+      await databases.updateRow(dbId, tableId, noteId, {
         title: newDocumentState.title,
         content: newDocumentState.content,
         metadata: newDocumentState.metadata,
@@ -1482,7 +1482,7 @@ export async function pushNotesDeltaSecure(rows: any[], jwt?: string) {
       });
     } else {
       // 5. New document: Create
-      await databases.createDocument(dbId, tableId, noteId || ID.unique(), {
+      await databases.createRow(dbId, tableId, noteId || ID.unique(), {
         title: newDocumentState.title,
         content: newDocumentState.content,
         userId: actor.$id,
@@ -5343,7 +5343,7 @@ export async function listRowsSecure(databaseId: string, tableId: string, querie
     return JSON.parse(JSON.stringify({
         total: res.total,
         rows: res.rows,
-        documents: res.rows
+        rows: res.rows
     }));
   } catch (error: any) {
     console.error('[listRowsSecure] Failed:', error?.message);
@@ -6814,7 +6814,7 @@ export async function approveProjectJoinRequestSecure(projectId: string, targetU
 
   const { databases } = createSystemClient();
   const permissionsList = Array.from(newPermissions);
-  await databases.updateDocument(
+  await databases.updateRow(
     APPWRITE_CONFIG.DATABASES.CHAT,
     'projects',
     projectId,

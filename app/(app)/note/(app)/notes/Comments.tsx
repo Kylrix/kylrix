@@ -837,7 +837,7 @@ export default function CommentsSection({ noteId, decryptionKey }: CommentsProps
           console.warn('Comments fetch: SDK profile resolution failed, trying shared API fallback');
           const { getSharedProfilesSecure } = await import('@/lib/actions/secure-ops');
           const profilesRes = await getSharedProfilesSecure(uniqueUserIds);
-          users = (profilesRes.documents as any) || [];
+          users = (profilesRes.rows as any) || [];
         }
 
         await normalizeAndStoreUsers(users);

@@ -52,20 +52,20 @@ export const APPWRITE_TABLE_ID_NOTETAGS = APPWRITE_CONFIG.TABLES.NOTE.NOTE_TAGS;
 
 // Ecosystem: Kylrix Flow
 const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
-export const FLOW_COLLECTION_ID_TASKS = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
-export const FLOW_COLLECTION_ID_EVENTS = APPWRITE_CONFIG.TABLES.FLOW.EVENTS;
+export const FLOW_TABLE_ID_TASKS = APPWRITE_CONFIG.TABLES.FLOW.TASKS;
+export const FLOW_TABLE_ID_EVENTS = APPWRITE_CONFIG.TABLES.FLOW.EVENTS;
 
 // Ecosystem: Kylrix Vault
 export const KEEP_DATABASE_ID = APPWRITE_CONFIG.DATABASES.VAULT;
-export const KEEP_COLLECTION_ID_CREDENTIALS = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
-export const KEEP_COLLECTION_ID_KEYCHAIN = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
+export const KEEP_TABLE_ID_CREDENTIALS = APPWRITE_CONFIG.TABLES.VAULT.CREDENTIALS;
+export const KEEP_TABLE_ID_KEYCHAIN = APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN;
 
 export const APPWRITE_BUCKET_PROFILE_PICTURES = APPWRITE_CONFIG.BUCKETS.PROFILE_PICTURES;
 export const APPWRITE_BUCKET_NOTES_ATTACHMENTS = APPWRITE_CONFIG.BUCKETS.NOTES_ATTACHMENTS;
 export const APPWRITE_BUCKET_EXTENSION_ASSETS = APPWRITE_CONFIG.BUCKETS.EXTENSION_ASSETS;
 export const APPWRITE_BUCKET_BACKUPS = APPWRITE_CONFIG.BUCKETS.BACKUPS;
 export const APPWRITE_BUCKET_TEMP_UPLOADS = APPWRITE_CONFIG.BUCKETS.TEMP_UPLOADS;
-export const CONNECT_COLLECTION_ID_MOMENTS = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
+export const CONNECT_TABLE_ID_MOMENTS = APPWRITE_CONFIG.TABLES.CHAT.MOMENTS;
 
 export { client, account, databases, storage, functions, ID, Query, Permission, Role, OAuthProvider, realtime };
 
@@ -1781,12 +1781,12 @@ export async function deleteActivityLog(activityLogId: string) {
 export async function listActivityLogs() {
   const user = await getCurrentUser();
   if (!user || !user.$id) {
-    return { total: 0, rows: [], documents: [] };
+    return { total: 0, rows: [], rows: [] };
   }
   const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, [Query.equal('userId', user.$id)]);
   return {
       ...res,
-      documents: res.rows // Ensure legacy alias is present
+      rows: res.rows // Ensure legacy alias is present
   };
 }
 
@@ -1902,7 +1902,7 @@ export async function createTaskFromNote(note: Notes) {
   // Table schema: title, description, status, priority, userId, parentId, etc.
   const taskDoc = await databases.createRow(
     FLOW_DATABASE_ID,
-    FLOW_COLLECTION_ID_TASKS,
+    FLOW_TABLE_ID_TASKS,
     taskId,
     {
       title: note.title || 'Task from Note',
@@ -2673,7 +2673,7 @@ export async function removeAttachmentFromNote(noteId: string, attachmentId: str
 
 // ...add similar helpers for other buckets as needed...
 
-// --- NEW ATTACHMENTS COLLECTION MODEL ---
+// --- NEW ATTACHMENTS TABLE MODEL ---
 // Progressive enhancement: supports richer metadata beyond embedded JSON strings.
 // If NEXT_PUBLIC_APPWRITE_TABLE_ID_ATTACHMENTS is set, we will dual-write to that table.
 
@@ -3090,7 +3090,7 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
 
   return {
     rows: filteredNotes,
-    documents: filteredNotes, // Legacy alias
+    rows: filteredNotes, // Legacy alias
     total: typeof res.total === 'number' ? res.total : filteredNotes.length,
     nextCursor,
     hasMore,
@@ -3763,13 +3763,13 @@ export async function setAnyoneCanEdit(noteId: string, enabled: boolean): Promis
 
 // Ecosystem Helpers
 export async function listFlowTasks(queries: any[] = []) {
-  return databases.listRows(FLOW_DATABASE_ID, FLOW_COLLECTION_ID_TASKS, queries);
+  return databases.listRows(FLOW_DATABASE_ID, FLOW_TABLE_ID_TASKS, queries);
 }
 
 export async function listFlowEvents(queries: any[] = []) {
-  return databases.listRows(FLOW_DATABASE_ID, FLOW_COLLECTION_ID_EVENTS, queries);
+  return databases.listRows(FLOW_DATABASE_ID, FLOW_TABLE_ID_EVENTS, queries);
 }
 
 export async function listKeepCredentials(queries: any[] = []) {
-  return databases.listRows(KEEP_DATABASE_ID, KEEP_COLLECTION_ID_CREDENTIALS, queries);
+  return databases.listRows(KEEP_DATABASE_ID, KEEP_TABLE_ID_CREDENTIALS, queries);
 }

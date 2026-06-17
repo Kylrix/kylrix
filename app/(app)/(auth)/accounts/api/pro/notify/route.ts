@@ -76,7 +76,7 @@ async function createGiftCouponRow(params: {
     }),
   };
 
-  return await databases.createDocument(
+  return await databases.createRow(
     CHAT_DATABASE_ID,
     ACCOUNT_EVENTS_COLLECTION_ID,
     ID.unique(),
@@ -99,7 +99,7 @@ async function recordCompletedTransactionLedger(params: {
   try {
     let existingTx = null;
     try {
-      existingTx = await databases.getDocument(DATABASE_ID, 'billing_transactions', paymentId);
+      existingTx = await databases.getRow(DATABASE_ID, 'billing_transactions', paymentId);
     } catch {
       // Ignore not found
     }
@@ -123,7 +123,7 @@ async function recordCompletedTransactionLedger(params: {
     };
 
     if (existingTx) {
-      await databases.updateDocument(
+      await databases.updateRow(
         DATABASE_ID,
         'billing_transactions',
         existingTx.$id,
@@ -136,7 +136,7 @@ async function recordCompletedTransactionLedger(params: {
         }
       );
     } else {
-      await databases.createDocument(
+      await databases.createRow(
         DATABASE_ID,
         'billing_transactions',
         paymentId,
@@ -160,7 +160,7 @@ async function logBillingWebhookCall(params: {
 }) {
   try {
     const { databases } = createSystemClient();
-    await databases.createDocument(
+    await databases.createRow(
       DATABASE_ID,
       'billing_webhook_logs',
       ID.unique(),
@@ -419,16 +419,16 @@ export async function POST(req: Request) {
       updatedAt: new Date().toISOString(),
     };
 
-    const subscription = await databases.createDocument(DATABASE_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
+    const subscription = await databases.createRow(DATABASE_ID, SUB_COLLECTION_ID, ID.unique(), subData, [
       Permission.read(Role.user(meta.payerUserId))]);
 
     if (meta.couponId) {
       try {
-        const coupon = await databases.getDocument(CHAT_DATABASE_ID, ACCOUNT_EVENTS_TABLE_ID, meta.couponId).catch(() => null);
+        const coupon = await databases.getRow(CHAT_DATABASE_ID, ACCOUNT_EVENTS_TABLE_ID, meta.couponId).catch(() => null);
         if (coupon && String(coupon.type || '').toLowerCase() === 'coupon') {
           const couponMetadata = parseMetadata(coupon.metadata);
           const couponDetails = parseMetadata(couponMetadata.coupon);
-          await databases.updateDocument(CHAT_DATABASE_ID, ACCOUNT_EVENTS_TABLE_ID, meta.couponId, {
+          await databases.updateRow(CHAT_DATABASE_ID, ACCOUNT_EVENTS_TABLE_ID, meta.couponId, {
             status: 'applied',
             relatedUserId: meta.payerUserId,
             metadata: JSON.stringify({
@@ -461,11 +461,11 @@ export async function POST(req: Request) {
     }
 
     try {
-      const profileRes = await databases.listDocuments(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, [
+      const profileRes = await databases.listRows(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, [
         Query.equal('userId', meta.payerUserId)]);
 
       if (profileRes.total > 0) {
-        await databases.updateDocument(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
+        await databases.updateRow(CHAT_DATABASE_ID, PROFILES_COLLECTION_ID, profileRes.rows[0].$id, {
           tier: planTier,
         });
       }

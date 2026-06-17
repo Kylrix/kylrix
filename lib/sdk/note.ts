@@ -10,7 +10,7 @@ type NoteSdk = {
   ) => Promise<unknown>;
   getRow: <T = unknown>(databaseId: string, tableId: string, rowId: string) => Promise<T>;
   updateRow: (databaseId: string, tableId: string, rowId: string, data: Record<string, unknown>) => Promise<unknown>;
-  listRows: <T = unknown>(databaseId: string, tableId: string, queries?: string[]) => Promise<{ documents: T[] } & Record<string, unknown>>;
+  listRows: <T = unknown>(databaseId: string, tableId: string, queries?: string[]) => Promise<{ rows: T[] } & Record<string, unknown>>;
 };
 
 /**

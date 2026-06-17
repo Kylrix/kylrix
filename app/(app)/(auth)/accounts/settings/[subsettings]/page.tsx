@@ -305,7 +305,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
       try {
         const [appPrefs, sessions] = await Promise.all([
           account.getPrefs().catch(() => ({})),
-          account.listSessions().catch(() => ({ documents: [] }))
+          account.listSessions().catch(() => ({ rows: [] }))
         ]);
         
         const exportData = {
@@ -315,7 +315,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
             name: user.name,
           },
           preferences: appPrefs,
-          sessions: (sessions as any).documents || [],
+          sessions: (sessions as any).rows || [],
           exportDate: new Date().toISOString(),
         };
         
