@@ -655,7 +655,7 @@ export function ShareNoteModal({ isOpen, onOpenChange, noteId, noteTitle }: Shar
                     <Select
                       size="small"
                       value={user.permission}
-                      onChange={ (e) => handleUpdatePermission(user, e.target.value as 'read' | 'write' | 'admin')}
+                      onChange={ (e: any) => handleUpdatePermission(user, e.target.value as 'read' | 'write' | 'admin')}
                       disabled={updatingCollab === user.collaborationId || user.collaborationId === 'pending'}
                       sx={{
                         height: 32,
