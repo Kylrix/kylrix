@@ -1171,7 +1171,7 @@ export async function getTag(tagId: string): Promise<Tags> {
   return hydrateTagMetadata(doc as unknown as Tags);
 }
 
-export async function updateTag(tagId: string, data: Partial<Tags>, jwt?: string) {
+export async function updateTag(tagId: string, data: Partial<Tags & { isPublic?: boolean; isGuest?: boolean }>, jwt?: string) {
   if (typeof window !== 'undefined') {
     const { updateRow } = await import('@/lib/actions/client-ops');
     const existing = await getTag(tagId);

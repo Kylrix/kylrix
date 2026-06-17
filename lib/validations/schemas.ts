@@ -32,7 +32,7 @@ export const MutatePermissionsSchema = z.object({
 export const CreateRowSchema = z.object({
   databaseId: DatabaseIDSchema,
   tableId: TableIDSchema,
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
   permissions: z.array(z.string()).optional(),
 });
 
@@ -40,7 +40,7 @@ export const UpdateRowSchema = z.object({
   databaseId: DatabaseIDSchema,
   tableId: TableIDSchema,
   rowId: IDSchema,
-  data: z.record(z.any()),
+  data: z.record(z.string(), z.any()),
   permissions: z.array(z.string()).optional(),
 });
 
@@ -137,7 +137,7 @@ export const TokenOperationSchema = z.object({
   operation: z.enum(['mint', 'transfer', 'fine', 'claim']),
   userId: IDSchema,
   amount: z.number().positive(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   jwt: JWTSchema,
 });
 
@@ -145,7 +145,7 @@ export const TelemetrySchema = z.object({
   action: z.string(),
   app: z.string(),
   niche: z.string(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export const EphemeralNoteSchema = z.object({
