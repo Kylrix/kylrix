@@ -276,7 +276,7 @@ export default function EmailOrchestrator() {
               <span className="text-[10px] text-white/40 font-bold font-mono uppercase tracking-wider block">Select Template</span>
               <select
                 value={template}
-                onChange={(e) => setTemplate(e.target.value)}
+                onChange={(e) => setTemplate(e.target.value as EmailTemplateId)}
                 className="w-full bg-[#0A0908] px-4 py-3 rounded-xl border border-white/10 text-white text-sm font-semibold focus:border-[#6366F1] focus:ring-4 focus:ring-[#6366F1]/10 focus:outline-none cursor-pointer transition-all duration-200 animate-fadeIn"
               >
                 {EMAIL_TEMPLATES.map(t => (
