@@ -203,8 +203,8 @@ export default function FocusMode() {
         <IconButton 
           onClick={toggleFullscreen}
           sx={{ 
-            bgcolor: theme.palette.action.hover,
-            '&:hover': { bgcolor: theme.palette.action.selected },
+            bgcolor: 'rgba(255,255,255,0.05)',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
           }}
         >
           {isFullscreen ? <FullscreenExit /> : <Fullscreen />}
@@ -247,7 +247,7 @@ export default function FocusMode() {
           size={280}
           thickness={3}
           sx={{
-            color: isActive && !isPaused ? '#10B981' : theme.palette.grey[400],
+            color: isActive && !isPaused ? '#10B981' : 'rgba(255,255,255,0.2)',
             position: 'absolute',
             left: 0,
             strokeLinecap: 'round',
@@ -347,7 +347,7 @@ export default function FocusMode() {
             </Box>
             <IconButton
               color={selectedTask.status === 'done' ? 'success' : 'default'}
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 updateTask(selectedTask.id, {
                   status: selectedTask.status === 'done' ? 'todo' : 'done',

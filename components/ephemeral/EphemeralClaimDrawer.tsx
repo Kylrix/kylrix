@@ -317,7 +317,7 @@ export function EphemeralClaimDrawer({ open, onClose, target, onConsumed }: Prop
             type="password"
             label="Master password (Vault)"
             value={masterPass}
-            onChange={(e) => setMasterPass(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMasterPass(e.target.value)}
             sx={{
               mb: 2,
               '& .MuiOutlinedInput-root': { bgcolor: alpha('#fff', 0.03), borderRadius: 2 },

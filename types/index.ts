@@ -343,6 +343,7 @@ export interface Event {
   attendees: string[]; // User IDs
   isPublic: boolean;
   isPinned: boolean;
+  isGuest?: boolean;
   creatorId: string;
   createdAt: Date;
   updatedAt: Date;

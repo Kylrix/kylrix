@@ -164,7 +164,7 @@ function SortableField({
                     variant="standard"
                     placeholder="Question Label"
                     value={field.label}
-                    onChange={(e) => updateField(fIdx, { label: e.target.value })}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(fIdx, { label: e.target.value })}
                     InputProps={{ 
                       disableUnderline: true, 
                       sx: { 
@@ -234,7 +234,7 @@ function SortableField({
                     <Switch 
                         size="small" 
                         checked={field.required} 
-                        onChange={(e) => updateField(fIdx, { required: e.target.checked })} 
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(fIdx, { required: e.target.checked })} 
                     />
                 }
                 label={<Typography variant="caption" sx={{ fontWeight: 800, opacity: 0.6 }}>REQUIRED</Typography>}
@@ -277,7 +277,7 @@ function SortableField({
                                 size="small"
                                 variant="standard"
                                 value={opt}
-                                onChange={(e) => updateOption(fIdx, oIdx, e.target.value)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateOption(fIdx, oIdx, e.target.value)}
                                 InputProps={{ 
                                   disableUnderline: true, 
                                   sx: { 
@@ -684,7 +684,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
             fullWidth
             variant="standard"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)}
             placeholder="Form Title..."
             InputProps={{ 
               disableUnderline: true, 
@@ -770,7 +770,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                   multiline
                   rows={2}
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDescription(e.target.value)}
                   placeholder="Briefly describe the purpose of this form..."
                   InputProps={{ 
                     disableUnderline: true, 
@@ -1125,7 +1125,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                 control={
                   <Switch 
                     checked={!!field.required} 
-                    onChange={(e) => updateField(activeSettingsFieldIndex, { required: e.target.checked })} 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(activeSettingsFieldIndex, { required: e.target.checked })} 
                   />
                 }
                 label={<Typography sx={{ fontWeight: 800, fontSize: '0.9rem', color: 'white' }}>Required Field</Typography>}
@@ -1144,7 +1144,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                       size="small"
                       variant="filled"
                       value={field.validation?.minLength || ''}
-                      onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(activeSettingsFieldIndex, { 
                         validation: { ...field.validation, minLength: e.target.value } 
                       })}
                       InputProps={{ 
@@ -1167,7 +1167,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                       size="small"
                       variant="filled"
                       value={field.validation?.maxLength || ''}
-                      onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(activeSettingsFieldIndex, { 
                         validation: { ...field.validation, maxLength: e.target.value } 
                       })}
                       InputProps={{ 
@@ -1223,7 +1223,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                       size="small"
                       variant="filled"
                       value={field.validation?.min || ''}
-                      onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(activeSettingsFieldIndex, { 
                         validation: { ...field.validation, min: e.target.value } 
                       })}
                       InputProps={{ 
@@ -1246,7 +1246,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                       size="small"
                       variant="filled"
                       value={field.validation?.max || ''}
-                      onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(activeSettingsFieldIndex, { 
                         validation: { ...field.validation, max: e.target.value } 
                       })}
                       InputProps={{ 
