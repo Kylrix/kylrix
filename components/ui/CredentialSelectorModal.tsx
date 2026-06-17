@@ -17,7 +17,7 @@ import {
 import { 
   Search as SearchIcon,
   VpnKey as KeyIcon,
-  Language as WorldIcon,
+  Globe as WorldIcon,
   CreditCard as CardIcon,
   Security as SecurityIcon,
   Close as CloseIcon
@@ -118,7 +118,7 @@ export function CredentialSelectorModal({ isOpen, onClose, onSelect }: Credentia
           size="small"
           placeholder="Search credentials..."
           value={search}
-          onChange={ (e) => setSearch(e.target.value)}
+          onChange={ (e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
           sx={{
             mb: 2,
             '& .ob-input-root': {

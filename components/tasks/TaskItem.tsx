@@ -227,7 +227,16 @@ const contextMenuItems = useMemo(() => ([
                         priority: task.priority,
                         projectId: task.projectId,
                         labels: task.labels,
-                        dueDate: task.dueDate
+                        dueDate: task.dueDate,
+                        comments: [],
+                        isPinned: false,
+                        isArchived: false,
+                        attachments: [],
+                        reminders: [],
+                        timeEntries: [],
+                        subtasks: [],
+                        creatorId: task.creatorId,
+                        assigneeIds: task.assigneeIds || []
                     });
                 }
             },
@@ -259,26 +268,23 @@ const contextMenuItems = useMemo(() => ([
             }
         })
     },
-] as SubmenuItem[]), [accessControlItems, task.id, task.title, user?.name, openUnified, openCallLauncher, task.creatorId, task.assigneeIds, tagMenuOptions, toggleTaskTag, addTask, updateTask, selectTask, openSecondarySidebar, deleteTask]);
-              await deleteTask(task.id);
-]
-            }
-        })
-    }
-  ], [
-    accessControlItems,
-    task,
-    tagMenuOptions,
-    toggleTaskTag,
-    openUnified,
-    user?.name,
-    openCallLauncher,
-    addTask,
-    updateTask,
-    selectTask,
-    openSecondarySidebar,
-    deleteTask,
-  ]);
+] as SubmenuItem[]), [
+    accessControlItems, 
+    task.id, 
+    task.title, 
+    user?.name, 
+    openUnified, 
+    openCallLauncher, 
+    task.creatorId, 
+    task.assigneeIds, 
+    tagMenuOptions, 
+    toggleTaskTag, 
+    addTask, 
+    updateTask, 
+    selectTask, 
+    openSecondarySidebar, 
+    deleteTask
+]);
 
   const handleContextMenu = (event: React.MouseEvent) => {
     event.preventDefault();
