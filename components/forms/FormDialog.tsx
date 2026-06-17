@@ -1191,7 +1191,7 @@ export default function FormDialog({ open, onClose, form, initialDraft, onSaved 
                     variant="filled"
                     placeholder="e.g., ^[a-zA-Z]+$"
                     value={field.validation?.pattern || ''}
-                    onChange={(e) => updateField(activeSettingsFieldIndex, { 
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => updateField(activeSettingsFieldIndex, { 
                       validation: { ...field.validation, pattern: e.target.value } 
                     })}
                     InputProps={{ 
