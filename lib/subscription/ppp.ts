@@ -38,7 +38,7 @@ export const calculateSubscriptionPrice = (
   // Fixed base price
   let basePrice = baseProPrice;
   
-  if (String(tier).toUpperCase() === 'TEAMS') {
+  if (String(tier).toUpperCase().startsWith('TEAMS')) {
     basePrice = basePrice * GLOBAL_SUBSCRIPTION_CONFIG.tier_multipliers.teams;
   }
   

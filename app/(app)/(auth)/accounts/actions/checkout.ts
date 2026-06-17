@@ -1,10 +1,10 @@
 'use server';
 
-import { ID, Permission, Query, Role } from 'node-appwrite';
+import { Query } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/billing';
+import { createBillingCheckoutSessionAction } from './billing';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 
@@ -21,6 +21,13 @@ export interface CryptoInvoiceResponse {
   months?: number;
 }
 
+function resolveBillingBaseUrl(baseUrl?: string) {
+  const raw = String(baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.space')
+    .trim()
+    .replace(/\/+$/, '');
+  return raw.endsWith('/accounts') ? raw : `${raw}/accounts`;
+}
+
 export async function createCryptoInvoiceAction(input: {
   ticker?: string;
   planId: string;
@@ -30,80 +37,30 @@ export async function createCryptoInvoiceAction(input: {
   baseUrl?: string;
 }): Promise<CryptoInvoiceResponse> {
   const { planId, months, countryCode, jwt, baseUrl } = input;
-  
+
   try {
-    const user = await getAuthenticatedUserForBillingAction({ jwt });
-    if (!user) {
-      return { success: false, error: 'Authentication required' };
-    }
-
-    const blockbeeApiKey = process.env.BLOCKBEE_API;
-    if (!blockbeeApiKey) {
-      return { success: false, error: 'Payment gateway configuration is missing' };
-    }
-
-    const normalizedMonths = Math.max(1, Math.floor(months || 1));
-    const usdAmount = calculateSubscriptionPrice(planId, countryCode, 'CRYPTO', normalizedMonths);
-
-    // Request Hosted Checkout
-    const paymentId = `invoice_${user.$id}_${Date.now()}`;
-    const resolvedBaseUrl = String(baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.space').replace(/\/+$/, '');
-    const callbackUrl = encodeURIComponent(`${resolvedBaseUrl}/accounts/api/pro/notify?payment_id=${paymentId}&order_id=${user.$id}&plan_id=${planId}&months=${normalizedMonths}`);
-    const returnUrl = encodeURIComponent(`${resolvedBaseUrl}/accounts?payment=success`);
-    const cancelUrl = encodeURIComponent(`${resolvedBaseUrl}/accounts?payment=cancelled`);
-
-    const createRes = await fetch(
-      `https://api.blockbee.io/checkout/request/?notify_url=${callbackUrl}&return_url=${returnUrl}&cancel_url=${cancelUrl}&apikey=${blockbeeApiKey}&value=${usdAmount}&custom=${paymentId}`
-    ).then(r => r.json()).catch(() => null);
-
-    if (!createRes || createRes.status !== 'success') {
-      console.error('[CryptoInvoice] BlockBee checkout request failed:', createRes);
-      return { success: false, error: 'Failed to generate checkout session' };
-    }
-
-    const paymentUrl = createRes.payment_url;
-
-    // Register inside BlockBee pending checkout registry
-    const { registerBlockBeePendingCheckout } = await import('@/lib/services/internal/blockbee-pending-checkout');
-    await registerBlockBeePendingCheckout({
-      paymentId: paymentId,
-      payerUserId: user.$id,
-      planId: planId,
-      months: normalizedMonths,
-      countryCode: countryCode,
-      expectedAmountUsd: usdAmount,
+    const session = await createBillingCheckoutSessionAction({
+      planId,
+      method: 'CRYPTO',
+      countryCode,
+      months,
+      jwt,
+      baseUrl: resolveBillingBaseUrl(baseUrl),
     });
 
-    // Record pending transaction in Appwrite database
-    const { databases } = createSystemClient();
-    await databases.createRow(
-      NOTE_DB_ID,
-      'billing_transactions',
-      ID.unique(),
-      {
-        paymentId: paymentId,
-        userId: user.$id,
-        plan: planId,
-        amountUsd: `$${usdAmount.toFixed(2)}`,
-        status: 'pending',
-        provider: 'blockbee',
-        metadata: JSON.stringify({
-          paymentUrl: paymentUrl,
-          countryCode: countryCode,
-          months: normalizedMonths,
-          amountCents: Math.round(usdAmount * 100),
-          createdAt: new Date().toISOString(),
-        }),
-      },
-      [Permission.read(Role.user(user.$id))]
-    );
+    if (session?.url && session?.id) {
+      return {
+        success: true,
+        paymentUrl: session.url,
+        paymentId: session.id,
+      };
+    }
 
+    const sessionError = 'error' in session ? session.error : undefined;
     return {
-      success: true,
-      paymentUrl: paymentUrl,
-      paymentId: paymentId
+      success: false,
+      error: typeof sessionError === 'string' ? sessionError : 'Failed to generate checkout session',
     };
-
   } catch (err: any) {
     console.error('[CryptoInvoice] Error creating crypto session:', err);
     return { success: false, error: err.message || 'Payment generation failed' };

@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { account } from '@/lib/appwrite/client';
-import { createCryptoInvoiceAction } from '@/app/(app)/(auth)/accounts/actions/checkout';
+import { createBillingCheckoutSessionAction } from '@/app/(app)/(auth)/accounts/actions/billing';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 
 const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
@@ -48,23 +48,25 @@ export default function PricingPage() {
     setCheckoutLoading(true);
     try {
       const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => undefined);
-      const res = await createCryptoInvoiceAction({
+      const session = await createBillingCheckoutSessionAction({
         planId,
-        months: checkoutMonths,
+        method: 'CRYPTO',
         countryCode,
+        months: checkoutMonths,
         jwt,
-        baseUrl: window.location.origin,
+        baseUrl: `${window.location.origin}/accounts`,
       });
 
-      if (res.success && res.paymentUrl) {
+      if (session?.url) {
         sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
-        window.location.href = res.paymentUrl;
+        window.location.href = session.url;
         return;
       }
 
-      toast.error(res.error || 'Failed to start checkout');
-    } catch {
-      toast.error('Failed to connect to the payment provider');
+      const sessionError = 'error' in session ? session.error : undefined;
+      toast.error(typeof sessionError === 'string' ? sessionError : 'Failed to start checkout');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to connect to the payment provider');
     } finally {
       setCheckoutLoading(false);
     }
