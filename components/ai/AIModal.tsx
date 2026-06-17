@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Drawer, Box, Typography, TextField, Button, CircularProgress, useTheme, useMediaQuery } from '@/lib/mui-tailwind/material';
-import AutoAwesomeIcon from '@/lib/mui-tailwind/icons';
-import SendIcon from '@/lib/mui-tailwind/icons';
+import { AutoAwesome as AutoAwesomeIcon } from '@/lib/mui-tailwind/icons';
+import { Send as SendIcon } from '@/lib/mui-tailwind/icons';
 import { useAI } from '@/context/AIContext';
 import { toast } from 'react-hot-toast';
 
@@ -141,7 +141,7 @@ export function AIModal({ onClose }: { onClose: () => void }) {
             fullWidth
             size="small"
             value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)}
             placeholder="Type your command..."
             disabled={isLoading}
             autoFocus

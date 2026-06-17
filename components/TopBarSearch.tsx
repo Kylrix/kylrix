@@ -158,7 +158,7 @@ export function TopBarSearch() {
           inputRef={inputRef}
           placeholder="Search Notes..."
           value={searchQuery}
-          onChange={ (e) => setSearchQuery(e.target.value)}
+          onChange={ (e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
           onFocus={handleFocus}
           fullWidth
           sx={{

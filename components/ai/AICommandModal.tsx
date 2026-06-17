@@ -10,9 +10,7 @@ import {
   IconButton, 
   CircularProgress,
   alpha,
-  Paper,
-  Slide,
-  type SlideProps
+  Paper
 } from '@/lib/mui-tailwind/material';
 import { 
   AutoAwesome as WandIcon, 
@@ -23,15 +21,6 @@ import {
 } from '@/lib/mui-tailwind/icons';
 import { useAI, AIChatMessage } from '@/hooks/useAI';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const Transition = React.forwardRef(function Transition(
-  props: SlideProps & {
-    children: React.ReactElement<any, any>;
-  },
-  ref: React.Ref<unknown>,
-) {
-  return <Slide direction="up" ref={ref} {...props} />;
-});
 
 interface AICommandModalProps {
   isOpen: boolean;
@@ -84,7 +73,6 @@ export const AICommandModal: React.FC<AICommandModalProps> = ({ isOpen, onClose 
       onClose={onClose}
       maxWidth="md"
       fullWidth
-      TransitionComponent={Transition}
       PaperProps={{
         sx: {
           bgcolor: 'rgba(10, 10, 10, 0.98)',
@@ -239,8 +227,8 @@ export const AICommandModal: React.FC<AICommandModalProps> = ({ isOpen, onClose 
               maxRows={4}
               placeholder="Structure my thoughts about the project..."
               value={prompt}
-              onChange={ (e) => setPrompt(e.target.value)}
-              onKeyDown={ (e) => {
+              onChange={ (e: React.ChangeEvent<HTMLInputElement>) => setPrompt(e.target.value)}
+              onKeyDown={ (e: React.KeyboardEvent) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
                   handleSubmit();
