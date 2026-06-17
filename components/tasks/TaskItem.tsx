@@ -153,7 +153,113 @@ interface SubmenuItem {
     submenu?: SubmenuItem[];
 }
 
-const contextMenuItems = useMemo(() => ([ ...accessControlItems, { label: "Synergy", icon: <Sparkles size={16} className="text-[#A855F7]" />, submenu: [ { label: "Assign Goal", icon: <AssignIcon size={16} />, onClick: () => openUnified("share-note", { resourceId: task.id, resourceType: "goal", resourceTitle: task.title, actorName: user?.name || "A Kylrix User" }) }, { label: "Start Huddle", icon: <Video size={16} />, onClick: () => { const participantIds = Array.from(new Set([task.creatorId, ...(task.assigneeIds || [])].filter(Boolean))); openCallLauncher({ source: "task", taskId: task.id, participantIds, title: task.title ? "Task Huddle: " + task.title : "Task Huddle" }); } } ] }, { label: "Project", icon: <FolderKanban size={16} className="text-[#6366F1]" />, submenu: [ { label: "Add to Project", icon: <FolderKanban size={16} />, onClick: () => openUnified("task-add-to-project", { taskId: task.id, taskTitle: task.title }) } ] }, { label: "Tags", icon: <Tag size={16} className="text-[#A855F7]" />, submenu: tagMenuOptions.length > 0 ? tagMenuOptions.map((tagName) => ({ label: tagName, icon: task.labels.includes(tagName) ? <Check size={16} className="text-[#A855F7]" /> : <Tag size={14} className="opacity-30" />, keepOpen: true, onClick: () => toggleTaskTag(tagName) })) : [{ label: "No tags available", onClick: () => undefined }] }, { label: "Workflow", icon: <Settings size={16} />, submenu: [ { label: "Duplicate", icon: <Copy size={16} />, onClick: () => { addTask({ title: task.title + " (Copy)", description: task.description, status: task.status, priority: task.priority, projectId: task.projectId, labels: task.labels, dueDate: task.dueDate }); } }, { label: "Archive", icon: <Archive size={16} />, onClick: () => updateTask(task.id, { isArchived: true }) } ] }, { label: "Edit Task", icon: <Edit size={16} />, onClick: () => { selectTask(task.id); openSecondarySidebar("task", task.id); } }, { label: "Delete", icon: <Trash2 size={16} />, onClick: () => openUnified("delete-confirm", { title: "Delete goal: " + task.title + "?", description: "This will permanently remove this goal and all its subtasks, comments, and history from your domain.", resourceName: "this goal", confirmLabel: "Delete Goal", onConfirm: async () => { await deleteTask(task.id); } }) }  as any), [accessControlItems, task.id, task.title, user?.name, openUnified, openCallLauncher, task.creatorId, task.assigneeIds, tagMenuOptions, toggleTaskTag, addTask, updateTask, selectTask, openSecondarySidebar, deleteTask]);
+const contextMenuItems = useMemo(() => ([
+    ...accessControlItems,
+    { 
+        label: 'Synergy', 
+        icon: <Sparkles size={16} className="text-[#A855F7]" />,
+        submenu: [
+            { 
+                label: 'Assign Goal', 
+                icon: <AssignIcon size={16} />, 
+                onClick: () => openUnified('share-note', {
+                    resourceId: task.id,
+                    resourceType: 'goal',
+                    resourceTitle: task.title,
+                    actorName: user?.name || 'A Kylrix User'
+                })
+            },
+            { 
+                label: 'Start Huddle', 
+                icon: <Video size={16} />, 
+                onClick: () => {
+                    const participantIds = Array.from(new Set([task.creatorId, ...(task.assigneeIds || [])].filter(Boolean)));
+                    openCallLauncher({
+                      source: 'task',
+                      taskId: task.id,
+                      participantIds,
+                      title: task.title ? `Task Huddle: ${task.title}` : 'Task Huddle',
+                    });
+                }
+            },
+        ]
+    },
+    {
+        label: 'Project',
+        icon: <FolderKanban size={16} className="text-[#6366F1]" />,
+        submenu: [
+            {
+                label: 'Add to Project',
+                icon: <FolderKanban size={16} />,
+                onClick: () => openUnified('task-add-to-project', {
+                    taskId: task.id,
+                    taskTitle: task.title,
+                }),
+            },
+        ],
+    },
+    {
+        label: 'Tags',
+        icon: <Tag size={16} className="text-[#A855F7]" />,
+        submenu: tagMenuOptions.length > 0
+          ? tagMenuOptions.map((tagName) => ({
+              label: tagName,
+              icon: task.labels.includes(tagName)
+                ? <Check size={16} className="text-[#A855F7]" />
+                : <Tag size={14} className="opacity-30" />,
+              keepOpen: true,
+              onClick: () => toggleTaskTag(tagName),
+            }))
+          : [{ label: 'No tags available', onClick: () => undefined }],
+    },
+    { 
+        label: 'Workflow', 
+        icon: <Settings size={16} />,
+        submenu: [
+            { 
+                label: 'Duplicate', 
+                icon: <Copy size={16} />, 
+                onClick: () => {
+                    addTask({
+                        title: `${task.title} (Copy)`,
+                        description: task.description,
+                        status: task.status,
+                        priority: task.priority,
+                        projectId: task.projectId,
+                        labels: task.labels,
+                        dueDate: task.dueDate
+                    });
+                }
+            },
+            { 
+                label: 'Archive', 
+                icon: <Archive size={16} />, 
+                onClick: () => updateTask(task.id, { isArchived: true })
+            },
+        ]
+    },
+    { 
+        label: 'Edit Task', 
+        icon: <Edit size={16} />, 
+        onClick: () => {
+            selectTask(task.id);
+            openSecondarySidebar('task', task.id);
+        }
+    },
+    { 
+        label: 'Delete', 
+        icon: <Trash2 size={16} />, 
+        onClick: () => openUnified('delete-confirm', {
+            title: `Delete goal: "${task.title}"?`,
+            description: 'This will permanently remove this goal and all its subtasks, comments, and history from your domain.',
+            resourceName: 'this goal',
+            confirmLabel: 'Delete Goal',
+            onConfirm: async () => {
+              await deleteTask(task.id);
+            }
+        })
+    },
+] as SubmenuItem[]), [accessControlItems, task.id, task.title, user?.name, openUnified, openCallLauncher, task.creatorId, task.assigneeIds, tagMenuOptions, toggleTaskTag, addTask, updateTask, selectTask, openSecondarySidebar, deleteTask]);
               await deleteTask(task.id);
 ]
             }
