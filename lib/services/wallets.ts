@@ -238,7 +238,7 @@ const deriveAddress = async (
             const tmp = new Uint8Array(33);
             tmp.set([0x00]); // Flag for Ed25519 in Sui
             tmp.set(pubKey, 1);
-            const hash = blake2b(tmp, { outputLength: 32 });
+            const hash = blake2b(tmp, { dkLen: 32 });
             address = '0x' + Buffer.from(hash).toString('hex').slice(0, 64);
             break;
         }

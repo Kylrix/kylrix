@@ -185,12 +185,14 @@ const mapAppwriteCalendarToProject = (doc: AppwriteCalendar): Project => ({
 });
 
 const mapEcosystemTagsToLabels = (tags: Tags[]): Label[] =>
-  tags.map((tag) => ({
-    id: tag.name,
-    name: tag.name,
-    color: (tag as Tags & { color?: string }).color || '#9B9691',
-    description: (tag as Tags & { description?: string }).description,
-  }));
+  tags
+    .filter((tag): tag is Tags & { name: string } => Boolean(tag.name))
+    .map((tag) => ({
+      id: tag.name,
+      name: tag.name,
+      color: (tag as Tags & { color?: string }).color || '#9B9691',
+      description: (tag as Tags & { description?: string }).description,
+    }));
 
 // State
 interface TaskState {

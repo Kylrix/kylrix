@@ -26,7 +26,7 @@ export class Registry {
         this.db = new AppwriteDatabaseAdapter();
       }
     }
-    return this.db;
+    return this.db!;
   }
 
   static getAuth(): AuthPort {

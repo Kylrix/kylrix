@@ -220,12 +220,12 @@ export const ProjectsService = {
 
       // Tasks
       const tasksPromise = resourceIdsByType['task']?.size
-        ? listFlowTasks([Query.equal('$id', Array.from(resourceIdsByType['task']))], 500).then(r => r.rows).catch(() => [])
+        ? listFlowTasks([Query.equal('$id', Array.from(resourceIdsByType['task'])), Query.limit(500)]).then(r => r.rows).catch(() => [])
         : Promise.resolve([]);
 
       // Credentials
       const credentialsPromise = resourceIdsByType['credential']?.size
-        ? listKeepCredentials([Query.equal('$id', Array.from(resourceIdsByType['credential']))], 500).then(r => r.rows).catch(() => [])
+        ? listKeepCredentials([Query.equal('$id', Array.from(resourceIdsByType['credential'])), Query.limit(500)]).then(r => r.rows).catch(() => [])
         : Promise.resolve([]);
 
       // TOTPs
