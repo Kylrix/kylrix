@@ -715,7 +715,7 @@ export class VaultService {
     const wrappedKey = await ecosystemSecurity.wrapKeyWithECDH(dek, recipient.publicKey);
     const senderPublicKey = await ecosystemSecurity.exportIdentityPublicKey() || "";
 
-    return await this.createKeyMapping(
+    const created = await this.createKeyMapping(
       {
         resourceId: credentialId,
         resourceType: "credential",
