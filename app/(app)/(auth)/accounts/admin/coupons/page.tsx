@@ -151,7 +151,9 @@ export default function AdminCouponsPage() {
           scope: targetUserIds.length > 0 ? 'targeted' : 'open',
         },
       }, jwt || undefined);
-      setSuccess(`Created ${data.count || 1} coupon(s).`);
+      if (data) {
+        setSuccess(`Created ${data.count || 1} coupon(s).`);
+      }
       setForm((prev) => ({ ...prev, title: '', note: '', redemptionLimit: '1' }));
       setSelectedTargets([]);
       await loadCoupons();
