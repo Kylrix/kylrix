@@ -54,7 +54,6 @@ export default function PricingPage() {
         countryCode,
         months: checkoutMonths,
         jwt,
-        baseUrl: `${window.location.origin}/accounts`,
       });
 
       if (session?.url) {

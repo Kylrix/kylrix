@@ -9,6 +9,7 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
 import { notifySubscriptionActivated } from '@/lib/billing/subscription-notifications';
+import { resolveBlockBeeRedirectBaseUrl } from '@/lib/billing/blockbee-urls';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
 import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/billing';
 import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
@@ -227,7 +228,7 @@ export async function createBillingCheckoutSessionAction(input: {
 
       return {
         id: subscription.$id,
-        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.com'}/accounts/pro/success?success=true`,
+        url: `${resolveBlockBeeRedirectBaseUrl()}?success=true`,
         provider: PaymentMethod.COUPON,
         couponApplied: true,
       };

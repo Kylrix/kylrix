@@ -5,6 +5,7 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/billing';
 import { createBillingCheckoutSessionAction } from './billing';
+import { resolveBlockBeeBillingBaseUrl } from '@/lib/billing/blockbee-urls';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 
@@ -21,11 +22,8 @@ export interface CryptoInvoiceResponse {
   months?: number;
 }
 
-function resolveBillingBaseUrl(baseUrl?: string) {
-  const raw = String(baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.space')
-    .trim()
-    .replace(/\/+$/, '');
-  return raw.endsWith('/accounts') ? raw : `${raw}/accounts`;
+function resolveBillingBaseUrl() {
+  return resolveBlockBeeBillingBaseUrl();
 }
 
 export async function createCryptoInvoiceAction(input: {
@@ -45,7 +43,7 @@ export async function createCryptoInvoiceAction(input: {
       countryCode,
       months,
       jwt,
-      baseUrl: resolveBillingBaseUrl(baseUrl),
+      baseUrl: resolveBillingBaseUrl(),
     });
 
     if (session?.url && session?.id) {

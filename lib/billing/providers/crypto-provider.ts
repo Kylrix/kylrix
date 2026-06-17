@@ -1,6 +1,10 @@
 import { PaymentProvider, CheckoutSession } from '../provider-factory';
 import { PaymentMethod } from '../types';
 import { calculateSubscriptionPrice } from '../../subscription/ppp';
+import {
+  resolveBlockBeeNotifyBaseUrl,
+  resolveBlockBeeRedirectBaseUrl,
+} from '../blockbee-urls';
 
 export class CryptoPaymentProvider implements PaymentProvider {
   name = PaymentMethod.CRYPTO;
@@ -14,17 +18,14 @@ export class CryptoPaymentProvider implements PaymentProvider {
     giftDetails?: { recipientUserId: string; recipientName?: string; giftMessage?: string },
     options?: { couponId?: string | null; discountPercent?: number | null; adjustedAmountUsd?: number | null; baseUrl?: string | null },
   ): Promise<CheckoutSession> {
-    const resolvedBaseUrl = String(options?.baseUrl || process.env.NEXT_PUBLIC_APP_URL || 'https://accounts.kylrix.com')
-      .trim()
-      .replace(/\/+$/, '');
     const blockbeeApiKey = process.env.BLOCKBEE_API;
 
     if (!blockbeeApiKey) {
       throw new Error('BLOCKBEE_API environment variable is not configured');
     }
 
-    // Pro Tier specifics from user mandate
-    const notifyUrl = new URL(`${resolvedBaseUrl}/api/pro/notify`);
+    // BlockBee whitelists fixed production notify/redirect URIs from the dashboard.
+    const notifyUrl = new URL(resolveBlockBeeNotifyBaseUrl());
     notifyUrl.searchParams.set('order_id', userId);
     notifyUrl.searchParams.set('plan_id', planId);
     notifyUrl.searchParams.set('months', String(months));
@@ -39,8 +40,8 @@ export class CryptoPaymentProvider implements PaymentProvider {
       if (giftDetails.recipientName) notifyUrl.searchParams.set('gift_recipient_name', giftDetails.recipientName);
       if (giftDetails.giftMessage) notifyUrl.searchParams.set('gift_message', giftDetails.giftMessage);
     }
-    // Correlate BlockBee checkout webhooks: `redirect_url` is echoed in the IPN payload.
-    const successUrlObj = new URL(`${resolvedBaseUrl}/pro/success`);
+
+    const successUrlObj = new URL(resolveBlockBeeRedirectBaseUrl());
     successUrlObj.searchParams.set('order_id', userId);
 
     // Dynamic Pricing based on PPP
@@ -48,6 +49,7 @@ export class CryptoPaymentProvider implements PaymentProvider {
     const amount = typeof options?.adjustedAmountUsd === 'number' ? options.adjustedAmountUsd : baseAmount;
 
     console.log(`[BlockBee] Initiating checkout for user: ${userId} (${email}), Plan: ${planId}, Months: ${months}, Region: ${countryCode}, Amount: ${amount} USD`);
+    console.log(`[BlockBee] notify_url=${notifyUrl.toString()} redirect_url=${successUrlObj.toString()}`);
 
     try {
       // Call BlockBee Checkout Request API (GET)
