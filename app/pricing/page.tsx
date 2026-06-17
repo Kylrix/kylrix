@@ -9,7 +9,7 @@ import { useAuth } from '@/context/auth/AuthContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { account } from '@/lib/appwrite/client';
 import { createBillingCheckoutSessionAction } from '@/app/(app)/(auth)/accounts/actions/billing';
-import { calculateTotalSubscriptionPrice, getYearlyDiscountedPrice, getYearlyListPrice } from '@/lib/subscription/ppp';
+import { calculateTotalSubscriptionPrice, getBundledFreeMonths, getYearlyDiscountedPrice, getYearlyListPrice } from '@/lib/subscription/ppp';
 
 const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
 
@@ -31,6 +31,8 @@ export default function PricingPage() {
 
   const yearlyListPrice = useMemo(() => getYearlyListPrice(selectedTier), [selectedTier]);
   const yearlyDiscountedPrice = useMemo(() => getYearlyDiscountedPrice(selectedTier), [selectedTier]);
+
+  const freeMonthsIncluded = useMemo(() => getBundledFreeMonths(months), [months]);
 
   const isYearly = months >= 12;
 
@@ -166,7 +168,7 @@ export default function PricingPage() {
 
                 {isYearly && (
                   <p className="mt-3 text-[11px] font-bold text-emerald-400/80">
-                    2 months free included in your total
+                    {freeMonthsIncluded} {freeMonthsIncluded === 1 ? 'month' : 'months'} free included in your total
                   </p>
                 )}
               </div>

@@ -45,6 +45,12 @@ export function getYearlyDiscountedPrice(tier: SubscriptionTier | string): numbe
   return getTierMonthlyPrice(tier) * 10;
 }
 
+/** Free months bundled in for each full 12-month block (2 per year). */
+export function getBundledFreeMonths(months: number): number {
+  if (months < 12) return 0;
+  return Math.floor(months / 12) * 2;
+}
+
 export function calculateTotalSubscriptionPrice(
   tier: SubscriptionTier | string,
   months: number,
