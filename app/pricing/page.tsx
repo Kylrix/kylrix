@@ -1,84 +1,113 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, Globe, ShieldCheck, ArrowRight, ArrowLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-import { CryptoPaymentDrawer } from '@/components/CryptoPaymentDrawer';
 import { useAuth } from '@/context/auth/AuthContext';
-import { getEcosystemUrl } from '@/lib/ecosystem';
-import { account } from '@/lib/appwrite';
-import { getActivePendingCryptoInvoiceAction } from '@/app/(app)/(auth)/accounts/actions/checkout';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
+import { account } from '@/lib/appwrite/client';
+import { createCryptoInvoiceAction } from '@/app/(app)/(auth)/accounts/actions/checkout';
 import { calculateSubscriptionPrice } from '@/lib/subscription/ppp';
+
+const CHECKOUT_CACHE_KEY = 'kylrix_pricing_checkout_v1';
+
+type PendingCheckout = {
+  planId: string;
+  months: number;
+  countryCode: string;
+  tier: 'PRO' | 'TEAMS';
+};
 
 export default function PricingPage() {
   const router = useRouter();
-  const { isAuthenticated, openIDMWindow, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { open: openUnified } = useUnifiedDrawer();
   const [months, setMonths] = useState(1);
-  const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
-
-  const checkPendingTransactions = async () => {
-    if (!user) return;
-    try {
-      const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => undefined);
-      const pending = await getActivePendingCryptoInvoiceAction({ jwt });
-      if (pending && pending.success) {
-        if (pending.months) {
-          setMonths(pending.months);
-        }
-        setPaymentDrawerOpen(true);
-      }
-    } catch {}
-  };
-
-  React.useEffect(() => {
-    checkPendingTransactions();
-  }, [user]);
-
   const [selectedTier, setSelectedTier] = useState<'PRO' | 'TEAMS'>('PRO');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const resumeAttemptedRef = useRef(false);
 
   const basePrice = useMemo(() => {
     return calculateSubscriptionPrice(selectedTier, 'US', 'CRYPTO');
   }, [selectedTier]);
 
   const isYearly = months >= 12;
-  
-  // Calculate display price: if 12+ months, apply the 10-for-12 discount
+
   const totalPrice = useMemo(() => {
     if (months >= 12) {
       const years = Math.floor(months / 12);
       const remainingMonths = months % 12;
-      return (years * 10 * basePrice) + (remainingMonths * basePrice);
+      return years * 10 * basePrice + remainingMonths * basePrice;
     }
     return months * basePrice;
   }, [months, basePrice]);
 
+  const proceedToBlockBee = useCallback(async (planId: string, checkoutMonths: number, countryCode: string) => {
+    setCheckoutLoading(true);
+    try {
+      const jwt = await account.createJWT().then((res: any) => res?.jwt || '').catch(() => undefined);
+      const res = await createCryptoInvoiceAction({
+        planId,
+        months: checkoutMonths,
+        countryCode,
+        jwt,
+        baseUrl: window.location.origin,
+      });
+
+      if (res.success && res.paymentUrl) {
+        sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
+        window.location.href = res.paymentUrl;
+        return;
+      }
+
+      toast.error(res.error || 'Failed to start checkout');
+    } catch {
+      toast.error('Failed to connect to the payment provider');
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user || resumeAttemptedRef.current) return;
+
+    const raw = sessionStorage.getItem(CHECKOUT_CACHE_KEY);
+    if (!raw) return;
+
+    try {
+      const intent = JSON.parse(raw) as PendingCheckout;
+      resumeAttemptedRef.current = true;
+      if (intent.months) setMonths(intent.months);
+      if (intent.tier) setSelectedTier(intent.tier);
+      void proceedToBlockBee(intent.planId, intent.months, intent.countryCode || 'US');
+    } catch {
+      sessionStorage.removeItem(CHECKOUT_CACHE_KEY);
+    }
+  }, [user, proceedToBlockBee]);
+
   const handleSubscribe = () => {
     const planId = months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`;
+
     if (!isAuthenticated) {
-      const checkoutUrl = `${getEcosystemUrl('accounts')}/subscription/pro/checkout?planId=${planId}&months=${months}&countryCode=US&paymentMethod=CRYPTO&source=${encodeURIComponent(window.location.href)}`;
-      openIDMWindow(checkoutUrl);
+      const intent: PendingCheckout = {
+        planId,
+        months,
+        countryCode: 'US',
+        tier: selectedTier,
+      };
+      sessionStorage.setItem(CHECKOUT_CACHE_KEY, JSON.stringify(intent));
+      openUnified('login');
       return;
     }
-    setPaymentDrawerOpen(true);
+
+    void proceedToBlockBee(planId, months, 'US');
   };
 
   return (
     <div className="min-h-screen bg-black text-white relative pt-12 pb-20 px-4 md:px-6">
-      
-      {/* Conditionally Render Drawer (Global Unmount Policy) */}
-      {paymentDrawerOpen && (
-        <CryptoPaymentDrawer
-          onClose={() => setPaymentDrawerOpen(false)}
-          months={months}
-          countryCode="US"
-          planId={months >= 12 ? `${selectedTier}_YEAR` : `${selectedTier}_MONTH`}
-        />
-      )}
-
       <div className="max-w-4xl mx-auto relative z-10">
-        
-        {/* Back Button */}
         <button
           onClick={() => router.back()}
           className="w-11 h-11 mb-6 bg-[#161412] text-white border border-white/6 rounded-[14px] flex items-center justify-center hover:bg-[#1C1A18] hover:-translate-x-0.5 transition-all"
@@ -86,7 +115,6 @@ export default function PricingPage() {
           <ArrowLeft size={18} />
         </button>
 
-        {/* Header Section */}
         <div className="text-center mb-6">
           <h1 className="text-white font-black text-4xl md:text-6xl tracking-tight leading-tight mb-3 font-mono">
             Kylrix {selectedTier === 'PRO' ? 'Pro' : 'Teams'}
@@ -96,7 +124,6 @@ export default function PricingPage() {
           </p>
         </div>
 
-        {/* Plan Selector Toggle */}
         <div className="flex justify-center mb-8">
           <div className="inline-flex p-1 bg-[#161514] border border-white/8 rounded-[16px]">
             <button
@@ -122,11 +149,8 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Main Box Card */}
         <div className="bg-[#161514] border border-white/8 rounded-[28px] p-6 md:p-10 shadow-2xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
-            
-            {/* Left Options/Features */}
             <div className="flex flex-col gap-6">
               <div>
                 <span className="text-[10px] text-[#6366F1] font-black uppercase tracking-wider block mb-2 font-mono">
@@ -135,8 +159,7 @@ export default function PricingPage() {
                 <h3 className="text-white text-xl md:text-2xl font-black tracking-tight leading-tight mb-4">
                   {months} {months === 1 ? 'Month' : 'Months'}
                 </h3>
-                
-                {/* Native Custom Styled Slider */}
+
                 <input
                   type="range"
                   min={1}
@@ -145,7 +168,7 @@ export default function PricingPage() {
                   onChange={(e) => setMonths(Number(e.target.value))}
                   className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#6366F1] focus:outline-none"
                 />
-                
+
                 {isYearly && (
                   <div className="mt-4 p-3 rounded-[12px] bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2 inline-flex">
                     <Sparkles size={16} className="text-emerald-400 flex-shrink-0" />
@@ -156,71 +179,66 @@ export default function PricingPage() {
                 )}
               </div>
 
-              {/* Feature Checklist */}
               <div className="flex flex-col gap-3.5 pt-2">
-                {(selectedTier === 'PRO' ? [
-                  { icon: ShieldCheck, text: 'Unlimited Vault & Notes storage' },
-                  { icon: Globe, text: 'Universal Identity across all apps' },
-                  { icon: Sparkles, text: 'Full AI Neural Graph access' },
-                  { icon: ShieldCheck, text: 'Up to 10 Projects (Free gets 1)' },
-                  { icon: ShieldCheck, text: 'Up to 3 collaborators per object/project' }
-                ] : [
-                  { icon: ShieldCheck, text: 'Unlimited Projects & Vault' },
-                  { icon: ShieldCheck, text: 'Unlimited Collaborators & team members' },
-                  { icon: Sparkles, text: 'Full AI Neural Graph access' },
-                  { icon: Globe, text: 'Universal Identity across all apps' }
-                ]).map((feat, i) => (
+                {(selectedTier === 'PRO'
+                  ? [
+                      { icon: ShieldCheck, text: 'Unlimited Vault & Notes storage' },
+                      { icon: Globe, text: 'Universal Identity across all apps' },
+                      { icon: Sparkles, text: 'Full AI Neural Graph access' },
+                      { icon: ShieldCheck, text: 'Up to 10 Projects (Free gets 1)' },
+                      { icon: ShieldCheck, text: 'Up to 3 collaborators per object/project' },
+                    ]
+                  : [
+                      { icon: ShieldCheck, text: 'Unlimited Projects & Vault' },
+                      { icon: ShieldCheck, text: 'Unlimited Collaborators & team members' },
+                      { icon: Sparkles, text: 'Full AI Neural Graph access' },
+                      { icon: Globe, text: 'Universal Identity across all apps' },
+                    ]
+                ).map((feat, i) => (
                   <div key={i} className="flex items-center gap-3">
-                     <feat.icon size={18} className="text-[#6366F1] flex-shrink-0" />
-                     <span className="text-sm font-bold text-white/80">{feat.text}</span>
+                    <feat.icon size={18} className="text-[#6366F1] flex-shrink-0" />
+                    <span className="text-sm font-bold text-white/80">{feat.text}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Right Pricing Summary Box */}
             <div className="p-6 rounded-[24px] bg-[#1F1D1B] border border-white/8 text-center flex flex-col items-center justify-center gap-4 min-h-[200px]">
-                <>
-                  <div>
-                    <span className="text-white/40 text-[11px] font-bold block mb-1">
-                      Total Amount ({selectedTier})
-                    </span>
-                    <span className="text-4xl md:text-5xl font-black text-white font-mono leading-none tracking-tight">
-                      ${totalPrice.toFixed(2)}
-                    </span>
-                  </div>
+              <div>
+                <span className="text-white/40 text-[11px] font-bold block mb-1">
+                  Total Amount ({selectedTier})
+                </span>
+                <span className="text-4xl md:text-5xl font-black text-white font-mono leading-none tracking-tight">
+                  ${totalPrice.toFixed(2)}
+                </span>
+              </div>
 
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-[#6366F1] font-black text-xs">
-                      Universal Global Rate
-                    </span>
-                  </div>
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-[#6366F1] font-black text-xs">Universal Global Rate</span>
+              </div>
 
-                  <button 
-                    onClick={handleSubscribe}
-                    className="w-full py-3.5 mt-4 bg-white hover:bg-neutral-200 text-black font-black text-sm md:text-base rounded-[16px] transition-all shadow-[0_4px_12px_rgba(255,255,255,0.05)]"
-                  >
-                    Continue to Checkout
-                  </button>
-                  
-                  <p className="text-[10px] text-white/30 font-medium leading-normal px-2 mt-2">
-                    Your subscription time is calculated based on your contribution. Any payment amount is automatically converted into active {selectedTier === 'PRO' ? 'Pro' : 'Teams'} time.
-                  </p>
-                </>
+              <button
+                onClick={handleSubscribe}
+                disabled={checkoutLoading}
+                className="w-full py-3.5 mt-4 bg-white hover:bg-neutral-200 disabled:opacity-60 disabled:cursor-not-allowed text-black font-black text-sm md:text-base rounded-[16px] transition-all shadow-[0_4px_12px_rgba(255,255,255,0.05)]"
+              >
+                {checkoutLoading ? 'Starting checkout…' : 'Continue to Checkout'}
+              </button>
+
+              <p className="text-[10px] text-white/30 font-medium leading-normal px-2 mt-2">
+                Your subscription time is calculated based on your contribution. Any payment amount is
+                automatically converted into active {selectedTier === 'PRO' ? 'Pro' : 'Teams'} time.
+              </p>
             </div>
-
           </div>
         </div>
 
-        {/* Free Plan Callout */}
         <div className="mt-8 text-center">
           <div className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-6 px-6 py-3.5 rounded-full bg-[#1F1D1B] border border-white/8">
-            <span className="text-sm font-bold text-white">
-              Kylrix Free is free forever. No pressure.
-            </span>
-            
+            <span className="text-sm font-bold text-white">Kylrix Free is free forever. No pressure.</span>
+
             <div className="hidden sm:block w-px h-5 bg-white/10" />
-            
+
             <button
               onClick={() => router.push('/')}
               className="inline-flex items-center gap-1.5 text-black bg-[#6366F1] hover:bg-[#6366F1]/90 font-black text-xs px-4 py-2 rounded-full transition-all group"
@@ -230,7 +248,6 @@ export default function PricingPage() {
             </button>
           </div>
         </div>
-
       </div>
     </div>
   );

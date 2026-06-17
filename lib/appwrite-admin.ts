@@ -105,53 +105,50 @@ export function createSystemClient() {
 
 function createProxiedDatabases(client: Client) {
   const original = new Databases(client);
+  const tablesDB = new TablesDB(client);
+
   return new Proxy(original, {
     get(target, prop, receiver) {
       if (prop === 'listRows') {
         return async (databaseId: string, tableId: string, queries?: any[]) => {
-          const res = await target.listRows(databaseId, tableId, queries);
-          return {
-            ...res,
-            rows: res.rows
-          };
+          return tablesDB.listRows({ databaseId, tableId, queries });
         };
       }
       if (prop === 'getRow') {
-        return (databaseId: string, tableId: string, rowId: string, queries?: any[]) => {
-          return target.getRow(databaseId, tableId, rowId, queries);
+        return async (databaseId: string, tableId: string, rowId: string, queries?: any[]) => {
+          return tablesDB.getRow({ databaseId, tableId, rowId, queries });
         };
       }
       if (prop === 'createRow') {
-        return (databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[]) => {
-          return target.createRow(databaseId, tableId, rowId, data, permissions);
+        return async (
+          databaseId: string,
+          tableId: string,
+          rowId: string,
+          data: any,
+          permissions?: string[],
+        ) => {
+          return tablesDB.createRow({ databaseId, tableId, rowId, data, permissions });
         };
       }
       if (prop === 'updateRow') {
-        return (databaseId: string, tableId: string, rowId: string, data: any, permissions?: string[]) => {
-          return target.updateRow(databaseId, tableId, rowId, data, permissions);
+        return async (
+          databaseId: string,
+          tableId: string,
+          rowId: string,
+          data: any,
+          permissions?: string[],
+        ) => {
+          return tablesDB.updateRow({ databaseId, tableId, rowId, data, permissions });
         };
       }
       if (prop === 'deleteRow') {
-        return (databaseId: string, tableId: string, rowId: string) => {
-          return target.deleteRow(databaseId, tableId, rowId);
-        };
-      }
-      if (prop === 'listRows' || prop === 'getRow' || prop === 'createRow' || prop === 'updateRow' || prop === 'deleteRow') {
-        const originalMethod = (target as any)[prop];
-        return async (...args: any[]) => {
-          const res = await originalMethod.apply(target, args);
-          if (prop === 'listRows' && res && typeof res === 'object') {
-            return {
-              ...res,
-              rows: res.rows
-            };
-          }
-          return res;
+        return async (databaseId: string, tableId: string, rowId: string) => {
+          return tablesDB.deleteRow({ databaseId, tableId, rowId });
         };
       }
       const val = Reflect.get(target, prop, receiver);
       return typeof val === 'function' ? val.bind(target) : val;
-    }
+    },
   }) as unknown as Databases;
 }
 

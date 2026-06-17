@@ -57,6 +57,7 @@ export async function createCryptoInvoiceAction(input: {
     ).then(r => r.json()).catch(() => null);
 
     if (!createRes || createRes.status !== 'success') {
+      console.error('[CryptoInvoice] BlockBee checkout request failed:', createRes);
       return { success: false, error: 'Failed to generate checkout session' };
     }
 
