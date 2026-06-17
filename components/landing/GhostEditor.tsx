@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { 
     Box, 
     TextField, 
-    Typography, 
     Stack, 
     Paper, 
     IconButton, 
@@ -26,7 +25,7 @@ import {
     DialogTitle,
     DialogContent,
     FormControl,
-    FormLabel,
+    Typography,
     RadioGroup,
     FormControlLabel,
     Radio
@@ -1353,9 +1352,9 @@ export const GhostEditor = () => {
                 </DialogTitle>
                 <DialogContent sx={{ p: 3, pt: 0 }}>
                     <FormControl fullWidth sx={{ mt: 2 }}>
-                        <FormLabel sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, mb: 2, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700, mb: 2, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                             Lifespan Duration
-                        </FormLabel>
+                        </Typography>
                         <RadioGroup
                             value={lifespanMs}
                             onChange={(e) => saveLifespanPref(Number(e.target.value))}

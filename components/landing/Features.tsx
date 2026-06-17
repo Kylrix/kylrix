@@ -45,6 +45,7 @@ const features = [
     title: "One-Time Codes",
     description: "Built-in code generator for extra security.",
   }];
+const IconWrapper = ({ icon: Icon, sx }: { icon: any, sx?: any }) => <Icon sx={sx} />;
 
 export default function Features() {
   return (
@@ -87,7 +88,6 @@ export default function Features() {
                   justifyContent: 'center',
                   mb: 3
                 }}>
-const IconWrapper = ({ icon: Icon, sx }: { icon: any, sx?: any }) => <Icon sx={sx} />;
 
 ...
 
