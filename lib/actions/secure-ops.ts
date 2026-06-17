@@ -3905,7 +3905,7 @@ export async function deleteFormSecure(formId: string, jwt?: string) {
     console.error('deleteFormSecure cascade cleanup failed:', err);
   }
 
-  const result = await tables.deleteRow({
+  const result = await systemTables.deleteRow({
       databaseId: APPWRITE_CONFIG.DATABASES.FLOW,
       tableId: APPWRITE_CONFIG.TABLES.FLOW.FORMS,
       rowId: formId,
@@ -5343,7 +5343,6 @@ export async function listRowsSecure(databaseId: string, tableId: string, querie
     return JSON.parse(JSON.stringify({
         total: res.total,
         rows: res.rows,
-        rows: res.rows
     }));
   } catch (error: any) {
     console.error('[listRowsSecure] Failed:', error?.message);

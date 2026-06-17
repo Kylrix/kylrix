@@ -466,11 +466,11 @@ function OrbitingParticles() {
   const particles = React.useMemo(() => 
     Array.from({ length: 20 }).map((_, i) => ({
       color: ['#6366F1', '#F59E0B', '#10B981', '#EC4899', '#A855F7'][i % 5],
-      left: Math.random() * 100,
-      top: Math.random() * 100,
-      yOffset: Math.random() * 20 - 10,
-      duration: 4 + Math.random() * 4,
-      delay: Math.random() * 3,
+      left: ((i * 17 + 13) % 100),
+      top: ((i * 23 + 7) % 100),
+      yOffset: ((i * 11) % 20) - 10,
+      duration: 4 + ((i * 3) % 4),
+      delay: (i * 0.15) % 3,
     })),
   []);
 

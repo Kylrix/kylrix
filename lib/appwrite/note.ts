@@ -705,9 +705,10 @@ async function syncTagsForCreatedNote(noteId: string, rawTags: string[], userId:
       const key = tagName.toLowerCase();
       if (!existingTagDocs[key]) {
         try {
-          const created = await appwriteDatabases.createRow(
+          const created = await databases.createRow(
             APPWRITE_DATABASE_ID,
             tagsTable,
+            ID.unique(),
             { name: tagName, nameLower: key, userId, createdAt: now, usageCount: 0 }
           );
           existingTagDocs[key] = created;
@@ -739,9 +740,10 @@ async function syncTagsForCreatedNote(noteId: string, rawTags: string[], userId:
       adjustTagUsage(userId, tagName, 1);
       if (existingPairs.has(pairKey)) continue;
       try {
-        await appwriteDatabases.createRow(
+        await databases.createRow(
           APPWRITE_DATABASE_ID,
           noteTagsTable,
+          ID.unique(),
           { resourceId: noteId, resourceType: 'note', tagId, tag: tagName, userId, createdAt: now }
         );
       } catch (e: any) {
@@ -759,7 +761,7 @@ const noteCreationService = createNoteCreationService({
   generateId: () => ID.unique(),
   getCurrentUser,
   createRow: async (databaseId, tableId, data, rowId, permissions) => {
-    return appwriteDatabases.createRow(databaseId, tableId, data as any, permissions) as any;
+    return databases.createRow(databaseId, tableId, data as any, permissions) as any;
   },
   getNote,
   getNotePermissions,
@@ -1110,7 +1112,7 @@ export async function getAllNotes(): Promise<{ rows: Notes[], total: number }> {
 
 // --- TAGS CRUD ---
 
-export async function createTag(data: Partial<Tags>, jwt?: string) {
+export async function createTag(data: Partial<Tags & { isPublic?: boolean; isGuest?: boolean }>, jwt?: string) {
   if (typeof window !== 'undefined') {
     const { createRow } = await import('@/lib/actions/client-ops');
     
@@ -1781,7 +1783,7 @@ export async function deleteActivityLog(activityLogId: string) {
 export async function listActivityLogs() {
   const user = await getCurrentUser();
   if (!user || !user.$id) {
-    return { total: 0, rows: [], rows: [] };
+    return { total: 0, rows: [] };
   }
   const res = await databases.listRows(APPWRITE_DATABASE_ID, APPWRITE_TABLE_ID_ACTIVITYLOG, [Query.equal('userId', user.$id)]);
   return {
@@ -3090,7 +3092,6 @@ export async function listNotesPaginated(options: ListNotesPaginatedOptions = {}
 
   return {
     rows: filteredNotes,
-    rows: filteredNotes, // Legacy alias
     total: typeof res.total === 'number' ? res.total : filteredNotes.length,
     nextCursor,
     hasMore,

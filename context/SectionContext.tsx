@@ -60,15 +60,11 @@ const SectionContext = createContext<SectionContextType | undefined>(undefined);
 // Core default layouts for flagged routes in Kylrix
 const DEFAULT_LAYOUTS: Record<string, PanelType[]> = {
   '/note': ['note', 'huddles', 'projects'],
-  '/note': ['note', 'huddles', 'projects'],
   '/tags': ['note', 'huddles', 'projects'],
   '/note/shared': ['tags', 'huddles', 'projects'],
   '/flow': ['forms', 'huddles', 'projects'],
-  '/flow': ['forms', 'huddles', 'projects'],
-  '/flow': ['forms', 'huddles', 'projects'],
   '/flow/forms': ['projects', 'huddles', 'goals'],
   '/flow/events': ['note', 'huddles', 'goals'],
-  '/vault': ['note', 'totp', 'projects'],
   '/vault': ['note', 'totp', 'projects'],
   '/vault/totp': ['secrets', 'secret_chat'],
   '/vault/sharing': ['secrets', 'totp', 'secret_chat'],

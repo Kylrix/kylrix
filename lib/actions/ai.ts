@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AIRequestPayload, AIResponse } from "@/lib/ai/types";
 import { getActor } from "@/lib/actions/secure-ops";
 import { hasPaidKylrixPlan } from "@/lib/utils";
-import { createSystemTablesDB } from "@/lib/appwrite-admin";
+import { createSystemClient, createSystemTablesDB } from "@/lib/appwrite-admin";
 import { Query, ID } from "node-appwrite";
 import { TelemetryService } from "@/lib/services/telemetry";
 

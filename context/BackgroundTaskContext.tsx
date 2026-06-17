@@ -2,8 +2,7 @@
 
 import React, { createContext, useContext, useMemo, useState, useCallback, ReactNode } from 'react';
 import { Box, Typography, LinearProgress, Button, alpha, CircularProgress } from '@/lib/openbricks/primitives';
-import CheckCircleIcon from '@/lib/openbricks/icons';
-import WarningIcon from '@/lib/openbricks/icons';
+import { CheckCircle as CheckCircleIcon, Warning as WarningIcon } from '@/lib/openbricks/icons';
 import { FloatingContainer } from '@/components/ui/FloatingContainer';
 import { ImportService, type ImportProgress, type ImportResult } from '@/utils/import/import-service';
 

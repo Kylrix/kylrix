@@ -116,7 +116,6 @@ const databasesProxy = new Proxy(originalDatabases, {
                 return { 
                     total: res.total, 
                     rows: res.rows,
-                    rows: res.rows 
                 };
             };
         }

@@ -3,9 +3,7 @@
 import { Box, Container, Typography, Grid, Paper, Stack, alpha } from '@/lib/openbricks/primitives';
 
 const VAULT_PRIMARY = "#10B981";
-import ShieldIcon from '@/lib/openbricks/icons';
-import LockIcon from '@/lib/openbricks/icons';
-import FingerprintIcon from '@/lib/openbricks/icons';
+import { Shield as ShieldIcon, Lock as LockIcon, Fingerprint as FingerprintIcon } from '@/lib/openbricks/icons';
 
 export default function Trust() {
 const IconWrapper = ({ icon: Icon, sx }: { icon: any, sx?: any }) => <Icon sx={sx} />;

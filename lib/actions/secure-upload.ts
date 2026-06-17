@@ -95,8 +95,8 @@ export async function secureUploadFile(formData: FormData, jwt?: string) {
         } else {
           const { storage: adminStorage } = createSystemClient();
           const existing = await adminStorage.getFile(bucketId, fileId);
-          if (existing && existing.permissions) {
-            shouldDelete = existing.permissions.some((p: string) => p.includes(`user:${actor.$id}`));
+          if (existing && existing.$permissions) {
+            shouldDelete = existing.$permissions.some((p: string) => p.includes(`user:${actor.$id}`));
           }
         }
         if (shouldDelete) {

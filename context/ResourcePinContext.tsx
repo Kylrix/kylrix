@@ -50,6 +50,8 @@ const defaultPinSets = (): Record<PinnableResourceType, Set<string>> => ({
   project: new Set(),
   conversation: new Set(),
   message: new Set(),
+  call: new Set(),
+  moment: new Set(),
 });
 
 const ResourcePinContext = createContext<ResourcePinContextValue | undefined>(undefined);

@@ -344,7 +344,11 @@ export async function listGhostNoteChats() {
 
 export async function getResourceCollaborators(params: { resourceId: string; resourceType: string }) {
   const jwt = await getJwt();
-  return getResourceCollaboratorsSecure({ ...params, jwt });
+  return getResourceCollaboratorsSecure({
+    resourceId: params.resourceId,
+    resourceType: params.resourceType as 'note' | 'project' | 'task' | 'event' | 'form' | 'secret' | 'totp' | 'call' | 'huddle',
+    jwt,
+  });
 }
 
 export async function getCrossSuggestions(params: { sourceApp: string; sourceType: string; sourceId: string | null }) {

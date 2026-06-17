@@ -21,7 +21,7 @@ import {
     Stack
 } from '@/lib/openbricks/primitives';
 import { Search } from '@/lib/openbricks/icons';
-import PersonIcon from '@/lib/openbricks/icons';
+import { Person as PersonIcon } from '@/lib/openbricks/icons';
 import toast from 'react-hot-toast';
 
 import { useSudo } from '@/context/SudoContext';

@@ -23,10 +23,7 @@ export class AdapterDateFns {}
 
 function formatDateValue(value: string | null | undefined, withTime: boolean) {
   if (!value) return '';
-  if (value instanceof Date) {
-    return withTime ? value.toISOString().slice(0, 16) : value.toISOString().slice(0, 10);
-  }
-  return value;
+  return withTime ? value.slice(0, 16) : value.slice(0, 10);
 }
 
 export const DatePicker = ({ label, value, onChange, disabled, minDate, maxDate, slotProps }: DatePickerProps) => (
@@ -34,7 +31,7 @@ export const DatePicker = ({ label, value, onChange, disabled, minDate, maxDate,
     label={label}
     type="date"
     value={formatDateValue(value, false)}
-    onChange={(event) => onChange?.(event.target.value || null)}
+    onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange?.(event.target.value || null)}
     disabled={disabled}
     min={minDate}
     max={maxDate}
@@ -47,7 +44,7 @@ export const DateTimePicker = ({ label, value, onChange, disabled, minDate, maxD
     label={label}
     type="datetime-local"
     value={formatDateValue(value, true)}
-    onChange={(event) => onChange?.(event.target.value || null)}
+    onChange={(event: React.ChangeEvent<HTMLInputElement>) => onChange?.(event.target.value || null)}
     disabled={disabled}
     min={minDate}
     max={maxDate}

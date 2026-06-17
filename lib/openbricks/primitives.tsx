@@ -916,6 +916,37 @@ export const TextField = React.forwardRef(({
 });
 TextField.displayName = 'TextField';
 
+export type TextFieldProps = {
+  label?: React.ReactNode;
+  placeholder?: string;
+  value?: string;
+  onChange?: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement>;
+  type?: string;
+  fullWidth?: boolean;
+  disabled?: boolean;
+  error?: boolean;
+  helperText?: React.ReactNode;
+  className?: string;
+  sx?: Record<string, unknown>;
+  inputRef?: React.Ref<HTMLInputElement | HTMLTextAreaElement>;
+  InputProps?: Record<string, unknown>;
+  multiline?: boolean;
+  rows?: number;
+  minRows?: number;
+  maxRows?: number;
+  variant?: string;
+  readOnly?: boolean;
+  [key: string]: unknown;
+};
+
+export type InputLabelProps = {
+  children?: React.ReactNode;
+  className?: string;
+  sx?: Record<string, unknown>;
+  htmlFor?: string;
+  [key: string]: unknown;
+};
+
 // 11. Dialog Component
 export const Dialog = React.forwardRef(({
   open,

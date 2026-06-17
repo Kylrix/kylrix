@@ -1,5 +1,5 @@
 type VaultSdk = {
-  listRows: <T = unknown>(databaseId: string, tableId: string, queries?: string[]) => Promise<{ rows: T[]; rows: T[] } & Record<string, unknown>>;
+  listRows: <T = unknown>(databaseId: string, tableId: string, queries?: string[]) => Promise<{ rows: T[]; total?: number } & Record<string, unknown>>;
   createRow: (databaseId: string, tableId: string, data: Record<string, unknown>) => Promise<unknown>;
 };
 
