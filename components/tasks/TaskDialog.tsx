@@ -628,7 +628,7 @@ export default function TaskDialog() {
                       }} 
                     />
                     <ListItemText 
-                      primary={tag.name.toUpperCase()} 
+                      primary={(tag.name || '').toUpperCase()} 
                       primaryTypographyProps={{ 
                         sx: { 
                           color: isSelected ? 'white' : TEXT_MUTED, 
