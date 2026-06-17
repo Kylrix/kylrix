@@ -16,7 +16,6 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
-  ListItemSecondaryAction,
   Select,
   MenuItem,
   FormControl,
@@ -652,7 +651,7 @@ export function ShareNoteModal({ isOpen, onOpenChange, noteId, noteTitle }: Shar
                     secondary={user.name ? user.email : null}
                     secondaryTypographyProps={{ variant: 'caption', color: 'rgba(255, 255, 255, 0.4)', fontFamily: 'var(--font-jetbrains)' }}
                   />
-                  <ListItemSecondaryAction sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Select
                       size="small"
                       value={user.permission}
@@ -689,7 +688,7 @@ export function ShareNoteModal({ isOpen, onOpenChange, noteId, noteTitle }: Shar
                         </IconButton>
                       </Tooltip>
                     )}
-                  </ListItemSecondaryAction>
+                  </Box>
                 </ListItem>
               ))}
             </List>
