@@ -1,0 +1,338 @@
+'use client';
+
+import React from 'react';
+import * as Lucide from 'lucide-react';
+
+const resolveIconSize = (fontSize: any, sx?: any) => {
+  const fromSx = sx?.fontSize;
+  const raw = fromSx ?? fontSize ?? 'medium';
+  if (raw === 'inherit') return 20;
+  if (raw === 'small') return 16;
+  if (raw === 'large') return 28;
+  if (typeof raw === 'number') return raw;
+  if (typeof raw === 'string' && raw.endsWith('rem')) return parseFloat(raw) * 16;
+  if (typeof raw === 'string' && raw.endsWith('px')) return parseFloat(raw);
+  return 20;
+};
+
+// Unified wrapper to make Lucide icons behave like OpenBricks icon primitives
+const createIcon = (LucideIcon: any, defaults?: { strokeWidth?: number; fill?: string }) => {
+  const IconComponent = React.forwardRef(({ fontSize = 'medium', className, style, sx, ...props }: any, ref) => {
+    if (!LucideIcon) return null;
+
+    const size = resolveIconSize(fontSize, sx);
+    const sxStyle = sx && typeof sx === 'object' ? sx : {};
+
+    return (
+      <LucideIcon
+        ref={ref}
+        size={size}
+        strokeWidth={props.strokeWidth ?? defaults?.strokeWidth ?? 1.75}
+        fill={props.fill ?? defaults?.fill ?? 'none'}
+        className={className}
+        style={{ ...sxStyle, ...style }}
+        {...props}
+      />
+    );
+  });
+  IconComponent.displayName = LucideIcon?.displayName || 'IconComponent';
+  return IconComponent;
+};
+
+// Common Lucide exports
+export const Plus = createIcon(Lucide.Plus);
+export const Minus = createIcon(Lucide.Minus);
+export const Trash2 = createIcon(Lucide.Trash2);
+export const Pencil = createIcon(Lucide.Pencil);
+export const SearchIcon = createIcon(Lucide.Search);
+export const SettingsIcon = createIcon(Lucide.Settings);
+export const XIcon = createIcon(Lucide.X);
+export const MenuIcon = createIcon(Lucide.Menu);
+export const ChevronRightIcon = createIcon(Lucide.ChevronRight);
+export const ChevronLeftIcon = createIcon(Lucide.ChevronLeft);
+export const ChevronUpIcon = createIcon(Lucide.ChevronUp);
+export const ChevronDownIcon = createIcon(Lucide.ChevronDown);
+export const ArrowLeftIcon = createIcon(Lucide.ArrowLeft);
+export const ArrowRightIcon = createIcon(Lucide.ArrowRight);
+export const ArrowUpIcon = createIcon(Lucide.ArrowUp);
+export const ArrowDownIcon = createIcon(Lucide.ArrowDown);
+export const EyeIcon = createIcon(Lucide.Eye);
+export const EyeOffIcon = createIcon(Lucide.EyeOff);
+export const CheckIcon = createIcon(Lucide.Check);
+export const InfoIcon = createIcon(Lucide.Info);
+export const AlertTriangle = createIcon(Lucide.AlertTriangle);
+export const AlertCircle = createIcon(Lucide.AlertCircle);
+export const CheckCircle = createIcon(Lucide.CheckCircle);
+export const HelpCircle = createIcon(Lucide.HelpCircle);
+export const HomeIcon = createIcon(Lucide.Home);
+export const UserIcon = createIcon(Lucide.User);
+export const UsersIcon = createIcon(Lucide.Users);
+export const MailIcon = createIcon(Lucide.Mail);
+export const PhoneIcon = createIcon(Lucide.Phone);
+export const LockIcon = createIcon(Lucide.Lock);
+export const CalendarIcon = createIcon(Lucide.Calendar);
+export const MessageSquare = createIcon(Lucide.MessageSquare);
+export const SendIcon = createIcon(Lucide.Send);
+export const BellIcon = createIcon(Lucide.Bell);
+export const Paperclip = createIcon(Lucide.Paperclip);
+export const ImageIcon = createIcon(Lucide.Image);
+export const Share2 = createIcon(Lucide.Share2);
+export const UploadIcon = createIcon(Lucide.Upload);
+export const DownloadIcon = createIcon(Lucide.Download);
+export const CopyIcon = createIcon(Lucide.Copy);
+export const StarIcon = createIcon(Lucide.Star);
+export const HistoryIcon = createIcon(Lucide.History);
+export const LogOutIcon = createIcon(Lucide.LogOut);
+export const MoreVertical = createIcon(Lucide.MoreVertical);
+export const MoreHorizontal = createIcon(Lucide.MoreHorizontal);
+export const PlayIcon = createIcon(Lucide.Play);
+export const PauseIcon = createIcon(Lucide.Pause);
+export const Volume2 = createIcon(Lucide.Volume2);
+export const VolumeX = createIcon(Lucide.VolumeX);
+export const MicIcon = createIcon(Lucide.Mic);
+export const MicOffIcon = createIcon(Lucide.MicOff);
+export const VideoIcon = createIcon(Lucide.Video);
+export const VideoOffIcon = createIcon(Lucide.VideoOff);
+export const FolderIcon = createIcon(Lucide.Folder);
+export const FileIcon = createIcon(Lucide.File);
+export const ListIcon = createIcon(Lucide.List);
+export const GridIcon = createIcon(Lucide.Grid);
+export const Sliders = createIcon(Lucide.Sliders);
+export const FilterIcon = createIcon(Lucide.Filter);
+export const CircleIcon = createIcon(Lucide.Circle);
+
+// Legacy icon name aliases (prefer Lucide names in new code)
+export const Add = Plus;
+export const AddCircle = createIcon(Lucide.PlusCircle);
+export const Remove = Minus;
+export const Delete = Trash2;
+export const Edit = Pencil;
+export const Search = SearchIcon;
+export const Settings = SettingsIcon;
+export const Close = XIcon;
+export const Menu = MenuIcon;
+export const ChevronRight = ChevronRightIcon;
+export const ChevronLeft = ChevronLeftIcon;
+export const ChevronUp = ChevronUpIcon;
+export const ChevronDown = ChevronDownIcon;
+export const ArrowBack = ArrowLeftIcon;
+export const ArrowForward = ArrowRightIcon;
+export const ArrowUpward = ArrowUpIcon;
+export const ArrowDownward = ArrowDownIcon;
+export const Visibility = EyeIcon;
+export const VisibilityOff = EyeOffIcon;
+export const Check = CheckIcon;
+export const Info = InfoIcon;
+export const Warning = AlertTriangle;
+export const Error = AlertCircle;
+export const Success = CheckCircle;
+export const Help = HelpCircle;
+export const Home = HomeIcon;
+export const Person = UserIcon;
+export const People = UsersIcon;
+export const Email = MailIcon;
+export const Phone = PhoneIcon;
+export const Lock = LockIcon;
+export const CalendarToday = CalendarIcon;
+export const Chat = MessageSquare;
+export const Send = SendIcon;
+export const Notifications = BellIcon;
+export const AttachFile = Paperclip;
+export const Image = ImageIcon;
+export const Share = Share2;
+export const CloudUpload = UploadIcon;
+export const CloudDownload = DownloadIcon;
+export const Copy = CopyIcon;
+export const Star = StarIcon;
+export const History = HistoryIcon;
+export const LogOut = LogOutIcon;
+export const MoreVert = MoreVertical;
+export const MoreHoriz = MoreHorizontal;
+export const PlayArrow = PlayIcon;
+export const Pause = PauseIcon;
+export const VolumeUp = Volume2;
+export const VolumeOff = VolumeX;
+export const Mic = MicIcon;
+export const MicOff = MicOffIcon;
+export const Videocam = VideoIcon;
+export const VideocamOff = VideoOffIcon;
+export const Folder = FolderIcon;
+export const InsertDriveFile = FileIcon;
+export const List = ListIcon;
+export const GridView = GridIcon;
+export const Tune = Sliders;
+export const FilterList = FilterIcon;
+export const CheckCircleOutline = CheckCircle;
+export const RadioButtonUnchecked = CircleIcon;
+export const LockOutlined = LockIcon;
+export const ContentCopy = CopyIcon;
+export const Done = CheckIcon;
+export const Refresh = createIcon(Lucide.RefreshCw);
+export const Security = createIcon(Lucide.Shield);
+export const Key = createIcon(Lucide.Key);
+export const Download = DownloadIcon;
+export const Upload = UploadIcon;
+export const Link = createIcon(Lucide.Link);
+export const OpenInNew = createIcon(Lucide.ExternalLink);
+export const FileDownload = DownloadIcon;
+export const Description = createIcon(Lucide.FileText);
+export const Event = CalendarIcon;
+export const Group = UsersIcon;
+export const Public = createIcon(Lucide.Globe);
+export const Globe = Public;
+export const CreditCard = createIcon(Lucide.CreditCard);
+export const ShieldAlert = createIcon(Lucide.ShieldAlert);
+export const ShieldCheck = createIcon(Lucide.ShieldCheck);
+export const Shield = createIcon(Lucide.Shield);
+export const VpnKey = createIcon(Lucide.Key);
+export const Cloud = createIcon(Lucide.Cloud);
+export const CheckBox = createIcon(Lucide.CheckSquare);
+export const CheckBoxOutlineBlank = createIcon(Lucide.Square);
+export const KeyboardArrowUp = ChevronUpIcon;
+export const KeyboardArrowDown = ChevronDownIcon;
+export const KeyboardArrowRight = ChevronRightIcon;
+export const KeyboardArrowLeft = ChevronLeftIcon;
+export const SendRounded = SendIcon;
+export const SmartToy = createIcon(Lucide.Bot);
+export const Code = createIcon(Lucide.Code);
+export const PlayCircle = createIcon(Lucide.PlayCircle);
+
+// Create a Proxy to dynamically handle any other requested icon name
+const fallbackProxy = new Proxy({}, {
+  get: (target, propName: string) => {
+    // If the component is already exported, return it
+    if (propName in target) return (target as any)[propName];
+    
+    // Look up in Lucide using exact name or matching logic
+    const lucideName = propName.replace(/Outlined|Rounded|Sharp/g, '');
+    const LucideComponent = (Lucide as any)[lucideName] || Lucide.HelpCircle;
+    return createIcon(LucideComponent);
+  }
+});
+
+export default fallbackProxy;
+
+export const Abc = createIcon(Lucide.Type);
+export const AccessTime = createIcon(Lucide.Clock);
+export const Accordion = createIcon((Lucide as any).Accordion || Lucide.HelpCircle);
+export const AccordionDetails = createIcon((Lucide as any).AccordionDetails || Lucide.HelpCircle);
+export const AccordionSummary = createIcon((Lucide as any).AccordionSummary || Lucide.HelpCircle);
+export const AddCircleOutline = createIcon((Lucide as any).AddCircleOutline || Lucide.HelpCircle);
+export const AlertTitle = createIcon((Lucide as any).AlertTitle || Lucide.HelpCircle);
+export const AlternateEmail = createIcon(Lucide.Mail);
+export const Apps = createIcon((Lucide as any).Apps || Lucide.HelpCircle);
+export const Archive = createIcon((Lucide as any).Archive || Lucide.HelpCircle);
+export const ArrowBackIosNew = createIcon((Lucide as any).ArrowBackIosNew || Lucide.HelpCircle);
+export const ArrowForwardIos = createIcon((Lucide as any).ArrowForwardIos || Lucide.HelpCircle);
+export const Assignment = createIcon((Lucide as any).Assignment || Lucide.HelpCircle);
+export const AutoAwesome = createIcon((Lucide as any).AutoAwesome || Lucide.HelpCircle);
+export const AutoFixHigh = createIcon((Lucide as any).AutoFixHigh || Lucide.HelpCircle);
+export const Autocomplete = createIcon((Lucide as any).Autocomplete || Lucide.HelpCircle);
+export const AvatarGroup = createIcon((Lucide as any).AvatarGroup || Lucide.HelpCircle);
+export const Backdrop = createIcon((Lucide as any).Backdrop || Lucide.HelpCircle);
+export const Block = createIcon((Lucide as any).Block || Lucide.HelpCircle);
+export const BottomNavigation = createIcon((Lucide as any).BottomNavigation || Lucide.HelpCircle);
+export const BottomNavigationAction = createIcon((Lucide as any).BottomNavigationAction || Lucide.HelpCircle);
+export const Breadcrumbs = createIcon((Lucide as any).Breadcrumbs || Lucide.HelpCircle);
+export const Brush = createIcon((Lucide as any).Brush || Lucide.HelpCircle);
+export const ButtonBase = createIcon((Lucide as any).ButtonBase || Lucide.HelpCircle);
+export const CalendarMonth = createIcon((Lucide as any).CalendarMonth || Lucide.HelpCircle);
+export const Campaign = createIcon((Lucide as any).Campaign || Lucide.HelpCircle);
+export const CardHeader = createIcon((Lucide as any).CardHeader || Lucide.HelpCircle);
+export const CardMedia = createIcon((Lucide as any).CardMedia || Lucide.HelpCircle);
+export const ChatBubbleOutline = createIcon((Lucide as any).ChatBubbleOutline || Lucide.HelpCircle);
+export const Circle = createIcon((Lucide as any).Circle || Lucide.HelpCircle);
+export const Construction = createIcon((Lucide as any).Construction || Lucide.HelpCircle);
+export const Container = createIcon((Lucide as any).Container || Lucide.HelpCircle);
+export const ContentPaste = createIcon((Lucide as any).ContentPaste || Lucide.HelpCircle);
+export const Dashboard = createIcon((Lucide as any).Dashboard || Lucide.HelpCircle);
+export const DataObject = createIcon((Lucide as any).DataObject || Lucide.HelpCircle);
+export const DeleteOutline = createIcon((Lucide as any).DeleteOutline || Lucide.HelpCircle);
+export const DragHandle = createIcon((Lucide as any).DragHandle || Lucide.HelpCircle);
+export const EmojiEmotionsOutlined = createIcon((Lucide as any).EmojiEmotionsOutlined || Lucide.HelpCircle);
+export const ErrorOutline = createIcon((Lucide as any).ErrorOutline || Lucide.HelpCircle);
+export const EventBusy = createIcon((Lucide as any).EventBusy || Lucide.HelpCircle);
+export const EventNote = createIcon((Lucide as any).EventNote || Lucide.HelpCircle);
+export const ExpandLess = createIcon((Lucide as any).ExpandLess || Lucide.HelpCircle);
+export const ExpandMore = createIcon((Lucide as any).ExpandMore || Lucide.HelpCircle);
+export const Extension = createIcon((Lucide as any).Extension || Lucide.HelpCircle);
+export const Fab = createIcon((Lucide as any).Fab || Lucide.HelpCircle);
+export const Fade = createIcon((Lucide as any).Fade || Lucide.HelpCircle);
+export const FiberPin = createIcon((Lucide as any).FiberPin || Lucide.HelpCircle);
+export const FingerprintOutlined = createIcon((Lucide as any).FingerprintOutlined || Lucide.HelpCircle);
+export const Flag = createIcon((Lucide as any).Flag || Lucide.HelpCircle);
+export const FlagOutlined = createIcon((Lucide as any).FlagOutlined || Lucide.HelpCircle);
+export const FolderOutlined = createIcon((Lucide as any).FolderOutlined || Lucide.HelpCircle);
+export const FolderSpecial = createIcon((Lucide as any).FolderSpecial || Lucide.HelpCircle);
+export const FormGroup = createIcon((Lucide as any).FormGroup || Lucide.HelpCircle);
+export const Fullscreen = createIcon((Lucide as any).Fullscreen || Lucide.HelpCircle);
+export const FullscreenExit = createIcon((Lucide as any).FullscreenExit || Lucide.HelpCircle);
+export const InfoOutlined = createIcon((Lucide as any).InfoOutlined || Lucide.HelpCircle);
+export const InputBase = createIcon((Lucide as any).InputBase || Lucide.HelpCircle);
+export const Insights = createIcon((Lucide as any).Insights || Lucide.HelpCircle);
+export const Keyboard = createIcon((Lucide as any).Keyboard || Lucide.HelpCircle);
+export const Label = createIcon((Lucide as any).Label || Lucide.HelpCircle);
+export const Launch = createIcon((Lucide as any).Launch || Lucide.HelpCircle);
+export const LibraryAdd = createIcon((Lucide as any).LibraryAdd || Lucide.HelpCircle);
+export const LightbulbOutlined = createIcon((Lucide as any).LightbulbOutlined || Lucide.HelpCircle);
+export const LinkOff = createIcon((Lucide as any).LinkOff || Lucide.HelpCircle);
+export const ListItemIcon = createIcon((Lucide as any).ListItemIcon || Lucide.HelpCircle);
+export const LocalOffer = createIcon(Lucide.Tag);
+export const LocalOfferOutlined = createIcon((Lucide as any).LocalOfferOutlined || Lucide.HelpCircle);
+export const LocationOn = createIcon((Lucide as any).LocationOn || Lucide.HelpCircle);
+export const LockOpen = createIcon(Lucide.LockOpen);
+export const Login = createIcon((Lucide as any).Login || Lucide.HelpCircle);
+export const Logout = createIcon((Lucide as any).Logout || Lucide.HelpCircle);
+export const MarkEmailRead = createIcon((Lucide as any).MarkEmailRead || Lucide.HelpCircle);
+export const MarkEmailUnread = createIcon((Lucide as any).MarkEmailUnread || Lucide.HelpCircle);
+export const NoteAdd = createIcon((Lucide as any).NoteAdd || HelpCircle);
+export const NoteOutlined = createIcon((Lucide as any).NoteOutlined || Lucide.HelpCircle);
+export const Notes = createIcon(Lucide.FileText);
+export const Numbers = createIcon(Lucide.Hash);
+export const OpenInFull = createIcon((Lucide as any).OpenInFull || Lucide.HelpCircle);
+export const Pagination = createIcon((Lucide as any).Pagination || Lucide.HelpCircle);
+export const PaginationItem = createIcon((Lucide as any).PaginationItem || Lucide.HelpCircle);
+export const PhotoCamera = createIcon((Lucide as any).PhotoCamera || Lucide.HelpCircle);
+export const PictureInPictureAlt = createIcon((Lucide as any).PictureInPictureAlt || Lucide.HelpCircle);
+export const PlaylistAdd = createIcon((Lucide as any).PlaylistAdd || Lucide.HelpCircle);
+export const PlaylistAddCheck = createIcon((Lucide as any).PlaylistAddCheck || Lucide.HelpCircle);
+export const Popover = createIcon((Lucide as any).Popover || Lucide.HelpCircle);
+export const Preview = createIcon((Lucide as any).Preview || Lucide.HelpCircle);
+/** Filled pin (pinned state) — matches MUI PushPin */
+export const PushPin = createIcon(Lucide.Pin, { strokeWidth: 2, fill: 'currentColor' });
+/** Outline pin (unpinned) — matches MUI PushPinOutlined */
+export const PushPinOutlined = createIcon(Lucide.Pin, { strokeWidth: 1.5, fill: 'none' });
+export const RadioButtonChecked = createIcon(Lucide.CircleDot);
+export const Reply = createIcon((Lucide as any).Reply || Lucide.HelpCircle);
+export const RotateLeft = createIcon((Lucide as any).RotateLeft || Lucide.HelpCircle);
+export const Save = createIcon((Lucide as any).Save || Lucide.HelpCircle);
+export const ShieldOutlined = createIcon((Lucide as any).ShieldOutlined || Lucide.HelpCircle);
+export const Skeleton = createIcon((Lucide as any).Skeleton || Lucide.HelpCircle);
+export const SpeedDial = createIcon((Lucide as any).SpeedDial || Lucide.HelpCircle);
+export const SpeedDialAction = createIcon((Lucide as any).SpeedDialAction || Lucide.HelpCircle);
+export const SpeedDialIcon = createIcon((Lucide as any).SpeedDialIcon || Lucide.HelpCircle);
+export const Spellcheck = createIcon((Lucide as any).Spellcheck || Lucide.HelpCircle);
+export const Stop = createIcon((Lucide as any).Stop || Lucide.HelpCircle);
+export const Summarize = createIcon((Lucide as any).Summarize || Lucide.HelpCircle);
+export const SwapVert = createIcon((Lucide as any).SwapVert || Lucide.HelpCircle);
+export const Sync = createIcon((Lucide as any).Sync || Lucide.HelpCircle);
+export const Table = createIcon((Lucide as any).Table || Lucide.HelpCircle);
+export const TableBody = createIcon((Lucide as any).TableBody || Lucide.HelpCircle);
+export const TableCell = createIcon((Lucide as any).TableCell || Lucide.HelpCircle);
+export const TableContainer = createIcon((Lucide as any).TableContainer || Lucide.HelpCircle);
+export const TableHead = createIcon((Lucide as any).TableHead || Lucide.HelpCircle);
+export const TablePagination = createIcon((Lucide as any).TablePagination || Lucide.HelpCircle);
+export const TableRow = createIcon((Lucide as any).TableRow || Lucide.HelpCircle);
+export const TableRows = createIcon((Lucide as any).TableRows || Lucide.HelpCircle);
+export const Tag = createIcon((Lucide as any).Tag || Lucide.HelpCircle);
+export const Today = createIcon((Lucide as any).Today || Lucide.HelpCircle);
+export const ToggleButton = createIcon((Lucide as any).ToggleButton || Lucide.HelpCircle);
+export const ToggleButtonGroup = createIcon((Lucide as any).ToggleButtonGroup || Lucide.HelpCircle);
+export const ToggleOn = createIcon((Lucide as any).ToggleOn || Lucide.HelpCircle);
+export const Undo = createIcon((Lucide as any).Undo || Lucide.HelpCircle);
+export const UploadFile = createIcon(Lucide.Upload);
+export const VerifiedUser = createIcon((Lucide as any).VerifiedUser || Lucide.HelpCircle);
+export const VideoCall = createIcon((Lucide as any).VideoCall || Lucide.HelpCircle);
+export const Zoom = createIcon((Lucide as any).Zoom || Lucide.HelpCircle);
+export const Telegram = createIcon(Lucide.Send);
+
