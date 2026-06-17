@@ -145,6 +145,7 @@ export type Notes = Models.Row & {
     updatedAt: string | null;
     userId: string | null;
     isPublic: boolean | null;
+    isGuest: boolean | null;
     status: Status | null;
     parentNoteId: string | null;
     title: string | null;
@@ -429,6 +430,7 @@ export type Projects = Models.Row & {
     createdAt: string | null;
     updatedAt: string | null;
     isDeleted?: boolean;
+    isPinned?: boolean;
 }
 
 export type ProjectObjects = Models.Row & {
@@ -441,6 +443,7 @@ export type ProjectObjects = Models.Row & {
     createdAt: string | null;
     updatedAt: string | null;
     isDeleted?: boolean;
+    isPinned?: boolean;
 }
 
 // Re-export auto-generated types from appwrite.d.ts

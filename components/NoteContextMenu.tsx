@@ -244,7 +244,7 @@ const PaywallDrawer: React.FC<PaywallDrawerProps> = ({
                     control={
                       <Switch 
                         checked={hasPaywall} 
-                        onChange={(e) => setHasPaywall(e.target.checked)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setHasPaywall(e.target.checked)}
                         sx={{
                           '& .MuiSwitch-switchBase': {
                             color: 'rgba(255,255,255,0.4)',
@@ -313,7 +313,7 @@ const PaywallDrawer: React.FC<PaywallDrawerProps> = ({
                       endAdornment: <InputAdornment position="end" sx={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-satoshi)' }}>USD</InputAdornment>,
                     }}
                     value={paywallAmount}
-                    onChange={(e) => setPaywallAmount(e.target.value ? parseFloat(e.target.value) : '')}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setPaywallAmount(e.target.value ? parseFloat(e.target.value) : '')}
                     placeholder="0.00"
                     sx={{
                       '& .MuiOutlinedInput-root': {

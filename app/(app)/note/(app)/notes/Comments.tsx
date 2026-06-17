@@ -298,7 +298,7 @@ function MentionComposer({
         value={value}
         onChange={handleChange}
         onBlur={handleBlur}
-        onFocus={(event) => {
+        onFocus={(event: React.FocusEvent<HTMLTextAreaElement>) => {
           const caret = event.currentTarget.selectionStart ?? value.length;
           const active = getActiveMentionToken(value, caret);
           if (active) {
@@ -606,7 +606,7 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
                   multiline
                   size="small"
                   value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setEditContent(e.target.value)}
                   autoFocus
                 />
                 <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
@@ -657,7 +657,7 @@ function CommentItem({ comment, onReply, onUpdate, onDelete, depth = 0, userMap,
                   <Tooltip title="Reactions">
                     <IconButton
                       size="small"
-                      onClick={(event) => {
+                      onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                         if (isReactionsOpen) {
                           closeReactions();
                         } else {

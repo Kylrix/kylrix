@@ -20,7 +20,7 @@ import {
 import { 
   Close as CloseIcon, 
   AutoAwesome as SparklesIcon, 
-  Lightbulb as LightBulbIcon, 
+  LightbulbOutlined as LightBulbIcon, 
   Search as MagnifyingGlassIcon, 
   Edit as PencilIcon 
 } from '@/lib/mui-tailwind/icons';
@@ -237,7 +237,7 @@ export function AIGeneratePromptModal({ onClose, onGenerate, isGenerating = fals
               multiline
               rows={4}
               value={customPrompt}
-              onChange={ (e) => setCustomPrompt(e.target.value)}
+              onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setCustomPrompt(e.target.value)}
               placeholder={selectedTypeData.placeholder}
               disabled={isGenerating}
               sx={{

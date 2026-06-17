@@ -18,7 +18,7 @@ export async function generateMetadata({
     }
 
     const title = `${event.title} | Shared Event`;
-    const description = event.description || `Date: ${new Date(event.startDate || '').toLocaleString()}`;
+    const description = event.description || `Date: ${new Date(event.startTime || '').toLocaleString()}`;
     const previewImage = `/flow/events/${eventId}/opengraph-image?v=${encodeURIComponent(
       event.$updatedAt || eventId
     )}`;

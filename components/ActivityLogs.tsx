@@ -164,7 +164,7 @@ export default function ActivityLogs({ onLogsLoaded }: ActivityLogsProps) {
             <TextField
               placeholder="Search logs..."
               value={searchTerm}
-              onChange={(e) => {
+              onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                 setSearchTerm(e.target.value);
                 setPage(0);
               }}

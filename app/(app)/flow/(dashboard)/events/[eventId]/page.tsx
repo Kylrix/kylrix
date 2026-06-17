@@ -682,7 +682,7 @@ export default function EventPage() {
                       fullWidth
                       size="small"
                       value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setInputText(e.target.value)}
                       placeholder={isAuthenticated ? "Type huddle message (auto-cleans in 7 days)..." : "Sign in to send messages..."}
                       disabled={!isAuthenticated}
                       variant="standard"

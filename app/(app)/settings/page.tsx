@@ -109,7 +109,7 @@ export default function SettingsPage() {
                 return;
             }
             try {
-                const cached = getCachedProfilePreview(profilePicId, 80, 80);
+                const cached = getCachedProfilePreview(profilePicId);
                 if (cached) {
                     if (mounted) setProfileAvatarUrl(cached ?? null);
                     return;

@@ -18,7 +18,7 @@ export default async function Image({
 
   const title = event?.title || 'Shared Event';
   const description = event?.description || 'Coordinate scheduled events, RSVPs, and campaigns.';
-  const startDate = event?.startDate ? new Date(event.startDate).toLocaleString() : '';
+  const startTime = event?.startTime ? new Date(event.startTime).toLocaleString() : '';
 
   return new ImageResponse(
     (
@@ -79,7 +79,7 @@ export default async function Image({
 
         {/* Middle Body */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', margin: 'auto 0' }}>
-          {startDate && (
+          {startTime && (
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <span
                 style={{
@@ -93,7 +93,7 @@ export default async function Image({
                   color: '#F472B6',
                 }}
               >
-                {startDate}
+                {startTime}
               </span>
             </div>
           )}

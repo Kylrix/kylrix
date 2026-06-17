@@ -1154,7 +1154,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
     const [replyContent, setReplyContent] = useState('');
     const [pulseMenuAnchorEl, setPulseMenuAnchorEl] = useState<null | HTMLElement>(null);
     const [pulseTarget, setPulseTarget] = useState<any>(null);
-    const [replyTargetId, setReplyTargetId] = useState<string>(momentId);
+    const [replyTargetId, setReplyTargetId] = useState<string>(momentId || '');
     const [shareDrawerOpen, setShareDrawerOpen] = useState(false);
     const [replyDrawerOpen, setReplyDrawerOpen] = useState(false);
     const [exportingImage, setExportingImage] = useState(false);
@@ -1617,7 +1617,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
             });
             setReplies(nextReplies);
             setReplyContent('');
-            setReplyTargetId(momentId);
+            setReplyTargetId(momentId || '');
             toast.success('Reply posted!');
             setReplyDrawerOpen(false);
         } catch (e) {
@@ -2099,7 +2099,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                 multiline
                                 maxRows={10}
                                 value={replyContent}
-                                onChange={(e) => setReplyContent(e.target.value)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setReplyContent(e.target.value)}
                                 InputProps={{
                                     disableUnderline: true,
                                     sx: { color: 'white', py: 0.5, fontSize: '0.92rem' },
@@ -2130,7 +2130,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                     <Drawer
                         anchor="bottom"
                         open={replyDrawerOpen}
-                        onClose={() => { setReplyDrawerOpen(false); setReplyTargetId(momentId); }}
+                        onClose={() => { setReplyDrawerOpen(false); setReplyTargetId(momentId || ''); }}
                         PaperProps={{
                             sx: {
                                 bgcolor: '#161514',
@@ -2149,7 +2149,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                         <Box sx={{ p: 2 }}>
                             {/* Close button row */}
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
-                                <IconButton onClick={() => { setReplyDrawerOpen(false); setReplyTargetId(momentId); }} sx={{ color: 'rgba(255,255,255,0.3)' }}>
+                                <IconButton onClick={() => { setReplyDrawerOpen(false); setReplyTargetId(momentId || ''); }} sx={{ color: 'rgba(255,255,255,0.3)' }}>
                                     <X size={20} />
                                 </IconButton>
                             </Box>
@@ -2171,7 +2171,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                     multiline
                                     rows={4}
                                     value={replyContent}
-                                    onChange={(e) => setReplyContent(e.target.value)}
+                                    onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setReplyContent(e.target.value)}
                                     InputProps={{
                                         disableUnderline: true,
                                         sx: { color: 'white', py: 0.5, fontSize: '0.95rem' }
@@ -2182,8 +2182,9 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                             {/* Footer action bar */}
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', pt: 1.5, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                                 <Button
-                                    onClick={async (e) => {
-                                        await handleReply(e);
+                                    onClick={async (e: React.MouseEvent) => {
+                                        e.preventDefault();
+                                        await handleReply();
                                         setReplyDrawerOpen(false);
                                     }}
                                     disabled={!replyContent.trim() || replying}
@@ -2380,7 +2381,7 @@ export function PostViewClient({ id: propId, onBack }: { id?: string; onBack?: (
                                 multiline
                                 rows={4}
                                 value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setEditContent(e.target.value)}
                                 InputProps={{
                                     disableUnderline: true,
                                     sx: { color: 'white', py: 0.5, fontSize: '0.95rem' }

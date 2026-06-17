@@ -40,6 +40,8 @@ interface CreateNoteFormProps {
     title?: string;
     content?: string;
     tags?: string[];
+    isPublic?: boolean;
+    isGuest?: boolean;
   };
   noteKind?: 'note' | 'project';
   noteId?: string;
@@ -813,7 +815,7 @@ export default function CreateNoteForm({
               <button
                 type="button"
                 onClick={() => {
-                  openUnified('tag-selector', {
+                  openUnified('new-tag', {
                     selectedTags: tags,
                     onSelect: (tagName: string) => {
                       appendTag(tagName);

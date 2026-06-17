@@ -2,7 +2,7 @@
 
 import { Box, Container, Typography, IconButton, Stack, Link as MuiLink } from '@/lib/mui-tailwind/material';
 import Link from 'next/link';
-import { GitHub, Twitter, LinkedIn, Facebook } from '@/lib/mui-tailwind/icons';
+import { Github, Twitter, Linkedin, Facebook } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const footerLinks = {
@@ -112,10 +112,10 @@ export default function Footer() {
             </Typography>
             <Stack direction="row" spacing={1}>
               {[
-                { icon: <GitHub />, label: 'GitHub' },
-                { icon: <Twitter />, label: 'Twitter' },
-                { icon: <LinkedIn />, label: 'LinkedIn' },
-                { icon: <Facebook />, label: 'Facebook' }
+                { icon: <Github size={20} />, label: 'GitHub' },
+                { icon: <Twitter size={20} />, label: 'Twitter' },
+                { icon: <Linkedin size={20} />, label: 'LinkedIn' },
+                { icon: <Facebook size={20} />, label: 'Facebook' }
               ].map((social, index) => (
                 <IconButton 
                   key={index}

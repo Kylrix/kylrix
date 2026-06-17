@@ -65,7 +65,6 @@ export default function OverviewPage() {
               totpResp as {
                 total?: number;
                 rows: Array<Record<string, unknown>>;
-                rows: Array<Record<string, unknown>>;
               }
             ).total ?? totpResp.rows.length;
         } catch {

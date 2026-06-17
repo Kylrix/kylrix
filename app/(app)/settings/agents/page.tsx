@@ -363,7 +363,7 @@ export default function AssistantSettingsPage() {
                                                 type="password"
                                                 placeholder="Enter Gemini API Key (AIzaSy...)"
                                                 value={byokKeyInput}
-                                                onChange={(e) => setByokKeyInput(e.target.value)}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setByokKeyInput(e.target.value)}
                                                 variant="filled"
                                                 InputProps={{ 
                                                     disableUnderline: true, 
@@ -424,7 +424,7 @@ export default function AssistantSettingsPage() {
 
                     <RadioGroup
                         value={selectedFramework}
-                        onChange={(e) => setSelectedFramework(e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSelectedFramework(e.target.value)}
                     >
                         <Stack spacing={2}>
                             {[

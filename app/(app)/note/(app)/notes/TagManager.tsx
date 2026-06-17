@@ -45,13 +45,13 @@ export default function TagManager({ selectedTags, onChangeAction }: TagManagerP
       <Autocomplete
         multiple
         options={tags}
-        getOptionLabel={(option) => option.name || ''}
+        getOptionLabel={(option: any) => option.name || ''}
         value={tags.filter(tag => selectedTags.includes(tag.$id))}
-        onChange={(event, newValue) => {
-          onChangeAction(newValue.map(tag => tag.$id));
+        onChange={(event: any, newValue: any) => {
+          onChangeAction(newValue.map((tag: any) => tag.$id));
         }}
-        renderTags={(value, getTagProps) =>
-          value.map((option, index) => {
+        renderTags={(value: any, getTagProps: any) =>
+          value.map((option: any, index: number) => {
              const tagProps = getTagProps({ index });
              const { key: _unusedKey, ...restProps } = tagProps; // key handled by MUI
             return (
@@ -65,7 +65,7 @@ export default function TagManager({ selectedTags, onChangeAction }: TagManagerP
             );
           })
         }
-        renderInput={(params) => (
+        renderInput={(params: any) => (
           <TextField
             {...params}
             variant="standard"
@@ -78,7 +78,7 @@ export default function TagManager({ selectedTags, onChangeAction }: TagManagerP
           size="small"
           placeholder="Create new tag"
           value={newTagName}
-          onChange={ (e) => setNewTagName(e.target.value)}
+          onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setNewTagName(e.target.value)}
         />
         <Button
           variant="outlined"

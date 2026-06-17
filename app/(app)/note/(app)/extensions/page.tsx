@@ -277,7 +277,7 @@ export default function ExtensionsPage() {
         <Stack spacing={4} sx={{ mb: 6 }}>
           <Tabs 
             value={activeTab} 
-            onChange={(_, v) => setActiveTab(v)}
+            onChange={(_: any, v: any) => setActiveTab(v)}
             sx={{
               '& .MuiTabs-indicator': { bgcolor: '#6366F1', height: 3, borderRadius: '3px 3px 0 0' },
               '& .MuiTab-root': { 
@@ -300,7 +300,7 @@ export default function ExtensionsPage() {
             fullWidth
             placeholder="Search extensions..."
             value={searchQuery}
-            onChange={ (e) => setSearchQuery(e.target.value)}
+            onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setSearchQuery(e.target.value)}
             variant="standard"
             InputProps={{
               disableUnderline: true,
@@ -724,7 +724,7 @@ function CreateExtensionModal({ isOpen, onClose, onSubmit, template }: {
               fullWidth
               required
               value={formData.name}
-              onChange={ (e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, name: e.target.value })}
               placeholder="My Awesome Extension"
               variant="standard"
               InputProps={{
@@ -754,7 +754,7 @@ function CreateExtensionModal({ isOpen, onClose, onSubmit, template }: {
               multiline
               rows={3}
               value={formData.description}
-              onChange={ (e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Describe what your extension does..."
               variant="standard"
               InputProps={{
@@ -782,7 +782,7 @@ function CreateExtensionModal({ isOpen, onClose, onSubmit, template }: {
               fullWidth
               required
               value={formData.version}
-              onChange={ (e) => setFormData({ ...formData, version: e.target.value })}
+              onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, version: e.target.value })}
               placeholder="1.0.0"
               variant="standard"
               InputProps={{
@@ -811,7 +811,7 @@ function CreateExtensionModal({ isOpen, onClose, onSubmit, template }: {
               multiline
               rows={6}
               value={formData.settings}
-              onChange={ (e) => setFormData({ ...formData, settings: e.target.value })}
+              onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setFormData({ ...formData, settings: e.target.value })}
               placeholder='{"setting1": "value1"}'
               variant="standard"
               InputProps={{

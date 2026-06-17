@@ -3,6 +3,7 @@ import { Link, Box, IconButton, Typography, Tooltip, CircularProgress, Button, D
 import { Play, Pause, Key, Lock, Shield, Copy, Check, ArrowLeft, X, Eye, EyeOff, Download } from 'lucide-react';
 import { StorageService } from '@/lib/services/storage';
 import { useAppwriteVault } from '@/context/appwrite-context';
+import { useCallLauncher } from '@/context/CallLauncherContext';
 import { useDataNexus } from '@/context/DataNexusContext';
 import { MasterPassDrawer } from '@/components/overlays/MasterPassDrawer';
 import { generateTOTP } from '@/lib/totp-util';
@@ -453,7 +454,7 @@ export function VaultTotpLink({ href, children }: { href: string; children?: Rea
       >
         <Link
           href={href}
-          onClick={(e) => {
+          onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
             e.preventDefault();
             e.stopPropagation();
             // Clicking triggers unlock if locked, or copies the current token if unlocked
@@ -539,7 +540,7 @@ export function LinkComponent({ href, children }: { href?: string; children?: Re
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={(e) => {
+      onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
         // Intercept form links if they are standard absolute links on kylrix domains
         if (href.includes('/flow/form/')) {
           const match = href.match(/\/flow\/form\/([a-zA-Z0-9_-]+)/);

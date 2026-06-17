@@ -50,6 +50,7 @@ export function AppwriteProvider({ children }: { children: ReactNode }) {
   >(undefined);
 
   const attemptSilentAuthRef = useRef<() => Promise<void>>(async () => undefined);
+  const idmWindowRef = useRef<Window | null>(null);
 
   // ... (existing state)
 

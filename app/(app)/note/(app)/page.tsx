@@ -178,7 +178,7 @@ export default function NotesPage() {
   const fetchNotesAction = useCallback(async () => {
     const safeNotes = Array.isArray(regularSourceNotes) ? regularSourceNotes : [];
     return {
-      rows: safeNotes,
+      documents: safeNotes,
       total: safeNotes.length
     };
   }, [regularSourceNotes]);

@@ -35,7 +35,7 @@ interface SubscriptionState {
   setRegion: (countryCode: string) => void;
   refreshPrices: () => void;
   /** Re-query trusted entitlement (payments, ledger, staff prefs tracks). */
-  refreshEntitlement: () => Promise<void>;
+  refreshEntitlement: (force?: boolean) => Promise<void>;
   refreshBalances: (force?: boolean) => Promise<void>;
 }
 

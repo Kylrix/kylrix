@@ -266,7 +266,7 @@ export default function AppsPage() {
       >
         <BottomNavigation
           value={selected}
-          onChange={(_, value) => setSelected(value)}
+          onChange={(_: any, value: any) => setSelected(value)}
           showLabels
           sx={{
             bgcolor: 'transparent',

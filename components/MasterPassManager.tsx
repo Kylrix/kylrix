@@ -128,7 +128,7 @@ export default function MasterPassManager({ userId }: { userId: string }) {
                 type="password"
                 placeholder="Enter your Master Pass"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setPassword(e.target.value)}
                 disabled={loading}
                 sx={{
                   '& .MuiOutlinedInput-root': {

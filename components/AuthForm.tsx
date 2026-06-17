@@ -72,7 +72,7 @@ export default function AuthForm({
               <TextField
                 type="email"
                 value={email}
-                onChange={(e) => onEmailChangeAction(e.target.value.trim())}
+                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onEmailChangeAction(e.target.value.trim())}
                 placeholder="you@example.com"
                 autoComplete="username"
                 disabled={loading}

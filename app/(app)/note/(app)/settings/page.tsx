@@ -317,7 +317,7 @@ export default function SettingsPage() {
                                 </Typography>
 
                                 {message && (
-                                    <Alert severity={message.type} sx={{ mb: 3, borderRadius: '14px', bgcolor: '#161412', color: theme.palette[message.type].main, border: `1px solid ${alpha(theme.palette[message.type].main, 0.1)}`, fontFamily: 'var(--font-satoshi)', fontWeight: 600, boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.02)' }}>
+                                    <Alert severity={message.type} sx={{ mb: 3, borderRadius: '14px', bgcolor: '#161412', color: (theme.palette as any)[message.type].main, border: `1px solid ${alpha((theme.palette as any)[message.type].main, 0.1)}`, fontFamily: 'var(--font-satoshi)', fontWeight: 600, boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.02)' }}>
                                         {message.text}
                                     </Alert>
                                 )}
@@ -330,7 +330,7 @@ export default function SettingsPage() {
                                                 type="password"
                                                 placeholder="Current PIN"
                                                 value={oldPin}
-                                                onChange={(e) => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                                 variant="filled"
                                                 inputProps={{ maxLength: 4, inputMode: 'numeric', style: { textAlign: 'center', fontWeight: 900, letterSpacing: '0.6em', fontFamily: 'var(--font-mono)', color: 'white' } }}
                                                 InputProps={{ disableUnderline: true, sx: { borderRadius: '16px', bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)', height: 56, boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.2)' } }}
@@ -342,7 +342,7 @@ export default function SettingsPage() {
                                                 type="password"
                                                 placeholder={isPinSet ? "New" : "PIN"}
                                                 value={pin}
-                                                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                                 variant="filled"
                                                 inputProps={{ maxLength: 4, inputMode: 'numeric', style: { textAlign: 'center', fontWeight: 900, letterSpacing: '0.6em', fontFamily: 'var(--font-mono)', color: 'white' } }}
                                                 InputProps={{ disableUnderline: true, sx: { borderRadius: '16px', bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)', height: 56, boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.2)' } }}
@@ -352,7 +352,7 @@ export default function SettingsPage() {
                                                 type="password"
                                                 placeholder="Confirm"
                                                 value={confirmPin}
-                                                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                                 variant="filled"
                                                 inputProps={{ maxLength: 4, inputMode: 'numeric', style: { textAlign: 'center', fontWeight: 900, letterSpacing: '0.6em', fontFamily: 'var(--font-mono)', color: 'white' } }}
                                                 InputProps={{ disableUnderline: true, sx: { borderRadius: '16px', bgcolor: '#161412', border: '1px solid rgba(255, 255, 255, 0.05)', height: 56, boxShadow: 'inset 0 1px 0 rgba(0,0,0,0.2)' } }}

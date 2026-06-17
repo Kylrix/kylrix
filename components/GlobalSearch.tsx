@@ -178,7 +178,7 @@ export default function GlobalSearch() {
         fullWidth
         placeholder="Search notes, collections, and tags..."
         value={searchTerm}
-        onChange={ (e) => {
+        onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
           const val = e.target.value;
           setSearchTerm(val);
           handleSearch(val);

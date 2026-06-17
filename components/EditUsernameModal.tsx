@@ -134,7 +134,7 @@ export default function EditUsernameModal({
             label="Username"
             variant="outlined"
             value={newName}
-            onChange={(_e) => setNewName(_e.target.value.toLowerCase().replace(/\s/g, ''))}
+            onChange={(_e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setNewName(_e.target.value.toLowerCase().replace(/\s/g, ''))}
             disabled={loading}
             autoFocus
             sx={{

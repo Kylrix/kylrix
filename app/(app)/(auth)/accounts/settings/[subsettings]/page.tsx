@@ -310,9 +310,9 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
         
         const exportData = {
           profile: {
-            userId: user.userId,
-            email: user.email,
-            name: user.name,
+            userId: user?.userId,
+            email: user?.email,
+            name: user?.name,
           },
           preferences: appPrefs,
           sessions: (sessions as any).rows || [],
@@ -322,7 +322,7 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
         const downloadAnchor = document.createElement('a');
         downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `kylrix_account_export_${user.userId}.json`);
+        downloadAnchor.setAttribute("download", `kylrix_account_export_${user?.userId}.json`);
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();
         downloadAnchor.remove();

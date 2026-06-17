@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { Models } from 'appwrite';
 import { useRouter } from 'next/navigation';
 import {
   Box,
@@ -276,7 +277,7 @@ function LocalProjectCard({ project, onClick, onDelete, onTogglePin, onUpdate }:
       x: e.clientX,
       y: e.clientY,
       items: accessControlItems,
-      appType: 'project',
+      appType: 'project' as any,
     });
   };
 

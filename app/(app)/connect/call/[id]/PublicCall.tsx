@@ -447,7 +447,7 @@ export function PublicCall({ id }: { id: string }) {
                                         fullWidth
                                         placeholder="What's your name?"
                                         value={displayName}
-                                        onChange={(e) => setDisplayName(e.target.value)}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDisplayName(e.target.value)}
                                         variant="outlined"
                                         InputProps={{
                                             sx: { 

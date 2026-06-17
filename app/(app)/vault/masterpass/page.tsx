@@ -280,7 +280,7 @@ function MasterPassPageInner() {
                     type="password"
                     placeholder="Create Master Password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setPassword(e.target.value)}
                     autoFocus
                     autoComplete="new-password"
                     sx={{
@@ -299,7 +299,7 @@ function MasterPassPageInner() {
                     type="password"
                     placeholder="Confirm Master Password"
                     value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setConfirmPassword(e.target.value)}
                     autoComplete="new-password"
                     sx={{
                         '& .MuiOutlinedInput-root': {

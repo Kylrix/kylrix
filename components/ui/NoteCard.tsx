@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import * as React from 'react';
 import { 
   Pin as PinIcon, 
   Paperclip as AttachFileIcon, 
@@ -50,9 +50,9 @@ interface NoteCardProps {
 }
 
 const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete, onNoteSelect }) => {
-  const [mounted, setMounted] = useState(false);
-  const [isPaywallDialogOpen, setIsPaywallDialogOpen] = useState(false);
-  const [isAIProcessing, setIsAIProcessing] = useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const [isPaywallDialogOpen, setIsPaywallDialogOpen] = React.useState(false);
+  const [isAIProcessing, setIsAIProcessing] = React.useState(false);
   
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
@@ -62,8 +62,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   
   // Decouple from frequent state changes in UnifiedDrawerContext
   const unifiedDrawer = useUnifiedDrawer();
-  const openShare = useCallback(() => unifiedDrawer.open('share-note', { noteId: note.$id, noteTitle: note.title }), [unifiedDrawer, note.$id, note.title]);
-  const openDelete = useCallback(() => unifiedDrawer.open('delete-confirm', { 
+  const openShare = React.useCallback(() => unifiedDrawer.open('share-note', { noteId: note.$id, noteTitle: note.title }), [unifiedDrawer, note.$id, note.title]);
+  const openDelete = React.useCallback(() => unifiedDrawer.open('delete-confirm', { 
     title: `Delete "${note.title}"?`,
     resourceName: 'this note',
     confirmLabel: 'Delete Note',
@@ -74,21 +74,21 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const { openProUpgrade } = useProUpgrade();
   const { showSuccess, showError, showInfo } = useToast();
 
-  useEffect(() => setMounted(true), []);
+  React.useEffect(() => setMounted(true), []);
 
   const isPublic = getNotePublicState(note);
   const isPro = hasPaidKylrixPlan(user);
-  const noteMeta = (() => {
+  const noteMeta = React.useMemo(() => {
     try {
       return JSON.parse(note.metadata || '{}');
     } catch {
       return {};
     }
-  })();
+  }, [note.metadata]);
   const isEncryptedNote = !!noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T4' && !noteMeta?.clientDecrypted;
   const pinned = isPinned(note.$id);
 
-  const handleAIAction = async (action: 'summarize' | 'grammar' | 'expand') => {
+  const handleAIAction = React.useCallback(async (action: 'summarize' | 'grammar' | 'expand') => {
     if (isAIProcessing) return;
     setIsAIProcessing(true);
     showInfo(`AI is ${action === 'grammar' ? 'fixing' : action + 'ing'} your note...`);
@@ -99,13 +99,14 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
         updatedAt: new Date().toISOString()
       });
       upsertNote(updated);
-      showSuccess(`Note ${action}d successfully`);
+      showSuccess('Note updated successfully!');
     } catch (err: any) {
-      showError(err.message || `Failed to ${action} note`);
+      showError('AI Action Failed', err.message);
     } finally {
       setIsAIProcessing(false);
     }
-  };
+  }, [isAIProcessing, note, upsertNote]);
+
 
   const handleCreateTodo = async () => {
     if (isAIProcessing) return;

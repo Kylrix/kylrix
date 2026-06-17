@@ -6,7 +6,7 @@ import {
   Menu, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions,
   Button
 } from '@/lib/mui-tailwind/material';
-import { Delete, Share, Lock, LockOpen, MoreVert, Analytics } from '@/lib/mui-tailwind/icons';
+import { Delete, Share, Lock, LockOpen, MoreVert, Insights as Analytics } from '@/lib/mui-tailwind/icons';
 import type { Notes } from '@/types/appwrite';
 import { formatNoteUpdatedDate } from '@/lib/date-utils';
 import { isNotePublic } from '@/lib/appwrite';

@@ -296,7 +296,7 @@ function SettingsPageContent() {
                                                 type="password"
                                                 placeholder="Current PIN"
                                                 value={oldPin}
-                                                onChange={(e) => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                                 variant="filled"
                                                 inputProps={{ maxLength: 4, inputMode: 'numeric', style: { textAlign: 'center', fontWeight: 800 } }}
                                                 InputProps={{ disableUnderline: true, sx: { borderRadius: '12px' } }}
@@ -308,7 +308,7 @@ function SettingsPageContent() {
                                                 type="password"
                                                 placeholder={isPinSet ? "New PIN" : "Set PIN"}
                                                 value={pin}
-                                                onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                                 variant="filled"
                                                 inputProps={{ maxLength: 4, inputMode: 'numeric', style: { textAlign: 'center', fontWeight: 800 } }}
                                                 InputProps={{ disableUnderline: true, sx: { borderRadius: '12px' } }}
@@ -318,7 +318,7 @@ function SettingsPageContent() {
                                                 type="password"
                                                 placeholder="Confirm"
                                                 value={confirmPin}
-                                                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                                                onChange={(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                                 variant="filled"
                                                 inputProps={{ maxLength: 4, inputMode: 'numeric', style: { textAlign: 'center', fontWeight: 800 } }}
                                                 InputProps={{ disableUnderline: true, sx: { borderRadius: '12px' } }}

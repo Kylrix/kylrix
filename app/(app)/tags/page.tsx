@@ -154,7 +154,7 @@ export default function TagsPage() {
               </button>
               <div>
                 <h1 className="text-white font-black text-2xl md:text-3xl tracking-tight leading-tight mb-1 font-mono tracking-tighter">
-                  {selectedTag ? `# ${selectedTag.name.toUpperCase()}` : 'Global Tags'}
+                  {selectedTag ? `# ${selectedTag.name?.toUpperCase() || ''}` : 'Global Tags'}
                 </h1>
                 <p className="text-white/40 text-xs font-semibold leading-normal font-sans">
                   {selectedTag ? `Sweeping ecosystem resources with this tag` : 'Organize and sweep resources across the ecosystem'}
@@ -234,7 +234,7 @@ export default function TagsPage() {
                                 {tag.name}
                               </h3>
                               <span className="block text-[9px] font-black uppercase tracking-wider text-white/30 font-mono mt-0.5">
-                                {tag.usageCount || 0} items
+                                {(tag as any).usageCount || 0} items
                               </span>
                             </div>
                           </div>

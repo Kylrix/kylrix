@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Box, Typography, TextField, Button, List, ListItem, ListItemText, Divider, Select, MenuItem, FormControl, InputLabel } from '@/lib/mui-tailwind/material';
+import { SelectChangeEvent } from '@mui/material';
 import { listCollaborators, createCollaborator, deleteCollaborator } from '@/lib/appwrite';
 import { useToast } from '@/components/ui/Toast';
 import type { Collaborators, Users } from '@/types/appwrite';
@@ -81,14 +82,14 @@ export default function CollaboratorsSection({ noteId }: CollaboratorsProps) {
           fullWidth
           label="User email"
           value={newCollaboratorEmail}
-          onChange={ (e) => setNewCollaboratorEmail(e.target.value)}
+          onChange={ (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setNewCollaboratorEmail(e.target.value)}
         />
         <FormControl sx={{ minWidth: 120 }}>
           <InputLabel>Permission</InputLabel>
           <Select
             value={permission}
             label="Permission"
-            onChange={ (e) => setPermission(e.target.value)}
+            onChange={ (e: SelectChangeEvent) => setPermission(e.target.value)}
           >
             <MenuItem value="read">Read</MenuItem>
             <MenuItem value="write">Write</MenuItem>

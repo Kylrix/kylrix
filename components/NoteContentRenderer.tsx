@@ -137,7 +137,7 @@ export function NoteContentRenderer({
         if (match) {
           const fileId = match[1];
           return (
-            <Box key={index} sx={{ my: 1.5, display: 'block' }} onClick={(e) => e.stopPropagation()}>
+            <Box key={index} sx={{ my: 1.5, display: 'block' }} onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
               <VoiceNotePlayer fileId={fileId} />
             </Box>
           );

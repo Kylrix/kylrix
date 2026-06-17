@@ -197,8 +197,7 @@ export default function ProjectDetailPage() {
     if (!project) return;
     try {
       await ProjectsService.updateProject(project.$id, {
-        visibility,
-        isGuest
+        visibility
       });
       showSuccess('Project visibility updated successfully!');
       fetchProjectData();
@@ -502,7 +501,7 @@ export default function ProjectDetailPage() {
         collaborators: resolvedCollabs,
         ownerProfile: resolvedOwner,
         gitIntegration: resolvedGit,
-        ...resolvedEntitiesData
+        ...(resolvedEntitiesData as any)
       };
       setSessionProjectDetail(projectId as string, cachePayload);
       void setCachedData(projectDetailCacheKey(projectId as string), cachePayload);
@@ -648,23 +647,23 @@ export default function ProjectDetailPage() {
         }
       }
 
-      setNotes(resolvedNotes);
-      setTasks(resolvedTasks);
-      setCredentials(resolvedCreds);
-      setSubProjects(resolvedSubProjs);
-      setForms(resolvedForms);
-      setEvents(resolvedEvents);
-      setTags(resolvedTags);
-      setTotps(resolvedTotps);
-      setMoments(resolvedMoments);
-      setCalls(resolvedCalls);
+      setNotes(resolvedNotes as any);
+      setTasks(resolvedTasks as any);
+      setCredentials(resolvedCreds as any);
+      setSubProjects(resolvedSubProjs as any);
+      setForms(resolvedForms as any);
+      setEvents(resolvedEvents as any);
+      setTags(resolvedTags as any);
+      setTotps(resolvedTotps as any);
+      setMoments(resolvedMoments as any);
+      setCalls(resolvedCalls as any);
       setTaggedResources(resolvedTagged);
 
       return {
         notes: resolvedNotes,
         tasks: resolvedTasks,
         credentials: resolvedCreds,
-        subProjects: resolvedSubProjs,
+        subProjects: resolvedSubProjs as any,
         forms: resolvedForms,
         events: resolvedEvents,
         tags: resolvedTags,
