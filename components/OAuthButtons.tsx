@@ -1,8 +1,9 @@
 'use client';
 
-import { OAuthProvider } from 'appwrite';
 import { account } from '@/lib/appwrite';
+import { OAuthProvider } from 'appwrite';
 import { useState } from 'react';
+import { clearStatelessSessions } from '@/lib/utils';
 
 const providers = [
   {
@@ -71,21 +72,7 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
     }
 
     // 2. Stateless session cleanup to prevent session mixing
-    try {
-      document.cookie = "kylrix_pulse_v2=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
-      document.cookie.split(";").forEach((cookie) => {
-        const eqPos = cookie.indexOf("=");
-        const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
-        if (name.startsWith("a_session_")) {
-          document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-          const domain = window.location.hostname;
-          document.cookie = `${name}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
-        }
-      });
-      sessionStorage.clear();
-    } catch (e) {
-      console.warn("Stateless cleanup warning:", e);
-    }
+    clearStatelessSessions();
 
     try {
       const success = `${window.location.origin}/?auth=success`;

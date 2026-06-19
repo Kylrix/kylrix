@@ -149,3 +149,22 @@ export function getEffectiveUsername(user: any): string | null {
   // Fast "canonization" into a username-safe string if it's just a name
   return raw.toString().toLowerCase().trim().replace(/[^a-z0-9_-]/g, '');
 }
+
+// Clear stale session cookies to prevent overlapping session identity bugs
+export function clearStatelessSessions() {
+  try {
+    document.cookie = "kylrix_pulse_v2=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+    document.cookie.split(";").forEach((cookie) => {
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+      if (name.startsWith("a_session_")) {
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+        const domain = window.location.hostname;
+        document.cookie = `${name}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+      }
+    });
+    sessionStorage.clear();
+  } catch (e) {
+    console.warn("Stateless cleanup warning:", e);
+  }
+}
