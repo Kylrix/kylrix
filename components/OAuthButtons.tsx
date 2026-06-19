@@ -48,6 +48,45 @@ export default function OAuthButtons({ disabled, lastUsed }: OAuthButtonsProps) 
     setError(null);
     localStorage.setItem('kylrix_last_auth_method', provider);
 
+    // 1. Pre-flight connectivity check
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('Please check your internet connection and try again.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+      await fetch(`${window.location.origin}/favicon.ico`, {
+        method: 'HEAD',
+        signal: controller.signal,
+        cache: 'no-store'
+      });
+      clearTimeout(timeoutId);
+    } catch (e) {
+      setError('Unable to connect to Kylrix services. Please check your internet connection.');
+      setLoading(false);
+      return;
+    }
+
+    // 2. Stateless session cleanup to prevent session mixing
+    try {
+      document.cookie = "kylrix_pulse_v2=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+      document.cookie.split(";").forEach((cookie) => {
+        const eqPos = cookie.indexOf("=");
+        const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
+        if (name.startsWith("a_session_")) {
+          document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+          const domain = window.location.hostname;
+          document.cookie = `${name}=; path=/; domain=${domain}; expires=Thu, 01 Jan 1970 00:00:00 GMT;`;
+        }
+      });
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn("Stateless cleanup warning:", e);
+    }
+
     try {
       const success = `${window.location.origin}/?auth=success`;
       const failure = `${window.location.origin}/?error=oauth_failed`;
