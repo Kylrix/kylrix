@@ -413,7 +413,9 @@ function filterNoteData(data: Record<string, any>): Record<string, any> {
     'id', 'createdAt', 'updatedAt', 'userId', 'isPublic', 'isGuest', 'status', 
     'parentNoteId', 'title', 'content', 'tags', 'comments', 
     'extensions', 'collaborators', 'metadata', 'attachments', 'format',
-    'isGhost', 'isThread', 'isPinned', 'creatorId'
+    'isGhost', 'isThread', 'isPinned', 'creatorId', 'isChat', 'resourceId',
+    'resourceType', 'isEncrypted', 'isPass', 'isTask', 'isFile', 'isTotp',
+    'isDiscussion', 'source', 'keepPermission', 'crdt', 'dek', 'isDeleted'
   ];
   
   const filtered: Record<string, any> = {};
@@ -3239,13 +3241,14 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
 
     if (meta.clientDecrypted) return note;
 
-    if (meta.isEncrypted && meta.encryptionVersion === 'T5') {
+    const rawDek = note.dek || meta.dek;
+    if (rawDek && (meta.encryptionVersion === 'T5' || !meta.encryptionVersion)) {
       if (!ecosystemSecurity.status.isUnlocked) {
         return note; // cannot decrypt locked note, leave as encrypted
       }
       try {
         const { decryptField } = await import("../masterpass-crypto");
-        const dekBase64 = await decryptField(meta.dek);
+        const dekBase64 = await decryptField(rawDek);
         const rawKey = base64ToBytes(dekBase64);
         const dek = await crypto.subtle.importKey(
           "raw",
@@ -3823,7 +3826,7 @@ export async function lockNote(noteId: string): Promise<Notes | null> {
     try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
   })();
 
-  if (meta.isEncrypted && meta.encryptionVersion === 'T5') {
+  if ((note.isEncrypted || meta.isEncrypted) && (note.dek || meta.dek)) {
     return note;
   }
 
@@ -3839,7 +3842,6 @@ export async function lockNote(noteId: string): Promise<Notes | null> {
     ...meta,
     isEncrypted: true,
     encryptionVersion: 'T5',
-    dek: wrappedDek,
     encryptedTitle
   };
 
@@ -3848,6 +3850,8 @@ export async function lockNote(noteId: string): Promise<Notes | null> {
     userId: ownerId,
     title: '🔒 Locked Note',
     content: encryptedContent,
+    isEncrypted: true,
+    dek: wrappedDek,
     metadata: JSON.stringify(updatedMeta)
   };
 
@@ -3882,11 +3886,12 @@ export async function unlockNote(noteId: string): Promise<Notes | null> {
     try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
   })();
 
-  if (!meta.isEncrypted || meta.encryptionVersion !== 'T5') {
+  const rawDek = note.dek || meta.dek;
+  if (!rawDek) {
     return note;
   }
 
-  const dekBase64 = await decryptField(meta.dek);
+  const dekBase64 = await decryptField(rawDek);
   const rawKey = base64ToBytes(dekBase64);
   const dek = await crypto.subtle.importKey(
     "raw",
@@ -3910,6 +3915,8 @@ export async function unlockNote(noteId: string): Promise<Notes | null> {
     userId: ownerId,
     title: plaintextTitle,
     content: plaintextContent,
+    isEncrypted: false,
+    dek: null,
     metadata: JSON.stringify(updatedMeta)
   };
 

@@ -175,6 +175,7 @@ export type Notes = Models.Row & {
     resourceType?: string | null;
     keepPermission?: boolean | null;
     source?: string | null;
+    dek?: string | null;
     isDeleted?: boolean;
     }
 

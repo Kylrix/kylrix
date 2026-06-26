@@ -85,8 +85,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       return {};
     }
   }, [note.metadata]);
-  const isEncryptedNote = !!noteMeta?.isEncrypted && (noteMeta?.encryptionVersion === 'T4' || noteMeta?.encryptionVersion === 'T5') && !noteMeta?.clientDecrypted;
-  const isLockedT5 = !!noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T5' && !noteMeta?.clientDecrypted;
+  const isLockedT5 = (!!note.dek || (noteMeta?.encryptionVersion === 'T5' && !!noteMeta?.dek)) && !noteMeta?.clientDecrypted;
+  const isEncryptedNote = (noteMeta?.encryptionVersion === 'T4' || isLockedT5) && !noteMeta?.clientDecrypted;
   const pinned = isPinned(note.$id);
 
   const handleAIAction = React.useCallback(async (action: 'summarize' | 'grammar' | 'expand') => {
@@ -204,7 +204,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const handleLockToggle = async () => {
     const handleToggle = async () => {
       try {
-        const isLocked = !!noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T5';
+        const isLocked = !!note.dek || (noteMeta?.encryptionVersion === 'T5' && !!noteMeta?.dek);
         const updated = isLocked ? await unlockNote(note.$id) : await lockNote(note.$id);
         if (updated) {
           upsertNote(updated);

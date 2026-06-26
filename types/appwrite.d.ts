@@ -399,6 +399,7 @@ export type Notes = Models.Row & {
     source: string | null;
     keepPermission: boolean | null;
     crdt: string | null;
+    dek: string | null;
     isDeleted: boolean;
 }
 
