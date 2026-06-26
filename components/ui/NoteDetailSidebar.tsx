@@ -253,14 +253,15 @@ export function NoteDetailSidebar({
     }
 
     if (isDirtyRef.current) return;
-    if (!serverTs || serverTs === lastAppliedServerTsRef.current) return;
-
-    lastAppliedServerTsRef.current = serverTs;
-    setTitle(liveNote.title || '');
-    setContent(liveNote.content || '');
-    setTags(liveNote.tags?.join(', ') || '');
-    setIsPublic(getNotePublicState(liveNote));
-  }, [liveNote]);
+    const contentDiverged = liveNote.title !== title || liveNote.content !== content;
+    if (serverTs !== lastAppliedServerTsRef.current || contentDiverged) {
+      lastAppliedServerTsRef.current = serverTs;
+      setTitle(liveNote.title || '');
+      setContent(liveNote.content || '');
+      setTags(liveNote.tags?.join(', ') || '');
+      setIsPublic(getNotePublicState(liveNote));
+    }
+  }, [liveNote, title, content]);
 
   // Automatically heal T4 encrypted state if vault is unlocked
   useEffect(() => {
