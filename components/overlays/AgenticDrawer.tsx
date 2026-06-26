@@ -313,10 +313,10 @@ export function AgenticDrawer() {
               </div>
               <div className="flex flex-col">
                 <h2 className="text-white font-extrabold text-base font-clash tracking-tight leading-none">
-                  Smart Systems
+                  Agentic Engine
                 </h2>
                 <span className="text-[#9B9691] text-xs font-semibold mt-1">
-                  Automate work with secure AI assistants
+                  Autonomous workspace coordination
                 </span>
               </div>
             </div>
@@ -348,11 +348,11 @@ export function AgenticDrawer() {
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${runSummary.working > 0 ? 'bg-[#F59E0B]' : 'bg-[#10B981]'}`} />
                 <span className="text-white text-xs font-black">
-                  {runSummary.total} Active Systems
+                  {runSummary.total} Autonomous Agents
                 </span>
               </div>
               <span className="text-[#9B9691] text-[11px] font-bold">
-                {runSummary.working} Active · {runSummary.idle} Inactive
+                {runSummary.working} Active · {runSummary.idle} Idle
               </span>
             </div>
           </div>
@@ -365,7 +365,7 @@ export function AgenticDrawer() {
             <div className="flex items-center gap-2 relative z-10">
               <Sparkles size={13} className="text-[#6366F1] animate-pulse" />
               <span className="text-white text-xs font-black uppercase tracking-wider font-clash">
-                Instant System Request
+                Instant Prompt
               </span>
               {!isPro && (
                 <span className="ml-auto text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-500">
@@ -405,7 +405,7 @@ export function AgenticDrawer() {
                 type="text"
                 value={instantPrompt}
                 onChange={(e) => setInstantPrompt(e.target.value)}
-                placeholder="Ask the system to summarize, analyze, or draft..."
+                placeholder="Ask the agent to write, analyze, or process..."
                 disabled={executingInstant}
                 className="w-full pl-3.5 pr-12 py-3 rounded-xl bg-[#161412] border border-white/5 text-xs text-white font-semibold placeholder:text-[#9B9691]/40 focus:outline-none focus:border-[#6366F1]/50 focus:shadow-[0_0_12px_rgba(99,102,241,0.15)] transition-all duration-300 disabled:opacity-50"
               />
@@ -462,10 +462,10 @@ export function AgenticDrawer() {
               ) : parsedAgents.length === 0 ? (
                 <div className="p-6 rounded-2xl bg-[#0B0A09] border border-white/5 text-center">
                   <h3 className="text-white font-extrabold text-sm mb-1">
-                    No Smart Systems
+                    No Agents Configured
                   </h3>
                   <p className="text-[#9B9691] text-xs leading-relaxed">
-                    Initialize your first background assistant to automate routine operations.
+                    Initialize an autonomous agent to orchestrate your workspace.
                   </p>
                 </div>
               ) : (
@@ -484,7 +484,7 @@ export function AgenticDrawer() {
                           </h4>
                           <div className="flex items-center gap-1.5 text-xs text-[#9B9691] font-semibold">
                             <span>
-                              {agent.framework === 'kylrix' ? 'Kylrix Internal' : agent.framework}
+                              {agent.framework === 'kylrix' ? 'Internal Engine' : agent.framework}
                             </span>
                             <span className="w-1 h-1 rounded-full bg-[#5D5A56]" />
                             <span className="text-[10px] font-normal text-white/35">
@@ -520,7 +520,7 @@ export function AgenticDrawer() {
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-extrabold text-sm bg-[#6366F1] text-white hover:bg-[#575CF0] transition shadow-none cursor-pointer"
               >
                 <Plus size={18} />
-                <span>Initialize Smart System</span>
+                <span>Initialize Agent</span>
               </button>
             </div>
           </div>
@@ -550,7 +550,7 @@ export function AgenticDrawer() {
                   <ArrowLeft size={16} />
                 </button>
                 <h3 className="text-white font-extrabold text-base font-clash tracking-tight">
-                  Initialize System
+                  Initialize Agent
                 </h3>
               </div>
               {!isDesktop && (
@@ -569,13 +569,13 @@ export function AgenticDrawer() {
             <div className="flex-1 overflow-y-auto pr-1 flex flex-col gap-5 min-h-0">
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-[#9B9691] tracking-wider uppercase font-clash">
-                  System Name
+                  Agent Name
                 </label>
                 <input
                   type="text"
                   value={agentName}
                   onChange={(event) => setAgentName(event.target.value)}
-                  placeholder="e.g., Workflow Manager"
+                  placeholder="e.g., Workspace Orchestrator"
                   className="w-full px-4 py-3 rounded-xl bg-[#0A0908] border border-[#34322F] text-sm text-white font-semibold placeholder:text-[#9B9691]/40 focus:outline-none focus:border-[#6366F1] transition"
                 />
               </div>
@@ -603,10 +603,10 @@ export function AgenticDrawer() {
                     <Plug size={18} className="text-[#6366F1]" />
                     <div className="flex flex-col">
                       <span className="text-[#9B9691] text-[10px] font-bold uppercase tracking-wider">
-                        Runtime Environment
+                        Runtime Host
                       </span>
                       <span className="text-white text-sm font-extrabold mt-0.5">
-                        {framework === 'kylrix' ? 'Kylrix Internal' : framework}
+                        {framework === 'kylrix' ? 'Internal Engine' : framework}
                       </span>
                     </div>
                   </div>
@@ -615,7 +615,7 @@ export function AgenticDrawer() {
               </div>
 
               <p className="text-[#9B9691] text-[11px] leading-relaxed px-1">
-                Smart systems run locally using in-process tasks. They cannot connect to arbitrary external websites or leak internal files.
+                Agents orchestrate workspace tools and run secure local pipelines.
               </p>
             </div>
 
@@ -720,7 +720,7 @@ export function AgenticDrawer() {
                 <ArrowLeft size={16} />
               </button>
               <h3 className="text-white font-extrabold text-base font-clash tracking-tight">
-                System Panel
+                Agent Configuration
               </h3>
             </div>
 
@@ -742,7 +742,7 @@ export function AgenticDrawer() {
                     {selectedAgent.status}
                   </span>
                   <span className="text-[#9B9691] text-xs font-semibold">
-                    {selectedAgent.framework === 'kylrix' ? 'Kylrix Internal' : selectedAgent.framework}
+                    {selectedAgent.framework === 'kylrix' ? 'Internal Engine' : selectedAgent.framework}
                   </span>
                 </div>
               </div>
@@ -763,7 +763,7 @@ export function AgenticDrawer() {
               {(selectedAgent.lastSummary || selectedAgent.lastError) && (
                 <div className="flex flex-col gap-1.5">
                   <h5 className="text-[#9B9691] text-[10px] font-bold uppercase tracking-wider px-1">
-                    System Logs / Activity
+                    Agent Logs & Output
                   </h5>
                   <div className="p-4 rounded-xl bg-[#0A0908] border border-[#34322F]">
                     {selectedAgent.lastError ? (

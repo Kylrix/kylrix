@@ -6,6 +6,7 @@ import { ID, Query } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { createServerClient } from '@/lib/appwrite/server';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { userHasPaidAiAccess } from '@/lib/server/ai-subscription-gate';
 
 type AgentStatus = 'idle' | 'working';
 
@@ -47,6 +48,69 @@ async function requireUser(jwt?: string) {
   const actor = await getActor(jwt);
   if (!actor?.$id) throw new Error('Unauthorized');
   return actor;
+}
+
+async function checkComputeBalance(userId: string) {
+  const hasAccess = await userHasPaidAiAccess(userId);
+  if (!hasAccess) {
+    throw new Error('AI features require a Pro account. Upgrade to continue.');
+  }
+
+  const { databases } = createSystemClient();
+  const res = await databases.listRows(
+    'whisperrflow',
+    'compute_balances',
+    [Query.equal('userId', userId), Query.limit(1)]
+  );
+
+  let balanceRow: any = null;
+  if (res.rows.length === 0) {
+    balanceRow = await databases.createRow(
+      'whisperrflow',
+      'compute_balances',
+      ID.unique(),
+      {
+        userId,
+        tier: 'pro',
+        balance: 100000,
+        lastResetAt: new Date().toISOString()
+      }
+    );
+  } else {
+    balanceRow = res.rows[0];
+  }
+
+  if (balanceRow.balance <= 0) {
+    throw new Error('You have exceeded your dynamic compute token allocation.');
+  }
+  return balanceRow;
+}
+
+async function debitComputeBalance(userId: string, balanceRow: any, promptText: string, completionText: string) {
+  const { databases } = createSystemClient();
+  const promptLength = promptText.length || 0;
+  const estimatedPromptTokens = Math.ceil(promptLength / 4) + 120;
+  const estimatedCompletionTokens = Math.ceil(completionText.length / 4);
+  const totalTokens = estimatedPromptTokens + estimatedCompletionTokens;
+
+  const newBalance = Math.max(0, balanceRow.balance - totalTokens);
+  await databases.updateRow(
+    'whisperrflow',
+    'compute_balances',
+    balanceRow.$id,
+    { balance: newBalance }
+  );
+
+  await databases.createRow(
+    'whisperrflow',
+    'compute_ledger',
+    ID.unique(),
+    {
+      userId,
+      tokensConsumed: totalTokens,
+      timestamp: new Date().toISOString()
+    }
+  );
 }
 
 async function getOwnedAgentOrThrow(agentId: string, ownerId: string) {
@@ -137,6 +201,8 @@ export async function runMyAgent(agentId: string, jwt?: string): Promise<{ summa
   );
 
   try {
+    const balanceRow = await checkComputeBalance(user.$id);
+
     const tasksRes = await databases.listRows(
       APPWRITE_CONFIG.DATABASES.FLOW,
       APPWRITE_CONFIG.TABLES.FLOW.TASKS,
@@ -171,6 +237,8 @@ export async function runMyAgent(agentId: string, jwt?: string): Promise<{ summa
 
     const result = await model.generateContent(prompt);
     const summary = result.response.text().trim().slice(0, 6000);
+
+    await debitComputeBalance(user.$id, balanceRow, prompt, summary);
 
     const nextConfig: AgentConfig = {
       ...config,
@@ -217,6 +285,8 @@ export async function executeInstantRequestAction(prompt: string, jwt?: string):
     throw new Error('Gemini is not configured on this deployment.');
   }
 
+  const balanceRow = await checkComputeBalance(user.$id);
+
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash',
@@ -224,8 +294,12 @@ export async function executeInstantRequestAction(prompt: string, jwt?: string):
   });
 
   const response = await model.generateContent(prompt);
+  const responseText = response.response.text().trim();
+
+  await debitComputeBalance(user.$id, balanceRow, prompt, responseText);
+
   return {
     success: true,
-    response: response.response.text().trim()
+    response: responseText
   };
 }
