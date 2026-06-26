@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import { isSelfHostedDeployment } from '@/lib/entitlements';
 import { useSubscription } from '../SubscriptionContext';
 import { SubscriptionTier } from '../lib/ppp';
 
@@ -18,6 +19,10 @@ export function PaywallWrapper({
 }: PaywallWrapperProps) {
   const router = useRouter();
   const { currentTier, isLoading } = useSubscription();
+
+  if (isSelfHostedDeployment()) {
+    return <>{children}</>;
+  }
 
   if (isLoading) return null;
 

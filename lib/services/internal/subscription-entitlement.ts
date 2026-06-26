@@ -1,8 +1,9 @@
 import { Query } from 'node-appwrite';
 import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
+import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
-import { normalizeBillingPrefsTier, type BillingUiTier } from '@/lib/subscription/tier-resolution';
+import type { BillingUiTier } from '@/lib/subscription/tier-resolution';
 
 const NOTE_DB_ID = APPWRITE_CONFIG.DATABASES.NOTE;
 const SUBSCRIPTIONS_TABLE_ID = APPWRITE_CONFIG.TABLES.NOTE.SUBSCRIPTIONS;
@@ -26,6 +27,16 @@ export async function getVerifiedProEntitlementForUser(userId: string): Promise<
   source: SubscriptionEntitlementSource;
   uiTier: BillingUiTier;
 }> {
+  if (isSelfHostedDeployment()) {
+    const open = getOpenSuiteEntitlement();
+    return {
+      active: open.active,
+      expiresAt: open.expiresAt,
+      source: 'prefs_lifetime',
+      uiTier: open.uiTier,
+    };
+  }
+
   const { databases, users } = createSystemClient();
   const now = new Date();
 

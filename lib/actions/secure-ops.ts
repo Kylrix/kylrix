@@ -5,6 +5,12 @@ import { createHmac, randomBytes } from 'node:crypto';
 import { ID, Permission, Query, Role, Databases, TablesDB, Account } from 'node-appwrite';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
 import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import {
+  allowsCollaboratorSharing,
+  getCollaboratorCap,
+  getContainerObjectCap,
+  getProjectCap,
+} from '@/lib/entitlements';
 import { createSystemClient, createSystemTablesDB } from '@/lib/appwrite-admin';
 import { Registry } from '@/lib/core/di/registry';
 import { createServerClient } from '@/lib/appwrite/server';
@@ -1711,10 +1717,10 @@ export async function grantPermissionSecure(input: PermissionChangeInput) {
     });
 
     const userTier = getUserSubscriptionTier(requester);
-    if (userTier === 'FREE') {
+    if (!allowsCollaboratorSharing(userTier)) {
       throw new Error(`Adding collaborators is a premium feature. Upgrade to PRO or TEAMS to collaborate on your ${input.resourceType}.`);
     }
-    const maxCollabs = userTier === 'PRO' ? 3 : Infinity;
+    const maxCollabs = getCollaboratorCap(userTier);
     if (existingCollabsRes.rows.length >= maxCollabs) {
       throw new Error(`Limit reached: PRO tier is limited to 3 collaborators per ${input.resourceType}. Upgrade to TEAMS for unlimited team members.`);
     }
@@ -2877,12 +2883,7 @@ export async function createProjectSecure(data: any, jwt?: string) {
       Query.equal('ownerId', actor.$id)
     ] as any
   });
-  let maxProjects = 1;
-  if (userTier === 'PRO') {
-    maxProjects = 10;
-  } else if (userTier === 'TEAMS' || userTier === 'ORG' || userTier === 'LIFETIME') {
-    maxProjects = Infinity;
-  }
+  const maxProjects = getProjectCap(userTier);
   if (existingProjects.rows.length >= maxProjects) {
     throw new Error(`Limit reached: ${userTier} plan is limited to ${maxProjects} project${maxProjects === 1 ? '' : 's'}. Upgrade to PRO or TEAMS to create more projects.`);
   }
@@ -3041,11 +3042,11 @@ export async function addProjectCollaboratorSecure(projectId: string, targetUser
   const owner = await users.get(project.ownerId);
   const ownerTier = getUserSubscriptionTier(owner);
 
-  if (ownerTier === 'FREE') {
+  if (!allowsCollaboratorSharing(ownerTier)) {
     throw new Error('Adding collaborators is a premium feature. Upgrade the project owner to PRO or TEAMS to add collaborators.');
   }
 
-  const maxCollabs = ownerTier === 'PRO' ? 3 : Infinity;
+  const maxCollabs = getCollaboratorCap(ownerTier);
   if (existingCollabsRes.rows.length >= maxCollabs) {
     throw new Error(`Limit reached: PRO tier is limited to 3 collaborators. Upgrade the project owner to TEAMS for unlimited team members.`);
   }
@@ -6859,12 +6860,7 @@ export async function attachObjectSecure(params: {
   const parentOwnerTier = getUserSubscriptionTier(parentOwner);
 
   // Total limit of the parent container
-  let containerLimit = 3; // Free default
-  if (parentOwnerTier === 'PRO') {
-    containerLimit = 10;
-  } else if (parentOwnerTier === 'TEAMS' || parentOwnerTier === 'ORG' || parentOwnerTier === 'LIFETIME') {
-    containerLimit = Infinity;
-  }
+  const containerLimit = getContainerObjectCap(parentOwnerTier);
 
   // Count existing attachments for the container
   const containerExisting = await tables.listRows({

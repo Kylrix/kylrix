@@ -8,6 +8,7 @@ import React, {
   useEffect,
   useCallback,
 } from 'react';
+import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import type { BillingUiTier } from '@/lib/subscription/tier-resolution';
 import type { SubscriptionTier, PaymentMethod, RegionConfig } from '@/lib/subscription/ppp';
 import { PPP_DATA, calculateSubscriptionPrice } from '@/lib/subscription/ppp';
@@ -89,6 +90,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (authLoading || !user?.$id) return;
     setTierLoading(true);
     try {
+      if (isSelfHostedDeployment()) {
+        const open = getOpenSuiteEntitlement();
+        setCurrentTier(open.uiTier);
+        setExpiresAt(open.expiresAt);
+        return;
+      }
       if ((user as { isPulse?: boolean }).isPulse) {
         setCurrentTier('FREE');
         setExpiresAt(null);
@@ -157,6 +164,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     setTierLoading(true);
     setBalanceLoading(true);
     try {
+      if (isSelfHostedDeployment()) {
+        const open = getOpenSuiteEntitlement();
+        setCurrentTier(open.uiTier);
+        setExpiresAt(open.expiresAt);
+        setTokenBalance(null);
+        setWallets([]);
+        return;
+      }
       if ((user as { isPulse?: boolean }).isPulse) {
         setCurrentTier('FREE');
         setTokenBalance(null);

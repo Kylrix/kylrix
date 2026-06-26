@@ -2,6 +2,9 @@ const webpack = require('webpack');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_SELFHOSTED: process.env.SELFHOSTED === 'true' ? 'true' : 'false',
+  },
   // Standalone output produces a self-contained server in .next/standalone
   // Required for efficient Docker deployments (no node_modules in final image)
   output: 'standalone',

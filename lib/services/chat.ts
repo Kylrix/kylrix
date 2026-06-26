@@ -3,6 +3,7 @@ import { account, storage, tablesDB, getCurrentUser } from '../appwrite/client';
 import { APPWRITE_CONFIG } from '../appwrite/config';
 import { KYLRIX_AUTH_URI, getEcosystemUrl } from '../constants';
 import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
+import { allowsGroupHangouts } from '@/lib/entitlements';
 import { ecosystemSecurity } from '../ecosystem/security';
 import { isValidX25519PublicKey } from '@/lib/crypto/public-key';
 import { UsersService } from './users';
@@ -831,7 +832,7 @@ export const ChatService = {
         if (type === 'group') {
             const currentUser = await getCurrentUser();
             const userTier = getUserSubscriptionTier(currentUser);
-            if (userTier === 'FREE' || userTier === 'PRO') {
+            if (!allowsGroupHangouts(userTier)) {
                 throw new Error('Creating hangouts (groups) is a TEAMS feature. Use resource discussions for collaboration, or upgrade to TEAMS for group chats.');
             }
         }
@@ -1321,7 +1322,7 @@ export const ChatService = {
         if (conv.type === 'group') {
             const currentUser = await getCurrentUser();
             const userTier = getUserSubscriptionTier(currentUser);
-            if (userTier === 'FREE' || userTier === 'PRO') {
+            if (!allowsGroupHangouts(userTier)) {
                 throw new Error('Hangouts (groups) are a TEAMS feature. Use resource discussions for collaboration, or upgrade to TEAMS.');
             }
         }

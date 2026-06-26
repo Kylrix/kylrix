@@ -13,6 +13,7 @@ import { resolveBlockBeeRedirectBaseUrl } from '@/lib/billing/blockbee-urls';
 import { pickLatestSubscription, type SubscriptionRow } from '@/lib/billing/subscription-helpers';
 import { getAuthenticatedUserForBillingAction } from '@/lib/services/internal/billing';
 import { getVerifiedProEntitlementForUser } from '@/lib/services/internal/subscription-entitlement';
+import { isBillingCommerceEnabled } from '@/lib/entitlements';
 import { applyProSubscriptionWindowToPrefs } from '@/lib/services/internal/subscription-prefs-merge';
 
 billingManager.registerProvider(new CryptoPaymentProvider());
@@ -104,6 +105,9 @@ export async function createBillingCheckoutSessionAction(input: {
   baseUrl?: string;
 }) {
   const { planId, method, countryCode, months, giftRecipientId, giftRecipientName, giftMessage, couponId, jwt, baseUrl } = input;
+  if (!isBillingCommerceEnabled()) {
+    throw new Error('Billing checkout is disabled on self-hosted deployments.');
+  }
   const user = await getAuthenticatedUserForBillingAction({ jwt });
   if (!user) throw new Error('Authentication required');
   if (!planId || !method) throw new Error('Missing parameters');

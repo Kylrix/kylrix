@@ -1,9 +1,11 @@
 // Utility helpers
 
 import {
-  billingTierHasPaidAccess,
-  normalizeBillingPrefsTier,
-} from '@/lib/subscription/tier-resolution';
+  effectiveTierHasPaidAccess,
+  getOpenSuiteEntitlement,
+  isSelfHostedDeployment,
+  resolveEffectiveBillingTier,
+} from '@/lib/entitlements';
 
 // Safely get a user field preferring top-level value, then legacy prefs
 // Example: getUserField(user, 'profilePicId') will return user.profilePicId || user.prefs?.profilePicId
@@ -39,6 +41,10 @@ export function getUserWalletAddress(user: any): string | null {
  * alone for PRO unless expiry is valid).
  */
 export function getUserSubscriptionTier(user: any): string {
+  if (isSelfHostedDeployment()) {
+    return getOpenSuiteEntitlement().uiTier;
+  }
+
   if (!user) return 'FREE';
 
   if (typeof window !== 'undefined') {
@@ -59,15 +65,18 @@ export function getUserSubscriptionTier(user: any): string {
   }
 
   if (user.prefs) {
-    return normalizeBillingPrefsTier(user.prefs);
+    return resolveEffectiveBillingTier(user.prefs);
   }
 
   return 'FREE';
 }
 
-/** Prefer this over comparing to PRO only — includes ORG/LIFETIME. */
+/** Prefer this over comparing to PRO only — includes ORG/LIFETIME. Self-hosted always true. */
 export function hasPaidKylrixPlan(user: any): boolean {
-  return billingTierHasPaidAccess(getUserSubscriptionTier(user));
+  if (isSelfHostedDeployment()) {
+    return true;
+  }
+  return effectiveTierHasPaidAccess(getUserSubscriptionTier(user));
 }
 
 export function getUserSubscriptionExpiresAt(user: any): string | null {

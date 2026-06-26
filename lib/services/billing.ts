@@ -2,6 +2,7 @@ import { KylrixTokenService } from './token';
 import { WalletService, type WalletSummary } from './wallets';
 import { verifyProEntitlementAction, hydrateSessionAction } from '@/app/(app)/(auth)/accounts/actions/billing';
 import { account } from '../appwrite/client';
+import { getOpenSuiteEntitlement, isSelfHostedDeployment } from '@/lib/entitlements';
 import { normalizeBillingPrefsTier, type BillingUiTier } from '../subscription/tier-resolution';
 
 interface BalanceData {
@@ -84,6 +85,20 @@ export const BillingCacheService = {
     },
 
     async getEntitlement(userId: string, force = false): Promise<EntitlementData> {
+        if (isSelfHostedDeployment()) {
+            const open = getOpenSuiteEntitlement();
+            const data = {
+                uiTier: open.uiTier,
+                active: open.active,
+                expiresAt: open.expiresAt,
+            };
+            entitlementCache = { data, expiresAt: Date.now() + TTL };
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(`kylrix_entitlement_${userId}`, JSON.stringify(data));
+            }
+            return data;
+        }
+
         const now = Date.now();
         if (!force && entitlementCache && entitlementCache.expiresAt > now) {
             return entitlementCache.data;
