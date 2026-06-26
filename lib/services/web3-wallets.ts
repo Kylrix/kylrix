@@ -1,6 +1,9 @@
 import { createPublicClient, http, formatEther, parseEther, parseAbi } from 'viem';
 import { mainnet, base, arbitrum, polygon } from 'viem/chains';
 import { WalletService, type SupportedWalletChain } from './wallets';
+import { tablesDB } from '../appwrite/client';
+import { APPWRITE_CONFIG } from '../appwrite/config';
+import { Query, Permission, Role } from 'appwrite';
 
 // DRPC configuration mapping
 const DRPC_CHAINS: Record<string, any> = {
@@ -158,5 +161,110 @@ export const Web3WalletService = {
       gasPrice: gasPrice.toString(),
       estimatedFeeEther: formatEther(gasEstimate * gasPrice)
     };
+  },
+
+  /** Retrieve registered ERC20 token contracts from the master Token Registry Table */
+  async getTokenRegistry(chain?: SupportedWalletChain) {
+    const queries = [];
+    if (chain) {
+      queries.push(Query.equal('chain', chain));
+    }
+    queries.push(Query.limit(100));
+
+    const response = await tablesDB.listRows(
+      APPWRITE_CONFIG.DATABASE_ID,
+      APPWRITE_CONFIG.TABLES.TOKEN_REGISTRY,
+      queries
+    );
+
+    return response.rows.map((row: any) => ({
+      address: row.address,
+      symbol: row.symbol,
+      decimals: Number(row.decimals),
+      iconUrl: row.iconUrl || null
+    }));
+  },
+
+  /** Log a finalized transaction to the local history Table */
+  async logTransaction(input: {
+    userId: string;
+    chain: SupportedWalletChain;
+    hash: string;
+    from: string;
+    to: string;
+    value: string;
+    symbol: string;
+  }) {
+    const data = {
+      userId: input.userId,
+      chain: input.chain,
+      hash: input.hash,
+      from: input.from,
+      to: input.to,
+      value: input.value,
+      symbol: input.symbol,
+      timestamp: Date.now()
+    };
+
+    const rowId = input.hash;
+
+    try {
+      return await tablesDB.createRow(
+        APPWRITE_CONFIG.DATABASE_ID,
+        APPWRITE_CONFIG.TABLES.WEB3_TRANSACTIONS,
+        rowId,
+        data,
+        [
+          Permission.read(Role.user(input.userId)),
+          Permission.write(Role.user(input.userId))
+        ]
+      );
+    } catch (e: any) {
+      if (e?.code === 409) {
+        return await tablesDB.getRow(
+          APPWRITE_CONFIG.DATABASE_ID,
+          APPWRITE_CONFIG.TABLES.WEB3_TRANSACTIONS,
+          rowId
+        );
+      }
+      throw e;
+    }
+  },
+
+  /** Fetch paginated transaction history for a user */
+  async getTransactionHistory(input: {
+    userId: string;
+    chain?: SupportedWalletChain;
+    limit?: number;
+    offset?: number;
+  }) {
+    const queries = [
+      Query.equal('userId', input.userId),
+      Query.orderDesc('timestamp'),
+      Query.limit(input.limit || 50),
+      Query.offset(input.offset || 0)
+    ];
+
+    if (input.chain) {
+      queries.push(Query.equal('chain', input.chain));
+    }
+
+    const response = await tablesDB.listRows(
+      APPWRITE_CONFIG.DATABASE_ID,
+      APPWRITE_CONFIG.TABLES.WEB3_TRANSACTIONS,
+      queries
+    );
+
+    return response.rows.map((row: any) => ({
+      id: row.$id,
+      userId: row.userId,
+      chain: row.chain,
+      hash: row.hash,
+      from: row.from,
+      to: row.to,
+      value: row.value,
+      symbol: row.symbol,
+      timestamp: row.timestamp
+    }));
   }
 };

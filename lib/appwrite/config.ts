@@ -30,6 +30,8 @@ export const APPWRITE_CONFIG = {
         KEYCHAIN: 'keychain',
         USER_RESOURCE_PINS: 'user_resource_pins',
         OBJECTS: 'objects',
+        TOKEN_REGISTRY: 'token_registry',
+        WEB3_TRANSACTIONS: 'web3_transactions',
 
         NOTE: {
             USERS: '67ff05c900247b5673d3',
@@ -64,13 +66,17 @@ export const APPWRITE_CONFIG = {
             USER: 'user',
             KEYCHAIN: 'keychain',
             KEY_MAPPING: 'key_mapping',
-            WALLETS: 'wallets'
+            WALLETS: 'wallets',
+            TOKEN_REGISTRY: 'token_registry',
+            WEB3_TRANSACTIONS: 'web3_transactions'
         },
         PASSWORD_MANAGER: {
             KEYCHAIN: 'keychain',
             KEY_MAPPING: 'key_mapping',
             IDENTITIES: 'identities',
-            WALLETS: 'wallets'
+            WALLETS: 'wallets',
+            TOKEN_REGISTRY: 'token_registry',
+            WEB3_TRANSACTIONS: 'web3_transactions'
         },
         FLOW: {
             TASKS: 'tasks',
