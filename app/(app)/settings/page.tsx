@@ -19,7 +19,8 @@ import {
     Link,
     Loader2 as SpinnerIcon,
     Database,
-    Info
+    Info,
+    Edit3
 } from 'lucide-react';
 import { VaultPorterDrawer } from '@/components/import/VaultPorterDrawer';
 import { ecosystemSecurity } from '@/lib/ecosystem/security';
@@ -27,7 +28,8 @@ import { useAuth } from '@/lib/auth';
 import { KeychainService } from '@/lib/appwrite/keychain';
 import { useSudo } from '@/context/SudoContext';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
-import { DiscoverabilitySettings } from '@/components/settings/DiscoverabilitySettings';
+import { EditProfileModal } from '@/components/profile/EditProfileModal';
+import { UsersService } from '@/lib/services/users';
 import { toast } from 'react-hot-toast';
 import { TelegramDrawer } from '@/components/overlays/TelegramDrawer';
 import { checkTelegramConnection } from '@/lib/actions/telegram';
@@ -96,6 +98,23 @@ export default function SettingsPage() {
     const [computeBalance, setComputeBalance] = useState<{ balance: number; maxBalance: number; tier: string; percent: number } | null>(null);
     const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
     const [showPorterDrawer, setShowPorterDrawer] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [profile, setProfile] = useState<any>(null);
+
+    const fetchProfile = useCallback(async () => {
+        const username = getEffectiveUsername(user);
+        if (!username) return;
+        try {
+            const data = await UsersService.getProfile(username);
+            if (data) setProfile(data);
+        } catch (e) {
+            console.error("Failed to load profile", e);
+        }
+    }, [user]);
+
+    useEffect(() => {
+        fetchProfile();
+    }, [fetchProfile]);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -337,20 +356,32 @@ export default function SettingsPage() {
                     </div>
 
                     {/* Account Info */}
-                    <div className="flex-1 min-w-0 text-center md:text-left">
-                        <h1 className="text-white font-black text-xl tracking-tight leading-tight font-mono truncate">
-                            {getEffectiveDisplayName(user)}
-                        </h1>
-                        <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
-                            <span className="text-[10px] font-black text-[#EC4899] uppercase tracking-wider">
-                                {currentTier} PLAN
-                            </span>
-                            {isPro && expiresAt && (
-                                <span className="text-[10px] font-bold text-white/20 uppercase font-mono">
-                                    • Ends {new Date(expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    <div className="flex-1 min-w-0 text-center md:text-left flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-white font-black text-xl tracking-tight leading-tight font-mono truncate">
+                                {getEffectiveDisplayName(user)}
+                            </h1>
+                            <div className="flex items-center justify-center md:justify-start gap-2 mt-1">
+                                <span className="text-[10px] font-black text-[#EC4899] uppercase tracking-wider">
+                                    {currentTier} PLAN
                                 </span>
-                            )}
+                                {isPro && expiresAt && (
+                                    <span className="text-[10px] font-bold text-white/20 uppercase font-mono">
+                                        • Ends {new Date(expiresAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                    </span>
+                                )}
+                            </div>
                         </div>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditModalOpen(true);
+                            }}
+                            className="py-2.5 px-5 rounded-xl bg-[#6366F1] hover:bg-[#5254E8] text-white font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-lg select-none w-full md:w-auto"
+                        >
+                            <Edit3 size={14} />
+                            <span>Edit Profile</span>
+                        </button>
                     </div>
 
                     {/* AI Compute Section (Usage 0-100%) */}
@@ -384,8 +415,7 @@ export default function SettingsPage() {
                 {/* Left Column: Discoverability, Integrations & Feedback */}
                 <div className="flex flex-col gap-8">
                     
-                    {/* Discoverability Section */}
-                    <DiscoverabilitySettings />
+                    {/* Discoverability section removed */}
 
                     {/* GitHub Integration panel */}
                     <div id="github-workspace-settings" className="transition-all duration-300">
@@ -783,6 +813,17 @@ export default function SettingsPage() {
             isOpen={showPorterDrawer}
             onClose={() => setShowPorterDrawer(false)}
         />
+        {profile && (
+            <EditProfileModal
+                open={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                profile={profile}
+                onUpdate={async () => {
+                    await refreshUser(true);
+                    await fetchProfile();
+                }}
+            />
+        )}
     </MultiSectionContainer>
   );
 }
