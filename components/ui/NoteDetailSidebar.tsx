@@ -296,10 +296,7 @@ export function NoteDetailSidebar({
   // Automatically prompt for vault unlock if opening an encrypted note
   useEffect(() => {
     if (isEncryptedNote && !vaultUnlocked) {
-      const timer = setTimeout(() => {
-        promptSudo();
-      }, 800);
-      return () => clearTimeout(timer);
+      promptSudo();
     }
   }, [isEncryptedNote, vaultUnlocked, promptSudo]);
 
@@ -798,12 +795,12 @@ export function NoteDetailSidebar({
               </button>
             )}
             
-            {shouldMaskEncrypted ? (
+            {isEncryptedNote ? (
               <h2
-                onClick={() => promptSudo()}
+                onClick={() => !vaultUnlocked && promptSudo()}
                 className="font-black font-space-grotesk text-[#6366F1] uppercase tracking-wide text-xl truncate flex-1 cursor-pointer"
               >
-                Secure Note
+                {vaultUnlocked ? 'Decrypting Secure Note...' : 'Locked Note'}
               </h2>
             ) : (
               <input
@@ -969,14 +966,16 @@ export function NoteDetailSidebar({
           </div>
 
           <div className="flex-1 min-h-[240px] overflow-y-auto pr-1">
-            {shouldMaskEncrypted ? (
+            {isEncryptedNote ? (
               <button
                 type="button"
-                onClick={() => promptSudo()}
+                onClick={() => !vaultUnlocked && promptSudo()}
                 className="min-h-[200px] w-full text-left cursor-pointer"
               >
                 <p className="text-xs italic font-bold text-white/40 leading-relaxed">
-                  Secure content hidden. Unlock your secure space to view and edit this note.
+                  {vaultUnlocked 
+                    ? 'Decrypting secure note, please wait...' 
+                    : 'Secure content hidden. Unlock your secure space to view and edit this note.'}
                 </p>
               </button>
             ) : liveNote.format === 'doodle' ? (
