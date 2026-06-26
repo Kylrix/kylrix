@@ -36,7 +36,7 @@ import { useSection } from '@/context/SectionContext';
 import { ShareLockButton } from './share/ShareLockButton';
 import { useAccessControlMenuItems } from './share/AccessControlMenuItems';
 import { getNotePublicState } from '@/lib/appwrite';
-import { toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl } from '@/lib/appwrite';
+import { toggleNoteVisibility, rotatePublicNoteLink, createTaskFromNote, getShareableUrl, getCurrentPublicNoteShareUrl, lockNote, unlockNote } from '@/lib/appwrite';
 import { createNote, updateNote } from '@/lib/actions/client-ops';
 import { useToast } from './ui/Toast';
 import { useSudo } from '@/context/SudoContext';
@@ -79,7 +79,8 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
       return {};
     }
   })();
-  const isEncryptedNote = !!noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T4' && !noteMeta?.clientDecrypted;
+  const isEncryptedNote = !!noteMeta?.isEncrypted && (noteMeta?.encryptionVersion === 'T4' || noteMeta?.encryptionVersion === 'T5') && !noteMeta?.clientDecrypted;
+  const isLockedT5 = !!noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T5' && !noteMeta?.clientDecrypted;
   const pinned = isPinned(note.$id);
 
   const handleAIAction = useCallback(async (action: 'summarize' | 'grammar' | 'expand') => {
@@ -193,6 +194,28 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     showSuccess('Share link copied to clipboard');
   };
 
+  const handleLockToggle = async () => {
+    const handleToggle = async () => {
+      try {
+        const isLocked = !!noteMeta?.isEncrypted && noteMeta?.encryptionVersion === 'T5';
+        const updated = isLocked ? await unlockNote(note.$id) : await lockNote(note.$id);
+        if (updated) {
+          upsertNote(updated);
+          showSuccess(isLocked ? 'Note unlocked' : 'Note locked');
+        }
+      } catch (err: any) {
+        if (err.message === 'VAULT_LOCKED') {
+          showError('Vault Locked', 'Unlock vault to change lock state.');
+          const unlocked = await promptSudo();
+          if (unlocked) handleToggle();
+        } else {
+          showError(err.message || 'Failed to toggle note lock');
+        }
+      }
+    };
+    handleToggle();
+  };
+
   const handleRotatePublicLink = async () => {
     const handleRotate = async () => {
       try {
@@ -252,6 +275,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
 
   const contextMenuItems = useMemo(() => [
     ...accessControlItems,
+    { label: isLockedT5 ? 'Unlock Note' : 'Lock Note', icon: isLockedT5 ? <Unlock size={16} /> : <PrivateIcon size={16} />, onClick: () => { handleLockToggle(); } },
     ...(isPro ? [
       { 
         label: 'Intelligence', 
@@ -267,7 +291,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
     { label: 'Add Paywall', icon: <LocalOfferIcon size={16} className="text-[#EC4899]" />, onClick: () => { setIsPaywallDialogOpen(true); } },
     { label: 'Share with...', icon: <ShareIcon size={16} />, onClick: () => setIsShareDrawerOpen(true) },
     { label: 'Delete', icon: <TrashIcon size={16} className="text-red-500" />, onClick: () => setIsDeleteDrawerOpen(true), variant: 'destructive' as const }
-  ], [accessControlItems, isPro, handleAIAction, handleCreateTodo, handleDuplicate]);
+  ], [accessControlItems, isPro, handleAIAction, handleCreateTodo, handleDuplicate, isLockedT5, handleLockToggle]);
 
   return (
     <>

@@ -3238,6 +3238,36 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
     })();
 
     if (meta.clientDecrypted) return note;
+
+    if (meta.isEncrypted && meta.encryptionVersion === 'T5') {
+      if (!ecosystemSecurity.status.isUnlocked) {
+        return note; // cannot decrypt locked note, leave as encrypted
+      }
+      try {
+        const { decryptField, base64ToBytes } = await import("../masterpass-crypto");
+        const dekBase64 = await decryptField(meta.dek);
+        const rawKey = base64ToBytes(dekBase64);
+        const dek = await crypto.subtle.importKey(
+          "raw",
+          rawKey as any,
+          { name: "AES-GCM", length: 256 },
+          true,
+          ["encrypt", "decrypt"]
+        );
+        const decryptedTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || '', dek);
+        const decryptedContent = await ecosystemSecurity.decryptWithKey(note.content || '', dek);
+        return {
+          ...note,
+          metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
+          title: decryptedTitle,
+          content: decryptedContent,
+        };
+      } catch (err) {
+        console.error('T5 decryption failed:', err);
+        return null;
+      }
+    }
+
     if (!meta.isEncrypted || meta.encryptionVersion !== 'T4') return note;
 
     let keyBase64 = forceKeyRefresh ? null : getCachedPublicNoteDecryptionKey(note.$id);
@@ -3773,4 +3803,125 @@ export async function listFlowEvents(queries: any[] = []) {
 
 export async function listKeepCredentials(queries: any[] = []) {
   return databases.listRows(KEEP_DATABASE_ID, KEEP_TABLE_ID_CREDENTIALS, queries);
+}
+
+export async function lockNote(noteId: string): Promise<Notes | null> {
+  const note = await getNote(noteId);
+  if (!(await isNoteOwner(note))) throw new Error('Permission denied');
+
+  if (!ecosystemSecurity.status.isUnlocked) {
+    throw new Error('VAULT_LOCKED');
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error('Not authenticated');
+  const ownerId = note.userId || currentUser.$id;
+
+  const { encryptField, bytesToBase64 } = await import("../masterpass-crypto");
+
+  const meta = (() => {
+    try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
+  })();
+
+  if (meta.isEncrypted && meta.encryptionVersion === 'T5') {
+    return note;
+  }
+
+  const dek = await ecosystemSecurity.generateRandomMEK();
+  const rawKey = await crypto.subtle.exportKey("raw", dek);
+  const dekBase64 = bytesToBase64(new Uint8Array(rawKey));
+  const wrappedDek = await encryptField(dekBase64);
+
+  const encryptedTitle = await ecosystemSecurity.encryptWithKey(note.title || '', dek);
+  const encryptedContent = await ecosystemSecurity.encryptWithKey(note.content || '', dek);
+
+  const updatedMeta = {
+    ...meta,
+    isEncrypted: true,
+    encryptionVersion: 'T5',
+    dek: wrappedDek,
+    encryptedTitle
+  };
+
+  const updatePayload: any = {
+    id: note.$id,
+    userId: ownerId,
+    title: '🔒 Locked Note',
+    content: encryptedContent,
+    metadata: JSON.stringify(updatedMeta)
+  };
+
+  const permissions = [Permission.read(Role.user(ownerId))];
+
+  const updated = await databases.updateRow(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_TABLE_ID_NOTES,
+    noteId,
+    filterNoteData(updatePayload),
+    permissions
+  );
+
+  return updated as unknown as Notes;
+}
+
+export async function unlockNote(noteId: string): Promise<Notes | null> {
+  const note = await getNote(noteId);
+  if (!(await isNoteOwner(note))) throw new Error('Permission denied');
+
+  if (!ecosystemSecurity.status.isUnlocked) {
+    throw new Error('VAULT_LOCKED');
+  }
+
+  const currentUser = await getCurrentUser();
+  if (!currentUser) throw new Error('Not authenticated');
+  const ownerId = note.userId || currentUser.$id;
+
+  const { decryptField, base64ToBytes } = await import("../masterpass-crypto");
+
+  const meta = (() => {
+    try { return JSON.parse(note.metadata || '{}'); } catch { return {}; }
+  })();
+
+  if (!meta.isEncrypted || meta.encryptionVersion !== 'T5') {
+    return note;
+  }
+
+  const dekBase64 = await decryptField(meta.dek);
+  const rawKey = base64ToBytes(dekBase64);
+  const dek = await crypto.subtle.importKey(
+    "raw",
+    rawKey as any,
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  );
+
+  const plaintextTitle = await ecosystemSecurity.decryptWithKey(meta.encryptedTitle || '', dek);
+  const plaintextContent = await ecosystemSecurity.decryptWithKey(note.content || '', dek);
+
+  const updatedMeta = { ...meta };
+  delete updatedMeta.isEncrypted;
+  delete updatedMeta.encryptionVersion;
+  delete updatedMeta.dek;
+  delete updatedMeta.encryptedTitle;
+
+  const updatePayload: any = {
+    id: note.$id,
+    userId: ownerId,
+    title: plaintextTitle,
+    content: plaintextContent,
+    metadata: JSON.stringify(updatedMeta)
+  };
+
+  const permissions = [Permission.read(Role.user(ownerId))];
+
+  const updated = await databases.updateRow(
+    APPWRITE_DATABASE_ID,
+    APPWRITE_TABLE_ID_NOTES,
+    noteId,
+    filterNoteData(updatePayload),
+    permissions
+  );
+
+  return updated as unknown as Notes;
 }

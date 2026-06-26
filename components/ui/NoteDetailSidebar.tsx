@@ -152,7 +152,7 @@ export function NoteDetailSidebar({
           const meta = (() => {
             try { return JSON.parse(full.metadata || '{}'); } catch { return {}; }
           })();
-          const isT4 = (meta?.isEncrypted === true || meta?.isEncrypted === 'true') && meta?.encryptionVersion === 'T4';
+          const isT4 = (meta?.isEncrypted === true || meta?.isEncrypted === 'true') && (meta?.encryptionVersion === 'T4' || meta?.encryptionVersion === 'T5');
           if (isT4 && ecosystemSecurity.status.isUnlocked && !meta?.clientDecrypted) {
             const decrypted = await decryptPublicEncryptedNote(full);
             if (decrypted) resolved = decrypted;
@@ -229,7 +229,7 @@ export function NoteDetailSidebar({
   }, []);
 
   // ENCRYPTION LOGIC
-  const isT4Encrypted = useMemo(() => (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && noteMeta?.encryptionVersion === 'T4', [noteMeta]);
+  const isT4Encrypted = useMemo(() => (noteMeta?.isEncrypted === true || noteMeta?.isEncrypted === 'true') && (noteMeta?.encryptionVersion === 'T4' || noteMeta?.encryptionVersion === 'T5'), [noteMeta]);
   const isEncryptedNote = useMemo(() => isT4Encrypted && !noteMeta?.clientDecrypted && !isLocallyDecrypted, [isT4Encrypted, noteMeta, isLocallyDecrypted]);
   const isT4EncryptedPublicNote = useMemo(() => isPublic && isT4Encrypted, [isPublic, isT4Encrypted]);
   const shouldMaskEncrypted = useMemo(() => isEncryptedNote && !vaultUnlocked, [isEncryptedNote, vaultUnlocked]);
