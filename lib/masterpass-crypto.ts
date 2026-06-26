@@ -146,6 +146,7 @@ export class MasterPassCrypto {
           try {
             const rawMek = event.data.payload as ArrayBuffer;
             await this.importKey(rawMek);
+            await ecosystemSecurity.importMasterKey(rawMek);
             await this.unlockWithImportedKey();
             console.log('[MasterPass] Successfully recovered MEK from Service Worker.');
             resolve(true);
