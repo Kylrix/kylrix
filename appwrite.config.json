@@ -8945,6 +8945,15 @@
                     "encrypt": false
                 },
                 {
+                    "key": "balance",
+                    "type": "integer",
+                    "required": false,
+                    "array": false,
+                    "default": 0,
+                    "min": 0,
+                    "max": 9223372036854775807
+                },
+                {
                     "key": "lastResetAt",
                     "type": "string",
                     "required": false,
