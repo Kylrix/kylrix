@@ -2122,6 +2122,15 @@
                     "encrypt": true
                 },
                 {
+                    "key": "dek",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
                     "key": "isDeleted",
                     "type": "boolean",
                     "required": false,

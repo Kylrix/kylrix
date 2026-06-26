@@ -555,6 +555,7 @@ export type NotesCreate = {
     "source"?: string | null;
     "keepPermission"?: boolean | null;
     "crdt"?: string | null;
+    "dek"?: string | null;
     "isDeleted"?: boolean;
 }
 
@@ -592,6 +593,7 @@ export type Notes = Models.Row & {
     "source"?: string | null;
     "keepPermission"?: boolean | null;
     "crdt"?: string | null;
+    "dek"?: string | null;
     "isDeleted"?: boolean;
 }
 
@@ -2427,6 +2429,7 @@ export type DatabaseTableMap = {
         "source"?: string | null;
         "keepPermission"?: boolean | null;
         "crdt"?: string | null;
+        "dek"?: string | null;
         "isDeleted"?: boolean;
       }, options?: { rowId?: string; permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Notes>;
       get: (id: string) => Promise<Notes>;
@@ -2464,6 +2467,7 @@ export type DatabaseTableMap = {
         "source"?: string | null;
         "keepPermission"?: boolean | null;
         "crdt"?: string | null;
+        "dek"?: string | null;
         "isDeleted"?: boolean;
       }>, options?: { permissions?: (permission: { read: (role: RoleString) => string; write: (role: RoleString) => string; create: (role: RoleString) => string; update: (role: RoleString) => string; delete: (role: RoleString) => string }, role: { any: () => RoleString; user: (userId: string, status?: string) => RoleString; users: (status?: string) => RoleString; guests: () => RoleString; team: (teamId: string, role?: string) => RoleString; member: (memberId: string) => RoleString; label: (label: string) => RoleString }) => string[]; transactionId?: string }) => Promise<Notes>;
       delete: (id: string, options?: { transactionId?: string }) => Promise<void>;
