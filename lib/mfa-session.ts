@@ -1,28 +1,14 @@
-export type SessionLike = {
-  $createdAt?: string | null;
-  mfaUpdatedAt?: string | null;
-  factors?: string[] | null;
-};
+export {
+  normalizeMfaFactors,
+  isMfaFullyEnabled,
+  isMfaRequiredError,
+  requiresMfaChallenge,
+  resolveLoginMethod,
+  type MfaFactorsLike,
+  type SessionLike,
+} from '@/lib/mfa';
 
-export type MfaFactorsLike = {
-  email?: boolean;
-  totp?: boolean;
-  phone?: boolean;
-};
-
-export function normalizeMfaFactors(value: unknown): MfaFactorsLike | null {
-  if (!value || typeof value !== 'object') {
-    return null;
-  }
-
-  const factors = value as Record<string, unknown>;
-
-  return {
-    email: Boolean(factors.email),
-    totp: Boolean(factors.totp),
-    phone: Boolean(factors.phone),
-  };
-}
+import { isMfaFullyEnabled, normalizeMfaFactors, type MfaFactorsLike, type SessionLike } from '@/lib/mfa';
 
 export function totpIsEnabled(factors?: MfaFactorsLike | null): boolean {
   return Boolean(factors?.totp);
@@ -40,11 +26,12 @@ export function sessionHasCompletedTotpMfa(session?: SessionLike | null): boolea
   return activeFactors.includes('totp');
 }
 
+/** @deprecated Prefer requiresMfaChallenge() which follows Appwrite account.get() semantics. */
 export function sessionNeedsTotpMfa(params: {
   session?: SessionLike | null;
   availableFactors?: MfaFactorsLike | null;
 }): boolean {
-  if (!totpIsEnabled(params.availableFactors)) {
+  if (!isMfaFullyEnabled(params.availableFactors)) {
     return false;
   }
 

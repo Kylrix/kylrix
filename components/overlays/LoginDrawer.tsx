@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Mail, ArrowLeft, Fingerprint } from 'lucide-react';
+import { X, Mail, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import OAuthButtons from '@/components/OAuthButtons';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
+import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
+import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
-
-type LoginStep = 'initial' | 'email' | 'otp' | 'mfa';
 
 // Simple custom media query hook to replace MUI useMediaQuery
 function useIsDesktop() {
@@ -27,7 +27,7 @@ function useIsDesktop() {
 
 export function LoginDrawer() {
   const { activeContent, close } = useUnifiedDrawer();
-  const { loginWithEmailOTP, verifyEmailOTP, verifyMFA, refreshUser } = useAuth();
+  const { loginWithEmailOTP, verifyEmailOTP, refreshUser } = useAuth();
   const { setIsDrawerOpen } = useDrawerState();
   const isDesktop = useIsDesktop();
 
@@ -35,7 +35,8 @@ export function LoginDrawer() {
   const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
   const [otp, setOtp] = useState('');
-  const [mfaChallengeId, setMfaChallengeId] = useState('');
+  const [mfaDrawerOpen, setMfaDrawerOpen] = useState(false);
+  const [mfaLoginMethod, setMfaLoginMethod] = useState<'email-otp' | 'oauth2' | 'password' | 'unknown'>('email-otp');
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(false);
   const [lastUsedMethod, setLastUsedMethod] = useState<string | null>(null);
@@ -103,57 +104,34 @@ export function LoginDrawer() {
     if (!code || code.length < 6) return;
     setLoading(true);
     try {
-      await verifyEmailOTP(email, userId, code); 
+      await verifyEmailOTP(email, userId, code);
       close();
-    } catch (err: any) {
-      if (err.type === 'user_more_factors_required') {
-          setMfaChallengeId(err.challengeId || 'totp');
-          setStep('mfa');
-          setOtp(''); 
-      } else {
-          toast.error(err.message || 'Invalid code');
-          setOtp(''); 
+    } catch (err: unknown) {
+      if (isMfaRequiredError(err)) {
+        const loginMethod = await getCurrentLoginMethod().catch(() => 'email-otp' as const);
+        setMfaLoginMethod(loginMethod);
+        setMfaDrawerOpen(true);
+        setOtp('');
+        return;
       }
+      toast.error((err as { message?: string })?.message || 'Invalid code');
+      setOtp('');
     } finally {
       setLoading(false);
     }
   }, [email, userId, verifyEmailOTP, close]);
 
-  const executeVerifyMFA = useCallback(async (code: string) => {
-      if (!code || code.length < 6) return;
-      setLoading(true);
-      try {
-          await verifyMFA(mfaChallengeId, code);
-          close();
-      } catch (err: any) {
-          toast.error(err.message || 'MFA verification failed');
-          setOtp('');
-      } finally {
-          setLoading(false);
-      }
-  }, [mfaChallengeId, verifyMFA, close]);
-
   // Auto-submit effects for 6-digit completion
   useEffect(() => {
     if (step === 'otp' && otp.length === 6) {
-        executeVerifyOTP(otp);
+      executeVerifyOTP(otp);
     }
   }, [otp, step, executeVerifyOTP]);
-
-  useEffect(() => {
-    if (step === 'mfa' && otp.length === 6) {
-        executeVerifyMFA(otp);
-    }
-  }, [otp, step, executeVerifyMFA]);
 
   const handleBack = () => {
     if (step === 'email') setStep('initial');
     else if (step === 'otp') {
         setStep('email');
-        setOtp('');
-    }
-    else if (step === 'mfa') {
-        setStep('initial');
         setOtp('');
     }
   };
@@ -263,33 +241,6 @@ export function LoginDrawer() {
             )}
           </div>
         );
-
-      case 'mfa':
-        return (
-          <div className="space-y-6 animate-fadeIn">
-            <div className="flex flex-col items-center gap-2 text-center">
-              <Fingerprint className="w-12 h-12 text-[#6366F1]" />
-              <h4 className="font-clash font-black text-white text-base">Two-Factor Auth</h4>
-              <p className="text-xs text-[#9B9691] leading-relaxed">
-                Enter the code from your authenticator app to continue.
-              </p>
-            </div>
-            <input
-              type="text"
-              placeholder="Enter 2FA code"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-              disabled={loading}
-              autoFocus
-              className="w-full bg-[#0A0908] px-4 py-4 rounded-xl border border-[#34322F] text-center text-lg font-black tracking-[0.2em] text-white focus:outline-none focus:border-[#6366F1] transition-all"
-            />
-            {loading && (
-              <div className="flex justify-center items-center py-2">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#6366F1]" />
-              </div>
-            )}
-          </div>
-        );
       
       default:
         return null;
@@ -326,7 +277,7 @@ export function LoginDrawer() {
                 </button>
               )}
               <h3 className="font-clash font-black text-white text-xl tracking-tight leading-tight">
-                {step === 'mfa' ? 'Security Verification' : 'Continue to Kylrix'}
+                Continue to Kylrix
               </h3>
             </div>
             <button 
@@ -361,6 +312,17 @@ export function LoginDrawer() {
           </p>
         </div>
       </div>
+
+      <MfaChallengeDrawer
+        open={mfaDrawerOpen}
+        onClose={() => setMfaDrawerOpen(false)}
+        loginMethod={mfaLoginMethod}
+        onSuccess={async () => {
+          setMfaDrawerOpen(false);
+          await refreshUser(true);
+          close();
+        }}
+      />
     </>
   );
 }

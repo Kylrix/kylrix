@@ -1,6 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  beginMfaChallenge,
+  completeMfaChallenge,
+  getLoginChallengeFactors,
+  getPreferredLoginChallengeFactor,
+  listCurrentMfaFactors,
+  type MfaChallengeFactor,
+  type MfaLoginMethod,
+} from '@/lib/mfa';
+import toast from 'react-hot-toast';
+import { Close as CloseIcon } from '@/lib/openbricks/icons';
 import {
   Box,
   Button,
@@ -15,18 +26,11 @@ import {
   useMediaQuery,
   useTheme,
 } from '@/lib/openbricks/primitives';
-import { Close as CloseIcon } from '@/lib/openbricks/icons';
-import { AuthenticationFactor } from 'appwrite';
-import { account } from '@/lib/appwrite';
-import toast from 'react-hot-toast';
-
-type LoginMethod = 'email-otp' | 'oauth2' | 'password' | 'unknown';
-type Factor = 'email' | 'totp' | 'recoverycode';
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  loginMethod: LoginMethod;
+  loginMethod: MfaLoginMethod;
   onSuccess: () => void;
 };
 
@@ -34,21 +38,18 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [loading, setLoading] = useState(false);
-  const [available, setAvailable] = useState<{ email: boolean; totp: boolean; phone: boolean } | null>(null);
+  const [factors, setFactors] = useState<{ email: boolean; totp: boolean; phone: boolean } | null>(null);
+  const [activeFactor, setActiveFactor] = useState<MfaChallengeFactor | null>(null);
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [otp, setOtp] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const allowedFactors = useMemo(() => {
-    const canUseEmail = loginMethod !== 'email-otp';
-    return [
-      ...(canUseEmail ? (['email'] as Factor[]) : []),
-      'totp' as Factor];
-  }, [loginMethod]);
+  const allowedFactors = getLoginChallengeFactors(loginMethod, factors);
 
   useEffect(() => {
     if (!open) return;
     setChallengeId(null);
+    setActiveFactor(null);
     setOtp('');
     setError(null);
   }, [loginMethod, open]);
@@ -56,28 +57,35 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
   useEffect(() => {
     if (!open) return;
     let mounted = true;
+
     (async () => {
       try {
-        const factors = await account.listMfaFactors();
-        if (mounted) setAvailable(factors as any);
-      } catch (_err) {
-        if (mounted) setAvailable(null);
+        const nextFactors = await listCurrentMfaFactors();
+        if (!mounted) return;
+        setFactors(nextFactors);
+        const preferred = getPreferredLoginChallengeFactor(loginMethod, nextFactors);
+        setActiveFactor(preferred);
+      } catch {
+        if (mounted) setFactors(null);
       }
     })();
+
     return () => {
       mounted = false;
     };
-  }, [open]);
+  }, [loginMethod, open]);
 
-  const beginChallenge = async (picked: Factor) => {
+  const startChallenge = async (picked: MfaChallengeFactor) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await account.createMfaChallenge({ factor: picked as unknown as AuthenticationFactor });
-      setChallengeId((response as any).$id);
-    } catch (_err) {
-      const err = _err as any;
-      setError(err?.message || 'Failed to start MFA challenge.');
+      const id = await beginMfaChallenge(picked);
+      setActiveFactor(picked);
+      setChallengeId(id);
+      setOtp('');
+    } catch (err) {
+      const message = (err as { message?: string })?.message || 'Failed to start MFA challenge.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -96,20 +104,12 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
     setLoading(true);
     setError(null);
     try {
-      await account.updateMfaChallenge({
-        challengeId,
-        otp: otp.trim(),
-      });
-      const currentPrefs = await account.getPrefs().catch(() => ({}));
-      await account.updatePrefs({
-        ...currentPrefs,
-        mfaLastVerifiedAt: new Date().toISOString(),
-      });
+      await completeMfaChallenge(challengeId, otp.trim());
       toast.success('Second factor verified.');
       onSuccess();
-    } catch (_err) {
-      const err = _err as any;
-      setError(err?.message || 'MFA verification failed.');
+    } catch (err) {
+      const message = (err as { message?: string })?.message || 'MFA verification failed.';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -144,7 +144,7 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
               Complete MFA
             </Typography>
             <Typography sx={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.9rem' }}>
-              Use the factor you already set up to finish login.
+              Finish login with a second factor.
             </Typography>
           </Box>
           <IconButton onClick={onClose} sx={{ color: 'rgba(255,255,255,0.7)' }}>
@@ -154,16 +154,10 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
 
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, mb: 3 }}>
           <Chip label={`Login: ${loginMethod}`} sx={{ bgcolor: '#1F1D1B', color: 'white' }} />
-          {available ? (
+          {factors ? (
             <>
-              <Chip
-                label={`Email: ${available.email ? 'available' : 'off'}`}
-                sx={{ bgcolor: '#1F1D1B', color: 'white' }}
-              />
-              <Chip
-                label={`TOTP: ${available.totp ? 'enabled' : 'off'}`}
-                sx={{ bgcolor: '#1F1D1B', color: 'white' }}
-              />
+              <Chip label={`Email: ${factors.email ? 'on' : 'off'}`} sx={{ bgcolor: '#1F1D1B', color: 'white' }} />
+              <Chip label={`TOTP: ${factors.totp ? 'on' : 'off'}`} sx={{ bgcolor: '#1F1D1B', color: 'white' }} />
             </>
           ) : null}
         </Box>
@@ -174,19 +168,24 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
           <Stack spacing={2.25}>
             <Typography sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.92rem', lineHeight: 1.6 }}>
               {loginMethod === 'email-otp'
-                ? 'Only TOTP is available here because email OTP already handled your first factor.'
-                : 'Pick the factor that is actually enabled on this account.'}
+                ? 'Email already handled your first factor. Use TOTP or a recovery code.'
+                : 'Pick the factor enabled on this account.'}
             </Typography>
             <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
-              {(available?.email || (!available && loginMethod !== 'email-otp')) && allowedFactors.includes('email') && (
-                <Button variant="outlined" onClick={() => beginChallenge('email')} disabled={loading} sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.12)', textTransform: 'none' }}>
+              {allowedFactors.includes('email') && (
+                <Button variant="outlined" onClick={() => startChallenge('email')} disabled={loading} sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.12)', textTransform: 'none' }}>
                   Email challenge
                 </Button>
               )}
-              {(available?.totp !== false || !available) && (
-                <Button variant="contained" onClick={() => beginChallenge('totp')} disabled={loading} sx={{ bgcolor: '#6366F1', color: 'white', textTransform: 'none', fontWeight: 800 }}>
-                {loading ? <CircularProgress size={18} sx={{ color: 'white', mr: 1 }} /> : null}
-                TOTP
+              {allowedFactors.includes('totp') && (
+                <Button variant="contained" onClick={() => startChallenge('totp')} disabled={loading} sx={{ bgcolor: '#6366F1', color: 'white', textTransform: 'none', fontWeight: 800 }}>
+                  {loading && activeFactor === 'totp' ? <CircularProgress size={18} sx={{ color: 'white', mr: 1 }} /> : null}
+                  TOTP
+                </Button>
+              )}
+              {allowedFactors.includes('recoverycode') && (
+                <Button variant="outlined" onClick={() => startChallenge('recoverycode')} disabled={loading} sx={{ color: 'white', borderColor: 'rgba(255,255,255,0.12)', textTransform: 'none' }}>
+                  Recovery code
                 </Button>
               )}
             </Box>
@@ -199,11 +198,20 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
         ) : (
           <Stack spacing={2.25}>
             <Box sx={{ p: 2.5, borderRadius: '20px', bgcolor: '#161514', border: '1px solid rgba(255, 255, 255, 0.06)' }}>
-              <Typography sx={{ color: 'white', fontWeight: 700, mb: 1 }}>Enter the code</Typography>
+              <Typography sx={{ color: 'white', fontWeight: 700, mb: 1 }}>
+                Enter the {activeFactor === 'recoverycode' ? 'recovery' : activeFactor} code
+              </Typography>
               <TextField
                 value={otp}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => setOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="6-digit code"
+                onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                  const raw = event.target.value.trim();
+                  if (activeFactor === 'recoverycode') {
+                    setOtp(raw.replace(/\s+/g, '').slice(0, 20));
+                    return;
+                  }
+                  setOtp(raw.replace(/\D/g, '').slice(0, 6));
+                }}
+                placeholder={activeFactor === 'recoverycode' ? 'Recovery code' : '6-digit code'}
                 fullWidth
                 autoFocus
                 sx={{
@@ -218,7 +226,7 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
               <Button
                 variant="contained"
                 onClick={verifyChallenge}
-                disabled={loading || otp.trim().length < 6}
+                disabled={loading || (activeFactor === 'recoverycode' ? otp.trim().length < 8 : otp.trim().length < 6)}
                 sx={{ mt: 2, bgcolor: '#6366F1', color: 'white', fontWeight: 800, textTransform: 'none' }}
               >
                 {loading ? <CircularProgress size={18} sx={{ color: 'white', mr: 1 }} /> : null}
@@ -236,4 +244,3 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
     </Drawer>
   );
 }
-

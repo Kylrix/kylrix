@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { useRouter, usePathname } from 'next/navigation';
 import { getCurrentUser, account, getKylrixPulse, setKylrixPulse, clearKylrixPulse, invalidateCurrentUserCache, onCurrentUserChanged, hasAuthSessionHint } from '@/lib/appwrite';
 import { getEcosystemUrl } from '@/lib/ecosystem';
+import { assertAuthenticatedAccount, completeMfaChallenge, isMfaRequiredError } from '@/lib/mfa';
 
 interface User {
   $id: string;
@@ -26,8 +27,7 @@ interface AuthContextType {
   verifyEmailOTP: (email: string, userId: string, secret: string) => Promise<void>;
   verifyMFA: (challengeId: string, otp: string) => Promise<void>;
   getJWT: () => Promise<string | null>;
-  }
-
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -301,14 +301,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return result.userId;
   }, []);
 
-  const verifyEmailOTP = useCallback(async (email: string, userId: string, secret: string) => {
+  const verifyEmailOTP = useCallback(async (_email: string, userId: string, secret: string) => {
     await account.createSession(userId, secret);
-    await refreshUser();
+    try {
+      await assertAuthenticatedAccount();
+      await refreshUser(true);
+    } catch (error) {
+      if (isMfaRequiredError(error)) {
+        throw error;
+      }
+      throw error;
+    }
   }, [refreshUser]);
 
   const verifyMFA = useCallback(async (challengeId: string, otp: string) => {
-    await (account as any).createMfaSession('totp', otp);
-    await refreshUser();
+    await completeMfaChallenge(challengeId, otp);
+    await refreshUser(true);
   }, [refreshUser]);
 
   const getJWT = useCallback(async () => {

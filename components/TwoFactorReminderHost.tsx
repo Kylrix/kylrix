@@ -4,17 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { account } from '@/lib/appwrite';
 import { useAuth } from '@/context/auth/AuthContext';
 import { TwoFactorDrawer } from '@/components/overlays/TwoFactorDrawer';
+import { isMfaFullyEnabled, listCurrentMfaFactors, resolveLoginMethod } from '@/lib/mfa';
 
 const REMINDER_KEY_PREFIX = 'kylrix_two_factor_reminder_last_prompt_';
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-
-function resolveLoginMethod(provider?: string | null) {
-  const value = (provider || '').toLowerCase();
-  if (value.includes('email')) return 'email-otp' as const;
-  if (value.includes('oauth')) return 'oauth2' as const;
-  if (value.includes('password')) return 'password' as const;
-  return 'unknown' as const;
-}
 
 export default function TwoFactorReminderHost() {
   const { user } = useAuth();
@@ -35,15 +28,15 @@ export default function TwoFactorReminderHost() {
 
     (async () => {
       try {
-        const [session, freshUser] = await Promise.all([
+        const [session, factors] = await Promise.all([
           account.getSession('current'),
-          account.get()]);
+          listCurrentMfaFactors(),
+        ]);
 
         if (!mounted) return;
-        setLoginMethod(resolveLoginMethod((session as any)?.provider));
+        setLoginMethod(resolveLoginMethod((session as { provider?: string | null })?.provider));
 
-        const mfaEnabledAt = (freshUser as any)?.prefs?.mfaEnabledAt;
-        if (mfaEnabledAt) {
+        if (isMfaFullyEnabled(factors)) {
           setOpen(false);
           return;
         }
@@ -54,7 +47,7 @@ export default function TwoFactorReminderHost() {
         if (due) {
           setOpen(true);
         }
-      } catch (_err) {
+      } catch {
         if (mounted) {
           setOpen(false);
         }
@@ -80,11 +73,10 @@ export default function TwoFactorReminderHost() {
       open={open}
       onClose={handleClose}
       userId={user.$id}
-      emailVerified={Boolean((user as any)?.emailVerification)}
+      emailVerified={Boolean((user as { emailVerification?: boolean })?.emailVerification)}
       loginMethod={loginMethod}
       mode="reminder"
       onEnabled={handleClose}
     />
   );
 }
-

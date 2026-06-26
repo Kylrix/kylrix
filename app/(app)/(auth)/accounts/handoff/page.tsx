@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Box, CircularProgress, Typography } from '@/lib/openbricks/primitives';
 import { account } from '@/lib/appwrite';
-import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
+import { isMfaRequiredError, requiresMfaChallenge } from '@/lib/mfa';
 import { useSource } from '@/lib/source-context';
 import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 import { createHandoffSessionSecure } from '@/lib/actions/secure-ops';
@@ -88,14 +88,10 @@ function AppHandoffContent() {
         if (mounted) {
           setStatus('Checking your session...');
         }
-        const [session, factors] = await Promise.all([
-          account.getSession('current'),
-          account.listMfaFactors().catch(() => null)]);
 
-        if (sessionNeedsTotpMfa({
-          session,
-          availableFactors: normalizeMfaFactors(factors),
-        })) {
+        const needsMfa = await requiresMfaChallenge(account);
+        if (needsMfa) {
+          const session = await account.getSession('current').catch(() => null);
           if (mounted) {
             setLoginMethod(getLoginMethod((session as any)?.provider));
             setMfaOpen(true);
@@ -105,7 +101,7 @@ function AppHandoffContent() {
         }
       } catch (_error) {
         const err = _error as any;
-        if (err?.type === 'user_more_factors_required' || err?.message?.includes('more_factors_required')) {
+        if (isMfaRequiredError(err)) {
           try {
             const session = await account.getSession('current');
             if (mounted) {

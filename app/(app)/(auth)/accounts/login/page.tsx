@@ -7,7 +7,7 @@ import { Box, Typography, Stack, TextField, Button, Alert, CircularProgress, alp
 import { safeDeleteCurrentSession } from '@/lib/safe-session';
 import { useSource } from '@/lib/source-context';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
+import { resolveLoginMethod, getCurrentLoginMethod, isMfaRequiredError, assertAuthenticatedAccount } from '@/lib/mfa';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getLastActiveApp } from '@/lib/sdk/ecosystem/useLastActiveApp';
 import Logo from '../components/Logo';
@@ -91,21 +91,8 @@ function LoginContent() {
 
   const confirmAuthenticated = useCallback(async () => {
     try {
-      const [session, factors] = await Promise.all([
-        account.getSession('current'),
-        account.listMfaFactors().catch(() => null)]);
-      setMfaLoginMethod(resolveLoginMethod((session as any)?.provider));
-
-      if (sessionNeedsTotpMfa({
-        session,
-        availableFactors: normalizeMfaFactors(factors),
-      })) {
-        setOtpUserId(null);
-        setMfaChallengeOpen(true);
-        return;
-      }
-
-      const user = await account.get();
+      const user = await assertAuthenticatedAccount(account);
+      setMfaLoginMethod(await getCurrentLoginMethod(account).catch(() => 'unknown'));
 
       const redirectUri = searchParams.get('redirect_uri');
       const returnTo = searchParams.get('return_to');
@@ -143,7 +130,7 @@ function LoginContent() {
       setIsSuccess(true);
     } catch (_e: unknown) {
       const err = _e as any;
-      if (err?.type === 'user_more_factors_required' || err?.message?.includes('more_factors_required')) {
+      if (isMfaRequiredError(err)) {
         const session = await account.getSession('current').catch(() => null);
         setMfaLoginMethod(resolveLoginMethod((session as any)?.provider));
         setMfaChallengeOpen(true);
@@ -151,7 +138,7 @@ function LoginContent() {
       }
       throw _e;
     }
-  }, [notifyOpenerAuthSuccess, resolveLoginMethod, searchParams, router]);
+  }, [notifyOpenerAuthSuccess, searchParams, router]);
 
   const checkExistingSession = useCallback(async () => {
     setIsCheckingSession(true);
@@ -283,7 +270,7 @@ function LoginContent() {
       await confirmAuthenticated();
     } catch (_err: unknown) {
       const err = _err as any;
-      if (err?.type === 'user_more_factors_required' || err?.message?.includes('more_factors_required')) {
+      if (isMfaRequiredError(err)) {
         const session = await account.getSession('current').catch(() => null);
         setMfaLoginMethod(resolveLoginMethod((session as any)?.provider));
         setMfaChallengeOpen(true);

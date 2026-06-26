@@ -15,7 +15,7 @@ import { applyPermissionMutation, revokePermissionMutation } from '@/lib/service
 import { normalizeTargetUserIds, upsertLockboxRows, provisionHybridTeamExpansionSecure } from '@/lib/api/permission-updater';
 import { reconcileStaleLiveCallPresenceForUser } from '@/lib/services/internal/live-call-presence-reconcile';
 import { executeSessionRuntimeJob, isSessionRuntimeJobId } from '@/lib/runtime-functions/session-jobs';
-import { normalizeMfaFactors, sessionNeedsTotpMfa } from '@/lib/mfa-session';
+import { isMfaRequiredError } from '@/lib/mfa';
 import { getNoteAttachmentIdFromMomentFileId } from '@/lib/moment-file-meta';
 import { permissionsInternal } from '@/lib/services/internal/permissions';
 import { dispatchEmail } from '@/lib/services/internal/emailDispatch';
@@ -683,20 +683,17 @@ export async function createHandoffSessionSecure(jwt?: string) {
   }
 
   // Session context verification (MFA check)
-  const { account: userAccount } = await createServerClient();
+  const { account: userAccount } = await createServerClient(jwt);
 
-  const [session, factors] = await Promise.all([
-    userAccount.getSession('current').catch(() => null),
-    userAccount.listMfaFactors().catch(() => null)
-  ]);
-
-  if (sessionNeedsTotpMfa({
-    session,
-    availableFactors: normalizeMfaFactors(factors),
-  })) {
-    const err = new Error('user_more_factors_required');
-    (err as any).code = 'MFA_REQUIRED';
-    throw err;
+  try {
+    await userAccount.get();
+  } catch (error) {
+    if (isMfaRequiredError(error)) {
+      const err = new Error('user_more_factors_required');
+      (err as any).code = 'MFA_REQUIRED';
+      throw err;
+    }
+    throw error;
   }
 
   const { users } = createSystemClient();

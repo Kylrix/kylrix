@@ -434,6 +434,39 @@ export class EcosystemSecurity {
     return true;
   }
 
+  async loadRecoveryIdentity(userId: string): Promise<string[] | null> {
+    if (!this.masterKey) throw new Error('VAULT_LOCKED');
+    if (!userId) return null;
+
+    const tableId = APPWRITE_CONFIG.TABLES.VAULT.USER;
+    const existing = await tablesDB.listRows({
+      databaseId: APPWRITE_CONFIG.DATABASES.VAULT,
+      tableId,
+      queries: [
+        Query.equal('userId', userId),
+        Query.limit(1)],
+    });
+
+    const payload = existing.rows[0]?.backupCodes;
+    if (!payload || typeof payload !== 'string') {
+      return null;
+    }
+
+    try {
+      const decrypted = await this.decrypt(payload);
+      const parsed = JSON.parse(decrypted) as {
+        kind?: string;
+        recoveryCodes?: string[];
+      };
+      if (parsed.kind !== 'recovery' || !Array.isArray(parsed.recoveryCodes)) {
+        return null;
+      }
+      return parsed.recoveryCodes.filter(Boolean);
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Phase 1: Setup PIN Verifier (Disk-Bound)
    * Stores { PinSalt, PinHash } in localStorage.

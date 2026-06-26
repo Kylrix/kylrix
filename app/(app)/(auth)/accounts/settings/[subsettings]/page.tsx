@@ -36,9 +36,6 @@ interface UserData {
   lastUsernameEdit?: string;
   profilePicId?: string | null;
   emailVerified?: boolean;
-  mfaEnabledAt?: string | null;
-  mfaLastVerifiedAt?: string | null;
-  mfaPrimaryFactor?: 'email' | 'totp' | null;
 }
 
 interface MfaFactorsState {
@@ -149,9 +146,6 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
             lastUsernameEdit: userData.prefs?.last_username_edit,
             profilePicId: userData.prefs?.profilePicId || null,
             emailVerified: Boolean((userData as any)?.emailVerification),
-            mfaEnabledAt: userData.prefs?.mfaEnabledAt || null,
-            mfaLastVerifiedAt: userData.prefs?.mfaLastVerifiedAt || null,
-            mfaPrimaryFactor: userData.prefs?.mfaPrimaryFactor || null,
           });
           setMfaFactors(normalizedFactors);
           setLoginMethod(((session as any)?.provider || '').toLowerCase().includes('email')
@@ -285,9 +279,6 @@ export default function SubSettingsPage(props: { params: Promise<{ subsettings: 
       setUser(prev => prev ? {
         ...prev,
         emailVerified: Boolean((freshUser as any)?.emailVerification),
-        mfaEnabledAt: freshUser.prefs?.mfaEnabledAt || null,
-        mfaLastVerifiedAt: freshUser.prefs?.mfaLastVerifiedAt || null,
-        mfaPrimaryFactor: freshUser.prefs?.mfaPrimaryFactor || null,
       } : null);
     } catch {
       // keep current UI state
