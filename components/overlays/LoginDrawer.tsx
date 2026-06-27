@@ -11,6 +11,8 @@ import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
+type LoginStep = 'initial' | 'email' | 'otp';
+
 // Simple custom media query hook to replace MUI useMediaQuery
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);

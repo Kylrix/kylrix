@@ -7,7 +7,7 @@ import { Box, Typography, Stack, TextField, Button, Alert, CircularProgress, alp
 import { safeDeleteCurrentSession } from '@/lib/safe-session';
 import { useSource } from '@/lib/source-context';
 import { APPWRITE_CONFIG } from '@/lib/appwrite/config';
-import { resolveLoginMethod, getCurrentLoginMethod, isMfaRequiredError, assertAuthenticatedAccount } from '@/lib/mfa';
+import { assertAuthenticatedAccount, getCurrentLoginMethod, isMfaRequiredError, resolveLoginMethod, type MfaLoginMethod } from '@/lib/mfa';
 import { useAuth } from '@/context/auth/AuthContext';
 import { getLastActiveApp } from '@/lib/sdk/ecosystem/useLastActiveApp';
 import Logo from '../components/Logo';
@@ -92,7 +92,7 @@ function LoginContent() {
   const confirmAuthenticated = useCallback(async () => {
     try {
       const user = await assertAuthenticatedAccount(account);
-      setMfaLoginMethod(await getCurrentLoginMethod(account).catch(() => 'unknown'));
+      setMfaLoginMethod(await getCurrentLoginMethod(account).catch((): MfaLoginMethod => 'unknown'));
 
       const redirectUri = searchParams.get('redirect_uri');
       const returnTo = searchParams.get('return_to');

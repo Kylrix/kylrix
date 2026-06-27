@@ -8,6 +8,7 @@ import {
   getPreferredLoginChallengeFactor,
   listCurrentMfaFactors,
   type MfaChallengeFactor,
+  type MfaFactorsLike,
   type MfaLoginMethod,
 } from '@/lib/mfa';
 import toast from 'react-hot-toast';
@@ -38,7 +39,7 @@ export function MfaChallengeDrawer({ open, onClose, loginMethod, onSuccess }: Pr
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [loading, setLoading] = useState(false);
-  const [factors, setFactors] = useState<{ email: boolean; totp: boolean; phone: boolean } | null>(null);
+  const [factors, setFactors] = useState<MfaFactorsLike | null>(null);
   const [activeFactor, setActiveFactor] = useState<MfaChallengeFactor | null>(null);
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const [otp, setOtp] = useState('');
