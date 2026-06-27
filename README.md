@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.gnu.org/licenses/agpl-3.0">
-    <img src="https://img.shields.io/badge/License-AGPL--3.0-black.svg?style=flat-square" alt="License: AGPL-3.0">
+    <img src="https://img.shields.io/badge/License-AGPL--3.0--or--later-black.svg?style=flat-square" alt="License: AGPL-3.0-or-later">
   </a>
   <a href="https://nextjs.org/">
     <img src="https://img.shields.io/badge/Frontend-Next.js%2016-black?style=flat-square&logo=nextdotjs" alt="Built with Next.js">

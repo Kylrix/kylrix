@@ -454,7 +454,7 @@ The mono-app is partitioned into four core workspaces that share the centralized
 - **Rate Limiting**: @upstash/ratelimit + @upstash/redis for server-side rate limiting.
 - **Export**: html-to-image for visual exports.
 - **Build**: `output: 'standalone'` for Docker-optimized builds. `experimental.taint: true` for React Taint API. `optimizePackageImports` for tree-shaking (lucide-react, lodash, date-fns). Webpack fallbacks disable client-side `crypto`, `fs`, `path`, `stream`.
-- **License**: AGPL-3.0.
+- **License**: AGPL-3.0-or-later.
 
 ### 2. Stacking Context & Interactivity Safety
 To prevent 'Non-Responsive UI' locks caused by hidden DOM structures capturing clicks:
