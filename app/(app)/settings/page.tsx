@@ -7,6 +7,7 @@ import {
     ArrowLeft,
     Lock, 
     Shield, 
+    AlertCircle, 
     Fingerprint, 
     Smartphone,
     Trash2,
@@ -81,6 +82,7 @@ export default function SettingsPage() {
     const [isUnlocked, setIsUnlocked] = useState(ecosystemSecurity.status.isUnlocked);
     const [isArgon, setIsArgon] = useState(ecosystemSecurity.status.isArgon);
     const [hasMasterpass, setHasMasterpass] = useState<boolean | null>(null);
+    const [isAuthPassConfigured, setIsAuthPassConfigured] = useState<boolean>(false);
 
     // Telegram state
     const [tgDrawerOpen, setTgDrawerOpen] = useState(false);
@@ -299,11 +301,12 @@ export default function SettingsPage() {
 
         if (user?.$id) {
             loadPasskeys();
-            // detect whether the user has a master password (Tier 2 / encryption) set
             (async () => {
                 try {
-                    const present = await KeychainService.hasMasterpass(user.$id);
-                    setHasMasterpass(present);
+                    const entries = await KeychainService.listKeychainEntries(user.$id);
+                    const passwordEntry = entries.find((e: any) => e.type === 'password');
+                    setHasMasterpass(!!passwordEntry);
+                    setIsAuthPassConfigured(!!passwordEntry?.authPass);
                 } catch (e) {
                     console.error('Failed to check masterpass presence', e);
                     setHasMasterpass(null);
@@ -783,7 +786,21 @@ export default function SettingsPage() {
                                     {/* Masterpass for Login Switch */}
                                     <div className="flex items-center justify-between gap-4 select-none">
                                         <div>
-                                            <span className="block text-white font-extrabold text-xs">Enable MasterPass for Account Login</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="block text-white font-extrabold text-xs">Enable MasterPass for Account Login</span>
+                                                {masterpassForLoginEnabled && !isAuthPassConfigured && (
+                                                    <button
+                                                        onClick={() => toast('Please lock and unlock your vault to upgrade your MasterPass to align with your account password.', {
+                                                            icon: '⚠️',
+                                                            duration: 6000,
+                                                        })}
+                                                        className="text-[#F59E0B] hover:text-[#D97706] transition-colors focus:outline-none"
+                                                        title="Upgrade pending"
+                                                    >
+                                                        <AlertCircle size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
                                             <span className="block text-white/40 text-[10px] font-semibold font-sans mt-0.5">Allow using your MasterPass to authenticate your account sign-in</span>
                                         </div>
                                         <Switch 
