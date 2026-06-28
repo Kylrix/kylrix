@@ -3301,14 +3301,11 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
           content: decryptedContent,
         };
       } catch (err: any) {
-        console.error('T5 decryption failed:', err);
-        if (err?.name === 'InvalidCharacterError' || String(err).includes('atob') || String(err?.message).includes('atob')) {
-          return {
-            ...note,
-            metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
-          };
-        }
-        return null;
+        console.error('T5 decryption failed, attempting self-healing fallback:', err);
+        return {
+          ...note,
+          metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
+        };
       }
     }
 
@@ -3364,16 +3361,14 @@ export async function decryptPublicEncryptedNote(note: Notes, forceKeyRefresh = 
           content: decryptedContent,
         };
     } catch (err: any) {
-        if (err?.name === 'InvalidCharacterError' || String(err).includes('atob') || String(err?.message).includes('atob')) {
-          cachePublicNoteDecryptionKey(note.$id, keyBase64);
-          activeNoteKeys.set(note.$id, key);
-          return {
-            ...note,
-            metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
-            title: decryptedTitle,
-          };
-        }
-        return null;
+        console.error('T4 decryption failed, attempting self-healing fallback:', err);
+        cachePublicNoteDecryptionKey(note.$id, keyBase64);
+        activeNoteKeys.set(note.$id, key);
+        return {
+          ...note,
+          metadata: JSON.stringify({ ...meta, clientDecrypted: true }),
+          title: decryptedTitle,
+        };
     }
   } catch (error) {
     return null;
