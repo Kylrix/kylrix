@@ -84,6 +84,7 @@ import { useContextMenu } from '@/components/ui/ContextMenuContext';
 import { ShareLockButton } from '@/components/share/ShareLockButton';
 import { useAccessControlMenuItems } from '@/components/share/AccessControlMenuItems';
 
+import { useDataNexus } from '@/context/DataNexusContext';
 import toast from 'react-hot-toast';
 
 import { useDrawerState } from '@/components/ui/DrawerStateContext';
@@ -1502,6 +1503,7 @@ return (
 
 export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => {
     const { user } = useAuth();
+    const { fetchOptimized, getCachedData, invalidate } = useDataNexus();
     const { profile: myProfile } = useProfile();
     const router = useRouter();
     const { openSidebar } = useDynamicSidebar();
@@ -1607,7 +1609,13 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
         // Hydrate the current view immediately so tab switches feel instant.
         momentsRef.current = [];
         const memoryCached = feedCacheRef.current[view];
-        const storageCached = memoryCached ? { rows: memoryCached, cachedAt: feedCacheAgeRef.current[view] || Date.now() } : readFeedCache(view);
+        const cacheKey = `connect_feed_${view}_${user?.$id || 'guest'}`;
+        const storageCached = memoryCached 
+            ? { rows: memoryCached, cachedAt: feedCacheAgeRef.current[view] || Date.now() } 
+            : (() => {
+                const d = getCachedData<any[]>(cacheKey);
+                return d ? { rows: d, cachedAt: Date.now() } : readFeedCache(view);
+            })();
 
         if (storageCached) {
             momentsRef.current = storageCached.rows;
@@ -1618,7 +1626,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
         } else {
             setLoading(true);
         }
-    }, [view]);
+    }, [view, user?.$id, getCachedData]);
 
     const saveToCache = useCallback((data: any[]) => {
         const sliced = data.slice(0, 50);
@@ -1690,35 +1698,46 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
         }
 
         const requestId = ++feedLoadSeqRef.current;
+        const cacheKey = `connect_feed_${view}_${user?.$id || 'guest'}`;
 
         if (force) {
             delete feedCacheRef.current[view];
             if (typeof window !== 'undefined') {
                 localStorage.removeItem(`${CACHE_KEY}_${view}`);
             }
+            invalidate(cacheKey);
         }
 
-        const cached = feedCacheRef.current[view];
+        const memoryCached = feedCacheRef.current[view];
+        const storageCached = memoryCached 
+            ? memoryCached 
+            : (() => {
+                const d = getCachedData<any[]>(cacheKey);
+                return d || null;
+            })();
 
         // Keep the cached view visible while we decide whether to refresh.
-        if (cached) {
-            momentsRef.current = cached;
-            setMoments(cached);
+        if (storageCached && storageCached.length > 0) {
+            momentsRef.current = storageCached;
+            setMoments(storageCached);
             setLoading(false);
-            return;
         } else {
             setLoading(true);
             momentsRef.current = [];
         }
         
         try {
-            const response = view === 'trending' ? 
-                await SocialService.getTrendingFeed(user?.$id) : 
-                await SocialService.getFeed(user?.$id);
+            const fetcher = async () => {
+                const response = view === 'trending' ? 
+                    await SocialService.getTrendingFeed(user?.$id) : 
+                    await SocialService.getFeed(user?.$id);
+                return response?.rows || [];
+            };
+
+            const freshRows = await fetchOptimized(cacheKey, fetcher, 30000); // 30s cache TTL
 
             if (requestId !== feedLoadSeqRef.current) return;
                 
-            const freshRows = response?.rows || [];
             // Filter out current user's own direct posts from the feed source
             const filteredRows = freshRows.filter((m: any) => {
                 const creatorId = m.userId || m.creatorId;
@@ -1748,35 +1767,6 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
             momentsRef.current = updated;
             setMoments(updated);
             saveToCache(updated);
-            const oppositeView = view === 'personal' ? 'trending' : view === 'trending' ? 'personal' : null;
-            if (oppositeView && !feedCacheRef.current[oppositeView]) {
-                window.setTimeout(() => {
-                    if (feedPrefetchRef.current[oppositeView]) return;
-                    feedPrefetchRef.current[oppositeView] = (async () => {
-                        try {
-                            const prefetchResponse = oppositeView === 'trending'
-                                ? await SocialService.getTrendingFeed(user?.$id)
-                                : await SocialService.getFeed(user?.$id);
-                            const rows = prefetchResponse?.rows || [];
-                            const filtered = rows.filter((m: any) => {
-                                const creatorId = m.userId || m.creatorId;
-                                const type = m.metadata?.type || 'post';
-                                if (user?.$id && creatorId === user.$id && type === 'post') return false;
-                                return true;
-                            });
-                            feedCacheRef.current[oppositeView] = filtered.slice(0, 50);
-                            feedCacheAgeRef.current[oppositeView] = Date.now();
-                            writeFeedCache(oppositeView, filtered, feedCacheAgeRef.current[oppositeView]);
-                        } catch (_e) {
-                            // best effort
-                        } finally {
-                            delete feedPrefetchRef.current[oppositeView];
-                        }
-                    })();
-                }, 0);
-            }
-
-            setLoading(false);
 
             // Phase 2: Background Hydration for missing profiles
             const uniqueCreatorIds = Array.from(new Set(filteredRows.map((m: any) => m.userId || m.creatorId)));
@@ -1802,14 +1792,14 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                     profileRegistry.set(id, hydratedProfile);
                     seedIdentityCache(hydratedProfile);
                     
-            // Trigger a single state update for all posts by this creator
-            setMoments(prev => {
-                const next = prev.map(m => {
-                    let nextUpdated = m;
-                    const mCreatorId = m.userId || m.creatorId;
-                    if (mCreatorId === id) {
-                        nextUpdated = { ...nextUpdated, creator: profileRegistry.get(id) };
-                    }
+                    // Trigger a single state update for all posts by this creator
+                    setMoments(prev => {
+                        const next = prev.map(m => {
+                            let nextUpdated = m;
+                            const mCreatorId = m.userId || m.creatorId;
+                            if (mCreatorId === id) {
+                                nextUpdated = { ...nextUpdated, creator: profileRegistry.get(id) };
+                            }
                             // Also hydrate sourceMoment creators if they match this ID
                             if (nextUpdated.sourceMoment) {
                                 const sCreatorId = nextUpdated.sourceMoment.userId || nextUpdated.sourceMoment.creatorId;
@@ -1819,12 +1809,12 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                                         sourceMoment: { ...nextUpdated.sourceMoment, creator: profileRegistry.get(id) } 
                                     };
                                 }
-                    }
-                    return nextUpdated;
-                });
-                momentsRef.current = next;
-                return next;
-            });
+                            }
+                            return nextUpdated;
+                        });
+                        momentsRef.current = next;
+                        return next;
+                    });
                 } catch (_e) {
                     const fallbackProfile = {
                         username: 'user',
@@ -1856,7 +1846,7 @@ export const Feed = ({ view = 'personal', composeIntent = null }: FeedProps) => 
                 setLoading(false);
             }
         }
-    }, [user, view, saveToCache]);
+    }, [user, view, saveToCache, fetchOptimized, getCachedData, invalidate]);
 
 
     useEffect(() => {
