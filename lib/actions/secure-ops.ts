@@ -7008,6 +7008,50 @@ export async function getObjectsByParentSecure(parentId: string, parentKind: str
   return JSON.parse(JSON.stringify(res.rows));
 }
 
+export async function syncMasterpassToAccountPasswordAction(payload: {
+  userId: string;
+  masterpass: string;
+  jwt?: string;
+}) {
+  const { z } = await import('zod');
+  const validatedUserId = IDSchema.parse(payload.userId);
+  const validatedMasterpass = z.string().parse(payload.masterpass);
+  const validatedJwt = JWTSchema.parse(payload.jwt);
+
+  const actor = await getActor(validatedJwt);
+  if (!actor?.$id || actor.$id !== validatedUserId) {
+    throw new Error('Unauthorized');
+  }
+
+  // 1. Update the Appwrite authentication password via System Users service
+  const { createSystemClient } = await import('@/lib/appwrite-admin');
+  const { users, databases } = createSystemClient();
+  await users.updatePassword(validatedUserId, validatedMasterpass);
+
+  // 2. Query the keychain entry for this user and set authPass = true
+  const keychainRes = await databases.listDocuments(
+    APPWRITE_CONFIG.DATABASES.VAULT,
+    APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+    [
+      Query.equal('userId', validatedUserId),
+      Query.equal('type', 'password'),
+      Query.limit(1)
+    ]
+  );
+
+  const entry = keychainRes.documents?.[0];
+  if (entry) {
+    await databases.updateDocument(
+      APPWRITE_CONFIG.DATABASES.VAULT,
+      APPWRITE_CONFIG.TABLES.VAULT.KEYCHAIN,
+      entry.$id,
+      { authPass: true }
+    );
+  }
+
+  return { success: true };
+}
+
 
 
 

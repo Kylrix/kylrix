@@ -1576,6 +1576,13 @@
                     "size": 255,
                     "default": "null",
                     "encrypt": false
+                },
+                {
+                    "key": "authPass",
+                    "type": "boolean",
+                    "required": false,
+                    "array": false,
+                    "default": false
                 }
             ],
             "indexes": [

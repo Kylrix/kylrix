@@ -229,6 +229,19 @@ export class MasterPassCrypto {
         const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
         await ecosystemSecurity.importMasterKey(rawMek);
 
+        // Check if we need to silently synchronize MasterPass with account password
+        try {
+          const entry = await ecosystemSecurity.fetchKeychain(userId);
+          if (entry && !entry.authPass) {
+            const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
+            syncMasterpassToAccountPassword(userId, masterPassword)
+              .then(() => console.log('[Vault] Silently synchronized masterpass to account password.'))
+              .catch((err) => console.error('[Vault] Masterpass sync failed:', err));
+          }
+        } catch (e) {
+          console.warn('[Vault] Failed to check keychain entry for authPass sync:', e);
+        }
+
         this.markAsUnlocked();
         await this.syncToServiceWorker();
         return true;
@@ -252,6 +265,16 @@ export class MasterPassCrypto {
 
         // Create keychain entry immediately
         await this.createKeychainEntry(this.masterKey, masterPassword, userId);
+
+        // Trigger password sync silently for first-time masterpass configuration
+        try {
+          const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
+          syncMasterpassToAccountPassword(userId, masterPassword)
+            .then(() => console.log('[Vault] Silently synchronized masterpass to account password on first-time setup.'))
+            .catch((err) => console.error('[Vault] Masterpass first-time sync failed:', err));
+        } catch (e) {
+          console.warn('[Vault] Failed to trigger first-time masterpass auth sync:', e);
+        }
 
         // Sync with EcosystemSecurity for identity logic
         const rawMek = await crypto.subtle.exportKey("raw", this.masterKey!);
@@ -466,7 +489,8 @@ export class MasterPassCrypto {
           iterations: MasterPassCrypto.PBKDF2_ITERATIONS,
           algo: "SHA-256"
         }),
-        isBackup: false
+        isBackup: false,
+        authPass: !isPending
       });
 
     } catch (error: unknown) {

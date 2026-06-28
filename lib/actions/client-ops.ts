@@ -436,4 +436,10 @@ export async function getObjectsByParent(parentId: string, parentKind: string) {
   return getObjectsByParentSecure(parentId, parentKind, jwt);
 }
 
+export async function syncMasterpassToAccountPassword(userId: string, masterpass: string) {
+  const jwt = await getJwt();
+  const { syncMasterpassToAccountPasswordAction } = await import('./secure-ops');
+  return syncMasterpassToAccountPasswordAction({ userId, masterpass, jwt });
+}
+
 
