@@ -344,6 +344,7 @@ export type Keychain = Models.Row & {
     isArgon: boolean;
     isPending: boolean;
     totpId: string;
+    authPass: boolean;
 }
 
 export type KeyMapping = Models.Row & {
