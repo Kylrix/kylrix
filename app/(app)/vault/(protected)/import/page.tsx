@@ -21,9 +21,11 @@ import { analyzeBitwardenExport } from '@/utils/import/bitwarden-mapper';
 import { masterPassCrypto } from '@/lib/masterpass-crypto';
 import { porterExport, downloadExportAsFile } from '@/lib/data-porter';
 import toast from 'react-hot-toast';
+import { useSudo } from '@/context/SudoContext';
 
 export default function ImportPage() {
   const { user } = useAppwriteVault();
+  const { requestSudo } = useSudo();
   const { startImport, isImporting: globalImporting } = useBackgroundTask();
   const [importType, setImportType] = useState<string>("bitwarden");
   const [file, setFile] = useState<File | null>(null);
@@ -35,17 +37,21 @@ export default function ImportPage() {
 
   const handleExport = async () => {
     if (!user) return;
-    setIsExporting(true);
-    try {
-      const result = await porterExport(user.$id);
-      downloadExportAsFile(result.data);
-      toast.success(`Exported ${result.data?.credentials?.length || 0} credentials, ${result.data?.totpSecrets?.length || 0} TOTP secrets`);
-    } catch (err: unknown) {
-      console.error('Export failed:', err);
-      toast.error('Export failed: ' + ((err as Error).message || 'Unknown error'));
-    } finally {
-      setIsExporting(false);
-    }
+    requestSudo({
+      onSuccess: async () => {
+        setIsExporting(true);
+        try {
+          const result = await porterExport(user.$id);
+          downloadExportAsFile(result.data);
+          toast.success(`Exported ${result.data?.credentials?.length || 0} credentials, ${result.data?.totpSecrets?.length || 0} TOTP secrets`);
+        } catch (err: unknown) {
+          console.error('Export failed:', err);
+          toast.error('Export failed: ' + ((err as Error).message || 'Unknown error'));
+        } finally {
+          setIsExporting(false);
+        }
+      }
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -111,19 +117,18 @@ export default function ImportPage() {
   };
 
   const handleFinalImport = (finalItems: ImportItem[]) => {
-    if (!masterPassCrypto.isVaultUnlocked()) {
-      setErrorState("Vault is locked. Please unlock your vault to import.");
-      setIsPreviewOpen(false);
-      return;
-    }
-    setIsPreviewOpen(false);
-    const processedPayload = JSON.stringify({
-      version: 1,
-      credentials: finalItems,
-      folders: [],
-      totpSecrets: []
+    requestSudo({
+      onSuccess: () => {
+        setIsPreviewOpen(false);
+        const processedPayload = JSON.stringify({
+          version: 1,
+          credentials: finalItems,
+          folders: [],
+          totpSecrets: []
+        });
+        startImport("kylrixvault", processedPayload, user!.$id);
+      }
     });
-    startImport("kylrixvault", processedPayload, user!.$id);
   };
 
   const isFileValid =

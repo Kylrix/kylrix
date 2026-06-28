@@ -24,6 +24,7 @@ import { parseCSV, detectColumnMapping, mapRowsToItems } from '@/utils/import/ge
 import { encryptExportData, generateEncryptedHtmlPage } from '@/utils/import/encrypted-html-exporter';
 import { porterExport } from '@/lib/data-porter';
 import toast from 'react-hot-toast';
+import { useSudo } from '@/context/SudoContext';
 
 interface VaultPorterDrawerProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ type PorterMode = 'menu' | 'import-type' | 'import-vendor' | 'import-upload' | '
 export function VaultPorterDrawer({ isOpen, onClose }: VaultPorterDrawerProps) {
   const { user } = useAppwriteVault();
   const { startImport, isImporting } = useBackgroundTask();
+  const { requestSudo } = useSudo();
 
   // Navigation state
   const [mode, setMode] = useState<PorterMode>('menu');
@@ -143,104 +145,112 @@ export function VaultPorterDrawer({ isOpen, onClose }: VaultPorterDrawerProps) {
   };
 
   const handleFinalImport = () => {
-    try {
-      let payload = "";
-      if (vendor === 'kylrixvault') {
-        // Native structure
-        payload = JSON.stringify({
-          version: 2,
-          format: 'kylrix-vault',
-          credentials: importTarget === 'password' ? parsedItems : [],
-          totpSecrets: importTarget === 'totp' ? parsedItems : [],
-          folders: [],
-        });
-      } else {
-        // Map other vendor data to native format
-        payload = JSON.stringify({
-          version: 2,
-          format: 'kylrix-vault',
-          credentials: importTarget === 'password' ? parsedItems : [],
-          totpSecrets: importTarget === 'totp' ? parsedItems : [],
-          folders: [],
-        });
-      }
+    requestSudo({
+      onSuccess: () => {
+        try {
+          let payload = "";
+          if (vendor === 'kylrixvault') {
+            // Native structure
+            payload = JSON.stringify({
+              version: 2,
+              format: 'kylrix-vault',
+              credentials: importTarget === 'password' ? parsedItems : [],
+              totpSecrets: importTarget === 'totp' ? parsedItems : [],
+              folders: [],
+            });
+          } else {
+            // Map other vendor data to native format
+            payload = JSON.stringify({
+              version: 2,
+              format: 'kylrix-vault',
+              credentials: importTarget === 'password' ? parsedItems : [],
+              totpSecrets: importTarget === 'totp' ? parsedItems : [],
+              folders: [],
+            });
+          }
 
-      startImport('kylrixvault', payload, user?.$id || '');
-      toast.success(`Importing ${parsedItems.length} items in the background...`);
-      onClose();
-      handleReset();
-    } catch (err: any) {
-      toast.error("Import execution failed: " + err.message);
-    }
+          startImport('kylrixvault', payload, user?.$id || '');
+          toast.success(`Importing ${parsedItems.length} items in the background...`);
+          onClose();
+          handleReset();
+        } catch (err: any) {
+          toast.error("Import execution failed: " + err.message);
+        }
+      }
+    });
   };
 
   // Export process
   const handleExport = async () => {
     if (!user) return;
-    setIsExporting(true);
-    try {
-      const result = await porterExport(user.$id);
-      let finalData = result.data;
+    requestSudo({
+      onSuccess: async () => {
+        setIsExporting(true);
+        try {
+          const result = await porterExport(user.$id);
+          let finalData = result.data;
 
-      // Filter subset if vault scope is requested
-      if (exportScope === 'vault') {
-        finalData = {
-          version: 2,
-          format: 'kylrix-vault',
-          exportedAt: new Date().toISOString(),
-          userId: user.$id,
-          data: {
-            vault: result.data.data?.vault || (result.data as any).vault || { folders: [], credentials: [], totpSecrets: [] }
+          // Filter subset if vault scope is requested
+          if (exportScope === 'vault') {
+            finalData = {
+              version: 2,
+              format: 'kylrix-vault',
+              exportedAt: new Date().toISOString(),
+              userId: user.$id,
+              data: {
+                vault: result.data.data?.vault || (result.data as any).vault || { folders: [], credentials: [], totpSecrets: [] }
+              }
+            } as any;
           }
-        } as any;
-      }
 
-      const jsonString = JSON.stringify(finalData, null, 2);
+          const jsonString = JSON.stringify(finalData, null, 2);
 
-      if (exportFormat === 'encrypted-html') {
-        if (!exportPassword) {
-          setErrorMsg("Please enter a master password to encrypt the file.");
+          if (exportFormat === 'encrypted-html') {
+            if (!exportPassword) {
+              setErrorMsg("Please enter a master password to encrypt the file.");
+              setIsExporting(false);
+              return;
+            }
+
+            // Encrypt using Master password
+            const encrypted = await encryptExportData(jsonString, exportPassword);
+            const htmlPage = generateEncryptedHtmlPage(encrypted.ciphertext, encrypted.salt, encrypted.iv, user.email || 'Kylrix User');
+            
+            // Trigger download
+            const blob = new Blob([htmlPage], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kylrix-${exportScope}-backup-encrypted.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            toast.success(`Encrypted HTML backup generated successfully.`);
+          } else {
+            // Standard JSON export
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `kylrix-${exportScope}-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            toast.success(`Standard JSON backup downloaded.`);
+          }
+          onClose();
+          handleReset();
+        } catch (err: any) {
+          toast.error('Export failed: ' + err.message);
+        } finally {
           setIsExporting(false);
-          return;
         }
-
-        // Encrypt using Master password
-        const encrypted = await encryptExportData(jsonString, exportPassword);
-        const htmlPage = generateEncryptedHtmlPage(encrypted.ciphertext, encrypted.salt, encrypted.iv, user.email || 'Kylrix User');
-        
-        // Trigger download
-        const blob = new Blob([htmlPage], { type: 'text/html' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `kylrix-${exportScope}-backup-encrypted.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        toast.success(`Encrypted HTML backup generated successfully.`);
-      } else {
-        // Standard JSON export
-        const blob = new Blob([jsonString], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `kylrix-${exportScope}-backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        toast.success(`Standard JSON backup downloaded.`);
       }
-      onClose();
-      handleReset();
-    } catch (err: any) {
-      toast.error('Export failed: ' + err.message);
-    } finally {
-      setIsExporting(false);
-    }
+    });
   };
 
   return (
