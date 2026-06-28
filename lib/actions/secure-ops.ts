@@ -4922,7 +4922,9 @@ export async function getIsSpecializedTable(tableId: string): Promise<boolean> {
     tableId === 'wallets' ||
     tableId === 'walletMap' ||
     tableId === 'follows' ||
-    tableId === 'activityLog'
+    tableId === 'activityLog' ||
+    tableId === 'conversations' ||
+    tableId === 'conversationMembers'
   );
 }
 

@@ -23,6 +23,7 @@ import { seedIdentityCache } from '@/lib/identity-cache';
 import { useSection } from '@/context/SectionContext';
 import { ShareLockButton } from '../share/ShareLockButton';
 import { useResourcePins } from '@/context/ResourcePinContext';
+import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
 
 export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
     const { user } = useAuth();
@@ -41,6 +42,7 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
     }, []);
     
     const { setActiveDetail } = useSection();
+    const { open: openUnified } = useUnifiedDrawer();
 
     const { isPinned: isResourcePinned, togglePin } = useResourcePins();
 
@@ -121,15 +123,21 @@ export const CallHistory = ({ onNewCall }: { onNewCall?: () => void }) => {
         }
     }, [user, loadCalls]);
 
-    const handleDeleteCall = async (callId: string) => {
-        if (!confirm('Are you sure you want to delete this call?')) return;
-        try {
-            await CallService.deleteCall(callId);
-            toast.success('Call deleted');
-            loadCalls();
-        } catch (_e) {
-            toast.error('Failed to delete call');
-        }
+    const handleDeleteCall = (callId: string) => {
+        openUnified('delete-confirm', {
+            title: 'Delete Huddle',
+            description: 'Are you sure you want to delete this huddle call record? This action cannot be undone.',
+            confirmLabel: 'Delete',
+            onConfirm: async () => {
+                try {
+                    await CallService.deleteCall(callId);
+                    toast.success('Call deleted');
+                    loadCalls();
+                } catch (_e) {
+                    toast.error('Failed to delete call');
+                }
+            }
+        });
     };
 
     const startCall = (call: any) => {
