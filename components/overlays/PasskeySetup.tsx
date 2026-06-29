@@ -20,6 +20,7 @@ import { ecosystemSecurity } from '@/lib/ecosystem/security';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
+import { getPasskeyRegisterFallbackSeedAction } from '@/lib/actions/auth-actions';
 import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
@@ -180,14 +181,28 @@ export function PasskeySetupPanel({
         if (prfBuffer) {
           kwrapSeed = prfBuffer;
         } else {
+          const fallbackRes = await getPasskeyRegisterFallbackSeedAction(regResp.id);
+          if (fallbackRes.success && fallbackRes.seed) {
+            kwrapSeed = new Uint8Array(
+              atob(fallbackRes.seed).split("").map(c => c.charCodeAt(0))
+            ).buffer;
+          } else {
+            const encoder = new TextEncoder();
+            const credentialData = encoder.encode(regResp.id + userId);
+            kwrapSeed = await crypto.subtle.digest("SHA-256", credentialData);
+          }
+        }
+      } else {
+        const fallbackRes = await getPasskeyRegisterFallbackSeedAction(regResp.id);
+        if (fallbackRes.success && fallbackRes.seed) {
+          kwrapSeed = new Uint8Array(
+            atob(fallbackRes.seed).split("").map(c => c.charCodeAt(0))
+          ).buffer;
+        } else {
           const encoder = new TextEncoder();
           const credentialData = encoder.encode(regResp.id + userId);
           kwrapSeed = await crypto.subtle.digest("SHA-256", credentialData);
         }
-      } else {
-        const encoder = new TextEncoder();
-        const credentialData = encoder.encode(regResp.id + userId);
-        kwrapSeed = await crypto.subtle.digest("SHA-256", credentialData);
       }
 
       const kwrap = await crypto.subtle.importKey(

@@ -5,6 +5,8 @@ import { createSystemClient } from '@/lib/appwrite-admin';
 import { APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_KEYCHAIN_ID } from '@/lib/appwrite';
 import { Query } from 'node-appwrite';
 import { resolvePasskeyRpId } from '@/lib/passkey-webauthn-options';
+import { cookies } from 'next/headers';
+import { createHmac } from 'node:crypto';
 
 /**
  * Generates WebAuthn login options (assertion options) for passkey sign-in.
@@ -61,6 +63,16 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname: str
       },
     };
 
+    // Store the generated challenge in a secure cookie to verify against it
+    const cookieStore = await cookies();
+    cookieStore.set('passkey_login_challenge', options.challenge, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 300, // 5 minutes
+      path: '/'
+    });
+
     // Serialize options to JSON-friendly format for RSC/Actions transport
     return { success: true, options: JSON.parse(JSON.stringify(options)) };
   } catch (error: any) {
@@ -104,10 +116,17 @@ export async function verifyPasskeyLoginAction(authResp: any, hostname: string =
     const protocol = hostname === 'localhost' || hostname.startsWith('127.') ? 'http' : 'https';
     const origin = `${protocol}://${hostHeader}`;
 
+    // Read stored challenge
+    const cookieStore = await cookies();
+    const expectedChallenge = cookieStore.get('passkey_login_challenge')?.value;
+    if (!expectedChallenge) {
+      return { success: false, error: 'Login session expired. Please retry.' };
+    }
+
     // 2. Verify Authentication Response
     const verification = await verifyAuthenticationResponse({
       response: authResp,
-      expectedChallenge: async () => true, // Trust client challenge verification for simplicity
+      expectedChallenge,
       expectedOrigin: origin,
       expectedRPID: rpID,
       credential: {
@@ -118,6 +137,9 @@ export async function verifyPasskeyLoginAction(authResp: any, hostname: string =
     });
 
     if (verification.verified) {
+      // Clear login challenge cookie
+      cookieStore.delete('passkey_login_challenge');
+
       // Update credential counter in DB if updated
       const { authenticationInfo } = verification;
       if (row.params) {
@@ -138,18 +160,44 @@ export async function verifyPasskeyLoginAction(authResp: any, hostname: string =
       // 3. Mint Appwrite Custom Token
       const token = await systemClient.users.createToken(row.userId);
 
+      // Generate secure HMAC fallback seed for clients lacking WebAuthn PRF
+      const fallbackSeed = createHmac('sha256', process.env.APPWRITE_API || 'fallback-dev-secret')
+        .update(row.credentialId + row.userId)
+        .digest('base64');
+
       return {
         success: true,
         verified: true,
         token: token.phrase,
         userId: row.userId,
         wrappedKey: row.wrappedKey,
+        fallbackSeed,
       };
     }
 
     return { success: false, error: 'Invalid WebAuthn assertion' };
   } catch (error: any) {
     console.error('Error verifying passkey action:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Returns a server-signed fallback seed for registering passkeys in browsers without PRF support.
+ */
+export async function getPasskeyRegisterFallbackSeedAction(credentialId: string) {
+  try {
+    const { createServerClient } = await import('@/lib/appwrite/server');
+    const { account } = createServerClient();
+    const user = await account.get();
+
+    const fallbackSeed = createHmac('sha256', process.env.APPWRITE_API || 'fallback-dev-secret')
+      .update(credentialId + user.$id)
+      .digest('base64');
+
+    return { success: true, seed: fallbackSeed };
+  } catch (error: any) {
+    console.error('Error generating fallback seed action:', error);
     return { success: false, error: error.message };
   }
 }

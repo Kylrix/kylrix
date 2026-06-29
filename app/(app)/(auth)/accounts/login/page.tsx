@@ -272,6 +272,10 @@ function LoginContent() {
           let kwrapSeed: ArrayBuffer;
           if (prfBuffer) {
             kwrapSeed = prfBuffer;
+          } else if (verifyRes.fallbackSeed) {
+            kwrapSeed = new Uint8Array(
+              atob(verifyRes.fallbackSeed).split("").map((c: string) => c.charCodeAt(0))
+            ).buffer;
           } else {
             // Fallback derivation
             const encoder = new TextEncoder();
