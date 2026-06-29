@@ -317,18 +317,23 @@ export default function SettingsPage() {
         return unsubscribe;
     }, [isUnlocked, isArgon, user, loadPasskeys]);
 
-    const handleRemovePasskey = async (id: string) => {
-        if (!window.confirm("Are you sure you want to remove this passkey? This cannot be undone.")) return;
-        
-        requestSudo({
-            onSuccess: async () => {
-                try {
-                    await KeychainService.deleteKeychainEntry(id);
-                    toast.success("Passkey removed");
-                    loadPasskeys();
-                } catch (_e) {
-                    toast.error("Failed to remove passkey");
-                }
+    const handleRemovePasskey = (id: string) => {
+        openDrawer('delete-confirm', {
+            title: 'Remove Passkey?',
+            description: 'Are you sure you want to remove this passkey? This cannot be undone.',
+            confirmLabel: 'Remove',
+            onConfirm: async () => {
+                requestSudo({
+                    onSuccess: async () => {
+                        try {
+                            await KeychainService.deleteKeychainEntry(id);
+                            toast.success("Passkey removed");
+                            loadPasskeys();
+                        } catch (_e) {
+                            toast.error("Failed to remove passkey");
+                        }
+                    }
+                });
             }
         });
     };
