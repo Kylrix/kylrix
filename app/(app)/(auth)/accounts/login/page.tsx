@@ -329,7 +329,19 @@ function LoginContent() {
     setMessage(null);
     try {
       await safeDeleteCurrentSession();
-      await account.createEmailPasswordSession(email, password);
+      const session = await account.createEmailPasswordSession(email, password);
+      
+      // Auto-unlock vault locally using the master password
+      try {
+        const { masterPassCrypto } = await import('@/lib/masterpass-crypto');
+        const unlockSuccess = await masterPassCrypto.unlock(password, session.userId, false);
+        if (unlockSuccess) {
+          toast.success("Vault unlocked automatically");
+        }
+      } catch (vaultErr) {
+        console.warn('Failed to auto-unlock vault with master password:', vaultErr);
+      }
+
       await confirmAuthenticated();
     } catch (_err: unknown) {
       const err = _err as any;
