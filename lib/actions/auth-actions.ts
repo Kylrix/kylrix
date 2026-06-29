@@ -188,7 +188,7 @@ export async function verifyPasskeyLoginAction(authResp: any, hostname: string =
 export async function getPasskeyRegisterFallbackSeedAction(credentialId: string) {
   try {
     const { createServerClient } = await import('@/lib/appwrite/server');
-    const { account } = createServerClient();
+    const { account } = await createServerClient();
     const user = await account.get();
 
     const fallbackSeed = createHmac('sha256', process.env.APPWRITE_API || 'fallback-dev-secret')
