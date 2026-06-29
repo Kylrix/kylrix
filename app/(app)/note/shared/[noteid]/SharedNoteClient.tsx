@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import { useProUpgrade } from '@/context/ProUpgradeContext';
-import { hasPaidKylrixPlan } from '@/lib/utils';
+import { hasPaidKylrixPlan, getUserSubscriptionTier } from '@/lib/utils';
 import { NoteContentRenderer } from '@/components/NoteContentRenderer';
 import PaywallDisplay from '@/components/PaywallDisplay';
 import { 
@@ -136,6 +136,30 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
   const { setCachedData, getCachedData, invalidate } = useDataNexus();
   const { openCallLauncher } = useCallLauncher();
   const [existingHuddleId, setExistingHuddleId] = useState<string | null>(null);
+  
+  const [isRequestingEdit, setIsRequestingEdit] = useState(false);
+  const [editRequestStatus, setEditRequestStatus] = useState<'pending' | 'requested' | 'accepted' | null>(null);
+
+  // Check if current user has already requested edit access
+  useEffect(() => {
+    if (verifiedNote && user?.$id) {
+      const collabs = Array.isArray(verifiedNote.collaborators) ? verifiedNote.collaborators : [];
+      const match = collabs.find((c: any) => {
+        try {
+          const parsed = typeof c === 'string' ? JSON.parse(c) : c;
+          return parsed.userId === user.$id;
+        } catch {
+          return false;
+        }
+      });
+      if (match) {
+        try {
+          const parsed = typeof match === 'string' ? JSON.parse(match) : match;
+          setEditRequestStatus(parsed.status || 'pending');
+        } catch {}
+      }
+    }
+  }, [verifiedNote, user]);
 
   const CACHE_KEY = useMemo(() => `public_note_${noteId}`, [noteId]);
   const SHARED_NOTE_TTL = 1000 * 60 * 60 * 24 * 7; // 7 days standard
@@ -671,6 +695,37 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
     }
   };
 
+  const handleRequestEditAccess = async () => {
+    if (!verifiedNote || isRequestingEdit) return;
+
+    if (!user) {
+      showError('Unauthorized', 'Please sign in to request edit access.');
+      return;
+    }
+
+    // Gated to TEAMS tier to prevent server and DB CRDT hit
+    const tier = getUserSubscriptionTier(user);
+    if (tier !== 'TEAMS') {
+      openProUpgrade('Collaborative Edit Access');
+      showError('Teams Plan Required', 'Real-time collaborative editing is restricted to the Teams tier.');
+      return;
+    }
+
+    setIsRequestingEdit(true);
+    try {
+      const { requestResourceAccessSecure } = await import('@/lib/actions/secure-ops');
+      const { account } = await import('@/lib/appwrite/client');
+      const { jwt } = await account.createJWT().catch(() => ({ jwt: undefined }));
+      await requestResourceAccessSecure(verifiedNote.$id, 'note', jwt);
+      setEditRequestStatus('requested');
+      showSuccess('Access Requested', 'Your request for edit access has been sent to the owner.');
+    } catch (err: any) {
+      showError('Request Failed', err.message || 'Failed to request edit access.');
+    } finally {
+      setIsRequestingEdit(false);
+    }
+  };
+
   const handlePostAsMoment = async () => {
     if (!verifiedNote || !user || isPostingMoment) return;
     const ownerId = String(verifiedNote.userId || '').trim();
@@ -827,68 +882,103 @@ export default function SharedNoteClient({ noteId, initialKey }: SharedNoteClien
                 </Button>
               )}
               {(!user || user.$id !== verifiedNote.userId) && (
-                <Box>
-                {isAuthenticated ? (
-                  alreadyDuplicated ? (
-                    <Chip 
-                      icon={<CheckIcon sx={{ color: '#10B981 !important' }} />} 
-                      label="Note Duplicated" 
-                      sx={{ 
-                        borderRadius: '12px', 
-                        bgcolor: 'rgba(16, 185, 129, 0.1)', 
-                        color: '#10B981',
-                        fontWeight: 800,
-                        border: '1px solid rgba(16, 185, 129, 0.2)',
-                        height: 44,
-                        px: 1
-                      }} 
-                    />
+                <Stack direction="row" spacing={2} alignItems="center">
+                  {isAuthenticated && (
+                    editRequestStatus ? (
+                      <Chip
+                        label={editRequestStatus === 'requested' || editRequestStatus === 'pending' ? 'Edit Access Requested' : 'Edit Access Approved'}
+                        sx={{
+                          borderRadius: '12px',
+                          bgcolor: 'rgba(245, 158, 11, 0.1)',
+                          color: '#F59E0B',
+                          fontWeight: 800,
+                          border: '1px solid rgba(245, 158, 11, 0.2)',
+                          height: 44,
+                          px: 1
+                        }}
+                      />
+                    ) : (
+                      <Button
+                        variant="outlined"
+                        onClick={handleRequestEditAccess}
+                        disabled={isRequestingEdit}
+                        sx={{
+                          borderRadius: '14px',
+                          borderColor: 'rgba(255, 255, 255, 0.1)',
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          fontWeight: 700,
+                          textTransform: 'none',
+                          px: 3,
+                          height: 44,
+                          whiteSpace: 'nowrap',
+                          '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.03)' }
+                        }}
+                      >
+                        {isRequestingEdit ? 'Requesting...' : 'Request Edit Access'}
+                      </Button>
+                    )
+                  )}
+                  {isAuthenticated ? (
+                    alreadyDuplicated ? (
+                      <Chip 
+                        icon={<CheckIcon sx={{ color: '#10B981 !important' }} />} 
+                        label="Note Duplicated" 
+                        sx={{ 
+                          borderRadius: '12px', 
+                          bgcolor: 'rgba(16, 185, 129, 0.1)', 
+                          color: '#10B981',
+                          fontWeight: 800,
+                          border: '1px solid rgba(16, 185, 129, 0.2)',
+                          height: 44,
+                          px: 1
+                        }} 
+                      />
+                    ) : (
+                      <Button
+                        variant="contained"
+                        onClick={handleDuplicate}
+                        disabled={isDuplicating}
+                        startIcon={isDuplicating ? <CircularProgress size={16} color="inherit" /> : <DuplicateIcon />}
+                        sx={{
+                          borderRadius: '14px',
+                          bgcolor: '#6366F1',
+                          color: '#000',
+                          fontWeight: 800,
+                          textTransform: 'none',
+                          px: 3,
+                          height: 44,
+                          whiteSpace: 'nowrap',
+                          boxShadow: '0 8px 20px rgba(99, 102, 241, 0.15)',
+                          '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
+                        }}
+                      >
+                        {isDuplicating ? 'Duplicating...' : 'Duplicate to My Collection'}
+                      </Button>
+                    )
                   ) : (
-                    <Button
-                      variant="contained"
-                      onClick={handleDuplicate}
-                      disabled={isDuplicating}
-                      startIcon={isDuplicating ? <CircularProgress size={16} color="inherit" /> : <DuplicateIcon />}
-                      sx={{
-                        borderRadius: '14px',
-                        bgcolor: '#6366F1',
-                        color: '#000',
-                        fontWeight: 800,
-                        textTransform: 'none',
-                        px: 3,
-                        height: 44,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 8px 20px rgba(99, 102, 241, 0.15)',
-                        '&:hover': { bgcolor: alpha('#6366F1', 0.8) }
-                      }}
-                    >
-                      {isDuplicating ? 'Duplicating...' : 'Duplicate to My Collection'}
-                    </Button>
-                  )
-                ) : (
-                  <Tooltip title="Login to duplicate note into your collection">
-                    <Button
-                      component={ObLink}
-                      href={`${getEcosystemUrl('accounts')}/login?source=${typeof window !== 'undefined' ? encodeURIComponent(window.location.origin + window.location.pathname) : ''}`}
-                      variant="outlined"
-                      startIcon={<DuplicateIcon />}
-                      sx={{
-                        borderRadius: '14px',
-                        borderColor: 'rgba(255, 255, 255, 0.1)',
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        fontWeight: 700,
-                        textTransform: 'none',
-                        px: 3,
-                        height: 44,
-                        whiteSpace: 'nowrap',
-                        '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.03)' }
-                      }}
-                    >
-                      Login to Duplicate
-                    </Button>
-                  </Tooltip>
-                )}
-                </Box>
+                    <Tooltip title="Login to duplicate note into your collection">
+                      <Button
+                        component={ObLink}
+                        href={`${getEcosystemUrl('accounts')}/login?source=${typeof window !== 'undefined' ? encodeURIComponent(window.location.origin + window.location.pathname) : ''}`}
+                        variant="outlined"
+                        startIcon={<DuplicateIcon />}
+                        sx={{
+                          borderRadius: '14px',
+                          borderColor: 'rgba(255, 255, 255, 0.1)',
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          fontWeight: 700,
+                          textTransform: 'none',
+                          px: 3,
+                          height: 44,
+                          whiteSpace: 'nowrap',
+                          '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.03)' }
+                        }}
+                      >
+                        Login to Duplicate
+                      </Button>
+                    </Tooltip>
+                  )}
+                </Stack>
               )}
             </Box>
           </Box>

@@ -1214,10 +1214,11 @@ The following catalog provides a highly detailed engineering breakdown of the ac
     4.  **Permissive Community & Communication Features**: Access to Moments, secure chats, Hangouts (groups), and 1-on-1 direct voice/video calls is universally free.
     5.  **Democratic Call Gating**: One-on-one direct calls are free to preserve the baseline right of direct communication. Group calls (anything beyond 2 participants) are restricted to the Teams tier because multi-peer SFU/WebRTC bridging incurs external Cloudflare Calls bandwidth billing. Gating group calls ensures the infrastructure remains self-sustaining without threatening bankruptcy.
     6.  **Duplication & Import Gating**: Duplicating or claiming shared resources (e.g. duplicating a shared note to a personal collection or claiming an ephemeral Send object) is strictly gated to the Pro/Teams tiers. This prevents database and storage bloat from free users attempting to bypass the collaboration locks by creating redundant copies of assets.
+    7.  **Edit Access Request Gating**: Requesting edit access on shared screens (which triggers a join request) is strictly gated to the Teams tier. Sharing is globally read-only by default; real-time edit collaboration utilizes synchronous database updates and CRDT operations that have a tendency to heavily pound database resources. Restricting edit requests to Teams protects infrastructure performance and maintains system stability.
 *   **Tier Definitions**:
-    *   **Free**: Full personal database (zero collaborators), secure chats, hangouts, moments, profile picture storage, and 1-on-1 direct calls. Audio recording features, shared note duplication, and shared Send claiming are excluded.
+    *   **Free**: Full personal database (zero collaborators), secure chats, hangouts, moments, profile picture storage, and 1-on-1 direct calls. Audio recording features, shared note duplication, shared Send claiming, and edit access requests are excluded.
     *   **Pro**: Adds arbitrary file storage, audio messages, shared note duplication, and shared Send claiming.
-    *   **Teams**: Enables multi-user collaboration (shared databases with unlimited collaborators), WebRTC group calls, shared note duplication, and shared Send claiming.
+    *   **Teams**: Enables multi-user collaboration (shared databases with unlimited collaborators), WebRTC group calls, shared note duplication, shared Send claiming, and edit access requests.
 
 ---
 

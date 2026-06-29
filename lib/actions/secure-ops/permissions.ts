@@ -834,3 +834,50 @@ export async function removeFormCollaboratorSecure(formId: string, targetUserId:
 
   return JSON.parse(JSON.stringify(updatedForm));
 }
+
+export async function requestResourceAccessSecure(resourceId: string, resourceType: 'project' | 'note', jwt?: string) {
+  const actor = await getActor(jwt);
+  if (!actor || !actor.$id) {
+    throw new Error('Unauthorized');
+  }
+
+  const tables = createSystemTablesDB();
+  const FLOW_DATABASE_ID = APPWRITE_CONFIG.DATABASES.FLOW;
+  const COLLABORATORS_TABLE = APPWRITE_CONFIG.TABLES.FLOW.COLLABORATORS || 'Collaborators';
+
+  // Check if they already have an entry
+  const existingCollab = await tables.listRows({
+    databaseId: FLOW_DATABASE_ID,
+    tableId: COLLABORATORS_TABLE,
+    queries: [
+      Query.equal('resourceId', resourceId),
+      Query.equal('resourceType', resourceType),
+      Query.equal('userId', actor.$id)
+    ] as any
+  });
+
+  if (existingCollab.rows.length > 0) {
+    const col = existingCollab.rows[0];
+    return { success: true, status: col.status };
+  }
+
+  // Create a collaborator row with status: 'pending'
+  await tables.createRow({
+    databaseId: FLOW_DATABASE_ID,
+    tableId: COLLABORATORS_TABLE,
+    rowId: ID.unique(),
+    data: {
+      resourceId,
+      resourceType,
+      userId: actor.$id,
+      permission: 'read',
+      invitedAt: new Date().toISOString(),
+      accepted: false,
+      status: 'pending',
+      role: 'collaborator',
+      inviterId: ''
+    }
+  });
+
+  return { success: true, status: 'requested' };
+}

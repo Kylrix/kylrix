@@ -19,6 +19,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
+import { useProUpgrade } from '@/context/ProUpgradeContext';
+import { getUserSubscriptionTier } from '@/lib/utils';
 import { NoteContentRenderer } from '@/components/NoteContentRenderer';
 import { 
   realtime,
@@ -69,7 +71,62 @@ export function SendReceiveClient({ noteId, keyParam, initialNote }: Props) {
   const [isLoadingNote, setIsLoadingNote] = useState(!initialNote);
   const { user } = useAuth();
   const [isCopied, setIsCopied] = useState(false);
-  const { showSuccess } = useToast();
+  const { showSuccess, showError } = useToast();
+  const { openProUpgrade } = useProUpgrade();
+  const [isRequestingEdit, setIsRequestingEdit] = useState(false);
+  const [editRequestStatus, setEditRequestStatus] = useState<'pending' | 'requested' | 'accepted' | null>(null);
+
+  // Check if current user has already requested edit access
+  useEffect(() => {
+    if (verifiedNote && user?.$id) {
+      const collabs = Array.isArray(verifiedNote.collaborators) ? verifiedNote.collaborators : [];
+      const match = collabs.find((c: any) => {
+        try {
+          const parsed = typeof c === 'string' ? JSON.parse(c) : c;
+          return parsed.userId === user.$id;
+        } catch {
+          return false;
+        }
+      });
+      if (match) {
+        try {
+          const parsed = typeof match === 'string' ? JSON.parse(match) : match;
+          setEditRequestStatus(parsed.status || 'pending');
+        } catch {}
+      }
+    }
+  }, [verifiedNote, user]);
+
+  const handleRequestEditAccess = async () => {
+    if (!verifiedNote || isRequestingEdit) return;
+
+    if (!user?.$id) {
+      showError('Unauthorized', 'Please sign in to request edit access.');
+      return;
+    }
+
+    // Gated to TEAMS tier to prevent server and DB CRDT hit
+    const tier = getUserSubscriptionTier(user);
+    if (tier !== 'TEAMS') {
+      openProUpgrade('Collaborative Edit Access');
+      showError('Teams Plan Required', 'Real-time collaborative editing is restricted to the Teams tier.');
+      return;
+    }
+
+    setIsRequestingEdit(true);
+    try {
+      const { requestResourceAccessSecure } = await import('@/lib/actions/secure-ops');
+      const { account } = await import('@/lib/appwrite/client');
+      const { jwt } = await account.createJWT().catch(() => ({ jwt: undefined }));
+      await requestResourceAccessSecure(verifiedNote.$id, 'note', jwt);
+      setEditRequestStatus('requested');
+      showSuccess('Access Requested', 'Your request for edit access has been sent to the owner.');
+    } catch (err: any) {
+      showError('Request Failed', err.message || 'Failed to request edit access.');
+    } finally {
+      setIsRequestingEdit(false);
+    }
+  };
   
   // Send Specific State
   const [kind, setKind] = useState<SendKind | null>(null);
@@ -556,7 +613,26 @@ export function SendReceiveClient({ noteId, keyParam, initialNote }: Props) {
           )}
         </div>
 
-        <div className="p-6 bg-[#161412] border-t border-white/[0.03]">
+        <div className="p-6 bg-[#161412] border-t border-white/[0.03] flex flex-col gap-4">
+          {(!user || user.$id !== verifiedNote.userId) && (
+            <div className="flex items-center gap-3">
+              {user?.$id ? (
+                editRequestStatus ? (
+                  <span className="text-xs px-3 py-1.5 rounded-lg font-bold bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20">
+                    {editRequestStatus === 'requested' || editRequestStatus === 'pending' ? 'Edit Access Requested' : 'Edit Access Approved'}
+                  </span>
+                ) : (
+                  <button
+                    onClick={handleRequestEditAccess}
+                    disabled={isRequestingEdit}
+                    className="text-xs font-bold px-4 py-2 rounded-xl bg-white/5 text-white/80 border border-white/10 hover:bg-white/10 active:scale-[0.98] transition"
+                  >
+                    {isRequestingEdit ? 'Requesting...' : 'Request Edit Access'}
+                  </button>
+                )
+              ) : null}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-[10px] text-white/30 font-mono font-bold">
               LINK ID: {verifiedNote.$id.toUpperCase()}
