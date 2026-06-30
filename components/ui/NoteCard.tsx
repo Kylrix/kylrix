@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from 'react';
+import { Drawer, Box, Typography } from '@/lib/openbricks/primitives';
 import { 
   Pin as PinIcon, 
   Paperclip as AttachFileIcon, 
@@ -53,6 +54,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const [mounted, setMounted] = React.useState(false);
   const [isPaywallDialogOpen, setIsPaywallDialogOpen] = React.useState(false);
   const [isAIProcessing, setIsAIProcessing] = React.useState(false);
+  const [isMenuDrawerOpen, setIsMenuDrawerOpen] = React.useState(false);
   
   const { openMenu } = useContextMenu();
   const { openSidebar } = useDynamicSidebar();
@@ -253,12 +255,7 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    openMenu({
-      x: e.clientX,
-      y: e.clientY,
-      items: contextMenuItems,
-      appType: 'note',
-    });
+    setIsMenuDrawerOpen(true);
   };
 
   const handleClick = () => {
@@ -381,6 +378,65 @@ const NoteCard: React.FC<NoteCardProps> = React.memo(({ note, onUpdate, onDelete
           </div>
 
         </div>
+      )}
+
+      {isMenuDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isMenuDrawerOpen}
+          onClose={() => setIsMenuDrawerOpen(false)}
+          PaperProps={{
+            sx: {
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              backgroundImage: 'none',
+              maxWidth: 720,
+              width: '100%',
+              mx: 'auto',
+              p: 2,
+              pb: 4,
+              pointerEvents: 'auto',
+            }
+          }}
+          ModalProps={{
+            keepMounted: false,
+            disableScrollLock: false,
+            disablePortal: true,
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
+            <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 950, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', tracking: '0.05em', fontFamily: 'var(--font-mono)', mb: 1, textAlign: 'center' }}>
+              Note Actions
+            </Typography>
+
+            {contextMenuItems.map((item: any, idx: number) => {
+              if (item.divider) return <Box key={idx} sx={{ h: '1px', bgcolor: 'white/5', my: 0.5 }} />;
+              
+              const isDestructive = item.variant === 'destructive';
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setIsMenuDrawerOpen(false);
+                    item.onClick?.();
+                  }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold transition-all text-left cursor-pointer ${
+                    isDestructive 
+                      ? 'bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20' 
+                      : 'bg-white/[0.02] border-white/5 text-white hover:bg-white/5'
+                  }`}
+                >
+                  {item.icon && <span className="opacity-70">{item.icon}</span>}
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </Box>
+        </Drawer>
       )}
     </>
   );
