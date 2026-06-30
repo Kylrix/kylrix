@@ -779,7 +779,88 @@ export default function CreateNoteForm({
         </div>
 
         {/* Bottom Toolbar */}
-        <div className="px-2.5 py-1.5 border-t border-white/5 bg-[#161412] flex flex-col gap-1.5 shrink-0">
+        <div className="px-2.5 py-1.5 border-t border-white/5 bg-[#161412] flex flex-col gap-2.5 shrink-0">
+          {/* Visibility and Voice controls */}
+          <div className="flex items-center justify-between pb-2 border-b border-white/5">
+            {/* Public vs Private toggle */}
+            <div className="flex items-center gap-1 bg-black/40 border border-white/5 rounded-xl p-0.5 text-xs font-mono">
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsPublic(false);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors font-bold ${!isPublic ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white'}`}
+                title="Private"
+              >
+                <Lock className="w-5 h-5" />
+                {!isMobile && <span>Private</span>}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!ecosystemSecurity.status.isUnlocked) {
+                    const unlocked = await promptSudo();
+                    if (!unlocked) {
+                      showError('Vault Locked', 'Unlock MasterPass before enabling public sharing.');
+                      return;
+                    }
+                  }
+                  setIsPublic(true);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors font-bold ${isPublic ? 'bg-pink-500/20 text-pink-400 font-extrabold' : 'text-white/40 hover:text-white'}`}
+                title="Public"
+              >
+                <Globe className="w-5 h-5" />
+                {!isMobile && <span>Public</span>}
+              </button>
+            </div>
+
+            {/* Article Toggle */}
+            <div className="flex items-center gap-1 bg-black/40 border border-white/5 rounded-xl p-0.5 text-xs font-mono">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!hasPaidKylrixPlan(user)) {
+                    openProUpgrade('Article Mode');
+                    return;
+                  }
+                  setIsArticle(!isArticle);
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors font-bold ${isArticle ? 'bg-[#6366F1]/20 text-[#6366F1] font-extrabold' : 'text-white/40 hover:text-white'}`}
+                title="Article Toggle"
+              >
+                <FileText className="w-5 h-5" />
+                {!isMobile && <span>Article</span>}
+              </button>
+            </div>
+
+            {/* Voice Recorder & Info */}
+            <div className="flex items-center gap-2">
+              <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`h-9 px-3 rounded-lg flex items-center justify-center gap-1.5 font-mono text-xs font-bold transition-all select-none border ${
+                    isRecording 
+                      ? 'bg-red-500/20 border-red-500/30 text-red-400 animate-pulse' 
+                      : 'bg-black/40 border-white/5 text-white/60 hover:text-white hover:bg-white/5'
+                  }`}
+                  title={isRecording ? "Click to Stop & Insert" : "Record Voice Note"}
+                >
+                  {isRecording ? (
+                    <>
+                      <Square className="w-4 h-4 fill-current" />
+                      <span>{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-5 h-5" />
+                      {!isMobile && <span>Record</span>}
+                    </>
+                  )}
+                </button>
+            </div>
+          </div>
+
           {/* Tags section */}
           <div className="flex flex-col gap-2">
             <div 
@@ -827,81 +908,6 @@ export default function CreateNoteForm({
               <span>{tags.length > 0 ? 'Add more tags...' : 'Add tags to this note...'}</span>
               <ArrowUpRight size={14} className="opacity-40" />
             </button>
-          </div>
-
-          {/* Visibility and Voice controls */}
-          <div className="flex items-center justify-between border-t border-white/5 pt-2">
-            {/* Public vs Private toggle */}
-            <div className="flex items-center gap-1 bg-black/40 border border-white/5 rounded-xl p-0.5 text-xs font-mono">
-              <button
-                type="button"
-                onClick={async () => {
-                  setIsPublic(false);
-                }}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors font-bold ${!isPublic ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white'}`}
-                title="Private"
-              >
-                <Lock className="w-2.5 h-2.5" />
-                {!isMobile && <span>Private</span>}
-              </button>
-              <button
-                type="button"
-                onClick={async () => {
-                  if (!ecosystemSecurity.status.isUnlocked) {
-                    const unlocked = await promptSudo();
-                    if (!unlocked) {
-                      showError('Vault Locked', 'Unlock MasterPass before enabling public sharing.');
-                      return;
-                    }
-                  }
-                  setIsPublic(true);
-                }}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors font-bold ${isPublic ? 'bg-pink-500/20 text-pink-400 font-extrabold' : 'text-white/40 hover:text-white'}`}
-                title="Public"
-              >
-                <Globe className="w-2.5 h-2.5" />
-                {!isMobile && <span>Public</span>}
-              </button>
-            </div>
-
-            {/* Article Toggle */}
-            <div className="flex items-center gap-1 bg-black/40 border border-white/5 rounded-xl p-0.5 text-xs font-mono">
-              <button
-                type="button"
-                onClick={() => setIsArticle(!isArticle)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition-colors font-bold ${isArticle ? 'bg-[#6366F1]/20 text-[#6366F1] font-extrabold' : 'text-white/40 hover:text-white'}`}
-                title="Article Toggle"
-              >
-                <FileText className="w-2.5 h-2.5" />
-                {!isMobile && <span>Article</span>}
-              </button>
-            </div>
-
-            {/* Voice Recorder & Info */}
-            <div className="flex items-center gap-2">
-              <button
-                  type="button"
-                  onClick={toggleRecording}
-                  className={`h-8 px-3 rounded-lg flex items-center justify-center gap-1.5 font-mono text-xs font-bold transition-all select-none border ${
-                    isRecording 
-                      ? 'bg-red-500/20 border-red-500/30 text-red-400 animate-pulse' 
-                      : 'bg-black/40 border-white/5 text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                  title={isRecording ? "Click to Stop & Insert" : "Record Voice Note"}
-                >
-                  {isRecording ? (
-                    <>
-                      <Square className="w-2.5 h-2.5 fill-current" />
-                      <span>{Math.floor(recordingDuration / 60)}:{(recordingDuration % 60 < 10 ? '0' : '') + (recordingDuration % 60)}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-3 h-3" />
-                      {!isMobile && <span>Record</span>}
-                    </>
-                  )}
-                </button>
-            </div>
           </div>
         </div>
       </div>
