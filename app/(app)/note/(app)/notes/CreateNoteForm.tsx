@@ -13,8 +13,12 @@ import {
   ChevronDown, 
   X, 
   Tag, 
-  Plus
+  Plus,
+  Clipboard,
+  CheckSquare,
+  Copy
 } from 'lucide-react';
+import { Drawer, Box, Typography } from '@/lib/openbricks/primitives';
 import { StorageService } from '@/lib/services/storage';
 import { buildAutoTitleFromContent } from '@/constants/noteTitle';
 import { useOverlay } from '@/components/ui/OverlayContext';
@@ -80,6 +84,7 @@ export default function CreateNoteForm({
   const [isPublic, setIsPublic] = useState(initialContent?.isPublic || false);
   const [isGuest, setIsGuest] = useState(initialContent?.isGuest || false);
   const [isArticle, setIsArticle] = useState(false);
+  const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
   const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
   const [currentTag, setCurrentTag] = useState('');
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
@@ -758,6 +763,11 @@ export default function CreateNoteForm({
             value={content}
             maxLength={isArticle ? 655300000 : 65535}
             onPaste={handlePaste}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsContextDrawerOpen(true);
+            }}
             onChange={(event) => {
               const val = event.target.value;
               setContent(val);
@@ -910,6 +920,106 @@ export default function CreateNoteForm({
             </button>
           </div>
         </div>
+
+        {isContextDrawerOpen && (
+          <Drawer
+            anchor="bottom"
+            open={isContextDrawerOpen}
+            onClose={() => setIsContextDrawerOpen(false)}
+            PaperProps={{
+              sx: {
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: '24px',
+                bgcolor: '#161412',
+                borderTop: '1px solid #34322F',
+                backgroundImage: 'none',
+                maxWidth: 720,
+                width: '100%',
+                mx: 'auto',
+                p: 2,
+                pb: 4,
+                pointerEvents: 'auto',
+              }
+            }}
+            ModalProps={{
+              keepMounted: false,
+              disableScrollLock: false,
+              disablePortal: true,
+            }}
+          >
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
+              <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
+              <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', tracking: '0.05em', fontFamily: 'var(--font-mono)', mb: 1, textAlign: 'center' }}>
+                Text Actions
+              </Typography>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(content);
+                  showSuccess('Copied', 'Entire note content copied to clipboard.');
+                  setIsContextDrawerOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+              >
+                <Copy className="w-5 h-5 text-pink-500" />
+                <span>Copy All Content</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsContextDrawerOpen(false);
+                  setTimeout(() => {
+                    const textarea = contentRef.current;
+                    if (textarea) {
+                      textarea.focus();
+                      textarea.select();
+                    }
+                  }, 100);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+              >
+                <CheckSquare className="w-5 h-5 text-purple-500" />
+                <span>Select All</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsContextDrawerOpen(false);
+                  try {
+                    const text = await navigator.clipboard.readText();
+                    const textarea = contentRef.current;
+                    if (textarea) {
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      if (start === 0 && end === textarea.value.length) {
+                        setContent(text);
+                        syncNoteInMemory(title, text, tags);
+                      } else {
+                        const nextContent = content.substring(0, start) + text + content.substring(end);
+                        setContent(nextContent);
+                        syncNoteInMemory(title, nextContent, tags);
+                        setTimeout(() => {
+                          textarea.focus();
+                          textarea.setSelectionRange(start + text.length, start + text.length);
+                        }, 50);
+                      }
+                      showSuccess('Pasted', 'Text pasted from clipboard.');
+                    }
+                  } catch (err) {
+                    showError('Paste Failed', 'Could not read from clipboard.');
+                  }
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+              >
+                <Clipboard className="w-5 h-5 text-emerald-500" />
+                <span>Paste Clipboard</span>
+              </button>
+            </Box>
+          </Drawer>
+        )}
       </div>
   );
 }
