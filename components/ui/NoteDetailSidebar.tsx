@@ -29,6 +29,7 @@ import {
   Copy as CopyIcon,
   Tag as TagIcon,
   Plus,
+  Clipboard
 } from 'lucide-react';
 
 import { 
@@ -649,6 +650,13 @@ export function NoteDetailSidebar({
   }, [liveNote, openCallLauncher]);
 
   const contentTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isContextDrawerOpen, setIsContextDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setIsDrawerOpen(isContextDrawerOpen);
+    return () => setIsDrawerOpen(false);
+  }, [isContextDrawerOpen, setIsDrawerOpen]);
+
   const displayTags = useMemo(() => tags.split(',').map((t: string) => t.trim()).filter(Boolean), [tags]);
 
   const currentAttachments = useMemo(() => {
@@ -1008,6 +1016,11 @@ export function NoteDetailSidebar({
                 onChange={(e) => {
                   setContent(e.target.value);
                   markDirty();
+                }}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setIsContextDrawerOpen(true);
                 }}
                 ref={contentTextareaRef}
                 className="w-full min-h-[320px] bg-transparent text-white/90 text-lg leading-[1.75] border-none focus:outline-none resize-none scrollbar-thin focus:ring-0 focus:ring-offset-0 font-sans placeholder:text-white/25"
@@ -1440,6 +1453,110 @@ export function NoteDetailSidebar({
           </List>
         </Box>
       </Drawer>
+
+      {isContextDrawerOpen && (
+        <Drawer
+          anchor="bottom"
+          open={isContextDrawerOpen}
+          onClose={() => setIsContextDrawerOpen(false)}
+          PaperProps={{
+            sx: {
+              position: 'fixed !important',
+              bottom: '0 !important',
+              left: '0 !important',
+              right: '0 !important',
+              borderTopLeftRadius: '24px',
+              borderTopRightRadius: '24px',
+              bgcolor: '#161412',
+              borderTop: '1px solid #34322F',
+              backgroundImage: 'none',
+              maxWidth: 720,
+              width: '100%',
+              mx: 'auto',
+              p: 2,
+              pb: 4,
+              pointerEvents: 'auto',
+            }
+          }}
+          ModalProps={{
+            keepMounted: false,
+            disableScrollLock: false,
+            disablePortal: true,
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pointerEvents: 'auto' }}>
+            <Box sx={{ width: 40, height: 4, borderRadius: 2, bgcolor: '#3D3A36', mx: 'auto', mb: 1 }} aria-hidden />
+            <Typography sx={{ fontSize: '0.9rem', fontWeight: 900, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', tracking: '0.05em', fontFamily: 'var(--font-mono)', mb: 1, textAlign: 'center' }}>
+              Text Actions
+            </Typography>
+
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(content);
+                showSuccess('Copied', 'Entire note content copied to clipboard.');
+                setIsContextDrawerOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <CopyIcon className="w-5 h-5 text-pink-500" />
+              <span>Copy All Content</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsContextDrawerOpen(false);
+                setTimeout(() => {
+                  const textarea = contentTextareaRef.current;
+                  if (textarea) {
+                    textarea.focus();
+                    textarea.select();
+                  }
+                }, 100);
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <TaskIcon className="w-5 h-5 text-purple-500" />
+              <span>Select All</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={async () => {
+                setIsContextDrawerOpen(false);
+                try {
+                  const text = await navigator.clipboard.readText();
+                  const textarea = contentTextareaRef.current;
+                  if (textarea) {
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    if (start === 0 && end === textarea.value.length) {
+                      setContent(text);
+                      markDirty();
+                    } else {
+                      const nextContent = content.substring(0, start) + text + content.substring(end);
+                      setContent(nextContent);
+                      markDirty();
+                      setTimeout(() => {
+                        textarea.focus();
+                        textarea.setSelectionRange(start + text.length, start + text.length);
+                      }, 50);
+                    }
+                    showSuccess('Pasted', 'Text pasted from clipboard.');
+                  }
+                } catch (err) {
+                  showError('Paste Failed', 'Could not read from clipboard.');
+                }
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/5 text-sm font-bold text-white hover:bg-white/5 transition-all text-left cursor-pointer"
+            >
+              <Clipboard className="w-5 h-5 text-emerald-500" />
+              <span>Paste Clipboard</span>
+            </button>
+          </Box>
+        </Drawer>
+      )}
 
     </div>
   );
