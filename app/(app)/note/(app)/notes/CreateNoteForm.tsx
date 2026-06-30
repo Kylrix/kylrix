@@ -839,9 +839,10 @@ export default function CreateNoteForm({
                   setIsPublic(false);
                 }}
                 className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors font-bold ${!isPublic ? 'bg-white/10 text-white font-extrabold' : 'text-white/40 hover:text-white'}`}
+                title="Private"
               >
                 <Lock className="w-2.5 h-2.5" />
-                <span>Private</span>
+                {!isMobile && <span>Private</span>}
               </button>
               <button
                 type="button"
@@ -856,9 +857,10 @@ export default function CreateNoteForm({
                   setIsPublic(true);
                 }}
                 className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors font-bold ${isPublic ? 'bg-pink-500/20 text-pink-400 font-extrabold' : 'text-white/40 hover:text-white'}`}
+                title="Public"
               >
                 <Globe className="w-2.5 h-2.5" />
-                <span>Public</span>
+                {!isMobile && <span>Public</span>}
               </button>
             </div>
 
@@ -868,9 +870,10 @@ export default function CreateNoteForm({
                 type="button"
                 onClick={() => setIsArticle(!isArticle)}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-lg transition-colors font-bold ${isArticle ? 'bg-[#6366F1]/20 text-[#6366F1] font-extrabold' : 'text-white/40 hover:text-white'}`}
+                title="Article Toggle"
               >
                 <FileText className="w-2.5 h-2.5" />
-                <span>Article</span>
+                {!isMobile && <span>Article</span>}
               </button>
             </div>
 
@@ -894,7 +897,7 @@ export default function CreateNoteForm({
                   ) : (
                     <>
                       <Mic className="w-3 h-3" />
-                      <span>Record</span>
+                      {!isMobile && <span>Record</span>}
                     </>
                   )}
                 </button>
