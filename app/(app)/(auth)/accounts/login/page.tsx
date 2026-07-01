@@ -246,7 +246,7 @@ function LoginContent() {
 
       // 1. Fetch options via Server Action
       const optionsRes = await getPasskeyLoginOptionsAction(email, hostname);
-      if (!optionsRes.success || !optionsRes.options) {
+      if (!optionsRes.success || !optionsRes.options || !optionsRes.challengeToken) {
         throw new Error(optionsRes.error || 'Failed to generate passkey login options');
       }
 
@@ -254,7 +254,7 @@ function LoginContent() {
       const authResp = await startAuthentication({ optionsJSON: optionsRes.options });
 
       // 3. Post assertion response to the verification Server Action
-      const verifyRes = await verifyPasskeyLoginAction(authResp, hostname, hostHeader);
+      const verifyRes = await verifyPasskeyLoginAction(authResp, optionsRes.challengeToken, hostname, hostHeader);
       if (!verifyRes.success || !verifyRes.verified) {
         throw new Error(verifyRes.error || 'Passkey verification failed');
       }

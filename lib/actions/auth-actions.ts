@@ -62,19 +62,19 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname: str
       },
     };
 
-    // Store the generated challenge in a secure cookie to verify against it
-    const { cookies: getCookies } = await import('next/headers');
-    const cookieStore = await getCookies();
-    cookieStore.set('passkey_login_challenge', options.challenge, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      maxAge: 300, // 5 minutes
-      path: '/'
-    });
+    // Generate stateless challenge token using our APPWRITE_API secret
+    const exp = Date.now() + 300000; // 5 minutes
+    const payload = JSON.stringify({ c: options.challenge, e: exp });
+    const secret = process.env.APPWRITE_API || 'fallback-dev-secret';
+    const sig = createHmac('sha256', secret).update(payload).digest('base64url');
+    const challengeToken = Buffer.from(payload).toString('base64url') + '.' + sig;
 
     // Serialize options to JSON-friendly format for RSC/Actions transport
-    return { success: true, options: JSON.parse(JSON.stringify(options)) };
+    return { 
+      success: true, 
+      options: JSON.parse(JSON.stringify(options)),
+      challengeToken
+    };
   } catch (error: any) {
     console.error('Error generating passkey options action:', error);
     return { success: false, error: error.message };
@@ -84,7 +84,7 @@ export async function getPasskeyLoginOptionsAction(email?: string, hostname: str
 /**
  * Verifies WebAuthn assertion response and returns an Appwrite custom token.
  */
-export async function verifyPasskeyLoginAction(authResp: any, hostname: string = 'localhost', hostHeader: string = 'localhost') {
+export async function verifyPasskeyLoginAction(authResp: any, challengeToken: string, hostname: string = 'localhost', hostHeader: string = 'localhost') {
   try {
     const systemClient = createSystemClient();
     const db = systemClient.databases;
@@ -116,13 +116,25 @@ export async function verifyPasskeyLoginAction(authResp: any, hostname: string =
     const protocol = hostname === 'localhost' || hostname.startsWith('127.') ? 'http' : 'https';
     const origin = `${protocol}://${hostHeader}`;
 
-    // Read stored challenge
-    const { cookies: getCookies } = await import('next/headers');
-    const cookieStore = await getCookies();
-    const expectedChallenge = cookieStore.get('passkey_login_challenge')?.value;
-    if (!expectedChallenge) {
+    // Verify stateless challenge token
+    const parts = challengeToken.split('.');
+    if (parts.length !== 2) {
+      return { success: false, error: 'Malformed challenge token' };
+    }
+    const payloadJson = Buffer.from(parts[0], 'base64url').toString();
+    const sig = parts[1];
+    const secret = process.env.APPWRITE_API || 'fallback-dev-secret';
+    const expectedSig = createHmac('sha256', secret).update(payloadJson).digest('base64url');
+
+    if (sig !== expectedSig) {
+      return { success: false, error: 'Invalid challenge signature' };
+    }
+
+    const parsed = JSON.parse(payloadJson);
+    if (Date.now() > parsed.e) {
       return { success: false, error: 'Login session expired. Please retry.' };
     }
+    const expectedChallenge = parsed.c;
 
     // 2. Verify Authentication Response
     const verification = await verifyAuthenticationResponse({
@@ -138,8 +150,6 @@ export async function verifyPasskeyLoginAction(authResp: any, hostname: string =
     });
 
     if (verification.verified) {
-      // Clear login challenge cookie
-      cookieStore.delete('passkey_login_challenge');
 
       // Update credential counter in DB if updated
       const { authenticationInfo } = verification;

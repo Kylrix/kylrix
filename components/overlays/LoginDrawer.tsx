@@ -138,7 +138,7 @@ export function LoginDrawer() {
       const hostHeader = window.location.host;
       
       const optionsRes = await getPasskeyLoginOptionsAction(undefined, hostname);
-      if (!optionsRes.success || !optionsRes.options) {
+      if (!optionsRes.success || !optionsRes.options || !optionsRes.challengeToken) {
         throw new Error(optionsRes.error || 'Failed to generate passkey options');
       }
 
@@ -155,7 +155,7 @@ export function LoginDrawer() {
       }
 
       const authResp = await startAuthentication({ optionsJSON: options });
-      const verifyRes = await verifyPasskeyLoginAction(authResp, hostname, hostHeader);
+      const verifyRes = await verifyPasskeyLoginAction(authResp, optionsRes.challengeToken, hostname, hostHeader);
 
       if (!verifyRes.success || !verifyRes.token) {
         throw new Error(verifyRes.error || 'Passkey verification failed');
