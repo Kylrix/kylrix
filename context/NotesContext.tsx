@@ -100,7 +100,7 @@ async function getGhostNotes(): Promise<Notes[]> {
         metadata: item.metadata || '{}',
       };
     }));
-    return mapped.filter(Boolean) as Notes[];
+    return mapped.filter(Boolean) as any as Notes[];
   } catch (e) {
     console.error('Failed to parse ghost history in getGhostNotes', e);
     return [];

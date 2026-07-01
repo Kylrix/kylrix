@@ -285,7 +285,7 @@ export function MasterPassDrawer({ isOpen, onClose, intent = 'unlock' }: MasterP
         }
 
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.warn("Failed to fetch keychain entries (likely offline):", err);
         const cachedHasMasterpass = typeof window !== 'undefined' && localStorage.getItem('kylrix_has_masterpass_' + user.$id) === 'true';
         if (cachedHasMasterpass) {

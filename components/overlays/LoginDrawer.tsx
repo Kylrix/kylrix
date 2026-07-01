@@ -149,7 +149,7 @@ export function LoginDrawer() {
         // convert it back to a proper Uint8Array so startAuthentication doesn't throw a type/support error.
         const rawFirst = options.extensions.prf.eval.first;
         if (rawFirst && typeof rawFirst === 'object' && !(rawFirst instanceof Uint8Array)) {
-          const values = Object.values(rawFirst);
+          const values = Object.values(rawFirst) as number[];
           options.extensions.prf.eval.first = new Uint8Array(values);
         }
       }
