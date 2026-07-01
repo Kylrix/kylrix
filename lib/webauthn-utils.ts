@@ -45,7 +45,7 @@ export async function performNativePasskeyAuthentication(
   }
 
   const assertion = await navigator.credentials.get({
-    publicKey: publicKey as PublicKeyCredentialRequestOptions,
+    publicKey: publicKey as unknown as PublicKeyCredentialRequestOptions,
   });
   if (!assertion) {
     throw new Error('Authentication was not completed');
