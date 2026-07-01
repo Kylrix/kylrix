@@ -32,6 +32,8 @@ function ConnectHomeContent() {
   const [threadsOpen, setThreadsOpen] = useState(true);
   const [projectsOpen, setProjectsOpen] = useState(true);
   const [bookmarksOpen, setBookmarksOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'moments' | 'chats' | 'calls'>('moments');
+  const [chatsActiveTab, setChatsActiveTab] = useState<'secure' | 'public'>('secure');
 
   const { projects, loading: projectsLoading } = useProjectsList();
   const { user } = useAuth();
@@ -159,239 +161,305 @@ function ConnectHomeContent() {
       {/* Top spotlight ambient glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1400px] h-[300px] bg-gradient-to-b from-amber-500/[0.04] to-transparent rounded-full blur-3xl pointer-events-none" />
 
-      {/* Grid reflow container (Centered max-w on mobile/tablet, expands on desktop) */}
-      <div className="max-w-3xl md:max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_340px] gap-8 items-start relative z-10">
-        
-        {/* Left Column: Moments Feed (Always first in DOM and visually primary) */}
-        <div className="min-w-0 w-full flex flex-col gap-6">
-          <div className="flex items-between justify-between">
-            <h2 className="text-2xl font-black font-clash text-white tracking-tight">
-              Moments
-            </h2>
-          </div>
-          <Feed view="personal" composeIntent={composeIntent} />
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-2xl w-fit select-none mb-8">
+          <button
+            onClick={() => setActiveTab('moments')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+              activeTab === 'moments'
+                ? 'bg-[#F59E0B] text-white shadow-[0_4px_12px_rgba(245,158,11,0.25)]'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Moments
+          </button>
+          <button
+            onClick={() => setActiveTab('chats')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+              activeTab === 'chats'
+                ? 'bg-[#F59E0B] text-white shadow-[0_4px_12px_rgba(245,158,11,0.25)]'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Chats
+          </button>
+          <button
+            onClick={() => setActiveTab('calls')}
+            className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+              activeTab === 'calls'
+                ? 'bg-[#F59E0B] text-white shadow-[0_4px_12px_rgba(245,158,11,0.25)]'
+                : 'text-white/50 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            Calls
+          </button>
         </div>
 
-        {/* Right Column: Collaboration Sidebar (Threads & Projects) - Hidden on mobile, visible on tablet/desktop */}
-        <div className="hidden md:flex w-full flex-col gap-8 max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 md:sticky md:top-[108px]">
-          
-          {/* Pocket 1: Discussion Threads */}
-          <div 
-            className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
-            style={{
-              flex: '0 0 auto',
-              height: threadsOpen ? '380px' : '68px',
-            }}
-          >
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
-                  Threads
-                  </h3>
+        {/* Tab Content */}
+        {activeTab === 'moments' && (
+          <div className="max-w-3xl md:max-w-[1400px] mx-auto grid grid-cols-1 md:grid-cols-[1fr_340px] gap-8 items-start">
+            {/* Left Column: Moments Feed */}
+            <div className="min-w-0 w-full flex flex-col gap-6">
+              <div className="flex items-between justify-between">
+                <h2 className="text-2xl font-black font-clash text-white tracking-tight">
+                  Moments
+                </h2>
               </div>
-              <div className="flex gap-1 items-center">
-                <button 
-                  onClick={() => setThreadsOpen(!threadsOpen)} 
-                  className="p-1 text-white/40 hover:text-white rounded transition-colors"
-                >
-                  {threadsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-                <button 
-                  onClick={() => router.push('/connect/chats')} 
-                  className="p-1 text-white/40 hover:text-[#F59E0B] rounded transition-colors"
-                >
-                  <Maximize2 size={12} />
-                </button>
-              </div>
+              <Feed view="personal" composeIntent={composeIntent} />
             </div>
 
-            {threadsOpen && (
-              <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
-                <ChatList activeTab="public" hideTabs={true} skipSecureLoad={true} />
-              </div>
-            )}
-          </div>
+            {/* Right Column: Collaboration Sidebar */}
+            <div className="hidden md:flex w-full flex-col gap-8 max-h-[calc(100vh-140px)] overflow-y-auto scrollbar-none pr-1 md:sticky md:top-[108px]">
+              {/* Pocket 1: Discussion Threads */}
+              <div 
+                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
+                style={{
+                  flex: '0 0 auto',
+                  height: threadsOpen ? '380px' : '68px',
+                }}
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                    <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
+                      Threads
+                    </h3>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <button 
+                      onClick={() => setThreadsOpen(!threadsOpen)} 
+                      className="p-1 text-white/40 hover:text-white rounded transition-colors"
+                    >
+                      {threadsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <button 
+                      onClick={() => router.push('/connect/chats')} 
+                      className="p-1 text-white/40 hover:text-[#F59E0B] rounded transition-colors"
+                    >
+                      <Maximize2 size={12} />
+                    </button>
+                  </div>
+                </div>
 
-          {/* Pocket 2: Projects Index */}
-          <div 
-            className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
-            style={{
-              flex: '0 0 auto',
-              height: projectsOpen ? '380px' : '68px',
-            }}
-          >
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-violet-500" />
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
-                  Projects
-                </h3>
+                {threadsOpen && (
+                  <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
+                    <ChatList activeTab="public" hideTabs={true} skipSecureLoad={true} />
+                  </div>
+                )}
               </div>
-              <div className="flex gap-1 items-center">
-                <button 
-                  onClick={() => setProjectsOpen(!projectsOpen)} 
-                  className="p-1 text-white/40 hover:text-white rounded transition-colors"
-                >
-                  {projectsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-                <button 
-                  onClick={() => router.push('/projects')} 
-                  className="p-1 text-white/40 hover:text-[#F59E0B] rounded transition-colors"
-                >
-                  <Maximize2 size={12} />
-                </button>
-              </div>
-            </div>
 
-            {projectsOpen && (
-              <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
-                {projectsLoading ? (
-                  <div className="flex flex-col gap-2.5">
-                    {[1, 2, 3].map((n) => (
-                      <div key={n} className="flex gap-3 p-3 rounded-xl bg-white/[0.01] border border-white/[0.03]">
-                        <div className="w-8 h-8 rounded bg-white/5 animate-pulse" />
-                        <div className="flex-1 flex flex-col gap-1 justify-center">
-                          <div className="h-3 bg-white/5 rounded w-2/3 animate-pulse" />
-                          <div className="h-2 bg-white/5 rounded w-1/2 animate-pulse" />
-                        </div>
+              {/* Pocket 2: Projects Index */}
+              <div 
+                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
+                style={{
+                  flex: '0 0 auto',
+                  height: projectsOpen ? '380px' : '68px',
+                }}
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-violet-500" />
+                    <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
+                      Projects
+                    </h3>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <button 
+                      onClick={() => setProjectsOpen(!projectsOpen)} 
+                      className="p-1 text-white/40 hover:text-white rounded transition-colors"
+                    >
+                      {projectsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <button 
+                      onClick={() => router.push('/projects')} 
+                      className="p-1 text-white/40 hover:text-[#F59E0B] rounded transition-colors"
+                    >
+                      <Maximize2 size={12} />
+                    </button>
+                  </div>
+                </div>
+
+                {projectsOpen && (
+                  <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
+                    {projectsLoading ? (
+                      <div className="flex flex-col gap-2.5">
+                        {[1, 2, 3].map((n) => (
+                          <div key={n} className="flex gap-3 p-3 rounded-xl bg-white/[0.01] border border-white/[0.03]">
+                            <div className="w-8 h-8 rounded bg-white/5 animate-pulse" />
+                            <div className="flex-1 flex flex-col gap-1 justify-center">
+                              <div className="h-3 bg-white/5 rounded w-2/3 animate-pulse" />
+                              <div className="h-2 bg-white/5 rounded w-1/2 animate-pulse" />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : projects.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-xs text-white/40">
-                      No active projects.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {projects.map((proj) => {
-                      const isPending = (proj as any).isPending;
-                      const isRequested = (proj as any).isRequested;
-                      return (
-                        <div
-                          key={proj.$id}
-                          onClick={() => {
-                            if (isPending) {
-                              openUnified('project-invite', {
-                                project: proj,
-                                onAccepted: () => {
+                    ) : projects.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-xs text-white/40">
+                          No active projects.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {projects.map((proj) => {
+                          const isPending = (proj as any).isPending;
+                          const isRequested = (proj as any).isRequested;
+                          return (
+                            <div
+                              key={proj.$id}
+                              onClick={() => {
+                                if (isPending) {
+                                  openUnified('project-invite', {
+                                    project: proj,
+                                    onAccepted: () => {
+                                      router.push(`/projects/${proj.$id}`);
+                                    }
+                                  });
+                                } else if (isRequested) {
+                                  openUnified('project-invite', {
+                                    project: proj,
+                                    isRequested: true
+                                  });
+                                } else {
                                   router.push(`/projects/${proj.$id}`);
                                 }
-                              });
-                            } else if (isRequested) {
-                              openUnified('project-invite', {
-                                project: proj,
-                                isRequested: true
-                              });
-                            } else {
-                              router.push(`/projects/${proj.$id}`);
-                            }
-                          }}
-                          className="flex gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03] cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.08] hover:translate-x-1 transition-all duration-200"
-                        >
-                          <div 
-                            className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
-                            style={{
-                              backgroundColor: `${(proj as any).color || '#6366F1'}1F`,
-                              color: (proj as any).color || '#6366F1'
-                            }}
-                          >
-                            <FolderKanban size={16} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-bold text-white truncate">
-                              {proj.title}
+                              }}
+                              className="flex gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03] cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.08] hover:translate-x-1 transition-all duration-200"
+                            >
+                              <div 
+                                className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+                                style={{
+                                  backgroundColor: `${(proj as any).color || '#6366F1'}1F`,
+                                  color: (proj as any).color || '#6366F1'
+                                }}
+                              >
+                                <FolderKanban size={16} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-bold text-white truncate">
+                                  {proj.title}
+                                </div>
+                                <div className="text-[9px] text-white/40 font-mono uppercase truncate mt-0.5">
+                                  STATUS: {isPending ? 'INVITED' : (isRequested ? 'REQUESTED' : (proj.status || 'Active').toUpperCase())}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-[9px] text-white/40 font-mono uppercase truncate mt-0.5">
-                              STATUS: {isPending ? 'INVITED' : (isRequested ? 'REQUESTED' : (proj.status || 'Active').toUpperCase())}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
 
-          {/* Pocket 3: Bookmarks */}
-          <div 
-            className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
-            style={{
-              flex: '0 0 auto',
-              height: bookmarksOpen ? '380px' : '68px',
-            }}
-          >
-            <div className="flex justify-between items-center mb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
-                  Bookmarks
-                </h3>
+              {/* Pocket 3: Bookmarks */}
+              <div 
+                className="bg-[#161412] rounded-3xl border border-white/5 p-5 flex flex-col overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.5)] hover:border-white/10 hover:-translate-y-0.5 transition-all duration-300"
+                style={{
+                  flex: '0 0 auto',
+                  height: bookmarksOpen ? '380px' : '68px',
+                }}
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <h3 className="text-sm font-mono uppercase tracking-widest text-white/90">
+                      Bookmarks
+                    </h3>
+                  </div>
+                  <div className="flex gap-1 items-center">
+                    <button 
+                      onClick={() => setBookmarksOpen(!bookmarksOpen)} 
+                      className="p-1 text-white/40 hover:text-white rounded transition-colors"
+                    >
+                      {bookmarksOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                {bookmarksOpen && (
+                  <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
+                    {bookmarksLoading ? (
+                      <div className="flex flex-col gap-2.5">
+                        {[1, 2].map((n) => (
+                          <div key={n} className="flex gap-3 p-3 rounded-xl bg-white/[0.01] border border-white/[0.03]">
+                            <div className="w-8 h-8 rounded bg-white/5 animate-pulse" />
+                            <div className="flex-1 flex flex-col gap-1 justify-center">
+                              <div className="h-3 bg-white/5 rounded w-2/3 animate-pulse" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : bookmarkedMoments.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-xs text-white/40">
+                          No bookmarks yet.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {bookmarkedMoments.map((moment) => (
+                          <div
+                            key={moment.$id}
+                            onClick={() => setActiveDetail({ type: 'moment', id: moment.$id, data: moment })}
+                            className="flex gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03] cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.08] hover:translate-x-1 transition-all duration-200"
+                          >
+                            <div 
+                              className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0 bg-amber-500/10 text-amber-500"
+                            >
+                              <Bookmark size={16} className="fill-amber-500/20" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="text-xs font-bold text-white truncate">
+                                {moment.caption || 'Untitled Moment'}
+                              </div>
+                              <div className="text-[9px] text-white/40 font-mono uppercase truncate mt-0.5">
+                                {(moment.momentKind || 'POST').toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex gap-1 items-center">
-                <button 
-                  onClick={() => setBookmarksOpen(!bookmarksOpen)} 
-                  className="p-1 text-white/40 hover:text-white rounded transition-colors"
-                >
-                  {bookmarksOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'chats' && (
+          <div className="max-w-3xl mx-auto flex flex-col gap-6">
+            {/* Desktop Stacked View */}
+            <div className="hidden lg:flex flex-col gap-8">
+              <div>
+                <h2 className="text-lg font-black font-clash text-white mb-4">
+                  Secret Chats
+                </h2>
+                <ChatList activeTab="secure" hideTabs={true} skipThreadsLoad />
+              </div>
+              <hr className="border-white/5 my-4" />
+              <div>
+                <h2 className="text-lg font-black font-clash text-white mb-4">
+                  Threads
+                </h2>
+                <ChatList activeTab="public" hideTabs={true} skipSecureLoad />
               </div>
             </div>
 
-            {bookmarksOpen && (
-              <div className="flex-1 overflow-y-auto pr-1 bg-[#0B0A09] rounded-2xl border border-white/5 p-3 scrollbar-none">
-                {bookmarksLoading ? (
-                  <div className="flex flex-col gap-2.5">
-                    {[1, 2].map((n) => (
-                      <div key={n} className="flex gap-3 p-3 rounded-xl bg-white/[0.01] border border-white/[0.03]">
-                        <div className="w-8 h-8 rounded bg-white/5 animate-pulse" />
-                        <div className="flex-1 flex flex-col gap-1 justify-center">
-                          <div className="h-3 bg-white/5 rounded w-2/3 animate-pulse" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : bookmarkedMoments.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-xs text-white/40">
-                      No bookmarks yet.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {bookmarkedMoments.map((moment) => (
-                      <div
-                        key={moment.$id}
-                        onClick={() => setActiveDetail({ type: 'moment', id: moment.$id, data: moment })}
-                        className="flex gap-3 p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.03] cursor-pointer hover:bg-white/[0.04] hover:border-white/[0.08] hover:translate-x-1 transition-all duration-200"
-                      >
-                        <div 
-                          className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0 bg-amber-500/10 text-amber-500"
-                        >
-                          <Bookmark size={16} className="fill-amber-500/20" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-bold text-white truncate">
-                            {moment.caption || 'Untitled Moment'}
-                          </div>
-                          <div className="text-[9px] text-white/40 font-mono uppercase truncate mt-0.5">
-                            {(moment.momentKind || 'POST').toUpperCase()}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Mobile Tabbed View */}
+            <div className="block lg:hidden">
+              <ChatList activeTab={chatsActiveTab} onTabChange={setChatsActiveTab} />
+            </div>
           </div>
+        )}
 
-        </div>
-
+        {activeTab === 'calls' && (
+          <div className="max-w-3xl mx-auto">
+            <CallHistory />
+          </div>
+        )}
       </div>
     </div>
   );
