@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { X, Mail, ArrowLeft } from 'lucide-react';
+import { X, Mail, ArrowLeft, Fingerprint } from 'lucide-react';
 import { useAuth } from '@/context/auth/AuthContext';
 import OAuthButtons from '@/components/OAuthButtons';
 import { useUnifiedDrawer } from '@/context/UnifiedDrawerContext';
@@ -10,6 +10,8 @@ import { MfaChallengeDrawer } from '@/components/overlays/MfaChallengeDrawer';
 import { getCurrentLoginMethod, isMfaRequiredError } from '@/lib/mfa';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { startAuthentication } from '@simplewebauthn/browser';
+import { getPasskeyLoginOptionsAction, verifyPasskeyLoginAction } from '@/lib/actions/auth-actions';
 
 type LoginStep = 'initial' | 'email' | 'otp';
 
@@ -42,6 +44,89 @@ export function LoginDrawer() {
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(false);
   const [lastUsedMethod, setLastUsedMethod] = useState<string | null>(null);
+
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+
+  const handlePasskeyLogin = async () => {
+    setPasskeyLoading(true);
+    try {
+      const hostname = window.location.hostname;
+      const hostHeader = window.location.host;
+      
+      const optionsRes = await getPasskeyLoginOptionsAction(undefined, hostname);
+      if (!optionsRes.success || !optionsRes.options) {
+        throw new Error(optionsRes.error || 'Failed to generate passkey options');
+      }
+
+      const authResp = await startAuthentication({ optionsJSON: optionsRes.options });
+      const verifyRes = await verifyPasskeyLoginAction(authResp, hostname, hostHeader);
+
+      if (!verifyRes.success || !verifyRes.token) {
+        throw new Error(verifyRes.error || 'Passkey verification failed');
+      }
+
+      // Complete Appwrite session creation using the minted token
+      const { account } = await import('@/lib/appwrite/client');
+      await account.createSession(verifyRes.userId, verifyRes.token);
+      
+      // Sync MEK/Masterpass wrapping if available
+      if (verifyRes.wrappedKey) {
+        let kwrapSeed: ArrayBuffer;
+        const extensionResults = authResp.clientExtensionResults as any;
+        const prfBuffer = extensionResults?.prf?.results?.first;
+        
+        if (prfBuffer) {
+          kwrapSeed = prfBuffer;
+        } else if (verifyRes.fallbackSeed) {
+          kwrapSeed = new Uint8Array(
+            atob(verifyRes.fallbackSeed).split("").map(c => c.charCodeAt(0))
+          ).buffer;
+        } else {
+          const encoder = new TextEncoder();
+          const credentialData = encoder.encode(authResp.id + verifyRes.userId);
+          kwrapSeed = await crypto.subtle.digest("SHA-256", credentialData);
+        }
+
+        const kwrap = await crypto.subtle.importKey(
+          "raw",
+          kwrapSeed,
+          { name: "AES-GCM" },
+          false,
+          ["decrypt"],
+        );
+
+        const wrappedKeyBytes = new Uint8Array(
+          atob(verifyRes.wrappedKey).split("").map(c => c.charCodeAt(0))
+        );
+
+        const iv = wrappedKeyBytes.slice(0, 12);
+        const ciphertext = wrappedKeyBytes.slice(12);
+
+        const mekBytes = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: iv },
+          kwrap,
+          ciphertext
+        );
+
+        const { ecosystemSecurity } = await import('@/lib/ecosystem/security');
+        await ecosystemSecurity.importMasterKey(mekBytes);
+      }
+
+      localStorage.setItem('kylrix_last_auth_method', 'passkey');
+      toast.success('Authenticated via Passkey!');
+      await refreshUser(true);
+      close();
+    } catch (err: any) {
+      if (err.name === 'NotAllowedError') {
+        // User cancelled or timed out
+        return;
+      }
+      console.error('Passkey login failed:', err);
+      toast.error(err.message || 'Passkey authentication failed');
+    } finally {
+      setPasskeyLoading(false);
+    }
+  };
 
   const isOpen = activeContent === 'login';
 
@@ -156,6 +241,7 @@ export function LoginDrawer() {
     switch (step) {
       case 'initial':
         const isEmailLastUsed = lastUsedMethod === 'email';
+        const isPasskeyLastUsed = lastUsedMethod === 'passkey';
         return (
           <div className="space-y-4 animate-fadeIn">
             {checkingSession ? (
@@ -166,6 +252,31 @@ export function LoginDrawer() {
               <OAuthButtons disabled={loading || checkingSession} lastUsed={lastUsedMethod} />
             )}
             
+            <button
+              type="button"
+              onClick={handlePasskeyLogin}
+              disabled={checkingSession || passkeyLoading}
+              className={`w-full flex items-center justify-between px-5 rounded-2xl border transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                isPasskeyLastUsed 
+                  ? 'h-[60px] border-white/30 bg-white/5 shadow-lg shadow-white/5' 
+                  : 'h-[52px] border-[#34322F] bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/20'
+              }`}
+            >
+              <div className="flex items-center gap-3 font-extrabold text-sm text-white font-satoshi">
+                {passkeyLoading ? (
+                  <div className="animate-spin rounded-full h-4.5 w-4.5 border-b-2 border-white flex-shrink-0" />
+                ) : (
+                  <Fingerprint className="w-4.5 h-4.5 text-white/40 flex-shrink-0" />
+                )}
+                <span>Continue with Passkey</span>
+              </div>
+              {isPasskeyLastUsed && (
+                <span className="text-[10px] font-black uppercase tracking-wider text-white opacity-60">
+                  Last Used
+                </span>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={() => setStep('email')}
