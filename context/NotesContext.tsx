@@ -61,6 +61,52 @@ function normalizeVisibility(note: Notes): Notes {
   };
 }
 
+async function getGhostNotes(): Promise<Notes[]> {
+  if (typeof window === 'undefined') return [];
+  const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+  if (!historyRaw) return [];
+  try {
+    const history = JSON.parse(historyRaw);
+    if (!Array.isArray(history)) return [];
+    const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+    const mapped = await Promise.all(history.map(async (item: any) => {
+      const meta = (() => {
+        try { return JSON.parse(item.metadata || '{}'); } catch { return {}; }
+      })();
+      const kind = meta?.send_object?.kind || 'note';
+      if (kind !== 'note' || meta?._deleted === true) return null;
+
+      let decryptedTitle = item.title;
+      let decryptedContent = item.content || '';
+      if (item.decryptionKey) {
+        try {
+          decryptedTitle = await decryptGhostData(item.title, item.decryptionKey);
+          decryptedContent = await decryptGhostData(item.content || '', item.decryptionKey);
+        } catch (e) {
+          console.error('Failed to decrypt ghost note in getGhostNotes:', e);
+        }
+      }
+      return {
+        $id: item.id,
+        $createdAt: item.createdAt,
+        $updatedAt: item.createdAt,
+        title: decryptedTitle,
+        content: decryptedContent,
+        format: 'text',
+        tags: [],
+        userId: 'ghost',
+        isPublic: false,
+        isGuest: false,
+        metadata: item.metadata || '{}',
+      };
+    }));
+    return mapped.filter(Boolean) as Notes[];
+  } catch (e) {
+    console.error('Failed to parse ghost history in getGhostNotes', e);
+    return [];
+  }
+}
+
 const PINNED_CACHE_KEY = 'pinned_note_ids';
 const INITIAL_NOTES_CACHE_KEY = 'initial_notes_page';
 
@@ -169,6 +215,26 @@ export function NotesProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // Load ghost notes and deleted IDs
+      const historyRaw = typeof window !== 'undefined' ? localStorage.getItem('kylrix_ghost_notes_v2') : null;
+      const deletedIds = new Set<string>();
+      if (historyRaw) {
+        try {
+          const history = JSON.parse(historyRaw);
+          if (Array.isArray(history)) {
+            history.forEach((h: any) => {
+              try {
+                const meta = JSON.parse(h.metadata || '{}');
+                if (meta?._deleted === true) {
+                  deletedIds.add(h.id);
+                }
+              } catch {}
+            });
+          }
+        } catch {}
+      }
+      const ghostNotes = await getGhostNotes();
+
       // Fetch pinned IDs with optimization
       if (reset && PINNED_CACHE_KEY) {
         const pIds = await fetchOptimized(PINNED_CACHE_KEY, fetchPinnedIds);
@@ -188,7 +254,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
         res = optimizedRes;
         
         // Update other states based on this initial fetch
-        const batch = (res?.rows || []).map((note: Notes) => normalizeVisibility(note)) as Notes[];
+        const batch = [
+          ...ghostNotes,
+          ...(res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id))
+        ] as Notes[];
         setNotes(batch);
         setTotalNotes(res?.total || 0);
         setHasMore(!!res?.hasMore);
@@ -207,7 +276,10 @@ export function NotesProvider({ children }: { children: ReactNode }) {
           userId: user?.$id,
         });
 
-        const batch = (res?.rows || []).map((note: Notes) => normalizeVisibility(note)) as Notes[];
+        const batch = [
+          ...ghostNotes,
+          ...(res?.rows || []).map((note: Notes) => normalizeVisibility(note)).filter((n: any) => !deletedIds.has(n.$id))
+        ] as Notes[];
 
         setNotes(prev => {
           if (reset) return batch;

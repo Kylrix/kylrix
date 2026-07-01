@@ -782,43 +782,134 @@ export default AppwriteService;
 
 export async function createNote(data: Partial<Notes>, jwt?: string) {
   if (typeof window !== 'undefined') {
+    const isOffline = !window.navigator.onLine;
+    if (isOffline) {
+      console.log('[createNote] Offline. Saving note as a ghost note...');
+      const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const deletionSecret = crypto.randomUUID();
+      const { sha256HexUtf8 } = await import('@/lib/crypto/sha256-hex');
+      const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
+      
+      const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+      const { encrypted: encTitle, key: noteKey } = await encryptGhostData(data.title || 'Untitled Thought');
+      const { encrypted: encContent } = await encryptGhostData(data.content || '', noteKey);
+
+      const id = data.$id || `ghost-${crypto.randomUUID()}`;
+      
+      const saved = {
+        $id: id,
+        $createdAt: new Date().toISOString(),
+        $updatedAt: new Date().toISOString(),
+        title: data.title || 'Untitled Thought',
+        content: data.content || '',
+        format: 'text',
+        tags: data.tags || [],
+        userId: 'ghost',
+        isPublic: false,
+        isGuest: false,
+        metadata: JSON.stringify({
+          isGhost: true,
+          ghostSecret: secret,
+          expiresAt,
+          isEncrypted: true,
+          creatorDeletionProofHash,
+          send_object: { kind: 'note' }
+        }),
+      } as any;
+
+      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+      let history = historyRaw ? JSON.parse(historyRaw) : [];
+      if (!Array.isArray(history)) history = [];
+
+      const existingIndex = history.findIndex((n: any) => n.id === id);
+      const newRef = {
+        id,
+        title: encTitle,
+        content: encContent,
+        metadata: saved.metadata,
+        createdAt: new Date().toISOString(),
+        expiresAt,
+        decryptionKey: noteKey,
+        deletionSecret,
+      };
+
+      if (existingIndex !== -1) {
+        history[existingIndex] = newRef;
+      } else {
+        history.unshift(newRef);
+      }
+
+      localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+      window.dispatchEvent(new Event('storage'));
+      return saved;
+    }
+
     try {
       const { createNote } = await import('@/lib/actions/client-ops');
       return await createNote(data);
     } catch (err: any) {
       const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
       if (isNetworkError) {
-        console.log('[createNote] Network error. Saving note to RxDB for offline sync...');
-        const user = await getCurrentUser();
-        if (user?.$id) {
-          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-          const db = await getRxDB();
-          const id = data.$id || `note-${crypto.randomUUID()}`;
-          const now = new Date().toISOString();
-          await db.notes.insert({
-            id,
-            title: data.title || 'Untitled Thought',
-            content: data.content || '',
-            userId: user.$id,
-            metadata: data.metadata || '{}',
-            updatedAt: now,
-            _deleted: false
-          });
-          
-          return {
-            $id: id,
-            $createdAt: now,
-            $updatedAt: now,
-            title: data.title || 'Untitled Thought',
-            content: data.content || '',
-            format: 'text',
-            tags: data.tags || [],
-            userId: user.$id,
-            isPublic: false,
-            isGuest: false,
-            metadata: data.metadata || '{}',
-          } as any;
+        console.log('[createNote] Network error. Saving note as a ghost note...');
+        const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const deletionSecret = crypto.randomUUID();
+        const { sha256HexUtf8 } = await import('@/lib/crypto/sha256-hex');
+        const creatorDeletionProofHash = await sha256HexUtf8(deletionSecret);
+        
+        const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+        const { encrypted: encTitle, key: noteKey } = await encryptGhostData(data.title || 'Untitled Thought');
+        const { encrypted: encContent } = await encryptGhostData(data.content || '', noteKey);
+
+        const id = data.$id || `ghost-${crypto.randomUUID()}`;
+        
+        const saved = {
+          $id: id,
+          $createdAt: new Date().toISOString(),
+          $updatedAt: new Date().toISOString(),
+          title: data.title || 'Untitled Thought',
+          content: data.content || '',
+          format: 'text',
+          tags: data.tags || [],
+          userId: 'ghost',
+          isPublic: false,
+          isGuest: false,
+          metadata: JSON.stringify({
+            isGhost: true,
+            ghostSecret: secret,
+            expiresAt,
+            isEncrypted: true,
+            creatorDeletionProofHash,
+            send_object: { kind: 'note' }
+          }),
+        } as any;
+
+        const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+        let history = historyRaw ? JSON.parse(historyRaw) : [];
+        if (!Array.isArray(history)) history = [];
+
+        const existingIndex = history.findIndex((n: any) => n.id === id);
+        const newRef = {
+          id,
+          title: encTitle,
+          content: encContent,
+          metadata: saved.metadata,
+          createdAt: new Date().toISOString(),
+          expiresAt,
+          decryptionKey: noteKey,
+          deletionSecret,
+        };
+
+        if (existingIndex !== -1) {
+          history[existingIndex] = newRef;
+        } else {
+          history.unshift(newRef);
         }
+
+        localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+        window.dispatchEvent(new Event('storage'));
+        return saved;
       }
       throw err;
     }
@@ -968,6 +1059,64 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
   if (typeof window !== 'undefined') {
     invalidateNoteRowClientCache(noteId);
     
+    const isOffline = !window.navigator.onLine;
+    if (isOffline) {
+      console.log('[updateNote] Offline. Saving note update as a ghost note...');
+      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+      let history = historyRaw ? JSON.parse(historyRaw) : [];
+      if (!Array.isArray(history)) history = [];
+
+      const index = history.findIndex((n: any) => n.id === noteId);
+      
+      const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+      const noteKey = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+      
+      const { encrypted: encTitle } = await encryptGhostData(data.title || 'Untitled Thought', noteKey);
+      const { encrypted: encContent } = await encryptGhostData(data.content || '', noteKey);
+
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const deletionSecret = crypto.randomUUID();
+
+      const newRef = {
+        id: noteId,
+        title: encTitle,
+        content: encContent,
+        metadata: JSON.stringify({
+          isGhost: true,
+          expiresAt,
+          isEncrypted: true,
+          send_object: { kind: 'note' }
+        }),
+        createdAt: new Date().toISOString(),
+        expiresAt,
+        decryptionKey: noteKey,
+        deletionSecret,
+      };
+
+      if (index !== -1) {
+        history[index] = newRef;
+      } else {
+        history.unshift(newRef);
+      }
+
+      localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+      window.dispatchEvent(new Event('storage'));
+
+      return {
+        $id: noteId,
+        $createdAt: new Date().toISOString(),
+        $updatedAt: new Date().toISOString(),
+        title: data.title || 'Untitled Thought',
+        content: data.content || '',
+        format: 'text',
+        tags: data.tags || [],
+        userId: 'ghost',
+        isPublic: false,
+        isGuest: false,
+        metadata: newRef.metadata,
+      } as any;
+    }
+
     // Encrypt fields client-side if we hold the active encryption key
     const key = activeNoteKeys.get(noteId);
     const isArticle = data.article === true;
@@ -1006,46 +1155,60 @@ export async function updateNote(noteId: string, data: Partial<Notes>, jwt?: str
     } catch (err: any) {
       const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
       if (isNetworkError) {
-        console.log('[updateNote] Network error. Updating note in RxDB for offline sync...');
-        const user = await getCurrentUser();
-        if (user?.$id) {
-          const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-          const db = await getRxDB();
-          const doc = await db.notes.findOne(noteId).exec();
-          const now = new Date().toISOString();
-          if (doc) {
-            await doc.patch({
-              title: data.title !== undefined ? data.title : doc.title,
-              content: data.content !== undefined ? data.content : doc.content,
-              metadata: data.metadata !== undefined ? data.metadata : doc.metadata,
-              updatedAt: now
-            });
-          } else {
-            await db.notes.insert({
-              id: noteId,
-              title: data.title || 'Untitled Thought',
-              content: data.content || '',
-              userId: user.$id,
-              metadata: data.metadata || '{}',
-              updatedAt: now,
-              _deleted: false
-            });
-          }
-          
-          return {
-            $id: noteId,
-            $createdAt: now,
-            $updatedAt: now,
-            title: data.title || '',
-            content: data.content || '',
-            format: 'text',
-            tags: data.tags || [],
-            userId: user.$id,
-            isPublic: false,
-            isGuest: false,
-            metadata: data.metadata || '{}',
-          } as any;
+        console.log('[updateNote] Network error. Saving note update as a ghost note...');
+        const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+        let history = historyRaw ? JSON.parse(historyRaw) : [];
+        if (!Array.isArray(history)) history = [];
+
+        const index = history.findIndex((n: any) => n.id === noteId);
+        
+        const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+        const noteKey = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+        
+        const { encrypted: encTitle } = await encryptGhostData(data.title || 'Untitled Thought', noteKey);
+        const { encrypted: encContent } = await encryptGhostData(data.content || '', noteKey);
+
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const deletionSecret = crypto.randomUUID();
+
+        const newRef = {
+          id: noteId,
+          title: encTitle,
+          content: encContent,
+          metadata: JSON.stringify({
+            isGhost: true,
+            expiresAt,
+            isEncrypted: true,
+            send_object: { kind: 'note' }
+          }),
+          createdAt: new Date().toISOString(),
+          expiresAt,
+          decryptionKey: noteKey,
+          deletionSecret,
+        };
+
+        if (index !== -1) {
+          history[index] = newRef;
+        } else {
+          history.unshift(newRef);
         }
+
+        localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+        window.dispatchEvent(new Event('storage'));
+
+        return {
+          $id: noteId,
+          $createdAt: new Date().toISOString(),
+          $updatedAt: new Date().toISOString(),
+          title: data.title || 'Untitled Thought',
+          content: data.content || '',
+          format: 'text',
+          tags: data.tags || [],
+          userId: 'ghost',
+          isPublic: false,
+          isGuest: false,
+          metadata: newRef.metadata,
+        } as any;
       }
       throw err;
     }
@@ -1195,6 +1358,42 @@ export async function deleteNote(noteId: string, jwt?: string) {
 
   if (typeof window !== 'undefined') {
     invalidateNoteRowClientCache(noteId);
+    
+    const isOffline = !window.navigator.onLine;
+    if (isOffline) {
+      console.log('[deleteNote] Offline. Saving deletion as a ghost note...');
+      const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+      if (historyRaw) {
+        try {
+          const history = JSON.parse(historyRaw);
+          const filtered = history.filter((n: any) => n.id !== noteId);
+
+          // Save deletion as a ghost note with _deleted: true
+          const newRef = {
+            id: noteId,
+            title: '',
+            content: '',
+            metadata: JSON.stringify({
+              isGhost: true,
+              _deleted: true,
+              send_object: { kind: 'note' }
+            }),
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            decryptionKey: '',
+            deletionSecret: '',
+          };
+          filtered.unshift(newRef);
+
+          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+          window.dispatchEvent(new Event('storage'));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      return { success: true };
+    }
+
     try {
       const { deleteNote } = await import('@/lib/actions/client-ops');
       const result = await deleteNote(noteId);
@@ -1203,17 +1402,36 @@ export async function deleteNote(noteId: string, jwt?: string) {
     } catch (err: any) {
       const isNetworkError = !err.status || err.code === 'network_error' || err.message?.includes('fetch') || err.message?.includes('NetworkError');
       if (isNetworkError) {
-        console.log('[deleteNote] Network error. Marking note as deleted in RxDB for offline sync...');
-        const { getRxDB } = await import('@/lib/webrtc/RxDBManager');
-        const db = await getRxDB();
-        const doc = await db.notes.findOne(noteId).exec();
-        if (doc) {
-          await doc.patch({
-            _deleted: true,
-            updatedAt: new Date().toISOString()
-          });
+        console.log('[deleteNote] Network error. Saving deletion as a ghost note...');
+        const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+        if (historyRaw) {
+          try {
+            const history = JSON.parse(historyRaw);
+            const filtered = history.filter((n: any) => n.id !== noteId);
+
+            // Save deletion as a ghost note with _deleted: true
+            const newRef = {
+              id: noteId,
+              title: '',
+              content: '',
+              metadata: JSON.stringify({
+                isGhost: true,
+                _deleted: true,
+                send_object: { kind: 'note' }
+              }),
+              createdAt: new Date().toISOString(),
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              decryptionKey: '',
+              deletionSecret: '',
+            };
+            filtered.unshift(newRef);
+
+            localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+            window.dispatchEvent(new Event('storage'));
+          } catch (e) {
+            console.error(e);
+          }
         }
-        invalidateNoteRowClientCache(noteId);
         return { success: true };
       }
       throw err;

@@ -2013,6 +2013,110 @@ export async function updateTotpSecret(
   data: Partial<TotpSecrets>,
   options?: { linkedNoteIds?: string[] },
 ) {
+  if (id.startsWith('ghost-') && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    if (historyRaw) {
+      try {
+        const history = JSON.parse(historyRaw);
+        const index = history.findIndex((n: any) => n.id === id);
+        if (index !== -1) {
+          const match = history[index];
+          let decryptedTitle = match.title;
+          let decryptedContent = match.content || '{}';
+          if (match.decryptionKey) {
+            const { decryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+            try {
+              decryptedTitle = await decryptGhostData(match.title, match.decryptionKey);
+              decryptedContent = await decryptGhostData(match.content || '', match.decryptionKey);
+            } catch (e) {
+              console.error('Failed to decrypt ghost TOTP for update:', e);
+            }
+          }
+          
+          const payload = JSON.parse(decryptedContent);
+          const updatedPayload = {
+            ...payload,
+            issuer: data.issuer !== undefined ? data.issuer : payload.issuer,
+            accountName: data.accountName !== undefined ? data.accountName : payload.accountName,
+            secretKey: data.secretKey !== undefined ? data.secretKey : payload.secretKey,
+            algorithm: data.algorithm !== undefined ? data.algorithm : payload.algorithm,
+            digits: data.digits !== undefined ? data.digits : payload.digits,
+            period: data.period !== undefined ? data.period : payload.period,
+          };
+
+          const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+          const { encrypted: encTitle, key: noteKey } = await encryptGhostData(updatedPayload.issuer || decryptedTitle);
+          const { encrypted: encContent } = await encryptGhostData(JSON.stringify(updatedPayload), noteKey);
+
+          history[index] = {
+            ...match,
+            title: encTitle,
+            content: encContent,
+            decryptionKey: noteKey,
+          };
+          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+          window.dispatchEvent(new Event('storage'));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return { $id: id } as any;
+  }
+
+  const isOffline = typeof window !== 'undefined' && !window.navigator.onLine;
+  if (isOffline && typeof window !== 'undefined') {
+    console.log('[updateTotpSecret] Offline. Saving TOTP update as a ghost note...');
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    let history = historyRaw ? JSON.parse(historyRaw) : [];
+    if (!Array.isArray(history)) history = [];
+
+    const index = history.findIndex((n: any) => n.id === id);
+    const payload = {
+      issuer: data.issuer || '',
+      accountName: data.accountName || '',
+      secretKey: data.secretKey || '',
+      algorithm: data.algorithm || 'SHA1',
+      digits: data.digits || 6,
+      period: data.period || 30,
+    };
+
+    const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+    const noteKey = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+    const { encrypted: encTitle } = await encryptGhostData(payload.issuer, noteKey);
+    const { encrypted: encContent } = await encryptGhostData(JSON.stringify(payload), noteKey);
+
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const deletionSecret = crypto.randomUUID();
+
+    const newRef = {
+      id,
+      title: encTitle,
+      content: encContent,
+      metadata: JSON.stringify({
+        isGhost: true,
+        expiresAt,
+        isEncrypted: true,
+        send_object: { kind: 'totp' }
+      }),
+      createdAt: new Date().toISOString(),
+      expiresAt,
+      decryptionKey: noteKey,
+      deletionSecret,
+    };
+
+    if (index !== -1) {
+      history[index] = newRef;
+    } else {
+      history.unshift(newRef);
+    }
+
+    localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+    window.dispatchEvent(new Event('storage'));
+
+    return { $id: id } as any;
+  }
+
   return await VaultService.updateTOTPSecret(id, data, options);
 }
 
@@ -2367,6 +2471,64 @@ export async function createTotpSecret(
   data: TotpSecretsCreate,
   options?: { linkedNoteIds?: string[] },
 ) {
+  const isOffline = typeof window !== 'undefined' && !window.navigator.onLine;
+  if (isOffline && typeof window !== 'undefined') {
+    console.log('[createTotpSecret] Offline. Saving TOTP as a ghost note...');
+    const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const deletionSecret = crypto.randomUUID();
+    
+    const payload = {
+      issuer: data.issuer || '',
+      accountName: data.accountName || '',
+      secretKey: data.secretKey || '',
+      algorithm: data.algorithm || 'SHA1',
+      digits: data.digits || 6,
+      period: data.period || 30,
+    };
+
+    const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+    const { encrypted: encTitle, key: noteKey } = await encryptGhostData(data.issuer || 'Untitled Authenticator');
+    const { encrypted: encContent } = await encryptGhostData(JSON.stringify(payload), noteKey);
+
+    const id = `ghost-${crypto.randomUUID()}`;
+    const newRef = {
+      id,
+      title: encTitle,
+      content: encContent,
+      metadata: JSON.stringify({
+        isGhost: true,
+        ghostSecret: secret,
+        expiresAt,
+        isEncrypted: true,
+        send_object: { kind: 'totp' }
+      }),
+      createdAt: new Date().toISOString(),
+      expiresAt,
+      decryptionKey: noteKey,
+      deletionSecret,
+    };
+
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    let history = historyRaw ? JSON.parse(historyRaw) : [];
+    if (!Array.isArray(history)) history = [];
+    history.unshift(newRef);
+    localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+    window.dispatchEvent(new Event('storage'));
+
+    return {
+      $id: id,
+      $createdAt: new Date().toISOString(),
+      $updatedAt: new Date().toISOString(),
+      userId: data.userId,
+      issuer: data.issuer || null,
+      accountName: data.accountName || null,
+      secretKey: data.secretKey,
+      algorithm: data.algorithm || 'SHA1',
+      digits: data.digits || 6,
+      period: data.period || 30,
+    } as any;
+  }
   return await VaultService.createTOTPSecret(data, options);
 }
 
@@ -2381,6 +2543,42 @@ export async function listTotpSecrets(userId: string, queries: string[] = []) {
  * Delete a TOTP secret by row ID.
  */
 export async function deleteTotpSecret(id: string) {
+  const isOffline = typeof window !== 'undefined' && !window.navigator.onLine;
+
+  if ((id.startsWith('ghost-') || isOffline) && typeof window !== 'undefined') {
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    if (historyRaw) {
+      try {
+        const history = JSON.parse(historyRaw);
+        const filtered = history.filter((n: any) => n.id !== id);
+
+        if (isOffline && !id.startsWith('ghost-')) {
+          // Save deletion as a ghost note with _deleted: true
+          const newRef = {
+            id,
+            title: '',
+            content: '',
+            metadata: JSON.stringify({
+              isGhost: true,
+              _deleted: true,
+              send_object: { kind: 'totp' }
+            }),
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            decryptionKey: '',
+            deletionSecret: '',
+          };
+          filtered.unshift(newRef);
+        }
+
+        localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
+        window.dispatchEvent(new Event('storage'));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return;
+  }
   return await VaultService.deleteTOTPSecret(id);
 }
 
@@ -2626,6 +2824,61 @@ export async function createCredential(
   data: CredentialsCreate,
   options?: { linkedNoteIds?: string[] },
 ) {
+  const isOffline = typeof window !== 'undefined' && !window.navigator.onLine;
+  if (isOffline && typeof window !== 'undefined') {
+    console.log('[createCredential] Offline. Saving credential as a ghost note...');
+    const secret = localStorage.getItem('kylrix_ghost_secret_v2') || crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const deletionSecret = crypto.randomUUID();
+    
+    const payload = {
+      username: data.username || '',
+      password: data.password || '',
+      totpSecret: data.totpId || '',
+    };
+
+    const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+    const { encrypted: encTitle, key: noteKey } = await encryptGhostData(data.name || 'Untitled Login');
+    const { encrypted: encContent } = await encryptGhostData(JSON.stringify(payload), noteKey);
+
+    const id = `ghost-${crypto.randomUUID()}`;
+    const newRef = {
+      id,
+      title: encTitle,
+      content: encContent,
+      metadata: JSON.stringify({
+        isGhost: true,
+        ghostSecret: secret,
+        expiresAt,
+        isEncrypted: true,
+        send_object: { kind: 'password' }
+      }),
+      createdAt: new Date().toISOString(),
+      expiresAt,
+      decryptionKey: noteKey,
+      deletionSecret,
+    };
+
+    const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
+    let history = historyRaw ? JSON.parse(historyRaw) : [];
+    if (!Array.isArray(history)) history = [];
+    history.unshift(newRef);
+    localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+    window.dispatchEvent(new Event('storage'));
+
+    return {
+      $id: id,
+      $createdAt: new Date().toISOString(),
+      $updatedAt: new Date().toISOString(),
+      userId: data.userId,
+      itemType: 'login',
+      name: data.name,
+      username: data.username || null,
+      password: data.password || null,
+      totpId: data.totpId || null,
+      isFavorite: false,
+    } as any;
+  }
   return await VaultService.createCredential(data, options);
 }
 
@@ -2637,7 +2890,9 @@ export async function updateCredential(
   data: Partial<Credentials>,
   options?: { linkedNoteIds?: string[] },
 ) {
-  if (id.startsWith('ghost-') && typeof window !== 'undefined') {
+  const isOffline = typeof window !== 'undefined' && !window.navigator.onLine;
+
+  if ((id.startsWith('ghost-') || isOffline) && typeof window !== 'undefined') {
     const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
     if (historyRaw) {
       try {
@@ -2677,6 +2932,41 @@ export async function updateCredential(
           };
           localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
           window.dispatchEvent(new Event('storage'));
+        } else {
+          // Standard credential edited offline -> save as ghost note with standard ID!
+          const payload = {
+            username: data.username || '',
+            password: data.password || '',
+            totpSecret: data.totpId || '',
+          };
+
+          const { encryptGhostData } = await import('@/lib/encryption/ghost-crypto');
+          const noteKey = crypto.randomUUID().replace(/-/g, '').slice(0, 32);
+          const { encrypted: encTitle } = await encryptGhostData(data.name || 'Untitled Login', noteKey);
+          const { encrypted: encContent } = await encryptGhostData(JSON.stringify(payload), noteKey);
+
+          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          const deletionSecret = crypto.randomUUID();
+
+          const newRef = {
+            id,
+            title: encTitle,
+            content: encContent,
+            metadata: JSON.stringify({
+              isGhost: true,
+              expiresAt,
+              isEncrypted: true,
+              send_object: { kind: 'password' }
+            }),
+            createdAt: new Date().toISOString(),
+            expiresAt,
+            decryptionKey: noteKey,
+            deletionSecret,
+          };
+
+          history.unshift(newRef);
+          localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(history));
+          window.dispatchEvent(new Event('storage'));
         }
       } catch (e) {
         console.error(e);
@@ -2691,12 +2981,34 @@ export async function updateCredential(
  * Delete a credential by row ID.
  */
 export async function deleteCredential(id: string) {
-  if (id.startsWith('ghost-') && typeof window !== 'undefined') {
+  const isOffline = typeof window !== 'undefined' && !window.navigator.onLine;
+
+  if ((id.startsWith('ghost-') || isOffline) && typeof window !== 'undefined') {
     const historyRaw = localStorage.getItem('kylrix_ghost_notes_v2');
     if (historyRaw) {
       try {
         const history = JSON.parse(historyRaw);
         const filtered = history.filter((n: any) => n.id !== id);
+
+        if (isOffline && !id.startsWith('ghost-')) {
+          // Save deletion as a ghost note with _deleted: true
+          const newRef = {
+            id,
+            title: '',
+            content: '',
+            metadata: JSON.stringify({
+              isGhost: true,
+              _deleted: true,
+              send_object: { kind: 'password' }
+            }),
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            decryptionKey: '',
+            deletionSecret: '',
+          };
+          filtered.unshift(newRef);
+        }
+
         localStorage.setItem('kylrix_ghost_notes_v2', JSON.stringify(filtered));
         window.dispatchEvent(new Event('storage'));
       } catch (e) {

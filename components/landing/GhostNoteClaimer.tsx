@@ -47,8 +47,74 @@ export const GhostNoteClaimer = () => {
                             try { return JSON.parse(item.metadata || '{}'); } catch { return {}; }
                         })();
                         const kind = meta?.send_object?.kind || 'note';
+                        const isDeleted = meta?._deleted === true;
+                        const isUpdate = item.id && !item.id.startsWith('ghost-');
 
-                        if (kind === 'task') {
+                        if (isDeleted) {
+                            if (kind === 'task') {
+                                const { tasks: taskApi } = await import('@/lib/kylrixflow');
+                                await taskApi.delete(item.id);
+                            } else if (kind === 'password') {
+                                const { deleteCredential } = await import('@/lib/appwrite/vault');
+                                await deleteCredential(item.id);
+                            } else if (kind === 'totp') {
+                                const { deleteTotpSecret } = await import('@/lib/appwrite/vault');
+                                await deleteTotpSecret(item.id);
+                            } else {
+                                const { deleteNote } = await import('@/lib/actions/client-ops');
+                                await deleteNote(item.id);
+                            }
+                        } else if (isUpdate) {
+                            if (kind === 'task') {
+                                const payload = (() => {
+                                    try { return JSON.parse(decryptedContent); } catch { return null; }
+                                })();
+                                if (payload) {
+                                    const { tasks: taskApi } = await import('@/lib/kylrixflow');
+                                    await taskApi.update(item.id, {
+                                        title: payload.title || decryptedTitle,
+                                        description: payload.detail || '',
+                                        status: payload.status || 'todo',
+                                        priority: payload.priority || 'medium',
+                                        dueDate: payload.dueAt ? payload.dueAt : null,
+                                    });
+                                }
+                            } else if (kind === 'password') {
+                                const payload = (() => {
+                                    try { return JSON.parse(decryptedContent); } catch { return null; }
+                                })();
+                                if (payload) {
+                                    const { updateCredential } = await import('@/lib/appwrite/vault');
+                                    await updateCredential(item.id, {
+                                        name: decryptedTitle,
+                                        username: payload.username || null,
+                                        password: payload.password || null,
+                                        totpId: payload.totpSecret || null,
+                                    });
+                                }
+                            } else if (kind === 'totp') {
+                                const payload = (() => {
+                                    try { return JSON.parse(decryptedContent); } catch { return null; }
+                                })();
+                                if (payload) {
+                                    const { updateTotpSecret } = await import('@/lib/appwrite/vault');
+                                    await updateTotpSecret(item.id, {
+                                        issuer: payload.issuer || decryptedTitle || 'Imported',
+                                        accountName: payload.account || payload.accountName || decryptedTitle || 'Authenticator',
+                                        secretKey: payload.secret || payload.secretKey || '',
+                                        algorithm: payload.algorithm || 'SHA1',
+                                        digits: payload.digits || 6,
+                                        period: payload.period || 30,
+                                    });
+                                }
+                            } else {
+                                const { updateNote } = await import('@/lib/actions/client-ops');
+                                await updateNote(item.id, {
+                                    title: decryptedTitle,
+                                    content: decryptedContent,
+                                });
+                            }
+                        } else if (kind === 'task') {
                             const payload = (() => {
                                 try { return JSON.parse(decryptedContent); } catch { return null; }
                             })();
@@ -144,6 +210,16 @@ export const GhostNoteClaimer = () => {
         };
 
         claimGhostNotes();
+
+        if (typeof window !== 'undefined') {
+            const handleOnline = () => {
+                if (isAuthenticated && user?.$id && !isClaiming.current) {
+                    void claimGhostNotes();
+                }
+            };
+            window.addEventListener('online', handleOnline);
+            return () => window.removeEventListener('online', handleOnline);
+        }
     }, [isAuthenticated, user?.$id]);
 
     return null; // Renderless component
