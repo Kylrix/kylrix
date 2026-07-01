@@ -116,7 +116,7 @@ export default function SudoModal({
                 }
                 setTimeout(() => {
                     if (isOpen) {
-                        onSuccessRef.current();
+                        handleSuccessWithSync();
                         isMigratingRef.current = false;
                     }
                 }, 1500);

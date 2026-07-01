@@ -313,6 +313,22 @@ export class MasterPassCrypto {
 
     // Re-wrap MEK with new password
     await this.createKeychainEntry(this.masterKey, newPassword, userId);
+
+    // Trigger password sync silently if masterpass_for_login_enabled is active
+    try {
+      const { account } = await import("./appwrite/client");
+      const userPrefs = await account.getPrefs().catch(() => ({})) as any;
+      const masterpassForLoginEnabled = userPrefs?.masterpass_for_login_enabled !== false;
+
+      if (masterpassForLoginEnabled) {
+        const { syncMasterpassToAccountPassword } = await import("./actions/client-ops");
+        await syncMasterpassToAccountPassword(userId, newPassword)
+          .then(() => console.log('[Vault] Silently synchronized masterpass to account password on masterpass change.'))
+          .catch((err) => console.error('[Vault] Masterpass sync failed on change:', err));
+      }
+    } catch (e) {
+      console.warn('[Vault] Failed to trigger masterpass auth sync on change:', e);
+    }
   }
 
   // Generate a random Master Encryption Key (MEK)
@@ -351,7 +367,7 @@ export class MasterPassCrypto {
         return false; // No keychain entry found
       }
 
-      const isArgon = !!keychainEntry.isArgon || (keychainEntry.params && keychainEntry.params.includes("Argon2id"));
+      const isArgon = !!keychainEntry.isArgon || (typeof keychainEntry.params === 'string' ? keychainEntry.params.includes("Argon2id") : keychainEntry.params?.algo === 'Argon2id');
 
       // Derive AuthKey using the stored salt
       const salt = this.decodeBase64(keychainEntry.salt);
@@ -500,7 +516,7 @@ export class MasterPassCrypto {
           algo: "SHA-256"
         }),
         isBackup: false,
-        authPass: !isPending
+        authPass: false
       });
 
     } catch (error: unknown) {
